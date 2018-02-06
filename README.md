@@ -1,2 +1,3 @@
 # orion
-A soon-to-be collection of random cryptographic functions, done as practice for myself.
+orion is my personal collection of cryptographic functions written in Rust.
+At the moment it only contains HMAC but will hopefully grow in size soon.

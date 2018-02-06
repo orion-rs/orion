@@ -1,0 +1,13 @@
+[package]
+name = "orion"
+version = "0.1.0"
+authors = ["brycx <brycx@protonmail.com>"]
+description = "A soon-to-be collection of random cryptographic functions, done as practice for myself."
+keywords = [ "cryptography", "hmac" ]
+readme = "README.md"
+repository = "https://github.com/brycx/orion"
+license-file = "LICENSE"
+
+[dependencies]
+ring = "*"
+rand = "*"
