@@ -4,8 +4,7 @@ pub fn gen_rand_key(len: usize) -> Vec<u8> {
     let mut generator = OsRng::new().unwrap();
     let mut rand_bytes_vec = vec![0u8; len];
     generator.fill_bytes(&mut rand_bytes_vec);
-
-    return rand_bytes_vec;
+    rand_bytes_vec
 }
 
 #[test]
