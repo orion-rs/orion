@@ -14,20 +14,22 @@ impl Hmac {
             Hmac::SHA512 => 128,
         }
     }
-    /// Return either a SHA256 or SHA512 digest of byte vector
-    fn hash(&self, data: &[u8]) -> Vec<u8> {
+
+    /// Return a ring::digest:Digest of a given byte slice
+    fn hash(&self, data: &[u8]) -> digest::Digest {
         let method = match *self {
             Hmac::SHA256 => &digest::SHA256,
             Hmac::SHA512 => &digest::SHA512,
         };
-        digest::digest(method, data).as_ref().to_vec()
+        digest::digest(method, data)
     }
-    /// Return a padded key such that it fits the blocksize
+
+    /// Return a padded key if the key is less than or greater than the blocksize
     fn pad_key<'a>(&self, key: &'a [u8]) -> Cow<'a, [u8]> {
         let mut key = Cow::from(key);
 
         if key.len() > self.blocksize() {
-            key = self.hash(&key).into();
+            key = self.hash(&key).as_ref().to_vec().into();
         }
         if key.len() < self.blocksize() {
             let mut resized_key = key.into_owned();
@@ -37,7 +39,7 @@ impl Hmac {
         key
     }
 
-    /// Returns an HMAC from key and message
+    /// Returns an HMAC from a given key and message
     pub fn hmac(&self, key: &[u8], message: &[u8]) -> Vec<u8> {
         let key = self.pad_key(key);
 
@@ -51,9 +53,8 @@ impl Hmac {
         let mut opad = make_padded_key(0x5C);
 
         ipad.extend_from_slice(message);
-        let ipad = self.hash(&ipad);
-        opad.extend_from_slice(&ipad);
-        self.hash(&opad)
+        opad.extend_from_slice(self.hash(&ipad).as_ref());
+        self.hash(&opad).as_ref().to_vec()
     }
 }
 
