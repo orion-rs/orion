@@ -1,24 +1,23 @@
-use functions;
 use ring::digest;
 
-enum Variant {
+enum Hmac {
     SHA256,
     SHA512,
 }
 
-impl Variant {
+impl Hmac {
 
     fn blocksize(&self) -> usize {
         match *self {
-            Variant::SHA256 => 64,
-            Variant::SHA512 => 128,
+            Hmac::SHA256 => 64,
+            Hmac::SHA512 => 128,
         }
     }
     /// Return either a SHA256 or SHA512 digest of byte vector
     fn hash(&self, data: &[u8]) -> Vec<u8> {
         let method = match *self {
-            Variant::SHA256 => &digest::SHA256,
-            Variant::SHA512 => &digest::SHA512,
+            Hmac::SHA256 => &digest::SHA256,
+            Hmac::SHA512 => &digest::SHA512,
         };
         digest::digest(method, data).as_ref().to_vec()
     }
@@ -56,7 +55,7 @@ impl Variant {
 
 #[cfg(test)]
 mod test {
-    use hmac::Variant;
+    use hmac::Hmac;
     use ring::test;
     use functions;
 
@@ -67,24 +66,24 @@ mod test {
         let rand_k: Vec<u8> = functions::gen_rand_key(64);
         let rand_k2: Vec<u8> = functions::gen_rand_key(128);
         let rand_k3: Vec<u8> = functions::gen_rand_key(34);
-        assert_eq!(Variant::SHA256.pad_key(&rand_k).len(), Variant::SHA256.blocksize());
-        assert_eq!(Variant::SHA512.pad_key(&rand_k).len(), Variant::SHA512.blocksize());
-        assert_eq!(Variant::SHA256.pad_key(&rand_k2).len(), Variant::SHA256.blocksize());
-        assert_eq!(Variant::SHA512.pad_key(&rand_k2).len(), Variant::SHA512.blocksize());
-        assert_eq!(Variant::SHA256.pad_key(&rand_k3).len(), Variant::SHA256.blocksize());
-        assert_eq!(Variant::SHA512.pad_key(&rand_k3).len(), Variant::SHA512.blocksize());
+        assert_eq!(Hmac::SHA256.pad_key(&rand_k).len(), Hmac::SHA256.blocksize());
+        assert_eq!(Hmac::SHA512.pad_key(&rand_k).len(), Hmac::SHA512.blocksize());
+        assert_eq!(Hmac::SHA256.pad_key(&rand_k2).len(), Hmac::SHA256.blocksize());
+        assert_eq!(Hmac::SHA512.pad_key(&rand_k2).len(), Hmac::SHA512.blocksize());
+        assert_eq!(Hmac::SHA256.pad_key(&rand_k3).len(), Hmac::SHA256.blocksize());
+        assert_eq!(Hmac::SHA512.pad_key(&rand_k3).len(), Hmac::SHA512.blocksize());
     }
 
     #[test]
     // Test that hmac() returns expected HMAC digests
     fn test_hmac_digest_result() {
-        let k_256 = vec![0x61; Variant::SHA256.blocksize()];
-        let m_256 = vec![0x62; Variant::SHA256.blocksize()];
-        let actual_256 = Variant::SHA256.hmac(&k_256, &m_256);
+        let k_256 = vec![0x61; Hmac::SHA256.blocksize()];
+        let m_256 = vec![0x62; Hmac::SHA256.blocksize()];
+        let actual_256 = Hmac::SHA256.hmac(&k_256, &m_256);
 
-        let k_512 = vec![0x63; Variant::SHA256.blocksize()];
-        let m_512 = vec![0x64; Variant::SHA256.blocksize()];
-        let actual_512 = Variant::SHA512.hmac(&k_512, &m_512);
+        let k_512 = vec![0x63; Hmac::SHA256.blocksize()];
+        let m_512 = vec![0x64; Hmac::SHA256.blocksize()];
+        let actual_512 = Hmac::SHA512.hmac(&k_512, &m_512);
 
         // Expected values from: https://www.freeformatter.com/hmac-generator.html#ad-output
         let expected_256 = test::from_hex("f6cbb37b326d36f2f27d294ac3bb46a6aac29c1c9936b985576041bfb338ae70").unwrap();
