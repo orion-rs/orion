@@ -65,8 +65,8 @@ mod test {
     use functions;
 
     #[test]
-    // Test that the function key_deriv() returns a padded key K
-    // with size of correct BLOCKSIZE, both for SHA256 and SHA512
+    // Test that the function pad_key() returns a padded key
+    // with size of correct blocksize, both for SHA256 and SHA512
     fn test_key_deriv() {
         let rand_k: Vec<u8> = functions::gen_rand_key(64);
         let rand_k2: Vec<u8> = functions::gen_rand_key(128);
