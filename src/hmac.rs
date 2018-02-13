@@ -1,4 +1,5 @@
 use ring::digest;
+use std::borrow::Cow;
 
 enum Hmac {
     SHA256,
@@ -22,23 +23,26 @@ impl Hmac {
         digest::digest(method, data).as_ref().to_vec()
     }
     /// Return a padded key such that it fits the blocksize
-    fn pad_key(&self, key: &[u8]) -> Vec<u8> {
-        let mut resized_key = key.to_vec();
+    fn pad_key<'a>(&self, key: &'a [u8]) -> Cow<'a, [u8]> {
+        let mut key = Cow::from(key);
 
-        if resized_key.len() > self.blocksize() {
-            resized_key = self.hash(key);
+        if key.len() > self.blocksize() {
+            key = self.hash(&key).into();
         }
-        if resized_key.len() < self.blocksize() {
+        if key.len() < self.blocksize() {
+            let mut resized_key = key.into_owned();
             resized_key.resize(self.blocksize(), 0x00);
+            key = resized_key.into();
         }
-        resized_key
+        key
     }
 
     /// Returns an HMAC from key and message
     pub fn hmac(&self, key: &[u8], message: &[u8]) -> Vec<u8> {
+        let key = self.pad_key(key);
 
         let make_padded_key = |byte: u8| {
-            let mut pad = self.pad_key(key);
+            let mut pad = key.to_vec();
             for i in &mut pad { *i ^= byte };
             pad
         };
@@ -47,7 +51,7 @@ impl Hmac {
         let mut opad = make_padded_key(0x5C);
 
         ipad.extend_from_slice(message);
-        ipad = self.hash(&ipad);
+        let ipad = self.hash(&ipad);
         opad.extend_from_slice(&ipad);
         self.hash(&opad)
     }
