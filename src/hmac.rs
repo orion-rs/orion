@@ -81,7 +81,7 @@ mod test {
     #[test]
     // Test that the function pad_key() returns a padded key
     // with size of correct blocksize, both for SHA256 and SHA512
-    fn test_key_deriv() {
+    fn test_pad_key() {
         let rand_k: Vec<u8> = functions::gen_rand_key(64);
         let rand_k2: Vec<u8> = functions::gen_rand_key(128);
         let rand_k3: Vec<u8> = functions::gen_rand_key(34);
