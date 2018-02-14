@@ -40,7 +40,7 @@ impl Hmac {
     }
 
     /// Returns an HMAC from a given key and message
-    pub fn hmac(&self, key: &[u8], message: &[u8]) -> Vec<u8> {
+    pub fn hmac_compute(&self, key: &[u8], message: &[u8]) -> Vec<u8> {
         let key = self.pad_key(key);
 
         let make_padded_key = |byte: u8| {
@@ -55,6 +55,20 @@ impl Hmac {
         ipad.extend_from_slice(message);
         opad.extend_from_slice(self.hash(&ipad).as_ref());
         self.hash(&opad).as_ref().to_vec()
+    }
+
+    /// Check HMAC validity by computing one from message and key, then comparing this to the
+    /// HMAC that has been passed to the function. Return true if the HMAC matches, return false
+    /// if not.
+    pub fn hmac_validate(&self, key: &[u8], message: &[u8], hmac: &Vec<u8>) -> bool {
+
+        let check = self.hmac_compute(&key, &message);
+
+        if &check == hmac {
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -84,16 +98,30 @@ mod test {
     fn test_hmac_digest_result() {
         let k_256 = vec![0x61; Hmac::SHA256.blocksize()];
         let m_256 = vec![0x62; Hmac::SHA256.blocksize()];
-        let actual_256 = Hmac::SHA256.hmac(&k_256, &m_256);
+        let actual_256 = Hmac::SHA256.hmac_compute(&k_256, &m_256);
 
         let k_512 = vec![0x63; Hmac::SHA256.blocksize()];
         let m_512 = vec![0x64; Hmac::SHA256.blocksize()];
-        let actual_512 = Hmac::SHA512.hmac(&k_512, &m_512);
+        let actual_512 = Hmac::SHA512.hmac_compute(&k_512, &m_512);
 
         // Expected values from: https://www.freeformatter.com/hmac-generator.html#ad-output
         let expected_256 = test::from_hex("f6cbb37b326d36f2f27d294ac3bb46a6aac29c1c9936b985576041bfb338ae70").unwrap();
         let expected_512 = test::from_hex("ffbd423817836ae58b801fc1e70386f09a6cc0e72daa215ac8505993721f0f6d67ce30118d7effe451310abad984d105fbd847ae37a88f042a3a79e26f307606").unwrap();
         assert_eq!(actual_256, expected_256);
         assert_eq!(actual_512, expected_512);
+    }
+
+    #[test]
+    // Test that hmac() returns expected HMAC digests
+    fn test_hmac_validate() {
+        let k_256 = vec![0x61; Hmac::SHA256.blocksize()];
+        let m_256 = vec![0x62; Hmac::SHA256.blocksize()];
+        let wrong_k_256 = vec![0x67; Hmac::SHA256.blocksize()];
+
+        let recieved = Hmac::SHA256.hmac_compute(&k_256, &m_256);
+        let expected = Hmac::SHA256.hmac_compute(&k_256, &m_256);
+        let expected_wrong = Hmac::SHA256.hmac_compute(&wrong_k_256, &m_256);
+        assert_eq!(recieved, expected);
+        assert_ne!(recieved, expected_wrong);
     }
 }
