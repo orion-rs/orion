@@ -3,7 +3,7 @@ orion is a soon-to-be collection of random cryptographic functions. It relies on
 included in orion.
 
 orion currently contains:
-.. * HMAC as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104)
+* HMAC as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104)
 
 #### Tests
 All unit-tests are located in the same file as the functions they are testing.
