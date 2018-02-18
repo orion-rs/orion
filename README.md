@@ -1,5 +1,4 @@
 ## orion
-![creates.io version](https://img.shields.io/crates/v/hmac-sha1.svg)
 
 orion aims to provide hassle-free cryptographic functions.
 
