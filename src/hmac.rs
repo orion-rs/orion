@@ -85,17 +85,50 @@ mod test {
     use functions;
 
     #[test]
-    // Test that the function pad_key() returns a padded key
-    // with size of correct blocksize, both for SHA256 and SHA512
-    fn test_pad_key() {
-        let rand_k: Vec<u8> = functions::gen_rand_key(64);
-        let rand_k2: Vec<u8> = functions::gen_rand_key(128);
+    // Test that the function pad_key() returns a padded key K
+    // with size of correct BLOCKSIZE for SHA1
+    fn test_pad_key_sha1() {
+        let rand_k: Vec<u8> = functions::gen_rand_key(67);
+        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
+        let rand_k3: Vec<u8> = functions::gen_rand_key(34);
+        assert_eq!(Hmac::SHA1.pad_key(&rand_k).len(), Hmac::SHA1.blocksize());
+        assert_eq!(Hmac::SHA1.pad_key(&rand_k2).len(), Hmac::SHA1.blocksize());
+        assert_eq!(Hmac::SHA1.pad_key(&rand_k3).len(), Hmac::SHA1.blocksize());
+    }
+
+    #[test]
+    // Test that the function pad_key() returns a padded key K
+    // with size of correct BLOCKSIZE for SHA256
+    fn test_pad_key_sha256() {
+        let rand_k: Vec<u8> = functions::gen_rand_key(67);
+        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
         let rand_k3: Vec<u8> = functions::gen_rand_key(34);
         assert_eq!(Hmac::SHA256.pad_key(&rand_k).len(), Hmac::SHA256.blocksize());
-        assert_eq!(Hmac::SHA512.pad_key(&rand_k).len(), Hmac::SHA512.blocksize());
+        assert_eq!(Hmac::SHA256.pad_key(&rand_k).len(), Hmac::SHA256.blocksize());
         assert_eq!(Hmac::SHA256.pad_key(&rand_k2).len(), Hmac::SHA256.blocksize());
+    }
+
+    #[test]
+    // Test that the function pad_key() returns a padded key K
+    // with size of correct BLOCKSIZE for SHA384
+    fn test_pad_key_sha384() {
+        let rand_k: Vec<u8> = functions::gen_rand_key(67);
+        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
+        let rand_k3: Vec<u8> = functions::gen_rand_key(34);
+        assert_eq!(Hmac::SHA384.pad_key(&rand_k).len(), Hmac::SHA384.blocksize());
+        assert_eq!(Hmac::SHA384.pad_key(&rand_k2).len(), Hmac::SHA384.blocksize());
+        assert_eq!(Hmac::SHA384.pad_key(&rand_k3).len(), Hmac::SHA384.blocksize());
+    }
+
+    #[test]
+    // Test that the function pad_key() returns a padded key K
+    // with size of correct BLOCKSIZE for SHA512
+    fn test_pad_key_sha512() {
+        let rand_k: Vec<u8> = functions::gen_rand_key(67);
+        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
+        let rand_k3: Vec<u8> = functions::gen_rand_key(34);
+        assert_eq!(Hmac::SHA512.pad_key(&rand_k).len(), Hmac::SHA512.blocksize());
         assert_eq!(Hmac::SHA512.pad_key(&rand_k2).len(), Hmac::SHA512.blocksize());
-        assert_eq!(Hmac::SHA256.pad_key(&rand_k3).len(), Hmac::SHA256.blocksize());
         assert_eq!(Hmac::SHA512.pad_key(&rand_k3).len(), Hmac::SHA512.blocksize());
     }
 
