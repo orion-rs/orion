@@ -118,16 +118,28 @@ mod test {
     }
 
     #[test]
-    // Test that hmac_validate() returns true if signatures match
+    // Test that hmac_validate() returns true if signatures match and false if not
     fn test_hmac_validate() {
-        let key = vec![0x61; Hmac::SHA256.blocksize()];
-        let message = vec![0x62; Hmac::SHA256.blocksize()];
-        let wrong_key = vec![0x67; Hmac::SHA256.blocksize()];
+        let key = vec![0x61; 5];
+        let message = vec![0x62; 5];
+        let wrong_key = vec![0x67; 5];
 
-        let recieved = Hmac::SHA256.hmac_compute(&key, &message);
-        let expected = Hmac::SHA256.hmac_compute(&key, &message);
-        let expected_wrong = Hmac::SHA256.hmac_compute(&wrong_key, &message);
-        assert_eq!(recieved, expected);
-        assert_ne!(recieved, expected_wrong);
+        let recieved_sha1 = Hmac::SHA1.hmac_compute(&key, &message);
+        let recieved_sha256 = Hmac::SHA256.hmac_compute(&key, &message);
+        let recieved_sha384 = Hmac::SHA384.hmac_compute(&key, &message);
+        let recieved_sha512 = Hmac::SHA512.hmac_compute(&key, &message);
+
+
+        assert_eq!(Hmac::SHA1.hmac_validate(&key, &message, &recieved_sha1), true);
+        assert_eq!(Hmac::SHA1.hmac_validate(&wrong_key, &message, &recieved_sha1), false);
+
+        assert_eq!(Hmac::SHA256.hmac_validate(&key, &message, &recieved_sha256), true);
+        assert_eq!(Hmac::SHA256.hmac_validate(&wrong_key, &message, &recieved_sha256), false);
+
+        assert_eq!(Hmac::SHA384.hmac_validate(&key, &message, &recieved_sha384), true);
+        assert_eq!(Hmac::SHA384.hmac_validate(&wrong_key, &message, &recieved_sha384), false);
+
+        assert_eq!(Hmac::SHA512.hmac_validate(&key, &message, &recieved_sha512), true);
+        assert_eq!(Hmac::SHA512.hmac_validate(&wrong_key, &message, &recieved_sha512), false);
     }
 }
