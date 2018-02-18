@@ -9,8 +9,8 @@ pub fn gen_rand_key(len: usize) -> Vec<u8> {
 }
 
 #[test]
+// Test that two randomly generated keys are not equal
 fn test_random_not_duplicate() {
-    // Test that two randomly generated keys are not equal
     assert_ne!(gen_rand_key(5), gen_rand_key(5));
     assert_ne!(gen_rand_key(7), gen_rand_key(7));
 }

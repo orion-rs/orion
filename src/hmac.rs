@@ -101,7 +101,7 @@ mod test {
 
     #[test]
     // Test that hmac_compute() returns expected HMAC digests
-    fn test_hmac_digest_result() {
+    fn test_hmac_compute_result() {
         let key = vec![0x61; 5];
         let message = vec![0x61; 5];
 
