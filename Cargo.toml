@@ -2,11 +2,11 @@
 name = "orion"
 version = "0.1.0"
 authors = ["brycx <brycx@protonmail.com>"]
-description = "Hassle-free Rust crypto."
+description = "Hassle-free cryptographic function(s) in Rust."
 keywords = [ "cryptography", "hmac" ]
 readme = "README.md"
 repository = "https://github.com/brycx/orion"
-license-file = "LICENSE"
+license = "MIT"
 
 [dependencies]
 ring = ">=0.12.1"
