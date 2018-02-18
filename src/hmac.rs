@@ -1,15 +1,43 @@
 use ring::digest;
 use std::borrow::Cow;
 
-enum Hmac {
+/// HMAC (Hash-based Message Authentication Code) as specified in the
+/// [RFC 2104](https://tools.ietf.org/html/rfc2104).
+pub enum Hmac {
     SHA1,
     SHA256,
     SHA384,
     SHA512,
 }
 
+/// HMAC (Hash-based Message Authentication Code) as specified in the
+/// [RFC 2104](https://tools.ietf.org/html/rfc2104).
+///
+/// All available SHA variants are provided by [ring](https://github.com/briansmith/ring).
+/// # Usage examples:
+/// ### Generating HMAC:
+/// ```
+/// use orion::hmac::Hmac;
+/// use orion::functions;
+///
+/// let key = functions::gen_rand_key(10);
+/// let message = functions::gen_rand_key(10);
+///
+/// let sig = Hmac::SHA256.hmac_compute(&key, &message);
+/// ```
+/// ### Verifying HMAC:
+/// ```
+/// use orion::hmac::Hmac;
+/// use orion::functions;
+///
+/// let key = functions::gen_rand_key(10);
+/// let message = functions::gen_rand_key(10);
+///
+/// let sig = Hmac::SHA256.hmac_compute(&key, &message);
+/// assert_eq!(Hmac::SHA256.hmac_validate(&key, &message, &sig), true);
+/// ```
 impl Hmac {
-
+    /// Return blocksize matching SHA variant.
     fn blocksize(&self) -> usize {
         match *self {
             Hmac::SHA1 => 64,
@@ -18,8 +46,7 @@ impl Hmac {
             Hmac::SHA512 => 128,
         }
     }
-
-    /// Return a ring::digest:Digest of a given byte slice
+    /// Return a ring::digest:Digest of a given byte slice.
     fn hash(&self, data: &[u8]) -> digest::Digest {
         let method = match *self {
             Hmac::SHA1 => &digest::SHA1,
@@ -30,7 +57,7 @@ impl Hmac {
         digest::digest(method, data)
     }
 
-    /// Return a padded key if the key is less than or greater than the blocksize
+    /// Return a padded key if the key is less than or greater than the blocksize.
     fn pad_key<'a>(&self, key: &'a [u8]) -> Cow<'a, [u8]> {
         let mut key = Cow::from(key);
 
@@ -45,7 +72,7 @@ impl Hmac {
         key
     }
 
-    /// Returns an HMAC from a given key and message
+    /// Returns HMAC from a given key and message.
     pub fn hmac_compute(&self, key: &[u8], message: &[u8]) -> Vec<u8> {
         let key = self.pad_key(key);
 
@@ -63,9 +90,8 @@ impl Hmac {
         self.hash(&opad).as_ref().to_vec()
     }
 
-    /// Check HMAC validity by computing one from message and key, then comparing this to the
-    /// HMAC that has been passed to the function. Return true if the HMAC matches, return false
-    /// if not.
+    /// Check HMAC validity by computing one from key and message, then comparing this to the
+    /// HMAC that has been passed to the function.
     pub fn hmac_validate(&self, key: &[u8], message: &[u8], hmac: &Vec<u8>) -> bool {
 
         let check = self.hmac_compute(&key, &message);
@@ -134,7 +160,7 @@ mod test {
 
     #[test]
     // Test that hmac_compute() returns expected HMAC digests
-    fn test_hmac_compute_result() {
+    fn test_hmac_computet_result() {
         let key = vec![0x61; 5];
         let message = vec![0x61; 5];
 
