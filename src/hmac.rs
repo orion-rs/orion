@@ -112,15 +112,15 @@ mod test {
     }
 
     #[test]
-    // Test that hmac() returns expected HMAC digests
+    // Test that hmac_validate() returns true if signatures match
     fn test_hmac_validate() {
-        let k_256 = vec![0x61; Hmac::SHA256.blocksize()];
-        let m_256 = vec![0x62; Hmac::SHA256.blocksize()];
-        let wrong_k_256 = vec![0x67; Hmac::SHA256.blocksize()];
+        let key = vec![0x61; Hmac::SHA256.blocksize()];
+        let message = vec![0x62; Hmac::SHA256.blocksize()];
+        let wrong_key = vec![0x67; Hmac::SHA256.blocksize()];
 
-        let recieved = Hmac::SHA256.hmac_compute(&k_256, &m_256);
-        let expected = Hmac::SHA256.hmac_compute(&k_256, &m_256);
-        let expected_wrong = Hmac::SHA256.hmac_compute(&wrong_k_256, &m_256);
+        let recieved = Hmac::SHA256.hmac_compute(&key, &message);
+        let expected = Hmac::SHA256.hmac_compute(&key, &message);
+        let expected_wrong = Hmac::SHA256.hmac_compute(&wrong_key, &message);
         assert_eq!(recieved, expected);
         assert_ne!(recieved, expected_wrong);
     }
