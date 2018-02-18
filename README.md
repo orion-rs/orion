@@ -10,7 +10,7 @@ orion currently contains:
 * HMAC as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104)
 
 ### Documentation
-[Find it here]().
+[Find it here](https://docs.rs/orion).
 
 ### Tests
 All unit-tests are located in the same file as the functions they are testing.
