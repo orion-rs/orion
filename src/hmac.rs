@@ -2,7 +2,9 @@ use ring::digest;
 use std::borrow::Cow;
 
 enum Hmac {
+    SHA1,
     SHA256,
+    SHA384,
     SHA512,
 }
 
@@ -10,7 +12,9 @@ impl Hmac {
 
     fn blocksize(&self) -> usize {
         match *self {
+            Hmac::SHA1 => 64,
             Hmac::SHA256 => 64,
+            Hmac::SHA384 => 128,
             Hmac::SHA512 => 128,
         }
     }
@@ -18,7 +22,9 @@ impl Hmac {
     /// Return a ring::digest:Digest of a given byte slice
     fn hash(&self, data: &[u8]) -> digest::Digest {
         let method = match *self {
+            Hmac::SHA1 => &digest::SHA1,
             Hmac::SHA256 => &digest::SHA256,
+            Hmac::SHA384 => &digest::SHA384,
             Hmac::SHA512 => &digest::SHA512,
         };
         digest::digest(method, data)
