@@ -100,21 +100,25 @@ mod test {
     }
 
     #[test]
-    // Test that hmac() returns expected HMAC digests
+    // Test that hmac_compute() returns expected HMAC digests
     fn test_hmac_digest_result() {
-        let k_256 = vec![0x61; Hmac::SHA256.blocksize()];
-        let m_256 = vec![0x62; Hmac::SHA256.blocksize()];
-        let actual_256 = Hmac::SHA256.hmac_compute(&k_256, &m_256);
+        let key = vec![0x61; 5];
+        let message = vec![0x61; 5];
 
-        let k_512 = vec![0x63; Hmac::SHA256.blocksize()];
-        let m_512 = vec![0x64; Hmac::SHA256.blocksize()];
-        let actual_512 = Hmac::SHA512.hmac_compute(&k_512, &m_512);
+        let actual_sha1 = Hmac::SHA1.hmac_compute(&key, &message);
+        let actual_sha256 = Hmac::SHA256.hmac_compute(&key, &message);
+        let actual_sha384 = Hmac::SHA384.hmac_compute(&key, &message);
+        let actual_sha512 = Hmac::SHA512.hmac_compute(&key, &message);
 
         // Expected values from: https://www.freeformatter.com/hmac-generator.html#ad-output
-        let expected_256 = test::from_hex("f6cbb37b326d36f2f27d294ac3bb46a6aac29c1c9936b985576041bfb338ae70").unwrap();
-        let expected_512 = test::from_hex("ffbd423817836ae58b801fc1e70386f09a6cc0e72daa215ac8505993721f0f6d67ce30118d7effe451310abad984d105fbd847ae37a88f042a3a79e26f307606").unwrap();
-        assert_eq!(actual_256, expected_256);
-        assert_eq!(actual_512, expected_512);
+        let expected_sha1 = test::from_hex("40a50a7b74cf6099ee7082e3b4e2fd51f002f29d").unwrap();
+        let expected_sha256 = test::from_hex("c960dd5485480f51044c1afa312fecc5ab58548f9f108a5062a3bc229fd02359").unwrap();
+        let expected_sha384 = test::from_hex("6b0d10e1f341c5d9d9c3fb59431ee2ba155b5fa75e25a73bcd418d8a8a45c9562741a1214537fc33b08db20a1d52e037").unwrap();
+        let expected_sha512 = test::from_hex("aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf").unwrap();
+        assert_eq!(actual_sha1, expected_sha1);
+        assert_eq!(actual_sha256, expected_sha256);
+        assert_eq!(actual_sha384, expected_sha384);
+        assert_eq!(actual_sha512, expected_sha512);
     }
 
     #[test]
