@@ -14,4 +14,4 @@ orion currently contains:
 
 ### Tests
 All unit-tests are located in the same file as the functions they are testing.
-To run test: `cargo test`.
+To run tests: `cargo test`.
