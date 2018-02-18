@@ -9,5 +9,5 @@ repository = "https://github.com/brycx/orion"
 license-file = "LICENSE.md"
 
 [dependencies]
-ring = "*"
-rand = "*"
+ring = ">=0.12.1"
+rand = ">=0.4.2"

@@ -130,8 +130,8 @@ mod test {
         let rand_k2: Vec<u8> = functions::gen_rand_key(130);
         let rand_k3: Vec<u8> = functions::gen_rand_key(34);
         assert_eq!(Hmac::SHA256.pad_key(&rand_k).len(), Hmac::SHA256.blocksize());
-        assert_eq!(Hmac::SHA256.pad_key(&rand_k).len(), Hmac::SHA256.blocksize());
         assert_eq!(Hmac::SHA256.pad_key(&rand_k2).len(), Hmac::SHA256.blocksize());
+        assert_eq!(Hmac::SHA256.pad_key(&rand_k3).len(), Hmac::SHA256.blocksize());
     }
 
     #[test]
