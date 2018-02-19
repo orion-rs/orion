@@ -1,22 +1,26 @@
 ## orion
 
-orion aims to provide hassle-free cryptographic functions.
+orion aims to provide hassle-free cryptographic function(s).
 
 This project is very early-stage and currently only contains HMAC. I plan on adding
 more, as long as I can find the time for it. Contributions are more than welcome!
 
-orion relies on [ring](https://github.com/briansmith/ring) for things like SHA.
+It relies on [ring](https://github.com/briansmith/ring) for things like SHA.
 
-orion currently contains:
-* HMAC as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104)
+Currently contains:
+* HMAC with SHA1, SHA256, SHA384, SHA512.
 
 ### Usage
-`extern crate orion`
+Include it in your `Cargo.toml` file:
 ```
 [dependencies]
 orion = ">=0.1.0"
 ```
-Check the documentation on more specific usage.
+and in relevant files:
+```
+extern crate orion
+```
+Check the documentation for more specific usage.
 ### Documentation
 [Find it here](https://docs.rs/orion).
 
