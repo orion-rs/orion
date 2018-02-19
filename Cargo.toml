@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Hassle-free cryptographic function(s) in Rust."
 keywords = [ "cryptography", "hmac" ]
