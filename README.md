@@ -1,4 +1,4 @@
-## orion
+## orion ![Build Status](https://travis-ci.org/brycx/orion.svg?branch=master)](https://travis-ci.org/brycx/orion)
 
 orion aims to provide hassle-free cryptographic function(s).
 
