@@ -3,3 +3,4 @@ extern crate ring;
 
 pub mod functions;
 pub mod hmac;
+pub mod hkdf;
