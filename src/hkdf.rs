@@ -1,12 +1,18 @@
 use hmac::Hmac;
-use functions;
 
+/// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
+/// [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub enum Hkdf {
     hmac_SHA1,
     hmac_SHA256,
     hmac_SHA384,
     hmac_SHA512,
 }
+
+/// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
+/// [RFC 5869](https://tools.ietf.org/html/rfc5869).
+///
+/// ...
 
 impl Hkdf {
 
