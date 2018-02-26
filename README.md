@@ -1,5 +1,7 @@
 ## orion ![Build Status](https://travis-ci.org/brycx/orion.svg?branch=master)
 
+**Warning:** I'm no expert on cryptography, use this at your own risk.
+
 This project is very early-stage. I plan on adding
 more, as long as I can find the time for it. Contributions are more than welcome!
 
