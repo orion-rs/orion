@@ -30,4 +30,4 @@ All unit-tests are located in the same file as the functions they are testing.
 To run tests: `cargo test`.
 
 ### License
-orion is licensed under MIT. See the `LICENSE` file for more information.
+orion is licensed under the MIT license. See the `LICENSE` file for more information.
