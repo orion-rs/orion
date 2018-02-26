@@ -43,15 +43,13 @@ impl Hkdf {
             panic!("Length is too high.");
         }
 
-        // add one at last to have it run all iterations
-        let border = (okm_len as f32 / self.hash_return_size() as f32).ceil(); //+ 1_f32
-        let n = border as usize;
+        let n_iter = (okm_len as f32 / self.hash_return_size() as f32).ceil() as usize;
 
         let mut it_vec: Vec<u8> = vec![];
         let mut t_vec: Vec<u8> = vec![];
         let mut f_vec: Vec<u8> = vec![];
-
-        for x in 1..n+1 {
+        
+        for x in 1..n_iter+1 {
                 it_vec.append(&mut t_vec);
                 it_vec.extend_from_slice(info); // Append info
                 it_vec.push(x as u8); // Append octet count
