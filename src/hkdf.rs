@@ -40,7 +40,8 @@ impl Hkdf {
     pub fn hkdf_expand(&self, prk: &[u8], info: &[u8], okm_len: usize) -> Vec<u8> {
 
         if okm_len as f32 > 255_f32 * self.hash_return_size() as f32 {
-            panic!("Length is too high.");
+            panic!("Derived key length above max. Max derived key length is: {:?}",
+                    255_f32 * self.hash_return_size() as f32);
         }
 
         let n_iter = (okm_len as f32 / self.hash_return_size() as f32).ceil() as usize;
@@ -48,7 +49,7 @@ impl Hkdf {
         let mut it_vec: Vec<u8> = vec![];
         let mut t_vec: Vec<u8> = vec![];
         let mut f_vec: Vec<u8> = vec![];
-        
+
         for x in 1..n_iter+1 {
                 it_vec.append(&mut t_vec);
                 it_vec.extend_from_slice(info); // Append info
