@@ -15,8 +15,7 @@ pub enum Hkdf {
 /// ...
 
 impl Hkdf {
-
-    /// Return the used hash function output size in octets
+    /// Return the used hash function output size in bytes.
     fn hash_return_size(&self) -> usize {
         match *self {
             Hkdf::hmac_SHA1 => 20,
@@ -26,7 +25,7 @@ impl Hkdf {
         }
     }
 
-    /// Return HMAC function matching passed SHA variant, 256/512
+    /// Return HMAC matching argument passsed to Hkdf.
     fn hmac_return_variant(&self, data: &[u8], salt: &[u8]) -> Vec<u8> {
         let hmac = match *self {
             Hkdf::hmac_SHA1 => Hmac::SHA1,
@@ -37,14 +36,14 @@ impl Hkdf {
         hmac.hmac_compute(data, salt)
     }
 
+    /// The HKDF Extract step. Returns an PRK (HMAC) from passed salt and IKM.
     pub fn hkdf_extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
         self.hmac_return_variant(salt, ikm)
     }
 
-    /// Return HKDF, take hkdf_extract as prk argument
-
+    /// The HKDF Expend step. Returns an HKDF.
     pub fn hkdf_expand(&self, prk: &[u8], info: &[u8], okm_len: usize) -> Vec<u8> {
-
+        // Check that the selected key length is within the limit.
         if okm_len as f32 > 255_f32 * self.hash_return_size() as f32 {
             panic!("Derived key length above max. Max derived key length is: {:?}",
                     255_f32 * self.hash_return_size() as f32);
@@ -52,21 +51,22 @@ impl Hkdf {
 
         let n_iter = (okm_len as f32 / self.hash_return_size() as f32).ceil() as usize;
 
-        let mut it_vec: Vec<u8> = vec![];
-        let mut t_vec: Vec<u8> = vec![];
-        let mut f_vec: Vec<u8> = vec![];
+        let mut con_step: Vec<u8> = vec![];
+        let mut t_step: Vec<u8> = vec![];
+        let mut hkdf_final: Vec<u8> = vec![];
 
         for x in 1..n_iter+1 {
-                it_vec.append(&mut t_vec);
-                it_vec.extend_from_slice(info); // Append info
-                it_vec.push(x as u8); // Append octet count
-                t_vec.extend_from_slice(&self.hmac_return_variant(prk, &it_vec)); // Append T step to final
-                it_vec.clear();
-                f_vec.extend_from_slice(&t_vec);
+                con_step.append(&mut t_step);
+                con_step.extend_from_slice(info); // Append info
+                con_step.push(x as u8); // Append octet count
+                t_step.extend_from_slice(&self.hmac_return_variant(prk, &con_step)); // Append T step to final
+                con_step.clear();
+                hkdf_final.extend_from_slice(&t_step);
         }
 
-        f_vec.truncate(okm_len);
-        f_vec
+        hkdf_final.truncate(okm_len);
+
+        hkdf_final
     }
 }
 
