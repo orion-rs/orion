@@ -41,7 +41,7 @@ impl Hkdf {
         self.hmac_return_variant(salt, ikm)
     }
 
-    /// The HKDF Expend step. Returns an HKDF.
+    /// The HKDF Expand step. Returns an HKDF.
     pub fn hkdf_expand(&self, prk: &[u8], info: &[u8], okm_len: usize) -> Vec<u8> {
         // Check that the selected key length is within the limit.
         if okm_len as f32 > 255_f32 * self.hash_return_size() as f32 {
@@ -57,10 +57,11 @@ impl Hkdf {
 
         for x in 1..n_iter+1 {
                 con_step.append(&mut t_step);
-                con_step.extend_from_slice(info); // Append info
-                con_step.push(x as u8); // Append octet count
-                t_step.extend_from_slice(&self.hmac_return_variant(prk, &con_step)); // Append T step to final
+                con_step.extend_from_slice(info);
+                con_step.push(x as u8);
+                t_step.extend_from_slice(&self.hmac_return_variant(prk, &con_step));
                 con_step.clear();
+
                 hkdf_final.extend_from_slice(&t_step);
         }
 
@@ -72,13 +73,12 @@ impl Hkdf {
 
 #[cfg(test)]
 mod test {
-    use hmac::Hmac;
     use ring::test;
-    use functions;
     use hkdf::Hkdf;
 
     // All expected results have been computed with the python cryptography package at:
     // https://cryptography.io
+    // Test that expected results are returned
     #[test]
     fn test_hkdf_return() {
         let ikm = vec![0x61; 5];
