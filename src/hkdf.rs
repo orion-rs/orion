@@ -48,7 +48,7 @@ impl Hkdf {
         hmac.hmac_compute(data, salt)
     }
 
-    /// The HKDF Extract step. Returns an PRK (HMAC) from passed salt and IKM.
+    /// The HKDF Extract step. Returns a PRK (HMAC) from passed salt and IKM.
     pub fn hkdf_extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
         self.hmac_return_variant(salt, ikm)
     }

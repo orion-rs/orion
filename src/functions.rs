@@ -1,6 +1,6 @@
 use rand::{OsRng, Rng};
 
-/// Return a random byte vector of a given length
+/// Return a random byte vector of a given length.
 pub fn gen_rand_key(len: usize) -> Vec<u8> {
     let mut generator = OsRng::new().unwrap();
     let mut rand_bytes_vec = vec![0u8; len];
