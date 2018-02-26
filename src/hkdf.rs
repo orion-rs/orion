@@ -12,7 +12,19 @@ pub enum Hkdf {
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
 ///
-/// ...
+/// # Usage examples:
+///
+/// ```
+/// use orion::hkdf::Hkdf;
+/// use orion::functions;
+///
+/// let key = functions::gen_rand_key(10);
+/// let salt = functions::gen_rand_key(10);
+/// let info = functions::gen_rand_key(10);
+///
+/// let prk = Hkdf::hmac_SHA512.hkdf_extract(&salt, &key);
+/// let d_key = Hkdf::hmac_SHA512.hkdf_expand(&prk, &info, 50);
+/// ```
 
 impl Hkdf {
     /// Return the used hash function output size in bytes.

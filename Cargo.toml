@@ -1,9 +1,9 @@
 [package]
 name = "orion"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Hassle-free cryptographic function(s) in Rust."
-keywords = [ "cryptography", "hmac" ]
+keywords = [ "cryptography", "hmac", "hkdf" ]
 readme = "README.md"
 repository = "https://github.com/brycx/orion"
 license = "MIT"
