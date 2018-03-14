@@ -2,7 +2,7 @@
 name = "orion"
 version = "0.1.4"
 authors = ["brycx <brycx@protonmail.com>"]
-description = "Hassle-free cryptographic function(s) in Rust."
+description = "Random cryptographic functions in Rust."
 keywords = [ "cryptography", "hmac", "hkdf" ]
 readme = "README.md"
 repository = "https://github.com/brycx/orion"
