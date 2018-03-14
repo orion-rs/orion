@@ -1,208 +1,144 @@
-use ring::digest;
-use std::borrow::Cow;
+use hmac::Hmac;
 
-/// HMAC (Hash-based Message Authentication Code) as specified in the
-/// [RFC 2104](https://tools.ietf.org/html/rfc2104).
-pub enum Hmac {
-    SHA1,
-    SHA256,
-    SHA384,
-    SHA512,
+/// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
+/// [RFC 5869](https://tools.ietf.org/html/rfc5869).
+pub enum Hkdf {
+    hmac_SHA1,
+    hmac_SHA2_256,
+    hmac_SHA2_384,
+    hmac_SHA2_512,
+    hmac_SHA3_256,
+    hmac_SHA3_384,
+    hmac_SHA3_512,
 }
 
-/// HMAC (Hash-based Message Authentication Code) as specified in the
-/// [RFC 2104](https://tools.ietf.org/html/rfc2104).
+/// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
+/// [RFC 5869](https://tools.ietf.org/html/rfc5869).
 ///
-/// All available SHA variants are provided by [ring](https://github.com/briansmith/ring).
 /// # Usage examples:
-/// ### Generating HMAC:
+///
 /// ```
-/// use orion::hmac::Hmac;
+/// use orion::hkdf::Hkdf;
 /// use orion::functions;
 ///
 /// let key = functions::gen_rand_key(10);
-/// let message = functions::gen_rand_key(10);
+/// let salt = functions::gen_rand_key(10);
+/// let info = functions::gen_rand_key(10);
 ///
-/// let sig = Hmac::SHA256.hmac_compute(&key, &message);
+/// let prk = Hkdf::hmac_SHA2_512.hkdf_extract(&salt, &key);
+/// let d_key = Hkdf::hmac_SHA2_512.hkdf_expand(&prk, &info, 50);
 /// ```
-/// ### Verifying HMAC:
-/// ```
-/// use orion::hmac::Hmac;
-/// use orion::functions;
-///
-/// let key = functions::gen_rand_key(10);
-/// let message = functions::gen_rand_key(10);
-///
-/// let sig = Hmac::SHA256.hmac_compute(&key, &message);
-/// assert_eq!(Hmac::SHA256.hmac_validate(&key, &message, &sig), true);
-/// ```
-impl Hmac {
-    /// Return blocksize matching SHA variant.
-    fn blocksize(&self) -> usize {
+
+impl Hkdf {
+    /// Return the used hash function output size in bytes.
+    fn hash_return_size(&self) -> usize {
         match *self {
-            Hmac::SHA1 => 64,
-            Hmac::SHA256 => 64,
-            Hmac::SHA384 => 128,
-            Hmac::SHA512 => 128,
+            Hkdf::hmac_SHA1 => 20,
+            Hkdf::hmac_SHA2_256 => 32,
+            Hkdf::hmac_SHA2_384 => 48,
+            Hkdf::hmac_SHA2_512 => 64,
+            Hkdf::hmac_SHA3_256 => 32,
+            Hkdf::hmac_SHA3_384 => 48,
+            Hkdf::hmac_SHA3_512 => 64,
         }
     }
-    /// Return a ring::digest:Digest of a given byte slice.
-    fn hash(&self, data: &[u8]) -> digest::Digest {
-        let method = match *self {
-            Hmac::SHA1 => &digest::SHA1,
-            Hmac::SHA256 => &digest::SHA256,
-            Hmac::SHA384 => &digest::SHA384,
-            Hmac::SHA512 => &digest::SHA512,
+
+    /// Return HMAC matching argument passsed to Hkdf.
+    fn hmac_return_variant(&self, data: &[u8], salt: &[u8]) -> Vec<u8> {
+        let hmac = match *self {
+            Hkdf::hmac_SHA1 => Hmac::SHA1,
+            Hkdf::hmac_SHA2_256 => Hmac::SHA2_256,
+            Hkdf::hmac_SHA2_384 => Hmac::SHA2_384,
+            Hkdf::hmac_SHA2_512 => Hmac::SHA2_512,
+            Hkdf::hmac_SHA3_256 => Hmac::SHA3_256,
+            Hkdf::hmac_SHA3_384 => Hmac::SHA3_384,
+            Hkdf::hmac_SHA3_512 => Hmac::SHA3_512,
         };
-        digest::digest(method, data)
+        hmac.hmac_compute(data, salt)
     }
 
-    /// Return a padded key if the key is less than or greater than the blocksize.
-    fn pad_key<'a>(&self, key: &'a [u8]) -> Cow<'a, [u8]> {
-        let mut key = Cow::from(key);
-
-        if key.len() > self.blocksize() {
-            key = self.hash(&key).as_ref().to_vec().into();
-        }
-        if key.len() < self.blocksize() {
-            let mut resized_key = key.into_owned();
-            resized_key.resize(self.blocksize(), 0x00);
-            key = resized_key.into();
-        }
-        key
+    /// The HKDF Extract step. Returns a PRK (HMAC) from passed salt and IKM.
+    pub fn hkdf_extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
+        self.hmac_return_variant(salt, ikm)
     }
 
-    /// Returns HMAC from a given key and message.
-    pub fn hmac_compute(&self, key: &[u8], message: &[u8]) -> Vec<u8> {
-        let key = self.pad_key(key);
-
-        let make_padded_key = |byte: u8| {
-            let mut pad = key.to_vec();
-            for i in &mut pad { *i ^= byte };
-            pad
-        };
-
-        let mut ipad = make_padded_key(0x36);
-        let mut opad = make_padded_key(0x5C);
-
-        ipad.extend_from_slice(message);
-        opad.extend_from_slice(self.hash(&ipad).as_ref());
-        self.hash(&opad).as_ref().to_vec()
-    }
-
-    /// Check HMAC validity by computing one from key and message, then comparing this to the
-    /// HMAC that has been passed to the function.
-    pub fn hmac_validate(&self, key: &[u8], message: &[u8], hmac: &Vec<u8>) -> bool {
-
-        let check = self.hmac_compute(&key, &message);
-
-        if &check == hmac {
-            true
-        } else {
-            false
+    /// The HKDF Expand step. Returns an HKDF.
+    pub fn hkdf_expand(&self, prk: &[u8], info: &[u8], okm_len: usize) -> Vec<u8> {
+        // Check that the selected key length is within the limit.
+        if okm_len as f32 > 255_f32 * self.hash_return_size() as f32 {
+            panic!("Derived key length above max. Max derived key length is: {:?}",
+                    255_f32 * self.hash_return_size() as f32);
         }
+
+        let n_iter = (okm_len as f32 / self.hash_return_size() as f32).ceil() as usize;
+
+        let mut con_step: Vec<u8> = vec![];
+        let mut t_step: Vec<u8> = vec![];
+        let mut hkdf_final: Vec<u8> = vec![];
+
+        for x in 1..n_iter+1 {
+                con_step.append(&mut t_step);
+                con_step.extend_from_slice(info);
+                con_step.push(x as u8);
+                t_step.extend_from_slice(&self.hmac_return_variant(prk, &con_step));
+                con_step.clear();
+
+                hkdf_final.extend_from_slice(&t_step);
+        }
+
+        hkdf_final.truncate(okm_len);
+
+        hkdf_final
     }
 }
 
 #[cfg(test)]
 mod test {
-    use hmac::Hmac;
     use ring::test;
-    use functions;
+    use hkdf::Hkdf;
 
+    // All expected results have been computed with the python cryptography package at:
+    // https://cryptography.io
+    // Test that expected results are returned
     #[test]
-    // Test that the function pad_key() returns a padded key K
-    // with size of correct BLOCKSIZE for SHA1
-    fn test_pad_key_sha1() {
-        let rand_k: Vec<u8> = functions::gen_rand_key(67);
-        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
-        let rand_k3: Vec<u8> = functions::gen_rand_key(34);
-        assert_eq!(Hmac::SHA1.pad_key(&rand_k).len(), Hmac::SHA1.blocksize());
-        assert_eq!(Hmac::SHA1.pad_key(&rand_k2).len(), Hmac::SHA1.blocksize());
-        assert_eq!(Hmac::SHA1.pad_key(&rand_k3).len(), Hmac::SHA1.blocksize());
+    fn test_hkdf_return() {
+        let ikm = vec![0x61; 5];
+        let salt = vec![0x61; 5];
+        let info = vec![0x61; 5];
+        let length: usize = 50;
+
+        let prk1 = Hkdf::hmac_SHA1.hkdf_extract(&salt, &ikm);
+        let prk256 = Hkdf::hmac_SHA2_256.hkdf_extract(&salt, &ikm);
+        let prk384 = Hkdf::hmac_SHA2_384.hkdf_extract(&salt, &ikm);
+        let prk512 = Hkdf::hmac_SHA2_512.hkdf_extract(&salt, &ikm);
+
+        let actual1 = Hkdf::hmac_SHA1.hkdf_expand(&prk1, &info, length);
+        let actual256 = Hkdf::hmac_SHA2_256.hkdf_expand(&prk256, &info, length);
+        let actual384 = Hkdf::hmac_SHA2_384.hkdf_expand(&prk384, &info, length);
+        let actual512 = Hkdf::hmac_SHA2_512.hkdf_expand(&prk512, &info, length);
+
+        let expected1 = test::from_hex("224e74d59e061324a629b274181cec75bb823bcd494b88f6ce83a815fec14030c9727fc59827e06e76f735169559b46ddf11").unwrap();
+        let expected256 = test::from_hex("f64478d1e58b2070933a13aca0ab75859a41c61283ed985023c964d6287c4b5f653efe8df22a4a82b9e87fc2a8627e3d0063").unwrap();
+        let expected384 = test::from_hex("74686470b67e49954926a71a5ca5e4fd4286a94c020aa7eeba16550db868dc5992ca6c2a13a2bfde7d7cc86c5fdf2bcd8ed1").unwrap();
+        let expected512 = test::from_hex("73b276604fa533dac12af682d7cf9a56150d75efddd2ffbcd3f83d847282df718eeb3ff9d303c0fd54c1177ab00b3fb5f618").unwrap();
+
+        assert_eq!(actual1, expected1);
+        assert_eq!(actual256, expected256);
+        assert_eq!(actual384, expected384);
+        assert_eq!(actual512, expected512);
     }
 
     #[test]
-    // Test that the function pad_key() returns a padded key K
-    // with size of correct BLOCKSIZE for SHA256
-    fn test_pad_key_sha256() {
-        let rand_k: Vec<u8> = functions::gen_rand_key(67);
-        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
-        let rand_k3: Vec<u8> = functions::gen_rand_key(34);
-        assert_eq!(Hmac::SHA256.pad_key(&rand_k).len(), Hmac::SHA256.blocksize());
-        assert_eq!(Hmac::SHA256.pad_key(&rand_k2).len(), Hmac::SHA256.blocksize());
-        assert_eq!(Hmac::SHA256.pad_key(&rand_k3).len(), Hmac::SHA256.blocksize());
+    #[should_panic]
+    // Test that hkdf_expand() panics when a length that is greater than the boundary
+    // is selected.
+    fn test_length_panic_return() {
+        let salt = vec![0x61; 5];
+        let secret = vec![0x67; 5];
+        let info = "10".as_bytes();
+        let len = Hkdf::hmac_SHA2_256.hash_return_size() * 256;
+        let prk = Hkdf::hmac_SHA2_256.hkdf_extract(&salt, &secret);
+        let actual = Hkdf::hmac_SHA2_256.hkdf_expand(&prk, &info, len as usize);
     }
 
-    #[test]
-    // Test that the function pad_key() returns a padded key K
-    // with size of correct BLOCKSIZE for SHA384
-    fn test_pad_key_sha384() {
-        let rand_k: Vec<u8> = functions::gen_rand_key(67);
-        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
-        let rand_k3: Vec<u8> = functions::gen_rand_key(34);
-        assert_eq!(Hmac::SHA384.pad_key(&rand_k).len(), Hmac::SHA384.blocksize());
-        assert_eq!(Hmac::SHA384.pad_key(&rand_k2).len(), Hmac::SHA384.blocksize());
-        assert_eq!(Hmac::SHA384.pad_key(&rand_k3).len(), Hmac::SHA384.blocksize());
-    }
-
-    #[test]
-    // Test that the function pad_key() returns a padded key K
-    // with size of correct BLOCKSIZE for SHA512
-    fn test_pad_key_sha512() {
-        let rand_k: Vec<u8> = functions::gen_rand_key(67);
-        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
-        let rand_k3: Vec<u8> = functions::gen_rand_key(34);
-        assert_eq!(Hmac::SHA512.pad_key(&rand_k).len(), Hmac::SHA512.blocksize());
-        assert_eq!(Hmac::SHA512.pad_key(&rand_k2).len(), Hmac::SHA512.blocksize());
-        assert_eq!(Hmac::SHA512.pad_key(&rand_k3).len(), Hmac::SHA512.blocksize());
-    }
-
-    #[test]
-    // Test that hmac_compute() returns expected HMAC digests
-    fn test_hmac_compute_result() {
-        let key = vec![0x61; 5];
-        let message = vec![0x61; 5];
-
-        let actual_sha1 = Hmac::SHA1.hmac_compute(&key, &message);
-        let actual_sha256 = Hmac::SHA256.hmac_compute(&key, &message);
-        let actual_sha384 = Hmac::SHA384.hmac_compute(&key, &message);
-        let actual_sha512 = Hmac::SHA512.hmac_compute(&key, &message);
-
-        // Expected values from: https://www.freeformatter.com/hmac-generator.html#ad-output
-        let expected_sha1 = test::from_hex("40a50a7b74cf6099ee7082e3b4e2fd51f002f29d").unwrap();
-        let expected_sha256 = test::from_hex("c960dd5485480f51044c1afa312fecc5ab58548f9f108a5062a3bc229fd02359").unwrap();
-        let expected_sha384 = test::from_hex("6b0d10e1f341c5d9d9c3fb59431ee2ba155b5fa75e25a73bcd418d8a8a45c9562741a1214537fc33b08db20a1d52e037").unwrap();
-        let expected_sha512 = test::from_hex("aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf").unwrap();
-        assert_eq!(actual_sha1, expected_sha1);
-        assert_eq!(actual_sha256, expected_sha256);
-        assert_eq!(actual_sha384, expected_sha384);
-        assert_eq!(actual_sha512, expected_sha512);
-    }
-
-    #[test]
-    // Test that hmac_validate() returns true if signatures match and false if not
-    fn test_hmac_validate() {
-        let key = vec![0x61; 5];
-        let message = vec![0x62; 5];
-        let wrong_key = vec![0x67; 5];
-
-        let recieved_sha1 = Hmac::SHA1.hmac_compute(&key, &message);
-        let recieved_sha256 = Hmac::SHA256.hmac_compute(&key, &message);
-        let recieved_sha384 = Hmac::SHA384.hmac_compute(&key, &message);
-        let recieved_sha512 = Hmac::SHA512.hmac_compute(&key, &message);
-
-
-        assert_eq!(Hmac::SHA1.hmac_validate(&key, &message, &recieved_sha1), true);
-        assert_eq!(Hmac::SHA1.hmac_validate(&wrong_key, &message, &recieved_sha1), false);
-
-        assert_eq!(Hmac::SHA256.hmac_validate(&key, &message, &recieved_sha256), true);
-        assert_eq!(Hmac::SHA256.hmac_validate(&wrong_key, &message, &recieved_sha256), false);
-
-        assert_eq!(Hmac::SHA384.hmac_validate(&key, &message, &recieved_sha384), true);
-        assert_eq!(Hmac::SHA384.hmac_validate(&wrong_key, &message, &recieved_sha384), false);
-
-        assert_eq!(Hmac::SHA512.hmac_validate(&key, &message, &recieved_sha512), true);
-        assert_eq!(Hmac::SHA512.hmac_validate(&wrong_key, &message, &recieved_sha512), false);
-    }
 }
