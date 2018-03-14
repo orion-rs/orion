@@ -7,14 +7,14 @@ more, as long as I can find the time for it. Contributions are more than welcome
 
 
 Currently contains:
-* HMAC with SHA1, SHA2(256,384,512), and SHA3(256,384,512).
+* HMAC with SHA1 and SHA2(256, 384, 512).
 * HKDF with the above HMAC options.
 
 ### Usage
 Include it in your `Cargo.toml` file:
 ```
 [dependencies]
-orion = ">=0.1.3"
+orion = ">=0.1.4"
 ```
 and in relevant files:
 ```

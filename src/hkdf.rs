@@ -7,9 +7,6 @@ pub enum Hkdf {
     hmac_SHA2_256,
     hmac_SHA2_384,
     hmac_SHA2_512,
-    hmac_SHA3_256,
-    hmac_SHA3_384,
-    hmac_SHA3_512,
 }
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
@@ -37,9 +34,6 @@ impl Hkdf {
             Hkdf::hmac_SHA2_256 => 32,
             Hkdf::hmac_SHA2_384 => 48,
             Hkdf::hmac_SHA2_512 => 64,
-            Hkdf::hmac_SHA3_256 => 32,
-            Hkdf::hmac_SHA3_384 => 48,
-            Hkdf::hmac_SHA3_512 => 64,
         }
     }
 
@@ -50,9 +44,6 @@ impl Hkdf {
             Hkdf::hmac_SHA2_256 => Hmac::SHA2_256,
             Hkdf::hmac_SHA2_384 => Hmac::SHA2_384,
             Hkdf::hmac_SHA2_512 => Hmac::SHA2_512,
-            Hkdf::hmac_SHA3_256 => Hmac::SHA3_256,
-            Hkdf::hmac_SHA3_384 => Hmac::SHA3_384,
-            Hkdf::hmac_SHA3_512 => Hmac::SHA3_512,
         };
         hmac.hmac_compute(data, salt)
     }
