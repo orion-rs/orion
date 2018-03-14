@@ -94,7 +94,9 @@ impl Hkdf {
 
 #[cfg(test)]
 mod test {
-    use ring::test;
+    extern crate hex;
+
+    use self::hex::decode;
     use hkdf::Hkdf;
 
     // All expected results have been computed with the python cryptography package at:
@@ -117,15 +119,15 @@ mod test {
         let actual384 = Hkdf::hmac_SHA2_384.hkdf_expand(&prk384, &info, length);
         let actual512 = Hkdf::hmac_SHA2_512.hkdf_expand(&prk512, &info, length);
 
-        let expected1 = test::from_hex("224e74d59e061324a629b274181cec75bb823bcd494b88f6ce83a815fec14030c9727fc59827e06e76f735169559b46ddf11").unwrap();
-        let expected256 = test::from_hex("f64478d1e58b2070933a13aca0ab75859a41c61283ed985023c964d6287c4b5f653efe8df22a4a82b9e87fc2a8627e3d0063").unwrap();
-        let expected384 = test::from_hex("74686470b67e49954926a71a5ca5e4fd4286a94c020aa7eeba16550db868dc5992ca6c2a13a2bfde7d7cc86c5fdf2bcd8ed1").unwrap();
-        let expected512 = test::from_hex("73b276604fa533dac12af682d7cf9a56150d75efddd2ffbcd3f83d847282df718eeb3ff9d303c0fd54c1177ab00b3fb5f618").unwrap();
+        let expected1 = decode("224e74d59e061324a629b274181cec75bb823bcd494b88f6ce83a815fec14030c9727fc59827e06e76f735169559b46ddf11");
+        let expected256 = decode("f64478d1e58b2070933a13aca0ab75859a41c61283ed985023c964d6287c4b5f653efe8df22a4a82b9e87fc2a8627e3d0063");
+        let expected384 = decode("74686470b67e49954926a71a5ca5e4fd4286a94c020aa7eeba16550db868dc5992ca6c2a13a2bfde7d7cc86c5fdf2bcd8ed1");
+        let expected512 = decode("73b276604fa533dac12af682d7cf9a56150d75efddd2ffbcd3f83d847282df718eeb3ff9d303c0fd54c1177ab00b3fb5f618");
 
-        assert_eq!(actual1, expected1);
-        assert_eq!(actual256, expected256);
-        assert_eq!(actual384, expected384);
-        assert_eq!(actual512, expected512);
+        assert_eq!(Ok(actual1), expected1);
+        assert_eq!(Ok(actual256), expected256);
+        assert_eq!(Ok(actual384), expected384);
+        assert_eq!(Ok(actual512), expected512);
     }
 
     #[test]

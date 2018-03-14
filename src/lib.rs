@@ -1,5 +1,4 @@
 extern crate rand;
-extern crate ring;
 extern crate sha1;
 extern crate sha2;
 extern crate sha3;

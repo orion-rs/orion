@@ -9,8 +9,10 @@ repository = "https://github.com/brycx/orion"
 license = "MIT"
 
 [dependencies]
-ring = ">=0.12.1"
 rand = ">=0.4.2"
 sha-1 = "0.7.0"
 sha2 = "0.7.0"
 sha3 = "0.7.2"
+
+[dev-dependencies]
+hex = "0.3.1"

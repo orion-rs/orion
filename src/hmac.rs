@@ -1,4 +1,3 @@
-//use ring::digest;
 use std::borrow::Cow;
 use sha1::Digest;
 use sha1;
@@ -149,8 +148,10 @@ impl Hmac {
 
 #[cfg(test)]
 mod test {
+    extern crate hex;
+
     use hmac::Hmac;
-    use ring::test;
+    use self::hex::decode;
     use functions;
 
 
@@ -225,24 +226,25 @@ mod test {
         let actual_sha3_512 = Hmac::SHA3_512.hmac_compute(&key, &message);
 
         // Expected values from: https://www.liavaag.org/English/SHA-Generator/HMAC/
-        let expected_sha1 = test::from_hex("40a50a7b74cf6099ee7082e3b4e2fd51f002f29d").unwrap();
+        let expected_sha1 = decode("40a50a7b74cf6099ee7082e3b4e2fd51f002f29d");
         // SHA2
-        let expected_sha2_256 = test::from_hex("c960dd5485480f51044c1afa312fecc5ab58548f9f108a5062a3bc229fd02359").unwrap();
-        let expected_sha2_384 = test::from_hex("6b0d10e1f341c5d9d9c3fb59431ee2ba155b5fa75e25a73bcd418d8a8a45c9562741a1214537fc33b08db20a1d52e037").unwrap();
-        let expected_sha2_512 = test::from_hex("aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf").unwrap();
+        let expected_sha2_256 = decode("c960dd5485480f51044c1afa312fecc5ab58548f9f108a5062a3bc229fd02359");
+        let expected_sha2_384 = decode("6b0d10e1f341c5d9d9c3fb59431ee2ba155b5fa75e25a73bcd418d8a8a45c9562741a1214537fc33b08db20a1d52e037");
+        let expected_sha2_512 = decode("aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf");
         // SHA3
-        let expected_sha3_256 = test::from_hex("90358ebe37dfa998ec9ce39ed955cc310eec8b2ad6b7ab1b8979fd1830b35d98").unwrap();
-        let expected_sha3_384 = test::from_hex("2332fb0d0b78d144971db2aa8c67ea7de51bf392a81525f6f1ed3e1664f50374149bd953160a1941dd4c154fb0ec3160").unwrap();
-        let expected_sha3_512 = test::from_hex("d09952383390e5a89d46116d710e468f38cd618fdcddac7c8841cc689d687db18e839c7182d8a729bfed266884e280fcc34d78c79231a22fb54e7424896ce70b").unwrap();
-        assert_eq!(actual_sha1, expected_sha1);
+        let expected_sha3_256 = decode("90358ebe37dfa998ec9ce39ed955cc310eec8b2ad6b7ab1b8979fd1830b35d98");
+        let expected_sha3_384 = decode("2332fb0d0b78d144971db2aa8c67ea7de51bf392a81525f6f1ed3e1664f50374149bd953160a1941dd4c154fb0ec3160");
+        let expected_sha3_512 = decode("d09952383390e5a89d46116d710e468f38cd618fdcddac7c8841cc689d687db18e839c7182d8a729bfed266884e280fcc34d78c79231a22fb54e7424896ce70b");
+
+        assert_eq!(Ok(actual_sha1), expected_sha1);
         // SHA2
-        assert_eq!(actual_sha2_256, expected_sha2_256);
-        assert_eq!(actual_sha2_384, expected_sha2_384);
-        assert_eq!(actual_sha2_512, expected_sha2_512);
+        assert_eq!(Ok(actual_sha2_256), expected_sha2_256);
+        assert_eq!(Ok(actual_sha2_384), expected_sha2_384);
+        assert_eq!(Ok(actual_sha2_512), expected_sha2_512);
         // SHA3
-        assert_eq!(actual_sha3_256, expected_sha3_256);
-        assert_eq!(actual_sha3_384, expected_sha3_384);
-        assert_eq!(actual_sha3_512, expected_sha3_512);
+        assert_eq!(Ok(actual_sha3_256), expected_sha3_256);
+        assert_eq!(Ok(actual_sha3_384), expected_sha3_384);
+        assert_eq!(Ok(actual_sha3_512), expected_sha3_512);
     }
 
     #[test]
