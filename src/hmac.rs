@@ -153,6 +153,7 @@ mod test {
     use ring::test;
     use functions;
 
+
     #[test]
     // Test that the function pad_key() returns a padded key K
     // with size of correct BLOCKSIZE for SHA1
@@ -167,38 +168,44 @@ mod test {
 
     #[test]
     // Test that the function pad_key() returns a padded key K
-    // with size of correct BLOCKSIZE for SHA256
-    fn test_pad_key_sha256() {
+    // with size of correct BLOCKSIZE for SHA2
+    fn test_pad_key_sha2() {
         let rand_k: Vec<u8> = functions::gen_rand_key(67);
         let rand_k2: Vec<u8> = functions::gen_rand_key(130);
         let rand_k3: Vec<u8> = functions::gen_rand_key(34);
+
         assert_eq!(Hmac::SHA2_256.pad_key(&rand_k).len(), Hmac::SHA2_256.blocksize());
         assert_eq!(Hmac::SHA2_256.pad_key(&rand_k2).len(), Hmac::SHA2_256.blocksize());
         assert_eq!(Hmac::SHA2_256.pad_key(&rand_k3).len(), Hmac::SHA2_256.blocksize());
-    }
 
-    #[test]
-    // Test that the function pad_key() returns a padded key K
-    // with size of correct BLOCKSIZE for SHA384
-    fn test_pad_key_sha384() {
-        let rand_k: Vec<u8> = functions::gen_rand_key(67);
-        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
-        let rand_k3: Vec<u8> = functions::gen_rand_key(34);
         assert_eq!(Hmac::SHA2_384.pad_key(&rand_k).len(), Hmac::SHA2_384.blocksize());
         assert_eq!(Hmac::SHA2_384.pad_key(&rand_k2).len(), Hmac::SHA2_384.blocksize());
         assert_eq!(Hmac::SHA2_384.pad_key(&rand_k3).len(), Hmac::SHA2_384.blocksize());
+
+        assert_eq!(Hmac::SHA2_512.pad_key(&rand_k).len(), Hmac::SHA2_512.blocksize());
+        assert_eq!(Hmac::SHA2_512.pad_key(&rand_k2).len(), Hmac::SHA2_512.blocksize());
+        assert_eq!(Hmac::SHA2_512.pad_key(&rand_k3).len(), Hmac::SHA2_512.blocksize());
     }
 
     #[test]
     // Test that the function pad_key() returns a padded key K
-    // with size of correct BLOCKSIZE for SHA512
-    fn test_pad_key_sha512() {
+    // with size of correct BLOCKSIZE for SHA3
+    fn test_pad_key_sha3() {
         let rand_k: Vec<u8> = functions::gen_rand_key(67);
         let rand_k2: Vec<u8> = functions::gen_rand_key(130);
         let rand_k3: Vec<u8> = functions::gen_rand_key(34);
-        assert_eq!(Hmac::SHA2_512.pad_key(&rand_k).len(), Hmac::SHA2_512.blocksize());
-        assert_eq!(Hmac::SHA2_512.pad_key(&rand_k2).len(), Hmac::SHA2_512.blocksize());
-        assert_eq!(Hmac::SHA2_512.pad_key(&rand_k3).len(), Hmac::SHA2_512.blocksize());
+
+        assert_eq!(Hmac::SHA3_256.pad_key(&rand_k).len(), Hmac::SHA3_256.blocksize());
+        assert_eq!(Hmac::SHA3_256.pad_key(&rand_k2).len(), Hmac::SHA3_256.blocksize());
+        assert_eq!(Hmac::SHA3_256.pad_key(&rand_k3).len(), Hmac::SHA3_256.blocksize());
+
+        assert_eq!(Hmac::SHA3_384.pad_key(&rand_k).len(), Hmac::SHA3_384.blocksize());
+        assert_eq!(Hmac::SHA3_384.pad_key(&rand_k2).len(), Hmac::SHA3_384.blocksize());
+        assert_eq!(Hmac::SHA3_384.pad_key(&rand_k3).len(), Hmac::SHA3_384.blocksize());
+
+        assert_eq!(Hmac::SHA3_512.pad_key(&rand_k).len(), Hmac::SHA3_512.blocksize());
+        assert_eq!(Hmac::SHA3_512.pad_key(&rand_k2).len(), Hmac::SHA3_512.blocksize());
+        assert_eq!(Hmac::SHA3_512.pad_key(&rand_k3).len(), Hmac::SHA3_512.blocksize());
     }
 
     #[test]
@@ -208,25 +215,31 @@ mod test {
         let message = vec![0x61; 5];
 
         let actual_sha1 = Hmac::SHA1.hmac_compute(&key, &message);
+        // SHA2
         let actual_sha2_256 = Hmac::SHA2_256.hmac_compute(&key, &message);
         let actual_sha2_384 = Hmac::SHA2_384.hmac_compute(&key, &message);
         let actual_sha2_512 = Hmac::SHA2_512.hmac_compute(&key, &message);
+        // SHA3
         let actual_sha3_256 = Hmac::SHA3_256.hmac_compute(&key, &message);
         let actual_sha3_384 = Hmac::SHA3_384.hmac_compute(&key, &message);
         let actual_sha3_512 = Hmac::SHA3_512.hmac_compute(&key, &message);
 
         // Expected values from: https://www.liavaag.org/English/SHA-Generator/HMAC/
         let expected_sha1 = test::from_hex("40a50a7b74cf6099ee7082e3b4e2fd51f002f29d").unwrap();
+        // SHA2
         let expected_sha2_256 = test::from_hex("c960dd5485480f51044c1afa312fecc5ab58548f9f108a5062a3bc229fd02359").unwrap();
         let expected_sha2_384 = test::from_hex("6b0d10e1f341c5d9d9c3fb59431ee2ba155b5fa75e25a73bcd418d8a8a45c9562741a1214537fc33b08db20a1d52e037").unwrap();
         let expected_sha2_512 = test::from_hex("aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf").unwrap();
+        // SHA3
         let expected_sha3_256 = test::from_hex("90358ebe37dfa998ec9ce39ed955cc310eec8b2ad6b7ab1b8979fd1830b35d98").unwrap();
         let expected_sha3_384 = test::from_hex("2332fb0d0b78d144971db2aa8c67ea7de51bf392a81525f6f1ed3e1664f50374149bd953160a1941dd4c154fb0ec3160").unwrap();
         let expected_sha3_512 = test::from_hex("d09952383390e5a89d46116d710e468f38cd618fdcddac7c8841cc689d687db18e839c7182d8a729bfed266884e280fcc34d78c79231a22fb54e7424896ce70b").unwrap();
         assert_eq!(actual_sha1, expected_sha1);
+        // SHA2
         assert_eq!(actual_sha2_256, expected_sha2_256);
         assert_eq!(actual_sha2_384, expected_sha2_384);
         assert_eq!(actual_sha2_512, expected_sha2_512);
+        // SHA3
         assert_eq!(actual_sha3_256, expected_sha3_256);
         assert_eq!(actual_sha3_384, expected_sha3_384);
         assert_eq!(actual_sha3_512, expected_sha3_512);
@@ -240,21 +253,35 @@ mod test {
         let wrong_key = vec![0x67; 5];
 
         let recieved_sha1 = Hmac::SHA1.hmac_compute(&key, &message);
-        let recieved_sha256 = Hmac::SHA2_256.hmac_compute(&key, &message);
-        let recieved_sha384 = Hmac::SHA2_384.hmac_compute(&key, &message);
-        let recieved_sha512 = Hmac::SHA2_512.hmac_compute(&key, &message);
+
+        let recieved_sha2_256 = Hmac::SHA2_256.hmac_compute(&key, &message);
+        let recieved_sha2_384 = Hmac::SHA2_384.hmac_compute(&key, &message);
+        let recieved_sha2_512 = Hmac::SHA2_512.hmac_compute(&key, &message);
+
+        let recieved_sha3_256 = Hmac::SHA3_256.hmac_compute(&key, &message);
+        let recieved_sha3_384 = Hmac::SHA3_384.hmac_compute(&key, &message);
+        let recieved_sha3_512 = Hmac::SHA3_512.hmac_compute(&key, &message);
 
 
         assert_eq!(Hmac::SHA1.hmac_validate(&key, &message, &recieved_sha1), true);
         assert_eq!(Hmac::SHA1.hmac_validate(&wrong_key, &message, &recieved_sha1), false);
 
-        assert_eq!(Hmac::SHA2_256.hmac_validate(&key, &message, &recieved_sha256), true);
-        assert_eq!(Hmac::SHA2_256.hmac_validate(&wrong_key, &message, &recieved_sha256), false);
+        assert_eq!(Hmac::SHA2_256.hmac_validate(&key, &message, &recieved_sha2_256), true);
+        assert_eq!(Hmac::SHA2_256.hmac_validate(&wrong_key, &message, &recieved_sha2_256), false);
 
-        assert_eq!(Hmac::SHA2_384.hmac_validate(&key, &message, &recieved_sha384), true);
-        assert_eq!(Hmac::SHA2_384.hmac_validate(&wrong_key, &message, &recieved_sha384), false);
+        assert_eq!(Hmac::SHA2_384.hmac_validate(&key, &message, &recieved_sha2_384), true);
+        assert_eq!(Hmac::SHA2_384.hmac_validate(&wrong_key, &message, &recieved_sha2_384), false);
 
-        assert_eq!(Hmac::SHA2_512.hmac_validate(&key, &message, &recieved_sha512), true);
-        assert_eq!(Hmac::SHA2_512.hmac_validate(&wrong_key, &message, &recieved_sha512), false);
+        assert_eq!(Hmac::SHA2_512.hmac_validate(&key, &message, &recieved_sha2_512), true);
+        assert_eq!(Hmac::SHA2_512.hmac_validate(&wrong_key, &message, &recieved_sha2_512), false);
+
+        assert_eq!(Hmac::SHA3_256.hmac_validate(&key, &message, &recieved_sha3_256), true);
+        assert_eq!(Hmac::SHA3_256.hmac_validate(&wrong_key, &message, &recieved_sha3_256), false);
+
+        assert_eq!(Hmac::SHA3_384.hmac_validate(&key, &message, &recieved_sha3_384), true);
+        assert_eq!(Hmac::SHA3_384.hmac_validate(&wrong_key, &message, &recieved_sha3_384), false);
+
+        assert_eq!(Hmac::SHA3_512.hmac_validate(&key, &message, &recieved_sha3_512), true);
+        assert_eq!(Hmac::SHA3_512.hmac_validate(&wrong_key, &message, &recieved_sha3_512), false);
     }
 }
