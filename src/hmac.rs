@@ -53,24 +53,24 @@ impl Hmac {
 
         match *self {
             Hmac::SHA1 => {
-                let mut fun = sha1::Sha1::default();
-                fun.input(data);
-                fun.result().to_vec()
+                let mut hash = sha1::Sha1::default();
+                hash.input(data);
+                hash.result().to_vec()
             },
             Hmac::SHA2_256 => {
-                let mut fun = sha2::Sha256::default();
-                fun.input(data);
-                fun.result().to_vec()
+                let mut hash = sha2::Sha256::default();
+                hash.input(data);
+                hash.result().to_vec()
             },
             Hmac::SHA2_384 => {
-                let mut fun = sha2::Sha384::default();
-                fun.input(data);
-                fun.result().to_vec()
+                let mut hash = sha2::Sha384::default();
+                hash.input(data);
+                hash.result().to_vec()
             },
             Hmac::SHA2_512 => {
-                let mut fun = sha2::Sha512::default();
-                fun.input(data);
-                fun.result().to_vec()
+                let mut hash = sha2::Sha512::default();
+                hash.input(data);
+                hash.result().to_vec()
             },
         }
     }
