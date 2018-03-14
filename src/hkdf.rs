@@ -4,9 +4,12 @@ use hmac::Hmac;
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub enum Hkdf {
     hmac_SHA1,
-    hmac_SHA256,
-    hmac_SHA384,
-    hmac_SHA512,
+    hmac_SHA2_256,
+    hmac_SHA2_384,
+    hmac_SHA2_512,
+    hmac_SHA3_256,
+    hmac_SHA3_384,
+    hmac_SHA3_512,
 }
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
@@ -22,8 +25,8 @@ pub enum Hkdf {
 /// let salt = functions::gen_rand_key(10);
 /// let info = functions::gen_rand_key(10);
 ///
-/// let prk = Hkdf::hmac_SHA512.hkdf_extract(&salt, &key);
-/// let d_key = Hkdf::hmac_SHA512.hkdf_expand(&prk, &info, 50);
+/// let prk = Hkdf::hmac_SHA2_512.hkdf_extract(&salt, &key);
+/// let d_key = Hkdf::hmac_SHA2_512.hkdf_expand(&prk, &info, 50);
 /// ```
 
 impl Hkdf {
@@ -31,9 +34,12 @@ impl Hkdf {
     fn hash_return_size(&self) -> usize {
         match *self {
             Hkdf::hmac_SHA1 => 20,
-            Hkdf::hmac_SHA256 => 32,
-            Hkdf::hmac_SHA384 => 48,
-            Hkdf::hmac_SHA512 => 64,
+            Hkdf::hmac_SHA2_256 => 32,
+            Hkdf::hmac_SHA2_384 => 48,
+            Hkdf::hmac_SHA2_512 => 64,
+            Hkdf::hmac_SHA3_256 => 32,
+            Hkdf::hmac_SHA3_384 => 48,
+            Hkdf::hmac_SHA3_512 => 64,
         }
     }
 
@@ -41,9 +47,12 @@ impl Hkdf {
     fn hmac_return_variant(&self, data: &[u8], salt: &[u8]) -> Vec<u8> {
         let hmac = match *self {
             Hkdf::hmac_SHA1 => Hmac::SHA1,
-            Hkdf::hmac_SHA256 => Hmac::SHA256,
-            Hkdf::hmac_SHA384 => Hmac::SHA384,
-            Hkdf::hmac_SHA512 => Hmac::SHA512,
+            Hkdf::hmac_SHA2_256 => Hmac::SHA2_256,
+            Hkdf::hmac_SHA2_384 => Hmac::SHA2_384,
+            Hkdf::hmac_SHA2_512 => Hmac::SHA2_512,
+            Hkdf::hmac_SHA3_256 => Hmac::SHA3_256,
+            Hkdf::hmac_SHA3_384 => Hmac::SHA3_384,
+            Hkdf::hmac_SHA3_512 => Hmac::SHA3_512,
         };
         hmac.hmac_compute(data, salt)
     }
@@ -99,14 +108,14 @@ mod test {
         let length: usize = 50;
 
         let prk1 = Hkdf::hmac_SHA1.hkdf_extract(&salt, &ikm);
-        let prk256 = Hkdf::hmac_SHA256.hkdf_extract(&salt, &ikm);
-        let prk384 = Hkdf::hmac_SHA384.hkdf_extract(&salt, &ikm);
-        let prk512 = Hkdf::hmac_SHA512.hkdf_extract(&salt, &ikm);
+        let prk256 = Hkdf::hmac_SHA2_256.hkdf_extract(&salt, &ikm);
+        let prk384 = Hkdf::hmac_SHA2_384.hkdf_extract(&salt, &ikm);
+        let prk512 = Hkdf::hmac_SHA2_512.hkdf_extract(&salt, &ikm);
 
         let actual1 = Hkdf::hmac_SHA1.hkdf_expand(&prk1, &info, length);
-        let actual256 = Hkdf::hmac_SHA256.hkdf_expand(&prk256, &info, length);
-        let actual384 = Hkdf::hmac_SHA384.hkdf_expand(&prk384, &info, length);
-        let actual512 = Hkdf::hmac_SHA512.hkdf_expand(&prk512, &info, length);
+        let actual256 = Hkdf::hmac_SHA2_256.hkdf_expand(&prk256, &info, length);
+        let actual384 = Hkdf::hmac_SHA2_384.hkdf_expand(&prk384, &info, length);
+        let actual512 = Hkdf::hmac_SHA2_512.hkdf_expand(&prk512, &info, length);
 
         let expected1 = test::from_hex("224e74d59e061324a629b274181cec75bb823bcd494b88f6ce83a815fec14030c9727fc59827e06e76f735169559b46ddf11").unwrap();
         let expected256 = test::from_hex("f64478d1e58b2070933a13aca0ab75859a41c61283ed985023c964d6287c4b5f653efe8df22a4a82b9e87fc2a8627e3d0063").unwrap();
@@ -127,9 +136,9 @@ mod test {
         let salt = vec![0x61; 5];
         let secret = vec![0x67; 5];
         let info = "10".as_bytes();
-        let len = Hkdf::hmac_SHA256.hash_return_size() * 256;
-        let prk = Hkdf::hmac_SHA256.hkdf_extract(&salt, &secret);
-        let actual = Hkdf::hmac_SHA256.hkdf_expand(&prk, &info, len as usize);
+        let len = Hkdf::hmac_SHA2_256.hash_return_size() * 256;
+        let prk = Hkdf::hmac_SHA2_256.hkdf_extract(&salt, &secret);
+        let actual = Hkdf::hmac_SHA2_256.hkdf_expand(&prk, &info, len as usize);
     }
 
 }
