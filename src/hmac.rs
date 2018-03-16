@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use sha2::Digest;
 use sha2;
+use clear_on_drop::clear;
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
@@ -9,6 +10,25 @@ pub enum Hmac {
     SHA2_384,
     SHA2_512,
 }
+
+
+pub struct HmacR {
+    secret_key: Vec<u8>,
+    message: Vec<u8>,
+}
+
+impl HmacR {
+    
+
+}
+
+impl Drop for HmacR {
+    fn drop(&mut self) {
+        self.secret_key.clear()
+    }
+}
+
+
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
