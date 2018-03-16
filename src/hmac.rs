@@ -5,6 +5,9 @@ use clear_on_drop::clear;
 use util::compare_ct;
 
 
+/// HMAC (Hash-based Message Authentication Code) as specified in the
+/// [RFC 2104](https://tools.ietf.org/html/rfc2104).
+
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
 pub struct Hmac {
@@ -12,6 +15,37 @@ pub struct Hmac {
     message: Vec<u8>,
     sha2: u32,
 }
+
+
+/// HMAC (Hash-based Message Authentication Code) as specified in the
+/// [RFC 2104](https://tools.ietf.org/html/rfc2104).
+///
+/// # Usage examples:
+/// ### Generating HMAC:
+/// ```
+/// use orion::hmac::Hmac;
+/// use orion::util::gen_rand_key;
+///
+/// let key = gen_rand_key(10);
+/// let message = gen_rand_key(10);
+///
+/// let hmac_sha256 = Hmac { secret_key: &key, message: &message, 256 };
+///
+/// hmac_sha256.hmac_compute()
+/// ```
+/// ### Verifying HMAC:
+/// ```
+/// use orion::hmac::Hmac;
+/// use orion::util::gen_rand_key;
+///
+/// let key = gen_rand_key(10);
+/// let message = gen_rand_key(10);
+///
+/// let hmac_sha256 = Hmac { secret_key: &key.clone(), message: &message.clone(), 256 };
+/// let received_hmac =  Hmac { secret_key: &key.clone(), message: &message.clone(), 256 };
+///
+///assert_eq!(hmac_sha256.hmac_validate(received_hmac.hmac_compute(), self.outputsize()), true);
+/// ```
 
 impl Drop for Hmac {
     fn drop(&mut self) {
@@ -47,12 +81,12 @@ impl Hmac {
     fn hash(&self, data: &[u8]) -> Vec<u8> {
         match self.sha2 {
             256 => {
-                let mut hash = sha2::Sha512::default();
+                let mut hash = sha2::Sha256::default();
                 hash.input(data);
                 hash.result().to_vec()
             },
             384 => {
-                let mut hash = sha2::Sha512::default();
+                let mut hash = sha2::Sha384::default();
                 hash.input(data);
                 hash.result().to_vec()
             },
@@ -114,20 +148,45 @@ impl Hmac {
 mod test {
     extern crate hex;
     use self::hex::decode;
-    use hmac::HmacR;
+    use hmac::Hmac;
 
     #[test]
-    fn test_run_new() {
+    fn test_hmac_return_result() {
         let key = vec![0x61; 5];
         let message = vec![0x61; 5];
 
-        let maccer = HmacR { secret_key: key, message: message, sha2: 512 };
-        let summ = maccer.hmac_compute();
-        let expected_sha2_512 = decode("aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf");
+        let hmac_256 = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
+        let hmac_384 = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 384 };
+        let hmac_512 = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 512 };
+
+        // Expected values from: https://www.liavaag.org/English/SHA-Generator/HMAC/
+        let expected_hmac_256 = decode(
+            "c960dd5485480f51044c1afa312fecc5ab58548f9f108a5062a3bc229fd02359");
+        let expected_hmac_384 = decode(
+            "6b0d10e1f341c5d9d9c3fb59431ee2ba155b5fa75e25a73bcd418d8a8a45c956\
+            2741a1214537fc33b08db20a1d52e037");
+        let expected_hmac_512 = decode(
+            "aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e\
+            4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf");
+
+        assert_eq!(Ok(hmac_256.hmac_compute()), expected_hmac_256);
+        assert_eq!(Ok(hmac_384.hmac_compute()), expected_hmac_384);
+        assert_eq!(Ok(hmac_512.hmac_compute()), expected_hmac_512);
+    }
 
 
-        //assert_eq!(HmacR::hmac_validate(&key, &message, &actual_sha2_512), true);
-        assert_eq!(Ok(summ), expected_sha2_512);
+    #[test]
+    // Test that hmac_validate() returns true if signatures match and false if not
+    fn test_hmac_validate() {
+        let key = vec![0x61; 5];
+        let message = vec![0x62; 5];
+        let wrong_key = vec![0x67; 5];
 
+        let own_hmac = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
+        let recieved_hmac = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
+        let false_hmac = Hmac { secret_key: key.clone(), message: wrong_key.clone(), sha2: 256 };
+
+        assert_eq!(own_hmac.hmac_validate(&recieved_hmac.hmac_compute()), true);
+        assert_eq!(own_hmac.hmac_validate(&false_hmac.hmac_compute()), false);
     }
 }
