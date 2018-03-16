@@ -13,7 +13,6 @@ pub enum Hmac {
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 ///
-/// All available SHA variants are provided by [ring](https://github.com/briansmith/ring).
 /// # Usage examples:
 /// ### Generating HMAC:
 /// ```
