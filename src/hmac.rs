@@ -11,19 +11,79 @@ pub enum Hmac {
     SHA2_512,
 }
 
-
 pub struct HmacR {
     secret_key: Vec<u8>,
     message: Vec<u8>,
 }
 
 impl HmacR {
-    
 
+    pub const BLOCKSIZE: usize = 128;
+
+    /// Return blocksize matching SHA variant.
+    fn blocksize() -> usize {
+        HmacR::BLOCKSIZE
+    }
+
+    /// Return a byte vector of a given byte slice.
+    fn hash(data: &[u8]) -> Vec<u8> {
+        let mut hash = sha2::Sha512::default();
+        hash.input(data);
+        hash.result().to_vec()
+    }
+
+    /// Return a padded key if the key is less than or greater than the blocksize.
+    fn pad_key<'a>(secret_key: &'a [u8]) -> Cow<'a, [u8]> {
+        let mut key = Cow::from(secret_key);
+
+        if key.len() > HmacR::blocksize() {
+            key = HmacR::hash(&key).into();
+
+        }
+        if key.len() < HmacR::blocksize() {
+            let mut resized_key = key.into_owned();
+            resized_key.resize(HmacR::blocksize(), 0x00);
+            key = resized_key.into();
+        }
+        key
+    }
+
+    /// Returns HMAC from a given key and message.
+    pub fn hmac_compute(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
+        let key = HmacR::pad_key(secret_key);
+
+        let make_padded_key = |byte: u8| {
+            let mut pad = key.to_vec();
+            for i in &mut pad { *i ^= byte };
+            pad
+        };
+
+        let mut ipad = make_padded_key(0x36);
+        let mut opad = make_padded_key(0x5C);
+
+        ipad.extend_from_slice(message);
+        opad.extend_from_slice(HmacR::hash(&ipad).as_ref());
+        HmacR::hash(&opad).to_vec()
+
+    }
+
+    /// Check HMAC validity by computing one from key and message, then comparing this to the
+    /// HMAC that has been passed to the function.
+    pub fn hmac_validate(key: &[u8], message: &[u8], hmac: &Vec<u8>) -> bool {
+
+        let check = HmacR::hmac_compute(&key, &message);
+
+        if &check == hmac {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 impl Drop for HmacR {
     fn drop(&mut self) {
+        println!("DROPPED");
         self.secret_key.clear()
     }
 }
@@ -142,6 +202,21 @@ mod test {
     use hmac::Hmac;
     use self::hex::decode;
     use functions;
+    use hmac::HmacR;
+
+    #[test]
+    fn test_run_new() {
+        let key = vec![0x61; 5];
+        let message = vec![0x61; 5];
+
+        let mut actual_sha2_512 = HmacR::hmac_compute(&key, &message);
+        let expected_sha2_512 = decode("aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf");
+
+
+        assert_eq!(HmacR::hmac_validate(&key, &message, &actual_sha2_512), true);
+        assert_eq!(Ok(actual_sha2_512), expected_sha2_512);
+
+    }
 
     #[test]
     // Test that the function pad_key() returns a padded key K
