@@ -7,7 +7,7 @@ more, as long as I can find the time for it. Contributions are more than welcome
 
 
 Currently contains:
-* HMAC with SHA1 and SHA2(256, 384, 512).
+* HMAC with SHA2(256, 384, 512).
 * HKDF with the above HMAC options.
 
 ### Usage

@@ -1,12 +1,10 @@
 use std::borrow::Cow;
-use sha1::Digest;
-use sha1;
+use sha2::Digest;
 use sha2;
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub enum Hmac {
-    SHA1,
     SHA2_256,
     SHA2_384,
     SHA2_512,
@@ -42,7 +40,6 @@ impl Hmac {
     /// Return blocksize matching SHA variant.
     fn blocksize(&self) -> usize {
         match *self {
-            Hmac::SHA1 => 64,
             Hmac::SHA2_256 => 64,
             Hmac::SHA2_384 => 128,
             Hmac::SHA2_512 => 128,
@@ -52,11 +49,6 @@ impl Hmac {
     fn hash(&self, data: &[u8]) -> Vec<u8> {
 
         match *self {
-            Hmac::SHA1 => {
-                let mut hash = sha1::Sha1::default();
-                hash.input(data);
-                hash.result().to_vec()
-            },
             Hmac::SHA2_256 => {
                 let mut hash = sha2::Sha256::default();
                 hash.input(data);
@@ -132,19 +124,6 @@ mod test {
     use self::hex::decode;
     use functions;
 
-
-    #[test]
-    // Test that the function pad_key() returns a padded key K
-    // with size of correct BLOCKSIZE for SHA1
-    fn test_pad_key_sha1() {
-        let rand_k: Vec<u8> = functions::gen_rand_key(67);
-        let rand_k2: Vec<u8> = functions::gen_rand_key(130);
-        let rand_k3: Vec<u8> = functions::gen_rand_key(34);
-        assert_eq!(Hmac::SHA1.pad_key(&rand_k).len(), Hmac::SHA1.blocksize());
-        assert_eq!(Hmac::SHA1.pad_key(&rand_k2).len(), Hmac::SHA1.blocksize());
-        assert_eq!(Hmac::SHA1.pad_key(&rand_k3).len(), Hmac::SHA1.blocksize());
-    }
-
     #[test]
     // Test that the function pad_key() returns a padded key K
     // with size of correct BLOCKSIZE for SHA2
@@ -172,20 +151,14 @@ mod test {
         let key = vec![0x61; 5];
         let message = vec![0x61; 5];
 
-        let actual_sha1 = Hmac::SHA1.hmac_compute(&key, &message);
-
         let actual_sha2_256 = Hmac::SHA2_256.hmac_compute(&key, &message);
         let actual_sha2_384 = Hmac::SHA2_384.hmac_compute(&key, &message);
         let actual_sha2_512 = Hmac::SHA2_512.hmac_compute(&key, &message);
 
         // Expected values from: https://www.liavaag.org/English/SHA-Generator/HMAC/
-        let expected_sha1 = decode("40a50a7b74cf6099ee7082e3b4e2fd51f002f29d");
-        // SHA2
         let expected_sha2_256 = decode("c960dd5485480f51044c1afa312fecc5ab58548f9f108a5062a3bc229fd02359");
         let expected_sha2_384 = decode("6b0d10e1f341c5d9d9c3fb59431ee2ba155b5fa75e25a73bcd418d8a8a45c9562741a1214537fc33b08db20a1d52e037");
         let expected_sha2_512 = decode("aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf");
-
-        assert_eq!(Ok(actual_sha1), expected_sha1);
 
         assert_eq!(Ok(actual_sha2_256), expected_sha2_256);
         assert_eq!(Ok(actual_sha2_384), expected_sha2_384);
@@ -199,14 +172,9 @@ mod test {
         let message = vec![0x62; 5];
         let wrong_key = vec![0x67; 5];
 
-        let recieved_sha1 = Hmac::SHA1.hmac_compute(&key, &message);
-
         let recieved_sha2_256 = Hmac::SHA2_256.hmac_compute(&key, &message);
         let recieved_sha2_384 = Hmac::SHA2_384.hmac_compute(&key, &message);
         let recieved_sha2_512 = Hmac::SHA2_512.hmac_compute(&key, &message);
-
-        assert_eq!(Hmac::SHA1.hmac_validate(&key, &message, &recieved_sha1), true);
-        assert_eq!(Hmac::SHA1.hmac_validate(&wrong_key, &message, &recieved_sha1), false);
 
         assert_eq!(Hmac::SHA2_256.hmac_validate(&key, &message, &recieved_sha2_256), true);
         assert_eq!(Hmac::SHA2_256.hmac_validate(&wrong_key, &message, &recieved_sha2_256), false);

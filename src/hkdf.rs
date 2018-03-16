@@ -3,7 +3,6 @@ use hmac::Hmac;
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub enum Hkdf {
-    hmac_SHA1,
     hmac_SHA2_256,
     hmac_SHA2_384,
     hmac_SHA2_512,
@@ -30,7 +29,6 @@ impl Hkdf {
     /// Return the used hash function output size in bytes.
     fn hash_return_size(&self) -> usize {
         match *self {
-            Hkdf::hmac_SHA1 => 20,
             Hkdf::hmac_SHA2_256 => 32,
             Hkdf::hmac_SHA2_384 => 48,
             Hkdf::hmac_SHA2_512 => 64,
@@ -40,7 +38,6 @@ impl Hkdf {
     /// Return HMAC matching argument passsed to Hkdf.
     fn hmac_return_variant(&self, data: &[u8], salt: &[u8]) -> Vec<u8> {
         let hmac = match *self {
-            Hkdf::hmac_SHA1 => Hmac::SHA1,
             Hkdf::hmac_SHA2_256 => Hmac::SHA2_256,
             Hkdf::hmac_SHA2_384 => Hmac::SHA2_384,
             Hkdf::hmac_SHA2_512 => Hmac::SHA2_512,
@@ -100,22 +97,24 @@ mod test {
         let info = vec![0x61; 5];
         let length: usize = 50;
 
-        let prk1 = Hkdf::hmac_SHA1.hkdf_extract(&salt, &ikm);
         let prk256 = Hkdf::hmac_SHA2_256.hkdf_extract(&salt, &ikm);
         let prk384 = Hkdf::hmac_SHA2_384.hkdf_extract(&salt, &ikm);
         let prk512 = Hkdf::hmac_SHA2_512.hkdf_extract(&salt, &ikm);
 
-        let actual1 = Hkdf::hmac_SHA1.hkdf_expand(&prk1, &info, length);
         let actual256 = Hkdf::hmac_SHA2_256.hkdf_expand(&prk256, &info, length);
         let actual384 = Hkdf::hmac_SHA2_384.hkdf_expand(&prk384, &info, length);
         let actual512 = Hkdf::hmac_SHA2_512.hkdf_expand(&prk512, &info, length);
 
-        let expected1 = decode("224e74d59e061324a629b274181cec75bb823bcd494b88f6ce83a815fec14030c9727fc59827e06e76f735169559b46ddf11");
-        let expected256 = decode("f64478d1e58b2070933a13aca0ab75859a41c61283ed985023c964d6287c4b5f653efe8df22a4a82b9e87fc2a8627e3d0063");
-        let expected384 = decode("74686470b67e49954926a71a5ca5e4fd4286a94c020aa7eeba16550db868dc5992ca6c2a13a2bfde7d7cc86c5fdf2bcd8ed1");
-        let expected512 = decode("73b276604fa533dac12af682d7cf9a56150d75efddd2ffbcd3f83d847282df718eeb3ff9d303c0fd54c1177ab00b3fb5f618");
+        let expected256 = decode(
+            "f64478d1e58b2070933a13aca0ab75859a41c61283ed985023c964d6287c4b5f65\
+            3efe8df22a4a82b9e87fc2a8627e3d0063");
+        let expected384 = decode(
+            "74686470b67e49954926a71a5ca5e4fd4286a94c020aa7eeba16550db868dc5992c\
+            a6c2a13a2bfde7d7cc86c5fdf2bcd8ed1");
+        let expected512 = decode(
+            "73b276604fa533dac12af682d7cf9a56150d75efddd2ffbcd3f83d847282df718ee\
+            b3ff9d303c0fd54c1177ab00b3fb5f618");
 
-        assert_eq!(Ok(actual1), expected1);
         assert_eq!(Ok(actual256), expected256);
         assert_eq!(Ok(actual384), expected384);
         assert_eq!(Ok(actual512), expected512);
