@@ -63,15 +63,6 @@ impl Hmac {
         }
     }
 
-    fn outputsize(&self) -> usize {
-        match self.sha2 {
-            256 => 32,
-            384 => 48,
-            512 => 64,
-            _ => panic!("Outputsize not found for {:?}", self.sha2)
-        }
-    }
-
     /// Return a byte vector of a given byte slice.
     fn hash(&self, data: &[u8]) -> Vec<u8> {
         match self.sha2 {
@@ -138,7 +129,7 @@ impl Hmac {
         let second_round_own = Hmac { secret_key: rand_key.clone(), message: own_hmac, sha2: self.sha2 };
         let second_round_received = Hmac {  secret_key: rand_key.clone(), message: received_hmac.to_vec(), sha2: self.sha2 };
 
-        util::compare_ct(&second_round_own.hmac_compute(), &second_round_received.hmac_compute(), self.outputsize())
+        util::compare_ct(&second_round_own.hmac_compute(), &second_round_received.hmac_compute(), (self.sha2 / 8))
     }
 }
 
