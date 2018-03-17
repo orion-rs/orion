@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use sha2::Digest;
 use sha2;
 use clear_on_drop::clear;
-use util::compare_ct;
+use util;
 
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
@@ -136,11 +136,15 @@ impl Hmac {
     /// Check HMAC validity by computing one from key and message, then comparing this to the
     /// HMAC that has been passed to the function. Assumes the key, data and SHA2 variant used,
     /// are those belonging to the initialized struct.
-    pub fn hmac_validate(&self, received_hmac: &Vec<u8>) -> bool {
+    pub fn hmac_validate(&self, received_hmac: Vec<u8>) -> bool {
 
         let own_hmac = self.hmac_compute();
 
-        compare_ct(&own_hmac, received_hmac, self.outputsize())
+        let rand_key = util::gen_rand_key(64);
+        let second_round_own = Hmac { secret_key: rand_key.clone(), message: own_hmac, sha2: self.sha2 };
+        let second_round_received = Hmac {  secret_key: rand_key.clone(), message: received_hmac, sha2: self.sha2 };
+
+        util::compare_ct(&second_round_own.hmac_compute(), &second_round_received.hmac_compute(), self.outputsize())
     }
 }
 
@@ -186,7 +190,7 @@ mod test {
         let recieved_hmac = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
         let false_hmac = Hmac { secret_key: key.clone(), message: wrong_key.clone(), sha2: 256 };
 
-        assert_eq!(own_hmac.hmac_validate(&recieved_hmac.hmac_compute()), true);
-        assert_eq!(own_hmac.hmac_validate(&false_hmac.hmac_compute()), false);
+        assert_eq!(own_hmac.hmac_validate(recieved_hmac.hmac_compute()), true);
+        assert_eq!(own_hmac.hmac_validate(false_hmac.hmac_compute()), false);
     }
 }
