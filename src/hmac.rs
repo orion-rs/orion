@@ -43,12 +43,19 @@ impl Drop for Hmac {
 /// use orion::hmac::Hmac;
 /// use orion::util::gen_rand_key;
 ///
-/// let key = gen_rand_key(10);
-/// let message = gen_rand_key(10);
+/// let key = "Some key.";
+/// let msg = "Some message.";
 ///
-/// let hmac_sha256 = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
-/// let received_hmac =  Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
-///
+/// let hmac_sha256 = Hmac {
+///     secret_key: key.as_bytes().to_vec(),
+///     message: msg.as_bytes().to_vec(),
+///     sha2: 256
+/// };
+/// let received_hmac = Hmac {
+///     secret_key: key.as_bytes().to_vec(),
+///     message: msg.as_bytes().to_vec(),
+///     sha2: 256
+/// };
 /// assert_eq!(hmac_sha256.hmac_validate(&received_hmac.hmac_compute()), true);
 /// ```
 
