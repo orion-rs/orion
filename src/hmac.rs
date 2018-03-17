@@ -154,12 +154,22 @@ mod test {
 
     #[test]
     fn test_hmac_return_result() {
-        let key = vec![0x61; 5];
-        let message = vec![0x61; 5];
 
-        let hmac_256 = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
-        let hmac_384 = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 384 };
-        let hmac_512 = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 512 };
+        let hmac_256 = Hmac {
+            secret_key: vec![0x61; 5],
+            message: vec![0x61; 5],
+            sha2: 256
+        };
+        let hmac_384 = Hmac {
+            secret_key: vec![0x61; 5],
+            message: vec![0x61; 5],
+            sha2: 384
+        };
+        let hmac_512 = Hmac {
+            secret_key: vec![0x61; 5],
+            message: vec![0x61; 5],
+            sha2: 512
+        };
 
         // Expected values from: https://www.liavaag.org/English/SHA-Generator/HMAC/
         let expected_hmac_256 = decode(
@@ -180,13 +190,22 @@ mod test {
     #[test]
     // Test that hmac_validate() returns true if signatures match and false if not
     fn test_hmac_validate() {
-        let key = vec![0x61; 5];
-        let message = vec![0x62; 5];
-        let wrong_key = vec![0x67; 5];
 
-        let own_hmac = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
-        let recieved_hmac = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
-        let false_hmac = Hmac { secret_key: key.clone(), message: wrong_key.clone(), sha2: 256 };
+        let own_hmac = Hmac {
+            secret_key: vec![0x61; 5],
+            message: vec![0x61; 5],
+            sha2: 256
+        };
+        let recieved_hmac = Hmac {
+            secret_key: vec![0x61; 5],
+            message: vec![0x61; 5],
+            sha2: 256
+        };
+        let false_hmac = Hmac {
+            secret_key: vec![0x61; 5],
+            message: vec![0x67; 5],
+            sha2: 256
+        };
 
         assert_eq!(own_hmac.hmac_validate(&recieved_hmac.hmac_compute()), true);
         assert_eq!(own_hmac.hmac_validate(&false_hmac.hmac_compute()), false);
