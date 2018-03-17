@@ -11,9 +11,9 @@ use util::compare_ct;
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
 pub struct Hmac {
-    secret_key: Vec<u8>,
-    message: Vec<u8>,
-    sha2: u32,
+    pub secret_key: Vec<u8>,
+    pub message: Vec<u8>,
+    pub sha2: u32,
 }
 
 
@@ -49,7 +49,7 @@ pub struct Hmac {
 
 impl Drop for Hmac {
     fn drop(&mut self) {
-        //println!("DROP: {:?}", self.secret_key);
+        //println!("DROPING");
         self.secret_key.clear();
         self.message.clear()
     }

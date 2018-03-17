@@ -29,7 +29,7 @@ pub fn compare_ct(x: &[u8], y: &[u8], length: usize) -> bool {
 
 #[test]
 // Test that compare_ct() returns expected values.
-fn test_ct_compare_results() {
+fn test_compare_ct_results() {
     let test_v_1 = vec![0x61; 32];
     let test_v_2 = vec![0x61; 32];
     let test_v_3 = vec![0x64; 32];
