@@ -9,12 +9,21 @@ use util;
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 
 #[allow(non_camel_case_types)]
-#[derive(Debug)]
+
 pub struct Hmac {
     pub secret_key: Vec<u8>,
     pub message: Vec<u8>,
     pub sha2: u32,
 }
+
+impl Drop for Hmac {
+    fn drop(&mut self) {
+        //println!("DROPING");
+        self.secret_key.clear();
+        self.message.clear()
+    }
+}
+
 
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
@@ -46,15 +55,6 @@ pub struct Hmac {
 ///
 ///assert_eq!(hmac_sha256.hmac_validate(received_hmac.hmac_compute(), self.outputsize()), true);
 /// ```
-
-impl Drop for Hmac {
-    fn drop(&mut self) {
-        //println!("DROPING");
-        self.secret_key.clear();
-        self.message.clear()
-    }
-}
-
 
 impl Hmac {
 
@@ -133,9 +133,8 @@ impl Hmac {
         self.hash(&opad).to_vec()
     }
 
-    /// Check HMAC validity by computing one from key and message, then comparing this to the
-    /// HMAC that has been passed to the function. Assumes that the HMAC that is not recieved from
-    /// another party, is the one that has been initialized with the struct.
+    /// Check HMAC validity by computing one from the current struct fields and comparing this
+    /// to the passed HMAC.
     pub fn hmac_validate(&self, received_hmac: Vec<u8>) -> bool {
 
         let own_hmac = self.hmac_compute();
