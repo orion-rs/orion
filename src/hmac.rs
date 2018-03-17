@@ -16,7 +16,7 @@ pub struct Hmac {
 
 impl Drop for Hmac {
     fn drop(&mut self) {
-        //println!("DROPING");
+        //println!("DROPPING");
         self.secret_key.clear();
         self.message.clear()
     }
