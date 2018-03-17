@@ -41,7 +41,11 @@ impl Drop for Hkdf {
 impl Hkdf {
     /// Return HMAC matching argument passsed to Hkdf.
     pub fn hkdf_extract(&self, data: &[u8], salt: &[u8]) -> Vec<u8> {
-        let hmac_res = Hmac { secret_key: salt.to_vec(), message: data.to_vec(), sha2: self.hmac };
+        let hmac_res = Hmac {
+            secret_key: salt.to_vec(),
+            message: data.to_vec(),
+            sha2: self.hmac
+        };
 
         hmac_res.hmac_compute()
     }
@@ -64,7 +68,10 @@ impl Hkdf {
                 con_step.append(&mut t_step);
                 con_step.extend_from_slice(&self.info);
                 con_step.push(x as u8);
-                t_step.extend_from_slice(&self.hkdf_extract(&con_step, &self.hkdf_extract(&self.salt, &self.data)));
+                t_step.extend_from_slice(&self.hkdf_extract(
+                    &con_step,
+                    &self.hkdf_extract(&self.salt, &self.data))
+                );
                 con_step.clear();
 
                 hkdf_final.extend_from_slice(&t_step);
@@ -84,14 +91,28 @@ mod test {
 
     #[test]
     fn test_hkdf_return_result() {
-        let ikm = vec![0x61; 5];
-        let salt_1 = vec![0x61; 5];
-        let info_1 = vec![0x61; 5];
-        //let length: usize = 50;
 
-        let actual256 = Hkdf { salt: salt_1.clone(), data: ikm.clone(), info: info_1.clone(), hmac: 256, length: 50 };
-        let actual384 = Hkdf { salt: salt_1.clone(), data: ikm.clone(), info: info_1.clone(), hmac: 384, length: 50 };
-        let actual512 = Hkdf { salt: salt_1.clone(), data: ikm.clone(), info: info_1.clone(), hmac: 512, length: 50 };
+        let actual256 = Hkdf {
+            salt: vec![0x61; 5],
+            data: vec![0x61; 5],
+            info: vec![0x61; 5],
+            hmac: 256,
+            length: 50
+        };
+        let actual384 = Hkdf {
+            salt: vec![0x61; 5],
+            data: vec![0x61; 5],
+            info: vec![0x61; 5],
+            hmac: 384,
+            length: 50
+        };
+        let actual512 = Hkdf {
+            salt: vec![0x61; 5],
+            data: vec![0x61; 5],
+            info: vec![0x61; 5],
+            hmac: 512,
+            length: 50
+        };
 
 
         let expected256 = decode(
