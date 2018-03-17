@@ -8,8 +8,6 @@ use util;
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 
-#[allow(non_camel_case_types)]
-
 pub struct Hmac {
     pub secret_key: Vec<u8>,
     pub message: Vec<u8>,
@@ -24,8 +22,6 @@ impl Drop for Hmac {
     }
 }
 
-
-
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 ///
@@ -38,9 +34,9 @@ impl Drop for Hmac {
 /// let key = gen_rand_key(10);
 /// let message = gen_rand_key(10);
 ///
-/// let hmac_sha256 = Hmac { secret_key: &key, message: &message, 256 };
+/// let hmac_sha256 = Hmac { secret_key: key, message: message, sha2: 256 };
 ///
-/// hmac_sha256.hmac_compute()
+/// hmac_sha256.hmac_compute();
 /// ```
 /// ### Verifying HMAC:
 /// ```
@@ -50,14 +46,13 @@ impl Drop for Hmac {
 /// let key = gen_rand_key(10);
 /// let message = gen_rand_key(10);
 ///
-/// let hmac_sha256 = Hmac { secret_key: &key.clone(), message: &message.clone(), 256 };
-/// let received_hmac =  Hmac { secret_key: &key.clone(), message: &message.clone(), 256 };
+/// let hmac_sha256 = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
+/// let received_hmac =  Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
 ///
-///assert_eq!(hmac_sha256.hmac_validate(received_hmac.hmac_compute(), self.outputsize()), true);
+/// assert_eq!(hmac_sha256.hmac_validate(&received_hmac.hmac_compute()), true);
 /// ```
 
 impl Hmac {
-
     /// Return blocksize matching SHA variant.
     fn blocksize(&self) -> usize {
         match self.sha2 {
@@ -135,13 +130,13 @@ impl Hmac {
 
     /// Check HMAC validity by computing one from the current struct fields and comparing this
     /// to the passed HMAC.
-    pub fn hmac_validate(&self, received_hmac: Vec<u8>) -> bool {
+    pub fn hmac_validate(&self, received_hmac: &[u8]) -> bool {
 
         let own_hmac = self.hmac_compute();
 
         let rand_key = util::gen_rand_key(64);
         let second_round_own = Hmac { secret_key: rand_key.clone(), message: own_hmac, sha2: self.sha2 };
-        let second_round_received = Hmac {  secret_key: rand_key.clone(), message: received_hmac, sha2: self.sha2 };
+        let second_round_received = Hmac {  secret_key: rand_key.clone(), message: received_hmac.to_vec(), sha2: self.sha2 };
 
         util::compare_ct(&second_round_own.hmac_compute(), &second_round_received.hmac_compute(), self.outputsize())
     }
@@ -189,7 +184,7 @@ mod test {
         let recieved_hmac = Hmac { secret_key: key.clone(), message: message.clone(), sha2: 256 };
         let false_hmac = Hmac { secret_key: key.clone(), message: wrong_key.clone(), sha2: 256 };
 
-        assert_eq!(own_hmac.hmac_validate(recieved_hmac.hmac_compute()), true);
-        assert_eq!(own_hmac.hmac_validate(false_hmac.hmac_compute()), false);
+        assert_eq!(own_hmac.hmac_validate(&recieved_hmac.hmac_compute()), true);
+        assert_eq!(own_hmac.hmac_validate(&false_hmac.hmac_compute()), false);
     }
 }
