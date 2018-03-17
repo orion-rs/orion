@@ -51,13 +51,9 @@ impl Hkdf {
 
     /// Return HMAC matching argument passsed to Hkdf.
     pub fn hkdf_extract(&self, data: &[u8], salt: &[u8]) -> Vec<u8> {
-        let variant = match self.hmac {
-            256 => Hmac { secret_key: salt.to_vec(), message: data.to_vec(), sha2: 256 },
-            384 => Hmac { secret_key: salt.to_vec(), message: data.to_vec(), sha2: 384 },
-            512 => Hmac { secret_key: salt.to_vec(), message: data.to_vec(), sha2: 512 },
-            _ => panic!("No HMAC matching this sha2 selector {:?}", self.hmac)
-        };
-        variant.hmac_compute()
+        let hmac_res = Hmac { secret_key: salt.to_vec(), message: data.to_vec(), sha2: self.hmac };
+
+        hmac_res.hmac_compute()
     }
 
     /// The HKDF Expand step. Returns an HKDF.

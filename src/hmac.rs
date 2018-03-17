@@ -134,8 +134,8 @@ impl Hmac {
     }
 
     /// Check HMAC validity by computing one from key and message, then comparing this to the
-    /// HMAC that has been passed to the function. Assumes the key, data and SHA2 variant used,
-    /// are those belonging to the initialized struct.
+    /// HMAC that has been passed to the function. Assumes that the HMAC that is not recieved from
+    /// another party, is the one that has been initialized with the struct.
     pub fn hmac_validate(&self, received_hmac: Vec<u8>) -> bool {
 
         let own_hmac = self.hmac_compute();
