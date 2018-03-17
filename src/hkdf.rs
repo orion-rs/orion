@@ -8,7 +8,7 @@ pub struct Hkdf {
     pub salt: Vec<u8>,
     pub data: Vec<u8>,
     pub info: Vec<u8>,
-    pub hmac: u32,
+    pub hmac: usize,
     pub length: usize,
 }
 
@@ -39,16 +39,6 @@ impl Drop for Hkdf {
 /// ```
 
 impl Hkdf {
-    /// Return the used hash function output size in bytes.
-    fn hash_return_size(&self) -> usize {
-        match self.hmac {
-            256 => 32,
-            384 => 48,
-            512 => 64,
-            _ => panic!("Return size not found for {:?}", self.hmac)
-        }
-    }
-
     /// Return HMAC matching argument passsed to Hkdf.
     pub fn hkdf_extract(&self, data: &[u8], salt: &[u8]) -> Vec<u8> {
         let hmac_res = Hmac { secret_key: salt.to_vec(), message: data.to_vec(), sha2: self.hmac };
@@ -59,12 +49,12 @@ impl Hkdf {
     /// The HKDF Expand step. Returns an HKDF.
     pub fn hkdf_compute(&self) -> Vec<u8> {
         // Check that the selected key length is within the limit.
-        if self.length as f32 > 255_f32 * self.hash_return_size() as f32 {
+        if self.length as f32 > 255_f32 * (self.hmac / 8) as f32 {
             panic!("Derived key length above max. Max derived key length is: {:?}",
-                    255_f32 * self.hash_return_size() as f32);
+                    255_f32 * (self.hmac / 8) as f32);
         }
 
-        let n_iter = (self.length as f32 / self.hash_return_size() as f32).ceil() as usize;
+        let n_iter = (self.length as f32 / (self.hmac / 8) as f32).ceil() as usize;
 
         let mut con_step: Vec<u8> = vec![];
         let mut t_step: Vec<u8> = vec![];

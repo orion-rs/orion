@@ -11,7 +11,7 @@ use util;
 pub struct Hmac {
     pub secret_key: Vec<u8>,
     pub message: Vec<u8>,
-    pub sha2: u32,
+    pub sha2: usize,
 }
 
 impl Drop for Hmac {
