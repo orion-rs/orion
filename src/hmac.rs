@@ -98,7 +98,6 @@ impl Hmac {
 
         if key.len() > self.blocksize() {
             key = self.hash(&key).into();
-
         }
         if key.len() < self.blocksize() {
             let mut resized_key = key.into_owned();
@@ -147,8 +146,7 @@ impl Hmac {
 
         util::compare_ct(
             &nd_round_own.hmac_compute(),
-            &nd_round_received.hmac_compute(),
-            (self.sha2 / 8)
+            &nd_round_received.hmac_compute()
         )
     }
 }
