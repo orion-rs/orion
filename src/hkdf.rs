@@ -54,8 +54,7 @@ impl Hkdf {
     pub fn hkdf_compute(&self) -> Vec<u8> {
         // Check that the selected key length is within the limit.
         if self.length as f32 > 255_f32 * (self.hmac / 8) as f32 {
-            panic!("Derived key length above max. Max derived key length is: {:?}",
-                    255_f32 * (self.hmac / 8) as f32);
+            panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
         }
 
         let n_iter = (self.length as f32 / (self.hmac / 8) as f32).ceil() as usize;
