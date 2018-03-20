@@ -69,7 +69,7 @@ impl Hkdf {
                 con_step.push(x as u8);
                 t_step.extend_from_slice(&self.hkdf_extract(
                     &con_step,
-                    &self.hkdf_extract(&self.salt, &self.data))
+                    &self.hkdf_extract(&self.data, &self.salt))
                 );
                 con_step.clear();
 
