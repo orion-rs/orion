@@ -116,17 +116,17 @@ mod test {
 
         let expected256 = decode(
             "f64478d1e58b2070933a13aca0ab75859a41c61283ed985023c964d6287c4b5f65\
-            3efe8df22a4a82b9e87fc2a8627e3d0063");
+            3efe8df22a4a82b9e87fc2a8627e3d0063").unwrap();
 
         let expected384 = decode(
             "74686470b67e49954926a71a5ca5e4fd4286a94c020aa7eeba16550db868dc5992c\
-            a6c2a13a2bfde7d7cc86c5fdf2bcd8ed1");
+            a6c2a13a2bfde7d7cc86c5fdf2bcd8ed1").unwrap();
         let expected512 = decode(
             "73b276604fa533dac12af682d7cf9a56150d75efddd2ffbcd3f83d847282df718ee\
-            b3ff9d303c0fd54c1177ab00b3fb5f618");
+            b3ff9d303c0fd54c1177ab00b3fb5f618").unwrap();
 
-        assert_eq!(Ok(actual256.hkdf_compute()), expected256);
-        assert_eq!(Ok(actual384.hkdf_compute()), expected384);
-        assert_eq!(Ok(actual512.hkdf_compute()), expected512);
+        assert_eq!(actual256.hkdf_compute(), expected256);
+        assert_eq!(actual384.hkdf_compute(), expected384);
+        assert_eq!(actual512.hkdf_compute(), expected512);
     }
 }

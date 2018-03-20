@@ -178,17 +178,17 @@ mod test {
 
         // Expected values from: https://www.liavaag.org/English/SHA-Generator/HMAC/
         let expected_hmac_256 = decode(
-            "c960dd5485480f51044c1afa312fecc5ab58548f9f108a5062a3bc229fd02359");
+            "c960dd5485480f51044c1afa312fecc5ab58548f9f108a5062a3bc229fd02359").unwrap();
         let expected_hmac_384 = decode(
             "6b0d10e1f341c5d9d9c3fb59431ee2ba155b5fa75e25a73bcd418d8a8a45c956\
-            2741a1214537fc33b08db20a1d52e037");
+            2741a1214537fc33b08db20a1d52e037").unwrap();
         let expected_hmac_512 = decode(
             "aaffe2e33265ab09d1f971dc8ee821a996e57264658a805317caabeb5b93321e\
-            4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf");
+            4e4dacb366670fb34867a4d0359b07f5e9ee7e681c650c7301cc9bf89f4a1adf").unwrap();
 
-        assert_eq!(Ok(hmac_256.hmac_compute()), expected_hmac_256);
-        assert_eq!(Ok(hmac_384.hmac_compute()), expected_hmac_384);
-        assert_eq!(Ok(hmac_512.hmac_compute()), expected_hmac_512);
+        assert_eq!(hmac_256.hmac_compute(), expected_hmac_256);
+        assert_eq!(hmac_384.hmac_compute(), expected_hmac_384);
+        assert_eq!(hmac_512.hmac_compute(), expected_hmac_512);
     }
 
 
