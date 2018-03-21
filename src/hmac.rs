@@ -167,12 +167,12 @@ mod test {
             sha2: 256
         };
         let hmac_384 = Hmac {
-            secret_key: vec![0x0b; 20],
+            secret_key: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             message: "Hi There".as_bytes().to_vec(),
             sha2: 384
         };
         let hmac_512 = Hmac {
-            secret_key: vec![0x0b; 20],
+            secret_key: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             message: "Hi There".as_bytes().to_vec(),
             sha2: 512
         };
@@ -446,9 +446,6 @@ mod test {
         assert_eq!(hmac_384.hmac_compute(), expected_hmac_384);
         assert_eq!(hmac_512.hmac_compute(), expected_hmac_512);
     }
-
-
-
 
     #[test]
     // Test that hmac_validate() returns true if signatures match and false if not
