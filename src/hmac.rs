@@ -70,7 +70,7 @@ impl Hmac {
         }
     }
 
-    /// Return a byte vector of a given byte slice.
+    /// Return a SHA2 digest of a given byte slice.
     fn hash(&self, data: &[u8]) -> Vec<u8> {
         match self.sha2 {
             256 => {
@@ -107,7 +107,7 @@ impl Hmac {
         key
     }
 
-    /// Returns HMAC from a given key and message.
+    /// Returns an HMAC for a given key and message.
     pub fn hmac_compute(&self) -> Vec<u8> {
         let key = self.pad_key(&self.secret_key);
 
