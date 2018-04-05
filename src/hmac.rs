@@ -31,8 +31,8 @@ impl Drop for Hmac {
 /// use orion::hmac::Hmac;
 /// use orion::util::gen_rand_key;
 ///
-/// let key = gen_rand_key(10);
-/// let message = gen_rand_key(10);
+/// let key = gen_rand_key(16);
+/// let message = gen_rand_key(16);
 ///
 /// let hmac_sha256 = Hmac { secret_key: key, message: message, sha2: 256 };
 ///
