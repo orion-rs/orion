@@ -12,7 +12,7 @@ Include it in your `Cargo.toml` file:
 [dependencies]
 orion = ">=0.1.43"
 ```
-and in relevant files:
+Use it like this:
 ```
 extern crate orion
 use orion::{default, util};

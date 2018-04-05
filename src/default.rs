@@ -1,28 +1,8 @@
-///
-/// ```orion::default``` provides a small API to make it a little easier to use the functions that
-/// ```orion``` provides, without worrying about details.
-///
-/// # Usage examples:
-/// ### HMAC (uses SHA512)
-///
-/// ```
-/// use orion::default;
-/// use orion::util::gen_rand_key;
-///
-/// ```
-/// ### HKDF (uses HMAC-SHA512)
-///
-/// ```
-/// use orion::default;
-/// use orion::util::gen_rand_key;
-///
-/// ```
-
 use hmac::Hmac;
 use hkdf::Hkdf;
 use util;
 
-
+/// HMAC with SHA512
 pub fn hmac(secret_key: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
 
     if secret_key.len() < 64 {
@@ -39,6 +19,7 @@ pub fn hmac(secret_key: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
     hmac_512_res.hmac_compute()
 }
 
+/// HKDF with HMAC-SHA512
 pub fn hkdf(salt: Vec<u8>, data: Vec<u8>, info: Vec<u8>, length: usize) -> Vec<u8> {
 
     if salt.len() < 64 {
