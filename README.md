@@ -10,13 +10,30 @@ Currently contains:
 Include it in your `Cargo.toml` file:
 ```
 [dependencies]
-orion = ">=0.1.42"
+orion = ">=0.1.43"
 ```
 and in relevant files:
 ```
 extern crate orion
+use orion::{default, util};
+
+// HMAC
+let key = util::gen_rand_key(64);
+let msg = "Some message.".as_bytes().to_vec();
+
+let hmac_digest = default::hmac(key, msg);
+let hmac_digest_second = default::hmac(key, msg);
+assert_eq!(default::hmac_validate(&hmac_digest, &hmac_digest_second), true);
+
+// HKDF
+let salt = util::gen_rand_key(64);
+let data = "Some data.".as_bytes().to_vec();
+let info = "Some info.".as_bytes().to_vec();
+
+let hkdf = default::hmac(salt, data, info, 64);
 ```
-Check the documentation for more specific usage.
+
+
 ### Documentation
 [Find it here](https://docs.rs/orion).
 

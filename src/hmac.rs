@@ -56,7 +56,7 @@ impl Drop for Hmac {
 ///     message: msg.as_bytes().to_vec(),
 ///     sha2: 256
 /// };
-/// assert_eq!(hmac_sha256.hmac_validate(&received_hmac.hmac_compute()), true);
+/// assert_eq!(hmac_sha256.hmac_compare(&received_hmac.hmac_compute()), true);
 /// ```
 
 impl Hmac {
@@ -127,7 +127,7 @@ impl Hmac {
 
     /// Check HMAC validity by computing one from the current struct fields and comparing this
     /// to the passed HMAC.
-    pub fn hmac_validate(&self, received_hmac: &[u8]) -> bool {
+    pub fn hmac_compare(&self, received_hmac: &[u8]) -> bool {
 
         let own_hmac = self.hmac_compute();
         let rand_key = util::gen_rand_key(64);
@@ -448,8 +448,8 @@ mod test {
     }
 
     #[test]
-    // Test that hmac_validate() returns true if signatures match and false if not
-    fn hmac_validate() {
+    // Test that hmac_compare() returns true if signatures match and false if not
+    fn hmac_compare() {
 
         let own_hmac = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
@@ -467,7 +467,7 @@ mod test {
             sha2: 256
         };
 
-        assert_eq!(own_hmac.hmac_validate(&recieved_hmac.hmac_compute()), true);
-        assert_eq!(own_hmac.hmac_validate(&false_hmac.hmac_compute()), false);
+        assert_eq!(own_hmac.hmac_compare(&recieved_hmac.hmac_compute()), true);
+        assert_eq!(own_hmac.hmac_compare(&false_hmac.hmac_compute()), false);
     }
 }
