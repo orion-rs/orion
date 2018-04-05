@@ -30,9 +30,9 @@ impl Drop for Hkdf {
 /// use orion::hkdf::Hkdf;
 /// use orion::util::gen_rand_key;
 ///
-/// let key = gen_rand_key(10);
-/// let salt = gen_rand_key(10);
-/// let info = gen_rand_key(10);
+/// let key = gen_rand_key(16);
+/// let salt = gen_rand_key(16);
+/// let info = gen_rand_key(16);
 ///
 /// let dk = Hkdf { salt: salt, data: key, info: info, hmac: 256, length: 50 };
 /// dk.hkdf_compute();
