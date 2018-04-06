@@ -53,7 +53,7 @@ impl Hkdf {
     /// The HKDF Expand step. Returns an HKDF.
     pub fn hkdf_compute(&self) -> Vec<u8> {
         // Check that the selected key length is within the limit.
-        if self.length as f32 > 255_f32 * (self.hmac / 8) as f32 {
+        if self.length > (255 * self.hmac / 8) {
             panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
         }
 
@@ -159,5 +159,53 @@ mod test {
 
         assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt), expected_prk_256);
         assert_eq!(hkdf_256.hkdf_compute(), expected_okm_256);
+    }
+
+    #[test]
+    #[should_panic]
+    fn hkdf_maximum_length_256() {
+
+        let hkdf_256 = Hkdf {
+            salt: decode("").unwrap(),
+            ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            info: decode("").unwrap(),
+            hmac: 256,
+            // Max allowed length here is 8160
+            length: 9000,
+        };
+
+        hkdf_256.hkdf_compute();
+    }
+
+    #[test]
+    #[should_panic]
+    fn hkdf_maximum_length_384() {
+
+        let hkdf_384 = Hkdf {
+            salt: decode("").unwrap(),
+            ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            info: decode("").unwrap(),
+            hmac: 384,
+            // Max allowed length here is 12240
+            length: 13000,
+        };
+
+        hkdf_384.hkdf_compute();
+    }
+
+    #[test]
+    #[should_panic]
+    fn hkdf_maximum_length_512() {
+
+        let hkdf_512 = Hkdf {
+            salt: decode("").unwrap(),
+            ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            info: decode("").unwrap(),
+            hmac: 512,
+            // Max allowed length here is 16320
+            length: 17000,
+        };
+
+        hkdf_512.hkdf_compute();
     }
 }
