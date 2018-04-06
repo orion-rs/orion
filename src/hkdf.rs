@@ -6,7 +6,7 @@ use clear_on_drop::clear;
 
 pub struct Hkdf {
     pub salt: Vec<u8>,
-    pub data: Vec<u8>,
+    pub ikm: Vec<u8>,
     pub info: Vec<u8>,
     pub hmac: usize,
     pub length: usize,
@@ -16,7 +16,7 @@ impl Drop for Hkdf {
     fn drop(&mut self) {
         //println!("DROPPING");
         self.salt.clear();
-        self.data.clear();
+        self.ikm.clear();
         self.info.clear()
     }
 }
@@ -34,16 +34,16 @@ impl Drop for Hkdf {
 /// let salt = gen_rand_key(16);
 /// let info = gen_rand_key(16);
 ///
-/// let dk = Hkdf { salt: salt, data: key, info: info, hmac: 256, length: 50 };
+/// let dk = Hkdf { salt: salt, ikm: key, info: info, hmac: 256, length: 50 };
 /// dk.hkdf_compute();
 /// ```
 
 impl Hkdf {
     /// Return HMAC matching argument passsed to Hkdf.
-    pub fn hkdf_extract(&self, data: &[u8], salt: &[u8]) -> Vec<u8> {
+    pub fn hkdf_extract(&self, ikm: &[u8], salt: &[u8]) -> Vec<u8> {
         let hmac_res = Hmac {
             secret_key: salt.to_vec(),
-            message: data.to_vec(),
+            message: ikm.to_vec(),
             sha2: self.hmac
         };
 
@@ -69,7 +69,7 @@ impl Hkdf {
                 con_step.push(x as u8);
                 t_step.extend_from_slice(&self.hkdf_extract(
                     &con_step,
-                    &self.hkdf_extract(&self.data, &self.salt))
+                    &self.hkdf_extract(&self.ikm, &self.salt))
                 );
                 con_step.clear();
 
@@ -94,7 +94,7 @@ mod test {
 
         let hkdf_256 = Hkdf {
             salt: decode("000102030405060708090a0b0c").unwrap(),
-            data: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("f0f1f2f3f4f5f6f7f8f9").unwrap(),
             hmac: 256,
             length: 42,
@@ -107,7 +107,7 @@ mod test {
             "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf\
             34007208d5b887185865").unwrap();
 
-        assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.data, &hkdf_256.salt), expected_prk_256);
+        assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt), expected_prk_256);
         assert_eq!(hkdf_256.hkdf_compute(), expected_okm_256);
     }
 
@@ -119,7 +119,7 @@ mod test {
             salt: decode("606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f\
                 808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f\
                 a0a1a2a3a4a5a6a7a8a9aaabacadaeaf").unwrap(),
-            data: decode("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f\
+            ikm: decode("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f\
                 202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f\
                 404142434445464748494a4b4c4d4e4f").unwrap(),
             info: decode("b0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf\
@@ -137,7 +137,7 @@ mod test {
             59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71\
             cc30c58179ec3e87c14c01d5c1f3434f1d87").unwrap();
 
-        assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.data, &hkdf_256.salt), expected_prk_256);
+        assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt), expected_prk_256);
         assert_eq!(hkdf_256.hkdf_compute(), expected_okm_256);
     }
 
@@ -147,7 +147,7 @@ mod test {
 
         let hkdf_256 = Hkdf {
             salt: decode("").unwrap(),
-            data: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
             hmac: 256,
             length: 42,
@@ -160,7 +160,7 @@ mod test {
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-        assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.data, &hkdf_256.salt), expected_prk_256);
+        assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt), expected_prk_256);
         assert_eq!(hkdf_256.hkdf_compute(), expected_okm_256);
     }
 }

@@ -29,7 +29,7 @@ pub fn hkdf(salt: Vec<u8>, data: Vec<u8>, info: Vec<u8>, length: usize) -> Vec<u
 
     let hkdf_512_res = Hkdf {
         salt: salt,
-        data: data,
+        ikm: data,
         info: info,
         hmac: 512,
         length: length
