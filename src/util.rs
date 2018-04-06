@@ -17,7 +17,7 @@ pub fn compare_ct(x: &[u8], y: &[u8]) -> bool {
     let length = x.len();
 
     if length != y.len() {
-        false;
+        return false;
     }
 
     let mut result: u8 = 0;
@@ -39,4 +39,7 @@ fn test_compare_ct_results() {
     assert_eq!(compare_ct(&test_v_1, &test_v_2), true);
     assert_ne!(compare_ct(&test_v_1, &test_v_3), true);
     assert_eq!(compare_ct(&test_v_1, &test_v_4), false);
+
+    assert_eq!(compare_ct(&[0], &[0, 1]), false);
+    assert_eq!(compare_ct(&[0, 1], &[0]), false);
 }
