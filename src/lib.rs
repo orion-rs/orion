@@ -9,3 +9,4 @@ pub mod hkdf;
 /// ```orion::default``` provides a small API to make it a little easier to use the functions that
 /// ```orion``` provides, without worrying about details.
 pub mod default;
+pub mod options;

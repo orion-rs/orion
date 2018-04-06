@@ -1,6 +1,7 @@
 use hmac::Hmac;
 use hkdf::Hkdf;
 use util;
+use options::ShaVariantOption;
 
 /// HMAC with SHA512
 pub fn hmac(secret_key: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
@@ -13,7 +14,7 @@ pub fn hmac(secret_key: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
     let hmac_512_res = Hmac {
         secret_key: secret_key,
         message: message,
-        sha2: 512
+        sha2: ShaVariantOption::SHA512
     };
 
     hmac_512_res.hmac_compute()
@@ -31,7 +32,7 @@ pub fn hkdf(salt: Vec<u8>, data: Vec<u8>, info: Vec<u8>, length: usize) -> Vec<u
         salt: salt,
         ikm: data,
         info: info,
-        hmac: 512,
+        hmac: ShaVariantOption::SHA512,
         length: length
     };
 

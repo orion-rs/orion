@@ -1,5 +1,6 @@
 use hmac::Hmac;
 use clear_on_drop::clear;
+use options::ShaVariantOption;
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
@@ -8,7 +9,7 @@ pub struct Hkdf {
     pub salt: Vec<u8>,
     pub ikm: Vec<u8>,
     pub info: Vec<u8>,
-    pub hmac: usize,
+    pub hmac: ShaVariantOption,
     pub length: usize,
 }
 
@@ -29,12 +30,13 @@ impl Drop for Hkdf {
 /// ```
 /// use orion::hkdf::Hkdf;
 /// use orion::util::gen_rand_key;
+/// use orion::options::ShaVariantOption;
 ///
 /// let key = gen_rand_key(16);
 /// let salt = gen_rand_key(16);
 /// let info = gen_rand_key(16);
 ///
-/// let dk = Hkdf { salt: salt, ikm: key, info: info, hmac: 256, length: 50 };
+/// let dk = Hkdf { salt: salt, ikm: key, info: info, hmac: ShaVariantOption::SHA256, length: 50 };
 /// dk.hkdf_compute();
 /// ```
 
@@ -53,11 +55,11 @@ impl Hkdf {
     /// The HKDF Expand step. Returns an HKDF.
     pub fn hkdf_compute(&self) -> Vec<u8> {
         // Check that the selected key length is within the limit.
-        if self.length > (255 * self.hmac / 8) {
+        if self.length > (255 * self.hmac.return_value() / 8) {
             panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
         }
 
-        let n_iter = (self.length as f32 / (self.hmac / 8) as f32).ceil() as usize;
+        let n_iter = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
 
         let mut con_step: Vec<u8> = vec![];
         let mut t_step: Vec<u8> = vec![];
@@ -87,6 +89,8 @@ mod test {
     extern crate hex;
     use self::hex::decode;
     use hkdf::Hkdf;
+    use options::ShaVariantOption;
+
 
     #[test]
     fn rfc5869_test_case_1() {
@@ -95,7 +99,7 @@ mod test {
             salt: decode("000102030405060708090a0b0c").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("f0f1f2f3f4f5f6f7f8f9").unwrap(),
-            hmac: 256,
+            hmac: ShaVariantOption::SHA256,
             length: 42,
         };
 
@@ -123,7 +127,7 @@ mod test {
             info: decode("b0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf\
                 d0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeef\
                 f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff").unwrap(),
-            hmac: 256,
+            hmac: ShaVariantOption::SHA256,
             length: 82,
         };
 
@@ -146,7 +150,7 @@ mod test {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: 256,
+            hmac: ShaVariantOption::SHA256,
             length: 42,
         };
 
@@ -169,7 +173,7 @@ mod test {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: 256,
+            hmac: ShaVariantOption::SHA256,
             // Max allowed length here is 8160
             length: 9000,
         };
@@ -185,7 +189,7 @@ mod test {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: 384,
+            hmac: ShaVariantOption::SHA384,
             // Max allowed length here is 12240
             length: 13000,
         };
@@ -201,7 +205,7 @@ mod test {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: 512,
+            hmac: ShaVariantOption::SHA512,
             // Max allowed length here is 16320
             length: 17000,
         };
