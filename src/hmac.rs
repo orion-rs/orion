@@ -158,8 +158,7 @@ mod test {
     use hmac::Hmac;
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_1() {
+    fn rfc4231_test_case_1() {
 
         let hmac_256 = Hmac {
             secret_key: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
@@ -192,8 +191,7 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_2() {
+    fn rfc4231_test_case_2() {
 
         let hmac_256 = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
@@ -226,8 +224,7 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_3() {
+    fn rfc4231_test_case_3() {
 
         let hmac_256 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
@@ -263,8 +260,7 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_4() {
+    fn rfc4231_test_case_4() {
 
         let hmac_256 = Hmac {
             secret_key: decode("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
@@ -300,8 +296,7 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_5() {
+    fn rfc4231_test_case_5() {
 
         let hmac_256 = Hmac {
             secret_key: decode("0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c").unwrap(),
@@ -340,8 +335,7 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_6() {
+    fn rfc4231_test_case_6() {
 
         let hmac_256 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
@@ -390,8 +384,7 @@ mod test {
 
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_7() {
+    fn rfc4231_test_case_7() {
 
         let hmac_256 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\

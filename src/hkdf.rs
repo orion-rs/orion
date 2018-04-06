@@ -89,8 +89,7 @@ mod test {
     use hkdf::Hkdf;
 
     #[test]
-    // Testing against provided test vectors in RFC 5869
-    fn hkdf_result_test_case_1() {
+    fn rfc5869_test_case_1() {
 
         let hkdf_256 = Hkdf {
             salt: decode("000102030405060708090a0b0c").unwrap(),
@@ -112,8 +111,7 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 5869
-    fn hkdf_result_test_case_2() {
+    fn rfc5869_test_case_2() {
 
         let hkdf_256 = Hkdf {
             salt: decode("606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f\
@@ -142,8 +140,7 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 5869
-    fn hkdf_result_test_case_3() {
+    fn rfc5869_test_case_3() {
 
         let hkdf_256 = Hkdf {
             salt: decode("").unwrap(),
