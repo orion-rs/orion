@@ -3,6 +3,7 @@ use sha2::Digest;
 use sha2;
 use clear_on_drop::clear;
 use util;
+use options::ShaVariantOption;
 
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
@@ -11,7 +12,7 @@ use util;
 pub struct Hmac {
     pub secret_key: Vec<u8>,
     pub message: Vec<u8>,
-    pub sha2: usize,
+    pub sha2: ShaVariantOption,
 }
 
 impl Drop for Hmac {
@@ -30,11 +31,12 @@ impl Drop for Hmac {
 /// ```
 /// use orion::hmac::Hmac;
 /// use orion::util::gen_rand_key;
+/// use orion::options::ShaVariantOption;
 ///
 /// let key = gen_rand_key(16);
 /// let message = gen_rand_key(16);
 ///
-/// let hmac_sha256 = Hmac { secret_key: key, message: message, sha2: 256 };
+/// let hmac_sha256 = Hmac { secret_key: key, message: message, sha2: ShaVariantOption::SHA256 };
 ///
 /// hmac_sha256.hmac_compute();
 /// ```
@@ -42,6 +44,7 @@ impl Drop for Hmac {
 /// ```
 /// use orion::hmac::Hmac;
 /// use orion::util::gen_rand_key;
+/// use orion::options::ShaVariantOption;
 ///
 /// let key = "Some key.";
 /// let msg = "Some message.";
@@ -49,12 +52,12 @@ impl Drop for Hmac {
 /// let hmac_sha256 = Hmac {
 ///     secret_key: key.as_bytes().to_vec(),
 ///     message: msg.as_bytes().to_vec(),
-///     sha2: 256
+///     sha2: ShaVariantOption::SHA256
 /// };
 /// let received_hmac = Hmac {
 ///     secret_key: key.as_bytes().to_vec(),
 ///     message: msg.as_bytes().to_vec(),
-///     sha2: 256
+///     sha2: ShaVariantOption::SHA256
 /// };
 /// assert_eq!(hmac_sha256.hmac_compare(&received_hmac.hmac_compute()), true);
 /// ```
@@ -62,17 +65,17 @@ impl Drop for Hmac {
 impl Hmac {
     /// Return blocksize matching SHA variant.
     fn blocksize(&self) -> usize {
-        match self.sha2 {
+        match self.sha2.return_value() {
             256 => 64,
             384 => 128,
             512 => 128,
-            _ => panic!("Blocksize not found for {:?}", self.sha2)
+            _ => panic!("Blocksize not found for {:?}", self.sha2.return_value())
         }
     }
 
     /// Return a SHA2 digest of a given byte slice.
     fn hash(&self, data: &[u8]) -> Vec<u8> {
-        match self.sha2 {
+        match self.sha2.return_value() {
             256 => {
                 let mut hash = sha2::Sha256::default();
                 hash.input(data);
@@ -88,7 +91,7 @@ impl Hmac {
                 hash.input(data);
                 hash.result().to_vec()
             },
-            _ => panic!("Unkown option {:?}", self.sha2)
+            _ => panic!("Unkown option {:?}", self.sha2.return_value())
         }
     }
 
@@ -156,25 +159,26 @@ mod test {
     extern crate hex;
     use self::hex::decode;
     use hmac::Hmac;
+    use options::ShaVariantOption;
+
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_1() {
+    fn rfc4231_test_case_1() {
 
         let hmac_256 = Hmac {
             secret_key: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             message: "Hi There".as_bytes().to_vec(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             message: "Hi There".as_bytes().to_vec(),
-            sha2: 384
+            sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             message: "Hi There".as_bytes().to_vec(),
-            sha2: 512
+            sha2: ShaVariantOption::SHA512
         };
 
         let expected_hmac_256 = decode(
@@ -192,23 +196,22 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_2() {
+    fn rfc4231_test_case_2() {
 
         let hmac_256 = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
             message: "what do ya want for nothing?".as_bytes().to_vec(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
             message: "what do ya want for nothing?".as_bytes().to_vec(),
-            sha2: 384
+            sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
             message: "what do ya want for nothing?".as_bytes().to_vec(),
-            sha2: 512
+            sha2: ShaVariantOption::SHA512
         };
 
         let expected_hmac_256 = decode(
@@ -226,26 +229,25 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_3() {
+    fn rfc4231_test_case_3() {
 
         let hmac_256 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
             message: decode("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\
                   dddddddddddddddddddddddddddddddddddd").unwrap(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
             message: decode("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\
                   dddddddddddddddddddddddddddddddddddd").unwrap(),
-            sha2: 384
+            sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
             message: decode("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\
                   dddddddddddddddddddddddddddddddddddd").unwrap(),
-            sha2: 512
+            sha2: ShaVariantOption::SHA512
         };
 
         let expected_hmac_256 = decode(
@@ -263,26 +265,25 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_4() {
+    fn rfc4231_test_case_4() {
 
         let hmac_256 = Hmac {
             secret_key: decode("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
             message: decode("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\
                   cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd").unwrap(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
             message: decode("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\
                   cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd").unwrap(),
-            sha2: 384
+            sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
             message: decode("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\
                   cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd").unwrap(),
-            sha2: 512
+            sha2: ShaVariantOption::SHA512
         };
 
         let expected_hmac_256 = decode(
@@ -300,23 +301,22 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_5() {
+    fn rfc4231_test_case_5() {
 
         let hmac_256 = Hmac {
             secret_key: decode("0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c").unwrap(),
             message: decode("546573742057697468205472756e636174696f6e").unwrap(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c").unwrap(),
             message: decode("546573742057697468205472756e636174696f6e").unwrap(),
-            sha2: 384
+            sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c").unwrap(),
             message: decode("546573742057697468205472756e636174696f6e").unwrap(),
-            sha2: 512
+            sha2: ShaVariantOption::SHA512
         };
 
         let expected_hmac_256 = decode(
@@ -340,8 +340,7 @@ mod test {
     }
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_6() {
+    fn rfc4231_test_case_6() {
 
         let hmac_256 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
@@ -351,7 +350,7 @@ mod test {
                   aaaaaa").unwrap(),
             message: decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
                   65204b6579202d2048617368204b6579204669727374").unwrap(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
@@ -361,7 +360,7 @@ mod test {
                   aaaaaa").unwrap(),
             message: decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
                   65204b6579202d2048617368204b6579204669727374").unwrap(),
-            sha2: 384
+            sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
@@ -371,7 +370,7 @@ mod test {
                   aaaaaa").unwrap(),
             message: decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
                   65204b6579202d2048617368204b6579204669727374").unwrap(),
-            sha2: 512
+            sha2: ShaVariantOption::SHA512
         };
 
         let expected_hmac_256 = decode(
@@ -390,8 +389,7 @@ mod test {
 
 
     #[test]
-    // Testing against provided test vectors in RFC 4231
-    fn hmac_result_test_case_7() {
+    fn rfc4231_test_case_7() {
 
         let hmac_256 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
@@ -404,7 +402,7 @@ mod test {
                   68616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565\
                   647320746f20626520686173686564206265666f7265206265696e6720757365\
                   642062792074686520484d414320616c676f726974686d2e").unwrap(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
@@ -417,7 +415,7 @@ mod test {
                   68616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565\
                   647320746f20626520686173686564206265666f7265206265696e6720757365\
                   642062792074686520484d414320616c676f726974686d2e").unwrap(),
-            sha2: 384
+            sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
@@ -430,7 +428,7 @@ mod test {
                   68616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565\
                   647320746f20626520686173686564206265666f7265206265696e6720757365\
                   642062792074686520484d414320616c676f726974686d2e").unwrap(),
-            sha2: 512
+            sha2: ShaVariantOption::SHA512
         };
 
         let expected_hmac_256 = decode(
@@ -454,17 +452,17 @@ mod test {
         let own_hmac = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
             message: "what do ya want for nothing?".as_bytes().to_vec(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
         let recieved_hmac = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
             message: "what do ya want for nothing?".as_bytes().to_vec(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
         let false_hmac = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
             message: "what do ya want for something?".as_bytes().to_vec(),
-            sha2: 256
+            sha2: ShaVariantOption::SHA256
         };
 
         assert_eq!(own_hmac.hmac_compare(&recieved_hmac.hmac_compute()), true);

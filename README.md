@@ -21,9 +21,8 @@ use orion::{default, util};
 let key = util::gen_rand_key(64);
 let msg = "Some message.".as_bytes().to_vec();
 
-let hmac_digest = default::hmac(key, msg);
-let hmac_digest_second = default::hmac(key, msg);
-assert_eq!(default::hmac_validate(&hmac_digest, &hmac_digest_second), true);
+let expected_hmac = default::hmac(key, msg);
+assert_eq!(default::hmac_validate(&expected_hmac, &key, &msg), true);
 
 // HKDF
 let salt = util::gen_rand_key(64);

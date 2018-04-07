@@ -1,6 +1,7 @@
 use hmac::Hmac;
 use hkdf::Hkdf;
 use util;
+use options::ShaVariantOption;
 
 /// HMAC with SHA512
 pub fn hmac(secret_key: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
@@ -13,7 +14,7 @@ pub fn hmac(secret_key: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
     let hmac_512_res = Hmac {
         secret_key: secret_key,
         message: message,
-        sha2: 512
+        sha2: ShaVariantOption::SHA512
     };
 
     hmac_512_res.hmac_compute()
@@ -29,24 +30,26 @@ pub fn hkdf(salt: Vec<u8>, data: Vec<u8>, info: Vec<u8>, length: usize) -> Vec<u
 
     let hkdf_512_res = Hkdf {
         salt: salt,
-        data: data,
+        ikm: data,
         info: info,
-        hmac: 512,
+        hmac: ShaVariantOption::SHA512,
         length: length
     };
 
     hkdf_512_res.hkdf_compute()
 }
 
-pub fn hmac_validate(own_hmac: &[u8], received_hmac: &[u8]) -> bool {
+pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> bool {
 
     let rand_key = util::gen_rand_key(64);
 
-    let nd_round_own = hmac(rand_key.clone(), own_hmac.to_vec());
+    let own_hmac = hmac(secret_key.to_vec(), message.to_vec());
 
-    let nd_round_received = hmac(rand_key.clone(), received_hmac.to_vec());
+    let nd_round_own = hmac(rand_key.clone(), own_hmac);
 
-    util::compare_ct(&nd_round_own, &nd_round_received)
+    let nd_round_expected = hmac(rand_key.clone(), expected_hmac.to_vec());
+
+    util::compare_ct(&nd_round_own, &nd_round_expected)
 }
 
 
@@ -104,13 +107,10 @@ mod test {
               aaaaaaaa").unwrap();
         let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-        let hmac_alice = default::hmac(sec_key_correct.clone(), msg.clone());
         let hmac_bob = default::hmac(sec_key_correct.clone(), msg.clone());
-        let hmac_eve = default::hmac(sec_key_false, msg.clone());
 
-        assert_eq!(default::hmac_validate(&hmac_alice, &hmac_bob), true);
-        assert_eq!(default::hmac_validate(&hmac_alice, &hmac_eve), false);
-
+        assert_eq!(default::hmac_validate(&hmac_bob, &sec_key_correct, &msg), true);
+        assert_eq!(default::hmac_validate(&hmac_bob, &sec_key_false, &msg), false);
     }
 
     #[test]
