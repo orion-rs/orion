@@ -10,7 +10,7 @@ Currently contains:
 Include it in your `Cargo.toml` file:
 ```
 [dependencies]
-orion = ">=0.1.44"
+orion = ">=0.1.45"
 ```
 Use it like this:
 ```
