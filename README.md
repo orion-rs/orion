@@ -40,5 +40,8 @@ let hkdf = default::hmac(salt, data, info, 64);
 All unit-tests are located in the same file as the functions they are testing.
 To run tests: `cargo test`.
 
+### Acknowledgments
+Thanks to @defuse for a quick audit of the code.
+
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.
