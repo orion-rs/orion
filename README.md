@@ -2,6 +2,8 @@
 
 **Warning:** You should not use this for anything that requires confidence in security.
 
+Cryptographic functions implemented in Rust, with a simple API.
+
 Currently contains:
 * HMAC with SHA2(256, 384, 512).
 * HKDF with the above HMAC options.
