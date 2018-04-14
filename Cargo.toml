@@ -1,11 +1,12 @@
 [package]
 name = "orion"
-version = "0.1.45"
+version = "0.1.46"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Random cryptographic functions in Rust."
 keywords = [ "cryptography", "hmac", "hkdf" ]
 readme = "README.md"
 repository = "https://github.com/brycx/orion"
+documentation = "https://docs.rs/orion"
 license = "MIT"
 
 [dependencies]

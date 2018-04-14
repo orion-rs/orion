@@ -12,6 +12,14 @@ pub fn gen_rand_key(len: usize) -> Vec<u8> {
 
 #[inline(never)]
 /// Comparison in constant time.
+/// # Usage example:
+///
+/// ```
+/// use orion::util;
+///
+/// let key = util::gen_rand_key(64);
+/// assert_eq!(util::compare_ct(&key, &key), true);
+/// ```
 pub fn compare_ct(x: &[u8], y: &[u8]) -> bool {
 
     let length = x.len();

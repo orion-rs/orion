@@ -97,6 +97,8 @@ impl Hmac {
 
     /// Return a padded key if the key is less than or greater than the blocksize.
     fn pad_key<'a>(&self, secret_key: &'a [u8]) -> Cow<'a, [u8]> {
+        // Borrow so that if the key is exactly the needed length
+        // no new key needs to be allocated before returning it
         let mut key = Cow::from(secret_key);
 
         if key.len() > self.blocksize() {

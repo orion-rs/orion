@@ -10,7 +10,7 @@ Currently contains:
 Include it in your `Cargo.toml` file:
 ```
 [dependencies]
-orion = ">=0.1.45"
+orion = ">=0.1.46"
 ```
 Use it like this:
 ```
@@ -19,17 +19,18 @@ use orion::{default, util};
 
 // HMAC
 let key = util::gen_rand_key(64);
-let msg = "Some message.".as_bytes().to_vec();
+let msg = "Some message.".as_bytes();
 
-let expected_hmac = default::hmac(key, msg);
+let expected_hmac = default::hmac(&key, msg);
+// Verifying an HMAC
 assert_eq!(default::hmac_validate(&expected_hmac, &key, &msg), true);
 
 // HKDF
 let salt = util::gen_rand_key(64);
-let data = "Some data.".as_bytes().to_vec();
-let info = "Some info.".as_bytes().to_vec();
+let data = "Some data.".as_bytes();
+let info = "Some info.".as_bytes();
 
-let hkdf = default::hmac(salt, data, info, 64);
+let hkdf = default::hkdf(&salt, data, info, 64);
 ```
 
 

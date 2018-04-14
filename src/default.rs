@@ -3,8 +3,19 @@ use hkdf::Hkdf;
 use util;
 use options::ShaVariantOption;
 
-/// HMAC with SHA512
-pub fn hmac(secret_key: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
+/// HMAC with SHA512.
+/// # Usage example:
+///
+/// ```
+/// use orion::default;
+/// use orion::util;
+///
+/// let key = util::gen_rand_key(64);
+/// let msg = "Some message.".as_bytes();
+///
+/// let hmac = default::hmac(&key, msg);
+/// ```
+pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
 
     if secret_key.len() < 64 {
         panic!("The secret_key must be equal to, or above 64 bytes in length.");
@@ -12,16 +23,28 @@ pub fn hmac(secret_key: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
 
 
     let hmac_512_res = Hmac {
-        secret_key: secret_key,
-        message: message,
+        secret_key: secret_key.to_vec(),
+        message: message.to_vec(),
         sha2: ShaVariantOption::SHA512
     };
 
     hmac_512_res.hmac_compute()
 }
 
-/// HKDF with HMAC-SHA512
-pub fn hkdf(salt: Vec<u8>, data: Vec<u8>, info: Vec<u8>, length: usize) -> Vec<u8> {
+/// HKDF with HMAC-SHA512.
+/// # Usage example:
+///
+/// ```
+/// use orion::default;
+/// use orion::util;
+///
+/// let salt = util::gen_rand_key(64);
+/// let data = "Some data.".as_bytes();
+/// let info = "Some info.".as_bytes();
+///
+/// let hkdf = default::hkdf(&salt, data, info, 64);
+/// ```
+pub fn hkdf(salt: &[u8], data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
 
     if salt.len() < 64 {
         panic!("The salt must be equal to, or above, 64 bytes in length.");
@@ -29,25 +52,37 @@ pub fn hkdf(salt: Vec<u8>, data: Vec<u8>, info: Vec<u8>, length: usize) -> Vec<u
 
 
     let hkdf_512_res = Hkdf {
-        salt: salt,
-        ikm: data,
-        info: info,
+        salt: salt.to_vec(),
+        ikm: data.to_vec(),
+        info: info.to_vec(),
         hmac: ShaVariantOption::SHA512,
         length: length
     };
 
     hkdf_512_res.hkdf_compute()
 }
-
+/// Validate an HMAC against a key and message.
+/// # Usage example:
+///
+/// ```
+/// use orion::default;
+/// use orion::util;
+///
+/// let key = util::gen_rand_key(64);
+/// let msg = "Some message.".as_bytes();
+///
+/// let expected_hmac = default::hmac(&key, msg);
+/// assert_eq!(default::hmac_validate(&expected_hmac, &key, &msg), true);
+/// ```
 pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> bool {
 
     let rand_key = util::gen_rand_key(64);
 
-    let own_hmac = hmac(secret_key.to_vec(), message.to_vec());
-
-    let nd_round_own = hmac(rand_key.clone(), own_hmac);
-
-    let nd_round_expected = hmac(rand_key.clone(), expected_hmac.to_vec());
+    let own_hmac = hmac(&secret_key, &message);
+    // Verification happens on an additional round of HMAC
+    // to randomize the data that the validation is done on
+    let nd_round_own = hmac(&rand_key, &own_hmac);
+    let nd_round_expected = hmac(&rand_key, &expected_hmac);
 
     util::compare_ct(&nd_round_own, &nd_round_expected)
 }
@@ -63,13 +98,13 @@ mod test {
     #[test]
     #[should_panic]
     fn hmac_secretkey_too_short() {
-        default::hmac(vec![0x61; 10], vec![0x61; 10]);
+        default::hmac(&vec![0x61; 10], &vec![0x61; 10]);
     }
 
     #[test]
     fn hmac_secretkey_allowed_len() {
-        default::hmac(vec![0x61; 64], vec![0x61; 10]);
-        default::hmac(vec![0x61; 78], vec![0x61; 10]);
+        default::hmac(&vec![0x61; 64], &vec![0x61; 10]);
+        default::hmac(&vec![0x61; 78], &vec![0x61; 10]);
     }
 
     #[test]
@@ -87,7 +122,7 @@ mod test {
             "80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f352\
             6b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598").unwrap();
 
-        assert_eq!(default::hmac(sec_key, msg), expected_hmac_512);
+        assert_eq!(default::hmac(&sec_key, &msg), expected_hmac_512);
     }
 
     #[test]
@@ -99,7 +134,7 @@ mod test {
               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
               aaaaaa").unwrap();
-              // Two additional a's in the end
+              // Change compared to the above: Two additional a's at the end
         let sec_key_false = decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
@@ -107,7 +142,7 @@ mod test {
               aaaaaaaa").unwrap();
         let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-        let hmac_bob = default::hmac(sec_key_correct.clone(), msg.clone());
+        let hmac_bob = default::hmac(&sec_key_correct, &msg);
 
         assert_eq!(default::hmac_validate(&hmac_bob, &sec_key_correct, &msg), true);
         assert_eq!(default::hmac_validate(&hmac_bob, &sec_key_false, &msg), false);
@@ -116,12 +151,12 @@ mod test {
     #[test]
     #[should_panic]
     fn hkdf_salt_too_short() {
-        default::hkdf(vec![0x61; 10], vec![0x61; 10], vec![0x61; 10], 20);
+        default::hkdf(&vec![0x61; 10], &vec![0x61; 10], &vec![0x61; 10], 20);
     }
 
     #[test]
     fn hkdf_salt_allowed_len() {
-        default::hkdf(vec![0x61; 67], vec![0x61; 10], vec![0x61; 10], 20);
-        default::hkdf(vec![0x61; 89], vec![0x61; 10], vec![0x61; 10], 20);
+        default::hkdf(&vec![0x61; 67], &vec![0x61; 10], &vec![0x61; 10], 20);
+        default::hkdf(&vec![0x61; 89], &vec![0x61; 10], &vec![0x61; 10], 20);
     }
 }

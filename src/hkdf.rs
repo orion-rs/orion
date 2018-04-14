@@ -14,6 +14,7 @@ pub struct Hkdf {
 }
 
 impl Drop for Hkdf {
+    // For each Drop, use the clear_on_drop .clear() function to overwrite data
     fn drop(&mut self) {
         //println!("DROPPING");
         self.salt.clear();
@@ -52,7 +53,7 @@ impl Hkdf {
         hmac_res.hmac_compute()
     }
 
-    /// The HKDF Expand step. Returns an HKDF.
+    /// The HKDF Expand step, that automatically calls the hkdf_extract() function. Returns an HKDF.
     pub fn hkdf_compute(&self) -> Vec<u8> {
         // Check that the selected key length is within the limit.
         if self.length > (255 * self.hmac.return_value() / 8) {
@@ -61,21 +62,23 @@ impl Hkdf {
 
         let n_iter = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
 
+        // con_step will hold the intermediate state of "T_n | info | 0x0n" as described in the RFC
         let mut con_step: Vec<u8> = vec![];
-        let mut t_step: Vec<u8> = vec![];
+        let mut hmac_hash_step: Vec<u8> = vec![];
         let mut hkdf_final: Vec<u8> = vec![];
 
         for x in 1..n_iter+1 {
-                con_step.append(&mut t_step);
+                con_step.append(&mut hmac_hash_step);
                 con_step.extend_from_slice(&self.info);
                 con_step.push(x as u8);
-                t_step.extend_from_slice(&self.hkdf_extract(
+                // Call hkdf_extract() here, so that a PRF does not need to be passed beforehand
+                hmac_hash_step.extend_from_slice(&self.hkdf_extract(
                     &con_step,
                     &self.hkdf_extract(&self.ikm, &self.salt))
                 );
                 con_step.clear();
 
-                hkdf_final.extend_from_slice(&t_step);
+                hkdf_final.extend_from_slice(&hmac_hash_step);
         }
 
         hkdf_final.truncate(self.length);

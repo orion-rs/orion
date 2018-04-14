@@ -1,4 +1,5 @@
 #[derive(Clone, Copy)]
+/// Exposes the Sha2 options made available.
 pub enum ShaVariantOption {
     SHA256,
     SHA384,
