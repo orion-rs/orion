@@ -17,15 +17,15 @@ Use it like this:
 extern crate orion
 use orion::{default, util};
 
-// HMAC
+// HMAC-SHA512
 let key = util::gen_rand_key(64);
 let msg = "Some message.".as_bytes();
 
 let expected_hmac = default::hmac(&key, msg);
-// Verifying an HMAC
+// Verifying an HMAC-SHA512
 assert_eq!(default::hmac_validate(&expected_hmac, &key, &msg), true);
 
-// HKDF
+// HKDF-HMAC-SHA512
 let salt = util::gen_rand_key(64);
 let data = "Some data.".as_bytes();
 let info = "Some info.".as_bytes();
