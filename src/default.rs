@@ -36,7 +36,9 @@ pub fn hkdf(salt: Vec<u8>, data: Vec<u8>, info: Vec<u8>, length: usize) -> Vec<u
         length: length
     };
 
-    hkdf_512_res.hkdf_compute()
+    let hkdf_512_extract = hkdf_512_res.hkdf_extract(&hkdf_512_res.ikm, &hkdf_512_res.salt);
+
+    hkdf_512_res.hkdf_expand(&hkdf_512_extract)
 }
 
 pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> bool {

@@ -37,7 +37,8 @@ impl Drop for Hkdf {
 /// let info = gen_rand_key(16);
 ///
 /// let dk = Hkdf { salt: salt, ikm: key, info: info, hmac: ShaVariantOption::SHA256, length: 50 };
-/// dk.hkdf_compute();
+/// let dk_extract = dk.hkdf_extract(&dk.ikm, &dk.salt);
+/// dk.hkdf_expand(&dk_extract);
 /// ```
 
 impl Hkdf {
@@ -53,7 +54,7 @@ impl Hkdf {
     }
 
     /// The HKDF Expand step. Returns an HKDF.
-    pub fn hkdf_compute(&self) -> Vec<u8> {
+    pub fn hkdf_expand(&self, prk: &[u8]) -> Vec<u8> {
         // Check that the selected key length is within the limit.
         if self.length > (255 * self.hmac.return_value() / 8) {
             panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
@@ -69,10 +70,8 @@ impl Hkdf {
                 con_step.append(&mut t_step);
                 con_step.extend_from_slice(&self.info);
                 con_step.push(x as u8);
-                t_step.extend_from_slice(&self.hkdf_extract(
-                    &con_step,
-                    &self.hkdf_extract(&self.ikm, &self.salt))
-                );
+                // We call extract here as it has the same functionality as a simple HMAC call
+                t_step.extend_from_slice(&self.hkdf_extract(&con_step, prk));
                 con_step.clear();
 
                 hkdf_final.extend_from_slice(&t_step);
@@ -110,8 +109,10 @@ mod test {
             "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf\
             34007208d5b887185865").unwrap();
 
-        assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt), expected_prk_256);
-        assert_eq!(hkdf_256.hkdf_compute(), expected_okm_256);
+        let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
+
+        assert_eq!(actual_extract_256, expected_prk_256);
+        assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256), expected_okm_256);
     }
 
     #[test]
@@ -139,8 +140,10 @@ mod test {
             59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71\
             cc30c58179ec3e87c14c01d5c1f3434f1d87").unwrap();
 
-        assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt), expected_prk_256);
-        assert_eq!(hkdf_256.hkdf_compute(), expected_okm_256);
+        let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
+
+        assert_eq!(actual_extract_256, expected_prk_256);
+        assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256), expected_okm_256);
     }
 
     #[test]
@@ -161,8 +164,10 @@ mod test {
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-        assert_eq!(hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt), expected_prk_256);
-        assert_eq!(hkdf_256.hkdf_compute(), expected_okm_256);
+        let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
+
+        assert_eq!(actual_extract_256, expected_prk_256);
+        assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256), expected_okm_256);
     }
 
     #[test]
@@ -178,7 +183,9 @@ mod test {
             length: 9000,
         };
 
-        hkdf_256.hkdf_compute();
+        let hkdf_256_extract = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
+
+        hkdf_256.hkdf_expand(&hkdf_256_extract);
     }
 
     #[test]
@@ -194,7 +201,9 @@ mod test {
             length: 13000,
         };
 
-        hkdf_384.hkdf_compute();
+        let hkdf_384_extract = hkdf_384.hkdf_extract(&hkdf_384.ikm, &hkdf_384.salt);
+
+        hkdf_384.hkdf_expand(&hkdf_384_extract);
     }
 
     #[test]
@@ -210,6 +219,8 @@ mod test {
             length: 17000,
         };
 
-        hkdf_512.hkdf_compute();
+        let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
+
+        hkdf_512.hkdf_expand(&hkdf_512_extract);
     }
 }
