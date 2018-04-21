@@ -54,13 +54,8 @@ impl Hkdf {
         hmac_res.hmac_compute()
     }
 
-<<<<<<< HEAD
-    /// The HKDF Expand step, that automatically calls the hkdf_extract() function. Returns an HKDF.
-    pub fn hkdf_compute(&self) -> Vec<u8> {
-=======
     /// The HKDF Expand step. Returns an HKDF.
     pub fn hkdf_expand(&self, prk: &[u8]) -> Vec<u8> {
->>>>>>> f23720e204ad99c5b1c023ca328e98dcba674151
         // Check that the selected key length is within the limit.
         if self.length > (255 * self.hmac.return_value() / 8) {
             panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
@@ -77,16 +72,8 @@ impl Hkdf {
                 con_step.append(&mut hmac_hash_step);
                 con_step.extend_from_slice(&self.info);
                 con_step.push(x as u8);
-<<<<<<< HEAD
-                // Call hkdf_extract() here, so that a PRF does not need to be passed beforehand
-                hmac_hash_step.extend_from_slice(&self.hkdf_extract(
-                    &con_step,
-                    &self.hkdf_extract(&self.ikm, &self.salt))
-                );
-=======
                 // We call extract here as it has the same functionality as a simple HMAC call
-                t_step.extend_from_slice(&self.hkdf_extract(&con_step, prk));
->>>>>>> f23720e204ad99c5b1c023ca328e98dcba674151
+                hmac_hash_step.extend_from_slice(&self.hkdf_extract(&con_step, prk));
                 con_step.clear();
 
                 hkdf_final.extend_from_slice(&hmac_hash_step);
