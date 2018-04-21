@@ -1,6 +1,6 @@
 ## orion ![Build Status](https://travis-ci.org/brycx/orion.svg?branch=master)
 
-**Warning:** You should not use this for anything that requires confidence in security.
+**Warning:** There are no guarantees for the security of these implementations. Use at your own risk.
 
 Cryptographic functions implemented in Rust, with a simple API.
 
@@ -12,7 +12,7 @@ Currently contains:
 Include it in your `Cargo.toml` file:
 ```
 [dependencies]
-orion = ">=0.1.46"
+orion = ">=0.1.5"
 ```
 Use it like this:
 ```
@@ -44,7 +44,7 @@ All unit-tests are located in the same file as the functions they are testing.
 To run tests: `cargo test`.
 
 ### Acknowledgments
-Thanks to @defuse for a quick audit of the code.
+Thanks to [@defuse](https://github.com/defuse) for a quick audit of the code.
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.
