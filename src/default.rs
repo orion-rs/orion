@@ -59,7 +59,9 @@ pub fn hkdf(salt: &[u8], data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
         length: length
     };
 
-    hkdf_512_res.hkdf_compute()
+    let hkdf_512_extract = hkdf_512_res.hkdf_extract(&hkdf_512_res.ikm, &hkdf_512_res.salt);
+
+    hkdf_512_res.hkdf_expand(&hkdf_512_extract)
 }
 /// Validate an HMAC against a key and message.
 /// # Usage example:
