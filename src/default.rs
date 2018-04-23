@@ -89,6 +89,7 @@ pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
     util::compare_ct(&nd_round_own, &nd_round_expected)
 }
 
+// Functions here to simplify PBKDF2 with HMAC-SHA512 and a automatically generated salt
 
 #[cfg(test)]
 mod test {

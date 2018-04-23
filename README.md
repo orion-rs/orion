@@ -7,6 +7,7 @@ Cryptographic functions implemented in Rust, with a simple API.
 Currently contains:
 * HMAC with SHA2(256, 384, 512).
 * HKDF with the above HMAC options.
+* PBKDF2 with the above HMAC options.
 
 ### Usage
 Include it in your `Cargo.toml` file:

@@ -16,3 +16,6 @@ pub mod default;
 
 /// Sha2 options.
 pub mod options;
+
+/// PBKDF2
+pub mod pbkdf2;
