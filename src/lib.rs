@@ -1,6 +1,7 @@
 extern crate rand;
 extern crate sha2;
 extern crate clear_on_drop;
+extern crate byte_tools;
 
 /// Utility functions such as constant time comparison.
 pub mod util;
