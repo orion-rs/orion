@@ -77,7 +77,7 @@ impl Pbkdf2 {
         let mut u_step: Vec<u8> = self.return_prf(&self.password, &u_first);
         f_iter_final.extend_from_slice(&self.fixed_xor(&u_first, &u_step));
 
-        for x in 2..self.iterations {
+        for x in 2..self.iterations+1 {
             u_int_step = self.return_prf(&self.password, &u_step);
             u_step = self.return_prf(&self.password, &u_int_step);
             f_iter_final.extend_from_slice(&self.fixed_xor(&u_step, &u_int_step));
@@ -152,19 +152,19 @@ mod test {
     fn rfc6070_test_case_2() {
 
 
-                let pbkdf2_dk_256 = Pbkdf2 {
-                    password: "password".as_bytes().to_vec(),
-                    salt: "salt".as_bytes().to_vec(),
-                    iterations: 1,
-                    length: 32,
-                    hmac: ShaVariantOption::SHA256,
-                };
+        let pbkdf2_dk_256 = Pbkdf2 {
+            password: "password".as_bytes().to_vec(),
+            salt: "salt".as_bytes().to_vec(),
+            iterations: 2,
+            length: 32,
+            hmac: ShaVariantOption::SHA256,
+        };
 
-                let expected_pbkdf2_dk_256 = decode(
-                    "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b"
-                ).unwrap();
+        let expected_pbkdf2_dk_256 = decode(
+            "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b"
+        ).unwrap();
 
-                assert_eq!(expected_pbkdf2_dk_256.len(), pbkdf2_dk_256.pbkdf2_compute().len());
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
 
     }
 
