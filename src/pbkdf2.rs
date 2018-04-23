@@ -161,7 +161,7 @@ mod test {
         };
 
         let expected_pbkdf2_dk_256 = decode(
-            "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b"
+            "ae4d0c95af6b46d32d0adff928f06dd02a303f8ef3c251dfd6e2d85a95474c43"
         ).unwrap();
 
         assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
