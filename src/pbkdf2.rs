@@ -111,6 +111,11 @@ impl Pbkdf2 {
 
     /// PBKDF2 function. Return a derived key.
     pub fn pbkdf2_compute(&self) -> Vec<u8> {
+
+        if self.iterations < 1 {
+            panic!("0 iterations are not possible");
+        }
+
         // Check that the selected key length is within the limit.
         if self.length > ((2_u64.pow(32) - 1) * (self.hmac.return_value() / 8) as u64) as usize {
             panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
@@ -275,6 +280,21 @@ mod test {
             salt: "salt".as_bytes().to_vec(),
             iterations: 1,
             length: too_long,
+            hmac: ShaVariantOption::SHA256,
+        };
+
+        pbkdf2_dk_256.pbkdf2_compute();
+    }
+
+    #[test]
+    #[should_panic]
+    fn zero_iterations_panic() {
+
+        let pbkdf2_dk_256 = Pbkdf2 {
+            password: "password".as_bytes().to_vec(),
+            salt: "salt".as_bytes().to_vec(),
+            iterations: 0,
+            length: 15,
             hmac: ShaVariantOption::SHA256,
         };
 
