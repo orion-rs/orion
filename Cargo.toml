@@ -3,7 +3,7 @@ name = "orion"
 version = "0.2.0"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Cryptographic functions implemented in Rust, with a simple API."
-keywords = [ "cryptography", "hmac", "hkdf" ]
+keywords = [ "cryptography", "hmac", "hkdf", "pbkdf"]
 readme = "README.md"
 repository = "https://github.com/brycx/orion"
 documentation = "https://docs.rs/orion"
@@ -14,6 +14,7 @@ rand = ">=0.4.2"
 sha2 = ">=0.7.0"
 clear_on_drop = "0.2.3"
 byte-tools = "0.2.0"
+hex = "0.3.1"
 
 [dev-dependencies]
 hex = "0.3.1"

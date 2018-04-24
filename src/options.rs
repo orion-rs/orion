@@ -8,6 +8,7 @@ pub enum ShaVariantOption {
 
 impl ShaVariantOption {
 
+    /// Return the output size in bits.
     pub fn return_value(&self) -> usize {
         match *self {
             ShaVariantOption::SHA256 => 256,

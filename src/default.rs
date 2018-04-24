@@ -90,6 +90,10 @@ pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
 }
 
 // Functions here to simplify PBKDF2 with HMAC-SHA512 and a automatically generated salt
+// Salt should be at least, as in minimum, 64 bits random
+// For max security 10000000 iterations is recommended, minimum is 1000
+
+
 
 #[cfg(test)]
 mod test {

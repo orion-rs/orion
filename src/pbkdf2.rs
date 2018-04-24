@@ -59,10 +59,10 @@ impl Pbkdf2 {
         prf_res.hmac_compute()
     }
 
-    // function_f() is the function F described in the RFC.
+    /// Function F as described in the RFC.
     fn function_f(&self, i: u32) -> Vec<u8> {
 
-        let mut u_int_step: Vec<u8> = Vec::new();
+        let mut u_step: Vec<u8> = Vec::new();
         let mut f_iter_final: Vec<u8> = Vec::new();
 
         let mut salt_extended = self.salt.clone();
@@ -70,22 +70,29 @@ impl Pbkdf2 {
         write_u32_be(&mut i_buffer, i);
         salt_extended.extend_from_slice(&i_buffer);
 
-        //salt_extended.push(i as u8);
-        // u_first will be the same as U_1
-        let u_first = self.return_prf(&self.password, &salt_extended);
-        // u_step here will be same as U_2
-        let mut u_step: Vec<u8> = self.return_prf(&self.password, &u_first);
-        f_iter_final.extend_from_slice(&self.fixed_xor(&u_first, &u_step));
+        // First iteration
+        // u_step here will be equal to U_1 in RFC
+        u_step = self.return_prf(&self.password, &salt_extended);
+        // Push directly into the final buffer, as this is the first iteration
+        f_iter_final.extend_from_slice(&u_step);
 
-        for x in 2..self.iterations+1 {
-            u_int_step = self.return_prf(&self.password, &u_step);
-            u_step = self.return_prf(&self.password, &u_int_step);
-            f_iter_final.extend_from_slice(&self.fixed_xor(&u_step, &u_int_step));
+        // Second iteration
+        // u_step here will be equal to U_2 in RFC
+        if self.iterations > 1 {
+            u_step = self.return_prf(&self.password, &u_step);
+            f_iter_final = self.fixed_xor(&f_iter_final, &u_step);
+        }
+
+        // Remainder of iterations
+        if self.iterations > 2 {
+            for _x in 2..self.iterations {
+                u_step = self.return_prf(&self.password, &u_step);
+                f_iter_final = self.fixed_xor(&f_iter_final, &u_step);
+            }
         }
 
         f_iter_final
     }
-
 
     /// PBKDF2 function. Return a derived key.
     pub fn pbkdf2_compute(&self) -> Vec<u8> {
@@ -98,21 +105,20 @@ impl Pbkdf2 {
         let hlen_blocks = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
         // Corresponds to r in RFC
         let r_last_block: usize = self.length - ((hlen_blocks - 1) * (self.hmac.return_value() / 8));
-        let mut pbkdf2_final: Vec<u8> = Vec::new();
+
+        let mut pbkdf2_res: Vec<u8> = Vec::new();
         let mut iter_count: u32 = 0;
 
-        for x in 0..hlen_blocks {
-            iter_count.checked_add(1).expect("Overflow on iteration count.");
-            if x != hlen_blocks {
-                pbkdf2_final.extend_from_slice(&self.function_f(iter_count));
-            } else {
-                pbkdf2_final.extend_from_slice(&self.function_f(iter_count)[..r_last_block-1]);
-            }
+        println!("hlen block {}", hlen_blocks);
+
+        for _x in 0..hlen_blocks {
+            iter_count += 1;
+            pbkdf2_res.extend_from_slice(&self.function_f(iter_count));
         }
 
-        pbkdf2_final.truncate(self.length);
-        pbkdf2_final
+        pbkdf2_res.truncate(self.length);
 
+        pbkdf2_res
     }
 }
 
@@ -126,10 +132,12 @@ mod test {
     extern crate hex;
     use self::hex::decode;
 
-    // https://stackoverflow.com/questions/5130513/pbkdf2-hmac-sha2-test-vectors
-
+    // These test vectors have been generated with the cryptography.io Python package.
+    // This package passes the original test vectors from the [RFC 6070](https://tools.ietf.org/html/rfc6070.html).
+    // The script that has been used to generate the expected test vectors can be found
+    // in the test_vector_generation folder.
     #[test]
-    fn rfc6070_test_case_1() {
+    fn gen_test_case_1() {
 
         let pbkdf2_dk_256 = Pbkdf2 {
             password: "password".as_bytes().to_vec(),
@@ -144,13 +152,10 @@ mod test {
         ).unwrap();
 
         assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
-
-
     }
 
     #[test]
-    fn rfc6070_test_case_2() {
-
+    fn gen_test_case_2() {
 
         let pbkdf2_dk_256 = Pbkdf2 {
             password: "password".as_bytes().to_vec(),
@@ -165,32 +170,99 @@ mod test {
         ).unwrap();
 
         assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
-
     }
 
     #[test]
-    fn rfc6070_test_case_3() {
+    fn gen_test_case_3() {
 
+        let pbkdf2_dk_256 = Pbkdf2 {
+            password: "password".as_bytes().to_vec(),
+            salt: "salt".as_bytes().to_vec(),
+            iterations: 4096,
+            length: 32,
+            hmac: ShaVariantOption::SHA256,
+        };
+
+        let expected_pbkdf2_dk_256 = decode(
+            "c5e478d59288c841aa530db6845c4c8d962893a001ce4e11a4963873aa98134a"
+        ).unwrap();
+
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+    }
+
+    // Commented out because it takes about 10 minues to complete
+    /*
+    #[test]
+    fn gen_test_case_4() {
+
+        let pbkdf2_dk_256 = Pbkdf2 {
+            password: "password".as_bytes().to_vec(),
+            salt: "salt".as_bytes().to_vec(),
+            iterations: 16777216,
+            length: 32,
+            hmac: ShaVariantOption::SHA256,
+        };
+
+        let expected_pbkdf2_dk_256 = decode(
+            "cf81c66fe8cfc04d1f31ecb65dab4089f7f179e89b3b0bcb17ad10e3ac6eba46"
+        ).unwrap();
+
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+
+    }
+    */
+
+    #[test]
+    fn gen_test_case_5() {
+
+        let pbkdf2_dk_256 = Pbkdf2 {
+            password: "passwordPASSWORDpassword".as_bytes().to_vec(),
+            salt: "saltSALTsaltSALTsaltSALTsaltSALTsalt".as_bytes().to_vec(),
+            iterations: 4096,
+            length: 40,
+            hmac: ShaVariantOption::SHA256,
+        };
+
+        let expected_pbkdf2_dk_256 = decode(
+            "348c89dbcbd32b2f32d814b8116e84cf2b17347ebc1800181c4e2a1fb8dd53e1c635518c7dac47e9"
+        ).unwrap();
+
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
     }
 
     #[test]
-    fn rfc6070_test_case_4() {
+    fn gen_test_case_6() {
 
+        let pbkdf2_dk_256 = Pbkdf2 {
+            password: "pass\0word".as_bytes().to_vec(),
+            salt: "sa\0lt".as_bytes().to_vec(),
+            iterations: 4096,
+            length: 16,
+            hmac: ShaVariantOption::SHA256,
+        };
+
+        let expected_pbkdf2_dk_256 = decode(
+            "89b69d0516f829893c696226650a8687"
+        ).unwrap();
+
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
     }
 
     #[test]
-    fn rfc6070_test_case_5() {
+    #[should_panic]
+    fn length_too_high() {
 
+        // Take 64 as this is the highest, since HMAC-SHA512
+        let too_long = ((2_u64.pow(32) - 1) * 64 as u64) as usize + 1;
+
+        let pbkdf2_dk_256 = Pbkdf2 {
+            password: "password".as_bytes().to_vec(),
+            salt: "salt".as_bytes().to_vec(),
+            iterations: 1,
+            length: too_long,
+            hmac: ShaVariantOption::SHA256,
+        };
+
+        pbkdf2_dk_256.pbkdf2_compute();
     }
-
-    #[test]
-    fn rfc6070_test_case_6() {
-
-    }
-
-    #[test]
-    fn rfc6070_test_case_7() {
-
-    }
-
 }
