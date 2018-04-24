@@ -91,9 +91,7 @@ pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
     util::compare_ct(&nd_round_own, &nd_round_expected)
 }
 
-/// PBKDF2 with HMAC-SHA512
-/// This generates a random salt of 64 bytes. It uses 60000 iterations and has an
-/// output length of 64 bytes.
+/// PBKDF2 with HMAC-SHA512. Uses 60000 iterations with an output length of 64 bytes.
 /// # Usage example:
 ///
 /// ```

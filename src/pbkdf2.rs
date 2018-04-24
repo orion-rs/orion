@@ -19,7 +19,7 @@ pub struct Pbkdf2 {
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 ///
 /// # Usage examples:
-/// ### Generating HMAC:
+/// ### Generating derived key:
 /// ```
 /// use orion::pbkdf2::Pbkdf2;
 /// use orion::util::gen_rand_key;
