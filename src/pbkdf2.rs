@@ -1,5 +1,4 @@
 use clear_on_drop::clear;
-use util;
 use hmac::Hmac;
 use options::ShaVariantOption;
 use byte_tools::write_u32_be;
