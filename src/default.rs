@@ -1,5 +1,6 @@
 use hmac::Hmac;
 use hkdf::Hkdf;
+use pbkdf2::Pbkdf2;
 use util;
 use options::ShaVariantOption;
 
@@ -63,6 +64,7 @@ pub fn hkdf(salt: &[u8], data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
 
     hkdf_512_res.hkdf_expand(&hkdf_512_extract)
 }
+
 /// Validate an HMAC against a key and message.
 /// # Usage example:
 ///
@@ -89,10 +91,31 @@ pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
     util::compare_ct(&nd_round_own, &nd_round_expected)
 }
 
-// Functions here to simplify PBKDF2 with HMAC-SHA512 and a automatically generated salt
-// Salt should be at least, as in minimum, 64 bits random
-// For max security 10000000 iterations is recommended, minimum is 1000
+/// PBKDF2 with HMAC-SHA512
+/// This generates a random salt of 64 bytes. It uses 60000 iterations and has an
+/// output length of 64 bytes.
+/// # Usage example:
+///
+/// ```
+/// use orion::default;
+/// use orion::util;
+///
+/// let derived_password = default::pbkdf2("Secret password".as_bytes());
+/// ```
+pub fn pbkdf2(password: &[u8]) -> Vec<u8> {
 
+    let salt = util::gen_rand_key(64);
+
+    let pbkdf2_sha512_res = Pbkdf2 {
+        password: password.to_vec(),
+        salt: salt,
+        iterations: 60000,
+        length: 64,
+        hmac: ShaVariantOption::SHA512
+    };
+
+    pbkdf2_sha512_res.pbkdf2_compute()
+}
 
 
 #[cfg(test)]
