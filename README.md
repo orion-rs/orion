@@ -34,6 +34,13 @@ let data = "Some data.".as_bytes();
 let info = "Some info.".as_bytes();
 
 let hkdf = default::hkdf(&salt, data, info, 64);
+
+// PBKDF2-HMAC-SHA512
+let salt = util::gen_rand_key(64);
+
+let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
+// Verifying a derived key
+assert_eq!(default::pbkdf2_verify("Secret password".as_bytes(), &salt, &derived_password), true);
 ```
 
 
