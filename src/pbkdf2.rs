@@ -21,7 +21,22 @@ pub struct Pbkdf2 {
 /// # Usage examples:
 /// ### Generating HMAC:
 /// ```
+/// use orion::pbkdf2::Pbkdf2;
+/// use orion::util::gen_rand_key;
+/// use orion::options::ShaVariantOption;
 ///
+/// let password = gen_rand_key(16);
+/// let salt = gen_rand_key(16);
+///
+/// let dk = Pbkdf2 {
+///     password: password,
+///     salt: salt,
+///     iterations: 10000,
+///     length: 64,
+///     hmac: ShaVariantOption::SHA512
+/// };
+///
+/// dk.pbkdf2_compute();
 /// ```
 
 impl Drop for Pbkdf2 {
