@@ -103,9 +103,10 @@ pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
 /// ```
 pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
 
-    if salt.len() != 64 {
-        panic!("Salt must be 64 bytes long");
+    if salt.len() < 64 {
+        panic!("The salt must be equal to, or above, 64 bytes in length.");
     }
+
 
     let pbkdf2_sha512_res = Pbkdf2 {
         password: password.to_vec(),
