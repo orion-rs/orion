@@ -98,15 +98,14 @@ pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
 /// use orion::default;
 /// use orion::util;
 ///
-/// let derived_password = default::pbkdf2("Secret password".as_bytes());
+/// let salt = util::gen_rand_key(64);
+/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
 /// ```
-pub fn pbkdf2(password: &[u8]) -> Vec<u8> {
-
-    let salt = util::gen_rand_key(64);
+pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
 
     let pbkdf2_sha512_res = Pbkdf2 {
         password: password.to_vec(),
-        salt: salt,
+        salt: salt.to_vec(),
         iterations: 60000,
         length: 64,
         hmac: ShaVariantOption::SHA512
@@ -115,6 +114,29 @@ pub fn pbkdf2(password: &[u8]) -> Vec<u8> {
     pbkdf2_sha512_res.pbkdf2_compute()
 }
 
+/// Verify PBKDF2 with HMAC-SHA512. Uses 60000 iterations with an output length of 64 bytes.
+/// # Usage example:
+///
+/// ```
+/// use orion::default;
+/// use orion::util;
+///
+/// let salt = util::gen_rand_key(64);
+/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
+/// assert_eq!(default::pbkdf2_verify("Secret password".as_bytes(), &salt, &derived_password), true);
+/// ```
+pub fn pbkdf2_verify(password: &[u8], salt: &[u8], derived_password: &[u8]) -> bool {
+
+    let pbkdf2_sha512_res = Pbkdf2 {
+        password: password.to_vec(),
+        salt: salt.to_vec(),
+        iterations: 60000,
+        length: 64,
+        hmac: ShaVariantOption::SHA512
+    };
+
+    util::compare_ct(&pbkdf2_sha512_res.pbkdf2_compute(), derived_password)
+}
 
 #[cfg(test)]
 mod test {
