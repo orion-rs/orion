@@ -90,14 +90,12 @@ impl Pbkdf2 {
         salt_extended.clear();
         // Push directly into the final buffer, as this is the first iteration
         f_iter_final.extend_from_slice(&u_step);
-
         // Second iteration
         // u_step here will be equal to U_2 in RFC
         if self.iterations > 1 {
             u_step = self.return_prf(&self.password, &u_step);
             f_iter_final = self.fixed_xor(&f_iter_final, &u_step);
         }
-
         // Remainder of iterations
         if self.iterations > 2 {
             for _x in 2..self.iterations {
@@ -115,19 +113,15 @@ impl Pbkdf2 {
         if self.iterations < 1 {
             panic!("0 iterations are not possible");
         }
-
         // Check that the selected key length is within the limit.
         if self.length > ((2_u64.pow(32) - 1) * (self.hmac.return_value() / 8) as u64) as usize {
             panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
         }
-
         // Corresponds to l in RFC
         let hlen_blocks = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
 
         let mut pbkdf2_res: Vec<u8> = Vec::new();
         let mut iter_count: u32 = 0;
-
-        println!("hlen block {}", hlen_blocks);
 
         for _x in 0..hlen_blocks {
             iter_count += 1;
