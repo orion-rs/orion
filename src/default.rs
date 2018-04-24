@@ -97,11 +97,15 @@ pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
 /// ```
 /// use orion::default;
 /// use orion::util;
-///
+/// // Salts are limited to being 64 in length here.
 /// let salt = util::gen_rand_key(64);
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
 /// ```
 pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
+
+    if salt.len() != 64 {
+        panic!("Salt must be 64 bytes long");
+    }
 
     let pbkdf2_sha512_res = Pbkdf2 {
         password: password.to_vec(),
@@ -208,5 +212,11 @@ mod test {
     fn hkdf_salt_allowed_len() {
         default::hkdf(&vec![0x61; 67], &vec![0x61; 10], &vec![0x61; 10], 20);
         default::hkdf(&vec![0x61; 89], &vec![0x61; 10], &vec![0x61; 10], 20);
+    }
+
+    #[test]
+    #[should_panic]
+    fn pbkdf2_salt_too_short() {
+        default::pbkdf2("Secret password".as_bytes(), "Very weak salt".as_bytes());
     }
 }
