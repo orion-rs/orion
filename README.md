@@ -52,7 +52,7 @@ All unit-tests are located in the same file as the functions they are testing.
 To run tests: `cargo test`.
 
 ### Acknowledgments
-Thanks to [@defuse](https://github.com/defuse) for a quick audit of the code.
+Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://github.com/brycx/orion/issues/3) of the code.
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.
