@@ -135,7 +135,6 @@ impl Pbkdf2 {
         }
 
         pbkdf2_res.truncate(self.length);
-        //pbkdf2_res.split_off(self.length);
 
         pbkdf2_res
     }
