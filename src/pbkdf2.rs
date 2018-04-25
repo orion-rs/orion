@@ -48,19 +48,6 @@ impl Drop for Pbkdf2 {
 
 impl Pbkdf2 {
 
-    /// XOR two equal length bytes vectors.
-    fn fixed_xor(&self, buffer_1: &[u8], buffer_2: &[u8]) -> Vec<u8> {
-        assert_eq!(buffer_1.len(), buffer_2.len());
-
-        let mut result: Vec<u8> = Vec::new();
-
-        for i in 0..buffer_1.len() {
-            result.push(buffer_1[i] ^ buffer_2[i]);
-        }
-
-        result
-    }
-
     /// Returns a PRF value from HMAC and selected Sha2 variant from Pbkdf2 struct.
     fn return_prf(&self, key: &[u8], data: &[u8]) -> Vec<u8> {
 
@@ -94,13 +81,19 @@ impl Pbkdf2 {
         // u_step here will be equal to U_2 in RFC
         if self.iterations > 1 {
             u_step = self.return_prf(&self.password, &u_step);
-            f_result = self.fixed_xor(&f_result, &u_step);
+            // The length of f_result and u_step will always be the same due to HMAC
+            for c in 0..f_result.len() {
+                f_result[c] ^= u_step[c];
+            }
         }
         // Remainder of iterations
         if self.iterations > 2 {
             for _x in 2..self.iterations {
                 u_step = self.return_prf(&self.password, &u_step);
-                f_result = self.fixed_xor(&f_result, &u_step);
+
+                for c in 0..f_result.len() {
+                    f_result[c] ^= u_step[c];
+                }
             }
         }
 
@@ -132,6 +125,7 @@ impl Pbkdf2 {
         }
 
         pbkdf2_res.truncate(self.length);
+        //pbkdf2_res.split_off(self.length);
 
         pbkdf2_res
     }
