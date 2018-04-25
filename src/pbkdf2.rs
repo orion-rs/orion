@@ -95,14 +95,14 @@ impl Pbkdf2 {
             for c in 0..f_result.len() {
                 f_result[c] ^= u_step[c];
             }
-        }
-        // Remainder of iterations
-        if self.iterations > 2 {
-            for _x in 2..self.iterations {
-                u_step = self.return_prf(&self.password, u_step);
+            // Remainder of iterations
+            if self.iterations > 2 {
+                for _x in 2..self.iterations {
+                    u_step = self.return_prf(&self.password, u_step);
 
-                for c in 0..f_result.len() {
-                    f_result[c] ^= u_step[c];
+                    for c in 0..f_result.len() {
+                        f_result[c] ^= u_step[c];
+                    }
                 }
             }
         }
