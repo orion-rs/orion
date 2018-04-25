@@ -14,6 +14,14 @@ pub struct Pbkdf2 {
     pub hmac: ShaVariantOption,
 }
 
+impl Drop for Pbkdf2 {
+    fn drop(&mut self) {
+        //println!("DROPPING");
+        self.password.clear();
+        self.salt.clear()
+    }
+}
+
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 ///
@@ -37,14 +45,6 @@ pub struct Pbkdf2 {
 ///
 /// dk.pbkdf2_compute();
 /// ```
-
-impl Drop for Pbkdf2 {
-    fn drop(&mut self) {
-        //println!("DROPPING");
-        self.password.clear();
-        self.salt.clear()
-    }
-}
 
 impl Pbkdf2 {
 
