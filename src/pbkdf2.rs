@@ -77,7 +77,7 @@ impl Pbkdf2 {
     fn function_f(&self, i: u32) -> Vec<u8> {
 
         let mut u_step: Vec<u8> = Vec::new();
-        let mut f_iter_final: Vec<u8> = Vec::new();
+        let mut f_result: Vec<u8> = Vec::new();
 
         let mut salt_extended = self.salt.clone();
         let mut i_buffer = [0u8; 4];
@@ -89,22 +89,22 @@ impl Pbkdf2 {
         u_step = self.return_prf(&self.password, &salt_extended);
         salt_extended.clear();
         // Push directly into the final buffer, as this is the first iteration
-        f_iter_final.extend_from_slice(&u_step);
+        f_result.extend_from_slice(&u_step);
         // Second iteration
         // u_step here will be equal to U_2 in RFC
         if self.iterations > 1 {
             u_step = self.return_prf(&self.password, &u_step);
-            f_iter_final = self.fixed_xor(&f_iter_final, &u_step);
+            f_result = self.fixed_xor(&f_result, &u_step);
         }
         // Remainder of iterations
         if self.iterations > 2 {
             for _x in 2..self.iterations {
                 u_step = self.return_prf(&self.password, &u_step);
-                f_iter_final = self.fixed_xor(&f_iter_final, &u_step);
+                f_result = self.fixed_xor(&f_result, &u_step);
             }
         }
 
-        f_iter_final
+        f_result
     }
 
     /// PBKDF2 function. Return a derived key.
