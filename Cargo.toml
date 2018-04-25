@@ -17,3 +17,6 @@ byte-tools = "0.2.0"
 
 [dev-dependencies]
 hex = "0.3.1"
+
+[profile.dev]
+opt-level = 2
