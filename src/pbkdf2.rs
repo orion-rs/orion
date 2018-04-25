@@ -148,9 +148,7 @@ mod test {
     use self::hex::decode;
 
     // These test vectors have been generated with the cryptography.io Python package.
-    // This package passes the original test vectors from the [RFC 6070](https://tools.ietf.org/html/rfc6070.html).
-    // The script that has been used to generate the expected test vectors can be found
-    // in the pbkdf2-test-vectors folder.
+    // More information here: https://github.com/brycx/PBKDF2-HMAC-SHA2-Test-Vectors
     #[test]
     fn sha256_test_case_1() {
 
