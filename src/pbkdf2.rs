@@ -48,12 +48,23 @@ impl Drop for Pbkdf2 {
 
 impl Pbkdf2 {
 
+    fn max_dklen(&self) -> usize {
+        match self.hmac.return_value() {
+            // These values have been calculated from the constraint given in RFC by:
+            // (2^32 - 1) * hLen
+            256 => 137438953440,
+            384 => 206158430160,
+            512 => 274877906880,
+            _ => panic!("Blocksize not found for {:?}", self.hmac.return_value())
+        }
+    }
+
     /// Returns a PRF value from HMAC and selected Sha2 variant from Pbkdf2 struct.
-    fn return_prf(&self, key: &[u8], data: &[u8]) -> Vec<u8> {
+    fn return_prf(&self, key: &[u8], data: Vec<u8>) -> Vec<u8> {
 
         let prf_res = Hmac {
             secret_key: key.to_vec(),
-            message: data.to_vec(),
+            message: data,
             sha2: self.hmac
         };
 
@@ -73,14 +84,13 @@ impl Pbkdf2 {
 
         // First iteration
         // u_step here will be equal to U_1 in RFC
-        u_step = self.return_prf(&self.password, &salt_extended);
-        salt_extended.clear();
+        u_step = self.return_prf(&self.password, salt_extended);
         // Push directly into the final buffer, as this is the first iteration
         f_result.extend_from_slice(&u_step);
         // Second iteration
         // u_step here will be equal to U_2 in RFC
         if self.iterations > 1 {
-            u_step = self.return_prf(&self.password, &u_step);
+            u_step = self.return_prf(&self.password, u_step);
             // The length of f_result and u_step will always be the same due to HMAC
             for c in 0..f_result.len() {
                 f_result[c] ^= u_step[c];
@@ -89,7 +99,7 @@ impl Pbkdf2 {
         // Remainder of iterations
         if self.iterations > 2 {
             for _x in 2..self.iterations {
-                u_step = self.return_prf(&self.password, &u_step);
+                u_step = self.return_prf(&self.password, u_step);
 
                 for c in 0..f_result.len() {
                     f_result[c] ^= u_step[c];
@@ -107,7 +117,7 @@ impl Pbkdf2 {
             panic!("0 iterations are not possible");
         }
         // Check that the selected key length is within the limit.
-        if self.length > ((2_u64.pow(32) - 1) * (self.hmac.return_value() / 8) as u64) as usize {
+        if self.length > self.max_dklen() {
             panic!("Derived key length above max.");
         } else if self.length == 0 {
             panic!("A derived key length of zero is not allowed.");
