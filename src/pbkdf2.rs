@@ -115,8 +115,11 @@ impl Pbkdf2 {
         }
         // Check that the selected key length is within the limit.
         if self.length > ((2_u64.pow(32) - 1) * (self.hmac.return_value() / 8) as u64) as usize {
-            panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
+            panic!("Derived key length above max.");
+        } else if self.length == 0 {
+            panic!("A derived key length of zero is not allowed.");
         }
+
         // Corresponds to l in RFC
         let hlen_blocks = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
 
@@ -287,6 +290,20 @@ mod test {
             salt: "salt".as_bytes().to_vec(),
             iterations: 0,
             length: 15,
+            hmac: ShaVariantOption::SHA256,
+        };
+
+        pbkdf2_dk_256.pbkdf2_compute();
+    }
+
+    #[test]
+    #[should_panic]
+    fn zero_length_panic() {
+        let pbkdf2_dk_256 = Pbkdf2 {
+            password: "password".as_bytes().to_vec(),
+            salt: "salt".as_bytes().to_vec(),
+            iterations: 2,
+            length: 0,
             hmac: ShaVariantOption::SHA256,
         };
 
