@@ -74,15 +74,15 @@ impl Pbkdf2 {
     }
 
     /// Function F as described in the RFC.
-    fn function_f(&self, i: u32) -> Vec<u8> {
+    fn function_f(&self, index_i: u32) -> Vec<u8> {
 
         let mut u_step: Vec<u8> = Vec::new();
         let mut f_result: Vec<u8> = Vec::new();
 
         let mut salt_extended = self.salt.clone();
-        let mut i_buffer = [0u8; 4];
-        write_u32_be(&mut i_buffer, i);
-        salt_extended.extend_from_slice(&i_buffer);
+        let mut index_buffer = [0u8; 4];
+        write_u32_be(&mut index_buffer, index_i);
+        salt_extended.extend_from_slice(&index_buffer);
 
         // First iteration
         // u_step here will be equal to U_1 in RFC
@@ -121,11 +121,11 @@ impl Pbkdf2 {
         let hlen_blocks = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
 
         let mut pbkdf2_res: Vec<u8> = Vec::new();
-        let mut iter_count: u32 = 0;
+        let mut index_i: u32 = 0;
 
         for _x in 0..hlen_blocks {
-            iter_count += 1;
-            pbkdf2_res.extend_from_slice(&self.function_f(iter_count));
+            index_i += 1;
+            pbkdf2_res.extend_from_slice(&self.function_f(index_i));
         }
 
         pbkdf2_res.truncate(self.length);
