@@ -1,9 +1,10 @@
 [package]
 name = "orion"
-version = "0.2.11"
+version = "0.2.12"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Cryptographic functions implemented in Rust, with a simple API."
-keywords = [ "cryptography", "hmac", "hkdf", "pbkdf"]
+keywords = [ "cryptography", "hmac", "hkdf", "pbkdf" ]
+categories = [ "cryptography" ]
 readme = "README.md"
 repository = "https://github.com/brycx/orion"
 documentation = "https://docs.rs/orion"
