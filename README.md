@@ -51,6 +51,19 @@ assert_eq!(default::pbkdf2_verify("Secret password".as_bytes(), &salt, &derived_
 All unit-tests are located in the same file as the functions they are testing.
 To run tests: `cargo test`.
 
+### Performance
+```
+PBKDF2-HMAC-SHA256, iterations = 1: 0.000008269002137240022 seconds
+PBKDF2-HMAC-SHA256, iterations = 10000: 0.023377304001769517 seconds
+PBKDF2-HMAC-SHA256, iterations = 16777216: 36.364124953997816 seconds
+HKDF-HMAC-SHA256: 0.000008642000466352329 seconds
+HKDF-HMAC-SHA384: 0.000011432999599492177 seconds
+HKDF-HMAC-SHA512: 0.000007079997885739431 seconds
+HMAC-SHA256: 0.0000030190021789167076 seconds
+HMAC-SHA384: 0.000003324999852338806 seconds
+HMAC-SHA512: 0.000003296998329460621 seconds
+```
+Tested on an Intel® Core™ i7-4790.
 ### Acknowledgments
 Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://github.com/brycx/orion/issues/3) of the code.
 
