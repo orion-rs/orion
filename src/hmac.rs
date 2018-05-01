@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use sha2::Digest;
 use sha2;
-use clear_on_drop::clear;
+use clear_on_drop::clear::Clear;
 use util;
 use options::ShaVariantOption;
 
@@ -18,8 +18,8 @@ pub struct Hmac {
 impl Drop for Hmac {
     fn drop(&mut self) {
         //println!("DROPPING");
-        self.secret_key.clear();
-        self.message.clear()
+        Clear::clear(&mut self.secret_key);
+        Clear::clear(&mut self.message)
     }
 }
 

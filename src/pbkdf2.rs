@@ -1,4 +1,4 @@
-use clear_on_drop::clear;
+use clear_on_drop::clear::Clear;
 use hmac::Hmac;
 use options::ShaVariantOption;
 use byte_tools::write_u32_be;
@@ -17,8 +17,8 @@ pub struct Pbkdf2 {
 impl Drop for Pbkdf2 {
     fn drop(&mut self) {
         //println!("DROPPING");
-        self.password.clear();
-        self.salt.clear()
+        Clear::clear(&mut self.password);
+        Clear::clear(&mut self.salt)
     }
 }
 
