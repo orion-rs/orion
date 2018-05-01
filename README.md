@@ -10,11 +10,6 @@ Currently contains:
 * PBKDF2 with the above HMAC options.
 
 ### Usage
-Include it in your `Cargo.toml` file:
-```
-[dependencies]
-orion = ">=0.2.12"
-```
 Use it like this:
 ```
 extern crate orion
