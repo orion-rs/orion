@@ -8,6 +8,7 @@ readme = "README.md"
 repository = "https://github.com/brycx/orion"
 documentation = "https://docs.rs/orion"
 license = "MIT"
+publish = false
 
 [dependencies]
 rand = ">=0.4.2"
