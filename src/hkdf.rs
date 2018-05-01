@@ -1,5 +1,5 @@
 use hmac::Hmac;
-use clear_on_drop::clear;
+use clear_on_drop::clear::Clear;
 use options::ShaVariantOption;
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
@@ -17,9 +17,10 @@ impl Drop for Hkdf {
     // For each Drop, use the clear_on_drop .clear() function to overwrite data
     fn drop(&mut self) {
         //println!("DROPPING");
-        self.salt.clear();
-        self.ikm.clear();
-        self.info.clear()
+        Clear::clear(&mut self.salt);
+        Clear::clear(&mut self.ikm);
+        Clear::clear(&mut self.info)
+
     }
 }
 
