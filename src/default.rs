@@ -32,6 +32,32 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
     hmac_512_res.hmac_compute()
 }
 
+/// Verify an HMAC against a key and message.
+/// # Usage example:
+///
+/// ```
+/// use orion::default;
+/// use orion::util;
+///
+/// let key = util::gen_rand_key(64);
+/// let msg = "Some message.".as_bytes();
+///
+/// let expected_hmac = default::hmac(&key, msg);
+/// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg), true);
+/// ```
+pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> bool {
+
+    let rand_key = util::gen_rand_key(64);
+
+    let own_hmac = hmac(&secret_key, &message);
+    // Verification happens on an additional round of HMAC
+    // to randomize the data that the validation is done on
+    let nd_round_own = hmac(&rand_key, &own_hmac);
+    let nd_round_expected = hmac(&rand_key, &expected_hmac);
+
+    util::compare_ct(&nd_round_own, &nd_round_expected)
+}
+
 /// HKDF with HMAC-SHA512.
 /// # Usage example:
 ///
@@ -65,30 +91,27 @@ pub fn hkdf(salt: &[u8], data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
     hkdf_512_res.hkdf_expand(&hkdf_512_extract)
 }
 
-/// Validate an HMAC against a key and message.
+/// Verify an HKDF with HMAC-SHA512.
 /// # Usage example:
 ///
 /// ```
 /// use orion::default;
 /// use orion::util;
 ///
-/// let key = util::gen_rand_key(64);
-/// let msg = "Some message.".as_bytes();
+/// let salt = util::gen_rand_key(64);
+/// let data = "Some data.".as_bytes();
+/// let info = "Some info.".as_bytes();
 ///
-/// let expected_hmac = default::hmac(&key, msg);
-/// assert_eq!(default::hmac_validate(&expected_hmac, &key, &msg), true);
+/// let hkdf = default::hkdf(&salt, data, info, 64);
+/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64), true);
 /// ```
-pub fn hmac_validate(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> bool {
+pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], data: &[u8], info: &[u8],
+    length: usize) -> bool {
 
-    let rand_key = util::gen_rand_key(64);
 
-    let own_hmac = hmac(&secret_key, &message);
-    // Verification happens on an additional round of HMAC
-    // to randomize the data that the validation is done on
-    let nd_round_own = hmac(&rand_key, &own_hmac);
-    let nd_round_expected = hmac(&rand_key, &expected_hmac);
+    let own_hkdf = hkdf(salt, data, info, length);
 
-    util::compare_ct(&nd_round_own, &nd_round_expected)
+    util::compare_ct(&own_hkdf, &expected_hkdf)
 }
 
 /// PBKDF2 with HMAC-SHA512. Uses 60000 iterations with an output length of 64 bytes.
@@ -128,19 +151,13 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
 ///
 /// let salt = util::gen_rand_key(64);
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
-/// assert_eq!(default::pbkdf2_verify("Secret password".as_bytes(), &salt, &derived_password), true);
+/// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt), true);
 /// ```
-pub fn pbkdf2_verify(password: &[u8], salt: &[u8], derived_password: &[u8]) -> bool {
+pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8]) -> bool {
 
-    let pbkdf2_sha512_res = Pbkdf2 {
-        password: password.to_vec(),
-        salt: salt.to_vec(),
-        iterations: 60000,
-        length: 64,
-        hmac: ShaVariantOption::SHA512
-    };
+    let own_pbkdf2 = pbkdf2(password, salt);
 
-    util::compare_ct(&pbkdf2_sha512_res.pbkdf2_compute(), derived_password)
+    util::compare_ct(&own_pbkdf2, derived_password)
 }
 
 #[cfg(test)]
@@ -182,7 +199,7 @@ mod test {
 
     #[test]
     // Test that hmac_validate() returns true if signatures match and false if not
-    fn hmac_validate() {
+    fn hmac_verify() {
 
         let sec_key_correct = decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
@@ -199,8 +216,8 @@ mod test {
 
         let hmac_bob = default::hmac(&sec_key_correct, &msg);
 
-        assert_eq!(default::hmac_validate(&hmac_bob, &sec_key_correct, &msg), true);
-        assert_eq!(default::hmac_validate(&hmac_bob, &sec_key_false, &msg), false);
+        assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_correct, &msg), true);
+        assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_false, &msg), false);
     }
 
     #[test]

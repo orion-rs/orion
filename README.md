@@ -21,7 +21,7 @@ let msg = "Some message.".as_bytes();
 
 let expected_hmac = default::hmac(&key, msg);
 // Verifying an HMAC-SHA512
-assert_eq!(default::hmac_validate(&expected_hmac, &key, &msg), true);
+assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg), true);
 
 // HKDF-HMAC-SHA512
 let salt = util::gen_rand_key(64);
@@ -29,6 +29,9 @@ let data = "Some data.".as_bytes();
 let info = "Some info.".as_bytes();
 
 let hkdf = default::hkdf(&salt, data, info, 64);
+
+// Verifying an HKDF HMAC-SHA512
+assert_eq!(&hkdf, &salt, data, info, 64), true);
 
 // PBKDF2-HMAC-SHA512
 let salt = util::gen_rand_key(64);
