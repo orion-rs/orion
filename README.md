@@ -29,7 +29,6 @@ let data = "Some data.".as_bytes();
 let info = "Some info.".as_bytes();
 
 let hkdf = default::hkdf(&salt, data, info, 64);
-
 // Verifying an HKDF HMAC-SHA512
 assert_eq!(&hkdf, &salt, data, info, 64), true);
 

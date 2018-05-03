@@ -166,6 +166,7 @@ mod test {
     extern crate hex;
     use self::hex::decode;
     use default;
+    use util;
 
     #[test]
     #[should_panic]
@@ -218,6 +219,29 @@ mod test {
 
         assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_correct, &msg), true);
         assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_false, &msg), false);
+    }
+
+    #[test]
+    fn hkdf_verify() {
+
+        let salt = util::gen_rand_key(64);
+        let data = "Some data.".as_bytes();
+        let info = "Some info.".as_bytes();
+
+        let hkdf_dk = default::hkdf(&salt, data, info, 64);
+
+        assert_eq!(default::hkdf_verify(&hkdf_dk, &salt, data, info, 64), true);
+    }
+
+    #[test]
+    fn pbkdf2_verify() {
+
+        let salt = util::gen_rand_key(64);
+        let password = util::gen_rand_key(64);
+
+        let pbkdf2_dk = default::pbkdf2(&password, &salt);
+
+        assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password, &salt), true);
     }
 
     #[test]
