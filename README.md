@@ -37,12 +37,12 @@ let salt = util::gen_rand_key(64);
 
 let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
 // Verifying a derived key
-assert_eq!(default::pbkdf2_verify("Secret password".as_bytes(), &salt, &derived_password), true);
+assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt), true);
 ```
 
 
 ### Documentation
-[Find it here](https://docs.rs/orion).
+To build the most recent: ```cargo doc --no-deps```
 
 ### Tests
 All unit-tests are located in the same file as the functions they are testing.
