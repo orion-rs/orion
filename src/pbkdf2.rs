@@ -74,17 +74,15 @@ impl Pbkdf2 {
     /// Function F as described in the RFC.
     fn function_f(&self, index_i: u32) -> Vec<u8> {
 
-        let mut u_step: Vec<u8> = Vec::new();
-        let mut f_result: Vec<u8> = Vec::new();
-
         let mut salt_extended = self.salt.clone();
         let mut index_buffer = [0u8; 4];
         write_u32_be(&mut index_buffer, index_i);
         salt_extended.extend_from_slice(&index_buffer);
 
+        let mut f_result: Vec<u8> = Vec::new();
         // First iteration
         // u_step here will be equal to U_1 in RFC
-        u_step = self.return_prf(&self.password, salt_extended);
+        let mut u_step = self.return_prf(&self.password, salt_extended);
         // Push directly into the final buffer, as this is the first iteration
         f_result.extend_from_slice(&u_step);
         // Second iteration
