@@ -232,6 +232,18 @@ mod test {
 
         assert_eq!(default::hkdf_verify(&hkdf_dk, &salt, data, info, 64), true);
     }
+    
+    #[test]
+    #[should_panic]
+    fn hkdf_salt_too_short() {
+        default::hkdf(&vec![0x61; 10], &vec![0x61; 10], &vec![0x61; 10], 20);
+    }
+
+    #[test]
+    fn hkdf_salt_allowed_len() {
+        default::hkdf(&vec![0x61; 67], &vec![0x61; 10], &vec![0x61; 10], 20);
+        default::hkdf(&vec![0x61; 89], &vec![0x61; 10], &vec![0x61; 10], 20);
+    }
 
     #[test]
     fn pbkdf2_verify() {
@@ -246,19 +258,13 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn hkdf_salt_too_short() {
-        default::hkdf(&vec![0x61; 10], &vec![0x61; 10], &vec![0x61; 10], 20);
-    }
-
-    #[test]
-    fn hkdf_salt_allowed_len() {
-        default::hkdf(&vec![0x61; 67], &vec![0x61; 10], &vec![0x61; 10], 20);
-        default::hkdf(&vec![0x61; 89], &vec![0x61; 10], &vec![0x61; 10], 20);
-    }
-
-    #[test]
-    #[should_panic]
     fn pbkdf2_salt_too_short() {
         default::pbkdf2("Secret password".as_bytes(), "Very weak salt".as_bytes());
+    }
+
+    #[test]
+    fn pbkdf2_salt_allowed_len() {
+        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 67]);
+        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 64]);
     }
 }
