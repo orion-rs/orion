@@ -1,6 +1,7 @@
 use hmac::Hmac;
 use clear_on_drop::clear::Clear;
 use options::ShaVariantOption;
+use util;
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
@@ -83,6 +84,20 @@ impl Hkdf {
         hkdf_final.truncate(self.length);
 
         hkdf_final
+    }
+
+    /// Check HKDF validity by computing one from the current struct fields and comparing this
+    /// to the passed HKDF.
+    pub fn hkdf_compare(&self, received_hkdf: &[u8]) -> bool {
+
+        if received_hkdf.len() != self.length {
+            panic!("Cannot compare two HKDF strings that are not the same length.");
+        }
+
+        let own_extract = self.hkdf_extract(&self.ikm, &self.salt);
+        let own_expand = self.hkdf_expand(&own_extract);
+
+        util::compare_ct(received_hkdf, &own_expand)
     }
 }
 
@@ -225,5 +240,67 @@ mod test {
         let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
 
         hkdf_512.hkdf_expand(&hkdf_512_extract);
+    }
+
+    #[test]
+    fn hkdf_compare_true() {
+        
+        let hkdf_256 = Hkdf {
+            salt: decode("").unwrap(),
+            ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            info: decode("").unwrap(),
+            hmac: ShaVariantOption::SHA256,
+            length: 42,
+        };
+
+        let expected_okm_256 = decode(
+            "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
+            9d201395faa4b61a96c8").unwrap();
+
+
+        assert_eq!(hkdf_256.hkdf_compare(&expected_okm_256), true);
+    }
+
+    #[test]
+    fn hkdf_compare_false() {
+
+        // Salt value differs between this and the previous test case
+        
+        let hkdf_256 = Hkdf {
+            salt: "salt".as_bytes().to_vec(),
+            ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            info: decode("").unwrap(),
+            hmac: ShaVariantOption::SHA256,
+            length: 42,
+        };
+
+        let expected_okm_256 = decode(
+            "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
+            9d201395faa4b61a96c8").unwrap();
+
+
+        assert_eq!(hkdf_256.hkdf_compare(&expected_okm_256), false);
+    }
+    
+    #[test]
+    #[should_panic]
+    fn hkdf_compare_diff_length_panic() {
+
+        // Different length than expected okm
+
+        let hkdf_256 = Hkdf {
+            salt: "salt".as_bytes().to_vec(),
+            ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            info: decode("").unwrap(),
+            hmac: ShaVariantOption::SHA256,
+            length: 75,
+        };
+
+        let expected_okm_256 = decode(
+            "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
+            9d201395faa4b61a96c8").unwrap();
+
+
+        assert_eq!(hkdf_256.hkdf_compare(&expected_okm_256), false);
     }
 }
