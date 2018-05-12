@@ -2,6 +2,7 @@ use clear_on_drop::clear::Clear;
 use hmac::Hmac;
 use options::ShaVariantOption;
 use byte_tools::write_u32_be;
+use util;
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
@@ -135,6 +136,19 @@ impl Pbkdf2 {
         pbkdf2_res.truncate(self.length);
 
         pbkdf2_res
+    }
+
+    /// Check derived key validity by computing one from the current struct fields and comparing this
+    /// to the passed derived key.
+    pub fn pbkdf2_compare(&self, received_dk: &[u8]) -> bool {
+
+        if received_dk.len() != self.length {
+            panic!("Cannot compare two derived keys that are not the same length.");
+        }
+
+        let own_dk = self.pbkdf2_compute();
+
+        util::compare_ct(received_dk, &own_dk)
     }
 }
 
@@ -569,5 +583,66 @@ mod test {
         };
 
         pbkdf2_dk_256.pbkdf2_compute();
+    }
+
+    #[test]
+    fn pbkdf2_compare_true() {
+
+        let pbkdf2_dk_512 = Pbkdf2 {
+            password: "pass\0word".as_bytes().to_vec(),
+            salt: "sa\0lt".as_bytes().to_vec(),
+            iterations: 4096,
+            length: 16,
+            hmac: ShaVariantOption::SHA512,
+        };
+
+        let expected_pbkdf2_dk_512 = decode(
+            "9d9e9c4cd21fe4be24d5b8244c759665"
+        ).unwrap();
+
+        assert_eq!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512), true);
+    }
+
+    #[test]
+    fn pbkdf2_compare_false() {
+
+        // Salt value differs between this and the previous test case
+
+        let pbkdf2_dk_512 = Pbkdf2 {
+            password: "pass\0word".as_bytes().to_vec(),
+            salt: "".as_bytes().to_vec(),
+            iterations: 4096,
+            length: 16,
+            hmac: ShaVariantOption::SHA512,
+        };
+
+        let expected_pbkdf2_dk_512 = decode(
+            "9d9e9c4cd21fe4be24d5b8244c759665"
+        ).unwrap();
+
+        assert_eq!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512), false);
+        
+    }
+
+    #[test]
+    #[should_panic]
+    fn pbkdf2_compare_diff_length_panic() {
+
+        // Different length than expected dk
+        
+        let pbkdf2_dk_512 = Pbkdf2 {
+            password: "pass\0word".as_bytes().to_vec(),
+            salt: "".as_bytes().to_vec(),
+            iterations: 4096,
+            length: 32,
+            hmac: ShaVariantOption::SHA512,
+        };
+
+        let expected_pbkdf2_dk_512 = decode(
+            "9d9e9c4cd21fe4be24d5b8244c759665"
+        ).unwrap();
+
+        assert_eq!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512), false);
+        
     }
 }
