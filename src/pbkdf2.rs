@@ -125,17 +125,17 @@ impl Pbkdf2 {
         // Corresponds to l in RFC
         let hlen_blocks = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
 
-        let mut pbkdf2_res: Vec<u8> = Vec::new();
+        let mut pbkdf2_dk: Vec<u8> = Vec::new();
         let mut index_i: u32 = 0;
 
         for _x in 0..hlen_blocks {
             index_i += 1;
-            pbkdf2_res.extend_from_slice(&self.function_f(index_i));
+            pbkdf2_dk.extend_from_slice(&self.function_f(index_i));
         }
 
-        pbkdf2_res.truncate(self.length);
+        pbkdf2_dk.truncate(self.length);
 
-        pbkdf2_res
+        pbkdf2_dk
     }
 
     /// Check derived key validity by computing one from the current struct fields and comparing this
@@ -143,7 +143,7 @@ impl Pbkdf2 {
     pub fn pbkdf2_compare(&self, received_dk: &[u8]) -> bool {
 
         if received_dk.len() != self.length {
-            panic!("Cannot compare two derived keys that are not the same length.");
+            panic!("Cannot compare two DK's that are not the same length.");
         }
 
         let own_dk = self.pbkdf2_compute();

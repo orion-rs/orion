@@ -47,6 +47,7 @@ impl Drop for Hkdf {
 impl Hkdf {
     /// Return HMAC matching argument passsed to Hkdf.
     pub fn hkdf_extract(&self, ikm: &[u8], salt: &[u8]) -> Vec<u8> {
+        
         let hmac_res = Hmac {
             secret_key: salt.to_vec(),
             message: ikm.to_vec(),
@@ -68,7 +69,7 @@ impl Hkdf {
         // con_step will hold the intermediate state of "T_n | info | 0x0n" as described in the RFC
         let mut con_step: Vec<u8> = vec![];
         let mut hmac_hash_step: Vec<u8> = vec![];
-        let mut hkdf_final: Vec<u8> = vec![];
+        let mut okm: Vec<u8> = vec![];
 
         for x in 1..n_iter+1 {
                 con_step.append(&mut hmac_hash_step);
@@ -78,12 +79,12 @@ impl Hkdf {
                 hmac_hash_step.extend_from_slice(&self.hkdf_extract(&con_step, prk));
                 con_step.clear();
 
-                hkdf_final.extend_from_slice(&hmac_hash_step);
+                okm.extend_from_slice(&hmac_hash_step);
         }
 
-        hkdf_final.truncate(self.length);
+        okm.truncate(self.length);
 
-        hkdf_final
+        okm
     }
 
     /// Check HKDF validity by computing one from the current struct fields and comparing this
@@ -91,7 +92,7 @@ impl Hkdf {
     pub fn hkdf_compare(&self, received_hkdf: &[u8]) -> bool {
 
         if received_hkdf.len() != self.length {
-            panic!("Cannot compare two HKDF strings that are not the same length.");
+            panic!("Cannot compare two HKDF's that are not the same length.");
         }
 
         let own_extract = self.hkdf_extract(&self.ikm, &self.salt);
