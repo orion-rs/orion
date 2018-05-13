@@ -1,4 +1,4 @@
-## orion ![Build Status](https://travis-ci.org/brycx/orion.svg?branch=master)
+## orion ![Build Status](https://travis-ci.org/brycx/orion.svg?branch=master) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion)
 
 **Warning:** There are no guarantees for the security of these implementations. Use at your own risk.
 
