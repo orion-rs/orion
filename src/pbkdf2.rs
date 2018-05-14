@@ -123,7 +123,7 @@ impl Pbkdf2 {
         }
 
         // Corresponds to l in RFC
-        let hlen_blocks = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
+        let hlen_blocks = (self.length / (self.hmac.return_value() / 8) + 1) as usize;
 
         let mut pbkdf2_dk: Vec<u8> = Vec::new();
         let mut index_i: u32 = 0;
