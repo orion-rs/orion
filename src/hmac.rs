@@ -1,6 +1,4 @@
 use std::borrow::Cow;
-use sha2::Digest;
-use sha2;
 use clear_on_drop::clear::Clear;
 use util;
 use options::ShaVariantOption;
@@ -63,6 +61,7 @@ impl Drop for Hmac {
 /// ```
 
 impl Hmac {
+
     /// Return blocksize matching SHA variant.
     fn blocksize(&self) -> usize {
         match self.sha2.return_value() {
@@ -73,28 +72,6 @@ impl Hmac {
         }
     }
 
-    /// Return a SHA2 digest of a given byte slice.
-    fn hash(&self, data: &[u8]) -> Vec<u8> {
-        match self.sha2.return_value() {
-            256 => {
-                let mut hash = sha2::Sha256::default();
-                hash.input(data);
-                hash.result().to_vec()
-            },
-            384 => {
-                let mut hash = sha2::Sha384::default();
-                hash.input(data);
-                hash.result().to_vec()
-            },
-            512 => {
-                let mut hash = sha2::Sha512::default();
-                hash.input(data);
-                hash.result().to_vec()
-            },
-            _ => panic!("Unkown option {:?}", self.sha2.return_value())
-        }
-    }
-
     /// Return a padded key if the key is less than or greater than the blocksize.
     pub fn pad_key<'a>(&self, secret_key: &'a [u8]) -> Cow<'a, [u8]> {
         // Borrow so that if the key is exactly the needed length
@@ -102,7 +79,7 @@ impl Hmac {
         let mut key = Cow::from(secret_key);
 
         if key.len() > self.blocksize() {
-            key = self.hash(&key).into();
+            key = self.sha2.hash(&key).into();
         }
         if key.len() < self.blocksize() {
             let mut resized_key = key.into_owned();
@@ -136,20 +113,19 @@ impl Hmac {
         let (mut ipad, mut opad) = self.make_pads(&self.secret_key);
 
         ipad.extend_from_slice(&self.message);
-        opad.extend_from_slice(self.hash(&ipad).as_ref());
+        opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
         
-        self.hash(&opad).to_vec()
+        self.sha2.hash(&opad).to_vec()
     }
 
     /// HMAC used for PBKDF2 which also takes both inner and outer padding as argument.
     pub fn pbkdf2_hmac(&self, mut ipad: Vec<u8>, mut opad: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
 
         ipad.extend_from_slice(&message);
-        opad.extend_from_slice(self.hash(&ipad).as_ref());
+        opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
         
-        self.hash(&opad).to_vec()
+        self.sha2.hash(&opad).to_vec()
     }
-
 
     /// Check HMAC validity by computing one from the current struct fields and comparing this
     /// to the passed HMAC.
