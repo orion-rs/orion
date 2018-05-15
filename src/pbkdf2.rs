@@ -49,6 +49,7 @@ impl Drop for Pbkdf2 {
 
 impl Pbkdf2 {
 
+    /// Return the maximum derived keyu length.
     fn max_dklen(&self) -> usize {
         match self.hmac.return_value() {
             // These values have been calculated from the constraint given in RFC by:
@@ -59,7 +60,8 @@ impl Pbkdf2 {
             _ => panic!("Blocksize not found for {:?}", self.hmac.return_value())
         }
     }
-
+    
+    /// Returns a PRF value from HMAC and selected Sha2 variant from Pbkdf2 struct.
     fn return_prf(&self, ipad: &[u8], opad: &[u8], message: Vec<u8>) -> Vec<u8> {
 
         // Secret value and message aren't needed in this case
@@ -71,8 +73,6 @@ impl Pbkdf2 {
 
         fast_hmac.pbkdf2_hmac(ipad.to_vec(), opad.to_vec(), message)
     }
-
-    
 
     /// Function F as described in the RFC.
     fn function_f(&self, index_i: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
@@ -131,7 +131,6 @@ impl Pbkdf2 {
         // Make inner and outer paddings for a faster HMAC
         let pad_const = Hmac {secret_key: vec![0x00; 0], message: vec![0x00; 0], sha2: self.hmac};
         let (ipad, opad) = pad_const.make_pads(&self.password);
-
 
         let mut pbkdf2_dk: Vec<u8> = Vec::new();
         let mut index_i: u32 = 0;
