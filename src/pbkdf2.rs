@@ -60,20 +60,22 @@ impl Pbkdf2 {
         }
     }
 
-    /// Returns a PRF value from HMAC and selected Sha2 variant from Pbkdf2 struct.
-    fn return_prf(&self, key: &[u8], data: Vec<u8>) -> Vec<u8> {
+    fn return_prf(&self, ipad: &[u8], opad: &[u8], message: Vec<u8>) -> Vec<u8> {
 
-        let prf_res = Hmac {
-            secret_key: key.to_vec(),
-            message: data,
+        // Secret value and message aren't needed in this case
+        let fast_hmac = Hmac {
+            secret_key: vec![0x00; 0],
+            message: vec![0x00; 0],
             sha2: self.hmac
         };
 
-        prf_res.hmac_compute()
+        fast_hmac.pbkdf2_hmac(ipad.to_vec(), opad.to_vec(), message)
     }
 
+    
+
     /// Function F as described in the RFC.
-    fn function_f(&self, index_i: u32) -> Vec<u8> {
+    fn function_f(&self, index_i: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
 
         let mut salt_extended = self.salt.clone();
         let mut index_buffer = [0u8; 4];
@@ -83,13 +85,14 @@ impl Pbkdf2 {
         let mut f_result: Vec<u8> = Vec::new();
         // First iteration
         // u_step here will be equal to U_1 in RFC
-        let mut u_step = self.return_prf(&self.password, salt_extended);
+        //let mut u_step = self.return_prf(padded_password, salt_extended);
+        let mut u_step = self.return_prf(ipad, opad, salt_extended);
         // Push directly into the final buffer, as this is the first iteration
         f_result.extend_from_slice(&u_step);
         // Second iteration
         // u_step here will be equal to U_2 in RFC
         if self.iterations > 1 {
-            u_step = self.return_prf(&self.password, u_step);
+            u_step = self.return_prf(ipad, opad, u_step);
             // The length of f_result and u_step will always be the same due to HMAC
             for c in 0..f_result.len() {
                 f_result[c] ^= u_step[c];
@@ -97,7 +100,7 @@ impl Pbkdf2 {
             // Remainder of iterations
             if self.iterations > 2 {
                 for _x in 2..self.iterations {
-                    u_step = self.return_prf(&self.password, u_step);
+                    u_step = self.return_prf(ipad, opad, u_step);
 
                     for c in 0..f_result.len() {
                         f_result[c] ^= u_step[c];
@@ -115,7 +118,7 @@ impl Pbkdf2 {
         if self.iterations < 1 {
             panic!("0 iterations are not possible");
         }
-        // Check that the selected key length is within the limit.
+        // Check that the selected key length is within the limit
         if self.length > self.max_dklen() {
             panic!("Derived key length above max.");
         } else if self.length == 0 {
@@ -123,14 +126,19 @@ impl Pbkdf2 {
         }
 
         // Corresponds to l in RFC
-        let hlen_blocks = (self.length / (self.hmac.return_value() / 8) + 1) as usize;
+        let hlen_blocks = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
+
+        // Make inner and outer paddings for a faster HMAC
+        let pad_const = Hmac {secret_key: vec![0x00; 0], message: vec![0x00; 0], sha2: self.hmac};
+        let (ipad, opad) = pad_const.make_pads(&self.password);
+
 
         let mut pbkdf2_dk: Vec<u8> = Vec::new();
         let mut index_i: u32 = 0;
 
         for _x in 0..hlen_blocks {
             index_i += 1;
-            pbkdf2_dk.extend_from_slice(&self.function_f(index_i));
+            pbkdf2_dk.extend_from_slice(&self.function_f(index_i, &ipad, &opad));
         }
 
         pbkdf2_dk.truncate(self.length);

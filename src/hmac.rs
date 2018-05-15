@@ -96,7 +96,7 @@ impl Hmac {
     }
 
     /// Return a padded key if the key is less than or greater than the blocksize.
-    fn pad_key<'a>(&self, secret_key: &'a [u8]) -> Cow<'a, [u8]> {
+    pub fn pad_key<'a>(&self, secret_key: &'a [u8]) -> Cow<'a, [u8]> {
         // Borrow so that if the key is exactly the needed length
         // no new key needs to be allocated before returning it
         let mut key = Cow::from(secret_key);
@@ -109,12 +109,14 @@ impl Hmac {
             resized_key.resize(self.blocksize(), 0x00);
             key = resized_key.into();
         }
+
         key
     }
 
-    /// Returns an HMAC for a given key and message.
-    pub fn hmac_compute(&self) -> Vec<u8> {
-        let key = self.pad_key(&self.secret_key);
+    /// Return the inner and outer padding used for HMAC.
+    pub fn make_pads(&self, secret_key: &[u8]) -> (Vec<u8>, Vec<u8>) {
+
+        let key = self.pad_key(&secret_key);
 
         let make_padded_key = |byte: u8| {
             let mut pad = key.to_vec();
@@ -122,13 +124,32 @@ impl Hmac {
             pad
         };
 
-        let mut ipad = make_padded_key(0x36);
-        let mut opad = make_padded_key(0x5C);
+        let ipad = make_padded_key(0x36);
+        let opad = make_padded_key(0x5C);
+
+        (ipad, opad)
+    }
+
+    /// Returns an HMAC for a given key and message.
+    pub fn hmac_compute(&self) -> Vec<u8> {
+
+        let (mut ipad, mut opad) = self.make_pads(&self.secret_key);
 
         ipad.extend_from_slice(&self.message);
         opad.extend_from_slice(self.hash(&ipad).as_ref());
+        
         self.hash(&opad).to_vec()
     }
+
+    /// HMAC used for PBKDF2 which also takes both inner and outer padding as argument.
+    pub fn pbkdf2_hmac(&self, mut ipad: Vec<u8>, mut opad: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
+
+        ipad.extend_from_slice(&message);
+        opad.extend_from_slice(self.hash(&ipad).as_ref());
+        
+        self.hash(&opad).to_vec()
+    }
+
 
     /// Check HMAC validity by computing one from the current struct fields and comparing this
     /// to the passed HMAC.

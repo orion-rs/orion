@@ -71,7 +71,7 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> b
 ///
 /// let hkdf = default::hkdf(&salt, data, info, 64);
 /// ```
-pub fn hkdf(salt: &[u8], data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
+pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
 
     if salt.len() < 64 {
         panic!("The salt must be equal to, or above, 64 bytes in length.");
@@ -80,7 +80,7 @@ pub fn hkdf(salt: &[u8], data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
 
     let hkdf_512_res = Hkdf {
         salt: salt.to_vec(),
-        ikm: data.to_vec(),
+        ikm: input_data.to_vec(),
         info: info.to_vec(),
         hmac: ShaVariantOption::SHA512,
         length: length
@@ -105,11 +105,11 @@ pub fn hkdf(salt: &[u8], data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
 /// let hkdf = default::hkdf(&salt, data, info, 64);
 /// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64), true);
 /// ```
-pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], data: &[u8], info: &[u8],
+pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &[u8],
     length: usize) -> bool {
 
 
-    let own_hkdf = hkdf(salt, data, info, length);
+    let own_hkdf = hkdf(salt, input_data, info, length);
 
     util::compare_ct(&own_hkdf, &expected_hkdf)
 }
