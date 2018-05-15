@@ -94,7 +94,7 @@ impl Hkdf {
             panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
         }
 
-        let n_iter = (self.length / (self.hmac.output_size() / 8) + 1) as usize;
+        let n_iter = 1 + ((self.length - 1) / (self.hmac.output_size() / 8)) as usize;
 
         // con_step will hold the intermediate state of "T_n | info | 0x0n" as described in the RFC
         let mut con_step: Vec<u8> = vec![];
