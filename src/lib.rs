@@ -12,11 +12,11 @@ pub mod hmac;
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod hkdf;
 
-/// API for the rest of orion.
+/// orion's API with safe defaults.
 pub mod default;
 
-/// Sha2 options.
+/// Sha2 options and hashing.
 pub mod options;
 
-/// PBKDF2
+/// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
 pub mod pbkdf2;

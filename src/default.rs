@@ -32,7 +32,7 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
     hmac_512_res.hmac_compute()
 }
 
-/// Verify an HMAC against a key and message.
+/// Verify an HMAC against a key and message in constant time and with Double-HMAC Verification.
 /// # Usage example:
 ///
 /// ```
@@ -91,7 +91,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Vec<u
     hkdf_512_res.hkdf_expand(&hkdf_512_extract)
 }
 
-/// Verify an HKDF with HMAC-SHA512.
+/// Verify an HKDF-HMAC-SHA512 derived key in constant time.
 /// # Usage example:
 ///
 /// ```
@@ -142,7 +142,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
     pbkdf2_sha512_res.pbkdf2_compute()
 }
 
-/// Verify PBKDF2 with HMAC-SHA512. Uses 60000 iterations with an output length of 64 bytes.
+/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 60000 iterations with an output length of 64 bytes for PBKDF2.
 /// # Usage example:
 ///
 /// ```

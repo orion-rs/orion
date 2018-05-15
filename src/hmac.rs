@@ -6,7 +6,6 @@ use options::ShaVariantOption;
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
-
 pub struct Hmac {
     pub secret_key: Vec<u8>,
     pub message: Vec<u8>,
@@ -128,7 +127,7 @@ impl Hmac {
     }
 
     /// Check HMAC validity by computing one from the current struct fields and comparing this
-    /// to the passed HMAC.
+    /// to the passed HMAC. Comparison is done in constant time and with Double-HMAC Verification.
     pub fn hmac_compare(&self, received_hmac: &[u8]) -> bool {
 
         let own_hmac = self.hmac_compute();

@@ -46,6 +46,27 @@ impl Drop for Pbkdf2 {
 ///
 /// dk.pbkdf2_compute();
 /// ```
+/// ### Verifying derived key:
+/// ```
+/// use orion::pbkdf2::Pbkdf2;
+/// use orion::util::gen_rand_key;
+/// use orion::options::ShaVariantOption;
+///
+/// let password = gen_rand_key(16);
+/// let salt = gen_rand_key(16);
+///
+/// let dk = Pbkdf2 {
+///     password: password,
+///     salt: salt,
+///     iterations: 10000,
+///     length: 64,
+///     hmac: ShaVariantOption::SHA512
+/// };
+///
+/// let derived_key = dk.pbkdf2_compute();
+/// assert_eq!(dk.pbkdf2_compare(&derived_key), true);
+/// ```
+
 
 impl Pbkdf2 {
 
@@ -60,7 +81,7 @@ impl Pbkdf2 {
             _ => panic!("Blocksize not found for {:?}", self.hmac.return_value())
         }
     }
-    
+
     /// Returns a PRF value from HMAC and selected Sha2 variant from Pbkdf2 struct.
     fn return_prf(&self, ipad: &[u8], opad: &[u8], message: Vec<u8>) -> Vec<u8> {
 
@@ -146,7 +167,7 @@ impl Pbkdf2 {
     }
 
     /// Check derived key validity by computing one from the current struct fields and comparing this
-    /// to the passed derived key.
+    /// to the passed derived key. Comparison is done in constant time.
     pub fn pbkdf2_compare(&self, received_dk: &[u8]) -> bool {
 
         if received_dk.len() != self.length {

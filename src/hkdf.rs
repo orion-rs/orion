@@ -29,7 +29,7 @@ impl Drop for Hkdf {
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
 ///
 /// # Usage examples:
-///
+/// ### Generating derived key:
 /// ```
 /// use orion::hkdf::Hkdf;
 /// use orion::util::gen_rand_key;
@@ -39,9 +39,39 @@ impl Drop for Hkdf {
 /// let salt = gen_rand_key(16);
 /// let info = gen_rand_key(16);
 ///
-/// let dk = Hkdf { salt: salt, ikm: key, info: info, hmac: ShaVariantOption::SHA256, length: 50 };
+/// let dk = Hkdf { 
+///     salt: salt, 
+///     ikm: key, 
+///     info: info, 
+///     hmac: ShaVariantOption::SHA256,
+///     length: 50
+/// };
+/// 
 /// let dk_extract = dk.hkdf_extract(&dk.ikm, &dk.salt);
 /// dk.hkdf_expand(&dk_extract);
+/// ```
+/// ### Verifying derived key:
+/// ```
+/// use orion::hkdf::Hkdf;
+/// use orion::util::gen_rand_key;
+/// use orion::options::ShaVariantOption;
+///
+/// let key = gen_rand_key(16);
+/// let salt = gen_rand_key(16);
+/// let info = gen_rand_key(16);
+///
+/// let dk = Hkdf { 
+///     salt: salt, 
+///     ikm: key, 
+///     info: info, 
+///     hmac: ShaVariantOption::SHA256,
+///     length: 50
+/// };
+/// 
+/// let dk_extract = dk.hkdf_extract(&dk.ikm, &dk.salt);
+/// let expanded_dk = dk.hkdf_expand(&dk_extract);
+/// 
+/// assert_eq!(dk.hkdf_compare(&expanded_dk), true);
 /// ```
 
 impl Hkdf {
@@ -88,7 +118,7 @@ impl Hkdf {
     }
 
     /// Check HKDF validity by computing one from the current struct fields and comparing this
-    /// to the passed HKDF.
+    /// to the passed HKDF. Comparison is done in constant time.
     pub fn hkdf_compare(&self, received_hkdf: &[u8]) -> bool {
 
         if received_hkdf.len() != self.length {
