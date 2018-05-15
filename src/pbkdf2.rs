@@ -72,13 +72,13 @@ impl Pbkdf2 {
 
     /// Return the maximum derived keyu length.
     fn max_dklen(&self) -> usize {
-        match self.hmac.return_value() {
+        match self.hmac.output_size() {
             // These values have been calculated from the constraint given in RFC by:
             // (2^32 - 1) * hLen
             256 => 137438953440,
             384 => 206158430160,
             512 => 274877906880,
-            _ => panic!("Blocksize not found for {:?}", self.hmac.return_value())
+            _ => panic!("Maximum DK lenght not found.")
         }
     }
 
@@ -147,7 +147,7 @@ impl Pbkdf2 {
         }
 
         // Corresponds to l in RFC
-        let hlen_blocks = (self.length as f32 / (self.hmac.return_value() / 8) as f32).ceil() as usize;
+        let hlen_blocks = (self.length as f32 / (self.hmac.output_size() /8) as f32).ceil() as usize;
 
         // Make inner and outer paddings for a faster HMAC
         let pad_const = Hmac {secret_key: vec![0x00; 0], message: vec![0x00; 0], sha2: self.hmac};

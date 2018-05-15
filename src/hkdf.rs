@@ -90,11 +90,11 @@ impl Hkdf {
     /// The HKDF Expand step. Returns an HKDF.
     pub fn hkdf_expand(&self, prk: &[u8]) -> Vec<u8> {
         // Check that the selected key length is within the limit.
-        if self.length > (255 * self.hmac.return_value() / 8) {
+        if self.length > (255 * self.hmac.output_size() / 8) {
             panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
         }
 
-        let n_iter = (self.length / (self.hmac.return_value() / 8) + 1) as usize;
+        let n_iter = (self.length / (self.hmac.output_size() / 8) + 1) as usize;
 
         // con_step will hold the intermediate state of "T_n | info | 0x0n" as described in the RFC
         let mut con_step: Vec<u8> = vec![];

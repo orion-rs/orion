@@ -61,28 +61,18 @@ impl Drop for Hmac {
 
 impl Hmac {
 
-    /// Return blocksize matching SHA variant.
-    fn blocksize(&self) -> usize {
-        match self.sha2.return_value() {
-            256 => 64,
-            384 => 128,
-            512 => 128,
-            _ => panic!("Blocksize not found for {:?}", self.sha2.return_value())
-        }
-    }
-
     /// Return a padded key if the key is less than or greater than the blocksize.
     pub fn pad_key<'a>(&self, secret_key: &'a [u8]) -> Cow<'a, [u8]> {
         // Borrow so that if the key is exactly the needed length
         // no new key needs to be allocated before returning it
         let mut key = Cow::from(secret_key);
 
-        if key.len() > self.blocksize() {
+        if key.len() > self.sha2.blocksize() {
             key = self.sha2.hash(&key).into();
         }
-        if key.len() < self.blocksize() {
+        if key.len() < self.sha2.blocksize() {
             let mut resized_key = key.into_owned();
-            resized_key.resize(self.blocksize(), 0x00);
+            resized_key.resize(self.sha2.blocksize(), 0x00);
             key = resized_key.into();
         }
 
