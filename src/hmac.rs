@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use clear_on_drop::clear::Clear;
+use constant_time_eq::constant_time_eq;
 use util;
 use options::ShaVariantOption;
 
@@ -135,7 +136,7 @@ impl Hmac {
             sha2: self.sha2
         };
 
-        util::compare_ct(
+        constant_time_eq(
             &nd_round_own.hmac_compute(),
             &nd_round_received.hmac_compute()
         )

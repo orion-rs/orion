@@ -2,7 +2,7 @@ use clear_on_drop::clear::Clear;
 use hmac::Hmac;
 use options::ShaVariantOption;
 use byte_tools::write_u32_be;
-use util;
+use constant_time_eq::constant_time_eq;
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
@@ -176,7 +176,7 @@ impl Pbkdf2 {
 
         let own_dk = self.pbkdf2_compute();
 
-        util::compare_ct(received_dk, &own_dk)
+        constant_time_eq(received_dk, &own_dk)
     }
 }
 

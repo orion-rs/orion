@@ -16,6 +16,7 @@ rand = ">=0.4.2"
 sha2 = ">=0.7.1"
 clear_on_drop = "0.2.3"
 byte-tools = "0.2.0"
+constant_time_eq = "0.1.3"
 
 [dev-dependencies]
 hex = "0.3.1"

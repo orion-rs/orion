@@ -2,8 +2,9 @@ extern crate rand;
 extern crate sha2;
 extern crate clear_on_drop;
 extern crate byte_tools;
+extern crate constant_time_eq;
 
-/// Utility functions such as constant time comparison.
+/// Utility functions such as generating a cryptographically strong key/nonce/salt/iv.
 pub mod util;
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).

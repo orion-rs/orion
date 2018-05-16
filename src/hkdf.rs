@@ -1,7 +1,7 @@
 use hmac::Hmac;
 use clear_on_drop::clear::Clear;
 use options::ShaVariantOption;
-use util;
+use constant_time_eq::constant_time_eq;
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
@@ -128,7 +128,7 @@ impl Hkdf {
         let own_extract = self.hkdf_extract(&self.ikm, &self.salt);
         let own_expand = self.hkdf_expand(&own_extract);
 
-        util::compare_ct(received_hkdf, &own_expand)
+        constant_time_eq(received_hkdf, &own_expand)
     }
 }
 

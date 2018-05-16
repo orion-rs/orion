@@ -2,6 +2,7 @@ use hmac::Hmac;
 use hkdf::Hkdf;
 use pbkdf2::Pbkdf2;
 use util;
+use constant_time_eq::constant_time_eq;
 use options::ShaVariantOption;
 
 /// HMAC with SHA512.
@@ -55,7 +56,7 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> b
     let nd_round_own = hmac(&rand_key, &own_hmac);
     let nd_round_expected = hmac(&rand_key, &expected_hmac);
 
-    util::compare_ct(&nd_round_own, &nd_round_expected)
+    constant_time_eq(&nd_round_own, &nd_round_expected)
 }
 
 /// HKDF with HMAC-SHA512.
@@ -111,7 +112,7 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 
     let own_hkdf = hkdf(salt, input_data, info, length);
 
-    util::compare_ct(&own_hkdf, &expected_hkdf)
+    constant_time_eq(&own_hkdf, &expected_hkdf)
 }
 
 /// PBKDF2 with HMAC-SHA512. Uses 60000 iterations with an output length of 64 bytes.
@@ -157,7 +158,7 @@ pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8]) -> b
 
     let own_pbkdf2 = pbkdf2(password, salt);
 
-    util::compare_ct(&own_pbkdf2, derived_password)
+    constant_time_eq(&own_pbkdf2, derived_password)
 }
 
 #[cfg(test)]
