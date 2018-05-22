@@ -176,7 +176,7 @@ impl Pbkdf2 {
 
         // Make inner and outer paddings for a faster HMAC
         let pad_const = Hmac {secret_key: vec![0x00; 0], message: vec![0x00; 0], sha2: self.hmac};
-        let (ipad, opad) = pad_const.make_pads(&self.password);
+        let (ipad, opad) = pad_const.pad_key_blocks(&self.password);
 
         let mut pbkdf2_dk: Vec<u8> = Vec::new();
         let mut index_i: u32 = 0;

@@ -106,7 +106,7 @@ impl Hmac {
     }
 
     /// Return the inner and outer padding used for HMAC.
-    pub fn make_pads(&self, secret_key: &[u8]) -> (Vec<u8>, Vec<u8>) {
+    pub fn pad_key_blocks(&self, secret_key: &[u8]) -> (Vec<u8>, Vec<u8>) {
 
         let key = self.pad_key(&secret_key);
 
@@ -125,7 +125,7 @@ impl Hmac {
     /// Returns an HMAC for a given key and message.
     pub fn hmac_compute(&self) -> Vec<u8> {
 
-        let (mut ipad, mut opad) = self.make_pads(&self.secret_key);
+        let (mut ipad, mut opad) = self.pad_key_blocks(&self.secret_key);
 
         ipad.extend_from_slice(&self.message);
         opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
