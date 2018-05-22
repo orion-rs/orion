@@ -23,4 +23,5 @@ pub mod options;
 pub mod pbkdf2;
 
 /// Testing module for orion.
+#[cfg(test)]
 pub mod tests;

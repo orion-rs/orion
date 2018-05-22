@@ -1,64 +1,14 @@
-// Copyright 2015-2016 Brian Smith.
-//
-// Permission to use, copy, modify, and/or distribute this software for any
-// purpose with or without fee is hereby granted, provided that the above
-// copyright notice and this permission notice appear in all copies.
-//
-// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
-// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY
-// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
-// OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-// CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-#[cfg(test)]
-mod tests {
+/// Test HMAC against NIST test vectors.
+pub mod nist_hmac;
 
-    extern crate ring;
-    use self::ring::{test, error};
-    use options::ShaVariantOption;
-    use hmac::Hmac;
+/// Test HMAC aginast RFC test vectors.
+pub mod rfc_hmac;
 
-    pub fn hmac_test_runner(option: ShaVariantOption, key: &[u8], input: &[u8], output: &[u8], is_ok: bool) -> Result<(), error::Unspecified> {
+/// Test HKDF aginast RFC test vectors.
+pub mod rfc_hkdf;
 
-        let hmac = Hmac { secret_key: key.to_vec(), message: input.to_vec(), sha2: option };
+/// Test PBKDF2 aginast RFC test vectors.
+pub mod rfc_pbkdf2;
 
-        let digest = hmac.hmac_compute();
-        
-        assert_eq!(is_ok, digest == output);
-        assert_eq!(is_ok, hmac.hmac_compare(output));
-
-        Ok(())
-
-    }
-
-    #[test]
-    fn hmac_tests() {
-        test::from_file("src/tests/test_data/HMAC.rsp_fmt.rsp", |section, test_case| {
-            assert_eq!(section, "");
-            let digest_alg = test_case.consume_string("HMAC");
-            let key_value = test_case.consume_bytes("Key");
-            let mut input = test_case.consume_bytes("Input");
-            let output = test_case.consume_bytes("Output");
-
-
-            let alg = match digest_alg.as_ref() {
-                "SHA256" => ShaVariantOption::SHA256,
-                "SHA384" => ShaVariantOption::SHA384,
-                "SHA512" => ShaVariantOption::SHA512,
-                _ => panic!("option not found"),
-            };
-
-            hmac_test_runner(alg, &key_value[..], &input[..], &output[..], true)?;
-            
-            // Tamper with the input and check that verification fails.
-            if input.is_empty() {
-                input.push(0);
-            } else {
-                input[0] ^= 1;
-            }
-            
-            hmac_test_runner(alg, &key_value[..], &input[..], &output[..], false)
-        });
-    }
-}
+/// Test HMAC aginast custom test vectors.
+pub mod custom_pbkdf2;

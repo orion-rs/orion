@@ -15,8 +15,6 @@ keyword_replacements = {
 
 lines = []
 
-file = "HMAC.rsp"
-
 with open('src/tests/test_data/HMAC.rsp') as infile:
     
     # Stores the most recent [Len=] parameter from original .rsp
@@ -68,7 +66,7 @@ with open('src/tests/test_data/HMAC.rsp') as infile:
             for x in range(1,3):
                 lines.pop()
 
-with open('src/tests/test_data/' + file + '_fmt.rsp', 'w') as outfile:
+with open('src/tests/test_data/HMAC_fmt.rsp', 'w') as outfile:
     for line in lines:
         outfile.write(line)
 
