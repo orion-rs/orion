@@ -24,7 +24,7 @@
 
 
 
-use rand::{OsRng, Rng};
+use rand::{OsRng, RngCore};
 
 #[inline(never)]
 /// Return a random byte vector of a given length. This uses the [rand](https://crates.io/crates/rand) crate, 
@@ -33,9 +33,9 @@ pub fn gen_rand_key(len: usize) -> Vec<u8> {
 
     assert!(len > 0);
 
-    let mut generator = OsRng::new().unwrap();
+    let mut generator = OsRng::new().expect("Error on OsRng new thread");
     let mut rand_bytes_vec = vec![0u8; len];
-    generator.fill_bytes(&mut rand_bytes_vec);
+    generator.try_fill_bytes(&mut rand_bytes_vec).expect("Error on generation of data from OsRng");
 
     rand_bytes_vec
 }
