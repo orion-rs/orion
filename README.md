@@ -45,8 +45,8 @@ assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(
 To build the most recent: ```cargo doc --no-deps```
 
 ### Tests
-All unit-tests are located in the same file as the functions they are testing.
-To run tests: `cargo test`.
+Unit tests are located in the same file as what is being tested, apart from implementation verification tests - these are in `tests`.
+To run all tests: `cargo test`.
 
 ### Performance
 ```
