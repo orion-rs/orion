@@ -41,10 +41,6 @@ mod rfc4231 {
         let mut def_hmac = hmac.hmac_compute();
         let mut pbkdf2_hmac = hmac.pbkdf2_hmac(ipad, opad, hmac.message.to_vec());
 
-        // If the MACs are modified, this should panic
-        assert_ne!(&def_hmac[..def_hmac.len()-1], expected);
-        assert_ne!(&pbkdf2_hmac[..pbkdf2_hmac.len()-1], expected);
-
         match trunc { 
             Some(ref length) => {
                 def_hmac.truncate(*length);
@@ -52,6 +48,10 @@ mod rfc4231 {
             }
             None => (),
         };
+
+        // If the MACs are modified, this should panic
+        assert_ne!(&def_hmac[..def_hmac.len()-1], expected);
+        assert_ne!(&pbkdf2_hmac[..pbkdf2_hmac.len()-1], expected);
 
         should_be == ( (pbkdf2_hmac == expected) == (def_hmac == expected) )
     }
