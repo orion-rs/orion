@@ -30,7 +30,7 @@ let info = "Some info.".as_bytes();
 
 let hkdf = default::hkdf(&salt, data, info, 64);
 // Verifying an HKDF HMAC-SHA512
-assert_eq!(&hkdf, &salt, data, info, 64), true);
+assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64), true);
 
 // PBKDF2-HMAC-SHA512
 let salt = util::gen_rand_key(64);
