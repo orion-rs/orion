@@ -42,7 +42,7 @@ assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(
 
 
 ### Documentation
-To build the most recent: ```cargo doc --no-deps```
+To build the most recent: ```cargo doc --no-deps``` or view [here](https://docs.rs/orion).
 
 ### Tests
 Unit tests are located in the same file as what is being tested, apart from implementation verification tests - these are in `tests`.

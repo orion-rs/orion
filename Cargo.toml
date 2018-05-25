@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.2.12"
+version = "0.3.0"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Cryptographic functions implemented in Rust, with a simple API."
 keywords = [ "cryptography", "hmac", "hkdf", "pbkdf" ]
@@ -9,7 +9,6 @@ readme = "README.md"
 repository = "https://github.com/brycx/orion"
 documentation = "https://docs.rs/orion"
 license = "MIT"
-publish = false
 
 [dependencies]
 rand = ">=0.5.0"
