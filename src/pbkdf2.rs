@@ -121,11 +121,11 @@ impl Pbkdf2 {
     }
 
     /// Function F as described in the RFC.
-    fn function_f(&self, index_i: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
+    fn function_f(&self, index: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
 
         let mut salt_extended = self.salt.clone();
         let mut index_buffer = [0u8; 4];
-        write_u32_be(&mut index_buffer, index_i);
+        write_u32_be(&mut index_buffer, index);
         salt_extended.extend_from_slice(&index_buffer);
 
         let mut f_result: Vec<u8> = Vec::new();
@@ -179,11 +179,9 @@ impl Pbkdf2 {
         let (ipad, opad) = pad_const.pad_key_blocks(&self.password);
 
         let mut pbkdf2_dk: Vec<u8> = Vec::new();
-        let mut index_i: u32 = 0;
 
-        for _x in 0..hlen_blocks {
-            index_i += 1;
-            pbkdf2_dk.extend_from_slice(&self.function_f(index_i, &ipad, &opad));
+        for index in 1..hlen_blocks+1 {
+            pbkdf2_dk.extend_from_slice(&self.function_f(index as u32, &ipad, &opad));
         }
 
         pbkdf2_dk.truncate(self.length);

@@ -126,10 +126,10 @@ impl Hkdf {
         let mut hmac_hash_step: Vec<u8> = vec![];
         let mut okm: Vec<u8> = vec![];
 
-        for x in 1..n_iter+1 {
+        for index in 1..n_iter+1 {
                 con_step.append(&mut hmac_hash_step);
                 con_step.extend_from_slice(&self.info);
-                con_step.push(x as u8);
+                con_step.push(index as u8);
                 // We call extract here as it has the same functionality as a simple HMAC call
                 hmac_hash_step.extend_from_slice(&self.hkdf_extract(&con_step, prk));
                 con_step.clear();
