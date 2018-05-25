@@ -141,7 +141,7 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
     constant_time_eq(&own_hkdf, &expected_hkdf)
 }
 
-/// PBKDF2 with HMAC-SHA512. Uses 60000 iterations with an output length of 64 bytes.
+/// PBKDF2 with HMAC-SHA512. Uses 512000 iterations with an output length of 64 bytes.
 /// # Usage example:
 ///
 /// ```
@@ -161,7 +161,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
     let pbkdf2_sha512_res = Pbkdf2 {
         password: password.to_vec(),
         salt: salt.to_vec(),
-        iterations: 60000,
+        iterations: 512000,
         length: 64,
         hmac: ShaVariantOption::SHA512
     };
@@ -169,7 +169,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
     pbkdf2_sha512_res.pbkdf2_compute()
 }
 
-/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 60000 iterations with an output length of 64 bytes for PBKDF2.
+/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 512000 iterations with an output length of 64 bytes for PBKDF2.
 /// # Usage example:
 ///
 /// ```
