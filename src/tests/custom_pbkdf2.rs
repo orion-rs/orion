@@ -49,7 +49,7 @@ mod custom_test_vectors {
             "120fb6cffcf8b32c43e7225256c4f837a86548c9"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -67,7 +67,7 @@ mod custom_test_vectors {
             "ae4d0c95af6b46d32d0adff928f06dd02a303f8e"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -85,7 +85,7 @@ mod custom_test_vectors {
             "c5e478d59288c841aa530db6845c4c8d962893a0"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -103,7 +103,7 @@ mod custom_test_vectors {
             "cf81c66fe8cfc04d1f31ecb65dab4089f7f179e8"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
 
     }
 
@@ -122,7 +122,7 @@ mod custom_test_vectors {
             "348c89dbcbd32b2f32d814b8116e84cf2b17347ebc1800181c"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -140,7 +140,7 @@ mod custom_test_vectors {
             "89b69d0516f829893c696226650a8687"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -158,7 +158,7 @@ mod custom_test_vectors {
             "c0e14f06e49e32d73f9f52ddf1d0c5c719160923"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -176,7 +176,7 @@ mod custom_test_vectors {
             "54f775c6d790f21930459162fc535dbf04a93918"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -194,7 +194,7 @@ mod custom_test_vectors {
             "559726be38db125bc85ed7895f6e3cf574c7a01c"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -212,7 +212,7 @@ mod custom_test_vectors {
             "a7fdb349ba2bfa6bf647bb0161bae1320df27e64"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute().unwrap());
 
     }
 
@@ -231,7 +231,7 @@ mod custom_test_vectors {
             "819143ad66df9a552559b9e131c52ae6c5c1b0eed18f4d283b"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -249,7 +249,7 @@ mod custom_test_vectors {
             "a3f00ac8657e095f8e0823d232fc60b3"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -267,7 +267,7 @@ mod custom_test_vectors {
             "867f70cf1ade02cff3752599a3a53dc4af34c7a6"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -285,7 +285,7 @@ mod custom_test_vectors {
             "e1d9c16aa681708a45f5c7c4e215ceb66e011a2e"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -303,7 +303,7 @@ mod custom_test_vectors {
             "d197b1b33db0143e018b12f3d1d1479e6cdebdcc"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -321,7 +321,7 @@ mod custom_test_vectors {
             "6180a3ceabab45cc3964112c811e0131bca93a35"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute().unwrap());
 
     }
 
@@ -340,7 +340,7 @@ mod custom_test_vectors {
             "8c0511f4c6e597c6ac6315d8f0362e225f3c501495ba23b868"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -358,6 +358,6 @@ mod custom_test_vectors {
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute().unwrap());
     }
 }

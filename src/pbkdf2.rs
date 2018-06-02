@@ -70,7 +70,7 @@ impl Drop for Pbkdf2 {
 ///     hmac: ShaVariantOption::SHA512
 /// };
 ///
-/// dk.pbkdf2_compute();
+/// dk.pbkdf2_compute().unwrap();
 /// ```
 /// ### Verifying derived key:
 /// ```
@@ -89,7 +89,7 @@ impl Drop for Pbkdf2 {
 ///     hmac: ShaVariantOption::SHA512
 /// };
 ///
-/// let derived_key = dk.pbkdf2_compute();
+/// let derived_key = dk.pbkdf2_compute().unwrap();
 /// assert_eq!(dk.pbkdf2_compare(&derived_key).unwrap(), true);
 /// ```
 
@@ -160,16 +160,16 @@ impl Pbkdf2 {
     }
 
     /// PBKDF2 function. Return a derived key.
-    pub fn pbkdf2_compute(&self) -> Vec<u8> {
+    pub fn pbkdf2_compute(&self) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
         if self.iterations < 1 {
-            panic!("0 iterations are not possible");
+            return Err(errors::UnknownCryptoError);
         }
         // Check that the selected key length is within the limit
         if self.length > self.max_dklen() {
-            panic!("Derived key length above max.");
+            return Err(errors::UnknownCryptoError);
         } else if self.length == 0 {
-            panic!("A derived key length of zero is not allowed.");
+            return Err(errors::UnknownCryptoError);
         }
 
         // Corresponds to l in RFC
@@ -187,7 +187,7 @@ impl Pbkdf2 {
 
         pbkdf2_dk.truncate(self.length);
 
-        pbkdf2_dk
+        Ok(pbkdf2_dk)
     }
 
     /// Check derived key validity by computing one from the current struct fields and comparing this
@@ -195,10 +195,10 @@ impl Pbkdf2 {
     pub fn pbkdf2_compare(&self, received_dk: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
         if received_dk.len() != self.length {
-            panic!("Cannot compare two DK's that are not the same length.");
+            return Err(errors::UnknownCryptoError);
         }
 
-        let own_dk = self.pbkdf2_compute();
+        let own_dk = self.pbkdf2_compute().unwrap();
 
         util::compare_ct(received_dk, &own_dk)
     }
@@ -215,7 +215,6 @@ mod test {
     use options::ShaVariantOption;
 
     #[test]
-    #[should_panic]
     fn length_too_high() {
 
         // Take 64 as this is the highest, since HMAC-SHA512
@@ -229,11 +228,10 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        pbkdf2_dk_256.pbkdf2_compute();
+        assert!(pbkdf2_dk_256.pbkdf2_compute().is_err());
     }
 
     #[test]
-    #[should_panic]
     fn zero_iterations_panic() {
 
         let pbkdf2_dk_256 = Pbkdf2 {
@@ -244,11 +242,10 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        pbkdf2_dk_256.pbkdf2_compute();
+        assert!(pbkdf2_dk_256.pbkdf2_compute().is_err());
     }
 
     #[test]
-    #[should_panic]
     fn zero_length_panic() {
         let pbkdf2_dk_256 = Pbkdf2 {
             password: "password".as_bytes().to_vec(),
@@ -258,7 +255,7 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        pbkdf2_dk_256.pbkdf2_compute();
+        assert!(pbkdf2_dk_256.pbkdf2_compute().is_err());    
     }
 
     #[test]
@@ -301,7 +298,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn pbkdf2_compare_diff_length_panic() {
 
         // Different length than expected dk

@@ -113,7 +113,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Resul
 
     let hkdf_512_extract = hkdf_512_res.hkdf_extract(&hkdf_512_res.ikm, &hkdf_512_res.salt);
 
-    Ok(hkdf_512_res.hkdf_expand(&hkdf_512_extract))
+    hkdf_512_res.hkdf_expand(&hkdf_512_extract)
 }
 
 /// Verify an HKDF-HMAC-SHA512 derived key in constant time.
@@ -164,7 +164,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Result<Vec<u8>, errors::UnknownCr
         hmac: ShaVariantOption::SHA512
     };
 
-    Ok(pbkdf2_sha512_res.pbkdf2_compute())
+    pbkdf2_sha512_res.pbkdf2_compute()
 }
 
 /// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 512000 iterations with an output length of 64 bytes for PBKDF2.

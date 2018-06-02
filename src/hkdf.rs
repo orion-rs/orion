@@ -27,7 +27,8 @@
 use hmac::Hmac;
 use clear_on_drop::clear::Clear;
 use options::ShaVariantOption;
-use constant_time_eq::constant_time_eq;
+use errors;
+use util;
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
@@ -59,9 +60,9 @@ impl Drop for Hkdf {
 /// use orion::util::gen_rand_key;
 /// use orion::options::ShaVariantOption;
 ///
-/// let key = gen_rand_key(16);
-/// let salt = gen_rand_key(16);
-/// let info = gen_rand_key(16);
+/// let key = gen_rand_key(16).unwrap();
+/// let salt = gen_rand_key(16).unwrap();
+/// let info = gen_rand_key(16).unwrap();
 ///
 /// let dk = Hkdf { 
 ///     salt: salt, 
@@ -72,7 +73,7 @@ impl Drop for Hkdf {
 /// };
 /// 
 /// let dk_extract = dk.hkdf_extract(&dk.ikm, &dk.salt);
-/// dk.hkdf_expand(&dk_extract);
+/// dk.hkdf_expand(&dk_extract).unwrap();
 /// ```
 /// ### Verifying derived key:
 /// ```
@@ -80,9 +81,9 @@ impl Drop for Hkdf {
 /// use orion::util::gen_rand_key;
 /// use orion::options::ShaVariantOption;
 ///
-/// let key = gen_rand_key(16);
-/// let salt = gen_rand_key(16);
-/// let info = gen_rand_key(16);
+/// let key = gen_rand_key(16).unwrap();
+/// let salt = gen_rand_key(16).unwrap();
+/// let info = gen_rand_key(16).unwrap();
 ///
 /// let dk = Hkdf { 
 ///     salt: salt, 
@@ -93,9 +94,9 @@ impl Drop for Hkdf {
 /// };
 /// 
 /// let dk_extract = dk.hkdf_extract(&dk.ikm, &dk.salt);
-/// let expanded_dk = dk.hkdf_expand(&dk_extract);
+/// let expanded_dk = dk.hkdf_expand(&dk_extract).unwrap();
 /// 
-/// assert_eq!(dk.hkdf_compare(&expanded_dk), true);
+/// assert_eq!(dk.hkdf_compare(&expanded_dk).unwrap(), true);
 /// ```
 
 impl Hkdf {
@@ -113,10 +114,10 @@ impl Hkdf {
     }
 
     /// The HKDF Expand step. Returns an HKDF.
-    pub fn hkdf_expand(&self, prk: &[u8]) -> Vec<u8> {
+    pub fn hkdf_expand(&self, prk: &[u8]) -> Result<Vec<u8>, errors::UnknownCryptoError> {
         // Check that the selected key length is within the limit.
         if self.length > (255 * self.hmac.output_size() / 8) {
-            panic!("Derived key length above max. 255 * (HMAC OUTPUT LENGTH IN BYTES)");
+            return Err(errors::UnknownCryptoError);
         }
 
         let n_iter = 1 + ((self.length - 1) / (self.hmac.output_size() / 8)) as usize;
@@ -139,21 +140,21 @@ impl Hkdf {
 
         okm.truncate(self.length);
 
-        okm
+        Ok(okm)
     }
 
     /// Check HKDF validity by computing one from the current struct fields and comparing this
     /// to the passed HKDF. Comparison is done in constant time.
-    pub fn hkdf_compare(&self, received_hkdf: &[u8]) -> bool {
+    pub fn hkdf_compare(&self, received_hkdf: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
         if received_hkdf.len() != self.length {
-            panic!("Cannot compare two HKDF's that are not the same length.");
+            return Err(errors::UnknownCryptoError);
         }
 
         let own_extract = self.hkdf_extract(&self.ikm, &self.salt);
-        let own_expand = self.hkdf_expand(&own_extract);
+        let own_expand = self.hkdf_expand(&own_extract).unwrap();
 
-        constant_time_eq(received_hkdf, &own_expand)
+        util::compare_ct(received_hkdf, &own_expand)
     }
 }
 
@@ -165,7 +166,6 @@ mod test {
     use options::ShaVariantOption;
 
     #[test]
-    #[should_panic]
     fn hkdf_maximum_length_256() {
 
         let hkdf_256 = Hkdf {
@@ -179,11 +179,10 @@ mod test {
 
         let hkdf_256_extract = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
 
-        hkdf_256.hkdf_expand(&hkdf_256_extract);
+        assert!(hkdf_256.hkdf_expand(&hkdf_256_extract).is_err());
     }
 
     #[test]
-    #[should_panic]
     fn hkdf_maximum_length_384() {
 
         let hkdf_384 = Hkdf {
@@ -197,11 +196,10 @@ mod test {
 
         let hkdf_384_extract = hkdf_384.hkdf_extract(&hkdf_384.ikm, &hkdf_384.salt);
 
-        hkdf_384.hkdf_expand(&hkdf_384_extract);
+        assert!(hkdf_384.hkdf_expand(&hkdf_384_extract).is_err());
     }
 
     #[test]
-    #[should_panic]
     fn hkdf_maximum_length_512() {
 
         let hkdf_512 = Hkdf {
@@ -215,7 +213,7 @@ mod test {
 
         let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
 
-        hkdf_512.hkdf_expand(&hkdf_512_extract);
+        assert!(hkdf_512.hkdf_expand(&hkdf_512_extract).is_err());
     }
 
     #[test]
@@ -234,7 +232,7 @@ mod test {
             9d201395faa4b61a96c8").unwrap();
 
 
-        assert_eq!(hkdf_256.hkdf_compare(&expected_okm_256), true);
+        assert_eq!(hkdf_256.hkdf_compare(&expected_okm_256).unwrap(), true);
     }
 
     #[test]
@@ -255,11 +253,10 @@ mod test {
             9d201395faa4b61a96c8").unwrap();
 
 
-        assert_eq!(hkdf_256.hkdf_compare(&expected_okm_256), false);
+        assert!(hkdf_256.hkdf_compare(&expected_okm_256).is_err());
     }
     
     #[test]
-    #[should_panic]
     fn hkdf_compare_diff_length_panic() {
 
         // Different length than expected okm
@@ -277,6 +274,6 @@ mod test {
             9d201395faa4b61a96c8").unwrap();
 
 
-        assert_eq!(hkdf_256.hkdf_compare(&expected_okm_256), false);
+        assert!(hkdf_256.hkdf_compare(&expected_okm_256).is_err());
     }
 }

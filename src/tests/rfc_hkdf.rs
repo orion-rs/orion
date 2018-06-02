@@ -55,7 +55,7 @@ mod rfc5869 {
         let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
 
         assert_eq!(actual_extract_256, expected_prk_256);
-        assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256), expected_okm_256);
+        assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256).unwrap(), expected_okm_256);
     }
 
     #[test]
@@ -86,7 +86,7 @@ mod rfc5869 {
         let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
 
         assert_eq!(actual_extract_256, expected_prk_256);
-        assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256), expected_okm_256);
+        assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256).unwrap(), expected_okm_256);
     }
 
     #[test]
@@ -110,6 +110,6 @@ mod rfc5869 {
         let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
 
         assert_eq!(actual_extract_256, expected_prk_256);
-        assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256), expected_okm_256);
+        assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256).unwrap(), expected_okm_256);
     }
 }

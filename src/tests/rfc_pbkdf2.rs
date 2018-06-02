@@ -50,7 +50,7 @@ mod rfc7914 {
             49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
     }
 
     #[test]
@@ -69,6 +69,6 @@ mod rfc7914 {
             a1d425a1225833549adb841b51c9b3176a272bdebba1d078478f62b397f33c8d"
         ).unwrap();
 
-        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute());
+        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
     }
 }
