@@ -29,7 +29,6 @@ use hkdf::Hkdf;
 use pbkdf2::Pbkdf2;
 use util;
 use errors;
-use constant_time_eq::constant_time_eq;
 use options::ShaVariantOption;
 
 /// HMAC with SHA512.
@@ -39,7 +38,7 @@ use options::ShaVariantOption;
 /// use orion::default;
 /// use orion::util;
 ///
-/// let key = util::gen_rand_key(64);
+/// let key = util::gen_rand_key(64).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
 /// let hmac = default::hmac(&key, msg);
@@ -67,11 +66,11 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
 /// use orion::default;
 /// use orion::util;
 ///
-/// let key = util::gen_rand_key(64);
+/// let key = util::gen_rand_key(64).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
 /// let expected_hmac = default::hmac(&key, msg);
-/// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg), true);
+/// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
 /// ```
 pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
@@ -93,7 +92,7 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> R
 /// use orion::default;
 /// use orion::util;
 ///
-/// let salt = util::gen_rand_key(64);
+/// let salt = util::gen_rand_key(64).unwrap();
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
@@ -126,20 +125,20 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Vec<u
 /// use orion::default;
 /// use orion::util;
 ///
-/// let salt = util::gen_rand_key(64);
+/// let salt = util::gen_rand_key(64).unwrap();
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
 /// let hkdf = default::hkdf(&salt, data, info, 64);
-/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64), true);
+/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
 /// ```
 pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &[u8],
-    length: usize) -> bool {
+    length: usize) -> Result<bool, errors::UnknownCryptoError> {
 
 
     let own_hkdf = hkdf(salt, input_data, info, length);
 
-    constant_time_eq(&own_hkdf, &expected_hkdf)
+    util::compare_ct(&own_hkdf, &expected_hkdf)
 }
 
 /// PBKDF2 with HMAC-SHA512. Uses 512000 iterations with an output length of 64 bytes.
@@ -149,7 +148,7 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 /// use orion::default;
 /// use orion::util;
 /// // Salts are limited to being 64 in length here.
-/// let salt = util::gen_rand_key(64);
+/// let salt = util::gen_rand_key(64).unwrap();
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
 /// ```
 pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
@@ -177,15 +176,15 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
 /// use orion::default;
 /// use orion::util;
 ///
-/// let salt = util::gen_rand_key(64);
+/// let salt = util::gen_rand_key(64).unwrap();
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
-/// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt), true);
+/// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt).unwrap(), true);
 /// ```
-pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8]) -> bool {
+pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
     let own_pbkdf2 = pbkdf2(password, salt);
 
-    constant_time_eq(&own_pbkdf2, derived_password)
+    util::compare_ct(&own_pbkdf2, derived_password)
 }
 
 #[cfg(test)]
@@ -258,7 +257,7 @@ mod test {
 
         let hkdf_dk = default::hkdf(&salt, data, info, 64);
 
-        assert_eq!(default::hkdf_verify(&hkdf_dk, &salt, data, info, 64), true);
+        assert_eq!(default::hkdf_verify(&hkdf_dk, &salt, data, info, 64).unwrap(), true);
     }
     
     #[test]
@@ -281,7 +280,7 @@ mod test {
 
         let pbkdf2_dk = default::pbkdf2(&password, &salt);
 
-        assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password, &salt), true);
+        assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password, &salt).unwrap(), true);
     }
 
     #[test]

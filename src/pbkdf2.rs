@@ -28,7 +28,8 @@ use clear_on_drop::clear::Clear;
 use hmac::Hmac;
 use options::ShaVariantOption;
 use byte_tools::write_u32_be;
-use constant_time_eq::constant_time_eq;
+use errors;
+use util;
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
@@ -58,8 +59,8 @@ impl Drop for Pbkdf2 {
 /// use orion::util::gen_rand_key;
 /// use orion::options::ShaVariantOption;
 ///
-/// let password = gen_rand_key(16);
-/// let salt = gen_rand_key(16);
+/// let password = gen_rand_key(16).unwrap();
+/// let salt = gen_rand_key(16).unwrap();
 ///
 /// let dk = Pbkdf2 {
 ///     password: password,
@@ -77,8 +78,8 @@ impl Drop for Pbkdf2 {
 /// use orion::util::gen_rand_key;
 /// use orion::options::ShaVariantOption;
 ///
-/// let password = gen_rand_key(16);
-/// let salt = gen_rand_key(16);
+/// let password = gen_rand_key(16).unwrap();
+/// let salt = gen_rand_key(16).unwrap();
 ///
 /// let dk = Pbkdf2 {
 ///     password: password,
@@ -89,7 +90,7 @@ impl Drop for Pbkdf2 {
 /// };
 ///
 /// let derived_key = dk.pbkdf2_compute();
-/// assert_eq!(dk.pbkdf2_compare(&derived_key), true);
+/// assert_eq!(dk.pbkdf2_compare(&derived_key).unwrap(), true);
 /// ```
 
 
@@ -191,7 +192,7 @@ impl Pbkdf2 {
 
     /// Check derived key validity by computing one from the current struct fields and comparing this
     /// to the passed derived key. Comparison is done in constant time.
-    pub fn pbkdf2_compare(&self, received_dk: &[u8]) -> bool {
+    pub fn pbkdf2_compare(&self, received_dk: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
         if received_dk.len() != self.length {
             panic!("Cannot compare two DK's that are not the same length.");
@@ -199,7 +200,7 @@ impl Pbkdf2 {
 
         let own_dk = self.pbkdf2_compute();
 
-        constant_time_eq(received_dk, &own_dk)
+        util::compare_ct(received_dk, &own_dk)
     }
 }
 
@@ -275,7 +276,7 @@ mod test {
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert_eq!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512), true);
+        assert_eq!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).unwrap(), true);
     }
 
     #[test]
@@ -295,7 +296,7 @@ mod test {
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert_eq!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512), false);
+        assert!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).is_err());
         
     }
 
@@ -317,7 +318,7 @@ mod test {
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert_eq!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512), false);
+        assert!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).is_err());
         
     }
 }
