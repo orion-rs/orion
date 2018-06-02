@@ -41,14 +41,13 @@ use options::ShaVariantOption;
 /// let key = util::gen_rand_key(64).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
-/// let hmac = default::hmac(&key, msg);
+/// let hmac = default::hmac(&key, msg).unwrap();
 /// ```
-pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
+pub fn hmac(secret_key: &[u8], message: &[u8]) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
-    if secret_key.len() < 64_usize {
-        panic!("The secret_key must be equal to, or above 64 bytes in length.");
+    if secret_key.len() < 64 {
+        return Err(errors::UnknownCryptoError);
     }
-
 
     let hmac_512_res = Hmac {
         secret_key: secret_key.to_vec(),
@@ -56,7 +55,7 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
         sha2: ShaVariantOption::SHA512
     };
 
-    hmac_512_res.hmac_compute()
+    Ok(hmac_512_res.hmac_compute())
 }
 
 /// Verify an HMAC against a key and message in constant time and with Double-HMAC Verification.
@@ -69,18 +68,18 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
 /// let key = util::gen_rand_key(64).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
-/// let expected_hmac = default::hmac(&key, msg);
+/// let expected_hmac = default::hmac(&key, msg).unwrap();
 /// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
 /// ```
 pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
     let rand_key = util::gen_rand_key(64).unwrap();
 
-    let own_hmac = hmac(&secret_key, &message);
+    let own_hmac = hmac(&secret_key, &message).unwrap();
     // Verification happens on an additional round of HMAC
     // to randomize the data that the validation is done on
-    let nd_round_own = hmac(&rand_key, &own_hmac);
-    let nd_round_expected = hmac(&rand_key, &expected_hmac);
+    let nd_round_own = hmac(&rand_key, &own_hmac).unwrap();
+    let nd_round_expected = hmac(&rand_key, &expected_hmac).unwrap();
 
     util::compare_ct(&nd_round_own, &nd_round_expected)
 }
@@ -96,14 +95,13 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> R
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info, 64);
+/// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// ```
-pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
+pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
-    if salt.len() < 64_usize {
-        panic!("The salt must be equal to, or above, 64 bytes in length.");
+    if salt.len() < 64 {
+        return Err(errors::UnknownCryptoError);
     }
-
 
     let hkdf_512_res = Hkdf {
         salt: salt.to_vec(),
@@ -115,7 +113,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Vec<u
 
     let hkdf_512_extract = hkdf_512_res.hkdf_extract(&hkdf_512_res.ikm, &hkdf_512_res.salt);
 
-    hkdf_512_res.hkdf_expand(&hkdf_512_extract)
+    Ok(hkdf_512_res.hkdf_expand(&hkdf_512_extract))
 }
 
 /// Verify an HKDF-HMAC-SHA512 derived key in constant time.
@@ -129,14 +127,14 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Vec<u
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info, 64);
+/// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
 /// ```
 pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &[u8],
     length: usize) -> Result<bool, errors::UnknownCryptoError> {
 
 
-    let own_hkdf = hkdf(salt, input_data, info, length);
+    let own_hkdf = hkdf(salt, input_data, info, length).unwrap();
 
     util::compare_ct(&own_hkdf, &expected_hkdf)
 }
@@ -151,10 +149,10 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 /// let salt = util::gen_rand_key(64).unwrap();
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
 /// ```
-pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
+pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
-    if salt.len() < 64_usize {
-        panic!("The salt must be equal to, or above, 64 bytes in length.");
+    if salt.len() < 64 {
+        return Err(errors::UnknownCryptoError);
     }
 
 
@@ -166,7 +164,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
         hmac: ShaVariantOption::SHA512
     };
 
-    pbkdf2_sha512_res.pbkdf2_compute()
+    Ok(pbkdf2_sha512_res.pbkdf2_compute())
 }
 
 /// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 512000 iterations with an output length of 64 bytes for PBKDF2.
@@ -177,12 +175,12 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
 /// use orion::util;
 ///
 /// let salt = util::gen_rand_key(64).unwrap();
-/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
+/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt).unwrap();
 /// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt).unwrap(), true);
 /// ```
 pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
-    let own_pbkdf2 = pbkdf2(password, salt);
+    let own_pbkdf2 = pbkdf2(password, salt).unwrap();
 
     util::compare_ct(&own_pbkdf2, derived_password)
 }
@@ -196,15 +194,14 @@ mod test {
     use util;
 
     #[test]
-    #[should_panic]
     fn hmac_secretkey_too_short() {
-        default::hmac(&vec![0x61; 10], &vec![0x61; 10]);
+        assert!(default::hmac(&vec![0x61; 10], &vec![0x61; 10]).is_err());
     }
 
     #[test]
     fn hmac_secretkey_allowed_len() {
-        default::hmac(&vec![0x61; 64], &vec![0x61; 10]);
-        default::hmac(&vec![0x61; 78], &vec![0x61; 10]);
+        default::hmac(&vec![0x61; 64], &vec![0x61; 10]).unwrap();
+        default::hmac(&vec![0x61; 78], &vec![0x61; 10]).unwrap();
     }
 
     #[test]
@@ -222,7 +219,7 @@ mod test {
             "80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f352\
             6b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598").unwrap();
 
-        assert_eq!(default::hmac(&sec_key, &msg), expected_hmac_512);
+        assert_eq!(default::hmac(&sec_key, &msg).unwrap(), expected_hmac_512);
     }
 
     #[test]
@@ -242,7 +239,7 @@ mod test {
               aaaaaaaa").unwrap();
         let msg = "what do ya want for nothing?".as_bytes().to_vec();
         
-        let hmac_bob = default::hmac(&sec_key_correct, &msg);
+        let hmac_bob = default::hmac(&sec_key_correct, &msg).unwrap();
 
         assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(), true);
         assert!(default::hmac_verify(&hmac_bob, &sec_key_false, &msg).is_err());
@@ -255,21 +252,20 @@ mod test {
         let data = "Some data.".as_bytes();
         let info = "Some info.".as_bytes();
 
-        let hkdf_dk = default::hkdf(&salt, data, info, 64);
+        let hkdf_dk = default::hkdf(&salt, data, info, 64).unwrap();
 
         assert_eq!(default::hkdf_verify(&hkdf_dk, &salt, data, info, 64).unwrap(), true);
     }
     
     #[test]
-    #[should_panic]
     fn hkdf_salt_too_short() {
-        default::hkdf(&vec![0x61; 10], &vec![0x61; 10], &vec![0x61; 10], 20);
+        assert!(default::hkdf(&vec![0x61; 10], &vec![0x61; 10], &vec![0x61; 10], 20).is_err());
     }
 
     #[test]
     fn hkdf_salt_allowed_len() {
-        default::hkdf(&vec![0x61; 67], &vec![0x61; 10], &vec![0x61; 10], 20);
-        default::hkdf(&vec![0x61; 89], &vec![0x61; 10], &vec![0x61; 10], 20);
+        default::hkdf(&vec![0x61; 67], &vec![0x61; 10], &vec![0x61; 10], 20).unwrap();
+        default::hkdf(&vec![0x61; 89], &vec![0x61; 10], &vec![0x61; 10], 20).unwrap();
     }
 
     #[test]
@@ -278,20 +274,19 @@ mod test {
         let salt = util::gen_rand_key(64).unwrap();
         let password = util::gen_rand_key(64).unwrap();
 
-        let pbkdf2_dk = default::pbkdf2(&password, &salt);
+        let pbkdf2_dk = default::pbkdf2(&password, &salt).unwrap();
 
         assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password, &salt).unwrap(), true);
     }
 
     #[test]
-    #[should_panic]
     fn pbkdf2_salt_too_short() {
-        default::pbkdf2("Secret password".as_bytes(), "Very weak salt".as_bytes());
+        assert!(default::pbkdf2("Secret password".as_bytes(), "Very weak salt".as_bytes()).is_err());
     }
 
     #[test]
     fn pbkdf2_salt_allowed_len() {
-        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 67]);
-        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 64]);
+        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 67]).unwrap();
+        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 64]).unwrap();
     }
 }
