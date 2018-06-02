@@ -118,6 +118,8 @@ impl Hkdf {
         // Check that the selected key length is within the limit.
         if self.length > (255 * self.hmac.output_size() / 8) {
             return Err(errors::UnknownCryptoError);
+        } else if self.length < 1 {
+            return Err(errors::UnknownCryptoError);
         }
 
         let n_iter = 1 + ((self.length - 1) / (self.hmac.output_size() / 8)) as usize;
@@ -209,6 +211,22 @@ mod test {
             hmac: ShaVariantOption::SHA512,
             // Max allowed length here is 16320
             length: 17000,
+        };
+
+        let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
+
+        assert!(hkdf_512.hkdf_expand(&hkdf_512_extract).is_err());
+    }
+
+    #[test]
+    fn hkdf_zero_length() {
+
+        let hkdf_512 = Hkdf {
+            salt: decode("").unwrap(),
+            ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            info: decode("").unwrap(),
+            hmac: ShaVariantOption::SHA512,
+            length: 0,
         };
 
         let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
