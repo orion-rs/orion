@@ -26,7 +26,7 @@
 use std::error::Error;
 use std::fmt;
 use rand;
-/// Error for orion's cryptographic operations.
+/// Errors for orion's cryptographic operations.
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct UnknownCryptoError;

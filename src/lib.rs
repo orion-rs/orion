@@ -52,5 +52,5 @@ pub mod pbkdf2;
 #[cfg(test)]
 pub mod tests;
 
-/// Error for orion's cryptographic operations.
+/// Errors for orion's cryptographic operations.
 pub mod errors;
