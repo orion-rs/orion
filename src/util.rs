@@ -25,31 +25,36 @@
 
 
 use rand::{OsRng, RngCore};
+use errors;
 
 #[inline(never)]
 /// Return a random byte vector of a given length. This uses the [rand](https://crates.io/crates/rand) crate, 
 /// which means that random data is read from the OS source /dev/urandom or CryptGenRandom().
-pub fn gen_rand_key(len: usize) -> Vec<u8> {
+pub fn gen_rand_key(len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
-    assert!(len > 0);
+    if len < 1 {
+        return Err(errors::UnknownCryptoError);
+    } else {
+        let mut rand_vec = Vec::<u8>::with_capacity(len);
+        let mut generator = OsRng::new()?;
+        generator.try_fill_bytes(&mut rand_vec)?;
 
-    let mut generator = OsRng::new().expect("Error on OsRng new thread");
-    let mut rand_bytes_vec = vec![0u8; len];
-    generator.try_fill_bytes(&mut rand_bytes_vec).expect("Error on generation of data from OsRng");
-
-    rand_bytes_vec
+        Ok(rand_vec)
+    }
 }
 
 #[test]
 fn rand_key_len_ok() {
 
-    gen_rand_key(4);
+    gen_rand_key(64).unwrap();
 }
 
 #[test]
-#[should_panic]
-fn rand_key_len_zero() {
+fn rand_key_error() {
 
-    gen_rand_key(0);
+    assert!(gen_rand_key(0).is_err());
+    
+    let err = gen_rand_key(0).unwrap_err();
+    assert_eq!(err, errors::UnknownCryptoError);
 
 }

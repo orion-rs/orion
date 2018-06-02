@@ -74,7 +74,7 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
 /// ```
 pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> bool {
 
-    let rand_key = util::gen_rand_key(64);
+    let rand_key = util::gen_rand_key(64).unwrap();
 
     let own_hmac = hmac(&secret_key, &message);
     // Verification happens on an additional round of HMAC
@@ -251,7 +251,7 @@ mod test {
     #[test]
     fn hkdf_verify() {
 
-        let salt = util::gen_rand_key(64);
+        let salt = util::gen_rand_key(64).unwrap();
         let data = "Some data.".as_bytes();
         let info = "Some info.".as_bytes();
 
@@ -275,8 +275,8 @@ mod test {
     #[test]
     fn pbkdf2_verify() {
 
-        let salt = util::gen_rand_key(64);
-        let password = util::gen_rand_key(64);
+        let salt = util::gen_rand_key(64).unwrap();
+        let password = util::gen_rand_key(64).unwrap();
 
         let pbkdf2_dk = default::pbkdf2(&password, &salt);
 
