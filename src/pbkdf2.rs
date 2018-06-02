@@ -121,7 +121,7 @@ impl Pbkdf2 {
     }
 
     /// Function F as described in the RFC.
-    fn function_f(&self, index: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
+    pub fn function_f(&self, index: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
 
         let mut salt_extended = self.salt.clone();
         let mut index_buffer = [0u8; 4];

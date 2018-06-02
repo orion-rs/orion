@@ -1,0 +1,32 @@
+
+[package]
+name = "orion-fuzz"
+version = "0.0.1"
+authors = ["Automatically generated"]
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+rand = "0.5.0"
+
+[dependencies.orion]
+path = ".."
+[dependencies.libfuzzer-sys]
+git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "pbkdf2_function_f"
+path = "fuzz_targets/pbkdf2_function_f.rs"
+[[bin]]
+name = "hmac_pad_key_blocks"
+path = "fuzz_targets/hmac_pad_key_blocks.rs"
+
+[[bin]]
+name = "hkdf_expand"
+path = "fuzz_targets/hkdf_expand.rs"
