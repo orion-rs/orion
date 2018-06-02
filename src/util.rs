@@ -31,6 +31,7 @@ use constant_time_eq::constant_time_eq;
 #[inline(never)]
 /// Return a random byte vector of a given length. This uses the [rand](https://crates.io/crates/rand) crate, 
 /// which means that random data is read from the OS source /dev/urandom or CryptGenRandom().
+/// Length must be greater than 1.
 pub fn gen_rand_key(len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
     if len < 1 {

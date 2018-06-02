@@ -53,6 +53,11 @@ impl Drop for Hkdf {
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
 ///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The specified length is less than 1
+/// - The specified length is greater than 255 * hash_output_size_in_bytes
+/// 
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```

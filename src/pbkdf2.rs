@@ -52,6 +52,12 @@ impl Drop for Pbkdf2 {
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 ///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The specified length is less than 1
+/// - The specified length is greater than (2^32 - 1) * hLen
+/// - The specified iteration count is less than 1
+/// 
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```
@@ -168,7 +174,7 @@ impl Pbkdf2 {
         // Check that the selected key length is within the limit
         if self.length > self.max_dklen() {
             return Err(errors::UnknownCryptoError);
-        } else if self.length == 0 {
+        } else if self.length < 1 {
             return Err(errors::UnknownCryptoError);
         }
 

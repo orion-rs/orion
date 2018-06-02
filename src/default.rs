@@ -32,6 +32,10 @@ use errors;
 use options::ShaVariantOption;
 
 /// HMAC with SHA512.
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The length of the secret key is less than 64
+/// 
 /// # Usage example:
 ///
 /// ```
@@ -85,6 +89,10 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> R
 }
 
 /// HKDF with HMAC-SHA512.
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The length of the secret key is less than 64
+/// 
 /// # Usage example:
 ///
 /// ```
@@ -140,6 +148,10 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 }
 
 /// PBKDF2 with HMAC-SHA512. Uses 512000 iterations with an output length of 64 bytes.
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The length of the secret key is less than 64
+/// 
 /// # Usage example:
 ///
 /// ```
