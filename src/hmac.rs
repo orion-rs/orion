@@ -26,8 +26,8 @@
 
 use std::borrow::Cow;
 use clear_on_drop::clear::Clear;
-use constant_time_eq::constant_time_eq;
 use util;
+use errors;
 use options::ShaVariantOption;
 
 
@@ -144,7 +144,7 @@ impl Hmac {
 
     /// Check HMAC validity by computing one from the current struct fields and comparing this
     /// to the passed HMAC. Comparison is done in constant time and with Double-HMAC Verification.
-    pub fn hmac_compare(&self, received_hmac: &[u8]) -> bool {
+    pub fn hmac_compare(&self, received_hmac: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
         let own_hmac = self.hmac_compute();
         let rand_key = Vec::new();
@@ -162,7 +162,7 @@ impl Hmac {
             sha2: self.sha2
         };
 
-        constant_time_eq(
+        util::compare_ct(
             &nd_round_own.hmac_compute(),
             &nd_round_received.hmac_compute()
         )
@@ -189,7 +189,7 @@ fn hmac_compare() {
         sha2: ShaVariantOption::SHA256
     };
 
-    assert_eq!(own_hmac.hmac_compare(&recieved_hmac.hmac_compute()), true);
-    assert_eq!(own_hmac.hmac_compare(&false_hmac.hmac_compute()), false);
+    assert_eq!(own_hmac.hmac_compare(&recieved_hmac.hmac_compute()).unwrap(), true);
+    assert!(own_hmac.hmac_compare(&false_hmac.hmac_compute()).is_err());
 }
 

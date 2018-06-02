@@ -24,9 +24,18 @@ fn hmac_test_runner(option: ShaVariantOption, key: &[u8], input: &[u8], output: 
     let hmac = Hmac { secret_key: key.to_vec(), message: input.to_vec(), sha2: option };
 
     let digest = hmac.hmac_compute();
-        
+
     assert_eq!(is_ok, digest == output);
-    assert_eq!(is_ok, hmac.hmac_compare(output));
+    
+    // To conform with the Result construction of compare functions
+    match is_ok {
+        true => {    
+            assert_eq!(is_ok, hmac.hmac_compare(output).unwrap());
+        },
+        false => {
+            assert!(hmac.hmac_compare(output).is_err());
+        }
+    }
 
     Ok(())
 

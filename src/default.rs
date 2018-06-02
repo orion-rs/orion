@@ -28,6 +28,7 @@ use hmac::Hmac;
 use hkdf::Hkdf;
 use pbkdf2::Pbkdf2;
 use util;
+use errors;
 use constant_time_eq::constant_time_eq;
 use options::ShaVariantOption;
 
@@ -45,7 +46,7 @@ use options::ShaVariantOption;
 /// ```
 pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
 
-    if secret_key.len() < 64 {
+    if secret_key.len() < 64_usize {
         panic!("The secret_key must be equal to, or above 64 bytes in length.");
     }
 
@@ -72,17 +73,17 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Vec<u8> {
 /// let expected_hmac = default::hmac(&key, msg);
 /// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg), true);
 /// ```
-pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> bool {
+pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
     let rand_key = util::gen_rand_key(64).unwrap();
 
-    let own_hmac = hmac(&secret_key, &message);
+    let own_hmac = hmac(secret_key, message);
     // Verification happens on an additional round of HMAC
     // to randomize the data that the validation is done on
     let nd_round_own = hmac(&rand_key, &own_hmac);
-    let nd_round_expected = hmac(&rand_key, &expected_hmac);
+    let nd_round_expected = hmac(&rand_key, expected_hmac);
 
-    constant_time_eq(&nd_round_own, &nd_round_expected)
+    util::compare_ct(&nd_round_own, &nd_round_expected)
 }
 
 /// HKDF with HMAC-SHA512.
@@ -100,7 +101,7 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> b
 /// ```
 pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Vec<u8> {
 
-    if salt.len() < 64 {
+    if salt.len() < 64_usize {
         panic!("The salt must be equal to, or above, 64 bytes in length.");
     }
 
@@ -153,7 +154,7 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 /// ```
 pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Vec<u8> {
 
-    if salt.len() < 64 {
+    if salt.len() < 64_usize {
         panic!("The salt must be equal to, or above, 64 bytes in length.");
     }
 
@@ -241,11 +242,11 @@ mod test {
               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
               aaaaaaaa").unwrap();
         let msg = "what do ya want for nothing?".as_bytes().to_vec();
-
+        
         let hmac_bob = default::hmac(&sec_key_correct, &msg);
 
-        assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_correct, &msg), true);
-        assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_false, &msg), false);
+        assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(), true);
+        assert!(default::hmac_verify(&hmac_bob, &sec_key_false, &msg).is_err());
     }
 
     #[test]
