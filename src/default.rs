@@ -77,11 +77,11 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> R
 
     let rand_key = util::gen_rand_key(64).unwrap();
 
-    let own_hmac = hmac(secret_key, message);
+    let own_hmac = hmac(&secret_key, &message);
     // Verification happens on an additional round of HMAC
     // to randomize the data that the validation is done on
     let nd_round_own = hmac(&rand_key, &own_hmac);
-    let nd_round_expected = hmac(&rand_key, expected_hmac);
+    let nd_round_expected = hmac(&rand_key, &expected_hmac);
 
     util::compare_ct(&nd_round_own, &nd_round_expected)
 }
