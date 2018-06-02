@@ -42,9 +42,10 @@ default::pbkdf2_verify(&dk, "Secret password".as_bytes(), &salt).unwrap();
 ### Documentation
 To build the most recent: ```cargo doc --no-deps``` or view [here](https://docs.rs/orion).
 
-### Tests
-Unit tests are located in the same file as what is being tested, apart from implementation verification tests - these are in `tests`.
-To run all tests: `cargo test`.
+### Tests/Fuzzing
+Unit tests are located in the same file as what is being tested, apart from implementation verification tests - these are in `tests`. To run all tests: `cargo test`. 
+
+Fuzzing is done using [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz). Fuzzing targets are located in `fuzz/fuzz_targets`.
 
 ### Performance
 ```
