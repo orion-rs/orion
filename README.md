@@ -10,34 +10,32 @@ Currently contains:
 * PBKDF2 with the above HMAC options.
 
 ### Usage
-Use it like this:
 ```
 extern crate orion
 use orion::{default, util};
 
 // HMAC-SHA512
 let key = util::gen_rand_key(64).unwrap();
-let msg = "Some message.".as_bytes();
+let msg = "Some message".as_bytes();
 
 let expected_hmac = default::hmac(&key, msg).unwrap();
-// Verifying an HMAC-SHA512
-assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
+default::hmac_verify(&expected_hmac, &key, &msg).unwrap();
+
 
 // HKDF-HMAC-SHA512
 let salt = util::gen_rand_key(64).unwrap();
-let data = "Some data.".as_bytes();
-let info = "Some info.".as_bytes();
+let data = "Some data".as_bytes();
+let info = "Some info".as_bytes();
 
-let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
-// Verifying an HKDF HMAC-SHA512
-assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
+let dk = default::hkdf(&salt, data, info, 64).unwrap();
+default::hkdf_verify(&dk, &salt, data, info, 64).unwrap();
+
 
 // PBKDF2-HMAC-SHA512
 let salt = util::gen_rand_key(64).unwrap();
 
-let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt).unwrap();
-// Verifying a derived key
-assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt).unwrap(), true);
+let dk = default::pbkdf2("Secret password".as_bytes(), &salt).unwrap();
+default::pbkdf2_verify(&dk, "Secret password".as_bytes(), &salt).unwrap();
 ```
 
 
