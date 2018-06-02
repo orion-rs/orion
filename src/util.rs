@@ -44,6 +44,7 @@ pub fn gen_rand_key(len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
     }
 }
 
+/// Compare two equal length slices in constant time, using the constant_time_eq crate.
 pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
     if a.len() != b.len() {
