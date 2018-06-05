@@ -29,7 +29,7 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> Vec<u8> {
 
         let prk = dk.hkdf_extract(ikm, salt);
 
-        dk.hkdf_expand(&prk)
+        dk.hkdf_expand(&prk).unwrap()
     } else  { prk }
 
 }

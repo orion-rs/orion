@@ -30,3 +30,7 @@ path = "fuzz_targets/hmac_pad_key_blocks.rs"
 [[bin]]
 name = "hkdf_expand"
 path = "fuzz_targets/hkdf_expand.rs"
+
+[[bin]]
+name = "default"
+path = "fuzz_targets/default.rs"
