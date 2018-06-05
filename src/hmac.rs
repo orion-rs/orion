@@ -146,8 +146,7 @@ impl Hmac {
     pub fn hmac_compare(&self, received_hmac: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
         let own_hmac = self.hmac_compute();
-        let rand_key = Vec::new();
-        util::gen_rand_key(64).unwrap();
+        let rand_key = util::gen_rand_key(64).unwrap();
 
         let nd_round_own = Hmac {
             secret_key: rand_key.clone(),
