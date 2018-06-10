@@ -153,9 +153,7 @@ impl Hkdf {
 
         let prk = self.hkdf_extract(&self.salt, &self.ikm);
 
-        let dk = self.hkdf_expand(&prk).unwrap();
-
-        Ok(dk)
+        self.hkdf_expand(&prk)
     }
 
     /// Check HKDF validity by computing one from the current struct fields and comparing this
@@ -195,6 +193,8 @@ mod test {
         let hkdf_256_extract = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
 
         assert!(hkdf_256.hkdf_expand(&hkdf_256_extract).is_err());
+        assert!(hkdf_256.hkdf_compute().is_err());
+
     }
 
     #[test]
@@ -212,6 +212,8 @@ mod test {
         let hkdf_384_extract = hkdf_384.hkdf_extract(&hkdf_384.ikm, &hkdf_384.salt);
 
         assert!(hkdf_384.hkdf_expand(&hkdf_384_extract).is_err());
+        assert!(hkdf_384.hkdf_compute().is_err());
+
     }
 
     #[test]
@@ -229,6 +231,8 @@ mod test {
         let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
 
         assert!(hkdf_512.hkdf_expand(&hkdf_512_extract).is_err());
+        assert!(hkdf_512.hkdf_compute().is_err());
+
     }
 
     #[test]
@@ -245,6 +249,8 @@ mod test {
         let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
 
         assert!(hkdf_512.hkdf_expand(&hkdf_512_extract).is_err());
+        assert!(hkdf_512.hkdf_compute().is_err());
+
     }
 
     #[test]
