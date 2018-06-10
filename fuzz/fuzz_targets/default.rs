@@ -4,7 +4,7 @@ extern crate orion;
 extern crate rand;
 
 use orion::core::util;
-use orion::core::default;
+use orion::default;
 use rand::prelude::*;
 
 fn test_def(data: &[u8]) -> () {
@@ -18,7 +18,7 @@ fn test_def(data: &[u8]) -> () {
 
         default::hkdf_verify(&default::hkdf(&rand_salt, data, data, len).unwrap(), &rand_salt, &data, data, len).unwrap();
         default::hmac_verify(&default::hmac(&rand_salt, data).unwrap(), &rand_salt, data).unwrap();
-        default::pbkdf2_verify(&default::pbkdf2(data, &rand_salt).unwrap(), data, &rand_salt).unwrap();
+        default::pbkdf2_verify(&default::pbkdf2(data, &rand_salt, 64).unwrap(), data, &rand_salt, 64).unwrap();
     }
 }
 
