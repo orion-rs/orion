@@ -120,7 +120,7 @@ impl Hmac {
         ipad.extend_from_slice(&self.message);
         opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
 
-        self.sha2.hash(&opad).to_vec()
+        self.sha2.hash(&opad)
     }
 
     /// HMAC used for PBKDF2 which also takes both inner and outer padding as argument.
@@ -129,7 +129,7 @@ impl Hmac {
         ipad.extend_from_slice(&message);
         opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
 
-        self.sha2.hash(&opad).to_vec()
+        self.sha2.hash(&opad)
     }
 
     /// Check HMAC validity by computing one from the current struct fields and comparing this
