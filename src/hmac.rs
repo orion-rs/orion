@@ -118,7 +118,7 @@ impl Hmac {
         let (mut ipad, mut opad) = self.pad_key(&self.secret_key);
 
         ipad.extend_from_slice(&self.message);
-        opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
+        opad.extend_from_slice(&self.sha2.hash(&ipad));
 
         self.sha2.hash(&opad)
     }
