@@ -76,7 +76,7 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Result<Vec<u8>, errors::Unknow
 /// ```
 pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 
-    let rand_key = util::gen_rand_key(64).unwrap();
+    let rand_key = util::gen_rand_key(128).unwrap();
 
     let own_hmac = hmac(&secret_key, &message).unwrap();
     // Verification happens on an additional round of HMAC
