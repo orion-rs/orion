@@ -124,9 +124,9 @@ impl Hmac {
     }
 
     /// HMAC used for PBKDF2 which also takes both inner and outer padding as argument.
-    pub fn pbkdf2_hmac(&self, mut ipad: Vec<u8>, mut opad: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
+    pub fn pbkdf2_hmac(&self, mut ipad: Vec<u8>, mut opad: Vec<u8>, message: &[u8]) -> Vec<u8> {
 
-        ipad.extend_from_slice(&message);
+        ipad.extend_from_slice(message);
         opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
 
         self.sha2.hash(&opad)

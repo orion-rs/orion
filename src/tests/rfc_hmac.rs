@@ -39,7 +39,7 @@ mod rfc4231 {
         let (ipad, opad) = hmac.pad_key(&hmac.secret_key);
 
         let mut def_hmac = hmac.hmac_compute();
-        let mut pbkdf2_hmac = hmac.pbkdf2_hmac(ipad, opad, hmac.message.to_vec());
+        let mut pbkdf2_hmac = hmac.pbkdf2_hmac(ipad, opad, &hmac.message);
 
         match trunc {
             Some(ref length) => {

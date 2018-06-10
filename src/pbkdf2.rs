@@ -115,7 +115,7 @@ impl Pbkdf2 {
     }
 
     /// Returns a PRF value from HMAC and selected Sha2 variant from Pbkdf2 struct.
-    fn return_prf(&self, ipad: &[u8], opad: &[u8], message: Vec<u8>) -> Vec<u8> {
+    fn return_prf(&self, ipad: &[u8], opad: &[u8], message: &[u8]) -> Vec<u8> {
 
         // Secret value and message aren't needed in this case
         let fast_hmac = Hmac {
@@ -139,13 +139,13 @@ impl Pbkdf2 {
         // First iteration
         // u_step here will be equal to U_1 in RFC
         //let mut u_step = self.return_prf(padded_password, salt_extended);
-        let mut u_step = self.return_prf(ipad, opad, salt_extended);
+        let mut u_step = self.return_prf(ipad, opad, &salt_extended);
         // Push directly into the final buffer, as this is the first iteration
         f_result.extend_from_slice(&u_step);
         // Second iteration
         // u_step here will be equal to U_2 in RFC
         if self.iterations > 1 {
-            u_step = self.return_prf(ipad, opad, u_step);
+            u_step = self.return_prf(ipad, opad, &u_step);
             // The length of f_result and u_step will always be the same due to HMAC
             for c in 0..f_result.len() {
                 f_result[c] ^= u_step[c];
@@ -153,7 +153,7 @@ impl Pbkdf2 {
             // Remainder of iterations
             if self.iterations > 2 {
                 for _x in 2..self.iterations {
-                    u_step = self.return_prf(ipad, opad, u_step);
+                    u_step = self.return_prf(ipad, opad, &u_step);
 
                     for c in 0..f_result.len() {
                         f_result[c] ^= u_step[c];
