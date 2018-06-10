@@ -85,8 +85,8 @@ impl Drop for Hmac {
 
 impl Hmac {
 
-    /// Return a padded key if the key is less than or greater than the blocksize.
-    pub fn pad_key<'a>(&self, secret_key: &'a [u8]) -> Cow<'a, [u8]> {
+    /// Return the inner and outer padding used for HMAC.
+    pub fn pad_key(&self, secret_key: &[u8]) -> (Vec<u8>, Vec<u8>) {
         // Borrow so that if the key is exactly the needed length
         // no new key needs to be allocated before returning it
         let mut key = Cow::from(secret_key);
@@ -99,14 +99,6 @@ impl Hmac {
             resized_key.resize(self.sha2.blocksize(), 0x00);
             key = resized_key.into();
         }
-
-        key
-    }
-
-    /// Return the inner and outer padding used for HMAC.
-    pub fn pad_key_blocks(&self, secret_key: &[u8]) -> (Vec<u8>, Vec<u8>) {
-
-        let key = self.pad_key(&secret_key);
 
         let make_padded_key = |byte: u8| {
             let mut pad = key.to_vec();
@@ -123,7 +115,7 @@ impl Hmac {
     /// Returns an HMAC for a given key and message.
     pub fn hmac_compute(&self) -> Vec<u8> {
 
-        let (mut ipad, mut opad) = self.pad_key_blocks(&self.secret_key);
+        let (mut ipad, mut opad) = self.pad_key(&self.secret_key);
 
         ipad.extend_from_slice(&self.message);
         opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());

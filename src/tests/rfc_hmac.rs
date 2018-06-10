@@ -36,7 +36,7 @@ mod rfc4231 {
 
     fn hmac_test_runner(hmac: Hmac, expected: &[u8], trunc: Option<usize>, should_be: bool) -> bool {
 
-        let (ipad, opad) = hmac.pad_key_blocks(&hmac.secret_key);
+        let (ipad, opad) = hmac.pad_key(&hmac.secret_key);
 
         let mut def_hmac = hmac.hmac_compute();
         let mut pbkdf2_hmac = hmac.pbkdf2_hmac(ipad, opad, hmac.message.to_vec());
