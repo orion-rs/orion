@@ -138,15 +138,15 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) -> Result<V
 /// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
 /// ```
 pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &[u8],
-    length: usize) -> Result<bool, errors::UnknownCryptoError> {
+    len: usize) -> Result<bool, errors::UnknownCryptoError> {
 
 
-    let own_hkdf = hkdf(salt, input_data, info, length).unwrap();
+    let own_hkdf = hkdf(salt, input_data, info, len).unwrap();
 
     util::compare_ct(&own_hkdf, &expected_hkdf)
 }
 
-/// PBKDF2 with HMAC-SHA512. Uses 512000 iterations with an output length of 64 bytes.
+/// PBKDF2 with HMAC-SHA512. Uses 512000 iterations.
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the secret key is less than 64
@@ -159,9 +159,9 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 ///
 /// // Salts are limited to being 64 in length here.
 /// let salt = util::gen_rand_key(64).unwrap();
-/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
+/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64);
 /// ```
-pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Result<Vec<u8>, errors::UnknownCryptoError> {
+pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
     if salt.len() < 64 {
         return Err(errors::UnknownCryptoError);
@@ -172,14 +172,14 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Result<Vec<u8>, errors::UnknownCr
         password: password.to_vec(),
         salt: salt.to_vec(),
         iterations: 512_000,
-        length: 64,
+        length: len,
         hmac: ShaVariantOption::SHA512
     };
 
     pbkdf2_sha512_res.pbkdf2_compute()
 }
 
-/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 512000 iterations with an output length of 64 bytes for PBKDF2.
+/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 512000 iterations.
 /// # Usage example:
 ///
 /// ```
@@ -187,12 +187,12 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Result<Vec<u8>, errors::UnknownCr
 /// use orion::core::util;
 ///
 /// let salt = util::gen_rand_key(64).unwrap();
-/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt).unwrap();
-/// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt).unwrap(), true);
+/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64).unwrap();
+/// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt, 64).unwrap(), true);
 /// ```
-pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
+pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8], len: usize) -> Result<bool, errors::UnknownCryptoError> {
 
-    let own_pbkdf2 = pbkdf2(password, salt).unwrap();
+    let own_pbkdf2 = pbkdf2(password, salt, len).unwrap();
 
     util::compare_ct(&own_pbkdf2, derived_password)
 }
@@ -286,19 +286,19 @@ mod test {
         let salt = util::gen_rand_key(64).unwrap();
         let password = util::gen_rand_key(64).unwrap();
 
-        let pbkdf2_dk = default::pbkdf2(&password, &salt).unwrap();
+        let pbkdf2_dk = default::pbkdf2(&password, &salt, 64).unwrap();
 
-        assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password, &salt).unwrap(), true);
+        assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password, &salt, 64).unwrap(), true);
     }
 
     #[test]
     fn pbkdf2_salt_too_short() {
-        assert!(default::pbkdf2("Secret password".as_bytes(), "Very weak salt".as_bytes()).is_err());
+        assert!(default::pbkdf2("Secret password".as_bytes(), "Very weak salt".as_bytes(), 64).is_err());
     }
 
     #[test]
     fn pbkdf2_salt_allowed_len() {
-        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 67]).unwrap();
-        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 64]).unwrap();
+        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 67], 64).unwrap();
+        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 64], 64).unwrap();
     }
 }
