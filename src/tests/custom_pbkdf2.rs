@@ -88,29 +88,8 @@ mod custom_test_vectors {
         assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
     }
 
-    /*
     #[test]
     fn sha256_test_case_4() {
-
-        let pbkdf2_dk_256 = Pbkdf2 {
-            password: "password".as_bytes().to_vec(),
-            salt: "salt".as_bytes().to_vec(),
-            iterations: 16777216,
-            length: 20,
-            hmac: ShaVariantOption::SHA256,
-        };
-
-        let expected_pbkdf2_dk_256 = decode(
-            "cf81c66fe8cfc04d1f31ecb65dab4089f7f179e8"
-        ).unwrap();
-
-        assert_eq!(expected_pbkdf2_dk_256, pbkdf2_dk_256.pbkdf2_compute().unwrap());
-
-    }
-    */
-
-    #[test]
-    fn sha256_test_case_5() {
 
         let pbkdf2_dk_256 = Pbkdf2 {
             password: "passwordPASSWORDpassword".as_bytes().to_vec(),
@@ -128,7 +107,7 @@ mod custom_test_vectors {
     }
 
     #[test]
-    fn sha256_test_case_6() {
+    fn sha256_test_case_5() {
 
         let pbkdf2_dk_256 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
@@ -199,29 +178,8 @@ mod custom_test_vectors {
         assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute().unwrap());
     }
 
-    /*
     #[test]
     fn sha384_test_case_4() {
-
-        let pbkdf2_dk_384 = Pbkdf2 {
-            password: "password".as_bytes().to_vec(),
-            salt: "salt".as_bytes().to_vec(),
-            iterations: 16777216,
-            length: 20,
-            hmac: ShaVariantOption::SHA384,
-        };
-
-        let expected_pbkdf2_dk_384 = decode(
-            "a7fdb349ba2bfa6bf647bb0161bae1320df27e64"
-        ).unwrap();
-
-        assert_eq!(expected_pbkdf2_dk_384, pbkdf2_dk_384.pbkdf2_compute().unwrap());
-
-    }
-    */
-
-    #[test]
-    fn sha384_test_case_5() {
 
         let pbkdf2_dk_384 = Pbkdf2 {
             password: "passwordPASSWORDpassword".as_bytes().to_vec(),
@@ -239,7 +197,7 @@ mod custom_test_vectors {
     }
 
     #[test]
-    fn sha384_test_case_6() {
+    fn sha384_test_case_5() {
 
         let pbkdf2_dk_384 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
@@ -310,29 +268,8 @@ mod custom_test_vectors {
         assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute().unwrap());
     }
 
-    /*
     #[test]
     fn sha512_test_case_4() {
-
-        let pbkdf2_dk_512 = Pbkdf2 {
-            password: "password".as_bytes().to_vec(),
-            salt: "salt".as_bytes().to_vec(),
-            iterations: 16777216,
-            length: 20,
-            hmac: ShaVariantOption::SHA512,
-        };
-
-        let expected_pbkdf2_dk_512 = decode(
-            "6180a3ceabab45cc3964112c811e0131bca93a35"
-        ).unwrap();
-
-        assert_eq!(expected_pbkdf2_dk_512, pbkdf2_dk_512.pbkdf2_compute().unwrap());
-
-    }
-    */
-
-    #[test]
-    fn sha512_test_case_5() {
 
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "passwordPASSWORDpassword".as_bytes().to_vec(),
@@ -350,7 +287,7 @@ mod custom_test_vectors {
     }
 
     #[test]
-    fn sha512_test_case_6() {
+    fn sha512_test_case_5() {
 
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
