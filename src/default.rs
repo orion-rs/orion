@@ -27,20 +27,19 @@
 use hmac::Hmac;
 use hkdf::Hkdf;
 use pbkdf2::Pbkdf2;
-use util;
-use errors;
-use options::ShaVariantOption;
+use core::{errors, util};
+use core::options::ShaVariantOption;
 
 /// HMAC with SHA512.
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the secret key is less than 64
-/// 
+///
 /// # Usage example:
 ///
 /// ```
 /// use orion::default;
-/// use orion::util;
+/// use orion::core::util;
 ///
 /// let key = util::gen_rand_key(64).unwrap();
 /// let msg = "Some message.".as_bytes();
@@ -67,7 +66,7 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Result<Vec<u8>, errors::Unknow
 ///
 /// ```
 /// use orion::default;
-/// use orion::util;
+/// use orion::core::util;
 ///
 /// let key = util::gen_rand_key(64).unwrap();
 /// let msg = "Some message.".as_bytes();
@@ -92,12 +91,12 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> R
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the secret key is less than 64
-/// 
+///
 /// # Usage example:
 ///
 /// ```
 /// use orion::default;
-/// use orion::util;
+/// use orion::core::util;
 ///
 /// let salt = util::gen_rand_key(64).unwrap();
 /// let data = "Some data.".as_bytes();
@@ -129,7 +128,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Resul
 ///
 /// ```
 /// use orion::default;
-/// use orion::util;
+/// use orion::core::util;
 ///
 /// let salt = util::gen_rand_key(64).unwrap();
 /// let data = "Some data.".as_bytes();
@@ -151,12 +150,13 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the secret key is less than 64
-/// 
+///
 /// # Usage example:
 ///
 /// ```
 /// use orion::default;
-/// use orion::util;
+/// use orion::core::util;
+///
 /// // Salts are limited to being 64 in length here.
 /// let salt = util::gen_rand_key(64).unwrap();
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt);
@@ -184,7 +184,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Result<Vec<u8>, errors::UnknownCr
 ///
 /// ```
 /// use orion::default;
-/// use orion::util;
+/// use orion::core::util;
 ///
 /// let salt = util::gen_rand_key(64).unwrap();
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt).unwrap();
@@ -203,7 +203,7 @@ mod test {
     extern crate hex;
     use self::hex::decode;
     use default;
-    use util;
+    use core::util;
 
     #[test]
     fn hmac_secretkey_too_short() {
@@ -250,7 +250,7 @@ mod test {
               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
               aaaaaaaa").unwrap();
         let msg = "what do ya want for nothing?".as_bytes().to_vec();
-        
+
         let hmac_bob = default::hmac(&sec_key_correct, &msg).unwrap();
 
         assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(), true);
@@ -268,7 +268,7 @@ mod test {
 
         assert_eq!(default::hkdf_verify(&hkdf_dk, &salt, data, info, 64).unwrap(), true);
     }
-    
+
     #[test]
     fn hkdf_salt_too_short() {
         assert!(default::hkdf(&vec![0x61; 10], &vec![0x61; 10], &vec![0x61; 10], 20).is_err());

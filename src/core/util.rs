@@ -25,11 +25,11 @@
 
 
 use rand::{OsRng, RngCore};
-use errors;
+use core::errors;
 use constant_time_eq::constant_time_eq;
 
 #[inline(never)]
-/// Return a random byte vector of a given length. This uses the [rand](https://crates.io/crates/rand) crate, 
+/// Return a random byte vector of a given length. This uses the [rand](https://crates.io/crates/rand) crate,
 /// which means that random data is read from the OS source /dev/urandom or CryptGenRandom().
 /// Length must be greater than 1.
 pub fn gen_rand_key(len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
@@ -50,8 +50,8 @@ pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError
 
     if a.len() != b.len() {
         return Err(errors::UnknownCryptoError)
-    } 
-    
+    }
+
     match constant_time_eq(a, b) {
         true => Ok(true),
         false => Err(errors::UnknownCryptoError)
@@ -68,7 +68,7 @@ fn rand_key_len_ok() {
 fn rand_key_error() {
 
     assert!(gen_rand_key(0).is_err());
-    
+
     let err = gen_rand_key(0).unwrap_err();
     assert_eq!(err, errors::UnknownCryptoError);
 
@@ -85,10 +85,10 @@ fn test_ct_eq_ok() {
 
 #[test]
 fn test_ct_eq_wrong_len() {
-    
+
     let buf_1 = vec![0x06; 10];
     let buf_2 = vec![0x06; 5];
-    
+
     assert!(compare_ct(&buf_1, &buf_2).is_err());
     assert!(compare_ct(&buf_2, &buf_1).is_err());
 
@@ -99,8 +99,8 @@ fn test_ct_eq_err() {
 
     let buf_1 = vec![0x06; 10];
     let buf_2 = vec![0x76; 10];
-    
+
     assert!(compare_ct(&buf_1, &buf_2).is_err());
     assert!(compare_ct(&buf_2, &buf_1).is_err());
-    
+
 }

@@ -26,9 +26,8 @@
 
 use hmac::Hmac;
 use clear_on_drop::clear::Clear;
-use options::ShaVariantOption;
-use errors;
-use util;
+use core::options::ShaVariantOption;
+use core::{util, errors};
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
@@ -57,58 +56,58 @@ impl Drop for Hkdf {
 /// An exception will be thrown if:
 /// - The specified length is less than 1
 /// - The specified length is greater than 255 * hash_output_size_in_bytes
-/// 
+///
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```
 /// use orion::hkdf::Hkdf;
-/// use orion::util::gen_rand_key;
-/// use orion::options::ShaVariantOption;
+/// use orion::core::util::gen_rand_key;
+/// use orion::core::options::ShaVariantOption;
 ///
 /// let key = gen_rand_key(16).unwrap();
 /// let salt = gen_rand_key(16).unwrap();
 /// let info = gen_rand_key(16).unwrap();
 ///
-/// let dk = Hkdf { 
-///     salt: salt, 
-///     ikm: key, 
-///     info: info, 
+/// let dk = Hkdf {
+///     salt: salt,
+///     ikm: key,
+///     info: info,
 ///     hmac: ShaVariantOption::SHA256,
 ///     length: 50
 /// };
-/// 
+///
 /// let dk_extract = dk.hkdf_extract(&dk.ikm, &dk.salt);
 /// dk.hkdf_expand(&dk_extract).unwrap();
 /// ```
 /// ### Verifying derived key:
 /// ```
 /// use orion::hkdf::Hkdf;
-/// use orion::util::gen_rand_key;
-/// use orion::options::ShaVariantOption;
+/// use orion::core::util::gen_rand_key;
+/// use orion::core::options::ShaVariantOption;
 ///
 /// let key = gen_rand_key(16).unwrap();
 /// let salt = gen_rand_key(16).unwrap();
 /// let info = gen_rand_key(16).unwrap();
 ///
-/// let dk = Hkdf { 
-///     salt: salt, 
-///     ikm: key, 
-///     info: info, 
+/// let dk = Hkdf {
+///     salt: salt,
+///     ikm: key,
+///     info: info,
 ///     hmac: ShaVariantOption::SHA256,
 ///     length: 50
 /// };
-/// 
+///
 /// let dk_extract = dk.hkdf_extract(&dk.ikm, &dk.salt);
 /// let expanded_dk = dk.hkdf_expand(&dk_extract).unwrap();
-/// 
+///
 /// assert_eq!(dk.hkdf_compare(&expanded_dk).unwrap(), true);
 /// ```
 
 impl Hkdf {
-    
+
     /// Return HMAC matching argument passsed to Hkdf.
     pub fn hkdf_extract(&self, ikm: &[u8], salt: &[u8]) -> Vec<u8> {
-        
+
         let hmac_res = Hmac {
             secret_key: salt.to_vec(),
             message: ikm.to_vec(),
@@ -170,7 +169,7 @@ mod test {
     extern crate hex;
     use self::hex::decode;
     use hkdf::Hkdf;
-    use options::ShaVariantOption;
+    use core::options::ShaVariantOption;
 
     #[test]
     fn hkdf_maximum_length_256() {
@@ -241,7 +240,7 @@ mod test {
 
     #[test]
     fn hkdf_compare_true() {
-        
+
         let hkdf_256 = Hkdf {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
@@ -262,7 +261,7 @@ mod test {
     fn hkdf_compare_false() {
 
         // Salt value differs between this and the previous test case
-        
+
         let hkdf_256 = Hkdf {
             salt: "salt".as_bytes().to_vec(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
@@ -278,7 +277,7 @@ mod test {
 
         assert!(hkdf_256.hkdf_compare(&expected_okm_256).is_err());
     }
-    
+
     #[test]
     fn hkdf_compare_diff_length_panic() {
 

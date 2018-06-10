@@ -4,7 +4,7 @@ extern crate orion;
 extern crate rand;
 
 use orion::hmac::Hmac;
-use orion::options::ShaVariantOption;
+use orion::core::options::ShaVariantOption;
 
 fn make_hmac(secret_key: &[u8], message: &[u8]) -> (Vec<u8>, Vec<u8>)  {
 

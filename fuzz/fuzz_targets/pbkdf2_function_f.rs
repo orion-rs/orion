@@ -4,12 +4,12 @@ extern crate orion;
 extern crate rand;
 
 use orion::pbkdf2::Pbkdf2;
-use orion::options::ShaVariantOption;
+use orion::core::options::ShaVariantOption;
 use rand::prelude::*;
 
 
 // Testing PBKDF2's function_f with focus on random index value
-fn make_pbkdf2(ipad: &[u8], 
+fn make_pbkdf2(ipad: &[u8],
                 opad: &[u8], password: &[u8], salt: &[u8]) -> Vec<u8> {
 
     let mut rng = rand::thread_rng();

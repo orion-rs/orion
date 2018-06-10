@@ -28,11 +28,11 @@
 
 #[cfg(test)]
 mod rfc7914 {
-    
+
     extern crate hex;
     use self::hex::decode;
     use pbkdf2::Pbkdf2;
-    use options::ShaVariantOption;
+    use core::options::ShaVariantOption;
 
     #[test]
     fn rfc7914_test_case_1() {

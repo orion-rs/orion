@@ -16,7 +16,7 @@
 
 extern crate ring;
 use self::ring::{test, error};
-use options::ShaVariantOption;
+use core::options::ShaVariantOption;
 use hmac::Hmac;
 
 fn hmac_test_runner(option: ShaVariantOption, key: &[u8], input: &[u8], output: &[u8], is_ok: bool) -> Result<(), error::Unspecified> {
@@ -26,10 +26,10 @@ fn hmac_test_runner(option: ShaVariantOption, key: &[u8], input: &[u8], output: 
     let digest = hmac.hmac_compute();
 
     assert_eq!(is_ok, digest == output);
-    
+
     // To conform with the Result construction of compare functions
     match is_ok {
-        true => {    
+        true => {
             assert_eq!(is_ok, hmac.hmac_compare(output).unwrap());
         },
         false => {
@@ -59,15 +59,14 @@ fn hmac_tests() {
         };
 
         hmac_test_runner(alg, &key_value[..], &input[..], &output[..], true)?;
-            
+
         // Tamper with the input and check that verification fails.
         if input.is_empty() {
             input.push(0);
         } else {
             input[0] ^= 1;
         }
-            
+
         hmac_test_runner(alg, &key_value[..], &input[..], &output[..], false)
     });
 }
-

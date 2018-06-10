@@ -28,12 +28,12 @@
 
 #[cfg(test)]
 mod rfc5869 {
-    
+
     extern crate hex;
     use self::hex::decode;
     use hkdf::Hkdf;
-    use options::ShaVariantOption;
-    
+    use core::options::ShaVariantOption;
+
     #[test]
     fn test_case_1() {
 

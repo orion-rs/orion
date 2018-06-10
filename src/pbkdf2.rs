@@ -26,10 +26,10 @@
 
 use clear_on_drop::clear::Clear;
 use hmac::Hmac;
-use options::ShaVariantOption;
+use core::options::ShaVariantOption;
 use byte_tools::write_u32_be;
-use errors;
-use util;
+use core::errors;
+use core::util;
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
@@ -57,13 +57,13 @@ impl Drop for Pbkdf2 {
 /// - The specified length is less than 1
 /// - The specified length is greater than (2^32 - 1) * hLen
 /// - The specified iteration count is less than 1
-/// 
+///
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```
 /// use orion::pbkdf2::Pbkdf2;
-/// use orion::util::gen_rand_key;
-/// use orion::options::ShaVariantOption;
+/// use orion::core::util::gen_rand_key;
+/// use orion::core::options::ShaVariantOption;
 ///
 /// let password = gen_rand_key(16).unwrap();
 /// let salt = gen_rand_key(16).unwrap();
@@ -81,8 +81,8 @@ impl Drop for Pbkdf2 {
 /// ### Verifying derived key:
 /// ```
 /// use orion::pbkdf2::Pbkdf2;
-/// use orion::util::gen_rand_key;
-/// use orion::options::ShaVariantOption;
+/// use orion::core::util::gen_rand_key;
+/// use orion::core::options::ShaVariantOption;
 ///
 /// let password = gen_rand_key(16).unwrap();
 /// let salt = gen_rand_key(16).unwrap();
@@ -218,7 +218,7 @@ mod test {
     extern crate hex;
     use self::hex::decode;
     use pbkdf2::Pbkdf2;
-    use options::ShaVariantOption;
+    use core::options::ShaVariantOption;
 
     #[test]
     fn length_too_high() {
@@ -261,7 +261,7 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        assert!(pbkdf2_dk_256.pbkdf2_compute().is_err());    
+        assert!(pbkdf2_dk_256.pbkdf2_compute().is_err());
     }
 
     #[test]
@@ -300,14 +300,14 @@ mod test {
         ).unwrap();
 
         assert!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).is_err());
-        
+
     }
 
     #[test]
     fn pbkdf2_compare_diff_length_panic() {
 
         // Different length than expected dk
-        
+
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "".as_bytes().to_vec(),
@@ -321,6 +321,6 @@ mod test {
         ).unwrap();
 
         assert!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).is_err());
-        
+
     }
 }

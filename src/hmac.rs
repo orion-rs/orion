@@ -26,9 +26,8 @@
 
 use std::borrow::Cow;
 use clear_on_drop::clear::Clear;
-use util;
-use errors;
-use options::ShaVariantOption;
+use core::{util, errors};
+use core::options::ShaVariantOption;
 
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
@@ -53,8 +52,8 @@ impl Drop for Hmac {
 /// ### Generating HMAC:
 /// ```
 /// use orion::hmac::Hmac;
-/// use orion::util::gen_rand_key;
-/// use orion::options::ShaVariantOption;
+/// use orion::core::util::gen_rand_key;
+/// use orion::core::options::ShaVariantOption;
 ///
 /// let key = gen_rand_key(16).unwrap();
 /// let message = gen_rand_key(16).unwrap();
@@ -66,7 +65,7 @@ impl Drop for Hmac {
 /// ### Verifying HMAC:
 /// ```
 /// use orion::hmac::Hmac;
-/// use orion::options::ShaVariantOption;
+/// use orion::core::options::ShaVariantOption;
 ///
 /// let key = "Some key.";
 /// let msg = "Some message.";
@@ -128,7 +127,7 @@ impl Hmac {
 
         ipad.extend_from_slice(&self.message);
         opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
-        
+
         self.sha2.hash(&opad).to_vec()
     }
 
@@ -137,7 +136,7 @@ impl Hmac {
 
         ipad.extend_from_slice(&message);
         opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
-        
+
         self.sha2.hash(&opad).to_vec()
     }
 
@@ -190,4 +189,3 @@ fn hmac_compare() {
     assert_eq!(own_hmac.hmac_compare(&recieved_hmac.hmac_compute()).unwrap(), true);
     assert!(own_hmac.hmac_compare(&false_hmac.hmac_compute()).is_err());
 }
-

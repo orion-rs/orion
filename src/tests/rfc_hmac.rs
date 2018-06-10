@@ -28,10 +28,10 @@
 
 #[cfg(test)]
 mod rfc4231 {
-    
+
     extern crate hex;
     use self::hex::decode;
-    use options::ShaVariantOption;
+    use core::options::ShaVariantOption;
     use hmac::Hmac;
 
     fn hmac_test_runner(hmac: Hmac, expected: &[u8], trunc: Option<usize>, should_be: bool) -> bool {
@@ -41,7 +41,7 @@ mod rfc4231 {
         let mut def_hmac = hmac.hmac_compute();
         let mut pbkdf2_hmac = hmac.pbkdf2_hmac(ipad, opad, hmac.message.to_vec());
 
-        match trunc { 
+        match trunc {
             Some(ref length) => {
                 def_hmac.truncate(*length);
                 pbkdf2_hmac.truncate(*length);
