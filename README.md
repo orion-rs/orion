@@ -47,21 +47,11 @@ Unit tests are located in the same file as what is being tested, apart from impl
 
 Fuzzing is done using [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz). Fuzzing targets are located in `fuzz/fuzz_targets`.
 
-### Performance
+### Benchmarks
+The library can be benchmarked as below. All benchmarking tests are located in `benches`.
 ```
-PBKDF2-HMAC-SHA256, iterations = 1: 0.000009282000974053517 seconds
-PBKDF2-HMAC-SHA256, iterations = 10000: 0.017861276000985526 seconds
-PBKDF2-HMAC-SHA256, iterations = 16777216: 28.345894931999283 seconds
-
-HKDF-HMAC-SHA256: 0.00002259599932585843 seconds
-HKDF-HMAC-SHA384: 0.00001884199991764035 seconds
-HKDF-HMAC-SHA512: 0.000005493000571732409 seconds
-
-HMAC-SHA256: 0.00000212700069823768 seconds
-HMAC-SHA384: 0.0000023610009520780295 seconds
-HMAC-SHA512: 0.0000024699984351173043 seconds
+cargo +nightly bench
 ```
-Tested on an Intel® Core™ i7-4790.
 ### Acknowledgments
 Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://github.com/brycx/orion/issues/3) of the code.
 
