@@ -147,7 +147,7 @@ impl Hmac {
         };
 
         let nd_round_received = Hmac {
-            secret_key: rand_key.clone(),
+            secret_key: rand_key,
             message: received_hmac.to_vec(),
             sha2: self.sha2
         };
