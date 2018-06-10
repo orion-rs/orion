@@ -119,8 +119,8 @@ impl Pbkdf2 {
 
         // Secret value and message aren't needed in this case
         let fast_hmac = Hmac {
-            secret_key: vec![0x00; 0],
-            message: vec![0x00; 0],
+            secret_key: Vec::new(),
+            message: Vec::new(),
             sha2: self.hmac
         };
 
@@ -152,7 +152,7 @@ impl Pbkdf2 {
             }
             // Remainder of iterations
             if self.iterations > 2 {
-                for _x in 2..self.iterations {
+                for _ in 2..self.iterations {
                     u_step = self.return_prf(ipad, opad, &u_step);
 
                     for c in 0..f_result.len() {
