@@ -52,7 +52,7 @@ mod rfc5869 {
             "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf\
             34007208d5b887185865").unwrap();
 
-        let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
+        let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.salt, &hkdf_256.ikm);
 
         assert_eq!(actual_extract_256, expected_prk_256);
         assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256).unwrap(), expected_okm_256);
@@ -83,7 +83,7 @@ mod rfc5869 {
             59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71\
             cc30c58179ec3e87c14c01d5c1f3434f1d87").unwrap();
 
-        let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
+        let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.salt, &hkdf_256.ikm);
 
         assert_eq!(actual_extract_256, expected_prk_256);
         assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256).unwrap(), expected_okm_256);
@@ -107,7 +107,7 @@ mod rfc5869 {
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-        let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
+        let actual_extract_256 = hkdf_256.hkdf_extract(&hkdf_256.salt, &hkdf_256.ikm);
 
         assert_eq!(actual_extract_256, expected_prk_256);
         assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256).unwrap(), expected_okm_256);

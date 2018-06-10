@@ -97,7 +97,7 @@ impl Drop for Hkdf {
 ///     length: 50
 /// };
 ///
-/// let dk_extract = dk.hkdf_extract(&dk.ikm, &dk.salt);
+/// let dk_extract = dk.hkdf_extract(&dk.salt, &dk.ikm);
 /// let expanded_dk = dk.hkdf_expand(&dk_extract).unwrap();
 ///
 /// assert_eq!(dk.hkdf_compare(&expanded_dk).unwrap(), true);
@@ -106,7 +106,7 @@ impl Drop for Hkdf {
 impl Hkdf {
 
     /// Return HMAC matching argument passsed to Hkdf.
-    pub fn hkdf_extract(&self, ikm: &[u8], salt: &[u8]) -> Vec<u8> {
+    pub fn hkdf_extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
 
         let hmac_res = Hmac {
             secret_key: salt.to_vec(),
@@ -130,16 +130,16 @@ impl Hkdf {
         let n_iter = 1 + ((self.length - 1) / (self.hmac.output_size() / 8)) as usize;
 
         // con_step will hold the intermediate state of "T_n | info | 0x0n" as described in the RFC
-        let mut con_step: Vec<u8> = vec![];
-        let mut hmac_hash_step: Vec<u8> = vec![];
-        let mut okm: Vec<u8> = vec![];
+        let mut con_step: Vec<u8> = Vec::new();
+        let mut hmac_hash_step: Vec<u8> = Vec::new();
+        let mut okm: Vec<u8> = Vec::new();
 
         for index in 1..n_iter+1 {
                 con_step.append(&mut hmac_hash_step);
                 con_step.extend_from_slice(&self.info);
                 con_step.push(index as u8);
                 // We call extract here as it has the same functionality as a simple HMAC call
-                hmac_hash_step.extend_from_slice(&self.hkdf_extract(&con_step, prk));
+                hmac_hash_step.extend_from_slice(&self.hkdf_extract(prk, &con_step));
                 con_step.clear();
 
                 okm.extend_from_slice(&hmac_hash_step);
@@ -158,7 +158,7 @@ impl Hkdf {
             return Err(errors::UnknownCryptoError);
         }
 
-        let own_extract = self.hkdf_extract(&self.ikm, &self.salt);
+        let own_extract = self.hkdf_extract(&self.salt, &self.ikm);
         let own_expand = self.hkdf_expand(&own_extract).unwrap();
 
         util::compare_ct(received_hkdf, &own_expand)
