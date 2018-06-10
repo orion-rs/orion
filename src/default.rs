@@ -74,7 +74,8 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Result<Vec<u8>, errors::Unknow
 /// let expected_hmac = default::hmac(&key, msg).unwrap();
 /// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
 /// ```
-pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
+pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
+        Result<bool, errors::UnknownCryptoError> {
 
     let rand_key = util::gen_rand_key(128).unwrap();
 
@@ -104,7 +105,8 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> R
 ///
 /// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// ```
-pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
+pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
+        Result<Vec<u8>, errors::UnknownCryptoError> {
 
     if salt.len() < 64 {
         return Err(errors::UnknownCryptoError);
@@ -118,9 +120,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) -> Result<V
         length: len
     };
 
-    let hkdf_512_extract = hkdf_512_res.hkdf_extract(&hkdf_512_res.ikm, &hkdf_512_res.salt);
-
-    hkdf_512_res.hkdf_expand(&hkdf_512_extract)
+    hkdf_512_res.hkdf_compute()
 }
 
 /// Verify an HKDF-HMAC-SHA512 derived key in constant time.

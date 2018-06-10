@@ -118,7 +118,7 @@ impl Hkdf {
     /// The HKDF Expand step. Returns an HKDF.
     pub fn hkdf_expand(&self, prk: &[u8]) -> Result<Vec<u8>, errors::UnknownCryptoError> {
         // Check that the selected key length is within the limit.
-        if self.length > (255 * self.hmac.output_size() / 8) {
+        if self.length > (255 * self.hmac.output_size()) {
             return Err(errors::UnknownCryptoError);
         }
         if self.length < 1 {

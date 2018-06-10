@@ -18,7 +18,7 @@ fn test_def(data: &[u8]) -> () {
 
         default::hkdf_verify(&default::hkdf(&rand_salt, data, data, len).unwrap(), &rand_salt, &data, data, len).unwrap();
         default::hmac_verify(&default::hmac(&rand_salt, data).unwrap(), &rand_salt, data).unwrap();
-        default::pbkdf2_verify(&default::pbkdf2(data, &rand_salt, 64).unwrap(), data, &rand_salt, 64).unwrap();
+        default::pbkdf2_verify(&default::pbkdf2(data, &rand_salt, len).unwrap(), data, &rand_salt, len).unwrap();
     }
 }
 
