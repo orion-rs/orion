@@ -127,7 +127,7 @@ impl Hmac {
     pub fn pbkdf2_hmac(&self, mut ipad: Vec<u8>, mut opad: Vec<u8>, message: &[u8]) -> Vec<u8> {
 
         ipad.extend_from_slice(message);
-        opad.extend_from_slice(self.sha2.hash(&ipad).as_ref());
+        opad.extend_from_slice(&self.sha2.hash(&ipad));
 
         self.sha2.hash(&opad)
     }
