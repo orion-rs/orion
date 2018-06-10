@@ -104,7 +104,7 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) -> R
 ///
 /// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// ```
-pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
+pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
     if salt.len() < 64 {
         return Err(errors::UnknownCryptoError);
@@ -115,7 +115,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], length: usize) -> Resul
         ikm: input_data.to_vec(),
         info: info.to_vec(),
         hmac: ShaVariantOption::SHA512,
-        length: length
+        length: len
     };
 
     let hkdf_512_extract = hkdf_512_res.hkdf_extract(&hkdf_512_res.ikm, &hkdf_512_res.salt);
@@ -171,7 +171,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8]) -> Result<Vec<u8>, errors::UnknownCr
     let pbkdf2_sha512_res = Pbkdf2 {
         password: password.to_vec(),
         salt: salt.to_vec(),
-        iterations: 512000,
+        iterations: 512_000,
         length: 64,
         hmac: ShaVariantOption::SHA512
     };

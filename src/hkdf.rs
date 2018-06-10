@@ -122,7 +122,8 @@ impl Hkdf {
         // Check that the selected key length is within the limit.
         if self.length > (255 * self.hmac.output_size() / 8) {
             return Err(errors::UnknownCryptoError);
-        } else if self.length < 1 {
+        }
+        if self.length < 1 {
             return Err(errors::UnknownCryptoError);
         }
 

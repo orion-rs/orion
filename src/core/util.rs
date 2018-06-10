@@ -52,10 +52,9 @@ pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError
         return Err(errors::UnknownCryptoError)
     }
 
-    match constant_time_eq(a, b) {
-        true => Ok(true),
-        false => Err(errors::UnknownCryptoError)
-    }
+    if constant_time_eq(a, b) {
+        Ok(true)
+    } else { Err(errors::UnknownCryptoError) }
 }
 
 #[test]

@@ -107,9 +107,9 @@ impl Pbkdf2 {
         match self.hmac.output_size() {
             // These values have been calculated from the constraint given in RFC by:
             // (2^32 - 1) * hLen
-            256 => 137438953440,
-            384 => 206158430160,
-            512 => 274877906880,
+            256 => 137_438_953_440,
+            384 => 206_158_430_160,
+            512 => 274_877_906_880,
             _ => panic!("Maximum DK lenght not found.")
         }
     }
@@ -174,7 +174,8 @@ impl Pbkdf2 {
         // Check that the selected key length is within the limit
         if self.length > self.max_dklen() {
             return Err(errors::UnknownCryptoError);
-        } else if self.length < 1 {
+        }
+        if self.length < 1 {
             return Err(errors::UnknownCryptoError);
         }
 
