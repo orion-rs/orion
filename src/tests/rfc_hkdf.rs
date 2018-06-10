@@ -56,6 +56,7 @@ mod rfc5869 {
 
         assert_eq!(actual_extract_256, expected_prk_256);
         assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256).unwrap(), expected_okm_256);
+        assert_eq!(hkdf_256.hkdf_compute().unwrap(), expected_okm_256);
     }
 
     #[test]
@@ -87,6 +88,7 @@ mod rfc5869 {
 
         assert_eq!(actual_extract_256, expected_prk_256);
         assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256).unwrap(), expected_okm_256);
+        assert_eq!(hkdf_256.hkdf_compute().unwrap(), expected_okm_256);
     }
 
     #[test]
@@ -111,5 +113,6 @@ mod rfc5869 {
 
         assert_eq!(actual_extract_256, expected_prk_256);
         assert_eq!(hkdf_256.hkdf_expand(&actual_extract_256).unwrap(), expected_okm_256);
+        assert_eq!(hkdf_256.hkdf_compute().unwrap(), expected_okm_256);
     }
 }

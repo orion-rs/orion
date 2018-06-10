@@ -76,8 +76,7 @@ impl Drop for Hkdf {
 ///     length: 50
 /// };
 ///
-/// let dk_extract = dk.hkdf_extract(&dk.ikm, &dk.salt);
-/// dk.hkdf_expand(&dk_extract).unwrap();
+/// let dk_final = dk.hkdf_compute().unwrap();
 /// ```
 /// ### Verifying derived key:
 /// ```
@@ -97,10 +96,9 @@ impl Drop for Hkdf {
 ///     length: 50
 /// };
 ///
-/// let dk_extract = dk.hkdf_extract(&dk.salt, &dk.ikm);
-/// let expanded_dk = dk.hkdf_expand(&dk_extract).unwrap();
+/// let dk_final = dk.hkdf_compute().unwrap();
 ///
-/// assert_eq!(dk.hkdf_compare(&expanded_dk).unwrap(), true);
+/// assert_eq!(dk.hkdf_compare(&dk_final).unwrap(), true);
 /// ```
 
 impl Hkdf {
@@ -148,6 +146,16 @@ impl Hkdf {
         okm.truncate(self.length);
 
         Ok(okm)
+    }
+
+    /// Combine hkdf_extract and hkdf_expand to return a DK.
+    pub fn hkdf_compute(&self) -> Result<Vec<u8>, errors::UnknownCryptoError> {
+
+        let prk = self.hkdf_extract(&self.salt, &self.ikm);
+
+        let dk = self.hkdf_expand(&prk).unwrap();
+
+        Ok(dk)
     }
 
     /// Check HKDF validity by computing one from the current struct fields and comparing this
