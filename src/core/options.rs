@@ -40,9 +40,9 @@ impl ShaVariantOption {
     /// Return the output size in bits.
     pub fn output_size(&self) -> usize {
         match *self {
-            ShaVariantOption::SHA256 => 256,
-            ShaVariantOption::SHA384 => 384,
-            ShaVariantOption::SHA512 => 512,
+            ShaVariantOption::SHA256 => 32,
+            ShaVariantOption::SHA384 => 48,
+            ShaVariantOption::SHA512 => 64,
         }
     }
 

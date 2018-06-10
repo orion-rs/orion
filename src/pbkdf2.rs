@@ -107,9 +107,9 @@ impl Pbkdf2 {
         match self.hmac.output_size() {
             // These values have been calculated from the constraint given in RFC by:
             // (2^32 - 1) * hLen
-            256 => 137_438_953_440,
-            384 => 206_158_430_160,
-            512 => 274_877_906_880,
+            32 => 137_438_953_440,
+            48 => 206_158_430_160,
+            64 => 274_877_906_880,
             _ => panic!("Maximum DK lenght not found.")
         }
     }
@@ -180,7 +180,7 @@ impl Pbkdf2 {
         }
 
         // Corresponds to l in RFC
-        let hlen_blocks = 1 + ((self.length - 1) / (self.hmac.output_size() / 8)) as usize;
+        let hlen_blocks = 1 + ((self.length - 1) / self.hmac.output_size()) as usize;
 
         // Make inner and outer paddings for a faster HMAC
         let pad_const = Hmac {secret_key: Vec::new(), message: Vec::new(), sha2: self.hmac};
