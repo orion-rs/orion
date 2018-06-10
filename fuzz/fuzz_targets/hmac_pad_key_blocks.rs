@@ -14,7 +14,7 @@ fn make_hmac(secret_key: &[u8], message: &[u8]) -> (Vec<u8>, Vec<u8>)  {
         sha2: ShaVariantOption::SHA256
     };
 
-    mac.pad_key_blocks(secret_key)
+    mac.pad_key(secret_key)
 }
 
 
