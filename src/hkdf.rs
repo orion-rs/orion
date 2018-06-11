@@ -164,10 +164,9 @@ impl Hkdf {
             return Err(errors::UnknownCryptoError);
         }
 
-        let own_extract = self.hkdf_extract(&self.salt, &self.ikm);
-        let own_expand = self.hkdf_expand(&own_extract).unwrap();
+        let own_dk = self.hkdf_compute().unwrap();
 
-        util::compare_ct(received_hkdf, &own_expand)
+        util::compare_ct(received_hkdf, &own_dk)
     }
 }
 
