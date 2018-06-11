@@ -18,10 +18,15 @@ fn make_pbkdf2(ipad: &[u8],
 
     if rng.gen() {
 
-        let len = rng.gen_range(1, 137438953441);
         let iter = rng.gen_range(1, 10001);
 
         let hmac_choice = rng.choose(&choices).unwrap();
+
+        let len = match *hmac_choice {
+                ShaVariantOption::SHA256 => rng.gen_range(1, 137_438_953_441),
+                ShaVariantOption::SHA384 => rng.gen_range(1, 206_158_430_161),
+                ShaVariantOption::SHA512 => rng.gen_range(1, 274_877_906_881),
+        };
 
         let dk = Pbkdf2 {
             password: password.to_vec(),
