@@ -116,8 +116,8 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
         salt: salt.to_vec(),
         ikm: input_data.to_vec(),
         info: info.to_vec(),
+        length: len,
         hmac: ShaVariantOption::SHA512,
-        length: len
     };
 
     hkdf_512_res.hkdf_compute()

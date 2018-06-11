@@ -41,8 +41,8 @@ mod rfc5869 {
             salt: decode("000102030405060708090a0b0c").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("f0f1f2f3f4f5f6f7f8f9").unwrap(),
-            hmac: ShaVariantOption::SHA256,
             length: 42,
+            hmac: ShaVariantOption::SHA256,
         };
 
         let expected_prk_256 = decode(
@@ -72,8 +72,8 @@ mod rfc5869 {
             info: decode("b0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf\
                 d0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeef\
                 f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff").unwrap(),
-            hmac: ShaVariantOption::SHA256,
             length: 82,
+            hmac: ShaVariantOption::SHA256,
         };
 
         let expected_prk_256 = decode(
@@ -98,8 +98,8 @@ mod rfc5869 {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: ShaVariantOption::SHA256,
             length: 42,
+            hmac: ShaVariantOption::SHA256,
         };
 
         let expected_prk_256 = decode(

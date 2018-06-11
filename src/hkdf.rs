@@ -36,8 +36,8 @@ pub struct Hkdf {
     pub salt: Vec<u8>,
     pub ikm: Vec<u8>,
     pub info: Vec<u8>,
-    pub hmac: ShaVariantOption,
     pub length: usize,
+    pub hmac: ShaVariantOption,
 }
 
 impl Drop for Hkdf {
@@ -72,8 +72,8 @@ impl Drop for Hkdf {
 ///     salt: salt,
 ///     ikm: key,
 ///     info: info,
+///     length: 50,
 ///     hmac: ShaVariantOption::SHA256,
-///     length: 50
 /// };
 ///
 /// let dk_final = dk.hkdf_compute().unwrap();
@@ -92,8 +92,8 @@ impl Drop for Hkdf {
 ///     salt: salt,
 ///     ikm: key,
 ///     info: info,
+///     length: 50,
 ///     hmac: ShaVariantOption::SHA256,
-///     length: 50
 /// };
 ///
 /// let dk_final = dk.hkdf_compute().unwrap();
@@ -184,9 +184,9 @@ mod test {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: ShaVariantOption::SHA256,
             // Max allowed length here is 8160
             length: 9000,
+            hmac: ShaVariantOption::SHA256,
         };
 
         let hkdf_256_extract = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
@@ -203,9 +203,9 @@ mod test {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: ShaVariantOption::SHA384,
             // Max allowed length here is 12240
             length: 13000,
+            hmac: ShaVariantOption::SHA384,
         };
 
         let hkdf_384_extract = hkdf_384.hkdf_extract(&hkdf_384.ikm, &hkdf_384.salt);
@@ -222,9 +222,9 @@ mod test {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: ShaVariantOption::SHA512,
             // Max allowed length here is 16320
             length: 17000,
+            hmac: ShaVariantOption::SHA512,
         };
 
         let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
@@ -241,8 +241,8 @@ mod test {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: ShaVariantOption::SHA512,
             length: 0,
+            hmac: ShaVariantOption::SHA512,
         };
 
         let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
@@ -259,8 +259,8 @@ mod test {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: ShaVariantOption::SHA256,
             length: 42,
+            hmac: ShaVariantOption::SHA256,
         };
 
         let expected_okm_256 = decode(
@@ -280,8 +280,8 @@ mod test {
             salt: "salt".as_bytes().to_vec(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: ShaVariantOption::SHA256,
             length: 42,
+            hmac: ShaVariantOption::SHA256,
         };
 
         let expected_okm_256 = decode(
@@ -301,8 +301,8 @@ mod test {
             salt: "salt".as_bytes().to_vec(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
-            hmac: ShaVariantOption::SHA256,
             length: 75,
+            hmac: ShaVariantOption::SHA256,
         };
 
         let expected_okm_256 = decode(
