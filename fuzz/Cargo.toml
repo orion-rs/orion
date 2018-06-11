@@ -21,15 +21,15 @@ git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
 members = ["."]
 
 [[bin]]
-name = "pbkdf2_function_f"
-path = "fuzz_targets/pbkdf2_function_f.rs"
+name = "pbkdf2"
+path = "fuzz_targets/pbkdf2.rs"
 [[bin]]
-name = "hmac_pad_key_blocks"
-path = "fuzz_targets/hmac_pad_key_blocks.rs"
+name = "hmac"
+path = "fuzz_targets/hmac.rs"
 
 [[bin]]
-name = "hkdf_expand"
-path = "fuzz_targets/hkdf_expand.rs"
+name = "hkdf"
+path = "fuzz_targets/hkdf.rs"
 
 [[bin]]
 name = "default"

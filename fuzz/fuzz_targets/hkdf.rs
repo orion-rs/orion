@@ -12,15 +12,19 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
 
     let mut rng = thread_rng();
 
+    let choices = [ShaVariantOption::SHA256, ShaVariantOption::SHA384, ShaVariantOption::SHA512];
+
     if rng.gen() {
 
         let len = rng.gen_range(1, 8161);
+
+        let hmac_choice = rng.choose(&choices).unwrap();
 
         let dk = Hkdf {
             salt: salt.to_vec(),
             ikm: ikm.to_vec(),
             info: info.to_vec(),
-            hmac: ShaVariantOption::SHA256,
+            hmac: *hmac_choice,
             length: len,
         };
 
@@ -28,6 +32,8 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
 
         let dk_fin = dk.hkdf_expand(&prk).unwrap();
         assert_eq!(dk_fin, dk.hkdf_compute().unwrap());
+        assert_eq!(dk.hkdf_compare(&dk_fin).unwrap(), true);
+
     } else  { () }
 
 }
