@@ -14,7 +14,7 @@ fn make_pbkdf2(ipad: &[u8],
 
     let mut rng = rand::thread_rng();
 
-    let len = rng.gen_range(1, 137438953440);
+    let len = rng.gen_range(1, 137438953441);
 
     let dk = Pbkdf2 {
         password: password.to_vec(),

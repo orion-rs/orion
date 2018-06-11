@@ -14,14 +14,14 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
 
     if rng.gen() {
 
-        let len = rng.gen_range(0, 8160);
+        let len = rng.gen_range(1, 8161);
 
         let dk = Hkdf {
             salt: salt.to_vec(),
             ikm: ikm.to_vec(),
             info: info.to_vec(),
             hmac: ShaVariantOption::SHA256,
-            length: len,
+            length: 0,
         };
 
         let prk = dk.hkdf_extract(ikm, salt);

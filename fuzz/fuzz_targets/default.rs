@@ -10,7 +10,7 @@ use rand::prelude::*;
 fn test_def(data: &[u8]) -> () {
     let mut rng = rand::thread_rng();
 
-    let len = rng.gen_range(1, 16320);
+    let len = rng.gen_range(1, 16321);
 
     let rand_salt = util::gen_rand_key(64).unwrap();
 
