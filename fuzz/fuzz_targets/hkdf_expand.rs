@@ -21,7 +21,7 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
             ikm: ikm.to_vec(),
             info: info.to_vec(),
             hmac: ShaVariantOption::SHA256,
-            length: 0,
+            length: len,
         };
 
         let prk = dk.hkdf_extract(ikm, salt);
