@@ -129,18 +129,13 @@ impl Hkdf {
 
         // con_step will hold the intermediate state of "T_n | info | 0x0n" as described in the RFC
         let mut con_step: Vec<u8> = Vec::new();
-        let mut hmac_hash_step: Vec<u8> = Vec::new();
         let mut okm: Vec<u8> = Vec::new();
 
         for index in 1..n_iter+1 {
-                con_step.append(&mut hmac_hash_step);
                 con_step.extend_from_slice(&self.info);
                 con_step.push(index as u8);
-                // We call extract here as it has the same functionality as a simple HMAC call
-                hmac_hash_step.extend_from_slice(&self.hkdf_extract(prk, &con_step));
-                con_step.clear();
-
-                okm.extend_from_slice(&hmac_hash_step);
+                con_step = self.hkdf_extract(prk, &con_step);
+                okm.extend_from_slice(&con_step);
         }
 
         okm.truncate(self.length);
