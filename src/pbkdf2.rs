@@ -279,7 +279,6 @@ mod test {
     fn pbkdf2_compare_false() {
 
         // Salt value differs between this and the previous test case
-
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "".as_bytes().to_vec(),
@@ -293,14 +292,12 @@ mod test {
         ).unwrap();
 
         assert!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).is_err());
-
     }
 
     #[test]
     fn pbkdf2_compare_diff_length_panic() {
 
         // Different length than expected dk
-
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "".as_bytes().to_vec(),
@@ -314,6 +311,5 @@ mod test {
         ).unwrap();
 
         assert!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).is_err());
-
     }
 }
