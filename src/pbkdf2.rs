@@ -25,7 +25,7 @@
 
 
 use clear_on_drop::clear::Clear;
-use hmac::Hmac;
+use hmac::*;
 use core::options::ShaVariantOption;
 use byte_tools::write_u32_be;
 use core::errors;
@@ -117,14 +117,7 @@ impl Pbkdf2 {
     /// Returns a PRF value from HMAC and selected Sha2 variant from Pbkdf2 struct.
     fn return_prf(&self, ipad: &[u8], opad: &[u8], message: &[u8]) -> Vec<u8> {
 
-        // Secret value and message aren't needed in this case
-        let fast_hmac = Hmac {
-            secret_key: Vec::new(),
-            message: Vec::new(),
-            sha2: self.hmac
-        };
-
-        fast_hmac.pbkdf2_hmac(ipad.to_vec(), opad.to_vec(), message)
+        pbkdf2_hmac(ipad.to_vec(), opad.to_vec(), message, self.hmac)
     }
 
     /// Function F as described in the RFC.

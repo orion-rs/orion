@@ -32,14 +32,14 @@ mod rfc4231 {
     extern crate hex;
     use self::hex::decode;
     use core::options::ShaVariantOption;
-    use hmac::Hmac;
+    use hmac::*;
 
     fn hmac_test_runner(hmac: Hmac, expected: &[u8], trunc: Option<usize>, should_be: bool) -> bool {
 
         let (ipad, opad) = hmac.pad_key(&hmac.secret_key);
 
         let mut def_hmac = hmac.hmac_compute();
-        let mut pbkdf2_hmac = hmac.pbkdf2_hmac(ipad, opad, &hmac.message);
+        let mut pbkdf2_hmac = pbkdf2_hmac(ipad, opad, &hmac.message, hmac.sha2);
 
         match trunc {
             Some(ref length) => {

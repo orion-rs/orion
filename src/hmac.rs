@@ -123,15 +123,6 @@ impl Hmac {
         self.sha2.hash(&opad)
     }
 
-    /// HMAC used for PBKDF2 which also takes both inner and outer padding as argument.
-    pub fn pbkdf2_hmac(&self, mut ipad: Vec<u8>, mut opad: Vec<u8>, message: &[u8]) -> Vec<u8> {
-
-        ipad.extend_from_slice(message);
-        opad.extend_from_slice(&self.sha2.hash(&ipad));
-
-        self.sha2.hash(&opad)
-    }
-
     /// Check HMAC validity by computing one from the current struct fields and comparing this
     /// to the passed HMAC. Comparison is done in constant time and with Double-HMAC Verification.
     pub fn hmac_compare(&self, received_hmac: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
@@ -158,6 +149,17 @@ impl Hmac {
         )
     }
 }
+
+/// HMAC used for PBKDF2 which takes both inner and outer padding as argument.
+pub fn pbkdf2_hmac(mut ipad: Vec<u8>, mut opad: Vec<u8>, message: &[u8],
+    hmac: ShaVariantOption) -> Vec<u8> {
+
+    ipad.extend_from_slice(message);
+    opad.extend_from_slice(&hmac.hash(&ipad));
+
+    hmac.hash(&opad)
+}
+
 
 #[test]
 // Test that hmac_compare() returns true if signatures match and false if not
