@@ -131,7 +131,6 @@ impl Pbkdf2 {
         let mut f_result: Vec<u8> = Vec::new();
         // First iteration
         // u_step here will be equal to U_1 in RFC
-        //let mut u_step = self.return_prf(padded_password, salt_extended);
         let mut u_step = self.return_prf(ipad, opad, &salt_extended);
         // Push directly into the final buffer, as this is the first iteration
         f_result.extend_from_slice(&u_step);
