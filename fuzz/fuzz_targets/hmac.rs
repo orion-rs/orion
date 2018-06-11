@@ -3,7 +3,7 @@
 extern crate orion;
 extern crate rand;
 
-use orion::hmac::Hmac;
+use orion::hmac::*;
 use orion::core::options::ShaVariantOption;
 use rand::prelude::*;
 
@@ -25,7 +25,7 @@ fn make_hmac(secret_key: &[u8], message: &[u8]) -> ()  {
 
         let (ipad, opad) = mac.pad_key(secret_key);
         let mac_def = mac.hmac_compute();
-        let mac_pbkdf2 = mac.pbkdf2_hmac(ipad, opad, &mac.message);
+        let mac_pbkdf2 = pbkdf2_hmac(ipad, opad, &mac.message, mac.sha2);
         assert_eq!(mac_def, mac_pbkdf2);
         assert_eq!(mac.hmac_compare(&mac_def).unwrap(), true);
         assert_eq!(mac.hmac_compare(&mac_pbkdf2).unwrap(), true);
