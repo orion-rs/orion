@@ -110,7 +110,7 @@ impl Pbkdf2 {
             32 => 137_438_953_440,
             48 => 206_158_430_160,
             64 => 274_877_906_880,
-            _ => panic!("Maximum DK lenght not found.")
+            _ => panic!(errors::UnknownCryptoError)
         }
     }
 
