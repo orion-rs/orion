@@ -172,7 +172,7 @@ impl Pbkdf2 {
         }
 
         // Corresponds to l in RFC
-        let hlen_blocks = 1 + ((self.length - 1) / self.hmac.output_size()) as usize;
+        let hlen_blocks = 1 + ((self.length - 1) / self.hmac.output_size());
 
         // Make inner and outer paddings for a faster HMAC
         let pad_const = Hmac {secret_key: Vec::new(), message: Vec::new(), sha2: self.hmac};

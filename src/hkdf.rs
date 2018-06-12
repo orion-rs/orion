@@ -125,7 +125,7 @@ impl Hkdf {
             return Err(errors::UnknownCryptoError);
         }
 
-        let n_iter = 1 + ((self.length - 1) / self.hmac.output_size()) as usize;
+        let n_iter = 1 + ((self.length - 1) / self.hmac.output_size());
 
         // con_step will hold the intermediate state of "T_n | info | 0x0n" as described in the RFC
         let mut con_step: Vec<u8> = Vec::new();
