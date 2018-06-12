@@ -103,6 +103,18 @@ impl Drop for Hkdf {
 
 impl Hkdf {
 
+    /// Return the maximum okm length.
+    fn max_okmlen(&self) -> usize {
+        match self.hmac.output_size() {
+            // These values have been calculated from the constraint given in RFC by:
+            // 255 * hLen
+            32 => 8160,
+            48 => 12240,
+            64 => 16320,
+            _ => panic!(errors::UnknownCryptoError)
+        }
+    }
+
     /// Return HMAC matching argument passsed to Hkdf.
     pub fn hkdf_extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
 
@@ -118,7 +130,7 @@ impl Hkdf {
     /// The HKDF Expand step. Returns an HKDF.
     pub fn hkdf_expand(&self, prk: &[u8]) -> Result<Vec<u8>, errors::UnknownCryptoError> {
         // Check that the selected key length is within the limit.
-        if self.length > (255 * self.hmac.output_size()) {
+        if self.length > self.max_okmlen() {
             return Err(errors::UnknownCryptoError);
         }
         if self.length < 1 {

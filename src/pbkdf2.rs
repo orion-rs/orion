@@ -102,7 +102,7 @@ impl Drop for Pbkdf2 {
 
 impl Pbkdf2 {
 
-    /// Return the maximum derived keyu length.
+    /// Return the maximum derived key length.
     fn max_dklen(&self) -> usize {
         match self.hmac.output_size() {
             // These values have been calculated from the constraint given in RFC by:
