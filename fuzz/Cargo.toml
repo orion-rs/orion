@@ -9,7 +9,7 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-rand = "0.5.0"
+rand = "0.5.1"
 
 [dependencies.orion]
 path = ".."

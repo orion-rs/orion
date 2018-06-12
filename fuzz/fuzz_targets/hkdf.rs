@@ -18,7 +18,7 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
 
         let hmac_choice = rng.choose(&choices).unwrap();
 
-        let len = match *hmac_choice {
+        let len: usize = match *hmac_choice {
                 ShaVariantOption::SHA256 => rng.gen_range(1, 8161),
                 ShaVariantOption::SHA384 => rng.gen_range(1, 12241),
                 ShaVariantOption::SHA512 => rng.gen_range(1, 16321),
@@ -43,5 +43,5 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
 }
 
 fuzz_target!(|data: &[u8]| {
-    make_hkdf(&data, &data, &data);
+    make_hkdf(data, data, data);
 });

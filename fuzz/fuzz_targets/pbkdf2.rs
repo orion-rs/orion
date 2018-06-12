@@ -18,15 +18,9 @@ fn make_pbkdf2(ipad: &[u8],
 
     if rng.gen() {
 
-        let iter = rng.gen_range(1, 10001);
-
+        let iter: usize = rng.gen_range(1, 10001);
         let hmac_choice = rng.choose(&choices).unwrap();
-
-        let len = match *hmac_choice {
-                ShaVariantOption::SHA256 => rng.gen_range(1, 137_438_953_441),
-                ShaVariantOption::SHA384 => rng.gen_range(1, 206_158_430_161),
-                ShaVariantOption::SHA512 => rng.gen_range(1, 274_877_906_881),
-        };
+        let len: usize = rng.gen_range(1, 128);
 
         let dk = Pbkdf2 {
             password: password.to_vec(),
@@ -39,9 +33,8 @@ fn make_pbkdf2(ipad: &[u8],
         let index = rand::random::<u32>();
 
         dk.function_f(index, ipad, opad);
-        let dk_def = dk.pbkdf2_compute().unwrap();
-        assert_eq!(dk.pbkdf2_compare(&dk_def).unwrap(), true);
-    }
+        assert_eq!(dk.pbkdf2_compare(&dk.pbkdf2_compute().unwrap()).unwrap(), true);
+    } else { () }
 
 }
 
