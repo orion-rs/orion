@@ -103,11 +103,9 @@ impl Drop for Hkdf {
 
 impl Hkdf {
 
-    /// Return the maximum okm length.
+    /// Return the maximum okm length (255 * hLen).
     fn max_okmlen(&self) -> usize {
         match self.hmac.output_size() {
-            // These values have been calculated from the constraint given in RFC by:
-            // 255 * hLen
             32 => 8160,
             48 => 12240,
             64 => 16320,
@@ -115,21 +113,20 @@ impl Hkdf {
         }
     }
 
-    /// Return HMAC matching argument passsed to Hkdf.
+    /// The HKDF Etract step.
     pub fn extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
 
         let hmac_res = Hmac {
             secret_key: salt.to_vec(),
-            message: ikm.to_vec(),
+            data: ikm.to_vec(),
             sha2: self.hmac
         };
 
-        hmac_res.hmac_compute()
+        hmac_res.finalize()
     }
 
-    /// The HKDF Expand step. Returns an HKDF.
+    /// The HKDF Expand step.
     pub fn expand(&self, prk: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-        // Check that the selected key length is within the limit.
         if self.length > self.max_okmlen() {
             return Err(UnknownCryptoError);
         }
@@ -156,7 +153,7 @@ impl Hkdf {
         Ok(okm)
     }
 
-    /// Combine extract and expand to return a DK.
+    /// Combine extract and expand to return a derived key.
     pub fn derive_key(&self) -> Result<Vec<u8>, UnknownCryptoError> {
 
         let prk = self.extract(&self.salt, &self.ikm);
@@ -164,17 +161,14 @@ impl Hkdf {
         self.expand(&prk)
     }
 
-    /// Check HKDF validity by computing one from the current struct fields and comparing this
-    /// to the passed HKDF. Comparison is done in constant time.
-    pub fn verify(&self, received_hkdf: &[u8]) -> Result<bool, UnknownCryptoError> {
-
-        if received_hkdf.len() != self.length {
-            return Err(UnknownCryptoError);
-        }
+    /// Verify a derived key by comparing one from the current struct fields and the derived key
+    /// passed to the function. Comparison is done in constant time. Both derived keys must be
+    /// of equal length.
+    pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, UnknownCryptoError> {
 
         let own_dk = self.derive_key().unwrap();
 
-        util::compare_ct(received_hkdf, &own_dk)
+        util::compare_ct(expected_dk, &own_dk)
     }
 }
 

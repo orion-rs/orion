@@ -7,7 +7,7 @@ use orion::hmac::*;
 use orion::core::options::ShaVariantOption;
 use rand::prelude::*;
 
-fn make_hmac(secret_key: &[u8], message: &[u8]) -> ()  {
+fn make_hmac(secret_key: &[u8], data: &[u8]) -> ()  {
 
     let mut rng = thread_rng();
 
@@ -19,16 +19,16 @@ fn make_hmac(secret_key: &[u8], message: &[u8]) -> ()  {
 
         let mac = Hmac {
             secret_key: secret_key.to_vec(),
-            message: message.to_vec(),
+            data: data.to_vec(),
             sha2: *hmac_choice
         };
 
         let (ipad, opad) = mac.pad_key(secret_key);
-        let mac_def = mac.hmac_compute();
-        let mac_pbkdf2 = pbkdf2_hmac(ipad, opad, &mac.message, mac.sha2);
+        let mac_def = mac.finalize();
+        let mac_pbkdf2 = pbkdf2_hmac(ipad, opad, &mac.data, mac.sha2);
         assert_eq!(mac_def, mac_pbkdf2);
-        assert_eq!(mac.hmac_compare(&mac_def).unwrap(), true);
-        assert_eq!(mac.hmac_compare(&mac_pbkdf2).unwrap(), true);
+        assert_eq!(mac.verify(&mac_def).unwrap(), true);
+        assert_eq!(mac.verify(&mac_pbkdf2).unwrap(), true);
     }
 }
 

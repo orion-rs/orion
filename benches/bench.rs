@@ -15,11 +15,11 @@ fn bench_hmac(b: &mut Bencher) {
 
         let hmac = Hmac {
             secret_key: vec![0x01; 32],
-            message: vec![0x01; 32],
+            data: vec![0x01; 32],
             sha2: ShaVariantOption::SHA256
         };
 
-        hmac.hmac_compute();
+        hmac.finalize();
 
     });
 }

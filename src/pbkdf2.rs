@@ -102,11 +102,9 @@ impl Drop for Pbkdf2 {
 
 impl Pbkdf2 {
 
-    /// Return the maximum derived key dklen.
+    /// Return the maximum derived key dklen ((2^32 - 1) * hLen).
     fn max_dklen(&self) -> usize {
         match self.hmac.output_size() {
-            // These values have been calculated from the constraint given in RFC by:
-            // (2^32 - 1) * hLen
             32 => 137_438_953_440,
             48 => 206_158_430_160,
             64 => 274_877_906_880,
@@ -114,14 +112,15 @@ impl Pbkdf2 {
         }
     }
 
-    /// Returns a PRF value from HMAC and selected Sha2 variant from Pbkdf2 struct.
-    fn return_prf(&self, ipad: &[u8], opad: &[u8], message: &[u8]) -> Vec<u8> {
+    /// Returns a PRK using HMAC as the PRF. The parameters `ipad` and `opad` are constructed
+    /// in the `derive_key`. They are used to speed up HMAC calls.
+    fn prf(&self, ipad: &[u8], opad: &[u8], data: &[u8]) -> Vec<u8> {
 
-        pbkdf2_hmac(ipad.to_vec(), opad.to_vec(), message, self.hmac)
+        pbkdf2_hmac(ipad.to_vec(), opad.to_vec(), data, self.hmac)
     }
 
     /// Function F as described in the RFC.
-    pub fn function_f(&self, index: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
+    fn function_f(&self, index: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
 
         let mut salt_extended = self.salt.clone();
         let mut index_buffer = [0u8; 4];
@@ -129,23 +128,24 @@ impl Pbkdf2 {
         salt_extended.extend_from_slice(&index_buffer);
 
         let mut f_result: Vec<u8> = Vec::new();
+
         // First iteration
-        // u_step here will be equal to U_1 in RFC
-        let mut u_step = self.return_prf(ipad, opad, &salt_extended);
-        // Push directly into the final buffer, as this is the first iteration
+        let mut u_step = self.prf(ipad, opad, &salt_extended);
+
         f_result.extend_from_slice(&u_step);
+
         // Second iteration
-        // u_step here will be equal to U_2 in RFC
         if self.iterations > 1 {
-            u_step = self.return_prf(ipad, opad, &u_step);
-            // The dklen of f_result and u_step will always be the same due to HMAC
+            u_step = self.prf(ipad, opad, &u_step);
+            // The length of f_result and u_step will always be the same due to HMAC,
+            // so there is no need for a length check
             for c in 0..f_result.len() {
                 f_result[c] ^= u_step[c];
             }
             // Remainder of iterations
             if self.iterations > 2 {
                 for _ in 2..self.iterations {
-                    u_step = self.return_prf(ipad, opad, &u_step);
+                    u_step = self.prf(ipad, opad, &u_step);
 
                     for c in 0..f_result.len() {
                         f_result[c] ^= u_step[c];
@@ -157,13 +157,12 @@ impl Pbkdf2 {
         f_result
     }
 
-    /// PBKDF2 function. Return a derived key.
+    /// Main PBKDF2 function. Return a derived key.
     pub fn derive_key(&self) -> Result<Vec<u8>, UnknownCryptoError> {
 
         if self.iterations < 1 {
             return Err(UnknownCryptoError);
         }
-        // Check that the selected key dklen is within the limit
         if self.dklen > self.max_dklen() {
             return Err(UnknownCryptoError);
         }
@@ -171,17 +170,20 @@ impl Pbkdf2 {
             return Err(UnknownCryptoError);
         }
 
-        // Corresponds to l in RFC
         let hlen_blocks: usize = 1 + ((self.dklen - 1) / self.hmac.output_size());
 
-        // Make inner and outer paddings for a faster HMAC
-        let pad_const = Hmac {secret_key: Vec::new(), message: Vec::new(), sha2: self.hmac};
+
+        let pad_const = Hmac {secret_key: Vec::new(), data: Vec::new(), sha2: self.hmac};
         let (ipad, opad) = pad_const.pad_key(&self.password);
 
         let mut derived_key: Vec<u8> = Vec::new();
 
         for index in 1..hlen_blocks+1 {
+
             derived_key.extend_from_slice(&self.function_f(index as u32, &ipad, &opad));
+            // Given that hlen_blocks is rounded correctly, then the `index as u32`
+            // should not be able to overflow. If the maximum dklen is selected,
+            // then hlen_blocks will equal exactly `u32::max_value()`
         }
 
         derived_key.truncate(self.dklen);
@@ -189,17 +191,14 @@ impl Pbkdf2 {
         Ok(derived_key)
     }
 
-    /// Check derived key validity by computing one from the current struct fields and comparing this
-    /// to the passed derived key. Comparison is done in constant time.
-    pub fn verify(&self, received_dk: &[u8]) -> Result<bool, UnknownCryptoError> {
-
-        if received_dk.len() != self.dklen {
-            return Err(UnknownCryptoError);
-        }
+    /// Verify a derived key by comparing one from the current struct fields and the derived key
+    /// passed to the function. Comparison is done in constant time. Both derived keys must be
+    /// of equal length.
+    pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, UnknownCryptoError> {
 
         let own_dk = self.derive_key().unwrap();
 
-        util::compare_ct(received_dk, &own_dk)
+        util::compare_ct(expected_dk, &own_dk)
     }
 }
 

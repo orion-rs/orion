@@ -46,22 +46,22 @@ use core::options::ShaVariantOption;
 ///
 /// let hmac = default::hmac(&key, msg).unwrap();
 /// ```
-pub fn hmac(secret_key: &[u8], message: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 
     if secret_key.len() < 64 {
         return Err(UnknownCryptoError);
     }
 
-    let hmac_512_res = Hmac {
+    let mac = Hmac {
         secret_key: secret_key.to_vec(),
-        message: message.to_vec(),
+        data: data.to_vec(),
         sha2: ShaVariantOption::SHA512
     };
 
-    Ok(hmac_512_res.hmac_compute())
+    Ok(mac.finalize())
 }
 
-/// Verify an HMAC against a key and message in constant time and with Double-HMAC Verification.
+/// Verify an HMAC against a key and data in constant time and with Double-HMAC Verification.
 /// # Usage example:
 ///
 /// ```
@@ -74,14 +74,13 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Result<Vec<u8>, UnknownCryptoE
 /// let expected_hmac = default::hmac(&key, msg).unwrap();
 /// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
 /// ```
-pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
+pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
         Result<bool, UnknownCryptoError> {
 
-    let rand_key = util::gen_rand_key(128).unwrap();
+    let rand_key = util::gen_rand_key(64).unwrap();
 
-    let own_hmac = hmac(&secret_key, &message).unwrap();
-    // Verification happens on an additional round of HMAC
-    // to randomize the data that the validation is done on
+    let own_hmac = hmac(&secret_key, &data).unwrap();
+    // Verification happens on an additional round of HMAC with a random key
     let nd_round_own = hmac(&rand_key, &own_hmac).unwrap();
     let nd_round_expected = hmac(&rand_key, &expected_hmac).unwrap();
 
@@ -113,7 +112,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
     }
 
 
-    let hkdf_512_res = Hkdf {
+    let hkdf_dk = Hkdf {
         salt: salt.to_vec(),
         ikm: input_data.to_vec(),
         info: info.to_vec(),
@@ -121,10 +120,11 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
         hmac: ShaVariantOption::SHA512,
     };
 
-    hkdf_512_res.derive_key()
+    hkdf_dk.derive_key()
 }
 
-/// Verify an HKDF-HMAC-SHA512 derived key in constant time.
+/// Verify an HKDF-HMAC-SHA512 derived key in constant time. Both derived keys must
+/// be of equal length.
 /// # Usage example:
 ///
 /// ```
@@ -138,13 +138,13 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
 /// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
 /// ```
-pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &[u8],
+pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input_data: &[u8], info: &[u8],
     len: usize) -> Result<bool, UnknownCryptoError> {
 
 
     let own_hkdf = hkdf(salt, input_data, info, len).unwrap();
 
-    util::compare_ct(&own_hkdf, &expected_hkdf)
+    util::compare_ct(&own_hkdf, &expected_dk)
 }
 
 /// PBKDF2 with HMAC-SHA512. Uses 512000 iterations.
@@ -173,7 +173,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], dklen: usize) -> Result<Vec<u8>, Unk
         return Err(UnknownCryptoError);
     }
 
-    let pbkdf2_sha512_res = Pbkdf2 {
+    let pbkdf2_dk = Pbkdf2 {
         password: password.to_vec(),
         salt: salt.to_vec(),
         iterations: 512_000,
@@ -181,10 +181,11 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], dklen: usize) -> Result<Vec<u8>, Unk
         hmac: ShaVariantOption::SHA512
     };
 
-    pbkdf2_sha512_res.derive_key()
+    pbkdf2_dk.derive_key()
 }
 
-/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 512000 iterations.
+/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 512000 iterations. Both derived
+/// keys must be of equal length.
 /// # Usage example:
 ///
 /// ```
@@ -195,12 +196,12 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], dklen: usize) -> Result<Vec<u8>, Unk
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64).unwrap();
 /// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt, 64).unwrap(), true);
 /// ```
-pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8],
+pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8], salt: &[u8],
         len: usize) -> Result<bool, UnknownCryptoError> {
 
     let own_pbkdf2 = pbkdf2(password, salt, len).unwrap();
 
-    util::compare_ct(&own_pbkdf2, derived_password)
+    util::compare_ct(&own_pbkdf2, expected_dk)
 }
 
 #[cfg(test)]

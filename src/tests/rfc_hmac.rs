@@ -38,8 +38,8 @@ mod rfc4231 {
 
         let (ipad, opad) = hmac.pad_key(&hmac.secret_key);
 
-        let mut def_hmac = hmac.hmac_compute();
-        let mut pbkdf2_hmac = pbkdf2_hmac(ipad, opad, &hmac.message, hmac.sha2);
+        let mut def_hmac = hmac.finalize();
+        let mut pbkdf2_hmac = pbkdf2_hmac(ipad, opad, &hmac.data, hmac.sha2);
 
         match trunc {
             Some(ref length) => {
@@ -61,17 +61,17 @@ mod rfc4231 {
 
         let hmac_256 = Hmac {
             secret_key: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
-            message: "Hi There".as_bytes().to_vec(),
+            data: "Hi There".as_bytes().to_vec(),
             sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
-            message: "Hi There".as_bytes().to_vec(),
+            data: "Hi There".as_bytes().to_vec(),
             sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
-            message: "Hi There".as_bytes().to_vec(),
+            data: "Hi There".as_bytes().to_vec(),
             sha2: ShaVariantOption::SHA512
         };
 
@@ -94,17 +94,17 @@ mod rfc4231 {
 
         let hmac_256 = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
-            message: "what do ya want for nothing?".as_bytes().to_vec(),
+            data: "what do ya want for nothing?".as_bytes().to_vec(),
             sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
-            message: "what do ya want for nothing?".as_bytes().to_vec(),
+            data: "what do ya want for nothing?".as_bytes().to_vec(),
             sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: "Jefe".as_bytes().to_vec(),
-            message: "what do ya want for nothing?".as_bytes().to_vec(),
+            data: "what do ya want for nothing?".as_bytes().to_vec(),
             sha2: ShaVariantOption::SHA512
         };
 
@@ -127,19 +127,19 @@ mod rfc4231 {
 
         let hmac_256 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
-            message: decode("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\
+            data: decode("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\
                   dddddddddddddddddddddddddddddddddddd").unwrap(),
             sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
-            message: decode("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\
+            data: decode("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\
                   dddddddddddddddddddddddddddddddddddd").unwrap(),
             sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap(),
-            message: decode("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\
+            data: decode("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\
                   dddddddddddddddddddddddddddddddddddd").unwrap(),
             sha2: ShaVariantOption::SHA512
         };
@@ -163,19 +163,19 @@ mod rfc4231 {
 
         let hmac_256 = Hmac {
             secret_key: decode("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
-            message: decode("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\
+            data: decode("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\
                   cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd").unwrap(),
             sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
-            message: decode("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\
+            data: decode("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\
                   cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd").unwrap(),
             sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
-            message: decode("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\
+            data: decode("cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\
                   cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd").unwrap(),
             sha2: ShaVariantOption::SHA512
         };
@@ -199,17 +199,17 @@ mod rfc4231 {
 
         let hmac_256 = Hmac {
             secret_key: decode("0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c").unwrap(),
-            message: decode("546573742057697468205472756e636174696f6e").unwrap(),
+            data: decode("546573742057697468205472756e636174696f6e").unwrap(),
             sha2: ShaVariantOption::SHA256
         };
         let hmac_384 = Hmac {
             secret_key: decode("0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c").unwrap(),
-            message: decode("546573742057697468205472756e636174696f6e").unwrap(),
+            data: decode("546573742057697468205472756e636174696f6e").unwrap(),
             sha2: ShaVariantOption::SHA384
         };
         let hmac_512 = Hmac {
             secret_key: decode("0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c").unwrap(),
-            message: decode("546573742057697468205472756e636174696f6e").unwrap(),
+            data: decode("546573742057697468205472756e636174696f6e").unwrap(),
             sha2: ShaVariantOption::SHA512
         };
 
@@ -234,7 +234,7 @@ mod rfc4231 {
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaa").unwrap(),
-            message: decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
+            data: decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
                   65204b6579202d2048617368204b6579204669727374").unwrap(),
             sha2: ShaVariantOption::SHA256
         };
@@ -244,7 +244,7 @@ mod rfc4231 {
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaa").unwrap(),
-            message: decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
+            data: decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
                   65204b6579202d2048617368204b6579204669727374").unwrap(),
             sha2: ShaVariantOption::SHA384
         };
@@ -254,7 +254,7 @@ mod rfc4231 {
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaa").unwrap(),
-            message: decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
+            data: decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
                   65204b6579202d2048617368204b6579204669727374").unwrap(),
             sha2: ShaVariantOption::SHA512
         };
@@ -283,7 +283,7 @@ mod rfc4231 {
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaa").unwrap(),
-            message: decode("5468697320697320612074657374207573696e672061206c6172676572207468\
+            data: decode("5468697320697320612074657374207573696e672061206c6172676572207468\
                   616e20626c6f636b2d73697a65206b657920616e642061206c61726765722074\
                   68616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565\
                   647320746f20626520686173686564206265666f7265206265696e6720757365\
@@ -296,7 +296,7 @@ mod rfc4231 {
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaa").unwrap(),
-            message: decode("5468697320697320612074657374207573696e672061206c6172676572207468\
+            data: decode("5468697320697320612074657374207573696e672061206c6172676572207468\
                   616e20626c6f636b2d73697a65206b657920616e642061206c61726765722074\
                   68616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565\
                   647320746f20626520686173686564206265666f7265206265696e6720757365\
@@ -309,7 +309,7 @@ mod rfc4231 {
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
                   aaaaaa").unwrap(),
-            message: decode("5468697320697320612074657374207573696e672061206c6172676572207468\
+            data: decode("5468697320697320612074657374207573696e672061206c6172676572207468\
                   616e20626c6f636b2d73697a65206b657920616e642061206c61726765722074\
                   68616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565\
                   647320746f20626520686173686564206265666f7265206265696e6720757365\

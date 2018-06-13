@@ -9,8 +9,7 @@ use rand::prelude::*;
 
 
 // Testing PBKDF2's function_f with focus on random index value
-fn make_pbkdf2(ipad: &[u8],
-                opad: &[u8], password: &[u8], salt: &[u8]) -> () {
+fn make_pbkdf2(password: &[u8], salt: &[u8]) -> () {
 
     let mut rng = rand::thread_rng();
 
@@ -30,14 +29,11 @@ fn make_pbkdf2(ipad: &[u8],
             hmac: *hmac_choice
         };
 
-        let index = rand::random::<u32>();
-
-        dk.function_f(index, ipad, opad);
         assert_eq!(dk.verify(&dk.derive_key().unwrap()).unwrap(), true);
     } else { () }
 
 }
 
 fuzz_target!(|data: &[u8]| {
-    make_pbkdf2(data, data, data, data);
+    make_pbkdf2(data, data);
 });
