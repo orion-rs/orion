@@ -22,7 +22,12 @@
 
 
 
-
+#![forbid(
+    dead_code,
+    warnings,
+    unsafe_code,
+    unused_imports
+)]
 
 extern crate rand;
 extern crate sha2;
