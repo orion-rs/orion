@@ -5,7 +5,6 @@ extern crate rand;
 
 use orion::core::util;
 use orion::default;
-//use rand::prelude::*;
 use rand::Rng;
 
 fn test_def(data: &[u8]) -> () {
