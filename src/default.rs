@@ -89,6 +89,9 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
 }
 
 /// HKDF with HMAC-SHA512.
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The length of the salt is less than 16 bytes
 ///
 /// # Usage example:
 ///
@@ -104,6 +107,10 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
 /// ```
 pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
         Result<Vec<u8>, errors::UnknownCryptoError> {
+
+    if salt.len() < 16 {
+        return Err(errors::UnknownCryptoError);
+    }
 
 
     let hkdf_512_res = Hkdf {
