@@ -37,8 +37,6 @@ fn bench_hkdf(b: &mut Bencher) {
             hmac: ShaVariantOption::SHA256
         };
 
-
-
         hkdf.derive_key().unwrap();
 
     });
@@ -58,5 +56,6 @@ fn bench_pbkdf2(b: &mut Bencher) {
         };
 
         pbkdf.derive_key().unwrap();
+        
     });
 }

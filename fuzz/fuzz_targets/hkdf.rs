@@ -33,8 +33,8 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
         };
 
         let prk = dk.extract(ikm, salt);
-
         let dk_fin = dk.expand(&prk).unwrap();
+
         assert_eq!(dk_fin, dk.derive_key().unwrap());
         assert_eq!(dk.verify(&dk_fin).unwrap(), true);
 
