@@ -166,7 +166,9 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
 /// use orion::core::util;
 ///
 /// let salt = util::gen_rand_key(64).unwrap();
-/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64);
+/// let password = "Secret password".as_bytes();
+///
+/// let derived_password = default::pbkdf2(password, &salt, 64);
 /// ```
 pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, UnknownCryptoError> {
 
@@ -198,8 +200,10 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, Unkno
 /// use orion::core::util;
 ///
 /// let salt = util::gen_rand_key(64).unwrap();
-/// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64).unwrap();
-/// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt, 64).unwrap(), true);
+/// let password = "Secret password".as_bytes();
+///
+/// let derived_password = default::pbkdf2(password, &salt, 64).unwrap();
+/// assert_eq!(default::pbkdf2_verify(&derived_password, password, &salt, 64).unwrap(), true);
 /// ```
 pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8], salt: &[u8],
         len: usize) -> Result<bool, UnknownCryptoError> {
