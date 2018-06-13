@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Cryptographic functions implemented in Rust, with a simple API."
 keywords = [ "cryptography", "hmac", "hkdf", "pbkdf2", "crypto" ]
