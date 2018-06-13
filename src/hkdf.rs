@@ -146,7 +146,7 @@ impl Hkdf {
         for index in 1..n_iter+1 {
                 con_step.extend_from_slice(&self.info);
                 con_step.push(index as u8);
-                // Calling extract as it yields the same result as a HMAC call
+                // Calling extract as it yields the same result as an HMAC call
                 con_step = self.extract(prk, &con_step);
                 okm.extend_from_slice(&con_step);
         }
