@@ -36,13 +36,13 @@ pub fn gen_rand_key(len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
     if len < 1 {
         return Err(errors::UnknownCryptoError);
-    } else {
-        let mut rand_vec = vec![0x00; len];
-        let mut generator = OsRng::new()?;
-        generator.try_fill_bytes(&mut rand_vec)?;
-
-        Ok(rand_vec)
     }
+
+    let mut rand_vec = vec![0x00; len];
+    let mut generator = OsRng::new()?;
+    generator.try_fill_bytes(&mut rand_vec)?;
+
+    Ok(rand_vec)
 }
 
 /// Compare two equal length slices in constant time, using the constant_time_eq crate.
