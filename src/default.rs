@@ -87,7 +87,7 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
     util::compare_ct(&nd_round_own, &nd_round_expected)
 }
 
-/// HKDF with HMAC-SHA512.
+/// HKDF-HMAC-SHA512.
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the salt is less than 16 bytes
@@ -110,7 +110,6 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
     if salt.len() < 16 {
         return Err(UnknownCryptoError);
     }
-
 
     let hkdf_dk = Hkdf {
         salt: salt.to_vec(),
@@ -141,13 +140,12 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
 pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input_data: &[u8], info: &[u8],
     len: usize) -> Result<bool, UnknownCryptoError> {
 
-
     let own_hkdf = hkdf(salt, input_data, info, len).unwrap();
 
     util::compare_ct(&own_hkdf, &expected_dk)
 }
 
-/// PBKDF2 with HMAC-SHA512. Uses 512000 iterations.
+/// PBKDF2-HMAC-SHA512 derived key, using 512.000 as iteration count.
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the salt is less than 16 bytes
@@ -184,7 +182,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], dklen: usize) -> Result<Vec<u8>, Unk
     pbkdf2_dk.derive_key()
 }
 
-/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 512000 iterations. Both derived
+/// Verify PBKDF2-HMAC-SHA512 derived key, using 512.000 as iteration count, in constant time. Both derived
 /// keys must be of equal length.
 /// # Usage example:
 ///
@@ -242,7 +240,6 @@ mod test {
     }
 
     #[test]
-    // Test that hmac_validate() returns true if signatures match and false if not
     fn hmac_verify() {
 
         let sec_key_correct = decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\

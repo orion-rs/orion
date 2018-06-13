@@ -30,7 +30,7 @@ extern crate clear_on_drop;
 extern crate byte_tools;
 extern crate constant_time_eq;
 
-/// Core operations that will be used throught the rest of orion.
+/// Core functionality such as opaque error and utility functions.
 pub mod core;
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
@@ -39,7 +39,7 @@ pub mod hmac;
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod hkdf;
 
-/// orion's API with safe defaults.
+/// Higher-level API with safer defaults.
 pub mod default;
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).

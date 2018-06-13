@@ -31,7 +31,8 @@ use core::{util, errors::UnknownCryptoError};
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
-
+///
+/// Fields `salt`, `ikm` and `info` are zeroed out on drop.
 pub struct Hkdf {
     pub salt: Vec<u8>,
     pub ikm: Vec<u8>,
@@ -269,15 +270,12 @@ mod test {
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-
         assert_eq!(hkdf_256.verify(&expected_okm_256).unwrap(), true);
     }
 
     #[test]
     fn hkdf_verify_false() {
-
         // Salt value differs between this and the previous test case
-
         let hkdf_256 = Hkdf {
             salt: "salt".as_bytes().to_vec(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
@@ -290,15 +288,12 @@ mod test {
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-
         assert!(hkdf_256.verify(&expected_okm_256).is_err());
     }
 
     #[test]
     fn verify_diff_length_panic() {
-
         // Different length than expected okm
-
         let hkdf_256 = Hkdf {
             salt: "salt".as_bytes().to_vec(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
@@ -310,7 +305,6 @@ mod test {
         let expected_okm_256 = decode(
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
-
 
         assert!(hkdf_256.verify(&expected_okm_256).is_err());
     }

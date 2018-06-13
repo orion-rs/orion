@@ -25,8 +25,8 @@
 /// Errors for orion's cryptographic operations.
 pub mod errors;
 
-/// Sha2 options and hashing.
+/// SHA2 options and hashing.
 pub mod options;
 
-/// Utility functions such as generating a cryptographically strong key/nonce/salt/iv.
+/// Utility functions such as constant time comparison.
 pub mod util;

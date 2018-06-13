@@ -26,12 +26,11 @@
 use std::error::Error;
 use std::fmt;
 use rand;
-/// Errors for orion's cryptographic operations.
+/// Opaque error.
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct UnknownCryptoError;
 
-// https://doc.rust-lang.org/stable/std/error/trait.Error.html
 impl fmt::Display for UnknownCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "UnknownCryptoError")
@@ -50,7 +49,7 @@ impl Error for UnknownCryptoError {
 
 // Required for rand's generators
 impl From<rand::Error> for UnknownCryptoError {
-    fn from(_: rand::Error) -> Self { 
+    fn from(_: rand::Error) -> Self {
         UnknownCryptoError
     }
 }

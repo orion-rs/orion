@@ -32,8 +32,8 @@ use core::{util, errors::UnknownCryptoError};
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
-
-
+///
+/// Fields `password` and `salt` are zeroed out on drop.
 pub struct Pbkdf2 {
     pub password: Vec<u8>,
     pub salt: Vec<u8>,
@@ -214,7 +214,6 @@ mod test {
 
     #[test]
     fn dklen_too_high() {
-
         // Take 64 as this is the highest, since HMAC-SHA512
         let too_long = ((2_u64.pow(32) - 1) * 64 as u64) as usize + 1;
 
@@ -276,7 +275,6 @@ mod test {
 
     #[test]
     fn verify_false() {
-
         // Salt value differs between this and the previous test case
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
@@ -295,7 +293,6 @@ mod test {
 
     #[test]
     fn verify_diff_dklen_panic() {
-
         // Different dklen than expected dk
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),

@@ -32,6 +32,8 @@ use core::options::ShaVariantOption;
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
+///
+/// Fields `secret_key` and `data` are zeroed out on drop.
 pub struct Hmac {
     pub secret_key: Vec<u8>,
     pub data: Vec<u8>,
@@ -162,7 +164,6 @@ pub fn pbkdf2_hmac(mut ipad: Vec<u8>, mut opad: Vec<u8>, data: &[u8],
 
 
 #[test]
-// Test that verify() returns true if signatures match and false if not
 fn verify() {
 
     let own_hmac = Hmac {
