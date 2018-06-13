@@ -303,6 +303,16 @@ mod test {
     }
 
     #[test]
+    fn pbkdf2_len_too_short() {
+        assert!(default::pbkdf2(&vec![0x61; 67], &vec![0x61; 16], 10).is_err());
+    }
+
+    #[test]
+    fn pbkdf2_len_good() {
+        default::pbkdf2(&vec![0x61; 67], &vec![0x61; 16], 14).unwrap();
+    }
+
+    #[test]
     fn pbkdf2_salt_allowed_len() {
         default::pbkdf2(&vec![0x61; 10], &vec![0x61; 67], 64).unwrap();
         default::pbkdf2(&vec![0x61; 10], &vec![0x61; 64], 64).unwrap();
