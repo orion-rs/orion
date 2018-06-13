@@ -35,6 +35,9 @@ use core::options::ShaVariantOption;
 /// An exception will be thrown if:
 /// - The length of the secret key is less than 64 bytes
 ///
+/// ## Note:
+/// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
+/// in `util` can be used for this.
 /// # Usage example:
 ///
 /// ```
@@ -92,6 +95,9 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
 /// An exception will be thrown if:
 /// - The length of the salt is less than 16 bytes
 ///
+/// ## Note:
+/// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
+/// in `util` can be used for this.
 /// # Usage example:
 ///
 /// ```
@@ -150,6 +156,9 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
 /// - The length of the salt is less than 16 bytes
 /// - The specified length for the derived key is less than 14 bytes
 ///
+/// ## Note:
+/// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
+/// in `util` can be used for this.
 /// # Usage example:
 ///
 /// ```

@@ -58,6 +58,9 @@ impl Drop for Pbkdf2 {
 /// - The specified dklen is greater than (2^32 - 1) * hLen
 /// - The specified iteration count is less than 1
 ///
+/// ## Note:
+/// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
+/// in `util` can be used for this.
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```

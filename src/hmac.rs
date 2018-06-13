@@ -50,6 +50,9 @@ impl Drop for Hmac {
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 ///
+/// ## Note:
+/// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
+/// in `util` can be used for this.
 /// # Usage examples:
 /// ### Generating HMAC:
 /// ```

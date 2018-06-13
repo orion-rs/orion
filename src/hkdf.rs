@@ -58,6 +58,9 @@ impl Drop for Hkdf {
 /// - The specified length is less than 1
 /// - The specified length is greater than 255 * hash_output_size_in_bytes
 ///
+/// ## Note:
+/// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
+/// in `util` can be used for this.
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```
