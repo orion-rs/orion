@@ -27,7 +27,7 @@
 use hmac::Hmac;
 use clear_on_drop::clear::Clear;
 use core::options::ShaVariantOption;
-use core::{util, errors};
+use core::{util, errors::UnknownCryptoError};
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
@@ -111,7 +111,7 @@ impl Hkdf {
             32 => 8160,
             48 => 12240,
             64 => 16320,
-            _ => panic!(errors::UnknownCryptoError)
+            _ => panic!(UnknownCryptoError)
         }
     }
 
@@ -128,13 +128,13 @@ impl Hkdf {
     }
 
     /// The HKDF Expand step. Returns an HKDF.
-    pub fn hkdf_expand(&self, prk: &[u8]) -> Result<Vec<u8>, errors::UnknownCryptoError> {
+    pub fn hkdf_expand(&self, prk: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
         // Check that the selected key length is within the limit.
         if self.length > self.max_okmlen() {
-            return Err(errors::UnknownCryptoError);
+            return Err(UnknownCryptoError);
         }
         if self.length < 1 {
-            return Err(errors::UnknownCryptoError);
+            return Err(UnknownCryptoError);
         }
 
         let n_iter = 1 + ((self.length - 1) / self.hmac.output_size());
@@ -156,7 +156,7 @@ impl Hkdf {
     }
 
     /// Combine hkdf_extract and hkdf_expand to return a DK.
-    pub fn hkdf_compute(&self) -> Result<Vec<u8>, errors::UnknownCryptoError> {
+    pub fn hkdf_compute(&self) -> Result<Vec<u8>, UnknownCryptoError> {
 
         let prk = self.hkdf_extract(&self.salt, &self.ikm);
 
@@ -165,10 +165,10 @@ impl Hkdf {
 
     /// Check HKDF validity by computing one from the current struct fields and comparing this
     /// to the passed HKDF. Comparison is done in constant time.
-    pub fn hkdf_compare(&self, received_hkdf: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
+    pub fn hkdf_compare(&self, received_hkdf: &[u8]) -> Result<bool, UnknownCryptoError> {
 
         if received_hkdf.len() != self.length {
-            return Err(errors::UnknownCryptoError);
+            return Err(UnknownCryptoError);
         }
 
         let own_dk = self.hkdf_compute().unwrap();

@@ -26,7 +26,7 @@
 
 use std::borrow::Cow;
 use clear_on_drop::clear::Clear;
-use core::{util, errors};
+use core::{util, errors::UnknownCryptoError};
 use core::options::ShaVariantOption;
 
 
@@ -125,7 +125,7 @@ impl Hmac {
 
     /// Check HMAC validity by computing one from the current struct fields and comparing this
     /// to the passed HMAC. Comparison is done in constant time and with Double-HMAC Verification.
-    pub fn hmac_compare(&self, received_hmac: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
+    pub fn hmac_compare(&self, received_hmac: &[u8]) -> Result<bool, UnknownCryptoError> {
 
         let own_hmac = self.hmac_compute();
 

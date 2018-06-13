@@ -27,7 +27,7 @@
 use hmac::Hmac;
 use hkdf::Hkdf;
 use pbkdf2::Pbkdf2;
-use core::{errors, util};
+use core::{errors::UnknownCryptoError, util};
 use core::options::ShaVariantOption;
 
 /// HMAC with SHA512.
@@ -46,10 +46,10 @@ use core::options::ShaVariantOption;
 ///
 /// let hmac = default::hmac(&key, msg).unwrap();
 /// ```
-pub fn hmac(secret_key: &[u8], message: &[u8]) -> Result<Vec<u8>, errors::UnknownCryptoError> {
+pub fn hmac(secret_key: &[u8], message: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 
     if secret_key.len() < 64 {
-        return Err(errors::UnknownCryptoError);
+        return Err(UnknownCryptoError);
     }
 
     let hmac_512_res = Hmac {
@@ -75,7 +75,7 @@ pub fn hmac(secret_key: &[u8], message: &[u8]) -> Result<Vec<u8>, errors::Unknow
 /// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
 /// ```
 pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
-        Result<bool, errors::UnknownCryptoError> {
+        Result<bool, UnknownCryptoError> {
 
     let rand_key = util::gen_rand_key(128).unwrap();
 
@@ -106,10 +106,10 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
 /// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// ```
 pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
-        Result<Vec<u8>, errors::UnknownCryptoError> {
+        Result<Vec<u8>, UnknownCryptoError> {
 
     if salt.len() < 16 {
-        return Err(errors::UnknownCryptoError);
+        return Err(UnknownCryptoError);
     }
 
 
@@ -139,7 +139,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
 /// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
 /// ```
 pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &[u8],
-    len: usize) -> Result<bool, errors::UnknownCryptoError> {
+    len: usize) -> Result<bool, UnknownCryptoError> {
 
 
     let own_hkdf = hkdf(salt, input_data, info, len).unwrap();
@@ -163,14 +163,14 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 /// let salt = util::gen_rand_key(64).unwrap();
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64);
 /// ```
-pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
+pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, UnknownCryptoError> {
 
     if salt.len() < 16 {
-        return Err(errors::UnknownCryptoError);
+        return Err(UnknownCryptoError);
     }
 
     if len < 14 {
-        return Err(errors::UnknownCryptoError);
+        return Err(UnknownCryptoError);
     }
 
     let pbkdf2_sha512_res = Pbkdf2 {
@@ -196,7 +196,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, error
 /// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt, 64).unwrap(), true);
 /// ```
 pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8],
-        len: usize) -> Result<bool, errors::UnknownCryptoError> {
+        len: usize) -> Result<bool, UnknownCryptoError> {
 
     let own_pbkdf2 = pbkdf2(password, salt, len).unwrap();
 

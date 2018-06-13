@@ -28,8 +28,7 @@ use clear_on_drop::clear::Clear;
 use hmac::*;
 use core::options::ShaVariantOption;
 use byte_tools::write_u32_be;
-use core::errors;
-use core::util;
+use core::{util, errors::UnknownCryptoError};
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
@@ -110,7 +109,7 @@ impl Pbkdf2 {
             32 => 137_438_953_440,
             48 => 206_158_430_160,
             64 => 274_877_906_880,
-            _ => panic!(errors::UnknownCryptoError)
+            _ => panic!(UnknownCryptoError)
         }
     }
 
@@ -158,43 +157,43 @@ impl Pbkdf2 {
     }
 
     /// PBKDF2 function. Return a derived key.
-    pub fn pbkdf2_compute(&self) -> Result<Vec<u8>, errors::UnknownCryptoError> {
+    pub fn pbkdf2_compute(&self) -> Result<Vec<u8>, UnknownCryptoError> {
 
         if self.iterations < 1 {
-            return Err(errors::UnknownCryptoError);
+            return Err(UnknownCryptoError);
         }
         // Check that the selected key length is within the limit
         if self.length > self.max_dklen() {
-            return Err(errors::UnknownCryptoError);
+            return Err(UnknownCryptoError);
         }
         if self.length < 1 {
-            return Err(errors::UnknownCryptoError);
+            return Err(UnknownCryptoError);
         }
 
         // Corresponds to l in RFC
-        let hlen_blocks = 1 + ((self.length - 1) / self.hmac.output_size());
+        let hlen_blocks: usize = 1 + ((self.length - 1) / self.hmac.output_size());
 
         // Make inner and outer paddings for a faster HMAC
         let pad_const = Hmac {secret_key: Vec::new(), message: Vec::new(), sha2: self.hmac};
         let (ipad, opad) = pad_const.pad_key(&self.password);
 
-        let mut pbkdf2_dk: Vec<u8> = Vec::new();
+        let mut derived_key: Vec<u8> = Vec::new();
 
         for index in 1..hlen_blocks+1 {
-            pbkdf2_dk.extend_from_slice(&self.function_f(index as u32, &ipad, &opad));
+            derived_key.extend_from_slice(&self.function_f(index as u32, &ipad, &opad));
         }
 
-        pbkdf2_dk.truncate(self.length);
+        derived_key.truncate(self.length);
 
-        Ok(pbkdf2_dk)
+        Ok(derived_key)
     }
 
     /// Check derived key validity by computing one from the current struct fields and comparing this
     /// to the passed derived key. Comparison is done in constant time.
-    pub fn pbkdf2_compare(&self, received_dk: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
+    pub fn pbkdf2_compare(&self, received_dk: &[u8]) -> Result<bool, UnknownCryptoError> {
 
         if received_dk.len() != self.length {
-            return Err(errors::UnknownCryptoError);
+            return Err(UnknownCryptoError);
         }
 
         let own_dk = self.pbkdf2_compute().unwrap();
