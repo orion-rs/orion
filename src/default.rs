@@ -144,6 +144,7 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the salt is less than 16 bytes
+/// - The specified length for the derived key is less than 14 bytes
 ///
 /// # Usage example:
 ///
@@ -161,6 +162,9 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, error
         return Err(errors::UnknownCryptoError);
     }
 
+    if len < 14 {
+        return Err(errors::UnknownCryptoError);
+    }
 
     let pbkdf2_sha512_res = Pbkdf2 {
         password: password.to_vec(),

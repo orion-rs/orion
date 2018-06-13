@@ -16,7 +16,7 @@ fn test_def(data: &[u8]) -> () {
     if rng.gen() {
 
         let len_hkdf: usize = rng.gen_range(1, 16321);
-        let len_pbkdf2: usize = rng.gen_range(1, 128);
+        let len_pbkdf2: usize = rng.gen_range(14, 128);
 
         default::hkdf_verify(&
             default::hkdf(&rand_salt, data, data, len_hkdf).unwrap(),
