@@ -121,7 +121,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
         hmac: ShaVariantOption::SHA512,
     };
 
-    hkdf_512_res.hkdf_compute()
+    hkdf_512_res.derive_key()
 }
 
 /// Verify an HKDF-HMAC-SHA512 derived key in constant time.

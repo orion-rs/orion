@@ -76,7 +76,7 @@ impl Drop for Hkdf {
 ///     hmac: ShaVariantOption::SHA256,
 /// };
 ///
-/// let dk_final = dk.hkdf_compute().unwrap();
+/// let dk_final = dk.derive_key().unwrap();
 /// ```
 /// ### Verifying derived key:
 /// ```
@@ -96,9 +96,9 @@ impl Drop for Hkdf {
 ///     hmac: ShaVariantOption::SHA256,
 /// };
 ///
-/// let dk_final = dk.hkdf_compute().unwrap();
+/// let dk_final = dk.derive_key().unwrap();
 ///
-/// assert_eq!(dk.hkdf_compare(&dk_final).unwrap(), true);
+/// assert_eq!(dk.verify(&dk_final).unwrap(), true);
 /// ```
 
 impl Hkdf {
@@ -116,7 +116,7 @@ impl Hkdf {
     }
 
     /// Return HMAC matching argument passsed to Hkdf.
-    pub fn hkdf_extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
+    pub fn extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
 
         let hmac_res = Hmac {
             secret_key: salt.to_vec(),
@@ -128,7 +128,7 @@ impl Hkdf {
     }
 
     /// The HKDF Expand step. Returns an HKDF.
-    pub fn hkdf_expand(&self, prk: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+    pub fn expand(&self, prk: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
         // Check that the selected key length is within the limit.
         if self.length > self.max_okmlen() {
             return Err(UnknownCryptoError);
@@ -137,7 +137,7 @@ impl Hkdf {
             return Err(UnknownCryptoError);
         }
 
-        let n_iter = 1 + ((self.length - 1) / self.hmac.output_size());
+        let n_iter: usize = 1 + ((self.length - 1) / self.hmac.output_size());
 
         // con_step will hold the intermediate state of "T_n | info | 0x0n" as described in the RFC
         let mut con_step: Vec<u8> = Vec::new();
@@ -146,7 +146,7 @@ impl Hkdf {
         for index in 1..n_iter+1 {
                 con_step.extend_from_slice(&self.info);
                 con_step.push(index as u8);
-                con_step = self.hkdf_extract(prk, &con_step);
+                con_step = self.extract(prk, &con_step);
                 okm.extend_from_slice(&con_step);
         }
 
@@ -155,23 +155,23 @@ impl Hkdf {
         Ok(okm)
     }
 
-    /// Combine hkdf_extract and hkdf_expand to return a DK.
-    pub fn hkdf_compute(&self) -> Result<Vec<u8>, UnknownCryptoError> {
+    /// Combine extract and expand to return a DK.
+    pub fn derive_key(&self) -> Result<Vec<u8>, UnknownCryptoError> {
 
-        let prk = self.hkdf_extract(&self.salt, &self.ikm);
+        let prk = self.extract(&self.salt, &self.ikm);
 
-        self.hkdf_expand(&prk)
+        self.expand(&prk)
     }
 
     /// Check HKDF validity by computing one from the current struct fields and comparing this
     /// to the passed HKDF. Comparison is done in constant time.
-    pub fn hkdf_compare(&self, received_hkdf: &[u8]) -> Result<bool, UnknownCryptoError> {
+    pub fn verify(&self, received_hkdf: &[u8]) -> Result<bool, UnknownCryptoError> {
 
         if received_hkdf.len() != self.length {
             return Err(UnknownCryptoError);
         }
 
-        let own_dk = self.hkdf_compute().unwrap();
+        let own_dk = self.derive_key().unwrap();
 
         util::compare_ct(received_hkdf, &own_dk)
     }
@@ -196,10 +196,10 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        let hkdf_256_extract = hkdf_256.hkdf_extract(&hkdf_256.ikm, &hkdf_256.salt);
+        let hkdf_256_extract = hkdf_256.extract(&hkdf_256.ikm, &hkdf_256.salt);
 
-        assert!(hkdf_256.hkdf_expand(&hkdf_256_extract).is_err());
-        assert!(hkdf_256.hkdf_compute().is_err());
+        assert!(hkdf_256.expand(&hkdf_256_extract).is_err());
+        assert!(hkdf_256.derive_key().is_err());
 
     }
 
@@ -215,10 +215,10 @@ mod test {
             hmac: ShaVariantOption::SHA384,
         };
 
-        let hkdf_384_extract = hkdf_384.hkdf_extract(&hkdf_384.ikm, &hkdf_384.salt);
+        let hkdf_384_extract = hkdf_384.extract(&hkdf_384.ikm, &hkdf_384.salt);
 
-        assert!(hkdf_384.hkdf_expand(&hkdf_384_extract).is_err());
-        assert!(hkdf_384.hkdf_compute().is_err());
+        assert!(hkdf_384.expand(&hkdf_384_extract).is_err());
+        assert!(hkdf_384.derive_key().is_err());
 
     }
 
@@ -234,10 +234,10 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
+        let hkdf_512_extract = hkdf_512.extract(&hkdf_512.ikm, &hkdf_512.salt);
 
-        assert!(hkdf_512.hkdf_expand(&hkdf_512_extract).is_err());
-        assert!(hkdf_512.hkdf_compute().is_err());
+        assert!(hkdf_512.expand(&hkdf_512_extract).is_err());
+        assert!(hkdf_512.derive_key().is_err());
 
     }
 
@@ -252,15 +252,15 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let hkdf_512_extract = hkdf_512.hkdf_extract(&hkdf_512.ikm, &hkdf_512.salt);
+        let hkdf_512_extract = hkdf_512.extract(&hkdf_512.ikm, &hkdf_512.salt);
 
-        assert!(hkdf_512.hkdf_expand(&hkdf_512_extract).is_err());
-        assert!(hkdf_512.hkdf_compute().is_err());
+        assert!(hkdf_512.expand(&hkdf_512_extract).is_err());
+        assert!(hkdf_512.derive_key().is_err());
 
     }
 
     #[test]
-    fn hkdf_compare_true() {
+    fn hkdf_verify_true() {
 
         let hkdf_256 = Hkdf {
             salt: decode("").unwrap(),
@@ -275,11 +275,11 @@ mod test {
             9d201395faa4b61a96c8").unwrap();
 
 
-        assert_eq!(hkdf_256.hkdf_compare(&expected_okm_256).unwrap(), true);
+        assert_eq!(hkdf_256.verify(&expected_okm_256).unwrap(), true);
     }
 
     #[test]
-    fn hkdf_compare_false() {
+    fn hkdf_verify_false() {
 
         // Salt value differs between this and the previous test case
 
@@ -296,11 +296,11 @@ mod test {
             9d201395faa4b61a96c8").unwrap();
 
 
-        assert!(hkdf_256.hkdf_compare(&expected_okm_256).is_err());
+        assert!(hkdf_256.verify(&expected_okm_256).is_err());
     }
 
     #[test]
-    fn hkdf_compare_diff_length_panic() {
+    fn verify_diff_length_panic() {
 
         // Different length than expected okm
 
@@ -317,6 +317,6 @@ mod test {
             9d201395faa4b61a96c8").unwrap();
 
 
-        assert!(hkdf_256.hkdf_compare(&expected_okm_256).is_err());
+        assert!(hkdf_256.verify(&expected_okm_256).is_err());
     }
 }

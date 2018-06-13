@@ -39,7 +39,7 @@ fn bench_hkdf(b: &mut Bencher) {
 
 
 
-        hkdf.hkdf_compute().unwrap();
+        hkdf.derive_key().unwrap();
 
     });
 }

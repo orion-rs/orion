@@ -32,11 +32,11 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
             hmac: *hmac_choice,
         };
 
-        let prk = dk.hkdf_extract(ikm, salt);
+        let prk = dk.extract(ikm, salt);
 
-        let dk_fin = dk.hkdf_expand(&prk).unwrap();
-        assert_eq!(dk_fin, dk.hkdf_compute().unwrap());
-        assert_eq!(dk.hkdf_compare(&dk_fin).unwrap(), true);
+        let dk_fin = dk.expand(&prk).unwrap();
+        assert_eq!(dk_fin, dk.derive_key().unwrap());
+        assert_eq!(dk.verify(&dk_fin).unwrap(), true);
 
     } else  { () }
 
