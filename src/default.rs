@@ -165,7 +165,6 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
 /// use orion::default;
 /// use orion::core::util;
 ///
-/// // Salts are limited to being 64 in length here.
 /// let salt = util::gen_rand_key(64).unwrap();
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64);
 /// ```
