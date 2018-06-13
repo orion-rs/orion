@@ -26,14 +26,14 @@ fn make_pbkdf2(ipad: &[u8],
             password: password.to_vec(),
             salt: salt.to_vec(),
             iterations: iter,
-            length: len,
+            dklen: len,
             hmac: *hmac_choice
         };
 
         let index = rand::random::<u32>();
 
         dk.function_f(index, ipad, opad);
-        assert_eq!(dk.pbkdf2_compare(&dk.pbkdf2_compute().unwrap()).unwrap(), true);
+        assert_eq!(dk.verify(&dk.derive_key().unwrap()).unwrap(), true);
     } else { () }
 
 }

@@ -163,13 +163,13 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 /// let salt = util::gen_rand_key(64).unwrap();
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64);
 /// ```
-pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn pbkdf2(password: &[u8], salt: &[u8], dklen: usize) -> Result<Vec<u8>, UnknownCryptoError> {
 
     if salt.len() < 16 {
         return Err(UnknownCryptoError);
     }
 
-    if len < 14 {
+    if dklen < 14 {
         return Err(UnknownCryptoError);
     }
 
@@ -177,11 +177,11 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, Unkno
         password: password.to_vec(),
         salt: salt.to_vec(),
         iterations: 512_000,
-        length: len,
+        dklen: dklen,
         hmac: ShaVariantOption::SHA512
     };
 
-    pbkdf2_sha512_res.pbkdf2_compute()
+    pbkdf2_sha512_res.derive_key()
 }
 
 /// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Uses 512000 iterations.

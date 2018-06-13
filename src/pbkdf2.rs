@@ -33,11 +33,12 @@ use core::{util, errors::UnknownCryptoError};
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 
+
 pub struct Pbkdf2 {
     pub password: Vec<u8>,
     pub salt: Vec<u8>,
     pub iterations: usize,
-    pub length: usize,
+    pub dklen: usize,
     pub hmac: ShaVariantOption,
 }
 
@@ -53,8 +54,8 @@ impl Drop for Pbkdf2 {
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The specified length is less than 1
-/// - The specified length is greater than (2^32 - 1) * hLen
+/// - The specified dklen is less than 1
+/// - The specified dklen is greater than (2^32 - 1) * hLen
 /// - The specified iteration count is less than 1
 ///
 /// # Usage examples:
@@ -71,11 +72,11 @@ impl Drop for Pbkdf2 {
 ///     password: password,
 ///     salt: salt,
 ///     iterations: 10000,
-///     length: 64,
+///     dklen: 64,
 ///     hmac: ShaVariantOption::SHA512
 /// };
 ///
-/// dk.pbkdf2_compute().unwrap();
+/// dk.derive_key().unwrap();
 /// ```
 /// ### Verifying derived key:
 /// ```
@@ -90,18 +91,18 @@ impl Drop for Pbkdf2 {
 ///     password: password,
 ///     salt: salt,
 ///     iterations: 10000,
-///     length: 64,
+///     dklen: 64,
 ///     hmac: ShaVariantOption::SHA512
 /// };
 ///
-/// let derived_key = dk.pbkdf2_compute().unwrap();
-/// assert_eq!(dk.pbkdf2_compare(&derived_key).unwrap(), true);
+/// let derived_key = dk.derive_key().unwrap();
+/// assert_eq!(dk.verify(&derived_key).unwrap(), true);
 /// ```
 
 
 impl Pbkdf2 {
 
-    /// Return the maximum derived key length.
+    /// Return the maximum derived key dklen.
     fn max_dklen(&self) -> usize {
         match self.hmac.output_size() {
             // These values have been calculated from the constraint given in RFC by:
@@ -137,7 +138,7 @@ impl Pbkdf2 {
         // u_step here will be equal to U_2 in RFC
         if self.iterations > 1 {
             u_step = self.return_prf(ipad, opad, &u_step);
-            // The length of f_result and u_step will always be the same due to HMAC
+            // The dklen of f_result and u_step will always be the same due to HMAC
             for c in 0..f_result.len() {
                 f_result[c] ^= u_step[c];
             }
@@ -157,21 +158,21 @@ impl Pbkdf2 {
     }
 
     /// PBKDF2 function. Return a derived key.
-    pub fn pbkdf2_compute(&self) -> Result<Vec<u8>, UnknownCryptoError> {
+    pub fn derive_key(&self) -> Result<Vec<u8>, UnknownCryptoError> {
 
         if self.iterations < 1 {
             return Err(UnknownCryptoError);
         }
-        // Check that the selected key length is within the limit
-        if self.length > self.max_dklen() {
+        // Check that the selected key dklen is within the limit
+        if self.dklen > self.max_dklen() {
             return Err(UnknownCryptoError);
         }
-        if self.length < 1 {
+        if self.dklen < 1 {
             return Err(UnknownCryptoError);
         }
 
         // Corresponds to l in RFC
-        let hlen_blocks: usize = 1 + ((self.length - 1) / self.hmac.output_size());
+        let hlen_blocks: usize = 1 + ((self.dklen - 1) / self.hmac.output_size());
 
         // Make inner and outer paddings for a faster HMAC
         let pad_const = Hmac {secret_key: Vec::new(), message: Vec::new(), sha2: self.hmac};
@@ -183,20 +184,20 @@ impl Pbkdf2 {
             derived_key.extend_from_slice(&self.function_f(index as u32, &ipad, &opad));
         }
 
-        derived_key.truncate(self.length);
+        derived_key.truncate(self.dklen);
 
         Ok(derived_key)
     }
 
     /// Check derived key validity by computing one from the current struct fields and comparing this
     /// to the passed derived key. Comparison is done in constant time.
-    pub fn pbkdf2_compare(&self, received_dk: &[u8]) -> Result<bool, UnknownCryptoError> {
+    pub fn verify(&self, received_dk: &[u8]) -> Result<bool, UnknownCryptoError> {
 
-        if received_dk.len() != self.length {
+        if received_dk.len() != self.dklen {
             return Err(UnknownCryptoError);
         }
 
-        let own_dk = self.pbkdf2_compute().unwrap();
+        let own_dk = self.derive_key().unwrap();
 
         util::compare_ct(received_dk, &own_dk)
     }
@@ -213,7 +214,7 @@ mod test {
     use core::options::ShaVariantOption;
 
     #[test]
-    fn length_too_high() {
+    fn dklen_too_high() {
 
         // Take 64 as this is the highest, since HMAC-SHA512
         let too_long = ((2_u64.pow(32) - 1) * 64 as u64) as usize + 1;
@@ -222,11 +223,11 @@ mod test {
             password: "password".as_bytes().to_vec(),
             salt: "salt".as_bytes().to_vec(),
             iterations: 1,
-            length: too_long,
+            dklen: too_long,
             hmac: ShaVariantOption::SHA256,
         };
 
-        assert!(pbkdf2_dk_256.pbkdf2_compute().is_err());
+        assert!(pbkdf2_dk_256.derive_key().is_err());
     }
 
     #[test]
@@ -236,34 +237,34 @@ mod test {
             password: "password".as_bytes().to_vec(),
             salt: "salt".as_bytes().to_vec(),
             iterations: 0,
-            length: 15,
+            dklen: 15,
             hmac: ShaVariantOption::SHA256,
         };
 
-        assert!(pbkdf2_dk_256.pbkdf2_compute().is_err());
+        assert!(pbkdf2_dk_256.derive_key().is_err());
     }
 
     #[test]
-    fn zero_length_panic() {
+    fn zero_dklen_panic() {
         let pbkdf2_dk_256 = Pbkdf2 {
             password: "password".as_bytes().to_vec(),
             salt: "salt".as_bytes().to_vec(),
             iterations: 2,
-            length: 0,
+            dklen: 0,
             hmac: ShaVariantOption::SHA256,
         };
 
-        assert!(pbkdf2_dk_256.pbkdf2_compute().is_err());
+        assert!(pbkdf2_dk_256.derive_key().is_err());
     }
 
     #[test]
-    fn pbkdf2_compare_true() {
+    fn verify_true() {
 
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "sa\0lt".as_bytes().to_vec(),
             iterations: 4096,
-            length: 16,
+            dklen: 16,
             hmac: ShaVariantOption::SHA512,
         };
 
@@ -271,18 +272,18 @@ mod test {
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert_eq!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).unwrap(), true);
+        assert_eq!(pbkdf2_dk_512.verify(&expected_pbkdf2_dk_512).unwrap(), true);
     }
 
     #[test]
-    fn pbkdf2_compare_false() {
+    fn verify_false() {
 
         // Salt value differs between this and the previous test case
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "".as_bytes().to_vec(),
             iterations: 4096,
-            length: 16,
+            dklen: 16,
             hmac: ShaVariantOption::SHA512,
         };
 
@@ -290,18 +291,18 @@ mod test {
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).is_err());
+        assert!(pbkdf2_dk_512.verify(&expected_pbkdf2_dk_512).is_err());
     }
 
     #[test]
-    fn pbkdf2_compare_diff_length_panic() {
+    fn verify_diff_dklen_panic() {
 
-        // Different length than expected dk
+        // Different dklen than expected dk
         let pbkdf2_dk_512 = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "".as_bytes().to_vec(),
             iterations: 4096,
-            length: 32,
+            dklen: 32,
             hmac: ShaVariantOption::SHA512,
         };
 
@@ -309,6 +310,6 @@ mod test {
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert!(pbkdf2_dk_512.pbkdf2_compare(&expected_pbkdf2_dk_512).is_err());
+        assert!(pbkdf2_dk_512.verify(&expected_pbkdf2_dk_512).is_err());
     }
 }

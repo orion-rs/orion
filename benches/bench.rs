@@ -53,10 +53,10 @@ fn bench_pbkdf2(b: &mut Bencher) {
             salt: vec![0x01; 32],
             password: vec![0x01; 32],
             iterations: 10000,
-            length: 32,
+            dklen: 32,
             hmac: ShaVariantOption::SHA256
         };
 
-        pbkdf.pbkdf2_compute().unwrap();
+        pbkdf.derive_key().unwrap();
     });
 }
