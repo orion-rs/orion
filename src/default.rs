@@ -33,7 +33,7 @@ use core::options::ShaVariantOption;
 /// HMAC with SHA512.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the secret key is less than 64
+/// - The length of the secret key is less than 64 bytes
 ///
 /// # Usage example:
 ///
@@ -89,9 +89,6 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
 }
 
 /// HKDF with HMAC-SHA512.
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The length of the secret key is less than 64
 ///
 /// # Usage example:
 ///
@@ -108,9 +105,6 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], message: &[u8]) ->
 pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
         Result<Vec<u8>, errors::UnknownCryptoError> {
 
-    if salt.len() < 64 {
-        return Err(errors::UnknownCryptoError);
-    }
 
     let hkdf_512_res = Hkdf {
         salt: salt.to_vec(),
@@ -149,7 +143,7 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 /// PBKDF2 with HMAC-SHA512. Uses 512000 iterations.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the secret key is less than 64
+/// - The length of the salt is less than 16 bytes
 ///
 /// # Usage example:
 ///
@@ -163,7 +157,7 @@ pub fn hkdf_verify(expected_hkdf: &[u8], salt: &[u8], input_data: &[u8], info: &
 /// ```
 pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
-    if salt.len() < 64 {
+    if salt.len() < 16 {
         return Err(errors::UnknownCryptoError);
     }
 
@@ -190,7 +184,8 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, error
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64).unwrap();
 /// assert_eq!(default::pbkdf2_verify(&derived_password, "Secret password".as_bytes(), &salt, 64).unwrap(), true);
 /// ```
-pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8], len: usize) -> Result<bool, errors::UnknownCryptoError> {
+pub fn pbkdf2_verify(derived_password: &[u8], password: &[u8], salt: &[u8],
+        len: usize) -> Result<bool, errors::UnknownCryptoError> {
 
     let own_pbkdf2 = pbkdf2(password, salt, len).unwrap();
 
