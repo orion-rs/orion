@@ -104,8 +104,7 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
 ///
 /// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// ```
-pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
-        Result<Vec<u8>, UnknownCryptoError> {
+pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8], len: usize) -> Result<Vec<u8>, UnknownCryptoError> {
 
     if salt.len() < 16 {
         return Err(UnknownCryptoError);
@@ -113,7 +112,7 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
 
     let hkdf_dk = Hkdf {
         salt: salt.to_vec(),
-        ikm: input_data.to_vec(),
+        ikm: input.to_vec(),
         info: info.to_vec(),
         length: len,
         hmac: ShaVariantOption::SHA512,
@@ -137,10 +136,10 @@ pub fn hkdf(salt: &[u8], input_data: &[u8], info: &[u8], len: usize) ->
 /// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
 /// ```
-pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input_data: &[u8], info: &[u8],
+pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
     len: usize) -> Result<bool, UnknownCryptoError> {
 
-    let own_hkdf = hkdf(salt, input_data, info, len).unwrap();
+    let own_hkdf = hkdf(salt, input, info, len).unwrap();
 
     util::compare_ct(&own_hkdf, &expected_dk)
 }
@@ -161,13 +160,13 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input_data: &[u8], info: &[u
 /// let salt = util::gen_rand_key(64).unwrap();
 /// let derived_password = default::pbkdf2("Secret password".as_bytes(), &salt, 64);
 /// ```
-pub fn pbkdf2(password: &[u8], salt: &[u8], dklen: usize) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, UnknownCryptoError> {
 
     if salt.len() < 16 {
         return Err(UnknownCryptoError);
     }
 
-    if dklen < 14 {
+    if len < 14 {
         return Err(UnknownCryptoError);
     }
 
@@ -175,7 +174,7 @@ pub fn pbkdf2(password: &[u8], salt: &[u8], dklen: usize) -> Result<Vec<u8>, Unk
         password: password.to_vec(),
         salt: salt.to_vec(),
         iterations: 512_000,
-        dklen: dklen,
+        dklen: len,
         hmac: ShaVariantOption::SHA512
     };
 
