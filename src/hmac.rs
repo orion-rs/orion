@@ -111,10 +111,8 @@ impl Hmac {
             pad
         };
 
-        let ipad = make_padded_key(0x36);
-        let opad = make_padded_key(0x5C);
-
-        (ipad, opad)
+        // Output format: ipad, opad
+        (make_padded_key(0x36), make_padded_key(0x5C))
     }
 
     /// Returns a HMAC for a given key and data.
@@ -125,7 +123,12 @@ impl Hmac {
         ipad.extend_from_slice(&self.data);
         opad.extend_from_slice(&self.sha2.hash(&ipad));
 
-        self.sha2.hash(&opad)
+        let mac = self.sha2.hash(&opad);
+
+        Clear::clear(&mut ipad);
+        Clear::clear(&mut opad);
+
+        mac
     }
 
     /// Check HMAC validity by computing one from the current struct fields and comparing this

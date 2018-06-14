@@ -160,9 +160,13 @@ impl Hkdf {
     /// Combine extract and expand to return a derived key.
     pub fn derive_key(&self) -> Result<Vec<u8>, UnknownCryptoError> {
 
-        let prk = self.extract(&self.salt, &self.ikm);
+        let mut prk = self.extract(&self.salt, &self.ikm);
 
-        self.expand(&prk)
+        let dk = self.expand(&prk);
+
+        Clear::clear(&mut prk);
+
+        dk
     }
 
     /// Verify a derived key by comparing one from the current struct fields and the derived key

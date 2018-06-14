@@ -177,7 +177,7 @@ impl Pbkdf2 {
 
 
         let pad_const = Hmac {secret_key: Vec::new(), data: Vec::new(), sha2: self.hmac};
-        let (ipad, opad) = pad_const.pad_key(&self.password);
+        let (mut ipad, mut opad) = pad_const.pad_key(&self.password);
 
         let mut derived_key: Vec<u8> = Vec::new();
 
@@ -188,6 +188,9 @@ impl Pbkdf2 {
             // should not be able to overflow. If the maximum dklen is selected,
             // then hlen_blocks will equal exactly `u32::max_value()`
         }
+
+        Clear::clear(&mut ipad);
+        Clear::clear(&mut opad);
 
         derived_key.truncate(self.dklen);
 
