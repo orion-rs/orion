@@ -28,7 +28,7 @@ use clear_on_drop::clear::Clear;
 use hmac::*;
 use core::options::ShaVariantOption;
 use byte_tools::write_u32_be;
-use core::{util, errors::UnknownCryptoError};
+use core::{util, errors::*};
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
@@ -200,11 +200,13 @@ impl Pbkdf2 {
     /// Verify a derived key by comparing one from the current struct fields and the derived key
     /// passed to the function. Comparison is done in constant time. Both derived keys must be
     /// of equal length.
-    pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, UnknownCryptoError> {
+    pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, ValidationCryptoError> {
 
         let own_dk = self.derive_key().unwrap();
 
-        util::compare_ct(expected_dk, &own_dk)
+        if util::compare_ct(&own_dk, expected_dk).is_err() {
+            return Err(ValidationCryptoError)
+        } else { Ok(true) }
     }
 }
 

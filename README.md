@@ -30,11 +30,10 @@ let dk = default::hkdf(&salt, data, info, 64).unwrap();
 assert!(default::hkdf_verify(&dk, &salt, data, info, 64).unwrap());
 
 // PBKDF2-HMAC-SHA512
-let salt = util::gen_rand_key(64).unwrap();
 let password = "Secret password".as_bytes();
 
-let dk = default::pbkdf2(password, &salt).unwrap();
-assert!(default::pbkdf2_verify(&dk, password, &salt).unwrap());
+let dk = default::pbkdf2("Secret password".as_bytes()).unwrap();
+assert!(default::pbkdf2_verify(&dk, "Secret password".as_bytes()).unwrap());
 ```
 
 

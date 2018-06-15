@@ -27,7 +27,7 @@
 use hmac::Hmac;
 use clear_on_drop::clear::Clear;
 use core::options::ShaVariantOption;
-use core::{util, errors::UnknownCryptoError};
+use core::{util, errors::*};
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
@@ -172,11 +172,13 @@ impl Hkdf {
     /// Verify a derived key by comparing one from the current struct fields and the derived key
     /// passed to the function. Comparison is done in constant time. Both derived keys must be
     /// of equal length.
-    pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, UnknownCryptoError> {
+    pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, ValidationCryptoError> {
 
         let own_dk = self.derive_key().unwrap();
 
-        util::compare_ct(expected_dk, &own_dk)
+        if util::compare_ct(&own_dk, expected_dk).is_err() {
+            return Err(ValidationCryptoError)
+        } else { Ok(true) }
     }
 }
 

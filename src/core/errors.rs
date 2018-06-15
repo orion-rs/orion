@@ -53,3 +53,25 @@ impl From<rand::Error> for UnknownCryptoError {
         UnknownCryptoError
     }
 }
+
+
+/// Error for a failed verification.
+#[derive(Debug)]
+#[derive(PartialEq)]
+pub struct ValidationCryptoError;
+
+impl fmt::Display for ValidationCryptoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ValidationCryptoError")
+    }
+}
+
+impl Error for ValidationCryptoError {
+    fn description(&self) -> &str {
+        "ValidationCryptoError"
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
+}

@@ -27,8 +27,9 @@
 use hmac::Hmac;
 use hkdf::Hkdf;
 use pbkdf2::Pbkdf2;
-use core::{errors::UnknownCryptoError, util};
+use core::{errors::*, util};
 use core::options::ShaVariantOption;
+
 
 /// HMAC with SHA512.
 /// # Exceptions:
@@ -78,7 +79,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoErro
 /// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
 /// ```
 pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
-        Result<bool, UnknownCryptoError> {
+        Result<bool, ValidationCryptoError> {
 
     let rand_key = util::gen_rand_key(64).unwrap();
 
@@ -87,7 +88,9 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
     let nd_round_own = hmac(&rand_key, &own_hmac).unwrap();
     let nd_round_expected = hmac(&rand_key, &expected_hmac).unwrap();
 
-    util::compare_ct(&nd_round_own, &nd_round_expected)
+    if util::compare_ct(&nd_round_own, &nd_round_expected).is_err() {
+        return Err(ValidationCryptoError)
+    } else { Ok(true) }
 }
 
 /// HKDF-HMAC-SHA512.
@@ -143,74 +146,114 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8], len: usize) -> Result<Vec<u8
 /// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
 /// ```
 pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
-    len: usize) -> Result<bool, UnknownCryptoError> {
+    len: usize) -> Result<bool, ValidationCryptoError> {
 
     let own_hkdf = hkdf(salt, input, info, len).unwrap();
 
-    util::compare_ct(&own_hkdf, &expected_dk)
+    if util::compare_ct(&own_hkdf, expected_dk).is_err() {
+        return Err(ValidationCryptoError)
+    } else { Ok(true) }
 }
 
-/// PBKDF2-HMAC-SHA512 derived key, using 512.000 as iteration count.
+/// PBKDF2-HMAC-SHA512.
+/// # About:
+/// This is meant to be used for password storage, A salt of 64 bytes is automatically
+/// generated. The derived key length is set to 64. 512.000 iterations are used. The salt is
+/// prepended to the password before being passed to the PBKDF@ function.
+/// A byte vector of 128 bytes is returned.
+/// The first 64 bytes of this vector is the salt used to derive the key and the last 64 bytes
+/// are the actual key. When using this function with `pbkdf2_verify` then the seperation of salt
+/// and password are automatically handeled.
+///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the salt is less than 16 bytes
 /// - The specified length for the derived key is less than 14 bytes
 ///
-/// ## Note:
-/// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this.
 /// # Usage example:
 ///
 /// ```
 /// use orion::default;
-/// use orion::core::util;
 ///
-/// let salt = util::gen_rand_key(64).unwrap();
 /// let password = "Secret password".as_bytes();
 ///
-/// let derived_password = default::pbkdf2(password, &salt, 64);
+/// let derived_password = default::pbkdf2(password);
 /// ```
-pub fn pbkdf2(password: &[u8], salt: &[u8], len: usize) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 
-    if salt.len() < 16 {
-        return Err(UnknownCryptoError);
-    }
+    let salt: Vec<u8> = util::gen_rand_key(64).unwrap();
+    // Prepend salt to password before deriving key
+    let mut pass_ext: Vec<u8> = Vec::new();
+    pass_ext.extend_from_slice(&salt);
+    pass_ext.extend_from_slice(password);
+    // Prepend salt to derived key
+    let mut dk = Vec::new();
+    dk.extend_from_slice(&salt);
 
-    if len < 14 {
-        return Err(UnknownCryptoError);
-    }
 
     let pbkdf2_dk = Pbkdf2 {
-        password: password.to_vec(),
-        salt: salt.to_vec(),
+        password: pass_ext,
+        salt: salt,
         iterations: 512_000,
-        dklen: len,
+        dklen: 64,
         hmac: ShaVariantOption::SHA512
     };
 
-    pbkdf2_dk.derive_key()
+    // Output format: First 64 bytes are the salt, last 64 bytes are the derived key
+    dk.extend_from_slice(&pbkdf2_dk.derive_key().unwrap());
+
+
+    if dk.len() != 128 {
+        return Err(UnknownCryptoError);
+    }
+
+    Ok(dk)
 }
 
 /// Verify PBKDF2-HMAC-SHA512 derived key, using 512.000 as iteration count, in constant time. Both derived
 /// keys must be of equal length.
+/// # About:
+/// This function is meant to be used with the `pbkdf2` function in orion's default API.
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The expected dervied key length is not 128 bytes
 /// # Usage example:
 ///
 /// ```
 /// use orion::default;
-/// use orion::core::util;
 ///
-/// let salt = util::gen_rand_key(64).unwrap();
 /// let password = "Secret password".as_bytes();
 ///
-/// let derived_password = default::pbkdf2(password, &salt, 64).unwrap();
-/// assert_eq!(default::pbkdf2_verify(&derived_password, password, &salt, 64).unwrap(), true);
+/// let derived_password = default::pbkdf2(password).unwrap();
+/// assert_eq!(default::pbkdf2_verify(&derived_password, password).unwrap(), true);
 /// ```
-pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8], salt: &[u8],
-        len: usize) -> Result<bool, UnknownCryptoError> {
+pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, ValidationCryptoError> {
 
-    let own_pbkdf2 = pbkdf2(password, salt, len).unwrap();
+    if expected_dk.len() != 128 {
+        panic!(UnknownCryptoError);
+    }
 
-    util::compare_ct(&own_pbkdf2, expected_dk)
+    let salt: Vec<u8> = expected_dk[..64].to_vec();
+    let mut pass_ext: Vec<u8> = Vec::new();
+    pass_ext.extend_from_slice(&salt);
+    pass_ext.extend_from_slice(password);
+
+    // Prepend salt to derived key
+    let mut dk = Vec::new();
+    dk.extend_from_slice(&salt);
+
+    let pbkdf2_dk = Pbkdf2 {
+        password: pass_ext,
+        salt: salt,
+        iterations: 512_000,
+        dklen: 64,
+        hmac: ShaVariantOption::SHA512
+    };
+
+    dk.extend_from_slice(&pbkdf2_dk.derive_key().unwrap());
+
+    if util::compare_ct(&dk, expected_dk).is_err() {
+        return Err(ValidationCryptoError)
+    } else { Ok(true) }
 }
 
 #[cfg(test)]
@@ -298,32 +341,10 @@ mod test {
     #[test]
     fn pbkdf2_verify() {
 
-        let salt = util::gen_rand_key(64).unwrap();
         let password = util::gen_rand_key(64).unwrap();
 
-        let pbkdf2_dk = default::pbkdf2(&password, &salt, 64).unwrap();
+        let pbkdf2_dk = default::pbkdf2(&password).unwrap();
 
-        assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password, &salt, 64).unwrap(), true);
-    }
-
-    #[test]
-    fn pbkdf2_salt_too_short() {
-        assert!(default::pbkdf2("Secret password".as_bytes(), "Very weak salt".as_bytes(), 64).is_err());
-    }
-
-    #[test]
-    fn pbkdf2_len_too_short() {
-        assert!(default::pbkdf2(&vec![0x61; 67], &vec![0x61; 16], 10).is_err());
-    }
-
-    #[test]
-    fn pbkdf2_len_good() {
-        default::pbkdf2(&vec![0x61; 67], &vec![0x61; 16], 14).unwrap();
-    }
-
-    #[test]
-    fn pbkdf2_salt_allowed_len() {
-        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 67], 64).unwrap();
-        default::pbkdf2(&vec![0x61; 10], &vec![0x61; 64], 64).unwrap();
+        assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap(), true);
     }
 }
