@@ -152,7 +152,7 @@ impl Hmac {
         };
 
         if util::compare_ct(&nd_round_own.finalize(), &nd_round_received.finalize()).is_err() {
-            return Err(ValidationCryptoError)
+            Err(ValidationCryptoError)
         } else { Ok(true) }
     }
 }

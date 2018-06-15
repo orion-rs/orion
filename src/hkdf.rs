@@ -177,7 +177,7 @@ impl Hkdf {
         let own_dk = self.derive_key().unwrap();
 
         if util::compare_ct(&own_dk, expected_dk).is_err() {
-            return Err(ValidationCryptoError)
+            Err(ValidationCryptoError)
         } else { Ok(true) }
     }
 }

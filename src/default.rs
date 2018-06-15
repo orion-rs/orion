@@ -89,7 +89,7 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
     let nd_round_expected = hmac(&rand_key, &expected_hmac).unwrap();
 
     if util::compare_ct(&nd_round_own, &nd_round_expected).is_err() {
-        return Err(ValidationCryptoError)
+        Err(ValidationCryptoError)
     } else { Ok(true) }
 }
 
@@ -151,7 +151,7 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
     let own_hkdf = hkdf(salt, input, info, len).unwrap();
 
     if util::compare_ct(&own_hkdf, expected_dk).is_err() {
-        return Err(ValidationCryptoError)
+        Err(ValidationCryptoError)
     } else { Ok(true) }
 }
 
@@ -192,7 +192,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 
     let pbkdf2_dk = Pbkdf2 {
         password: pass_ext,
-        salt: salt,
+        salt,
         iterations: 512_000,
         dklen: 64,
         hmac: ShaVariantOption::SHA512
@@ -243,7 +243,7 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
 
     let pbkdf2_dk = Pbkdf2 {
         password: pass_ext,
-        salt: salt,
+        salt,
         iterations: 512_000,
         dklen: 64,
         hmac: ShaVariantOption::SHA512
@@ -252,7 +252,7 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
     dk.extend_from_slice(&pbkdf2_dk.derive_key().unwrap());
 
     if util::compare_ct(&dk, expected_dk).is_err() {
-        return Err(ValidationCryptoError)
+        Err(ValidationCryptoError)
     } else { Ok(true) }
 }
 
