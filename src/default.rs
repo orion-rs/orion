@@ -79,7 +79,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoErro
 /// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
 /// ```
 pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
-        Result<bool, ValidationCryptoError> {
+                    Result<bool, ValidationCryptoError> {
 
     let rand_key = util::gen_rand_key(64).unwrap();
 
@@ -119,7 +119,7 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8], len: usize) -> Result<Vec<u8
         return Err(UnknownCryptoError);
     }
 
-    let hkdf_dk = Hkdf {
+    let hkdf = Hkdf {
         salt: salt.to_vec(),
         ikm: input.to_vec(),
         info: info.to_vec(),
@@ -127,7 +127,7 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8], len: usize) -> Result<Vec<u8
         hmac: ShaVariantOption::SHA512,
     };
 
-    hkdf_dk.derive_key()
+    hkdf.derive_key()
 }
 
 /// Verify an HKDF-HMAC-SHA512 derived key in constant time. Both derived keys must
@@ -181,15 +181,15 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 
     let salt: Vec<u8> = util::gen_rand_key(64).unwrap();
     // Prepend salt to password before deriving key
-    let mut pass_ext: Vec<u8> = Vec::new();
-    pass_ext.extend_from_slice(&salt);
-    pass_ext.extend_from_slice(password);
+    let mut pass_extented: Vec<u8> = Vec::new();
+    pass_extented.extend_from_slice(&salt);
+    pass_extented.extend_from_slice(password);
     // Prepend salt to derived key
     let mut dk = Vec::new();
     dk.extend_from_slice(&salt);
 
     let pbkdf2_dk = Pbkdf2 {
-        password: pass_ext,
+        password: pass_extented,
         salt,
         iterations: 512_000,
         dklen: 64,
@@ -232,16 +232,16 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
     }
 
     let salt: Vec<u8> = expected_dk[..64].to_vec();
-    let mut pass_ext: Vec<u8> = Vec::new();
-    pass_ext.extend_from_slice(&salt);
-    pass_ext.extend_from_slice(password);
+    let mut pass_extented: Vec<u8> = Vec::new();
+    pass_extented.extend_from_slice(&salt);
+    pass_extented.extend_from_slice(password);
 
     // Prepend salt to derived key
     let mut dk = Vec::new();
     dk.extend_from_slice(&salt);
 
     let pbkdf2_dk = Pbkdf2 {
-        password: pass_ext,
+        password: pass_extented,
         salt,
         iterations: 512_000,
         dklen: 64,
@@ -264,18 +264,18 @@ mod test {
     use core::util;
 
     #[test]
-    fn hmac_secretkey_too_short() {
+    fn hmac_secret_key_too_short() {
         assert!(default::hmac(&vec![0x61; 10], &vec![0x61; 10]).is_err());
     }
 
     #[test]
-    fn hmac_secretkey_allowed_len() {
+    fn hmac_secret_key_allowed_len() {
         default::hmac(&vec![0x61; 64], &vec![0x61; 10]).unwrap();
         default::hmac(&vec![0x61; 78], &vec![0x61; 10]).unwrap();
     }
 
     #[test]
-    fn hmac_result() {
+    fn hmac_finalize() {
 
         let sec_key = decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
