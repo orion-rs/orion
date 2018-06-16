@@ -24,8 +24,7 @@
 
 
 
-// Testing against RFC 7914 test vectors.
-
+// Testing against RFC 7914 test vectors
 #[cfg(test)]
 mod rfc7914 {
 

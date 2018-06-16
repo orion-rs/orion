@@ -24,8 +24,7 @@
 
 
 
-// Testing against RFC 4231 test vectors.
-
+// Testing against RFC 4231 test vectors
 #[cfg(test)]
 mod rfc4231 {
 
@@ -49,7 +48,7 @@ mod rfc4231 {
             None => (),
         };
 
-        // If the MACs are modified, this should panic
+        // If the MACs are modified, then they should not be equal to the expected
         assert_ne!(&def_hmac[..def_hmac.len()-1], expected);
         assert_ne!(&pbkdf2_hmac[..pbkdf2_hmac.len()-1], expected);
 

@@ -12,14 +12,17 @@
 // OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 // CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-// Testing against NIST CAVP HMACVS test vectors.
 
+
+
+// Testing against NIST CAVP HMACVS test vectors
 extern crate ring;
 use self::ring::{test, error};
 use core::options::ShaVariantOption;
 use hmac::Hmac;
 
-fn hmac_test_runner(option: ShaVariantOption, key: &[u8], input: &[u8], output: &[u8], is_ok: bool) -> Result<(), error::Unspecified> {
+fn hmac_test_runner(option: ShaVariantOption, key: &[u8], input: &[u8], output: &[u8], is_ok: bool)
+                    -> Result<(), error::Unspecified> {
 
     let hmac = Hmac { secret_key: key.to_vec(), data: input.to_vec(), sha2: option };
 
@@ -60,7 +63,7 @@ fn hmac_tests() {
 
         hmac_test_runner(alg, &key_value[..], &input[..], &output[..], true)?;
 
-        // Tamper with the input and check that verification fails.
+        // Tamper with the input and check that verification fails
         if input.is_empty() {
             input.push(0);
         } else {

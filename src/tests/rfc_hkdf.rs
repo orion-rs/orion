@@ -37,7 +37,7 @@ mod rfc5869 {
     #[test]
     fn test_case_1() {
 
-        let hkdf_256 = Hkdf {
+        let hkdf = Hkdf {
             salt: decode("000102030405060708090a0b0c").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("f0f1f2f3f4f5f6f7f8f9").unwrap(),
@@ -52,17 +52,17 @@ mod rfc5869 {
             "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf\
             34007208d5b887185865").unwrap();
 
-        let actual_prk = hkdf_256.extract(&hkdf_256.salt, &hkdf_256.ikm);
+        let actual_prk = hkdf.extract(&hkdf.salt, &hkdf.ikm);
 
         assert_eq!(actual_prk, expected_prk);
-        assert_eq!(hkdf_256.expand(&actual_prk).unwrap(), expected_okm);
-        assert_eq!(hkdf_256.derive_key().unwrap(), expected_okm);
+        assert_eq!(hkdf.expand(&actual_prk).unwrap(), expected_okm);
+        assert_eq!(hkdf.derive_key().unwrap(), expected_okm);
     }
 
     #[test]
     fn test_case_2() {
 
-        let hkdf_256 = Hkdf {
+        let hkdf = Hkdf {
             salt: decode("606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f\
                 808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f\
                 a0a1a2a3a4a5a6a7a8a9aaabacadaeaf").unwrap(),
@@ -84,17 +84,17 @@ mod rfc5869 {
             59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71\
             cc30c58179ec3e87c14c01d5c1f3434f1d87").unwrap();
 
-        let actual_prk = hkdf_256.extract(&hkdf_256.salt, &hkdf_256.ikm);
+        let actual_prk = hkdf.extract(&hkdf.salt, &hkdf.ikm);
 
         assert_eq!(actual_prk, expected_prk);
-        assert_eq!(hkdf_256.expand(&actual_prk).unwrap(), expected_okm);
-        assert_eq!(hkdf_256.derive_key().unwrap(), expected_okm);
+        assert_eq!(hkdf.expand(&actual_prk).unwrap(), expected_okm);
+        assert_eq!(hkdf.derive_key().unwrap(), expected_okm);
     }
 
     #[test]
     fn test_case_3() {
 
-        let hkdf_256 = Hkdf {
+        let hkdf = Hkdf {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
@@ -109,10 +109,10 @@ mod rfc5869 {
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-        let actual_prk = hkdf_256.extract(&hkdf_256.salt, &hkdf_256.ikm);
+        let actual_prk = hkdf.extract(&hkdf.salt, &hkdf.ikm);
 
         assert_eq!(actual_prk, expected_prk);
-        assert_eq!(hkdf_256.expand(&actual_prk).unwrap(), expected_okm);
-        assert_eq!(hkdf_256.derive_key().unwrap(), expected_okm);
+        assert_eq!(hkdf.expand(&actual_prk).unwrap(), expected_okm);
+        assert_eq!(hkdf.derive_key().unwrap(), expected_okm);
     }
 }

@@ -42,7 +42,7 @@ keyword_replacements = {
 lines = []
 
 with open('src/tests/test_data/HMAC.rsp') as infile:
-    
+
     # Stores the most recent [Len=] parameter from original .rsp
     variant = 0
 
@@ -52,7 +52,7 @@ with open('src/tests/test_data/HMAC.rsp') as infile:
 
         # Check if output is accepted SHA variant and length
         Output_is_valid = False
-        
+
         # Set HMAC with SHA variant tag according to [Len=] param
         if line.startswith("[L=32]"):
             variant = 256
@@ -73,7 +73,6 @@ with open('src/tests/test_data/HMAC.rsp') as infile:
             lines.pop()
 
         if not line.startswith("Output") or Output_is_valid is True:
-        #if not line.startswith("Output") or (len(line) == 74) or (len(line) == 106) or (len(line) == 136):
             if not line.startswith("["):
                 if not line.startswith("Count"):
                     if not line.startswith("Klen"):

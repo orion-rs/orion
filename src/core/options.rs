@@ -83,7 +83,7 @@ mod test {
     extern crate hex;
     use self::hex::decode;
 
-    // These result test cases are some picks from
+    // These test cases are some picks from
     // the [NIST SHAVS](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/secure-hashing#shavs)
     #[test]
     fn shavs_256() {
