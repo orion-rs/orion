@@ -45,18 +45,18 @@ mod rfc5869 {
             hmac: ShaVariantOption::SHA256,
         };
 
-        let expected_prk_256 = decode(
+        let expected_prk = decode(
             "077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5").unwrap();
 
-        let expected_okm_256 = decode(
+        let expected_okm = decode(
             "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf\
             34007208d5b887185865").unwrap();
 
-        let actual_extract_256 = hkdf_256.extract(&hkdf_256.salt, &hkdf_256.ikm);
+        let actual_prk = hkdf_256.extract(&hkdf_256.salt, &hkdf_256.ikm);
 
-        assert_eq!(actual_extract_256, expected_prk_256);
-        assert_eq!(hkdf_256.expand(&actual_extract_256).unwrap(), expected_okm_256);
-        assert_eq!(hkdf_256.derive_key().unwrap(), expected_okm_256);
+        assert_eq!(actual_prk, expected_prk);
+        assert_eq!(hkdf_256.expand(&actual_prk).unwrap(), expected_okm);
+        assert_eq!(hkdf_256.derive_key().unwrap(), expected_okm);
     }
 
     #[test]
@@ -76,19 +76,19 @@ mod rfc5869 {
             hmac: ShaVariantOption::SHA256,
         };
 
-        let expected_prk_256 = decode(
+        let expected_prk = decode(
             "06a6b88c5853361a06104c9ceb35b45cef760014904671014a193f40c15fc244").unwrap();
 
-        let expected_okm_256 = decode(
+        let expected_okm = decode(
             "b11e398dc80327a1c8e7f78c596a49344f012eda2d4efad8a050cc4c19afa97c\
             59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71\
             cc30c58179ec3e87c14c01d5c1f3434f1d87").unwrap();
 
-        let actual_extract_256 = hkdf_256.extract(&hkdf_256.salt, &hkdf_256.ikm);
+        let actual_prk = hkdf_256.extract(&hkdf_256.salt, &hkdf_256.ikm);
 
-        assert_eq!(actual_extract_256, expected_prk_256);
-        assert_eq!(hkdf_256.expand(&actual_extract_256).unwrap(), expected_okm_256);
-        assert_eq!(hkdf_256.derive_key().unwrap(), expected_okm_256);
+        assert_eq!(actual_prk, expected_prk);
+        assert_eq!(hkdf_256.expand(&actual_prk).unwrap(), expected_okm);
+        assert_eq!(hkdf_256.derive_key().unwrap(), expected_okm);
     }
 
     #[test]
@@ -102,17 +102,17 @@ mod rfc5869 {
             hmac: ShaVariantOption::SHA256,
         };
 
-        let expected_prk_256 = decode(
+        let expected_prk = decode(
             "19ef24a32c717b167f33a91d6f648bdf96596776afdb6377ac434c1c293ccb04").unwrap();
 
-        let expected_okm_256 = decode(
+        let expected_okm = decode(
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-        let actual_extract_256 = hkdf_256.extract(&hkdf_256.salt, &hkdf_256.ikm);
+        let actual_prk = hkdf_256.extract(&hkdf_256.salt, &hkdf_256.ikm);
 
-        assert_eq!(actual_extract_256, expected_prk_256);
-        assert_eq!(hkdf_256.expand(&actual_extract_256).unwrap(), expected_okm_256);
-        assert_eq!(hkdf_256.derive_key().unwrap(), expected_okm_256);
+        assert_eq!(actual_prk, expected_prk);
+        assert_eq!(hkdf_256.expand(&actual_prk).unwrap(), expected_okm);
+        assert_eq!(hkdf_256.derive_key().unwrap(), expected_okm);
     }
 }
