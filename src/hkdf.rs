@@ -120,13 +120,13 @@ impl Hkdf {
     /// The HKDF Etract step.
     pub fn extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
 
-        let hmac_res = Hmac {
+        let prk = Hmac {
             secret_key: salt.to_vec(),
             data: ikm.to_vec(),
             sha2: self.hmac
         };
 
-        hmac_res.finalize()
+        prk.finalize()
     }
 
     /// The HKDF Expand step.
@@ -192,7 +192,7 @@ mod test {
     #[test]
     fn hkdf_maximum_length_256() {
 
-        let hkdf_256 = Hkdf {
+        let hkdf = Hkdf {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
@@ -201,17 +201,17 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        let hkdf_256_extract = hkdf_256.extract(&hkdf_256.ikm, &hkdf_256.salt);
+        let hkdf_extract = hkdf.extract(&hkdf.ikm, &hkdf.salt);
 
-        assert!(hkdf_256.expand(&hkdf_256_extract).is_err());
-        assert!(hkdf_256.derive_key().is_err());
+        assert!(hkdf.expand(&hkdf_extract).is_err());
+        assert!(hkdf.derive_key().is_err());
 
     }
 
     #[test]
     fn hkdf_maximum_length_384() {
 
-        let hkdf_384 = Hkdf {
+        let hkdf = Hkdf {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
@@ -220,17 +220,17 @@ mod test {
             hmac: ShaVariantOption::SHA384,
         };
 
-        let hkdf_384_extract = hkdf_384.extract(&hkdf_384.ikm, &hkdf_384.salt);
+        let hkdf_extract = hkdf.extract(&hkdf.ikm, &hkdf.salt);
 
-        assert!(hkdf_384.expand(&hkdf_384_extract).is_err());
-        assert!(hkdf_384.derive_key().is_err());
+        assert!(hkdf.expand(&hkdf_extract).is_err());
+        assert!(hkdf.derive_key().is_err());
 
     }
 
     #[test]
     fn hkdf_maximum_length_512() {
 
-        let hkdf_512 = Hkdf {
+        let hkdf = Hkdf {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
@@ -239,17 +239,17 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let hkdf_512_extract = hkdf_512.extract(&hkdf_512.ikm, &hkdf_512.salt);
+        let hkdf_extract = hkdf.extract(&hkdf.ikm, &hkdf.salt);
 
-        assert!(hkdf_512.expand(&hkdf_512_extract).is_err());
-        assert!(hkdf_512.derive_key().is_err());
+        assert!(hkdf.expand(&hkdf_extract).is_err());
+        assert!(hkdf.derive_key().is_err());
 
     }
 
     #[test]
     fn hkdf_zero_length() {
 
-        let hkdf_512 = Hkdf {
+        let hkdf = Hkdf {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
@@ -257,17 +257,17 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let hkdf_512_extract = hkdf_512.extract(&hkdf_512.ikm, &hkdf_512.salt);
+        let hkdf_extract = hkdf.extract(&hkdf.ikm, &hkdf.salt);
 
-        assert!(hkdf_512.expand(&hkdf_512_extract).is_err());
-        assert!(hkdf_512.derive_key().is_err());
+        assert!(hkdf.expand(&hkdf_extract).is_err());
+        assert!(hkdf.derive_key().is_err());
 
     }
 
     #[test]
     fn hkdf_verify_true() {
 
-        let hkdf_256 = Hkdf {
+        let hkdf = Hkdf {
             salt: decode("").unwrap(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
@@ -275,17 +275,17 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        let expected_okm_256 = decode(
+        let expected_okm = decode(
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-        assert_eq!(hkdf_256.verify(&expected_okm_256).unwrap(), true);
+        assert_eq!(hkdf.verify(&expected_okm).unwrap(), true);
     }
 
     #[test]
     fn hkdf_verify_false() {
         // Salt value differs between this and the previous test case
-        let hkdf_256 = Hkdf {
+        let hkdf = Hkdf {
             salt: "salt".as_bytes().to_vec(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
@@ -293,17 +293,17 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        let expected_okm_256 = decode(
+        let expected_okm = decode(
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-        assert!(hkdf_256.verify(&expected_okm_256).is_err());
+        assert!(hkdf.verify(&expected_okm).is_err());
     }
 
     #[test]
     fn verify_diff_length_panic() {
         // Different length than expected okm
-        let hkdf_256 = Hkdf {
+        let hkdf = Hkdf {
             salt: "salt".as_bytes().to_vec(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
             info: decode("").unwrap(),
@@ -311,10 +311,10 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        let expected_okm_256 = decode(
+        let expected_okm = decode(
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
             9d201395faa4b61a96c8").unwrap();
 
-        assert!(hkdf_256.verify(&expected_okm_256).is_err());
+        assert!(hkdf.verify(&expected_okm).is_err());
     }
 }
