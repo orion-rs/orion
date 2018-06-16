@@ -155,7 +155,7 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
     } else { Ok(true) }
 }
 
-/// PBKDF2-HMAC-SHA512.
+/// PBKDF2-HMAC-SHA512 suitable for password storage.
 /// # About:
 /// This is meant to be used for password storage.
 /// - A salt of 64 bytes is automatically generated.
