@@ -11,7 +11,7 @@ Currently contains:
 
 ### Usage
 ```
-extern crate orion
+extern crate orion;
 use orion::{default, core::util};
 
 // HMAC-SHA512
