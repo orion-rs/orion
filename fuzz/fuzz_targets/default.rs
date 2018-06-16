@@ -7,7 +7,7 @@ use orion::core::util;
 use orion::default;
 use rand::Rng;
 
-fn test_def(data: &[u8]) -> () {
+fn fuzz_default(data: &[u8]) -> () {
 
     let rand_salt = util::gen_rand_key(64).unwrap();
     let mut rng = rand::thread_rng();
@@ -31,5 +31,5 @@ fn test_def(data: &[u8]) -> () {
 
 
 fuzz_target!(|data: &[u8]| {
-    test_def(data);
+    fuzz_default(data);
 });

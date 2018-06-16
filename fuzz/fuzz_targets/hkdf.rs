@@ -8,7 +8,7 @@ use orion::core::options::ShaVariantOption;
 use rand::prelude::*;
 
 
-fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
+fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
 
     let mut rng = thread_rng();
 
@@ -43,5 +43,5 @@ fn make_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
 }
 
 fuzz_target!(|data: &[u8]| {
-    make_hkdf(data, data, data);
+    fuzz_hkdf(data, data, data);
 });

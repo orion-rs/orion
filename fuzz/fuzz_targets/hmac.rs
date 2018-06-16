@@ -7,7 +7,7 @@ use orion::hmac::*;
 use orion::core::options::ShaVariantOption;
 use rand::prelude::*;
 
-fn make_hmac(secret_key: &[u8], data: &[u8]) -> ()  {
+fn fuzz_hmac(secret_key: &[u8], data: &[u8]) -> ()  {
 
     let mut rng = thread_rng();
 
@@ -35,5 +35,5 @@ fn make_hmac(secret_key: &[u8], data: &[u8]) -> ()  {
 
 
 fuzz_target!(|data: &[u8]| {
-    make_hmac(data, data);
+    fuzz_hmac(data, data);
 });

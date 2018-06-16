@@ -7,7 +7,7 @@ use orion::pbkdf2::Pbkdf2;
 use orion::core::options::ShaVariantOption;
 use rand::prelude::*;
 
-fn make_pbkdf2(password: &[u8], salt: &[u8]) -> () {
+fn fuzz_pbkdf2(password: &[u8], salt: &[u8]) -> () {
 
     let mut rng = rand::thread_rng();
 
@@ -28,11 +28,11 @@ fn make_pbkdf2(password: &[u8], salt: &[u8]) -> () {
         };
 
         assert_eq!(dk.verify(&dk.derive_key().unwrap()).unwrap(), true);
-        
+
     } else { () }
 
 }
 
 fuzz_target!(|data: &[u8]| {
-    make_pbkdf2(data, data);
+    fuzz_pbkdf2(data, data);
 });
