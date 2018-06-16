@@ -361,6 +361,17 @@ mod test {
     }
 
     #[test]
+    fn pbkdf2_verify_err() {
+
+        let password = util::gen_rand_key(64).unwrap();
+
+        let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        pbkdf2_dk.extend_from_slice(&[0u8; 4]);
+
+        assert!(default::pbkdf2_verify(&pbkdf2_dk, &password).is_err());
+    }
+
+    #[test]
     fn pbkdf2_verify_expected_dk_too_long() {
 
         let password = util::gen_rand_key(64).unwrap();
