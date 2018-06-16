@@ -31,7 +31,7 @@ use core::{errors::*, util};
 use core::options::ShaVariantOption;
 
 
-/// HMAC with SHA512.
+/// HMAC-SHA512.
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the secret key is less than 64 bytes.
@@ -65,7 +65,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoErro
     Ok(mac.finalize())
 }
 
-/// Verify an HMAC against a key and data in constant time, with Double-HMAC Verification.
+/// Verify an HMAC-SHA512 against a key and data in constant time, with Double-HMAC Verification.
 /// # Usage example:
 ///
 /// ```
@@ -206,8 +206,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     Ok(dk)
 }
 
-/// Verify PBKDF2-HMAC-SHA512 derived key, using 512.000 as iteration count, in constant time. Both derived
-/// keys must be of equal length.
+/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Both derived keys must be of equal length.
 /// # About:
 /// This function is meant to be used with the `default::pbkdf2` function in orion's default API. It can be
 /// used without it, but then the expected_dk passed to the function must be constructed just as in

@@ -115,7 +115,7 @@ impl Hmac {
         (make_padded_key(0x36), make_padded_key(0x5C))
     }
 
-    /// Returns a HMAC for a given key and data.
+    /// Returns an HMAC for a given key and data.
     pub fn finalize(&self) -> Vec<u8> {
 
         let (mut ipad, mut opad) = self.pad_key(&self.secret_key);

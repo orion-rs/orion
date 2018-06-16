@@ -160,7 +160,7 @@ impl Pbkdf2 {
         f_result
     }
 
-    /// Main PBKDF2 function. Return a derived key.
+    /// Main PBKDF2 function. Returns a derived key.
     pub fn derive_key(&self) -> Result<Vec<u8>, UnknownCryptoError> {
 
         if self.iterations < 1 {

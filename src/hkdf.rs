@@ -117,7 +117,7 @@ impl Hkdf {
         }
     }
 
-    /// The HKDF Etract step.
+    /// The HKDF Extract step.
     pub fn extract(&self, salt: &[u8], ikm: &[u8]) -> Vec<u8> {
 
         let prk = Hmac {
