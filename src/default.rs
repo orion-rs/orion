@@ -229,7 +229,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, ValidationCryptoError> {
 
     if expected_dk.len() != 128 {
-        panic!(UnknownCryptoError);
+        return Err(ValidationCryptoError);
     }
 
     let salt: Vec<u8> = expected_dk[..64].to_vec();
@@ -346,5 +346,26 @@ mod test {
         let pbkdf2_dk = default::pbkdf2(&password).unwrap();
 
         assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap(), true);
+    }
+
+    #[test]
+    fn pbkdf2_verify_expected_dk_too_long() {
+
+        let password = util::gen_rand_key(64).unwrap();
+
+        let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        pbkdf2_dk.extend_from_slice(&[0u8;1]);
+
+        assert!(default::pbkdf2_verify(&pbkdf2_dk, &password).is_err());
+    }
+
+    #[test]
+    fn pbkdf2_verify_expected_dk_too_short() {
+
+        let password = util::gen_rand_key(64).unwrap();
+
+        let pbkdf2_dk = default::pbkdf2(&password).unwrap();
+
+        assert!(default::pbkdf2_verify(&pbkdf2_dk[..127], &password).is_err());
     }
 }
