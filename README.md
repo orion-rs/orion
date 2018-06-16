@@ -1,8 +1,8 @@
 ## orion ![Build Status](https://travis-ci.org/brycx/orion.svg?branch=master) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion)
 
-**Warning:** There are no guarantees for the security of these implementations. Use at your own risk.
+**Warning:** This library is not suitable for production code. There are no guarantees for the security of these implementations. Use at your own risk.
 
-Cryptographic functions implemented in Rust, with a simple API.
+Cryptographic primitives implemented in Rust, with a simple API.
 
 Currently contains:
 * HMAC with SHA2(256, 384, 512).
@@ -41,17 +41,23 @@ assert!(default::pbkdf2_verify(&dk, "Secret password".as_bytes()).unwrap());
 To build the most recent: ```cargo doc --no-deps``` or view [here](https://docs.rs/orion).
 
 ### Tests/Fuzzing
-Unit tests are located in the same file as what is being tested, apart from implementation verification tests - these are in `tests`. To run all tests: `cargo test`.
+Unit tests are located in the same file as what is being tested, apart from implementation verification tests - these are in `src/tests/`. To run all tests: `cargo test`.
 
-Fuzzing is done using [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz). Fuzzing targets are located in `fuzz/fuzz_targets`.
+Fuzzing is done using [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz). Fuzzing targets are located in `fuzz/fuzz_targets/`.
 
 ### Benchmarks
-The library can be benchmarked as below. All benchmarking tests are located in `benches`.
+The library can be benchmarked as below. All benchmarking tests are located in `benches/`.
 ```
 cargo +nightly bench
 ```
 ### Acknowledgments
 Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://github.com/brycx/orion/issues/3) of the code.
+
+### Alternatives
+- [*ring*](https://crates.io/crates/ring)
+- [RustCrypto HMAC](https://crates.io/crates/hmac)
+- [RustCrypto HKDF](https://crates.io/crates/hkdf)
+- [RustCrypto PBKDF2](https://crates.io/crates/pbkdf2)
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.
