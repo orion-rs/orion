@@ -30,7 +30,7 @@ use constant_time_eq::constant_time_eq;
 
 #[inline(never)]
 /// Return a random byte vector of a given length. This uses rand's
-/// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html), Length must be >= 1.
+/// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html). Length must be >= 1.
 pub fn gen_rand_key(len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 
     if len < 1 {
