@@ -147,6 +147,10 @@ impl Hkdf {
         for index in 1..n_iter+1 {
                 con_step.extend_from_slice(&self.info);
                 con_step.push(index as u8);
+                // Given that n_iter is rounded correctly, then the `index as u8`
+                // should not be able to overflow. If the maximum okmlen is selected,
+                // then n_iter will equal exactly `u8::max_value()`
+
                 // Calling extract as it yields the same result as an HMAC call
                 con_step = self.extract(prk, &con_step);
                 okm.extend_from_slice(&con_step);
