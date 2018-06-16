@@ -159,7 +159,7 @@ impl Hmac {
 
 /// HMAC used for PBKDF2.
 pub fn pbkdf2_hmac(mut ipad: Vec<u8>, mut opad: Vec<u8>, data: &[u8],
-        hmac: ShaVariantOption) -> Vec<u8> {
+                    hmac: ShaVariantOption) -> Vec<u8> {
 
     ipad.extend_from_slice(data);
     opad.extend_from_slice(&hmac.hash(&ipad));
@@ -174,7 +174,7 @@ pub fn pbkdf2_hmac(mut ipad: Vec<u8>, mut opad: Vec<u8>, data: &[u8],
 
 
 #[test]
-fn verify() {
+fn finalize_and_verify() {
 
     let own_hmac = Hmac {
         secret_key: "Jefe".as_bytes().to_vec(),

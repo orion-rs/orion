@@ -225,7 +225,7 @@ mod test {
         // Take 64 as this is the highest, since HMAC-SHA512
         let too_long = ((2_u64.pow(32) - 1) * 64 as u64) as usize + 1;
 
-        let pbkdf2_dk_256 = Pbkdf2 {
+        let dk = Pbkdf2 {
             password: "password".as_bytes().to_vec(),
             salt: "salt".as_bytes().to_vec(),
             iterations: 1,
@@ -233,13 +233,13 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        assert!(pbkdf2_dk_256.derive_key().is_err());
+        assert!(dk.derive_key().is_err());
     }
 
     #[test]
-    fn zero_iterations_panic() {
+    fn zero_iterations_err() {
 
-        let pbkdf2_dk_256 = Pbkdf2 {
+        let dk = Pbkdf2 {
             password: "password".as_bytes().to_vec(),
             salt: "salt".as_bytes().to_vec(),
             iterations: 0,
@@ -247,12 +247,12 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        assert!(pbkdf2_dk_256.derive_key().is_err());
+        assert!(dk.derive_key().is_err());
     }
 
     #[test]
-    fn zero_dklen_panic() {
-        let pbkdf2_dk_256 = Pbkdf2 {
+    fn zero_dklen_err() {
+        let dk = Pbkdf2 {
             password: "password".as_bytes().to_vec(),
             salt: "salt".as_bytes().to_vec(),
             iterations: 2,
@@ -260,13 +260,13 @@ mod test {
             hmac: ShaVariantOption::SHA256,
         };
 
-        assert!(pbkdf2_dk_256.derive_key().is_err());
+        assert!(dk.derive_key().is_err());
     }
 
     #[test]
     fn verify_true() {
 
-        let pbkdf2_dk_512 = Pbkdf2 {
+        let dk = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "sa\0lt".as_bytes().to_vec(),
             iterations: 4096,
@@ -274,17 +274,17 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let expected_pbkdf2_dk_512 = decode(
+        let expected_dk = decode(
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert_eq!(pbkdf2_dk_512.verify(&expected_pbkdf2_dk_512).unwrap(), true);
+        assert_eq!(dk.verify(&expected_dk).unwrap(), true);
     }
 
     #[test]
     fn verify_false() {
         // Salt value differs between this and the previous test case
-        let pbkdf2_dk_512 = Pbkdf2 {
+        let dk = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "".as_bytes().to_vec(),
             iterations: 4096,
@@ -292,17 +292,17 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let expected_pbkdf2_dk_512 = decode(
+        let expected_dk = decode(
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert!(pbkdf2_dk_512.verify(&expected_pbkdf2_dk_512).is_err());
+        assert!(dk.verify(&expected_dk).is_err());
     }
 
     #[test]
     fn verify_diff_dklen_panic() {
         // Different dklen than expected dk
-        let pbkdf2_dk_512 = Pbkdf2 {
+        let dk = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "".as_bytes().to_vec(),
             iterations: 4096,
@@ -310,10 +310,10 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let expected_pbkdf2_dk_512 = decode(
+        let expected_dk = decode(
             "9d9e9c4cd21fe4be24d5b8244c759665"
         ).unwrap();
 
-        assert!(pbkdf2_dk_512.verify(&expected_pbkdf2_dk_512).is_err());
+        assert!(dk.verify(&expected_dk).is_err());
     }
 }
