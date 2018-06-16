@@ -168,6 +168,10 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
 /// is the actual derived key. When using this function with `default::pbkdf2_verify`
 /// then the seperation of salt and password are automatically handeled.
 ///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The length of the password is less than 14 bytes.
+///
 /// # Usage example:
 ///
 /// ```
@@ -178,6 +182,10 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
 /// let derived_password = default::pbkdf2(password);
 /// ```
 pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+
+    if password.len() < 14 {
+        return Err(UnknownCryptoError);
+    }
 
     let salt: Vec<u8> = util::gen_rand_key(64).unwrap();
     // Prepend salt to password before deriving key
@@ -389,5 +397,13 @@ mod test {
         let pbkdf2_dk = default::pbkdf2(&password).unwrap();
 
         assert!(default::pbkdf2_verify(&pbkdf2_dk[..127], &password).is_err());
+    }
+
+    #[test]
+    fn pbkdf2_password_too_short() {
+
+        let password = util::gen_rand_key(13).unwrap();
+
+        assert!(default::pbkdf2(&password).is_err());
     }
 }
