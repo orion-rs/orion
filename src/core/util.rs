@@ -64,13 +64,12 @@ fn rand_key_len_ok() {
 }
 
 #[test]
-fn rand_key_error() {
+fn rand_key_len_error() {
 
     assert!(gen_rand_key(0).is_err());
 
     let err = gen_rand_key(0).unwrap_err();
     assert_eq!(err, errors::UnknownCryptoError);
-
 }
 
 #[test]
@@ -83,23 +82,28 @@ fn test_ct_eq_ok() {
 }
 
 #[test]
-fn test_ct_eq_wrong_len() {
+fn test_ct_eq_diff_len() {
 
     let buf_1 = vec![0x06; 10];
     let buf_2 = vec![0x06; 5];
 
     assert!(compare_ct(&buf_1, &buf_2).is_err());
     assert!(compare_ct(&buf_2, &buf_1).is_err());
-
 }
 
 #[test]
-fn test_ct_eq_err() {
+fn test_ct_ne() {
 
     let buf_1 = vec![0x06; 10];
     let buf_2 = vec![0x76; 10];
 
     assert!(compare_ct(&buf_1, &buf_2).is_err());
     assert!(compare_ct(&buf_2, &buf_1).is_err());
+}
 
+#[test]
+fn test_ct_ne_reg() {
+
+    assert!(compare_ct(&[0], &[0, 1]).is_err());
+    assert!(compare_ct(&[0, 1], &[0]).is_err());
 }

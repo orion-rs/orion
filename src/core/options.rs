@@ -99,7 +99,6 @@ mod test {
     #[test]
     fn shavs_384() {
 
-
         let msg = decode("15247149").unwrap();
         let expected_md = decode("f1f2164a41471741d30ef3408be496e3f7903b2c005b57e9\
                                 d707cee8ab50777d4ddfc9348ad2aba7cca92fca3b7108e6").unwrap();
