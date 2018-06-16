@@ -25,7 +25,10 @@ fn fuzz_default(data: &[u8]) -> () {
             &rand_salt, data)
             .unwrap();
 
-        default::pbkdf2_verify(&default::pbkdf2(data).unwrap(), data).unwrap();
+        let mut password = data.to_vec();
+        password.extend_from_slice(&[0u8; 14]);
+
+        default::pbkdf2_verify(&default::pbkdf2(&password).unwrap(), &password).unwrap();
     }
 }
 
