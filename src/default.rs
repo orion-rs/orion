@@ -327,6 +327,19 @@ mod test {
     }
 
     #[test]
+    fn hkdf_verify_err() {
+
+        let salt = util::gen_rand_key(64).unwrap();
+        let data = "Some data.".as_bytes();
+        let info = "Some info.".as_bytes();
+
+        let mut hkdf_dk = default::hkdf(&salt, data, info, 64).unwrap();
+        hkdf_dk.extend_from_slice(&[0u8; 4]);
+
+        assert!(default::hkdf_verify(&hkdf_dk, &salt, data, info, 64).is_err());
+    }
+
+    #[test]
     fn hkdf_salt_too_short() {
         assert!(default::hkdf(&vec![0x61; 10], &vec![0x61; 10], &vec![0x61; 10], 20).is_err());
     }
