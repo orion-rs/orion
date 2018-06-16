@@ -46,7 +46,7 @@ impl ShaVariantOption {
         }
     }
 
-    /// Return blocksize matching SHA variant.
+    /// Return blocksize in bytes, matching SHA variant.
     pub fn blocksize(&self) -> usize {
         match *self {
             ShaVariantOption::SHA256 => 64,
