@@ -34,7 +34,7 @@ use core::options::ShaVariantOption;
 /// HMAC with SHA512.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the secret key is less than 64 bytes
+/// - The length of the secret key is less than 64 bytes.
 ///
 /// ## Note:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
@@ -65,7 +65,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoErro
     Ok(mac.finalize())
 }
 
-/// Verify an HMAC against a key and data in constant time and with Double-HMAC Verification.
+/// Verify an HMAC against a key and data in constant time, with Double-HMAC Verification.
 /// # Usage example:
 ///
 /// ```
@@ -96,7 +96,7 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
 /// HKDF-HMAC-SHA512.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the salt is less than 16 bytes
+/// - The length of the salt is less than 16 bytes.
 ///
 /// ## Note:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
@@ -157,17 +157,16 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
 
 /// PBKDF2-HMAC-SHA512.
 /// # About:
-/// This is meant to be used for password storage, A salt of 64 bytes is automatically
-/// generated. The derived key length is set to 64. 512.000 iterations are used. The salt is
-/// prepended to the password before being passed to the PBKDF@ function.
-/// A byte vector of 128 bytes is returned.
-/// The first 64 bytes of this vector is the salt used to derive the key and the last 64 bytes
-/// are the actual key. When using this function with `pbkdf2_verify` then the seperation of salt
-/// and password are automatically handeled.
+/// This is meant to be used for password storage.
+/// - A salt of 64 bytes is automatically generated.
+/// - The derived key length is set to 64.
+/// - 512.000 iterations are used.
+/// - The salt is prepended to the password before being passed to the PBKDF2 function.
+/// - A byte vector of 128 bytes is returned.
 ///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The specified length for the derived key is less than 14 bytes
+/// The first 64 bytes of this vector is the salt used to derive the key and the last 64 bytes
+/// is the actual derived key. When using this function with `default::pbkdf2_verify`
+/// then the seperation of salt and password are automatically handeled.
 ///
 /// # Usage example:
 ///
@@ -189,7 +188,6 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     let mut dk = Vec::new();
     dk.extend_from_slice(&salt);
 
-
     let pbkdf2_dk = Pbkdf2 {
         password: pass_ext,
         salt,
@@ -201,7 +199,6 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     // Output format: First 64 bytes are the salt, last 64 bytes are the derived key
     dk.extend_from_slice(&pbkdf2_dk.derive_key().unwrap());
 
-
     if dk.len() != 128 {
         return Err(UnknownCryptoError);
     }
@@ -212,10 +209,12 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 /// Verify PBKDF2-HMAC-SHA512 derived key, using 512.000 as iteration count, in constant time. Both derived
 /// keys must be of equal length.
 /// # About:
-/// This function is meant to be used with the `pbkdf2` function in orion's default API.
+/// This function is meant to be used with the `default::pbkdf2` function in orion's default API. It can be
+/// used without it, but then the expected_dk passed to the function must be constructed just as in
+/// `default::pbkdf2`. See documention on `default::pbkdf2` for details on this.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The expected dervied key length is not 128 bytes
+/// - The expected derived key length is not 128 bytes.
 /// # Usage example:
 ///
 /// ```
