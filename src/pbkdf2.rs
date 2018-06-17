@@ -20,15 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-
-
-
-use clear_on_drop::clear::Clear;
-use hmac::*;
-use core::options::ShaVariantOption;
 use byte_tools::write_u32_be;
-use core::{util, errors::*};
+use clear_on_drop::clear::Clear;
+use core::options::ShaVariantOption;
+use core::{errors::*, util};
+use hmac::*;
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
@@ -102,29 +98,25 @@ impl Drop for Pbkdf2 {
 /// assert_eq!(dk.verify(&derived_key).unwrap(), true);
 /// ```
 
-
 impl Pbkdf2 {
-
     /// Return the maximum derived key dklen ((2^32 - 1) * hLen).
     fn max_dklen(&self) -> usize {
         match self.hmac.output_size() {
             32 => 137_438_953_440,
             48 => 206_158_430_160,
             64 => 274_877_906_880,
-            _ => panic!(UnknownCryptoError)
+            _ => panic!(UnknownCryptoError),
         }
     }
 
     /// Returns a PRK using HMAC as the PRF. The parameters `ipad` and `opad` are constructed
     /// in the `derive_key`. They are used to speed up HMAC calls.
     fn prf(&self, ipad: &[u8], opad: &[u8], data: &[u8]) -> Vec<u8> {
-
         pbkdf2_hmac(ipad.to_vec(), opad.to_vec(), data, self.hmac)
     }
 
     /// Function F as described in the RFC.
     fn function_f(&self, index: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
-
         let mut salt_extended = self.salt.clone();
         let mut index_buffer = [0u8; 4];
         write_u32_be(&mut index_buffer, index);
@@ -162,7 +154,6 @@ impl Pbkdf2 {
 
     /// Main PBKDF2 function. Returns a derived key.
     pub fn derive_key(&self) -> Result<Vec<u8>, UnknownCryptoError> {
-
         if self.iterations < 1 {
             return Err(UnknownCryptoError);
         }
@@ -175,14 +166,16 @@ impl Pbkdf2 {
 
         let hlen_blocks: usize = 1 + ((self.dklen - 1) / self.hmac.output_size());
 
-
-        let pad_const = Hmac {secret_key: Vec::new(), data: Vec::new(), sha2: self.hmac};
+        let pad_const = Hmac {
+            secret_key: Vec::new(),
+            data: Vec::new(),
+            sha2: self.hmac,
+        };
         let (mut ipad, mut opad) = pad_const.pad_key(&self.password);
 
         let mut derived_key: Vec<u8> = Vec::new();
 
-        for index in 1..hlen_blocks+1 {
-
+        for index in 1..hlen_blocks + 1 {
             derived_key.extend_from_slice(&self.function_f(index as u32, &ipad, &opad));
             // Given that hlen_blocks is rounded correctly, then the `index as u32`
             // should not be able to overflow. If the maximum dklen is selected,
@@ -201,24 +194,23 @@ impl Pbkdf2 {
     /// passed to the function. Comparison is done in constant time. Both derived keys must be
     /// of equal length.
     pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, ValidationCryptoError> {
-
         let own_dk = self.derive_key().unwrap();
 
         if util::compare_ct(&own_dk, expected_dk).is_err() {
             Err(ValidationCryptoError)
-        } else { Ok(true) }
+        } else {
+            Ok(true)
+        }
     }
 }
-
-
 
 #[cfg(test)]
 mod test {
 
     extern crate hex;
     use self::hex::decode;
-    use pbkdf2::Pbkdf2;
     use core::options::ShaVariantOption;
+    use pbkdf2::Pbkdf2;
 
     #[test]
     fn dklen_too_high() {
@@ -238,7 +230,6 @@ mod test {
 
     #[test]
     fn zero_iterations_err() {
-
         let dk = Pbkdf2 {
             password: "password".as_bytes().to_vec(),
             salt: "salt".as_bytes().to_vec(),
@@ -265,7 +256,6 @@ mod test {
 
     #[test]
     fn verify_true() {
-
         let dk = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "sa\0lt".as_bytes().to_vec(),
@@ -274,9 +264,7 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let expected_dk = decode(
-            "9d9e9c4cd21fe4be24d5b8244c759665"
-        ).unwrap();
+        let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
         assert_eq!(dk.verify(&expected_dk).unwrap(), true);
     }
@@ -292,9 +280,7 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let expected_dk = decode(
-            "9d9e9c4cd21fe4be24d5b8244c759665"
-        ).unwrap();
+        let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
         assert!(dk.verify(&expected_dk).is_err());
     }
@@ -310,9 +296,7 @@ mod test {
             hmac: ShaVariantOption::SHA512,
         };
 
-        let expected_dk = decode(
-            "9d9e9c4cd21fe4be24d5b8244c759665"
-        ).unwrap();
+        let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
         assert!(dk.verify(&expected_dk).is_err());
     }

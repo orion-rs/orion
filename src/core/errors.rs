@@ -20,15 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-
-
+use rand;
 use std::error::Error;
 use std::fmt;
-use rand;
 /// Opaque error.
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct UnknownCryptoError;
 
 impl fmt::Display for UnknownCryptoError {
@@ -54,10 +50,8 @@ impl From<rand::Error> for UnknownCryptoError {
     }
 }
 
-
 /// Error for a failed verification.
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ValidationCryptoError;
 
 impl fmt::Display for ValidationCryptoError {

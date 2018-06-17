@@ -20,16 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-
-
-
-use hmac::Hmac;
-use hkdf::Hkdf;
-use pbkdf2::Pbkdf2;
-use core::{errors::*, util};
 use core::options::ShaVariantOption;
-
+use core::{errors::*, util};
+use hkdf::Hkdf;
+use hmac::Hmac;
+use pbkdf2::Pbkdf2;
 
 /// HMAC-SHA512.
 /// # Exceptions:
@@ -51,7 +46,6 @@ use core::options::ShaVariantOption;
 /// let hmac = default::hmac(&key, msg).unwrap();
 /// ```
 pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-
     if secret_key.len() < 64 {
         return Err(UnknownCryptoError);
     }
@@ -59,7 +53,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoErro
     let mac = Hmac {
         secret_key: secret_key.to_vec(),
         data: data.to_vec(),
-        sha2: ShaVariantOption::SHA512
+        sha2: ShaVariantOption::SHA512,
     };
 
     Ok(mac.finalize())
@@ -78,9 +72,11 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoErro
 /// let expected_hmac = default::hmac(&key, msg).unwrap();
 /// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
 /// ```
-pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
-                    Result<bool, ValidationCryptoError> {
-
+pub fn hmac_verify(
+    expected_hmac: &[u8],
+    secret_key: &[u8],
+    data: &[u8],
+) -> Result<bool, ValidationCryptoError> {
     let rand_key = util::gen_rand_key(64).unwrap();
 
     let own_hmac = hmac(&secret_key, &data).unwrap();
@@ -90,7 +86,9 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
 
     if util::compare_ct(&nd_round_own, &nd_round_expected).is_err() {
         Err(ValidationCryptoError)
-    } else { Ok(true) }
+    } else {
+        Ok(true)
+    }
 }
 
 /// HKDF-HMAC-SHA512.
@@ -113,8 +111,12 @@ pub fn hmac_verify(expected_hmac: &[u8], secret_key: &[u8], data: &[u8]) ->
 ///
 /// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// ```
-pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8], len: usize) -> Result<Vec<u8>, UnknownCryptoError> {
-
+pub fn hkdf(
+    salt: &[u8],
+    input: &[u8],
+    info: &[u8],
+    len: usize,
+) -> Result<Vec<u8>, UnknownCryptoError> {
     if salt.len() < 16 {
         return Err(UnknownCryptoError);
     }
@@ -145,14 +147,20 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8], len: usize) -> Result<Vec<u8
 /// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
 /// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
 /// ```
-pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
-    len: usize) -> Result<bool, ValidationCryptoError> {
-
+pub fn hkdf_verify(
+    expected_dk: &[u8],
+    salt: &[u8],
+    input: &[u8],
+    info: &[u8],
+    len: usize,
+) -> Result<bool, ValidationCryptoError> {
     let own_hkdf = hkdf(salt, input, info, len).unwrap();
 
     if util::compare_ct(&own_hkdf, expected_dk).is_err() {
         Err(ValidationCryptoError)
-    } else { Ok(true) }
+    } else {
+        Ok(true)
+    }
 }
 
 /// PBKDF2-HMAC-SHA512 suitable for password storage.
@@ -182,7 +190,6 @@ pub fn hkdf_verify(expected_dk: &[u8], salt: &[u8], input: &[u8], info: &[u8],
 /// let derived_password = default::pbkdf2(password);
 /// ```
 pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-
     if password.len() < 14 {
         return Err(UnknownCryptoError);
     }
@@ -201,7 +208,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
         salt,
         iterations: 512_000,
         dklen: 64,
-        hmac: ShaVariantOption::SHA512
+        hmac: ShaVariantOption::SHA512,
     };
 
     // Output format: First 64 bytes are the salt, last 64 bytes are the derived key
@@ -233,7 +240,6 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 /// assert_eq!(default::pbkdf2_verify(&derived_password, password).unwrap(), true);
 /// ```
 pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, ValidationCryptoError> {
-
     if expected_dk.len() != 128 {
         return Err(ValidationCryptoError);
     }
@@ -252,14 +258,16 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
         salt,
         iterations: 512_000,
         dklen: 64,
-        hmac: ShaVariantOption::SHA512
+        hmac: ShaVariantOption::SHA512,
     };
 
     dk.extend_from_slice(&pbkdf2_dk.derive_key().unwrap());
 
     if util::compare_ct(&dk, expected_dk).is_err() {
         Err(ValidationCryptoError)
-    } else { Ok(true) }
+    } else {
+        Ok(true)
+    }
 }
 
 #[cfg(test)]
@@ -267,8 +275,8 @@ mod test {
 
     extern crate hex;
     use self::hex::decode;
-    use default;
     use core::util;
+    use default;
 
     #[test]
     fn hmac_secret_key_too_short() {
@@ -283,59 +291,70 @@ mod test {
 
     #[test]
     fn hmac_finalize() {
-
-        let sec_key = decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaa").unwrap();
-        let msg = decode("54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
-              65204b6579202d2048617368204b6579204669727374").unwrap();
+        let sec_key = decode(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaa",
+        ).unwrap();
+        let msg = decode(
+            "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
+             65204b6579202d2048617368204b6579204669727374",
+        ).unwrap();
 
         let expected_hmac_512 = decode(
             "80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f352\
-            6b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598").unwrap();
+             6b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598",
+        ).unwrap();
 
         assert_eq!(default::hmac(&sec_key, &msg).unwrap(), expected_hmac_512);
     }
 
     #[test]
     fn hmac_verify() {
-
-        let sec_key_correct = decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaa").unwrap();
-              // Change compared to the above: Two additional a's at the end
-        let sec_key_false = decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-              aaaaaaaa").unwrap();
+        let sec_key_correct = decode(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaa",
+        ).unwrap();
+        // Change compared to the above: Two additional a's at the end
+        let sec_key_false = decode(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+             aaaaaaaa",
+        ).unwrap();
         let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
         let hmac_bob = default::hmac(&sec_key_correct, &msg).unwrap();
 
-        assert_eq!(default::hmac_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(), true);
+        assert_eq!(
+            default::hmac_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
+            true
+        );
         assert!(default::hmac_verify(&hmac_bob, &sec_key_false, &msg).is_err());
     }
 
     #[test]
     fn hkdf_verify() {
-
         let salt = util::gen_rand_key(64).unwrap();
         let data = "Some data.".as_bytes();
         let info = "Some info.".as_bytes();
 
         let hkdf_dk = default::hkdf(&salt, data, info, 64).unwrap();
 
-        assert_eq!(default::hkdf_verify(&hkdf_dk, &salt, data, info, 64).unwrap(), true);
+        assert_eq!(
+            default::hkdf_verify(&hkdf_dk, &salt, data, info, 64).unwrap(),
+            true
+        );
     }
 
     #[test]
     fn hkdf_verify_err() {
-
         let salt = util::gen_rand_key(64).unwrap();
         let data = "Some data.".as_bytes();
         let info = "Some info.".as_bytes();
@@ -359,7 +378,6 @@ mod test {
 
     #[test]
     fn pbkdf2_verify() {
-
         let password = util::gen_rand_key(64).unwrap();
 
         let pbkdf2_dk = default::pbkdf2(&password).unwrap();
@@ -369,7 +387,6 @@ mod test {
 
     #[test]
     fn pbkdf2_verify_err() {
-
         let password = util::gen_rand_key(64).unwrap();
 
         let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
@@ -380,18 +397,16 @@ mod test {
 
     #[test]
     fn pbkdf2_verify_expected_dk_too_long() {
-
         let password = util::gen_rand_key(64).unwrap();
 
         let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
-        pbkdf2_dk.extend_from_slice(&[0u8;1]);
+        pbkdf2_dk.extend_from_slice(&[0u8; 1]);
 
         assert!(default::pbkdf2_verify(&pbkdf2_dk, &password).is_err());
     }
 
     #[test]
     fn pbkdf2_verify_expected_dk_too_short() {
-
         let password = util::gen_rand_key(64).unwrap();
 
         let pbkdf2_dk = default::pbkdf2(&password).unwrap();
@@ -401,7 +416,6 @@ mod test {
 
     #[test]
     fn pbkdf2_password_too_short() {
-
         let password = util::gen_rand_key(13).unwrap();
 
         assert!(default::pbkdf2(&password).is_err());

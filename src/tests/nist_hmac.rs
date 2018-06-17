@@ -13,19 +13,24 @@
 // OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 // CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-
-
-
 // Testing against NIST CAVP HMACVS test vectors
 extern crate ring;
-use self::ring::{test, error};
+use self::ring::{error, test};
 use core::options::ShaVariantOption;
 use hmac::Hmac;
 
-fn hmac_test_runner(option: ShaVariantOption, key: &[u8], input: &[u8], output: &[u8], is_ok: bool)
-                    -> Result<(), error::Unspecified> {
-
-    let hmac = Hmac { secret_key: key.to_vec(), data: input.to_vec(), sha2: option };
+fn hmac_test_runner(
+    option: ShaVariantOption,
+    key: &[u8],
+    input: &[u8],
+    output: &[u8],
+    is_ok: bool,
+) -> Result<(), error::Unspecified> {
+    let hmac = Hmac {
+        secret_key: key.to_vec(),
+        data: input.to_vec(),
+        sha2: option,
+    };
 
     let digest = hmac.finalize();
 
@@ -35,14 +40,13 @@ fn hmac_test_runner(option: ShaVariantOption, key: &[u8], input: &[u8], output: 
     match is_ok {
         true => {
             assert_eq!(is_ok, hmac.verify(output).unwrap());
-        },
+        }
         false => {
             assert!(hmac.verify(output).is_err());
         }
     }
 
     Ok(())
-
 }
 
 #[test]
@@ -53,7 +57,6 @@ fn hmac_tests() {
         let key_value = test_case.consume_bytes("Key");
         let mut input = test_case.consume_bytes("Input");
         let output = test_case.consume_bytes("Output");
-
 
         let alg = match digest_alg.as_ref() {
             "SHA256" => ShaVariantOption::SHA256,

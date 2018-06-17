@@ -20,20 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#![forbid(dead_code, warnings, unsafe_code, unused_imports)]
 
-
-#![forbid(
-    dead_code,
-    warnings,
-    unsafe_code,
-    unused_imports
-)]
-
+extern crate byte_tools;
+extern crate clear_on_drop;
+extern crate constant_time_eq;
 extern crate rand;
 extern crate sha2;
-extern crate clear_on_drop;
-extern crate byte_tools;
-extern crate constant_time_eq;
 
 /// Core functionality such as opaque error and utility functions.
 pub mod core;

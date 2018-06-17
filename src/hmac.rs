@@ -20,15 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-
-
-
-use std::borrow::Cow;
 use clear_on_drop::clear::Clear;
-use core::{util, errors::*};
 use core::options::ShaVariantOption;
-
+use core::{errors::*, util};
+use std::borrow::Cow;
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
@@ -89,7 +84,6 @@ impl Drop for Hmac {
 /// ```
 
 impl Hmac {
-
     /// Pad the key and return inner and outer padding.
     pub fn pad_key(&self, secret_key: &[u8]) -> (Vec<u8>, Vec<u8>) {
         // Borrow so that if the key is exactly the needed length
@@ -107,7 +101,9 @@ impl Hmac {
 
         let make_padded_key = |byte: u8| {
             let mut pad = key.to_vec();
-            for i in &mut pad { *i ^= byte };
+            for i in &mut pad {
+                *i ^= byte
+            }
             pad
         };
 
@@ -117,7 +113,6 @@ impl Hmac {
 
     /// Returns an HMAC for a given key and data.
     pub fn finalize(&self) -> Vec<u8> {
-
         let (mut ipad, mut opad) = self.pad_key(&self.secret_key);
 
         ipad.extend_from_slice(&self.data);
@@ -134,7 +129,6 @@ impl Hmac {
     /// Check HMAC validity by computing one from the current struct fields and comparing this
     /// to the passed HMAC. Comparison is done in constant time and with Double-HMAC Verification.
     pub fn verify(&self, expected_hmac: &[u8]) -> Result<bool, ValidationCryptoError> {
-
         let own_hmac = self.finalize();
 
         let rand_key = util::gen_rand_key(self.sha2.blocksize()).unwrap();
@@ -142,25 +136,30 @@ impl Hmac {
         let nd_round_own = Hmac {
             secret_key: rand_key.clone(),
             data: own_hmac,
-            sha2: self.sha2
+            sha2: self.sha2,
         };
 
         let nd_round_received = Hmac {
             secret_key: rand_key,
             data: expected_hmac.to_vec(),
-            sha2: self.sha2
+            sha2: self.sha2,
         };
 
         if util::compare_ct(&nd_round_own.finalize(), &nd_round_received.finalize()).is_err() {
             Err(ValidationCryptoError)
-        } else { Ok(true) }
+        } else {
+            Ok(true)
+        }
     }
 }
 
 /// HMAC used for PBKDF2.
-pub fn pbkdf2_hmac(mut ipad: Vec<u8>, mut opad: Vec<u8>, data: &[u8],
-                    hmac: ShaVariantOption) -> Vec<u8> {
-
+pub fn pbkdf2_hmac(
+    mut ipad: Vec<u8>,
+    mut opad: Vec<u8>,
+    data: &[u8],
+    hmac: ShaVariantOption,
+) -> Vec<u8> {
     ipad.extend_from_slice(data);
     opad.extend_from_slice(&hmac.hash(&ipad));
 
@@ -172,24 +171,22 @@ pub fn pbkdf2_hmac(mut ipad: Vec<u8>, mut opad: Vec<u8>, data: &[u8],
     mac
 }
 
-
 #[test]
 fn finalize_and_verify() {
-
     let own_hmac = Hmac {
         secret_key: "Jefe".as_bytes().to_vec(),
         data: "what do ya want for nothing?".as_bytes().to_vec(),
-        sha2: ShaVariantOption::SHA256
+        sha2: ShaVariantOption::SHA256,
     };
     let recieved_hmac = Hmac {
         secret_key: "Jefe".as_bytes().to_vec(),
         data: "what do ya want for nothing?".as_bytes().to_vec(),
-        sha2: ShaVariantOption::SHA256
+        sha2: ShaVariantOption::SHA256,
     };
     let false_hmac = Hmac {
         secret_key: "Jefe".as_bytes().to_vec(),
         data: "what do ya want for something?".as_bytes().to_vec(),
-        sha2: ShaVariantOption::SHA256
+        sha2: ShaVariantOption::SHA256,
     };
 
     assert_eq!(own_hmac.verify(&recieved_hmac.finalize()).unwrap(), true);

@@ -20,19 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-
-
-
-use rand::{OsRng, RngCore};
-use core::errors;
 use constant_time_eq::constant_time_eq;
+use core::errors;
+use rand::{OsRng, RngCore};
 
 #[inline(never)]
 /// Return a random byte vector of a given length. This uses rand's
 /// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html). Length must be >= 1.
 pub fn gen_rand_key(len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
-
     if len < 1 {
         return Err(errors::UnknownCryptoError);
     }
@@ -47,25 +42,24 @@ pub fn gen_rand_key(len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
 /// Compare two equal length slices in constant time, using the
 /// [constant_time_eq](https://crates.io/crates/constant_time_eq) crate.
 pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
-
     if a.len() != b.len() {
-        return Err(errors::UnknownCryptoError)
+        return Err(errors::UnknownCryptoError);
     }
 
     if constant_time_eq(a, b) {
         Ok(true)
-    } else { Err(errors::UnknownCryptoError) }
+    } else {
+        Err(errors::UnknownCryptoError)
+    }
 }
 
 #[test]
 fn rand_key_len_ok() {
-
     gen_rand_key(64).unwrap();
 }
 
 #[test]
 fn rand_key_len_error() {
-
     assert!(gen_rand_key(0).is_err());
 
     let err = gen_rand_key(0).unwrap_err();
@@ -83,7 +77,6 @@ fn test_ct_eq_ok() {
 
 #[test]
 fn test_ct_eq_diff_len() {
-
     let buf_1 = vec![0x06; 10];
     let buf_2 = vec![0x06; 5];
 
@@ -93,7 +86,6 @@ fn test_ct_eq_diff_len() {
 
 #[test]
 fn test_ct_ne() {
-
     let buf_1 = vec![0x06; 10];
     let buf_2 = vec![0x76; 10];
 
@@ -103,7 +95,6 @@ fn test_ct_ne() {
 
 #[test]
 fn test_ct_ne_reg() {
-
     assert!(compare_ct(&[0], &[0, 1]).is_err());
     assert!(compare_ct(&[0, 1], &[0]).is_err());
 }
