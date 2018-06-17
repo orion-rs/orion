@@ -37,7 +37,7 @@ pub mod hmac;
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod hkdf;
 
-/// Higher-level API with safer defaults.
+/// Higher-level API with safer defaults. Offers API's for HMAC, HKDF and PBKDF2.
 pub mod default;
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
