@@ -47,7 +47,8 @@ impl Drop for Hmac {
 ///
 /// ## Note:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this.
+/// in `util` can be used for this. The recommended length for a salt is the output length of the
+/// hash function. So if using SHA512 then a salt of 64 bytes is recommended.
 /// # Usage examples:
 /// ### Generating HMAC:
 /// ```
@@ -55,12 +56,12 @@ impl Drop for Hmac {
 /// use orion::core::util::gen_rand_key;
 /// use orion::core::options::ShaVariantOption;
 ///
-/// let key = gen_rand_key(16).unwrap();
-/// let message = gen_rand_key(16).unwrap();
+/// let key = gen_rand_key(32).unwrap();
+/// let message = gen_rand_key(32).unwrap();
 ///
-/// let hmac_sha256 = Hmac { secret_key: key, data: message, sha2: ShaVariantOption::SHA256 };
+/// let hmac = Hmac { secret_key: key, data: message, sha2: ShaVariantOption::SHA256 };
 ///
-/// hmac_sha256.finalize();
+/// hmac.finalize();
 /// ```
 /// ### Verifying HMAC:
 /// ```
@@ -70,7 +71,7 @@ impl Drop for Hmac {
 /// let key = "Some key.";
 /// let msg = "Some message.";
 ///
-/// let hmac_sha256 = Hmac {
+/// let hmac = Hmac {
 ///     secret_key: key.as_bytes().to_vec(),
 ///     data: msg.as_bytes().to_vec(),
 ///     sha2: ShaVariantOption::SHA256
@@ -80,7 +81,7 @@ impl Drop for Hmac {
 ///     data: msg.as_bytes().to_vec(),
 ///     sha2: ShaVariantOption::SHA256
 /// };
-/// assert_eq!(hmac_sha256.verify(&received_hmac.finalize()).unwrap(), true);
+/// assert_eq!(hmac.verify(&received_hmac.finalize()).unwrap(), true);
 /// ```
 
 impl Hmac {

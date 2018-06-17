@@ -55,7 +55,8 @@ impl Drop for Hkdf {
 ///
 /// ## Note:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this.
+/// in `util` can be used for this. The recommended length for a salt is the output length of the
+/// hash function. So if using SHA512 then a salt of 64 bytes is recommended.
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```
@@ -63,9 +64,9 @@ impl Drop for Hkdf {
 /// use orion::core::util::gen_rand_key;
 /// use orion::core::options::ShaVariantOption;
 ///
-/// let key = gen_rand_key(16).unwrap();
-/// let salt = gen_rand_key(16).unwrap();
-/// let info = gen_rand_key(16).unwrap();
+/// let key = gen_rand_key(32).unwrap();
+/// let salt = gen_rand_key(32).unwrap();
+/// let info = gen_rand_key(32).unwrap();
 ///
 /// let dk = Hkdf {
 ///     salt: salt,
@@ -83,9 +84,9 @@ impl Drop for Hkdf {
 /// use orion::core::util::gen_rand_key;
 /// use orion::core::options::ShaVariantOption;
 ///
-/// let key = gen_rand_key(16).unwrap();
-/// let salt = gen_rand_key(16).unwrap();
-/// let info = gen_rand_key(16).unwrap();
+/// let key = gen_rand_key(32).unwrap();
+/// let salt = gen_rand_key(32).unwrap();
+/// let info = gen_rand_key(32).unwrap();
 ///
 /// let dk = Hkdf {
 ///     salt: salt,
