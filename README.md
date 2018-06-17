@@ -32,13 +32,17 @@ assert!(default::hkdf_verify(&dk, &salt, data, info, 64).unwrap());
 // PBKDF2-HMAC-SHA512
 let password = "Secret password".as_bytes();
 
-let dk = default::pbkdf2("Secret password".as_bytes()).unwrap();
-assert!(default::pbkdf2_verify(&dk, "Secret password".as_bytes()).unwrap());
+let dk = default::pbkdf2(password).unwrap();
+assert!(default::pbkdf2_verify(&dk, password).unwrap());
 ```
 
 
 ### Documentation
-To build the most recent: ```cargo doc --no-deps``` or view [here](https://docs.rs/orion).
+Can be viewed [here](https://docs.rs/orion) or built with:
+
+```
+cargo doc --no-deps
+```
 
 ### Tests/Fuzzing
 Unit tests are located in the same file as what is being tested, apart from implementation verification tests - these are in `src/tests/`. To run all tests:
