@@ -22,9 +22,9 @@
 
 use core::options::ShaVariantOption;
 use core::{errors::*, util};
-use hkdf::Hkdf;
-use hmac::Hmac;
-use pbkdf2::Pbkdf2;
+use hazardous::hkdf::Hkdf;
+use hazardous::hmac::Hmac;
+use hazardous::pbkdf2::Pbkdf2;
 
 /// HMAC-SHA512.
 /// # Exceptions:
@@ -100,7 +100,8 @@ pub fn hmac_verify(
 /// ## Note:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
 /// in `util` can be used for this. The recommended length for a salt is the output length of the
-/// hash function. So if using SHA512 then a salt of 64 bytes is recommended.
+/// hash function. So if using SHA512 then a salt of 64 bytes is recommended. HKDF is not suitable
+/// for password storage.
 /// # Usage example:
 ///
 /// ```

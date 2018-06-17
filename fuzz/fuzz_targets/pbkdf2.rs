@@ -3,7 +3,7 @@
 extern crate orion;
 extern crate rand;
 
-use orion::pbkdf2::Pbkdf2;
+use orion::hazardous::pbkdf2::Pbkdf2;
 use orion::core::options::ShaVariantOption;
 use rand::prelude::*;
 

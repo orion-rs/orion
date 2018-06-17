@@ -52,7 +52,7 @@ impl Drop for Hmac {
 /// # Usage examples:
 /// ### Generating HMAC:
 /// ```
-/// use orion::hmac::Hmac;
+/// use orion::hazardous::hmac::Hmac;
 /// use orion::core::util::gen_rand_key;
 /// use orion::core::options::ShaVariantOption;
 ///
@@ -65,7 +65,7 @@ impl Drop for Hmac {
 /// ```
 /// ### Verifying HMAC:
 /// ```
-/// use orion::hmac::Hmac;
+/// use orion::hazardous::hmac::Hmac;
 /// use orion::core::options::ShaVariantOption;
 ///
 /// let key = "Some key.";

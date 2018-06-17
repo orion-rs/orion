@@ -24,7 +24,7 @@ use byte_tools::write_u32_be;
 use clear_on_drop::clear::Clear;
 use core::options::ShaVariantOption;
 use core::{errors::*, util};
-use hmac::*;
+use hazardous::hmac::*;
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
@@ -62,7 +62,7 @@ impl Drop for Pbkdf2 {
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```
-/// use orion::pbkdf2::Pbkdf2;
+/// use orion::hazardous::pbkdf2::Pbkdf2;
 /// use orion::core::util::gen_rand_key;
 /// use orion::core::options::ShaVariantOption;
 ///
@@ -81,7 +81,7 @@ impl Drop for Pbkdf2 {
 /// ```
 /// ### Verifying derived key:
 /// ```
-/// use orion::pbkdf2::Pbkdf2;
+/// use orion::hazardous::pbkdf2::Pbkdf2;
 /// use orion::core::util::gen_rand_key;
 /// use orion::core::options::ShaVariantOption;
 ///
@@ -212,7 +212,7 @@ mod test {
     extern crate hex;
     use self::hex::decode;
     use core::options::ShaVariantOption;
-    use pbkdf2::Pbkdf2;
+    use hazardous::pbkdf2::Pbkdf2;
 
     #[test]
     fn dklen_too_high() {

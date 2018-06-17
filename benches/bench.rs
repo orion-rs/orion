@@ -3,9 +3,9 @@ extern crate orion;
 extern crate test;
 
 use orion::core::options::ShaVariantOption;
-use orion::hkdf::Hkdf;
-use orion::hmac::Hmac;
-use orion::pbkdf2::Pbkdf2;
+use orion::hazardous::hkdf::Hkdf;
+use orion::hazardous::hmac::Hmac;
+use orion::hazardous::pbkdf2::Pbkdf2;
 use test::Bencher;
 
 #[bench]

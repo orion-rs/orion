@@ -17,7 +17,7 @@
 extern crate ring;
 use self::ring::{error, test};
 use core::options::ShaVariantOption;
-use hmac::Hmac;
+use hazardous::hmac::Hmac;
 
 fn hmac_test_runner(
     option: ShaVariantOption,

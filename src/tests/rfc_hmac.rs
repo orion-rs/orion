@@ -27,7 +27,7 @@ mod rfc4231 {
     extern crate hex;
     use self::hex::decode;
     use core::options::ShaVariantOption;
-    use hmac::*;
+    use hazardous::hmac::*;
 
     fn hmac_test_runner(
         hmac: Hmac,

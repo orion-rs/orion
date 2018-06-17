@@ -20,23 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#![forbid(dead_code, warnings, unsafe_code, unused_imports)]
+/// HMAC (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
+pub mod hmac;
 
-extern crate byte_tools;
-extern crate clear_on_drop;
-extern crate constant_time_eq;
-extern crate rand;
-extern crate sha2;
+/// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
+pub mod hkdf;
 
-/// Core functionality such as generating a salt/key/IV/nonce.
-pub mod core;
-
-/// High-level API with safer defaults. Includes HMAC, HKDF and PBKDF2.
-pub mod default;
-
-/// Low-level API.
-pub mod hazardous;
-
-/// Testing module for orion.
-#[cfg(test)]
-pub mod tests;
+/// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
+pub mod pbkdf2;

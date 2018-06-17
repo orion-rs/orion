@@ -30,7 +30,7 @@ mod custom_test_vectors {
     extern crate hex;
     use self::hex::decode;
     use core::options::ShaVariantOption;
-    use pbkdf2::Pbkdf2;
+    use hazardous::pbkdf2::Pbkdf2;
 
     #[test]
     fn sha256_test_case_1() {

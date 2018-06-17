@@ -23,7 +23,7 @@
 use clear_on_drop::clear::Clear;
 use core::options::ShaVariantOption;
 use core::{errors::*, util};
-use hmac::Hmac;
+use hazardous::hmac::Hmac;
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
@@ -61,7 +61,7 @@ impl Drop for Hkdf {
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```
-/// use orion::hkdf::Hkdf;
+/// use orion::hazardous::hkdf::Hkdf;
 /// use orion::core::util::gen_rand_key;
 /// use orion::core::options::ShaVariantOption;
 ///
@@ -81,7 +81,7 @@ impl Drop for Hkdf {
 /// ```
 /// ### Verifying derived key:
 /// ```
-/// use orion::hkdf::Hkdf;
+/// use orion::hazardous::hkdf::Hkdf;
 /// use orion::core::util::gen_rand_key;
 /// use orion::core::options::ShaVariantOption;
 ///
@@ -186,7 +186,7 @@ mod test {
     extern crate hex;
     use self::hex::decode;
     use core::options::ShaVariantOption;
-    use hkdf::Hkdf;
+    use hazardous::hkdf::Hkdf;
 
     #[test]
     fn hkdf_maximum_length_256() {

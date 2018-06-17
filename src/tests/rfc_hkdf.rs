@@ -28,7 +28,7 @@ mod rfc5869 {
     extern crate hex;
     use self::hex::decode;
     use core::options::ShaVariantOption;
-    use hkdf::Hkdf;
+    use hazardous::hkdf::Hkdf;
 
     #[test]
     fn test_case_1() {

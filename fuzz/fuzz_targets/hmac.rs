@@ -3,7 +3,7 @@
 extern crate orion;
 extern crate rand;
 
-use orion::hmac::*;
+use orion::hazardous::hmac::*;
 use orion::core::options::ShaVariantOption;
 use rand::prelude::*;
 

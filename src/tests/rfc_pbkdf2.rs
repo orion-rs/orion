@@ -27,7 +27,7 @@ mod rfc7914 {
     extern crate hex;
     use self::hex::decode;
     use core::options::ShaVariantOption;
-    use pbkdf2::Pbkdf2;
+    use hazardous::pbkdf2::Pbkdf2;
 
     #[test]
     fn rfc7914_test_case_1() {
