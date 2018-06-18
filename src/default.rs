@@ -78,18 +78,14 @@ pub fn hmac_verify(
     secret_key: &[u8],
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let rand_key = util::gen_rand_key(64).unwrap();
 
-    let own_hmac = hmac(&secret_key, &data).unwrap();
-    // Verification happens on an additional round of HMAC with a random key
-    let nd_round_own = hmac(&rand_key, &own_hmac).unwrap();
-    let nd_round_expected = hmac(&rand_key, &expected_hmac).unwrap();
+    let mac = Hmac {
+        secret_key: secret_key.to_vec(),
+        data: data.to_vec(),
+        sha2: ShaVariantOption::SHA512,
+    };
 
-    if util::compare_ct(&nd_round_own, &nd_round_expected).is_err() {
-        Err(ValidationCryptoError)
-    } else {
-        Ok(true)
-    }
+    mac.verify(&expected_hmac)
 }
 
 /// HKDF-HMAC-SHA512.
@@ -157,13 +153,16 @@ pub fn hkdf_verify(
     info: &[u8],
     len: usize,
 ) -> Result<bool, ValidationCryptoError> {
-    let own_hkdf = hkdf(salt, input, info, len).unwrap();
 
-    if util::compare_ct(&own_hkdf, expected_dk).is_err() {
-        Err(ValidationCryptoError)
-    } else {
-        Ok(true)
-    }
+    let hkdf = Hkdf {
+        salt: salt.to_vec(),
+        ikm: input.to_vec(),
+        info: info.to_vec(),
+        length: len,
+        hmac: ShaVariantOption::SHA512,
+    };
+
+    hkdf.verify(&expected_dk)
 }
 
 /// PBKDF2-HMAC-SHA512 suitable for password storage.
