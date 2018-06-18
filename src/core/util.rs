@@ -22,7 +22,7 @@
 
 use constant_time_eq::constant_time_eq;
 use core::errors;
-use rand::{OsRng, RngCore};
+use rand::{rngs::OsRng, RngCore};
 
 #[inline(never)]
 /// Return a random byte vector of a given length. This uses rand's
