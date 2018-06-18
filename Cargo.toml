@@ -9,10 +9,16 @@ readme = "README.md"
 repository = "https://github.com/brycx/orion"
 documentation = "https://docs.rs/orion"
 license = "MIT"
+exclude = [
+    ".gitignore",
+    ".travis.yml",
+    "benches/*",
+    "fuzz/*",
+]
 
 [dependencies]
-rand = ">=0.5.1"
-sha2 = ">=0.7.1"
+rand = "0.5.1"
+sha2 = "0.7.1"
 clear_on_drop = "0.2.3"
 byte-tools = "0.2.0"
 constant_time_eq = "0.1.3"
