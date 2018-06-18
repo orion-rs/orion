@@ -33,8 +33,8 @@ pub enum ShaVariantOption {
 
 impl ShaVariantOption {
     /// Return the output size in bytes.
-    pub fn output_size(&self) -> usize {
-        match *self {
+    pub fn output_size(self) -> usize {
+        match self {
             ShaVariantOption::SHA256 => 32,
             ShaVariantOption::SHA384 => 48,
             ShaVariantOption::SHA512 => 64,
@@ -42,8 +42,8 @@ impl ShaVariantOption {
     }
 
     /// Return blocksize in bytes, matching SHA2 variant.
-    pub fn blocksize(&self) -> usize {
-        match *self {
+    pub fn blocksize(self) -> usize {
+        match self {
             ShaVariantOption::SHA256 => 64,
             ShaVariantOption::SHA384 => 128,
             ShaVariantOption::SHA512 => 128,
@@ -51,8 +51,8 @@ impl ShaVariantOption {
     }
 
     /// Return a SHA2 digest of a given byte slice.
-    pub fn hash(&self, data: &[u8]) -> Vec<u8> {
-        match *self {
+    pub fn hash(self, data: &[u8]) -> Vec<u8> {
+        match self {
             ShaVariantOption::SHA256 => {
                 let mut hash = sha2::Sha256::default();
                 hash.input(data);
