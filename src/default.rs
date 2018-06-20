@@ -40,7 +40,7 @@ use hazardous::pbkdf2::Pbkdf2;
 /// use orion::default;
 /// use orion::core::util;
 ///
-/// let key = util::gen_rand_key(32).unwrap();
+/// let key = util::gen_rand_key(64).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
 /// let hmac = default::hmac(&key, msg).unwrap();
