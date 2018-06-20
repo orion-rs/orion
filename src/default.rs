@@ -26,48 +26,46 @@ use hazardous::hkdf::Hkdf;
 use hazardous::hmac::Hmac;
 use hazardous::pbkdf2::Pbkdf2;
 
-/// HMAC-SHA512.
+/// HMAC-SHA512/256.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the secret key is less than 64 bytes.
+/// - The length of the secret key is less than 32 bytes.
 ///
 /// ## Note:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is the output length of the
-/// hash function. So if using SHA512 then a salt of 64 bytes is recommended.
-/// # Usage example:
+/// in `util` can be used for this. The recommended length for a salt is 32.
 ///
 /// ```
 /// use orion::default;
 /// use orion::core::util;
 ///
-/// let key = util::gen_rand_key(64).unwrap();
+/// let key = util::gen_rand_key(32).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
 /// let hmac = default::hmac(&key, msg).unwrap();
 /// ```
 pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-    if secret_key.len() < 64 {
+    if secret_key.len() < 32 {
         return Err(UnknownCryptoError);
     }
 
     let mac = Hmac {
         secret_key: secret_key.to_vec(),
         data: data.to_vec(),
-        sha2: ShaVariantOption::SHA512,
+        sha2: ShaVariantOption::SHA512Trunc256,
     };
 
     Ok(mac.finalize())
 }
 
-/// Verify an HMAC-SHA512 against a key and data in constant time, with Double-HMAC Verification.
+/// Verify an HMAC-SHA512/256 against a key and data in constant time, with Double-HMAC Verification.
 /// # Usage example:
 ///
 /// ```
 /// use orion::default;
 /// use orion::core::util;
 ///
-/// let key = util::gen_rand_key(64).unwrap();
+/// let key = util::gen_rand_key(32).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
 /// let expected_hmac = default::hmac(&key, msg).unwrap();
@@ -82,21 +80,20 @@ pub fn hmac_verify(
     let mac = Hmac {
         secret_key: secret_key.to_vec(),
         data: data.to_vec(),
-        sha2: ShaVariantOption::SHA512,
+        sha2: ShaVariantOption::SHA512Trunc256,
     };
 
     mac.verify(&expected_hmac)
 }
 
-/// HKDF-HMAC-SHA512.
+/// HKDF-HMAC-SHA512/256.
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the salt is less than 16 bytes.
 ///
 /// ## Note:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is the output length of the
-/// hash function. So if using SHA512 then a salt of 64 bytes is recommended. HKDF is not suitable
+/// in `util` can be used for this. The recommended length for a salt is 32. HKDF is not suitable
 /// for password storage.
 /// # Usage example:
 ///
@@ -104,11 +101,11 @@ pub fn hmac_verify(
 /// use orion::default;
 /// use orion::core::util;
 ///
-/// let salt = util::gen_rand_key(64).unwrap();
+/// let salt = util::gen_rand_key(32).unwrap();
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
+/// let hkdf = default::hkdf(&salt, data, info, 32).unwrap();
 /// ```
 pub fn hkdf(
     salt: &[u8],
@@ -125,13 +122,13 @@ pub fn hkdf(
         ikm: input.to_vec(),
         info: info.to_vec(),
         length: len,
-        hmac: ShaVariantOption::SHA512,
+        hmac: ShaVariantOption::SHA512Trunc256,
     };
 
     hkdf.derive_key()
 }
 
-/// Verify an HKDF-HMAC-SHA512 derived key in constant time. Both derived keys must
+/// Verify an HKDF-HMAC-SHA512/256 derived key in constant time. Both derived keys must
 /// be of equal length.
 /// # Usage example:
 ///
@@ -139,12 +136,12 @@ pub fn hkdf(
 /// use orion::default;
 /// use orion::core::util;
 ///
-/// let salt = util::gen_rand_key(64).unwrap();
+/// let salt = util::gen_rand_key(32).unwrap();
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info, 64).unwrap();
-/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 64).unwrap(), true);
+/// let hkdf = default::hkdf(&salt, data, info, 32).unwrap();
+/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 32).unwrap(), true);
 /// ```
 pub fn hkdf_verify(
     expected_dk: &[u8],
@@ -159,22 +156,22 @@ pub fn hkdf_verify(
         ikm: input.to_vec(),
         info: info.to_vec(),
         length: len,
-        hmac: ShaVariantOption::SHA512,
+        hmac: ShaVariantOption::SHA512Trunc256,
     };
 
     hkdf.verify(&expected_dk)
 }
 
-/// PBKDF2-HMAC-SHA512 suitable for password storage.
+/// PBKDF2-HMAC-SHA512/256 suitable for password storage.
 /// # About:
 /// This is meant to be used for password storage.
-/// - A salt of 64 bytes is automatically generated.
-/// - The derived key length is set to 64.
+/// - A salt of 32 bytes is automatically generated.
+/// - The derived key length is set to 32.
 /// - 512.000 iterations are used.
 /// - The salt is prepended to the password before being passed to the PBKDF2 function.
-/// - A byte vector of 128 bytes is returned.
+/// - A byte vector of 64 bytes is returned.
 ///
-/// The first 64 bytes of this vector is the salt used to derive the key and the last 64 bytes
+/// The first 32 bytes of this vector is the salt used to derive the key and the last 32 bytes
 /// is the actual derived key. When using this function with `default::pbkdf2_verify`
 /// then the seperation of salt and password are automatically handeled.
 ///
@@ -196,7 +193,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
         return Err(UnknownCryptoError);
     }
 
-    let salt: Vec<u8> = util::gen_rand_key(64).unwrap();
+    let salt: Vec<u8> = util::gen_rand_key(32).unwrap();
     // Prepend salt to password before deriving key
     let mut pass_extented: Vec<u8> = Vec::new();
     pass_extented.extend_from_slice(&salt);
@@ -209,28 +206,28 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
         password: pass_extented,
         salt,
         iterations: 512_000,
-        dklen: 64,
-        hmac: ShaVariantOption::SHA512,
+        dklen: 32,
+        hmac: ShaVariantOption::SHA512Trunc256,
     };
 
-    // Output format: First 64 bytes are the salt, last 64 bytes are the derived key
+    // Output format: First 32 bytes are the salt, last 32 bytes are the derived key
     dk.extend_from_slice(&pbkdf2_dk.derive_key().unwrap());
 
-    if dk.len() != 128 {
+    if dk.len() != 64 {
         return Err(UnknownCryptoError);
     }
 
     Ok(dk)
 }
 
-/// Verify PBKDF2-HMAC-SHA512 derived key in constant time. Both derived keys must be of equal length.
+/// Verify PBKDF2-HMAC-SHA512/256 derived key in constant time. Both derived keys must be of equal length.
 /// # About:
 /// This function is meant to be used with the `default::pbkdf2` function in orion's default API. It can be
 /// used without it, but then the expected_dk passed to the function must be constructed just as in
 /// `default::pbkdf2`. See documention on `default::pbkdf2` for details on this.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The expected derived key length is not 128 bytes.
+/// - The expected derived key length is not 64 bytes.
 /// # Usage example:
 ///
 /// ```
@@ -242,11 +239,11 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 /// assert_eq!(default::pbkdf2_verify(&derived_password, password).unwrap(), true);
 /// ```
 pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, ValidationCryptoError> {
-    if expected_dk.len() != 128 {
+    if expected_dk.len() != 64 {
         return Err(ValidationCryptoError);
     }
 
-    let salt: Vec<u8> = expected_dk[..64].to_vec();
+    let salt: Vec<u8> = expected_dk[..32].to_vec();
     let mut pass_extented: Vec<u8> = Vec::new();
     pass_extented.extend_from_slice(&salt);
     pass_extented.extend_from_slice(password);
@@ -259,8 +256,8 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
         password: pass_extented,
         salt,
         iterations: 512_000,
-        dklen: 64,
-        hmac: ShaVariantOption::SHA512,
+        dklen: 32,
+        hmac: ShaVariantOption::SHA512Trunc256,
     };
 
     dk.extend_from_slice(&pbkdf2_dk.derive_key().unwrap());
@@ -289,28 +286,6 @@ mod test {
     fn hmac_secret_key_allowed_len() {
         default::hmac(&vec![0x61; 64], &vec![0x61; 10]).unwrap();
         default::hmac(&vec![0x61; 78], &vec![0x61; 10]).unwrap();
-    }
-
-    #[test]
-    fn hmac_finalize() {
-        let sec_key = decode(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaa",
-        ).unwrap();
-        let msg = decode(
-            "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a\
-             65204b6579202d2048617368204b6579204669727374",
-        ).unwrap();
-
-        let expected_hmac_512 = decode(
-            "80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f352\
-             6b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598",
-        ).unwrap();
-
-        assert_eq!(default::hmac(&sec_key, &msg).unwrap(), expected_hmac_512);
     }
 
     #[test]
@@ -399,7 +374,7 @@ mod test {
 
     #[test]
     fn pbkdf2_verify_expected_dk_too_long() {
-        let password = util::gen_rand_key(64).unwrap();
+        let password = util::gen_rand_key(32).unwrap();
 
         let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
         pbkdf2_dk.extend_from_slice(&[0u8; 1]);
@@ -413,7 +388,7 @@ mod test {
 
         let pbkdf2_dk = default::pbkdf2(&password).unwrap();
 
-        assert!(default::pbkdf2_verify(&pbkdf2_dk[..127], &password).is_err());
+        assert!(default::pbkdf2_verify(&pbkdf2_dk[..63], &password).is_err());
     }
 
     #[test]
