@@ -29,7 +29,7 @@ use hazardous::pbkdf2::Pbkdf2;
 /// HMAC-SHA512/256.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the secret key is less than 32 bytes.
+/// - The length of the secret key is less than 64 bytes.
 ///
 /// ## Note:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
@@ -46,7 +46,7 @@ use hazardous::pbkdf2::Pbkdf2;
 /// let hmac = default::hmac(&key, msg).unwrap();
 /// ```
 pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-    if secret_key.len() < 32 {
+    if secret_key.len() < 64 {
         return Err(UnknownCryptoError);
     }
 
