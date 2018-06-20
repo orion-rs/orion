@@ -55,7 +55,8 @@ impl Drop for Hkdf {
 ///
 /// ## Note:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 32 bytes. HKDF is not suitable
+/// in `util` can be used for this. The recommended length for a salt is the sha functions digest
+/// size in bytes. HKDF is not suitable
 /// for password storage.
 /// # Usage examples:
 /// ### Generating derived key:

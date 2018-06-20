@@ -56,8 +56,8 @@ impl Drop for Pbkdf2 {
 ///
 /// ## Note:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 32 bytes. The iteration count
-/// should be set as high as feasible.
+/// in `util` can be used for this.  The recommended length for a salt is the sha functions digest
+/// size in bytes. The iteration count should be set as high as feasible.
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```

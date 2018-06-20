@@ -33,7 +33,8 @@ use hazardous::pbkdf2::Pbkdf2;
 ///
 /// ## Note:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 32 bytes.
+/// in `util` can be used for this.  The recommended length for a secret key is the sha functions digest
+/// size in bytes.
 ///
 /// ```
 /// use orion::default;
