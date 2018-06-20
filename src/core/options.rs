@@ -60,12 +60,12 @@ impl ShaVariantOption {
                 let mut hash = sha2::Sha256::default();
                 hash.input(data);
                 hash.result().to_vec()
-            }
+            },
             ShaVariantOption::SHA384 => {
                 let mut hash = sha2::Sha384::default();
                 hash.input(data);
                 hash.result().to_vec()
-            }
+            },
             ShaVariantOption::SHA512 => {
                 let mut hash = sha2::Sha512::default();
                 hash.input(data);
