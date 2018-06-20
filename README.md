@@ -5,7 +5,7 @@
 Cryptographic primitives implemented in Rust, with a simple API.
 
 Currently contains:
-* HMAC with SHA2(256, 384, 512).
+* HMAC with SHA256, SHA384, SHA512 and SHA512/256.
 * HKDF with the above HMAC options.
 * PBKDF2 with the above HMAC options.
 
