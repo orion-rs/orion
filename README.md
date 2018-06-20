@@ -14,14 +14,14 @@ Currently contains:
 extern crate orion;
 use orion::{default, core::util};
 
-// HMAC-SHA512
+// HMAC-SHA512/256
 let key = util::gen_rand_key(64).unwrap();
 let msg = "Some message".as_bytes();
 
 let expected_hmac = default::hmac(&key, msg).unwrap();
 assert!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap());
 
-// HKDF-HMAC-SHA512
+// HKDF-HMAC-SHA512/256
 let salt = util::gen_rand_key(64).unwrap();
 let data = "Some data".as_bytes();
 let info = "Some info".as_bytes();
@@ -29,7 +29,7 @@ let info = "Some info".as_bytes();
 let dk = default::hkdf(&salt, data, info, 64).unwrap();
 assert!(default::hkdf_verify(&dk, &salt, data, info, 64).unwrap());
 
-// PBKDF2-HMAC-SHA512
+// PBKDF2-HMAC-SHA512/256
 let password = "Secret password".as_bytes();
 
 let dk = default::pbkdf2(password).unwrap();
