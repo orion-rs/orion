@@ -8,14 +8,13 @@ extern crate rand;
 use ring::digest;
 use ring::hmac as ring_hmac;
 use ring::hkdf::*;
+use ring::pbkdf2 as ring_pbkdf2;
 use orion::hazardous::hmac;
 use orion::hazardous::hkdf;
+use orion::hazardous::pbkdf2;
 use orion::core::options;
 use orion::core::util::*;
 use rand::prelude::*;
-
-
-// TODO Add tests for PBKDF2
 
 fn return_rand_data() -> Vec<u8> {
 
@@ -139,6 +138,53 @@ fn ro_hkdf(buf1: &[u8], buf2: &[u8], buf3: &[u8]) {
     assert_eq!(orion_derived, out_okm);
 }
 
+fn ro_pbkdf2(buf1: &[u8], buf2: &[u8]) {
+
+    let salt = buf1.to_vec();
+    let password = buf2.to_vec();
+
+    let mut rng = rand::thread_rng();
+
+    let choices = [
+        options::ShaVariantOption::SHA256,
+        options::ShaVariantOption::SHA384,
+        options::ShaVariantOption::SHA512,
+        options::ShaVariantOption::SHA512Trunc256,
+    ];
+
+    let iter: usize = rng.gen_range(1, 10001);
+    let hmac_choice = rng.choose(&choices).unwrap();
+    let len: usize = rng.gen_range(1, 128);
+
+    let mut dk_out = vec![0u8; len];
+
+    let ring_digest = match *hmac_choice {
+            options::ShaVariantOption::SHA256 => &digest::SHA256,
+            options::ShaVariantOption::SHA384 => &digest::SHA384,
+            options::ShaVariantOption::SHA512 => &digest::SHA512,
+            options::ShaVariantOption::SHA512Trunc256 => &digest::SHA512_256,
+    };
+
+    let dk = pbkdf2::Pbkdf2 {
+        password: password.to_vec(),
+        salt: salt.to_vec(),
+        iterations: iter,
+        dklen: len,
+        hmac: *hmac_choice
+    };
+
+    ring_pbkdf2::derive(ring_digest, iter as u32, &salt, &password, &mut dk_out);
+
+    let orion_dk = dk.derive_key().unwrap();
+
+    assert_eq!(dk_out, orion_dk);
+
+    assert!(ring_pbkdf2::verify(ring_digest, iter as u32, &salt, &password, &dk_out).is_ok());
+    assert!(ring_pbkdf2::verify(ring_digest, iter as u32, &salt, &password, &orion_dk).is_ok());
+    assert!(dk.verify(&dk_out).is_ok());
+    assert!(dk.verify(&orion_dk).is_ok());
+}
+
 
 
 
@@ -159,4 +205,9 @@ fuzz_target!(|data: &[u8]| {
     ro_hkdf(data, data, &rand_key);
     ro_hkdf(&rand_key, &rand_key, data);
     ro_hkdf(&rand_key, &rand_key, &rand_key);
+
+    ro_pbkdf2(data, data);
+    ro_pbkdf2(&rand_key, data);
+    ro_pbkdf2(data, &rand_key);
+    ro_pbkdf2(&rand_key, &rand_key);
 });
