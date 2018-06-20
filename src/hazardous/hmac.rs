@@ -47,7 +47,7 @@ impl Drop for Hmac {
 ///
 /// ## Note:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 32.
+/// in `util` can be used for this. The recommended length for a salt is 32 bytes.
 /// # Usage examples:
 /// ### Generating HMAC:
 /// ```

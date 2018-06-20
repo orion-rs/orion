@@ -33,7 +33,7 @@ use hazardous::pbkdf2::Pbkdf2;
 ///
 /// ## Note:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 32.
+/// in `util` can be used for this. The recommended length for a salt is 32 bytes.
 ///
 /// ```
 /// use orion::default;
@@ -93,7 +93,7 @@ pub fn hmac_verify(
 ///
 /// ## Note:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 32. HKDF is not suitable
+/// in `util` can be used for this. The recommended length for a salt is 32 bytes. HKDF is not suitable
 /// for password storage.
 /// # Usage example:
 ///
