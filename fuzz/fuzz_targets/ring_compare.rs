@@ -13,16 +13,7 @@ use orion::hazardous::hmac;
 use orion::hazardous::hkdf;
 use orion::hazardous::pbkdf2;
 use orion::core::options::ShaVariantOption;
-use orion::core::util::*;
 use rand::prelude::*;
-
-fn return_rand_data() -> Vec<u8> {
-
-    let mut rng = thread_rng();
-    let key_len = rng.gen_range(1, 256);
-
-    gen_rand_key(key_len).unwrap()
-}
 
 fn return_digest(sha2: ShaVariantOption) -> &'static digest::Algorithm {
 
@@ -148,8 +139,6 @@ fn ro_pbkdf2(buf1: &[u8], buf2: &[u8], hmac: ShaVariantOption) {
 
 fuzz_target!(|data: &[u8]| {
 
-    let rand_key = return_rand_data();
-
     let variants = [
         ShaVariantOption::SHA256,
         ShaVariantOption::SHA384,
@@ -160,20 +149,9 @@ fuzz_target!(|data: &[u8]| {
     for selec in variants.iter() {
 
         ro_hmac(data, data, *selec);
-        ro_hmac(&rand_key, data, *selec);
-        ro_hmac(data, &rand_key, *selec);
-        ro_hmac(&rand_key, &rand_key, *selec);
 
         ro_hkdf(data, data, data, *selec);
-        ro_hkdf(&rand_key, data, data, *selec);
-        ro_hkdf(data, &rand_key, data, *selec);
-        ro_hkdf(data, data, &rand_key, *selec);
-        ro_hkdf(&rand_key, &rand_key, data, *selec);
-        ro_hkdf(&rand_key, &rand_key, &rand_key, *selec);
 
         ro_pbkdf2(data, data, *selec);
-        ro_pbkdf2(&rand_key, data, *selec);
-        ro_pbkdf2(data, &rand_key, *selec);
-        ro_pbkdf2(&rand_key, &rand_key, *selec);
     }
 });
