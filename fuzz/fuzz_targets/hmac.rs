@@ -11,8 +11,13 @@ fn fuzz_hmac(secret_key: &[u8], data: &[u8]) -> ()  {
 
     let mut rng = thread_rng();
 
-    let choices = [ShaVariantOption::SHA256, ShaVariantOption::SHA384, ShaVariantOption::SHA512];
-
+    let choices = [
+        ShaVariantOption::SHA256,
+        ShaVariantOption::SHA384,
+        ShaVariantOption::SHA512,
+        ShaVariantOption::SHA512Trunc256,
+    ];
+    
     if rng.gen() {
 
         let hmac_choice = rng.choose(&choices).unwrap();

@@ -31,6 +31,7 @@ fn ro_hmac(buf1: &[u8], buf2: &[u8]) {
         options::ShaVariantOption::SHA256,
         options::ShaVariantOption::SHA384,
         options::ShaVariantOption::SHA512,
+        options::ShaVariantOption::SHA512Trunc256,
     ];
 
     let mut rng = thread_rng();
@@ -40,6 +41,7 @@ fn ro_hmac(buf1: &[u8], buf2: &[u8]) {
             options::ShaVariantOption::SHA256 => &digest::SHA256,
             options::ShaVariantOption::SHA384 => &digest::SHA384,
             options::ShaVariantOption::SHA512 => &digest::SHA512,
+            options::ShaVariantOption::SHA512Trunc256 => &digest::SHA512_256,
     };
 
 
@@ -92,7 +94,8 @@ fn ro_hkdf(buf1: &[u8], buf2: &[u8], buf3: &[u8]) {
     let choices = [
         options::ShaVariantOption::SHA256,
         options::ShaVariantOption::SHA384,
-        options::ShaVariantOption::SHA512
+        options::ShaVariantOption::SHA512,
+        options::ShaVariantOption::SHA512Trunc256,
     ];
 
     let hmac_choice = rng.choose(&choices).unwrap();
@@ -101,12 +104,14 @@ fn ro_hkdf(buf1: &[u8], buf2: &[u8], buf3: &[u8]) {
             options::ShaVariantOption::SHA256 => &digest::SHA256,
             options::ShaVariantOption::SHA384 => &digest::SHA384,
             options::ShaVariantOption::SHA512 => &digest::SHA512,
+            options::ShaVariantOption::SHA512Trunc256 => &digest::SHA512_256,
     };
 
     let okm_len: usize = match *hmac_choice {
             options::ShaVariantOption::SHA256 => rng.gen_range(1, 8161),
             options::ShaVariantOption::SHA384 => rng.gen_range(1, 12241),
             options::ShaVariantOption::SHA512 => rng.gen_range(1, 16321),
+            options::ShaVariantOption::SHA512Trunc256 => rng.gen_range(1, 8161),
     };
 
     let mut out_okm = vec![0u8; okm_len];

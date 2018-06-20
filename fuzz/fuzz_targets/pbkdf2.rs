@@ -11,8 +11,13 @@ fn fuzz_pbkdf2(password: &[u8], salt: &[u8]) -> () {
 
     let mut rng = rand::thread_rng();
 
-    let choices = [ShaVariantOption::SHA256, ShaVariantOption::SHA384, ShaVariantOption::SHA512];
-
+    let choices = [
+        ShaVariantOption::SHA256,
+        ShaVariantOption::SHA384,
+        ShaVariantOption::SHA512,
+        ShaVariantOption::SHA512Trunc256,
+    ];
+    
     if rng.gen() {
 
         let iter: usize = rng.gen_range(1, 10001);

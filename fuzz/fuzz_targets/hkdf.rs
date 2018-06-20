@@ -12,7 +12,12 @@ fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
 
     let mut rng = thread_rng();
 
-    let choices = [ShaVariantOption::SHA256, ShaVariantOption::SHA384, ShaVariantOption::SHA512];
+    let choices = [
+        ShaVariantOption::SHA256,
+        ShaVariantOption::SHA384,
+        ShaVariantOption::SHA512,
+        ShaVariantOption::SHA512Trunc256,
+    ];
 
     if rng.gen() {
 
@@ -22,6 +27,7 @@ fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
                 ShaVariantOption::SHA256 => rng.gen_range(1, 8161),
                 ShaVariantOption::SHA384 => rng.gen_range(1, 12241),
                 ShaVariantOption::SHA512 => rng.gen_range(1, 16321),
+                ShaVariantOption::SHA512Trunc256 => rng.gen_range(1, 8161),
         };
 
         let dk = Hkdf {
