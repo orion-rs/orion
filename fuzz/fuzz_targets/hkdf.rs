@@ -5,37 +5,18 @@ extern crate rand;
 
 use orion::hazardous::hkdf::Hkdf;
 use orion::core::options::ShaVariantOption;
-use rand::prelude::*;
 
+fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8], okm_len: usize, hmac: ShaVariantOption) {
 
-fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
-
-    let mut rng = thread_rng();
-
-    let choices = [
-        ShaVariantOption::SHA256,
-        ShaVariantOption::SHA384,
-        ShaVariantOption::SHA512,
-        ShaVariantOption::SHA512Trunc256,
-    ];
-
-    if rng.gen() {
-
-        let hmac_choice = rng.choose(&choices).unwrap();
-
-        let len: usize = match *hmac_choice {
-                ShaVariantOption::SHA256 => rng.gen_range(1, 8161),
-                ShaVariantOption::SHA384 => rng.gen_range(1, 12241),
-                ShaVariantOption::SHA512 => rng.gen_range(1, 16321),
-                ShaVariantOption::SHA512Trunc256 => rng.gen_range(1, 8161),
-        };
+    // Make sure to cover all possible length selections
+    for okm_len_inter in 1..okm_len+1 {
 
         let dk = Hkdf {
             salt: salt.to_vec(),
             ikm: ikm.to_vec(),
             info: info.to_vec(),
-            length: len,
-            hmac: *hmac_choice,
+            length: okm_len_inter,
+            hmac,
         };
 
         let prk = dk.extract(ikm, salt);
@@ -44,10 +25,17 @@ fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8]) -> () {
         assert_eq!(dk_fin, dk.derive_key().unwrap());
         assert_eq!(dk.verify(&dk_fin).unwrap(), true);
 
-    } else  { () }
-
+    }
 }
 
 fuzz_target!(|data: &[u8]| {
-    fuzz_hkdf(data, data, data);
+
+    fuzz_hkdf(data, data, data, 8160, ShaVariantOption::SHA256);
+
+    fuzz_hkdf(data, data, data, 12240, ShaVariantOption::SHA384);
+
+    fuzz_hkdf(data, data, data, 16320, ShaVariantOption::SHA512);
+
+    fuzz_hkdf(data, data, data, 8160, ShaVariantOption::SHA512Trunc256);
+
 });
