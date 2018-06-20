@@ -10,6 +10,7 @@ cargo-fuzz = true
 
 [dependencies]
 rand = "0.5.1"
+ring = "0.12.1"
 
 [dependencies.orion]
 path = ".."
@@ -34,3 +35,7 @@ path = "fuzz_targets/hkdf.rs"
 [[bin]]
 name = "default"
 path = "fuzz_targets/default.rs"
+
+[[bin]]
+name = "ring_compare"
+path = "fuzz_targets/ring_compare.rs"
