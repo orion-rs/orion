@@ -9,12 +9,12 @@ use rand::Rng;
 
 fn fuzz_default(data: &[u8]) -> () {
 
-    let rand_salt = util::gen_rand_key(64).unwrap();
+    let rand_salt = util::gen_rand_key(32).unwrap();
     let mut rng = rand::thread_rng();
 
     if rng.gen() {
 
-        let len_hkdf: usize = rng.gen_range(1, 16321);
+        let len_hkdf: usize = rng.gen_range(1, 8161);
 
         default::hkdf_verify(&
             default::hkdf(&rand_salt, data, data, len_hkdf).unwrap(),
