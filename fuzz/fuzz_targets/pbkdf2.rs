@@ -14,7 +14,7 @@ fn fuzz_pbkdf2(password: &[u8], salt: &[u8], hmac: ShaVariantOption) {
     if rng.gen() {
 
         let iter: usize = rng.gen_range(1, 10001);
-        let len: usize = rng.gen_range(1, 128);
+        let len: usize = rng.gen_range(1, 1025);
 
         let dk = Pbkdf2 {
             password: password.to_vec(),
