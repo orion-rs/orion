@@ -45,7 +45,7 @@ cargo doc --no-deps
 ```
 
 ### Tests/Fuzzing
-Unit tests are located in the same file as what is being tested, apart from implementation verification tests - these are in `src/tests/`. To run all tests:
+To run all tests:
 ```
 cargo test
 ```
