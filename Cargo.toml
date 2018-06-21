@@ -2,7 +2,7 @@
 name = "orion"
 version = "0.3.6"
 authors = ["brycx <brycx@protonmail.com>"]
-description = "Cryptographic primitives implemented in Rust, with a simple API."
+description = "Easy and usable rust crypto"
 keywords = [ "cryptography", "hmac", "hkdf", "pbkdf2", "crypto" ]
 categories = [ "cryptography" ]
 readme = "README.md"

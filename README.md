@@ -1,8 +1,16 @@
 ## orion ![Build Status](https://travis-ci.org/brycx/orion.svg?branch=master) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion)
 
-**Warning:** This library is not suitable for production code. There are no guarantees for the security of these implementations. Use at your own risk.
+### Warning
+This library is not suitable for production code. There are no guarantees for the security of these implementations. Use at your own risk.
 
-Cryptographic primitives implemented in Rust, with a simple API.
+
+### About
+This library aims to provide easy and usable crypto. 'Usable' meaning exposing high-level
+API's that are easy to use and hard to misuse.  
+
+In case you missed the warning above: **don't use orion for production code or instances where you need absolute confidence in security**. While security is a top priority goal for this library, the author is no
+professional. Look in the Alternatives section if this means orion is not for you.
+
 
 Currently contains:
 * HMAC with SHA256, SHA384, SHA512 and SHA512/256.
@@ -45,12 +53,12 @@ cargo doc --no-deps
 ```
 
 ### Tests/Fuzzing
-To run all tests:
+The [wiki](https://github.com/brycx/orion/wiki) has details on how orion is tested. To run all tests:
 ```
 cargo test
 ```
 
-Fuzzing is done using [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz). Fuzzing targets are located in `fuzz/fuzz_targets/`. These can be run with:
+Fuzzing is done using libFuzzer with [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz). Fuzzing targets can be run with:
 ```
 cargo +nightly fuzz run -O fuzz_target
 ```
