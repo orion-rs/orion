@@ -56,7 +56,7 @@ impl Drop for Hkdf {
 /// ## Note:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
 /// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-/// for password storage.
+/// HKDF is not suitable for password storage.
 /// # Usage examples:
 /// ### Generating derived key:
 /// ```
@@ -155,7 +155,7 @@ impl Hkdf {
         Ok(okm)
     }
 
-    /// Combine extract and expand to return a derived key.
+    /// Combine Extract and Expand to return a derived key.
     pub fn derive_key(&self) -> Result<Vec<u8>, UnknownCryptoError> {
         let mut prk = self.extract(&self.salt, &self.ikm);
 
@@ -166,7 +166,7 @@ impl Hkdf {
         dk
     }
 
-    /// Verify a derived key by comparing one from the current struct fields and the derived key
+    /// Verify a derived key by comparing one from the current struct fields to the derived key
     /// passed to the function. Comparison is done in constant time. Both derived keys must be
     /// of equal length.
     pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, ValidationCryptoError> {

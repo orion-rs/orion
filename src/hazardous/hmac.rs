@@ -47,7 +47,7 @@ impl Drop for Hmac {
 ///
 /// ## Note:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this.  The recommended length for a secret key is the sha functions digest
+/// in `util` can be used for this.  The recommended length for a secret key is the SHA functions digest
 /// size in bytes.
 /// # Usage examples:
 /// ### Generating HMAC:
@@ -59,7 +59,11 @@ impl Drop for Hmac {
 /// let key = gen_rand_key(32).unwrap();
 /// let message = gen_rand_key(32).unwrap();
 ///
-/// let hmac = Hmac { secret_key: key, data: message, sha2: ShaVariantOption::SHA256 };
+/// let hmac = Hmac {
+///     secret_key: key,
+///     data: message,
+///     sha2: ShaVariantOption::SHA256
+/// };
 ///
 /// hmac.finalize();
 /// ```

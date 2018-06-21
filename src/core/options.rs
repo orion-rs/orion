@@ -33,7 +33,7 @@ pub enum ShaVariantOption {
 }
 
 impl ShaVariantOption {
-    /// Return the output size in bytes.
+    /// Return the output size in bytes, matching SHA2 variant.
     pub fn output_size(self) -> usize {
         match self {
             ShaVariantOption::SHA256 => 32,

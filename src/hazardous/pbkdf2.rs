@@ -191,7 +191,7 @@ impl Pbkdf2 {
         Ok(derived_key)
     }
 
-    /// Verify a derived key by comparing one from the current struct fields and the derived key
+    /// Verify a derived key by comparing one from the current struct fields with the derived key
     /// passed to the function. Comparison is done in constant time. Both derived keys must be
     /// of equal length.
     pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, ValidationCryptoError> {

@@ -33,7 +33,7 @@ use hazardous::pbkdf2::Pbkdf2;
 ///
 /// ## Note:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this.  The recommended length for a secret key is the sha functions digest
+/// in `util` can be used for this.  The recommended length for a secret key is the SHA functions digest
 /// size in bytes.
 ///
 /// ```
@@ -163,7 +163,7 @@ pub fn hkdf_verify(
     hkdf.verify(&expected_dk)
 }
 
-/// PBKDF2-HMAC-SHA512/256 suitable for password storage.
+/// PBKDF2-HMAC-SHA512/256. Suitable for password storage.
 /// # About:
 /// This is meant to be used for password storage.
 /// - A salt of 32 bytes is automatically generated.
@@ -221,10 +221,10 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     Ok(dk)
 }
 
-/// Verify PBKDF2-HMAC-SHA512/256 derived key in constant time. Both derived keys must be of equal length.
+/// Verify PBKDF2-HMAC-SHA512/256 derived key in constant time.
 /// # About:
 /// This function is meant to be used with the `default::pbkdf2` function in orion's default API. It can be
-/// used without it, but then the expected_dk passed to the function must be constructed just as in
+/// used without it, but then the `expected_dk` passed to the function must be constructed just as in
 /// `default::pbkdf2`. See documention on `default::pbkdf2` for details on this.
 /// # Exceptions:
 /// An exception will be thrown if:
