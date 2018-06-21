@@ -53,7 +53,7 @@ cargo doc --no-deps
 ```
 
 ### Tests/Fuzzing
-The [wiki](https://github.com/brycx/orion/wiki) has details on how orion is tested. To run all tests:
+The [wiki](https://github.com/brycx/orion/wiki/Testing-suite) has details on how orion is tested. To run all tests:
 ```
 cargo test
 ```
