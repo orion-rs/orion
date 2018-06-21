@@ -9,7 +9,7 @@ use rand::Rng;
 
 fn fuzz_default(data: &[u8]) -> () {
 
-    let rand_salt = util::gen_rand_key(32).unwrap();
+    let rand_salt = util::gen_rand_key(64).unwrap();
     let mut rng = rand::thread_rng();
 
     if rng.gen() {
