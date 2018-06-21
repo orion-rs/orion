@@ -94,8 +94,8 @@ pub fn hmac_verify(
 ///
 /// ## Note:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a secret key is the sha functions digest
-/// size in bytes. HKDF is not suitable for password storage.
+/// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
+/// HKDF is not suitable for password storage.
 /// # Usage example:
 ///
 /// ```
