@@ -214,9 +214,8 @@ mod test {
     use hazardous::pbkdf2::Pbkdf2;
 
     #[test]
-    fn dklen_too_high() {
-        // Take 64 as this is the highest, since HMAC-SHA512
-        let too_long = ((2_u64.pow(32) - 1) * 64 as u64) as usize + 1;
+    fn dklen_too_high_sha256() {
+        let too_long = ((2_u64.pow(32) - 1) * 32 as u64) as usize + 1;
 
         let dk = Pbkdf2 {
             password: "password".as_bytes().to_vec(),
@@ -224,6 +223,36 @@ mod test {
             iterations: 1,
             dklen: too_long,
             hmac: ShaVariantOption::SHA256,
+        };
+
+        assert!(dk.derive_key().is_err());
+    }
+
+    #[test]
+    fn dklen_too_high_sha384() {
+        let too_long = ((2_u64.pow(32) - 1) * 48 as u64) as usize + 1;
+
+        let dk = Pbkdf2 {
+            password: "password".as_bytes().to_vec(),
+            salt: "salt".as_bytes().to_vec(),
+            iterations: 1,
+            dklen: too_long,
+            hmac: ShaVariantOption::SHA384,
+        };
+
+        assert!(dk.derive_key().is_err());
+    }
+
+    #[test]
+    fn dklen_too_high_sha512() {
+        let too_long = ((2_u64.pow(32) - 1) * 64 as u64) as usize + 1;
+
+        let dk = Pbkdf2 {
+            password: "password".as_bytes().to_vec(),
+            salt: "salt".as_bytes().to_vec(),
+            iterations: 1,
+            dklen: too_long,
+            hmac: ShaVariantOption::SHA512,
         };
 
         assert!(dk.derive_key().is_err());
