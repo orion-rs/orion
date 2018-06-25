@@ -177,7 +177,7 @@ pub fn pbkdf2_hmac(
 }
 
 #[test]
-fn finalize_and_verify() {
+fn finalize_and_veriy_true() {
     let own_hmac = Hmac {
         secret_key: "Jefe".as_bytes().to_vec(),
         data: "what do ya want for nothing?".as_bytes().to_vec(),
@@ -188,12 +188,38 @@ fn finalize_and_verify() {
         data: "what do ya want for nothing?".as_bytes().to_vec(),
         sha2: ShaVariantOption::SHA256,
     };
+
+    assert_eq!(own_hmac.verify(&recieved_hmac.finalize()).unwrap(), true);
+}
+
+#[test]
+fn veriy_false_wrong_secret_key() {
+    let own_hmac = Hmac {
+        secret_key: "Jefe".as_bytes().to_vec(),
+        data: "what do ya want for nothing?".as_bytes().to_vec(),
+        sha2: ShaVariantOption::SHA256,
+    };
     let false_hmac = Hmac {
         secret_key: "Jefe".as_bytes().to_vec(),
         data: "what do ya want for something?".as_bytes().to_vec(),
         sha2: ShaVariantOption::SHA256,
     };
 
-    assert_eq!(own_hmac.verify(&recieved_hmac.finalize()).unwrap(), true);
+    assert!(own_hmac.verify(&false_hmac.finalize()).is_err());
+}
+
+#[test]
+fn veriy_false_wrong_data() {
+    let own_hmac = Hmac {
+        secret_key: "Jefe".as_bytes().to_vec(),
+        data: "what do ya want for nothing?".as_bytes().to_vec(),
+        sha2: ShaVariantOption::SHA256,
+    };
+    let false_hmac = Hmac {
+        secret_key: "Jose".as_bytes().to_vec(),
+        data: "what do ya want for nothing?".as_bytes().to_vec(),
+        sha2: ShaVariantOption::SHA256,
+    };
+
     assert!(own_hmac.verify(&false_hmac.finalize()).is_err());
 }
