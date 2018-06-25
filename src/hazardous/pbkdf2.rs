@@ -300,11 +300,26 @@ mod test {
     }
 
     #[test]
-    fn verify_false() {
+    fn verify_false_wrong_salt() {
         // Salt value differs between this and the previous test case
         let dk = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "".as_bytes().to_vec(),
+            iterations: 4096,
+            dklen: 16,
+            hmac: ShaVariantOption::SHA512,
+        };
+
+        let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
+
+        assert!(dk.verify(&expected_dk).is_err());
+    }
+
+    #[test]
+    fn verify_false_wrong_password() {
+        let dk = Pbkdf2 {
+            password: "none".as_bytes().to_vec(),
+            salt: "sa\0lt".as_bytes().to_vec(),
             iterations: 4096,
             dklen: 16,
             hmac: ShaVariantOption::SHA512,

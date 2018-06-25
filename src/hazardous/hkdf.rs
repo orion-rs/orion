@@ -273,11 +273,29 @@ mod test {
     }
 
     #[test]
-    fn hkdf_verify_false() {
+    fn hkdf_verify_wrong_salt() {
         // Salt value differs between this and the previous test case
         let hkdf = Hkdf {
             salt: "salt".as_bytes().to_vec(),
             ikm: decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap(),
+            info: decode("").unwrap(),
+            length: 42,
+            hmac: ShaVariantOption::SHA256,
+        };
+
+        let expected_okm = decode(
+            "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
+             9d201395faa4b61a96c8",
+        ).unwrap();
+
+        assert!(hkdf.verify(&expected_okm).is_err());
+    }
+
+    #[test]
+    fn hkdf_verify_wrong_ikm() {
+        let hkdf = Hkdf {
+            salt: decode("").unwrap(),
+            ikm: decode("0b").unwrap(),
             info: decode("").unwrap(),
             length: 42,
             hmac: ShaVariantOption::SHA256,
