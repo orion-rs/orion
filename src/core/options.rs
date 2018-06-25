@@ -60,22 +60,22 @@ impl ShaVariantOption {
                 let mut hash = sha2::Sha256::default();
                 hash.input(data);
                 hash.result().to_vec()
-            },
+            }
             ShaVariantOption::SHA384 => {
                 let mut hash = sha2::Sha384::default();
                 hash.input(data);
                 hash.result().to_vec()
-            },
+            }
             ShaVariantOption::SHA512 => {
                 let mut hash = sha2::Sha512::default();
                 hash.input(data);
                 hash.result().to_vec()
-            },
+            }
             ShaVariantOption::SHA512Trunc256 => {
                 let mut hash = sha2::Sha512Trunc256::default();
                 hash.input(data);
                 hash.result().to_vec()
-            },
+            }
         }
     }
 }
@@ -128,9 +128,8 @@ mod test {
     #[test]
     fn shavs_512_trunc_256() {
         let msg = decode("63d8cfd72768c44920d7b015460489ad578c063be19053889cb809").unwrap();
-        let expected_md = decode(
-            "876e59c8a64faf9d665f7cde5d42fbb331ba818ddcd284491ac51ed50e1613be",
-        ).unwrap();
+        let expected_md =
+            decode("876e59c8a64faf9d665f7cde5d42fbb331ba818ddcd284491ac51ed50e1613be").unwrap();
         let actual_md = ShaVariantOption::SHA512Trunc256.hash(&msg);
 
         assert_eq!(expected_md, actual_md);

@@ -77,7 +77,6 @@ pub fn hmac_verify(
     secret_key: &[u8],
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-
     let mac = Hmac {
         secret_key: secret_key.to_vec(),
         data: data.to_vec(),
@@ -151,7 +150,6 @@ pub fn hkdf_verify(
     info: &[u8],
     len: usize,
 ) -> Result<bool, ValidationCryptoError> {
-
     let hkdf = Hkdf {
         salt: salt.to_vec(),
         ikm: input.to_vec(),
