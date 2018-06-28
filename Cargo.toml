@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Easy and usable rust crypto"
 keywords = [ "cryptography", "hmac", "hkdf", "pbkdf2", "crypto" ]
@@ -17,7 +17,7 @@ exclude = [
 ]
 
 [dependencies]
-rand = "0.5.2"
+rand = "0.5.3"
 sha2 = "0.7.1"
 clear_on_drop = "0.2.3"
 byte-tools = "0.2.0"
