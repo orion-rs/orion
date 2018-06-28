@@ -27,15 +27,22 @@ use hazardous::hmac::Hmac;
 use hazardous::pbkdf2::Pbkdf2;
 
 /// HMAC-SHA512/256.
+/// # Parameters:
+/// - `secret_key`:  The authentication key
+/// - `data`: Data to be authenticated
+///
+/// See [RFC](https://tools.ietf.org/html/rfc2104#section-2) for more information.
+///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the secret key is less than 64 bytes.
 ///
-/// ## Note:
+/// # Security:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
 /// in `util` can be used for this.  The recommended length for a secret key is the SHA functions digest
 /// size in bytes.
 ///
+/// # Example:
 /// ```
 /// use orion::default;
 /// use orion::core::util;
@@ -60,7 +67,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoErro
 }
 
 /// Verify an HMAC-SHA512/256 against a key and data in constant time, with Double-HMAC Verification.
-/// # Usage example:
+/// # Example:
 ///
 /// ```
 /// use orion::default;
@@ -87,16 +94,25 @@ pub fn hmac_verify(
 }
 
 /// HKDF-HMAC-SHA512/256.
+/// # Parameters:
+/// - `salt`:  Optional salt value
+/// - `input`: Input keying material
+/// - `info`: Optional context and application specific information (can be a zero-length string)
+/// - `len`: Length of output keying material
+///
+/// See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
+///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the salt is less than 16 bytes.
 ///
-/// ## Note:
+/// # Security:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
 /// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-/// HKDF is not suitable for password storage.
-/// # Usage example:
+/// HKDF is not suitable for password storage. Even though a salt value is optional, it is strongly
+/// recommended to use one.
 ///
+/// # Example:
 /// ```
 /// use orion::default;
 /// use orion::core::util;
@@ -130,7 +146,7 @@ pub fn hkdf(
 
 /// Verify an HKDF-HMAC-SHA512/256 derived key in constant time. Both derived keys must
 /// be of equal length.
-/// # Usage example:
+/// # Example:
 ///
 /// ```
 /// use orion::default;
@@ -178,7 +194,7 @@ pub fn hkdf_verify(
 /// An exception will be thrown if:
 /// - The length of the password is less than 14 bytes.
 ///
-/// # Usage example:
+/// # Example:
 ///
 /// ```
 /// use orion::default;
@@ -227,7 +243,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The expected derived key length is not 64 bytes.
-/// # Usage example:
+/// # Example:
 ///
 /// ```
 /// use orion::default;

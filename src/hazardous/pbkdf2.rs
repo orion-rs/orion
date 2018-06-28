@@ -48,17 +48,26 @@ impl Drop for Pbkdf2 {
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 ///
+/// # Parameters:
+/// - `password`: Password
+/// - `salt`: Salt value
+/// - `iterations`: Iteration count
+/// - `dklen`: Length of the derived key
+/// - `hmac`: Pseudorandom function
+///
+/// See [RFC](https://tools.ietf.org/html/rfc8018#section-5.2) for more information.
+///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The specified dklen is less than 1
 /// - The specified dklen is greater than (2^32 - 1) * hLen
 /// - The specified iteration count is less than 1
 ///
-/// ## Note:
+/// # Security:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
 /// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
 /// The iteration count should be set as high as feasible.
-/// # Usage examples:
+/// # Example:
 /// ### Generating derived key:
 /// ```
 /// use orion::hazardous::pbkdf2::Pbkdf2;

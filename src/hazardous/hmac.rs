@@ -45,11 +45,18 @@ impl Drop for Hmac {
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 ///
-/// ## Note:
+/// # Parameters:
+/// - `secret_key`:  The authentication key
+/// - `data`: Data to be authenticated
+/// - `sha2`: Cryptographic hash function
+///
+/// See [RFC](https://tools.ietf.org/html/rfc2104#section-2) for more information.
+///
+/// # Security:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
 /// in `util` can be used for this.  The recommended length for a secret key is the SHA functions digest
 /// size in bytes.
-/// # Usage examples:
+/// # Example:
 /// ### Generating HMAC:
 /// ```
 /// use orion::hazardous::hmac::Hmac;

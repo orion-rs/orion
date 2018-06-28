@@ -47,17 +47,27 @@ impl Drop for Hkdf {
 
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
 /// [RFC 5869](https://tools.ietf.org/html/rfc5869).
+/// # Parameters:
+/// - `salt`:  Optional salt value
+/// - `ikm`: Input keying material
+/// - `info`: Optional context and application specific information (can be a zero-length string)
+/// - `length`: Length of output keying material
+/// - `hmac`: HMAC function
+///
+/// See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The specified length is less than 1
 /// - The specified length is greater than 255 * hash_output_size_in_bytes
 ///
-/// ## Note:
+/// # Security:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
 /// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-/// HKDF is not suitable for password storage.
-/// # Usage examples:
+/// HKDF is not suitable for password storage. Even though a salt value is optional, it is strongly
+/// recommended to use one.
+///
+/// # Example:
 /// ### Generating derived key:
 /// ```
 /// use orion::hazardous::hkdf::Hkdf;
