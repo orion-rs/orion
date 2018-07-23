@@ -20,20 +20,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// Test HMAC against NIST test vectors.
-pub mod nist_hmac;
 
-/// Test HMAC aginast RFC test vectors.
-pub mod rfc_hmac;
+#[cfg(test)]
+mod nonofficial_test_vectors {
 
-/// Test HKDF aginast RFC test vectors.
-pub mod rfc_hkdf;
+    extern crate hex;
+    use self::hex::decode;
+    use hazardous::cshake::CShake;
+    use core::options::*;
 
-/// Test PBKDF2 aginast RFC test vectors.
-pub mod rfc_pbkdf2;
+    #[test]
+    fn test_result() {
 
-/// Test HMAC aginast custom test vectors.
-pub mod custom_pbkdf2;
+        let cshake = CShake {
+            input: "message".as_bytes().to_vec(),
+            length: 32_usize,
+            n: "".as_bytes().to_vec(),
+            s: "custom".as_bytes().to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128
+        };
 
-/// Test cSHAKE against non-official test vectors.
-pub mod nonofficial_cshake;
+        let expected = decode("db006103bb064f875a6695cd7f636d184d7cdabdbc61b553cade47f1d4b29ab3").unwrap();
+
+        assert_eq!(cshake.finalize().unwrap(), expected);
+
+    }
+}

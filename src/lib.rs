@@ -27,6 +27,7 @@ extern crate clear_on_drop;
 extern crate constant_time_eq;
 extern crate rand;
 extern crate sha2;
+extern crate sha3;
 
 /// Core functionality such as generating a salt/key/IV/nonce.
 pub mod core;
