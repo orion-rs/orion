@@ -132,10 +132,17 @@ impl CShake {
         }
 
         let mut cshake_pad: Keccak = self.keccak_init();
+
         // Only append the left encoded rate, not the rate itself as with `name` and `custom`
         cshake_pad.update(&left_encode(self.rate()));
-        cshake_pad.update(&encode_string(&self.name));
-        cshake_pad.update(&encode_string(&self.custom));
+
+        // The below two calls are equivalent to encode_string() from the spec
+        cshake_pad.update(&left_encode(self.name.len() as u64 * 8));
+        cshake_pad.update(&self.name);
+
+        cshake_pad.update(&left_encode(self.custom.len() as u64 * 8));
+        cshake_pad.update(&self.custom);
+
         // Pad with zeroes before calling pad() in finalize()
         cshake_pad.fill_block();
 
@@ -154,14 +161,6 @@ impl CShake {
             Ok(true)
         }
     }
-}
-
-/// The encode_string function as specified in the NIST SP 800-185.
-fn encode_string(s: &[u8]) -> Vec<u8> {
-    let mut encoded = left_encode(s.len() as u64 * 8);
-    encoded.extend_from_slice(s);
-
-    encoded
 }
 
 /// The left_encode function as specified in the NIST SP 800-185.
@@ -191,17 +190,6 @@ fn left_encode(x: u64) -> Vec<u8> {
 mod test {
 
     use hazardous::cshake::*;
-
-    #[test]
-    fn test_encode_string() {
-        // Example test case from NIST SP 800-185
-        let res = encode_string("".as_bytes());
-        // Empty string should yield: 10000000 00000000.
-        assert_eq!(res[0].count_ones(), 1);
-        assert_eq!(res[0].count_zeros(), 7);
-        assert_eq!(res[1].count_ones(), 0);
-        assert_eq!(res[1].count_zeros(), 8);
-    }
 
     #[test]
     fn test_left_encode() {
