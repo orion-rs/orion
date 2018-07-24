@@ -9,8 +9,10 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-rand = "0.5.1"
-ring = "0.12.1"
+rand = "0.5.4"
+ring = "0.13.2"
+sp800-185 = "0.2.0"
+
 
 [dependencies.orion]
 path = ".."
@@ -43,3 +45,7 @@ path = "fuzz_targets/ring_compare.rs"
 [[bin]]
 name = "cshake"
 path = "fuzz_targets/cshake.rs"
+
+[[bin]]
+name = "sp800_185_compare"
+path = "fuzz_targets/sp800_185_compare.rs"

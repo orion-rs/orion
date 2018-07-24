@@ -27,7 +27,6 @@ constant_time_eq = "0.1.3"
 [dev-dependencies]
 hex = "0.3.2"
 ring = "0.13.2"
-sp800-185 = "0.2.0"
 
 [profile.dev]
 opt-level = 2
