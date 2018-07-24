@@ -21,7 +21,7 @@ fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize, keccak:
     let cshake = CShake {
         input: input.to_vec(),
         name: name.to_vec(),
-        custom: mod_custom,
+        custom: mod_custom.to_vec(),
         length: len_rand,
         keccak,
     };
@@ -29,15 +29,16 @@ fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize, keccak:
     let hash = cshake.finalize().unwrap();
 
     let mut sp_cshake_hash = match &keccak {
-        KeccakVariantOption::KECCAK128 => sp_cshake::new_cshake128(name, custom),
-        KeccakVariantOption::KECCAK256 => sp_cshake::new_cshake256(name, custom),
+        KeccakVariantOption::KECCAK128 => sp_cshake::new_cshake128(name, &mod_custom),
+        KeccakVariantOption::KECCAK256 => sp_cshake::new_cshake256(name, &mod_custom),
     };
 
     sp_cshake_hash.update(input);
     let mut sp_cshake_fin = vec![0u8; len_rand];
     sp_cshake_hash.finalize(&mut sp_cshake_fin);
 
-    assert_eq!(hash, sp_cshake_fin);
+    assert_eq!(hash.len(), sp_cshake_fin.len());
+    assert_eq!(&hash, &sp_cshake_fin);
     assert_eq!(cshake.verify(&hash).unwrap(), true);
     assert_eq!(cshake.verify(&sp_cshake_fin).unwrap(), true);
 
