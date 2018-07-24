@@ -20,13 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use core::options::CShakeVariantOption;
 use core::options::ShaVariantOption;
-//use core::options::CShakeVariantOption;
 use core::{errors::*, util};
+use hazardous::cshake::CShake;
 use hazardous::hkdf::Hkdf;
 use hazardous::hmac::Hmac;
 use hazardous::pbkdf2::Pbkdf2;
-//use hazardous::cshake::CShake;
 
 /// HMAC-SHA512/256.
 /// # Parameters:
@@ -286,6 +286,72 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
     }
 }
 
+/// cSHAKE256.
+/// # About:
+/// - Output length is 64
+///
+/// # Parameters:
+/// - `input`:  The main input bit string
+/// - `name`: Function-name bit string
+/// - `custom`: Customization bit string
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - Both `name` and `custom` are empty
+/// - If the length of either `name` or `custom` is greater than 65536
+///
+/// # Example:
+/// ```
+/// use orion::default;
+///
+/// let data = "Not so random data".as_bytes();
+/// let name = "".as_bytes();
+/// let custom = "Custom".as_bytes();
+///
+/// let hash = default::cshake(data, name, custom).unwrap();
+/// ```
+pub fn cshake(input: &[u8], name: &[u8], custom: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+    let cshake = CShake {
+        input: input.to_vec(),
+        name: name.to_vec(),
+        custom: custom.to_vec(),
+        length: 64,
+        cshake: CShakeVariantOption::CSHAKE256,
+    };
+
+    cshake.finalize()
+}
+
+/// Verify a cSHAKE256 hash in constant time. Both hashes must be of equal length.
+/// # Example:
+///
+/// ```
+/// use orion::default;
+///
+/// let data = "Not so random data".as_bytes();
+/// let name = "".as_bytes();
+/// let custom = "Custom".as_bytes();
+///
+/// let hash = default::cshake(data, name, custom).unwrap();
+/// assert_eq!(default::cshake_verify(&hash, data, name, custom).unwrap(), true);
+/// ```
+pub fn cshake_verify(
+    expected: &[u8],
+    input: &[u8],
+    name: &[u8],
+    custom: &[u8],
+) -> Result<bool, ValidationCryptoError> {
+    let cshake = CShake {
+        input: input.to_vec(),
+        name: name.to_vec(),
+        custom: custom.to_vec(),
+        length: 64,
+        cshake: CShakeVariantOption::CSHAKE256,
+    };
+
+    cshake.verify(&expected)
+}
+
 #[cfg(test)]
 mod test {
 
@@ -413,5 +479,41 @@ mod test {
         let password = util::gen_rand_key(13).unwrap();
 
         assert!(default::pbkdf2(&password).is_err());
+    }
+
+    #[test]
+    fn cshake_verify() {
+        let data = util::gen_rand_key(64).unwrap();
+        let name = "Some data.".as_bytes();
+        let custom = "Some custom string".as_bytes();
+
+        let cshake = default::cshake(&data, name, custom).unwrap();
+
+        assert_eq!(
+            default::cshake_verify(&cshake, &data, name, custom).unwrap(),
+            true
+        );
+    }
+
+    #[test]
+    fn cshake_verify_err() {
+        let data = util::gen_rand_key(64).unwrap();
+        let name = "Some data.".as_bytes();
+        let custom = "Some custom string".as_bytes();
+
+        let cshake = default::cshake(&data, name, custom).unwrap();
+
+        assert!(default::cshake_verify(&cshake, "Wrong data".as_bytes(), name, custom).is_err());
+    }
+
+    #[test]
+    fn cshake_verify_err_len() {
+        let data = util::gen_rand_key(64).unwrap();
+        let name = "Some data.".as_bytes();
+        let custom = "Some custom string".as_bytes();
+
+        let cshake = default::cshake(&data, name, custom).unwrap();
+
+        assert!(default::cshake_verify(&cshake[..63], &data, name, custom).is_err());
     }
 }

@@ -88,6 +88,7 @@ impl Drop for CShake {
 /// };
 ///
 /// let result = cshake.finalize().unwrap();
+/// assert_eq!(cshake.verify(&result).unwrap(), true);
 /// ```
 
 impl CShake {
@@ -145,7 +146,6 @@ impl CShake {
     /// passed to the function. Comparison is done in constant time. Both hashes must be
     /// of equal length.
     pub fn verify(&self, input: &[u8]) -> Result<bool, ValidationCryptoError> {
-
         let own_hash = self.finalize().unwrap();
 
         if util::compare_ct(&own_hash, input).is_err() {

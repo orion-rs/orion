@@ -2,12 +2,12 @@
 extern crate orion;
 extern crate test;
 
-use orion::core::options::ShaVariantOption;
 use orion::core::options::CShakeVariantOption;
+use orion::core::options::ShaVariantOption;
+use orion::hazardous::cshake::CShake;
 use orion::hazardous::hkdf::Hkdf;
 use orion::hazardous::hmac::Hmac;
 use orion::hazardous::pbkdf2::Pbkdf2;
-use orion::hazardous::cshake::CShake;
 use test::Bencher;
 
 #[bench]

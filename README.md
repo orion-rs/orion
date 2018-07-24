@@ -43,6 +43,14 @@ let password = "Secret password".as_bytes();
 
 let dk = default::pbkdf2(password).unwrap();
 assert!(default::pbkdf2_verify(&dk, password).unwrap());
+
+// cSHAKE256
+let data = "Not so random data".as_bytes();
+let name = "".as_bytes();
+let custom = "Custom".as_bytes();
+
+let hash = default::cshake(data, name, custom).unwrap();
+assert!(default::cshake_verify(hash, data, name, custom).unwrap())
 ```
 
 
