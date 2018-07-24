@@ -35,5 +35,5 @@ pub mod rfc_pbkdf2;
 /// Test HMAC aginast custom test vectors.
 pub mod custom_pbkdf2;
 
-/// Test cSHAKE against non-official test vectors.
-pub mod nonofficial_cshake;
+/// Test cSHAKE against official test vectors from the KeccakCodePackage.
+pub mod official_cshake;

@@ -357,7 +357,6 @@ mod test {
 
     #[test]
     fn verify_diff_iter_error() {
-
         let dk = Pbkdf2 {
             password: "pass\0word".as_bytes().to_vec(),
             salt: "sa\0lt".as_bytes().to_vec(),

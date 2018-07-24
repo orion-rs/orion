@@ -3,7 +3,7 @@ name = "orion"
 version = "0.4.1"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Easy and usable rust crypto"
-keywords = [ "cryptography", "hmac", "hkdf", "pbkdf2", "crypto" ]
+keywords = [ "cryptography",  "crypto", "hmac", "hkdf", "pbkdf2", "cshake" ]
 categories = [ "cryptography" ]
 readme = "README.md"
 repository = "https://github.com/brycx/orion"
@@ -19,7 +19,6 @@ exclude = [
 [dependencies]
 rand = "0.5.3"
 sha2 = "0.7.1"
-sha3 = "0.7.3"
 tiny-keccak = "1.4.2"
 clear_on_drop = "0.2.3"
 byte-tools = "0.2.0"

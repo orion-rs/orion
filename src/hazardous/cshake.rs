@@ -20,65 +20,55 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use clear_on_drop::clear::Clear;
-use core::options::CShakeVariantOption;
-use byte_tools::write_u64_le;
 use byte_tools::write_u64_be;
-use core::errors::*;
-//use sha3;
-//use sha3::Digest;
+use clear_on_drop::clear::Clear;
+use core::errors::UnknownCryptoError;
+use core::options::CShakeVariantOption;
 use tiny_keccak::Keccak;
 
-/// cSHAKE as specified in the NIST SP 800-185.
+/// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 ///
-/// Fields `` and `` are zeroed out on drop.
+/// Fields `input`, `name` and `custom` are zeroed out on drop.
 pub struct CShake {
     pub input: Vec<u8>,
     pub length: usize,
-    pub n: Vec<u8>,
-    pub s: Vec<u8>,
+    pub name: Vec<u8>,
+    pub custom: Vec<u8>,
     pub cshake: CShakeVariantOption,
 }
 
 impl Drop for CShake {
     fn drop(&mut self) {
         Clear::clear(&mut self.input);
-        Clear::clear(&mut self.n);
-        Clear::clear(&mut self.s)
+        Clear::clear(&mut self.name);
+        Clear::clear(&mut self.custom)
     }
 }
 
-/// cSHAKE (Hash-based Message Authentication Code) as specified in the LINK HERE
+/// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 ///
 /// # Parameters:
 /// - `input`:  The main input bit string
 /// - `length`: Output length in bytes
-/// - `n`: Function-name bit string
-/// - `s`: Customization bit string
+/// - `name`: Function-name bit string
+/// - `custom`: Customization bit string
 /// - `cshake`: cSHAKE variant to be used
 ///
-/// See LINK HERE for more information.
+/// See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The specified length is less than 8
-/// - The specified length is not a multiple of 8
-/// - `n` is empty
-/// - `s` is empty
+/// - Both `name` and `custom` are empty
 ///
-/// The reason that `n` and `s` cannot be empty is because, if they could be set to empty strings
-/// the result of using cSHAKE would be equivalent to a SHAKE call (See specification).
+/// The reason that `name` and `custom` cannot both be empty is because, if they could be set to
+/// empty strings the result of using cSHAKE would be equivalent to a SHAKE call.
 ///
 /// # Security:
 ///
 /// # Example:
-/// ```
-/// ```
-
-// https://groups.google.com/forum/#!topic/golang-codereviews/0t_cXN1u5ro
 
 impl CShake {
-
+    /// Return the rate in bytes of the respective Keccak sponge function.
     fn rate(&self) -> u64 {
         match &self.cshake {
             CShakeVariantOption::CSHAKE128 => 168_u64,
@@ -86,19 +76,19 @@ impl CShake {
         }
     }
 
+    /// Initialize a Keccak hasher.
     fn keccak_init(&self) -> Keccak {
         match &self.cshake {
             CShakeVariantOption::CSHAKE128 => {
-                let mut hash = Keccak::new(168, 0x04);
-                hash
-            },
+                Keccak::new(self.rate() as usize, 0x04)
+            }
             CShakeVariantOption::CSHAKE256 => {
-                let mut hash = Keccak::new(136, 0x04);
-                hash
+                Keccak::new(self.rate() as usize, 0x04)
             }
         }
     }
 
+    /// Return a Keccak hash.
     fn keccak_finalize(&self, mut state: Keccak) -> Vec<u8> {
         let mut hash = vec![0u8; self.length];
         state.absorb(&self.input);
@@ -106,59 +96,34 @@ impl CShake {
         hash
     }
 
+    /// Return a cSHAKE.
     pub fn finalize(&self) -> Result<Vec<u8>, UnknownCryptoError> {
         // "When N and S are both empty strings, cSHAKE(X, L, N, S) is equivalent to SHAKE as
         // defined in FIPS 202"
-        if (self.n.is_empty()) && (self.s.is_empty()) {
-            // INSERT SHAKE CALLL HERE
+        if (self.name.is_empty()) && (self.custom.is_empty()) {
             return Err(UnknownCryptoError);
         }
 
         let mut cshake_pad = self.keccak_init();
         cshake_pad.update(&left_encode(self.rate()));
-        cshake_pad.update(&encode_string(&self.n));
-        cshake_pad.update(&encode_string(&self.s));
+        cshake_pad.update(&encode_string(&self.name));
+        cshake_pad.update(&encode_string(&self.custom));
         cshake_pad.fill_block();
 
         Ok(self.keccak_finalize(cshake_pad))
     }
 }
 
-pub fn bytepad(x: &[u8], w: u64) -> Vec<u8> {
-    let mut res: Vec<u8> = Vec::new();
-    res.extend_from_slice(&left_encode(w));
-    res.extend_from_slice(x);
-    let padlen = w - (x.len() as u64 % w);
-
-    res.extend_from_slice(&vec![0u8; padlen as usize]);
-
-    res
-}
-
-/// The enc_8 function as specified in the NIST SP 800-185.
-pub fn enc_8(i: u64) -> [u8; 9] {
-    // In range of 0..255
-    assert!(i < 256);
-
-    let mut buf_encoded = [0u8; 9];
-    write_u64_le(&mut buf_encoded, i);
-
-    buf_encoded
-}
-
 /// The encode_string function as specified in the NIST SP 800-185.
-pub fn encode_string(s: &[u8]) -> Vec<u8> {
+fn encode_string(s: &[u8]) -> Vec<u8> {
+    let mut encoded = left_encode(s.len() as u64 * 8);
+    encoded.extend_from_slice(s);
 
-    let mut enc_final = left_encode(s.len() as u64 * 8);
-    enc_final.extend_from_slice(s);
-
-    enc_final
+    encoded
 }
 
 /// The left_encode function as specified in the NIST SP 800-185.
-pub fn left_encode(x: u64) -> Vec<u8> {
-    // https://github.com/gvanas/KeccakCodePackage/blob/master/lib/high/Keccak/SP800-185/SP800-185.c
-    // https://gist.github.com/mimoo/7e815318e54d5c07c3330149ddf439c5
+fn left_encode(x: u64) -> Vec<u8> {
 
     let mut input = vec![0u8; 9];
     let mut offset: usize = 0;
@@ -176,33 +141,39 @@ pub fn left_encode(x: u64) -> Vec<u8> {
     }
 
     input[offset - 1] = (9 - offset) as u8;
+
     input[(offset - 1)..].to_vec()
 }
 
+#[cfg(test)]
+mod test {
 
-#[test]
-fn test_encode_string() {
-    // Example test case from NIST SP 800-185
-    let res = encode_string("".as_bytes());
-    // Empty string should yield: 10000000 00000000.
-    assert_eq!(res[0].count_ones(), 1);
-    assert_eq!(res[0].count_zeros(), 7);
+    use hazardous::cshake::*;
 
-    assert_eq!(res[1].count_ones(), 0);
-    assert_eq!(res[1].count_zeros(), 8);
-}
+    #[test]
+    fn test_encode_string() {
+        // Example test case from NIST SP 800-185
+        let res = encode_string("".as_bytes());
+        // Empty string should yield: 10000000 00000000.
+        assert_eq!(res[0].count_ones(), 1);
+        assert_eq!(res[0].count_zeros(), 7);
+        assert_eq!(res[1].count_ones(), 0);
+        assert_eq!(res[1].count_zeros(), 8);
+    }
 
-#[test]
-fn test_left_encode() {
-    //let test_1 = left_encode(32);
-    let test_2 = left_encode(255);
-    let test_3 = left_encode(0);
-    let test_4 = left_encode(64);
-    let test_5 = left_encode(u64::max_value());
+    #[test]
+    fn test_left_encode() {
+        let test_1 = left_encode(32);
+        let test_2 = left_encode(255);
+        let test_3 = left_encode(0);
+        let test_4 = left_encode(64);
+        let test_5 = left_encode(u64::max_value());
 
-    //assert_eq!(&test_1, &[1, 32]);
-    assert_eq!(&test_2, &[1, 255]);
-    assert_eq!(&test_3, &[1, 0]);
-    assert_eq!(&test_4, &[1, 64]);
-    assert_eq!(&test_5, &[8, 255, 255, 255, 255, 255, 255, 255, 255]);
+        assert_eq!(&test_1, &[1, 32]);
+        assert_eq!(&test_2, &[1, 255]);
+        assert_eq!(&test_3, &[1, 0]);
+        assert_eq!(&test_4, &[1, 64]);
+        assert_eq!(&test_5, &[8, 255, 255, 255, 255, 255, 255, 255, 255]);
+    }
+
 }

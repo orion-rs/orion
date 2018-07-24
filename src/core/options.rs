@@ -83,7 +83,7 @@ impl ShaVariantOption {
 /// cSHAKE options.
 pub enum CShakeVariantOption {
     CSHAKE128,
-    CSHAKE256
+    CSHAKE256,
 }
 
 #[cfg(test)]
