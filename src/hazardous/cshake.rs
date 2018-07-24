@@ -62,6 +62,7 @@ impl Drop for CShake {
 /// - Both `name` and `custom` are empty
 /// - The specified length is zero
 /// - The specified length is greater than 65536
+/// - If the length of either `name` or `custom` is greater than 65536
 ///
 /// The reason that `name` and `custom` cannot both be empty is because, if they could be set to
 /// empty strings the result of using cSHAKE would be equivalent to a SHAKE call.
@@ -123,6 +124,9 @@ impl CShake {
             return Err(UnknownCryptoError);
         }
         if self.length == 0 || self.length > 65536 {
+            return Err(UnknownCryptoError);
+        }
+        if self.name.len() > 65536 || self.custom.len() > 65536 {
             return Err(UnknownCryptoError);
         }
 
@@ -272,6 +276,32 @@ mod test {
             length: 65537,
             name: b"Email signature".to_vec(),
             custom: b"".to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        assert!(cshake.finalize().is_err());
+    }
+
+    #[test]
+    fn err_on_name_max_length() {
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            length: 32,
+            name: vec![0u8; 65537],
+            custom: b"Email signature".to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        assert!(cshake.finalize().is_err());
+    }
+
+    #[test]
+    fn err_on_custom_max_length() {
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            length: 32,
+            name: b"Email signature".to_vec(),
+            custom: vec![0u8; 65537],
             cshake: CShakeVariantOption::CSHAKE128,
         };
 
