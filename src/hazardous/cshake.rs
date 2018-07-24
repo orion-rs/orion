@@ -48,6 +48,10 @@ impl Drop for CShake {
 
 /// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 ///
+/// # About:
+/// "This is intended for use by NIST in defining SHA-3-derived functions, and should only be set
+/// to values defined by NIST6"
+///
 /// # Parameters:
 /// - `input`:  The main input bit string
 /// - `length`: Output length in bytes
@@ -55,7 +59,10 @@ impl Drop for CShake {
 /// - `custom`: Customization bit string
 /// - `keccak`: Keccak variant to be used
 ///
-/// See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
+/// ### Note:
+/// `name` is a special parameter that in most cases should be just set to a zero string:
+/// "This is intended for use by NIST in defining SHA-3-derived functions, and should only be set
+/// to values defined by NIST". See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
