@@ -99,8 +99,9 @@ impl CShake {
         }
     }
 
-    fn keccak_finalize(&self, state: Keccak) -> Vec<u8> {
+    fn keccak_finalize(&self, mut state: Keccak) -> Vec<u8> {
         let mut hash = vec![0u8; self.length];
+        state.absorb(&self.input);
         state.finalize(&mut hash);
         hash
     }
@@ -113,23 +114,13 @@ impl CShake {
             return Err(UnknownCryptoError);
         }
 
-        let mut cshake_pad = Vec::new();
+        let mut cshake_pad = self.keccak_init();
+        cshake_pad.update(&left_encode(self.rate()));
+        cshake_pad.update(&encode_string(&self.n));
+        cshake_pad.update(&encode_string(&self.s));
+        cshake_pad.fill_block();
 
-        cshake_pad.extend_from_slice(&left_encode(self.n.len() as u64 * 8));
-        cshake_pad.extend_from_slice(&self.n);
-
-        cshake_pad.extend_from_slice(&left_encode(self.s.len() as u64 * 8));
-        cshake_pad.extend_from_slice(&self.s);
-
-        cshake_pad = bytepad(&cshake_pad, self.rate());
-        cshake_pad.extend_from_slice(&self.input);
-
-        let mut state = self.keccak_init();
-        state.absorb(&cshake_pad);
-        state.fill_block();
-        let fin = self.keccak_finalize(state);
-
-        Ok(fin)
+        Ok(self.keccak_finalize(cshake_pad))
     }
 }
 
@@ -153,6 +144,15 @@ pub fn enc_8(i: u64) -> [u8; 9] {
     write_u64_le(&mut buf_encoded, i);
 
     buf_encoded
+}
+
+/// The encode_string function as specified in the NIST SP 800-185.
+pub fn encode_string(s: &[u8]) -> Vec<u8> {
+
+    let mut enc_final = left_encode(s.len() as u64 * 8);
+    enc_final.extend_from_slice(s);
+
+    enc_final
 }
 
 /// The left_encode function as specified in the NIST SP 800-185.
@@ -179,14 +179,6 @@ pub fn left_encode(x: u64) -> Vec<u8> {
     input[(offset - 1)..].to_vec()
 }
 
-/// The encode_string function as specified in the NIST SP 800-185.
-pub fn encode_string(s: &[u8]) -> Vec<u8> {
-
-    let mut enc_final = left_encode(s.len() as u64 * 8);
-    enc_final.extend_from_slice(s);
-
-    enc_final
-}
 
 #[test]
 fn test_encode_string() {
@@ -213,6 +205,4 @@ fn test_left_encode() {
     assert_eq!(&test_3, &[1, 0]);
     assert_eq!(&test_4, &[1, 64]);
     assert_eq!(&test_5, &[8, 255, 255, 255, 255, 255, 255, 255, 255]);
-
-
 }
