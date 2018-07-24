@@ -294,6 +294,11 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
 /// - `input`:  The main input bit string
 /// - `custom`: Customization bit string
 ///
+/// "The customization string is intended to avoid a collision between these two cSHAKE values—it
+/// will be very difficult for an attacker to somehow force one computation (the email signature)
+/// to yield the same result as the other computation (the key fingerprint) if different values
+/// of S are used." See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
+///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - `custom` is empty

@@ -48,16 +48,18 @@ impl Drop for CShake {
 
 /// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 ///
-/// # About:
-/// "This is intended for use by NIST in defining SHA-3-derived functions, and should only be set
-/// to values defined by NIST6"
-///
 /// # Parameters:
 /// - `input`:  The main input bit string
 /// - `length`: Output length in bytes
 /// - `name`: Function-name bit string
 /// - `custom`: Customization bit string
 /// - `keccak`: Keccak variant to be used
+///
+///
+/// "The customization string is intended to avoid a collision between these two cSHAKE values—it
+/// will be very difficult for an attacker to somehow force one computation (the email signature)
+/// to yield the same result as the other computation (the key fingerprint) if different values
+/// of S are used." See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
 ///
 /// ### Note:
 /// `name` is a special parameter that in most cases should be just set to a zero string:
@@ -124,7 +126,7 @@ impl CShake {
         hash
     }
 
-    /// Return a cSHAKE.
+    /// Return a cSHAKE hash.
     pub fn finalize(&self) -> Result<Vec<u8>, UnknownCryptoError> {
         // "When N and S are both empty strings, cSHAKE(X, L, N, S) is equivalent to SHAKE as
         // defined in FIPS 202"
