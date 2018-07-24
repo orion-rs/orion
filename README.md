@@ -50,7 +50,7 @@ let name = "".as_bytes();
 let custom = "Custom".as_bytes();
 
 let hash = default::cshake(data, name, custom).unwrap();
-assert!(default::cshake_verify(hash, data, name, custom).unwrap())
+assert!(default::cshake_verify(hash, data, name, custom).unwrap());
 ```
 
 
@@ -85,7 +85,7 @@ Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://githu
 - [RustCrypto HMAC](https://crates.io/crates/hmac)
 - [RustCrypto HKDF](https://crates.io/crates/hkdf)
 - [RustCrypto PBKDF2](https://crates.io/crates/pbkdf2)
-- [sp800-185](https://crates.io/crates/sp800-185) (cSHAKE, KMAC)
+- [sp800-185](https://crates.io/crates/sp800-185) (cSHAKE)
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.
