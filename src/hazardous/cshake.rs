@@ -35,7 +35,7 @@ pub struct CShake {
     pub name: Vec<u8>,
     pub custom: Vec<u8>,
     pub length: usize,
-    pub cshake: KeccakVariantOption,
+    pub keccak: KeccakVariantOption,
 }
 
 impl Drop for CShake {
@@ -53,7 +53,7 @@ impl Drop for CShake {
 /// - `length`: Output length in bytes
 /// - `name`: Function-name bit string
 /// - `custom`: Customization bit string
-/// - `cshake`: cSHAKE variant to be used
+/// - `keccak`: Keccak variant to be used
 ///
 /// See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
 ///
@@ -84,7 +84,7 @@ impl Drop for CShake {
 ///     name: "".as_bytes().to_vec(),
 ///     custom: "Email signature".as_bytes().to_vec(),
 ///     length: 32,
-///     cshake: KeccakVariantOption::KECCAK128,
+///     keccak: KeccakVariantOption::KECCAK128,
 /// };
 ///
 /// let result = cshake.finalize().unwrap();
@@ -94,7 +94,7 @@ impl Drop for CShake {
 impl CShake {
     /// Return the rate in bytes of the respective Keccak sponge function.
     fn rate(&self) -> u64 {
-        match &self.cshake {
+        match &self.keccak {
             KeccakVariantOption::KECCAK128 => 168_u64,
             KeccakVariantOption::KECCAK256 => 136_u64,
         }
@@ -102,7 +102,7 @@ impl CShake {
 
     /// Initialize a Keccak hasher.
     fn keccak_init(&self) -> Keccak {
-        match &self.cshake {
+        match &self.keccak {
             KeccakVariantOption::KECCAK128 => Keccak::new(self.rate() as usize, 0x04),
             KeccakVariantOption::KECCAK256 => Keccak::new(self.rate() as usize, 0x04),
         }
@@ -225,7 +225,7 @@ mod test {
             length: 32,
             name: b"".to_vec(),
             custom: b"".to_vec(),
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         assert!(cshake.finalize().is_err());
@@ -238,7 +238,7 @@ mod test {
             length: 32,
             name: b"Email signature".to_vec(),
             custom: b"".to_vec(),
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         assert!(cshake.finalize().is_ok());
@@ -251,7 +251,7 @@ mod test {
             length: 32,
             name: b"Email signature".to_vec(),
             custom: b"".to_vec(),
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         assert!(cshake.finalize().is_ok());
@@ -264,7 +264,7 @@ mod test {
             length: 0,
             name: b"Email signature".to_vec(),
             custom: b"".to_vec(),
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         assert!(cshake.finalize().is_err());
@@ -277,7 +277,7 @@ mod test {
             length: 65537,
             name: b"Email signature".to_vec(),
             custom: b"".to_vec(),
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         assert!(cshake.finalize().is_err());
@@ -290,7 +290,7 @@ mod test {
             length: 32,
             name: vec![0u8; 65537],
             custom: b"Email signature".to_vec(),
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         assert!(cshake.finalize().is_err());
@@ -303,7 +303,7 @@ mod test {
             length: 32,
             name: b"Email signature".to_vec(),
             custom: vec![0u8; 65537],
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         assert!(cshake.finalize().is_err());
@@ -316,7 +316,7 @@ mod test {
             length: 17,
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         let expected = b"\xC1\xC3\x69\x25\xB6\x40\x9A\x04\xF1\xB5\x04\xFC\xBC\xA9\xD8\x2B\x40\x17\
@@ -334,7 +334,7 @@ mod test {
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
             length: 32,
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         let expected = b"\xC1\xC3\x69\x25\xB6\x40\x9A\x04\xF1\xB5\x04\xFC\xBC\xA9\xD8\x2B\x40\x17\
@@ -352,7 +352,7 @@ mod test {
             length: 32,
             name: b"Email signature".to_vec(),
             custom: b"".to_vec(),
-            cshake: KeccakVariantOption::KECCAK128,
+            keccak: KeccakVariantOption::KECCAK128,
         };
 
         let expected = b"\xC1\xC3\x69\x25\xB6\x40\x9A\x04\xF1\xB5\x04\xFC\xBC\xA9\xD8\x2B\x40\x17\

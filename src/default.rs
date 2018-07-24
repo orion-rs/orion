@@ -316,7 +316,7 @@ pub fn cshake(input: &[u8], name: &[u8], custom: &[u8]) -> Result<Vec<u8>, Unkno
         name: name.to_vec(),
         custom: custom.to_vec(),
         length: 64,
-        cshake: KeccakVariantOption::KECCAK256,
+        keccak: KeccakVariantOption::KECCAK256,
     };
 
     cshake.finalize()
@@ -346,7 +346,7 @@ pub fn cshake_verify(
         name: name.to_vec(),
         custom: custom.to_vec(),
         length: 64,
-        cshake: KeccakVariantOption::KECCAK256,
+        keccak: KeccakVariantOption::KECCAK256,
     };
 
     cshake.verify(&expected)
