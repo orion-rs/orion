@@ -176,4 +176,36 @@ mod test {
         assert_eq!(&test_5, &[8, 255, 255, 255, 255, 255, 255, 255, 255]);
     }
 
+    #[test]
+    fn err_on_empty_n_c() {
+
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            length: 32,
+            name: b"".to_vec(),
+            custom: b"".to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        assert!(cshake.finalize().is_err());
+    }
+
+    #[test]
+    fn non_8_div_len() {
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            length: 17,
+            name: b"".to_vec(),
+            custom: b"Email Signature".to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        let expected = b"\xC1\xC3\x69\x25\xB6\x40\x9A\x04\xF1\xB5\x04\xFC\xBC\xA9\xD8\x2B\x40\x17\
+                        \x27\x7C\xB5\xED\x2B\x20\x65\xFC\x1D\x38\x14\xD5\xAA\xF5"
+            .to_vec();
+
+        assert_eq!(expected[..17].len(), cshake.finalize().unwrap().len());
+        assert_eq!(cshake.finalize().unwrap(), &expected[..17]);
+    }
+
 }
