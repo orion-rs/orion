@@ -80,6 +80,7 @@ impl ShaVariantOption {
     }
 }
 
+#[derive(Clone, Copy)]
 /// Keccak options.
 pub enum KeccakVariantOption {
     KECCAK128,
