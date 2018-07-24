@@ -29,6 +29,27 @@ fn fuzz_default(data: &[u8]) -> () {
         password.extend_from_slice(&[0u8; 14]);
 
         default::pbkdf2_verify(&default::pbkdf2(&password).unwrap(), &password).unwrap();
+
+
+        default::cshake_verify(&default::cshake(&data, &data, &data).unwrap(), &data, &data, &data).unwrap();
+        default::cshake_verify(
+            &default::cshake(&data, "".as_bytes(), &data).unwrap(),
+            &data,
+            "".as_bytes(),
+            &data)
+        .unwrap();
+        default::cshake_verify(
+            &default::cshake(&data, &data, "".as_bytes()).unwrap(),
+            &data,
+            &data,
+            "".as_bytes())
+        .unwrap();
+        default::cshake_verify(
+            &default::cshake("".as_bytes(), &data, &data).unwrap(),
+             "".as_bytes(),
+             &data,
+             &data)
+        .unwrap();
     }
 }
 
