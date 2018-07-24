@@ -39,3 +39,7 @@ path = "fuzz_targets/default.rs"
 [[bin]]
 name = "ring_compare"
 path = "fuzz_targets/ring_compare.rs"
+
+[[bin]]
+name = "cshake"
+path = "fuzz_targets/cshake.rs"

@@ -11,7 +11,6 @@ use rand::prelude::*;
 fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8], len_max: usize, hmac: ShaVariantOption) {
 
     let mut rng = rand::thread_rng();
-
     let okm_len_rand = rng.gen_range(1, len_max+1);
 
     let dk = Hkdf {
