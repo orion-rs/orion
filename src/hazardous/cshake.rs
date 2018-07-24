@@ -22,8 +22,9 @@
 
 use byte_tools::write_u64_be;
 use clear_on_drop::clear::Clear;
-use core::errors::UnknownCryptoError;
+use core::errors::*;
 use core::options::CShakeVariantOption;
+use core::util;
 use tiny_keccak::Keccak;
 
 /// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
@@ -134,6 +135,20 @@ impl CShake {
         cshake_pad.fill_block();
 
         Ok(self.keccak_finalize(cshake_pad))
+    }
+
+    /// Verify a cSHAKE hash by comparing one from the current struct fields to the input hash
+    /// passed to the function. Comparison is done in constant time. Both hashes must be
+    /// of equal length.
+    pub fn verify(&self, input: &[u8]) -> Result<bool, ValidationCryptoError> {
+
+        let own_hash = self.finalize().unwrap();
+
+        if util::compare_ct(&own_hash, input).is_err() {
+            Err(ValidationCryptoError)
+        } else {
+            Ok(true)
+        }
     }
 }
 
@@ -279,5 +294,40 @@ mod test {
 
         assert_eq!(expected[..17].len(), cshake.finalize().unwrap().len());
         assert_eq!(cshake.finalize().unwrap(), &expected[..17]);
+    }
+
+    #[test]
+    fn verify_ok() {
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            name: b"".to_vec(),
+            custom: b"Email Signature".to_vec(),
+            length: 32,
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        let expected = b"\xC1\xC3\x69\x25\xB6\x40\x9A\x04\xF1\xB5\x04\xFC\xBC\xA9\xD8\x2B\x40\x17\
+                        \x27\x7C\xB5\xED\x2B\x20\x65\xFC\x1D\x38\x14\xD5\xAA\xF5"
+            .to_vec();
+
+        assert_eq!(cshake.verify(&expected).unwrap(), true);
+    }
+
+    #[test]
+    fn verify_err() {
+        // `name` and `custom` values have been switched here compared to the previous one
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            length: 32,
+            name: b"Email signature".to_vec(),
+            custom: b"".to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        let expected = b"\xC1\xC3\x69\x25\xB6\x40\x9A\x04\xF1\xB5\x04\xFC\xBC\xA9\xD8\x2B\x40\x17\
+                        \x27\x7C\xB5\xED\x2B\x20\x65\xFC\x1D\x38\x14\xD5\xAA\xF5"
+            .to_vec();
+
+        assert!(cshake.verify(&expected).is_err());
     }
 }

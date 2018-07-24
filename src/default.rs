@@ -21,10 +21,12 @@
 // SOFTWARE.
 
 use core::options::ShaVariantOption;
+//use core::options::CShakeVariantOption;
 use core::{errors::*, util};
 use hazardous::hkdf::Hkdf;
 use hazardous::hmac::Hmac;
 use hazardous::pbkdf2::Pbkdf2;
+//use hazardous::cshake::CShake;
 
 /// HMAC-SHA512/256.
 /// # Parameters:
