@@ -31,9 +31,9 @@ use tiny_keccak::Keccak;
 /// Fields `input`, `name` and `custom` are zeroed out on drop.
 pub struct CShake {
     pub input: Vec<u8>,
-    pub length: usize,
     pub name: Vec<u8>,
     pub custom: Vec<u8>,
+    pub length: usize,
     pub cshake: CShakeVariantOption,
 }
 
@@ -59,13 +59,34 @@ impl Drop for CShake {
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - Both `name` and `custom` are empty
+/// - The specified length is zero
+/// - The specified length is greater than 65536
 ///
 /// The reason that `name` and `custom` cannot both be empty is because, if they could be set to
 /// empty strings the result of using cSHAKE would be equivalent to a SHAKE call.
 ///
 /// # Security:
+/// cSHAKE128 has a security strength of 128 bits, whereas cSHAKE256 has a security strength of
+/// 256 bits. The recommended output length for cSHAKE128 is 32 and 64 for cSHAKE256.
 ///
 /// # Example:
+/// ```
+/// use orion::hazardous::cshake::CShake;
+/// use orion::core::util::gen_rand_key;
+/// use orion::core::options::CShakeVariantOption;
+///
+/// let key = gen_rand_key(32).unwrap();
+///
+/// let cshake = CShake {
+///     input: key,
+///     name: "".as_bytes().to_vec(),
+///     custom: "Email signature".as_bytes().to_vec(),
+///     length: 32,
+///     cshake: CShakeVariantOption::CSHAKE128,
+/// };
+///
+/// let result = cshake.finalize().unwrap();
+/// ```
 
 impl CShake {
     /// Return the rate in bytes of the respective Keccak sponge function.
@@ -79,19 +100,16 @@ impl CShake {
     /// Initialize a Keccak hasher.
     fn keccak_init(&self) -> Keccak {
         match &self.cshake {
-            CShakeVariantOption::CSHAKE128 => {
-                Keccak::new(self.rate() as usize, 0x04)
-            }
-            CShakeVariantOption::CSHAKE256 => {
-                Keccak::new(self.rate() as usize, 0x04)
-            }
+            CShakeVariantOption::CSHAKE128 => Keccak::new(self.rate() as usize, 0x04),
+            CShakeVariantOption::CSHAKE256 => Keccak::new(self.rate() as usize, 0x04),
         }
     }
 
     /// Return a Keccak hash.
     fn keccak_finalize(&self, mut state: Keccak) -> Vec<u8> {
         let mut hash = vec![0u8; self.length];
-        state.absorb(&self.input);
+        state.update(&self.input);
+        // finalize() will call pad(), then keccakf() and finally squeeze()
         state.finalize(&mut hash);
         hash
     }
@@ -103,11 +121,16 @@ impl CShake {
         if (self.name.is_empty()) && (self.custom.is_empty()) {
             return Err(UnknownCryptoError);
         }
+        if self.length == 0 || self.length > 65536 {
+            return Err(UnknownCryptoError);
+        }
 
-        let mut cshake_pad = self.keccak_init();
+        let mut cshake_pad: Keccak = self.keccak_init();
+        // Only append the left encoded rate, not the rate itself as with `name` and `custom`
         cshake_pad.update(&left_encode(self.rate()));
         cshake_pad.update(&encode_string(&self.name));
         cshake_pad.update(&encode_string(&self.custom));
+        // Pad with zeroes before calling pad() in finalize()
         cshake_pad.fill_block();
 
         Ok(self.keccak_finalize(cshake_pad))
@@ -124,7 +147,6 @@ fn encode_string(s: &[u8]) -> Vec<u8> {
 
 /// The left_encode function as specified in the NIST SP 800-185.
 fn left_encode(x: u64) -> Vec<u8> {
-
     let mut input = vec![0u8; 9];
     let mut offset: usize = 0;
 
@@ -178,11 +200,62 @@ mod test {
 
     #[test]
     fn err_on_empty_n_c() {
-
         let cshake = CShake {
             input: b"\x00\x01\x02\x03".to_vec(),
             length: 32,
             name: b"".to_vec(),
+            custom: b"".to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        assert!(cshake.finalize().is_err());
+    }
+
+    #[test]
+    fn empty_custom_ok() {
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            length: 32,
+            name: b"Email signature".to_vec(),
+            custom: b"".to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        assert!(cshake.finalize().is_ok());
+    }
+
+    #[test]
+    fn empty_input_ok() {
+        let cshake = CShake {
+            input: b"".to_vec(),
+            length: 32,
+            name: b"Email signature".to_vec(),
+            custom: b"".to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        assert!(cshake.finalize().is_ok());
+    }
+
+    #[test]
+    fn err_on_zero_length() {
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            length: 0,
+            name: b"Email signature".to_vec(),
+            custom: b"".to_vec(),
+            cshake: CShakeVariantOption::CSHAKE128,
+        };
+
+        assert!(cshake.finalize().is_err());
+    }
+
+    #[test]
+    fn err_on_above_max_length() {
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            length: 65537,
+            name: b"Email signature".to_vec(),
             custom: b"".to_vec(),
             cshake: CShakeVariantOption::CSHAKE128,
         };
@@ -207,5 +280,4 @@ mod test {
         assert_eq!(expected[..17].len(), cshake.finalize().unwrap().len());
         assert_eq!(cshake.finalize().unwrap(), &expected[..17]);
     }
-
 }

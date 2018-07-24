@@ -29,5 +29,5 @@ pub mod hkdf;
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
 pub mod pbkdf2;
 
-/// cSHAKE as specified in the NIST SP 800-185.
+/// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 pub mod cshake;

@@ -20,7 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
 /// Testing against official test vectors from the [KeccakCodePackage](https://github.com/gvanas/KeccakCodePackage/blob/master/tests/UnitTests/testSP800-185.c)
 
 #[cfg(test)]
@@ -33,9 +32,9 @@ mod kcp_test_vectors {
     fn cshake128_test_case_1() {
         let cshake = CShake {
             input: b"\x00\x01\x02\x03".to_vec(),
-            length: 32,
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
+            length: 32,
             cshake: CShakeVariantOption::CSHAKE128,
         };
 
@@ -62,9 +61,9 @@ mod kcp_test_vectors {
                     \xAB\xAC\xAD\xAE\xAF\xB0\xB1\xB2\xB3\xB4\xB5\xB6\xB7\xB8\xB9\xBA\xBB\xBC\xBD\
                     \xBE\xBF\xC0\xC1\xC2\xC3\xC4\xC5\xC6\xC7"
                 .to_vec(),
-            length: 32,
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
+            length: 32,
             cshake: CShakeVariantOption::CSHAKE128,
         };
 
@@ -80,9 +79,9 @@ mod kcp_test_vectors {
     fn cshake_256_test_case_1() {
         let cshake = CShake {
             input: b"\x00\x01\x02\x03".to_vec(),
-            length: 64,
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
+            length: 64,
             cshake: CShakeVariantOption::CSHAKE256,
         };
 
@@ -111,9 +110,9 @@ mod kcp_test_vectors {
                     \xAB\xAC\xAD\xAE\xAF\xB0\xB1\xB2\xB3\xB4\xB5\xB6\xB7\xB8\xB9\xBA\xBB\xBC\xBD\
                     \xBE\xBF\xC0\xC1\xC2\xC3\xC4\xC5\xC6\xC7"
                 .to_vec(),
-            length: 64,
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
+            length: 64,
             cshake: CShakeVariantOption::CSHAKE256,
         };
 
