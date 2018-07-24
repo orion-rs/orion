@@ -2,7 +2,7 @@
 extern crate orion;
 extern crate test;
 
-use orion::core::options::CShakeVariantOption;
+use orion::core::options::KeccakVariantOption;
 use orion::core::options::ShaVariantOption;
 use orion::hazardous::cshake::CShake;
 use orion::hazardous::hkdf::Hkdf;
@@ -61,7 +61,7 @@ fn bench_cshake(b: &mut Bencher) {
             name: vec![0x00; 0],
             custom: vec![0x01; 32],
             length: 64,
-            cshake: CShakeVariantOption::CSHAKE256,
+            cshake: KeccakVariantOption::KECCAK256,
         };
 
         cshake.finalize().unwrap();

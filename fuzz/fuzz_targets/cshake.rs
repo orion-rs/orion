@@ -4,11 +4,11 @@ extern crate orion;
 extern crate rand;
 
 use orion::hazardous::cshake::CShake;
-use orion::core::options::CShakeVariantOption;
+use orion::core::options::KeccakVariantOption;
 use rand::prelude::*;
 
 
-fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize, cshake: CShakeVariantOption) {
+fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize, cshake: KeccakVariantOption) {
 
     let mut rng = rand::thread_rng();
     let len_rand = rng.gen_range(1, len_max+1);
@@ -33,7 +33,7 @@ fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize, cshake:
 }
 
 fuzz_target!(|data: &[u8]| {
-    fuzz_cshake(data, data, data, 65536, CShakeVariantOption::CSHAKE128);
-    fuzz_cshake(data, data, data, 65536, CShakeVariantOption::CSHAKE256);
+    fuzz_cshake(data, data, data, 65536, KeccakVariantOption::KECCAK128);
+    fuzz_cshake(data, data, data, 65536, KeccakVariantOption::KECCAK256);
 
 });

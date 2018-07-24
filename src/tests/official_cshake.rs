@@ -35,7 +35,7 @@ mod kcp_test_vectors {
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
             length: 32,
-            cshake: CShakeVariantOption::CSHAKE128,
+            cshake: KeccakVariantOption::KECCAK128,
         };
 
         let expected = b"\xC1\xC3\x69\x25\xB6\x40\x9A\x04\xF1\xB5\x04\xFC\xBC\xA9\xD8\x2B\x40\x17\
@@ -64,7 +64,7 @@ mod kcp_test_vectors {
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
             length: 32,
-            cshake: CShakeVariantOption::CSHAKE128,
+            cshake: KeccakVariantOption::KECCAK128,
         };
 
         let expected = b"\xC5\x22\x1D\x50\xE4\xF8\x22\xD9\x6A\x2E\x88\x81\xA9\x61\x42\x0F\x29\x4B\
@@ -82,7 +82,7 @@ mod kcp_test_vectors {
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
             length: 64,
-            cshake: CShakeVariantOption::CSHAKE256,
+            cshake: KeccakVariantOption::KECCAK256,
         };
 
         let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
@@ -113,7 +113,7 @@ mod kcp_test_vectors {
             name: b"".to_vec(),
             custom: b"Email Signature".to_vec(),
             length: 64,
-            cshake: CShakeVariantOption::CSHAKE256,
+            cshake: KeccakVariantOption::KECCAK256,
         };
 
         let expected = b"\x07\xDC\x27\xB1\x1E\x51\xFB\xAC\x75\xBC\x7B\x3C\x1D\x98\x3E\x8B\x4B\x85\

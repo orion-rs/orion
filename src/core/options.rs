@@ -80,10 +80,10 @@ impl ShaVariantOption {
     }
 }
 
-/// cSHAKE options.
-pub enum CShakeVariantOption {
-    CSHAKE128,
-    CSHAKE256,
+/// Keccak options.
+pub enum KeccakVariantOption {
+    KECCAK128,
+    KECCAK256,
 }
 
 #[cfg(test)]
