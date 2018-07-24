@@ -81,10 +81,11 @@ cargo +nightly bench
 Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://github.com/brycx/orion/issues/3) of the code.
 
 ### Alternatives
-- [*ring*](https://crates.io/crates/ring)
+- [*ring*](https://crates.io/crates/ring) (HMAC, HKDF, PBKDF2)
 - [RustCrypto HMAC](https://crates.io/crates/hmac)
 - [RustCrypto HKDF](https://crates.io/crates/hkdf)
 - [RustCrypto PBKDF2](https://crates.io/crates/pbkdf2)
+- [sp800-185](https://crates.io/crates/sp800-185) (cSHAKE, KMAC)
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.
