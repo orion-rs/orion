@@ -25,8 +25,9 @@ use core::options::CShakeVariantOption;
 use byte_tools::write_u64_le;
 use byte_tools::write_u64_be;
 use core::errors::*;
-use sha3;
-use sha3::Digest;
+//use sha3;
+//use sha3::Digest;
+use tiny_keccak::Keccak;
 
 /// cSHAKE as specified in the NIST SP 800-185.
 ///
@@ -74,57 +75,81 @@ impl Drop for CShake {
 /// ```
 /// ```
 
+// https://groups.google.com/forum/#!topic/golang-codereviews/0t_cXN1u5ro
+
 impl CShake {
 
-    fn return_rate(&self) -> u64 {
+    fn rate(&self) -> u64 {
         match &self.cshake {
             CShakeVariantOption::CSHAKE128 => 168_u64,
             CShakeVariantOption::CSHAKE256 => 136_u64,
         }
     }
 
-    fn return_keccak(&self, data: &[u8]) -> Vec<u8> {
+    fn keccak_init(&self) -> Keccak {
         match &self.cshake {
             CShakeVariantOption::CSHAKE128 => {
-                let mut hash = sha3::Keccak256::default();
-                hash.input(data);
-                hash.result().to_vec()
+                let mut hash = Keccak::new(168, 0x04);
+                hash
             },
             CShakeVariantOption::CSHAKE256 => {
-                let mut hash = sha3::Keccak512::default();
-                hash.input(data);
-                hash.result().to_vec()
+                let mut hash = Keccak::new(136, 0x04);
+                hash
             }
         }
+    }
+
+    fn keccak_finalize(&self, state: Keccak) -> Vec<u8> {
+        let mut hash = vec![0u8; self.length];
+        state.finalize(&mut hash);
+        hash
     }
 
     pub fn finalize(&self) -> Result<Vec<u8>, UnknownCryptoError> {
         // "When N and S are both empty strings, cSHAKE(X, L, N, S) is equivalent to SHAKE as
         // defined in FIPS 202"
         if (self.n.is_empty()) && (self.s.is_empty()) {
+            // INSERT SHAKE CALLL HERE
             return Err(UnknownCryptoError);
         }
 
-        let mut concat_ns_pad = encode_string(&self.n);
-        concat_ns_pad.extend_from_slice(&encode_string(&self.n));
-        concat_ns_pad = bytepad(&concat_ns_pad, self.return_rate());
-        concat_ns_pad.extend_from_slice(&self.input);
-        concat_ns_pad.push(0u8);
-        concat_ns_pad.push(0u8);
+        let mut cshake_pad = Vec::new();
 
-        Ok(self.return_keccak(&concat_ns_pad))
+        cshake_pad.extend_from_slice(&left_encode(self.n.len() as u64 * 8));
+        cshake_pad.extend_from_slice(&self.n);
 
+        cshake_pad.extend_from_slice(&left_encode(self.s.len() as u64 * 8));
+        cshake_pad.extend_from_slice(&self.s);
+
+        cshake_pad = bytepad(&cshake_pad, self.rate());
+        cshake_pad.extend_from_slice(&self.input);
+
+        let mut state = self.keccak_init();
+        state.absorb(&cshake_pad);
+        state.fill_block();
+        let fin = self.keccak_finalize(state);
+
+        Ok(fin)
     }
-
 }
 
+pub fn bytepad(x: &[u8], w: u64) -> Vec<u8> {
+    let mut res: Vec<u8> = Vec::new();
+    res.extend_from_slice(&left_encode(w));
+    res.extend_from_slice(x);
+    let padlen = w - (x.len() as u64 % w);
+
+    res.extend_from_slice(&vec![0u8; padlen as usize]);
+
+    res
+}
 
 /// The enc_8 function as specified in the NIST SP 800-185.
-pub fn enc_8(i: u64) -> [u8; 8] {
+pub fn enc_8(i: u64) -> [u8; 9] {
     // In range of 0..255
     assert!(i < 256);
 
-    let mut buf_encoded = [0u8; 8];
+    let mut buf_encoded = [0u8; 9];
     write_u64_le(&mut buf_encoded, i);
 
     buf_encoded
@@ -136,61 +161,32 @@ pub fn left_encode(x: u64) -> Vec<u8> {
     // https://gist.github.com/mimoo/7e815318e54d5c07c3330149ddf439c5
 
     let mut input = vec![0u8; 9];
-
     let mut offset: usize = 0;
 
     if x == 0 {
         offset = 8;
     } else {
-        write_u64_be(&mut input[1..], x);
+        write_u64_be(&mut input[1..], x.to_le());
         for idx in &input {
-            offset += 1;
-            if *idx != 0_u8 {
-                continue;
+            if *idx != 0 {
+                break;
             }
+            offset += 1;
         }
     }
 
-    input[offset - 1] = 9 - offset as u8;
-    input[offset - 1..].to_vec()
+    input[offset - 1] = (9 - offset) as u8;
+    input[(offset - 1)..].to_vec()
 }
 
-/*
-/// The right_encode function as specified in the NIST SP 800-185.
-pub fn right_encode(x: u32) -> Vec<u8> {
-
-    vec![0x00; 0]
-}
-*/
 /// The encode_string function as specified in the NIST SP 800-185.
 pub fn encode_string(s: &[u8]) -> Vec<u8> {
 
-    let mut enc_final = left_encode(s.len() as u64);
+    let mut enc_final = left_encode(s.len() as u64 * 8);
     enc_final.extend_from_slice(s);
 
     enc_final
 }
-
-/// The bytepad function as specified in the NIST SP 800-185.
-
-/// NEEDS TO BE LOOKED THROUGH
-pub fn bytepad(x: &[u8], w: u64) -> Vec<u8> {
-    assert!(w > 0);
-
-    let mut z: Vec<u8> = Vec::new();
-    z.extend_from_slice(&left_encode(w));
-    z.extend_from_slice(x);
-
-    while z.len().checked_rem(8) != None {
-        z.push(0u8);
-    }
-    while (z.len().checked_div(8).unwrap()).checked_rem(w as usize) != None {
-        z.extend_from_slice(&[0u8; 8]);
-    }
-
-    z
-}
-
 
 #[test]
 fn test_encode_string() {
@@ -205,7 +201,18 @@ fn test_encode_string() {
 }
 
 #[test]
-#[should_panic]
-fn test_bytepad_zero_panic() {
-    bytepad(&[0u8; 1], 0);
+fn test_left_encode() {
+    //let test_1 = left_encode(32);
+    let test_2 = left_encode(255);
+    let test_3 = left_encode(0);
+    let test_4 = left_encode(64);
+    let test_5 = left_encode(u64::max_value());
+
+    //assert_eq!(&test_1, &[1, 32]);
+    assert_eq!(&test_2, &[1, 255]);
+    assert_eq!(&test_3, &[1, 0]);
+    assert_eq!(&test_4, &[1, 64]);
+    assert_eq!(&test_5, &[8, 255, 255, 255, 255, 255, 255, 255, 255]);
+
+
 }

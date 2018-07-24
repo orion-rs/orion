@@ -25,6 +25,8 @@
 mod nonofficial_test_vectors {
 
     extern crate hex;
+    extern crate sp800_185;
+    use self::sp800_185::CShake as cs;
     use self::hex::decode;
     use hazardous::cshake::CShake;
     use core::options::*;
@@ -42,7 +44,15 @@ mod nonofficial_test_vectors {
 
         let expected = decode("db006103bb064f875a6695cd7f636d184d7cdabdbc61b553cade47f1d4b29ab3").unwrap();
 
-        assert_eq!(cshake.finalize().unwrap(), expected);
+        let mut t_ex = [0u8; 32];
+        let mut handler = cs::new_cshake128("".as_bytes(),  "custom".as_bytes());
+        handler.update("message".as_bytes());
+        handler.finalize(&mut t_ex);
+
+        assert_eq!(expected.len(), cshake.finalize().unwrap().len());
+        assert_eq!(&t_ex, &expected.as_ref());
+        assert_eq!(&cshake.finalize().unwrap(), &t_ex);
+        //assert_eq!(cshake.finalize().unwrap(), expected);
 
     }
 }
