@@ -29,8 +29,8 @@ fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize, keccak:
     let hash = cshake.finalize().unwrap();
 
     let mut sp_cshake_hash = match &keccak {
-        KeccakVariantOption::KECCAK128 => sp_cshake::new_cshake128(name, &mod_custom),
-        KeccakVariantOption::KECCAK256 => sp_cshake::new_cshake256(name, &mod_custom),
+        KeccakVariantOption::KECCAK256 => sp_cshake::new_cshake128(name, &mod_custom),
+        KeccakVariantOption::KECCAK512 => sp_cshake::new_cshake256(name, &mod_custom),
     };
 
     sp_cshake_hash.update(input);
@@ -47,14 +47,14 @@ fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize, keccak:
 
 fuzz_target!(|data: &[u8]| {
 
-    fuzz_cshake(data, data, data, 65536, KeccakVariantOption::KECCAK128);
-    fuzz_cshake(data, &Vec::new(), data, 65536, KeccakVariantOption::KECCAK128);
-    fuzz_cshake(data, data, &Vec::new(), 65536, KeccakVariantOption::KECCAK128);
-    fuzz_cshake(&Vec::new(), data, data, 65536, KeccakVariantOption::KECCAK128);
-
     fuzz_cshake(data, data, data, 65536, KeccakVariantOption::KECCAK256);
     fuzz_cshake(data, &Vec::new(), data, 65536, KeccakVariantOption::KECCAK256);
     fuzz_cshake(data, data, &Vec::new(), 65536, KeccakVariantOption::KECCAK256);
     fuzz_cshake(&Vec::new(), data, data, 65536, KeccakVariantOption::KECCAK256);
+
+    fuzz_cshake(data, data, data, 65536, KeccakVariantOption::KECCAK512);
+    fuzz_cshake(data, &Vec::new(), data, 65536, KeccakVariantOption::KECCAK512);
+    fuzz_cshake(data, data, &Vec::new(), 65536, KeccakVariantOption::KECCAK512);
+    fuzz_cshake(&Vec::new(), data, data, 65536, KeccakVariantOption::KECCAK512);
 
 });

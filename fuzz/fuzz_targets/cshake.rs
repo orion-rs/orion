@@ -33,14 +33,14 @@ fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize, keccak:
 
 fuzz_target!(|data: &[u8]| {
 
-    fuzz_cshake(data, data, data, 65536, KeccakVariantOption::KECCAK128);
-    fuzz_cshake(data, &Vec::new(), data, 65536, KeccakVariantOption::KECCAK128);
-    fuzz_cshake(data, data, &Vec::new(), 65536, KeccakVariantOption::KECCAK128);
-    fuzz_cshake(&Vec::new(), data, data, 65536, KeccakVariantOption::KECCAK128);
-
     fuzz_cshake(data, data, data, 65536, KeccakVariantOption::KECCAK256);
     fuzz_cshake(data, &Vec::new(), data, 65536, KeccakVariantOption::KECCAK256);
     fuzz_cshake(data, data, &Vec::new(), 65536, KeccakVariantOption::KECCAK256);
     fuzz_cshake(&Vec::new(), data, data, 65536, KeccakVariantOption::KECCAK256);
+
+    fuzz_cshake(data, data, data, 65536, KeccakVariantOption::KECCAK512);
+    fuzz_cshake(data, &Vec::new(), data, 65536, KeccakVariantOption::KECCAK512);
+    fuzz_cshake(data, data, &Vec::new(), 65536, KeccakVariantOption::KECCAK512);
+    fuzz_cshake(&Vec::new(), data, data, 65536, KeccakVariantOption::KECCAK512);
 
 });

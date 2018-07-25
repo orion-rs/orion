@@ -83,8 +83,8 @@ impl ShaVariantOption {
 #[derive(Clone, Copy)]
 /// Keccak options.
 pub enum KeccakVariantOption {
-    KECCAK128,
     KECCAK256,
+    KECCAK512,
 }
 
 #[cfg(test)]
