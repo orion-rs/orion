@@ -93,7 +93,7 @@ impl Drop for CShake {
 ///     name: "".as_bytes().to_vec(),
 ///     custom: "Email signature".as_bytes().to_vec(),
 ///     length: 32,
-///     keccak: KeccakVariantOption::KECCAK128,
+///     keccak: KeccakVariantOption::KECCAK256,
 /// };
 ///
 /// let result = cshake.finalize().unwrap();
