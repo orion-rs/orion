@@ -33,11 +33,6 @@ fn fuzz_default(data: &[u8]) -> () {
 
         default::cshake_verify(&default::cshake(&data, &data).unwrap(), &data, &data).unwrap();
         default::cshake_verify(
-            &default::cshake(&data, "".as_bytes()).unwrap(),
-            &data,
-            "".as_bytes())
-        .unwrap();
-        default::cshake_verify(
             &default::cshake("".as_bytes(), &data).unwrap(),
              "".as_bytes(),
              &data)
