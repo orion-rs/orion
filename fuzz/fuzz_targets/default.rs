@@ -31,23 +31,15 @@ fn fuzz_default(data: &[u8]) -> () {
         default::pbkdf2_verify(&default::pbkdf2(&password).unwrap(), &password).unwrap();
 
 
-        default::cshake_verify(&default::cshake(&data, &data, &data).unwrap(), &data, &data, &data).unwrap();
+        default::cshake_verify(&default::cshake(&data, &data).unwrap(), &data, &data).unwrap();
         default::cshake_verify(
-            &default::cshake(&data, "".as_bytes(), &data).unwrap(),
-            &data,
-            "".as_bytes(),
-            &data)
-        .unwrap();
-        default::cshake_verify(
-            &default::cshake(&data, &data, "".as_bytes()).unwrap(),
-            &data,
+            &default::cshake(&data, "".as_bytes()).unwrap(),
             &data,
             "".as_bytes())
         .unwrap();
         default::cshake_verify(
-            &default::cshake("".as_bytes(), &data, &data).unwrap(),
+            &default::cshake("".as_bytes(), &data).unwrap(),
              "".as_bytes(),
-             &data,
              &data)
         .unwrap();
     }

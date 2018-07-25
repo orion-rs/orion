@@ -17,7 +17,7 @@ fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize, keccak:
     let mut mod_custom = custom.to_vec();
     mod_custom.push(0u8);
 
-    let cshake_init = CShake {
+    let cshake = CShake {
         input: input.to_vec(),
         name: name.to_vec(),
         custom: mod_custom,
