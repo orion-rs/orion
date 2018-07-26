@@ -32,7 +32,7 @@ extern crate tiny_keccak;
 /// Core functionality such as generating a salt/key/IV/nonce.
 pub mod core;
 
-/// High-level API with safer defaults. Includes HMAC, HKDF and PBKDF2.
+/// High-level API with safer defaults. Includes HMAC, HKDF, PBKDF2 and cSHAKE.
 pub mod default;
 
 /// Low-level API.

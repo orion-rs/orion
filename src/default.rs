@@ -291,8 +291,8 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
 /// - Output length is 64
 ///
 /// # Parameters:
-/// - `input`:  The main input bit string
-/// - `custom`: Customization bit string
+/// - `input`:  The main input string
+/// - `custom`: Customization string
 ///
 /// "The customization string is intended to avoid a collision between these two cSHAKE values—it
 /// will be very difficult for an attacker to somehow force one computation (the email signature)
@@ -329,7 +329,7 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<Vec<u8>, UnknownCryptoError
     cshake.finalize()
 }
 
-/// Verify a cSHAKE256 hash in constant time. Both hashes must be of equal length.
+/// Verify a cSHAKE256 hash in constant time. The expected hash must be of length 64.
 /// # Example:
 ///
 /// ```

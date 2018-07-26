@@ -23,7 +23,7 @@
 /// Errors for orion's cryptographic operations.
 pub mod errors;
 
-/// SHA2 options and hashing.
+/// SHA2/Keccak options and hashing.
 pub mod options;
 
 /// Utility functions such as constant time comparison.

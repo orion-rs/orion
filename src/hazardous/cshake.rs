@@ -48,10 +48,10 @@ impl Drop for CShake {
 /// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 ///
 /// # Parameters:
-/// - `input`:  The main input bit string
+/// - `input`:  The main input string
 /// - `length`: Output length in bytes
-/// - `name`: Function-name bit string
-/// - `custom`: Customization bit string
+/// - `name`: Function-name string
+/// - `custom`: Customization string
 /// - `keccak`: Keccak variant to be used
 ///
 ///
@@ -75,8 +75,8 @@ impl Drop for CShake {
 /// - The specified length is greater than 65536
 /// - If the length of either `name` or `custom` is greater than 65536
 ///
-/// The reason that `name` and `custom` cannot both be empty is because, if they could be set to
-/// empty strings the result of using cSHAKE would be equivalent to a SHAKE call.
+/// The reason that `name` and `custom` cannot both be empty is because that would be equivalent to
+/// a SHAKE call.
 ///
 /// # Security:
 /// cSHAKE128 has a security strength of 128 bits, whereas cSHAKE256 has a security strength of
