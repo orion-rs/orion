@@ -61,7 +61,7 @@ fn bench_cshake(b: &mut Bencher) {
             name: vec![0x00; 0],
             custom: vec![0x01; 32],
             length: 64,
-            cshake: KeccakVariantOption::KECCAK256,
+            keccak: KeccakVariantOption::KECCAK256,
         };
 
         cshake.finalize().unwrap();
