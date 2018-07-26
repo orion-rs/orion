@@ -293,6 +293,19 @@ mod test {
     }
 
     #[test]
+    fn err_on_n_c_max_length() {
+        let cshake = CShake {
+            input: b"\x00\x01\x02\x03".to_vec(),
+            length: 32,
+            name: vec![0u8; 65537],
+            custom: vec![0u8; 65537],
+            keccak: KeccakVariantOption::KECCAK256,
+        };
+
+        assert!(cshake.finalize().is_err());
+    }
+
+    #[test]
     fn err_on_custom_max_length() {
         let cshake = CShake {
             input: b"\x00\x01\x02\x03".to_vec(),
