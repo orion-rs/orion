@@ -18,6 +18,10 @@ Currently contains:
 * PBKDF2 with the above HMAC options.
 * cSHAKE128 and cSHAKE256.
 
+***Note on cSHAKE***:
+The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
+will produce **incorrect results on big-endian based systems**. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
+
 ### Usage
 ```
 extern crate orion;

@@ -299,6 +299,10 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
 /// to yield the same result as the other computation (the key fingerprint) if different values
 /// of S are used." See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
 ///
+/// ### Note:
+/// The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
+/// will produce ***incorrect results on big-endian based systems***. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
+///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - `custom` is empty

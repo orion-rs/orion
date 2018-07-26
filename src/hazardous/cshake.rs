@@ -60,7 +60,10 @@ impl Drop for CShake {
 /// to yield the same result as the other computation (the key fingerprint) if different values
 /// of S are used." See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
 ///
-/// ### Note:
+/// ### Notes:
+/// The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
+/// will produce ***incorrect results on big-endian based systems***. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
+///
 /// `name` is a special parameter that in most cases should be just set to a zero string:
 /// "This is intended for use by NIST in defining SHA-3-derived functions, and should only be set
 /// to values defined by NIST". See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
