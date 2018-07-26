@@ -1,15 +1,15 @@
 #![no_main]
-#[macro_use] extern crate libfuzzer_sys;
+#[macro_use]
+extern crate libfuzzer_sys;
 extern crate orion;
-use orion::hazardous::hmac::*;
 use orion::core::options::ShaVariantOption;
+use orion::hazardous::hmac::*;
 
 fn fuzz_hmac(secret_key: &[u8], data: &[u8], sha2: ShaVariantOption) {
-
     let mac = Hmac {
         secret_key: secret_key.to_vec(),
         data: data.to_vec(),
-        sha2
+        sha2,
     };
 
     let (ipad, opad) = mac.pad_key(secret_key);
@@ -22,7 +22,6 @@ fn fuzz_hmac(secret_key: &[u8], data: &[u8], sha2: ShaVariantOption) {
 }
 
 fuzz_target!(|data: &[u8]| {
-
     fuzz_hmac(data, data, ShaVariantOption::SHA256);
 
     fuzz_hmac(data, data, ShaVariantOption::SHA384);
@@ -30,5 +29,4 @@ fuzz_target!(|data: &[u8]| {
     fuzz_hmac(data, data, ShaVariantOption::SHA512);
 
     fuzz_hmac(data, data, ShaVariantOption::SHA512Trunc256);
-
 });

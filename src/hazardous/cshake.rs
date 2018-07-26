@@ -193,7 +193,6 @@ fn left_encode(x: u64) -> Vec<u8> {
     input[(offset - 1)..].to_vec()
 }
 
-
 #[cfg(test)]
 mod test {
 
