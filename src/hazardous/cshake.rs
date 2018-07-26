@@ -29,7 +29,7 @@ use tiny_keccak::Keccak;
 
 /// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 ///
-/// Fields `input`, `name` and `custom` are zeroed out on drop.
+/// Fields `input` and `custom` are zeroed out on drop.
 pub struct CShake {
     pub input: Vec<u8>,
     pub name: Vec<u8>,
@@ -41,7 +41,6 @@ pub struct CShake {
 impl Drop for CShake {
     fn drop(&mut self) {
         Clear::clear(&mut self.input);
-        Clear::clear(&mut self.name);
         Clear::clear(&mut self.custom)
     }
 }
