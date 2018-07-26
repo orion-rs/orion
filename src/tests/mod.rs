@@ -37,3 +37,6 @@ pub mod custom_pbkdf2;
 
 /// Test cSHAKE against official test vectors from the KeccakCodePackage.
 pub mod official_cshake;
+
+/// Test HMAC against IETF Draft test vectors.
+pub mod other_hmac;
