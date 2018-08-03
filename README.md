@@ -23,7 +23,7 @@ The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently
 will produce **incorrect results on big-endian based systems**. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
 
 ### Usage
-```
+```rust
 extern crate orion;
 use orion::{default, core::util};
 
