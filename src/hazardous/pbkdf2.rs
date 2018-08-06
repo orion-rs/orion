@@ -136,25 +136,15 @@ impl Pbkdf2 {
 
         // First iteration
         let mut u_step = self.prf(ipad, opad, &salt_extended);
-
         f_result.extend_from_slice(&u_step);
 
-        // Second iteration
+        // Remaining iterations
         if self.iterations > 1 {
-            u_step = self.prf(ipad, opad, &u_step);
-            // The length of f_result and u_step will always be the same due to HMAC,
-            // so there is no need for a length check
-            for c in 0..f_result.len() {
-                f_result[c] ^= u_step[c];
-            }
-            // Remainder of iterations
-            if self.iterations > 2 {
-                for _ in 2..self.iterations {
-                    u_step = self.prf(ipad, opad, &u_step);
+            for _ in 1..self.iterations {
+                u_step = self.prf(ipad, opad, &u_step);
 
-                    for c in 0..f_result.len() {
-                        f_result[c] ^= u_step[c];
-                    }
+                for index in 0..f_result.len() {
+                    f_result[index] ^= u_step[index];
                 }
             }
         }
