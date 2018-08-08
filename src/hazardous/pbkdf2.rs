@@ -181,7 +181,8 @@ impl Pbkdf2 {
             derived_key.extend_from_slice(&self.function_f(index as u32, &ipad, &opad, &mut salt_ext));
             // Given that hlen_blocks is rounded correctly, then the `index as u32`
             // should not be able to overflow. If the maximum dklen is selected,
-            // then hlen_blocks will equal exactly `u32::max_value()`
+            // along with the highest output size, then hlen_blocks will equal
+            // exactly `u32::max_value()`
         }
 
         Clear::clear(&mut ipad);
