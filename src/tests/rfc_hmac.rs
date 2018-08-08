@@ -46,7 +46,7 @@ mod rfc4231 {
         let (ipad, opad) = mac.pad_key(&mac.secret_key);
 
         let mut def_hmac = mac.finalize();
-        let mut pbkdf2_hmac = pbkdf2_hmac(ipad, opad, &mac.data, mac.sha2);
+        let mut pbkdf2_hmac = pbkdf2_hmac(&ipad, &opad, &mac.data, mac.sha2);
 
         match trunc {
             Some(ref length) => {

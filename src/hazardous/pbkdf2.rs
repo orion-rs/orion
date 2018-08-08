@@ -122,7 +122,7 @@ impl Pbkdf2 {
     /// Returns a PRK using HMAC as the PRF. The parameters `ipad` and `opad` are constructed
     /// in the `derive_key`. They are used to speed up HMAC calls.
     fn prf(&self, ipad: &[u8], opad: &[u8], data: &[u8]) -> Vec<u8> {
-        pbkdf2_hmac(ipad.to_vec(), opad.to_vec(), data, self.hmac)
+        pbkdf2_hmac(ipad, opad, data, self.hmac)
     }
 
     /// Function F as described in the RFC.

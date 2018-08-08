@@ -162,20 +162,21 @@ impl Hmac {
 
 /// HMAC used for PBKDF2.
 pub fn pbkdf2_hmac(
-    mut ipad: Vec<u8>,
-    mut opad: Vec<u8>,
+    ipad: &[u8],
+    opad: &[u8],
     data: &[u8],
     hmac: ShaVariantOption,
 ) -> Vec<u8> {
-    ipad.extend_from_slice(data);
-    opad.extend_from_slice(&hmac.hash(&ipad));
 
-    let mac = hmac.hash(&opad);
+    let mut ires = Vec::new();
+    ires.extend_from_slice(&ipad);
+    ires.extend_from_slice(&data);
 
-    Clear::clear(&mut ipad);
-    Clear::clear(&mut opad);
+    let mut mac = Vec::new();
+    mac.extend_from_slice(&opad);
+    mac.extend_from_slice(&hmac.hash(&ires));
 
-    mac
+    hmac.hash(&mac)
 }
 
 #[test]
