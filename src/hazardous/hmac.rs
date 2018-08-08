@@ -23,7 +23,6 @@
 use clear_on_drop::clear::Clear;
 use core::options::ShaVariantOption;
 use core::{errors::*, util};
-use std::borrow::Cow;
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
@@ -98,29 +97,25 @@ impl Drop for Hmac {
 impl Hmac {
     /// Pad the key and return inner and outer padding.
     pub fn pad_key(&self, secret_key: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        // Borrow so that if the key is exactly the needed length
-        // no new key needs to be allocated before returning it
-        let mut key = Cow::from(secret_key);
 
-        if key.len() > self.sha2.blocksize() {
-            key = self.sha2.hash(&key).into();
-        }
-        if key.len() < self.sha2.blocksize() {
-            let mut resized_key = key.into_owned();
-            resized_key.resize(self.sha2.blocksize(), 0x00);
-            key = resized_key.into();
-        }
+        let mut inner_pad = vec![0x36; self.sha2.blocksize()];
+        let mut outer_pad = vec![0x5C; self.sha2.blocksize()];
 
-        let make_padded_key = |byte: u8| {
-            let mut pad = key.to_vec();
-            for i in &mut pad {
-                *i ^= byte
+        if secret_key.len() > self.sha2.blocksize() {
+            let key = self.sha2.hash(secret_key);
+
+            for index in 0..self.sha2.output_size() {
+                inner_pad[index] ^= key[index];
+                outer_pad[index] ^= key[index];
             }
-            pad
-        };
+        } else {
+            for index in 0..secret_key.len() {
+                inner_pad[index] ^= secret_key[index];
+                outer_pad[index] ^= secret_key[index];
+            }
+        }
 
-        // Output format: ipad, opad
-        (make_padded_key(0x36), make_padded_key(0x5C))
+        (inner_pad, outer_pad)
     }
 
     /// Returns an HMAC for a given key and data.
