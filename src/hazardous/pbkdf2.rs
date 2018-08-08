@@ -126,20 +126,20 @@ impl Pbkdf2 {
     }
 
     /// Function F as described in the RFC.
-    fn function_f(&self, index: u32, ipad: &[u8], opad: &[u8]) -> Vec<u8> {
-        let mut salt_extended = self.salt.clone();
-        let mut index_buffer = [0u8; 4];
-        write_u32_be(&mut index_buffer, index);
-        salt_extended.extend_from_slice(&index_buffer);
+    fn function_f(&self, index: u32, ipad: &[u8], opad: &[u8], salt_ext: &mut [u8]) -> Vec<u8> {
 
-        let mut f_result: Vec<u8> = Vec::new();
+        let pos = salt_ext.len() - 4;
+        write_u32_be(&mut salt_ext[pos..], index);
 
         // First iteration
-        let mut u_step = self.prf(ipad, opad, &salt_extended);
-        f_result.extend_from_slice(&u_step);
+        let mut f_result: Vec<u8> = self.prf(ipad, opad, &salt_ext);
 
         // Remaining iterations
         if self.iterations > 1 {
+
+            let mut u_step = Vec::new();
+            u_step.extend_from_slice(&f_result);
+
             for _ in 1..self.iterations {
                 u_step = self.prf(ipad, opad, &u_step);
 
@@ -172,11 +172,13 @@ impl Pbkdf2 {
             sha2: self.hmac,
         };
         let (mut ipad, mut opad) = pad_const.pad_key(&self.password);
-
+        let mut salt_ext = self.salt.clone();
+        // We need 4 bytes of space for the index value
+        salt_ext.extend_from_slice(&[0u8; 4]);
         let mut derived_key: Vec<u8> = Vec::new();
 
         for index in 1..hlen_blocks + 1 {
-            derived_key.extend_from_slice(&self.function_f(index as u32, &ipad, &opad));
+            derived_key.extend_from_slice(&self.function_f(index as u32, &ipad, &opad, &mut salt_ext));
             // Given that hlen_blocks is rounded correctly, then the `index as u32`
             // should not be able to overflow. If the maximum dklen is selected,
             // then hlen_blocks will equal exactly `u32::max_value()`
