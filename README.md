@@ -80,6 +80,9 @@ The library can be benchmarked as below. All benchmarking tests are located in `
 ```
 cargo +nightly bench
 ```
+### Changelog
+Can be found [here](https://github.com/brycx/orion/releases).
+
 ### Acknowledgments
 Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://github.com/brycx/orion/issues/3) of the code.
 
