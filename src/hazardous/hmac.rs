@@ -168,16 +168,16 @@ pub fn pbkdf2_hmac(
     hmac: ShaVariantOption,
 ) -> Vec<u8> {
 
-    let mut ires = Vec::new();
-    ires.extend_from_slice(&ipad);
-    ires.extend_from_slice(&data);
-    ires = hmac.hash(&ires);
-
     let mut mac = Vec::new();
-    mac.extend_from_slice(&opad);
-    mac.extend_from_slice(&ires);
+    mac.extend_from_slice(opad);
+    mac.extend_from_slice(ipad);
+    mac.extend_from_slice(data);
+    let tmp = hmac.hash(&mac[opad.len()..]);
+    mac.truncate(opad.len());
+    mac.extend_from_slice(&tmp);
+    mac = hmac.hash(&mac);
 
-    hmac.hash(&mac)
+    mac
 }
 
 #[test]
