@@ -171,10 +171,11 @@ pub fn pbkdf2_hmac(
     let mut ires = Vec::new();
     ires.extend_from_slice(&ipad);
     ires.extend_from_slice(&data);
+    ires = hmac.hash(&ires);
 
     let mut mac = Vec::new();
     mac.extend_from_slice(&opad);
-    mac.extend_from_slice(&hmac.hash(&ires));
+    mac.extend_from_slice(&ires);
 
     hmac.hash(&mac)
 }
