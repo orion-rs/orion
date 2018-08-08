@@ -9,7 +9,7 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-rand = "0.5.4"
+rand = "0.5.5"
 ring = "0.13.2"
 sp800-185 = "0.2.0"
 
