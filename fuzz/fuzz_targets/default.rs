@@ -12,6 +12,10 @@ fn fuzz_default(data: &[u8]) -> () {
     let rand_salt = util::gen_rand_key(64).unwrap();
     let mut rng = rand::thread_rng();
 
+    // cSHAKE `custom` can't be empty
+    let mut mod_custom = data.to_vec();
+    mod_custom.push(0u8);
+
     if rng.gen() {
         let len_hkdf: usize = rng.gen_range(1, 8161);
 
@@ -30,11 +34,11 @@ fn fuzz_default(data: &[u8]) -> () {
 
         default::pbkdf2_verify(&default::pbkdf2(&password).unwrap(), &password).unwrap();
 
-        default::cshake_verify(&default::cshake(&data, &data).unwrap(), &data, &data).unwrap();
+        default::cshake_verify(&default::cshake(&data, &mod_custom).unwrap(), &data, &mod_custom).unwrap();
         default::cshake_verify(
-            &default::cshake("".as_bytes(), &data).unwrap(),
+            &default::cshake("".as_bytes(), &mod_custom).unwrap(),
             "".as_bytes(),
-            &data,
+            &mod_custom,
         ).unwrap();
     }
 }

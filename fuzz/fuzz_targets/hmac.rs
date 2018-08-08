@@ -14,7 +14,7 @@ fn fuzz_hmac(secret_key: &[u8], data: &[u8], sha2: ShaVariantOption) {
 
     let (ipad, opad) = mac.pad_key(secret_key);
     let mac_def = mac.finalize();
-    let mac_pbkdf2 = pbkdf2_hmac(ipad, opad, &mac.data, mac.sha2);
+    let mac_pbkdf2 = pbkdf2_hmac(&ipad, &opad, &mac.data, mac.sha2);
 
     assert_eq!(mac_def, mac_pbkdf2);
     assert_eq!(mac.verify(&mac_def).unwrap(), true);
