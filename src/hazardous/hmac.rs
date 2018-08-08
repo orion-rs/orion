@@ -172,8 +172,7 @@ pub fn pbkdf2_hmac(
     mac.extend_from_slice(opad);
     mac.extend_from_slice(ipad);
     mac.extend_from_slice(data);
-    let tmp = hmac.hash(&mac[opad.len()..]);
-    mac.truncate(opad.len());
+    let tmp = hmac.hash(&mac.split_off(opad.len()));
     mac.extend_from_slice(&tmp);
     mac = hmac.hash(&mac);
 
