@@ -1,4 +1,10 @@
-## orion ![Build Status](https://travis-ci.org/brycx/orion.svg?branch=master) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion)
+<p align="center">
+  <img src="logo/logo.png" alt="orion" height="200px">
+</p>
+<p align="center">
+  <img src="https://travis-ci.org/brycx/orion.svg?branch=master">
+  <img src="https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg">
+</p>
 
 ### Warning
 This library is not suitable for production code. There are no guarantees for the security of these implementations. Use at your own risk.
@@ -84,7 +90,8 @@ cargo +nightly bench
 Can be found [here](https://github.com/brycx/orion/releases).
 
 ### Acknowledgments
-Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://github.com/brycx/orion/issues/3) of the code.
+- Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://github.com/brycx/orion/issues/3) of the code.
+- Thanks to [@ritalinn](https://github.com/ritalinn) for the logo.
 
 ### Alternatives
 - [*ring*](https://crates.io/crates/ring) (HMAC, HKDF, PBKDF2)
