@@ -1,3 +1,6 @@
+<p align="center"><img src="design/logo.png" alt="orion" height="300px"></p>
+
+
 ## orion ![Build Status](https://travis-ci.org/brycx/orion.svg?branch=master) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion)
 
 ### Warning
