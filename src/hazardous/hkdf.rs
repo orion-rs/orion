@@ -162,7 +162,6 @@ mod test {
             "832390086cda71fb47625bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d9f925d7cb",
         ).unwrap();
 
-
         assert_eq!(
             verify(&expected_okm, &salt, &ikm, &info, &mut okm_out).unwrap(),
             true
@@ -181,9 +180,7 @@ mod test {
              9d201395faa4b61a96c8",
         ).unwrap();
 
-        assert!(
-            verify(&expected_okm, salt, &ikm, info, &mut okm_out).is_err()
-        );
+        assert!(verify(&expected_okm, salt, &ikm, info, &mut okm_out).is_err());
     }
 
     #[test]
@@ -198,9 +195,7 @@ mod test {
              9d201395faa4b61a96c8",
         ).unwrap();
 
-        assert!(
-            verify(&expected_okm, salt, &ikm, info, &mut okm_out).is_err()
-        );
+        assert!(verify(&expected_okm, salt, &ikm, info, &mut okm_out).is_err());
     }
 
     #[test]
@@ -215,8 +210,6 @@ mod test {
              9d201395faa4b61a96c8",
         ).unwrap();
 
-        assert!(
-            verify(&expected_okm, salt, &ikm, info, &mut okm_out).is_err()
-        );
+        assert!(verify(&expected_okm, salt, &ikm, info, &mut okm_out).is_err());
     }
 }
