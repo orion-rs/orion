@@ -37,7 +37,7 @@ use utilities::{errors::*, util};
 /// - `password`: Password
 /// - `salt`: Salt value
 /// - `iterations`: Iteration count
-/// - `okm_out`: Destination buffer for the derivec key. The length of the derived key is implied by the length of `okm_out`
+/// - `okm_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
 ///
 /// See [RFC](https://tools.ietf.org/html/rfc8018#section-5.2) for more information.
 ///

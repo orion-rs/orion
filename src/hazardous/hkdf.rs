@@ -35,7 +35,7 @@ use utilities::{errors::*, util};
 /// - `salt`:  Optional salt value
 /// - `ikm`: Input keying material
 /// - `info`: Optional context and application specific information (can be a zero-length string)
-/// - `okm_out`: Destination buffer for the derivec key. The length of the derived key is implied by the length of `okm_out`
+/// - `okm_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
 ///
 /// See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
 ///

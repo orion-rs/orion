@@ -20,9 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use core::fmt;
 use rand;
-use std::error::Error;
-use std::fmt;
+
 /// Opaque error.
 #[derive(Debug, PartialEq)]
 pub struct UnknownCryptoError;
@@ -30,16 +30,6 @@ pub struct UnknownCryptoError;
 impl fmt::Display for UnknownCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "UnknownCryptoError")
-    }
-}
-
-impl Error for UnknownCryptoError {
-    fn description(&self) -> &str {
-        "UnknownCryptoError"
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        None
     }
 }
 
@@ -57,15 +47,5 @@ pub struct ValidationCryptoError;
 impl fmt::Display for ValidationCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "ValidationCryptoError")
-    }
-}
-
-impl Error for ValidationCryptoError {
-    fn description(&self) -> &str {
-        "ValidationCryptoError"
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        None
     }
 }

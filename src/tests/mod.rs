@@ -20,23 +20,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// Test HMAC against NIST test vectors.
-pub mod nist_hmac;
-
 /// Test HMAC aginast RFC test vectors.
 pub mod rfc_hmac;
 
 /// Test HKDF aginast RFC test vectors.
-pub mod rfc_hkdf;
+pub mod other_hkdf;
 
-/// Test PBKDF2 aginast RFC test vectors.
-pub mod rfc_pbkdf2;
+/// Test HKDF aginast custom test vectors.
+pub mod custom_hkdf;
 
-/// Test HMAC aginast custom test vectors.
+/// Test PBKDF2 aginast custom test vectors.
 pub mod custom_pbkdf2;
 
-/// Test cSHAKE against official test vectors from the KeccakCodePackage.
+// Test cSHAKE against official test vectors from the KeccakCodePackage.
 pub mod official_cshake;
-
-/// Test HMAC against IETF Draft test vectors.
-pub mod other_hmac;

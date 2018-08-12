@@ -20,33 +20,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use constant_time_eq::constant_time_eq;
-use core::errors;
+use core::{mem, ptr};
 use rand::{rngs::OsRng, RngCore};
+use subtle::ConstantTimeEq;
+use utilities::errors;
+
+#[inline(never)]
+pub fn memzero(src: &mut [u8]) {
+    assert_eq!(src.is_empty(), false);
+    let src_len = mem::size_of_val(src);
+
+    unsafe {
+        let src_ptr: *mut u8 = src.as_mut_ptr();
+        ptr::write_bytes(src_ptr, 0u8, src_len);
+    }
+
+    mem::drop(src)
+}
 
 #[inline(never)]
 /// Return a random byte vector of a given length. This uses rand's
-/// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html). Length must be >= 1.
-pub fn gen_rand_key(len: usize) -> Result<Vec<u8>, errors::UnknownCryptoError> {
-    if len < 1 {
+/// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html). Length of `dst` must be >= 1.
+pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
+    if dst.len() < 1 {
         return Err(errors::UnknownCryptoError);
     }
 
-    let mut rand_vec = vec![0x00; len];
     let mut generator = OsRng::new()?;
-    generator.try_fill_bytes(&mut rand_vec)?;
+    generator.try_fill_bytes(dst)?;
 
-    Ok(rand_vec)
+    Ok(())
 }
 
 /// Compare two equal length slices in constant time, using the
-/// [constant_time_eq](https://crates.io/crates/constant_time_eq) crate.
+/// [subtle](https://crates.io/crates/subtle) crate.
 pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
     if a.len() != b.len() {
         return Err(errors::UnknownCryptoError);
     }
 
-    if constant_time_eq(a, b) {
+    if a.ct_eq(b).unwrap_u8() == 1 {
         Ok(true)
     } else {
         Err(errors::UnknownCryptoError)
@@ -55,21 +68,24 @@ pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError
 
 #[test]
 fn rand_key_len_ok() {
-    gen_rand_key(64).unwrap();
+    let mut dst = [0u8; 64];
+    gen_rand_key(&mut dst).unwrap();
 }
 
 #[test]
 fn rand_key_len_error() {
-    assert!(gen_rand_key(0).is_err());
+    let mut dst = [0u8; 0];
+    assert!(gen_rand_key(&mut dst).is_err());
 
-    let err = gen_rand_key(0).unwrap_err();
+    let mut dst = [0u8; 0];
+    let err = gen_rand_key(&mut dst).unwrap_err();
     assert_eq!(err, errors::UnknownCryptoError);
 }
 
 #[test]
 fn test_ct_eq_ok() {
-    let buf_1 = vec![0x06; 10];
-    let buf_2 = vec![0x06; 10];
+    let buf_1 = [0x06; 10];
+    let buf_2 = [0x06; 10];
 
     assert_eq!(compare_ct(&buf_1, &buf_2).unwrap(), true);
     assert_eq!(compare_ct(&buf_2, &buf_1).unwrap(), true);
@@ -77,8 +93,8 @@ fn test_ct_eq_ok() {
 
 #[test]
 fn test_ct_eq_diff_len() {
-    let buf_1 = vec![0x06; 10];
-    let buf_2 = vec![0x06; 5];
+    let buf_1 = [0x06; 10];
+    let buf_2 = [0x06; 5];
 
     assert!(compare_ct(&buf_1, &buf_2).is_err());
     assert!(compare_ct(&buf_2, &buf_1).is_err());
@@ -86,8 +102,8 @@ fn test_ct_eq_diff_len() {
 
 #[test]
 fn test_ct_ne() {
-    let buf_1 = vec![0x06; 10];
-    let buf_2 = vec![0x76; 10];
+    let buf_1 = [0x06; 10];
+    let buf_2 = [0x76; 10];
 
     assert!(compare_ct(&buf_1, &buf_2).is_err());
     assert!(compare_ct(&buf_2, &buf_1).is_err());
@@ -97,4 +113,68 @@ fn test_ct_ne() {
 fn test_ct_ne_reg() {
     assert!(compare_ct(&[0], &[0, 1]).is_err());
     assert!(compare_ct(&[0, 1], &[0]).is_err());
+}
+
+#[test]
+fn memzero_1() {
+    let mut src = [0x3F; 64];
+    let mut res = true;
+    memzero(&mut src);
+
+    for idx in 0..64 {
+        let tmp = src[idx] ^ 0u8;
+
+        if tmp ^ 0u8 != 0u8 {
+            res = false;
+            break;
+        }
+    }
+
+    assert!(res);
+}
+
+#[test]
+fn memzero_2() {
+    let mut src = [0x6F; 128];
+    let mut res = true;
+    memzero(&mut src);
+
+    for idx in 0..128 {
+        let tmp = src[idx] ^ 0u8;
+
+        if tmp ^ 0u8 != 0u8 {
+            res = false;
+            break;
+        }
+    }
+
+    assert!(res);
+}
+
+#[test]
+#[should_panic]
+fn memzero_mod() {
+    let mut src = [0x5C; 128];
+    let mut res = true;
+    memzero(&mut src);
+
+    src[5..17].copy_from_slice(&[0x35; 12]);
+
+    for idx in 0..128 {
+        let tmp = src[idx] ^ 0u8;
+
+        if tmp ^ 0u8 != 0u8 {
+            res = false;
+            break;
+        }
+    }
+
+    assert!(res);
+}
+
+#[test]
+#[should_panic]
+fn memzero_empty_src() {
+    let mut src = [0x5C; 0];
+    memzero(&mut src);
 }

@@ -20,17 +20,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#![forbid(dead_code, warnings, unsafe_code, unused_imports)]
+#![forbid(dead_code, warnings, unused_imports)]
+#![no_std]
 
 extern crate byte_tools;
-extern crate clear_on_drop;
-extern crate constant_time_eq;
 extern crate rand;
 extern crate sha2;
+extern crate subtle;
 extern crate tiny_keccak;
 
 /// Core functionality such as generating a salt/key/IV/nonce.
-pub mod core;
+pub mod utilities;
 
 /// High-level API with safer defaults. Includes HMAC, HKDF, PBKDF2 and cSHAKE.
 pub mod default;

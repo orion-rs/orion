@@ -21,38 +21,19 @@
 // SOFTWARE.
 
 use byte_tools::write_u64_be;
-use clear_on_drop::clear::Clear;
-use core::errors::*;
-use core::options::KeccakVariantOption;
-use core::util;
+use utilities::errors::*;
 use tiny_keccak::Keccak;
 
 /// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 ///
-/// Fields `input` and `custom` are zeroed out on drop.
-pub struct CShake {
-    pub input: Vec<u8>,
-    pub name: Vec<u8>,
-    pub custom: Vec<u8>,
-    pub length: usize,
-    pub keccak: KeccakVariantOption,
-}
-
-impl Drop for CShake {
-    fn drop(&mut self) {
-        Clear::clear(&mut self.input);
-        Clear::clear(&mut self.custom)
-    }
-}
 
 /// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 ///
 /// # Parameters:
 /// - `input`:  The main input string
-/// - `length`: Output length in bytes
 /// - `name`: Function-name string
 /// - `custom`: Customization string
-/// - `keccak`: Keccak variant to be used
+/// - `out`: Destination buffer for the digest. The length of the digest is implied by the length of `out`
 ///
 ///
 /// "The customization string is intended to avoid a collision between these two cSHAKE values—it
@@ -84,22 +65,7 @@ impl Drop for CShake {
 ///
 /// # Example:
 /// ```
-/// use orion::hazardous::cshake::CShake;
-/// use orion::core::util::gen_rand_key;
-/// use orion::core::options::KeccakVariantOption;
-///
-/// let key = gen_rand_key(32).unwrap();
-///
-/// let cshake = CShake {
-///     input: key,
-///     name: "".as_bytes().to_vec(),
-///     custom: "Email signature".as_bytes().to_vec(),
-///     length: 32,
-///     keccak: KeccakVariantOption::KECCAK256,
-/// };
-///
-/// let result = cshake.finalize().unwrap();
-/// assert_eq!(cshake.verify(&result).unwrap(), true);
+/// use orion::hazardous::cshake;
 /// ```
 
 impl CShake {
