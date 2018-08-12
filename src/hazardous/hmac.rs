@@ -20,24 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use clear_on_drop::clear::Clear;
-use core::options::ShaVariantOption;
-use core::{errors::*, util};
+use core::mem;
+use hazardous::constants::{BlocksizeArray, HLenArray, BLOCKSIZE, HLEN};
+use sha2::{Digest, Sha512};
+use utilities::{errors::*, util};
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
-///
-/// Fields `secret_key` and `data` are zeroed out on drop.
 pub struct Hmac {
-    pub secret_key: Vec<u8>,
-    pub data: Vec<u8>,
-    pub sha2: ShaVariantOption,
+    ipad: BlocksizeArray,
+    opad: BlocksizeArray,
+    hasher: Sha512,
 }
 
 impl Drop for Hmac {
     fn drop(&mut self) {
-        Clear::clear(&mut self.secret_key);
-        Clear::clear(&mut self.data)
+        util::memzero(&mut self.ipad);
+        util::memzero(&mut self.opad);
     }
 }
 
@@ -95,134 +94,152 @@ impl Drop for Hmac {
 /// ```
 
 impl Hmac {
-    /// Pad the key and return inner and outer padding.
-    pub fn pad_key(&self, secret_key: &[u8]) -> (Vec<u8>, Vec<u8>) {
+    #[inline(always)]
+    /// Pad `key` with `ipad` and `opad`.
+    fn pad_key_io(&mut self, key: &[u8]) {
+        if key.len() > BLOCKSIZE {
 
-        let mut inner_pad = vec![0x36; self.sha2.blocksize()];
-        let mut outer_pad = vec![0x5C; self.sha2.blocksize()];
+            self.ipad[..HLEN].copy_from_slice(&Sha512::digest(&key));
 
-        if secret_key.len() > self.sha2.blocksize() {
-            let key = self.sha2.hash(secret_key);
+            for (idx, itm) in self.ipad.iter_mut().take(64).enumerate() {
+                *itm ^= 0x36;
+                self.opad[idx] = *itm ^ 0x6A;
 
-            for index in 0..self.sha2.output_size() {
-                inner_pad[index] ^= key[index];
-                outer_pad[index] ^= key[index];
             }
         } else {
-            for index in 0..secret_key.len() {
-                inner_pad[index] ^= secret_key[index];
-                outer_pad[index] ^= secret_key[index];
+            for (idx, itm) in key.iter().enumerate() {
+                self.ipad[idx] ^= itm;
+                self.opad[idx] ^= itm;
             }
         }
 
-        (inner_pad, outer_pad)
+        self.hasher.input(&self.ipad);
     }
 
-    /// Returns an HMAC for a given key and data.
-    pub fn finalize(&self) -> Vec<u8> {
-        let (mut ipad, mut opad) = self.pad_key(&self.secret_key);
+    /// Reset to `init()` state.
+    pub fn reset(&mut self) {
+        self.hasher.input(&self.ipad);
+    }
 
-        ipad.extend_from_slice(&self.data);
-        opad.extend_from_slice(&self.sha2.hash(&ipad));
+    /// This can be called multiple times.
+    pub fn update(&mut self, message: &[u8]) {
+        self.hasher.input(message);
+    }
 
-        let mac = self.sha2.hash(&opad);
+    #[inline(always)]
+    /// Return MAC.
+    pub fn finalize(&mut self) -> HLenArray {
+        let mut hash_ires = Sha512::default();
+        mem::swap(&mut self.hasher, &mut hash_ires);
 
-        Clear::clear(&mut ipad);
-        Clear::clear(&mut opad);
+        let mut hash_ores = Sha512::default();
+        hash_ores.input(&self.opad);
+        hash_ores.input(&hash_ires.result());
 
+        let mut mac: HLenArray = [0u8; HLEN];
+        mac.copy_from_slice(&hash_ores.result());
         mac
     }
 
-    /// Check HMAC validity by computing one from the current struct fields and comparing this
-    /// to the passed HMAC. Comparison is done in constant time and with Double-HMAC Verification.
-    pub fn verify(&self, expected_hmac: &[u8]) -> Result<bool, ValidationCryptoError> {
-        let own_hmac = self.finalize();
+    #[inline(always)]
+    /// Retrieve MAC and copy to `dst`.
+    pub fn finalize_with_dst(&mut self, dst: &mut [u8]) {
+        let mut hash_ires = Sha512::default();
+        mem::swap(&mut self.hasher, &mut hash_ires);
 
-        let rand_key = util::gen_rand_key(self.sha2.blocksize()).unwrap();
+        let mut hash_ores = Sha512::default();
+        let dst_len = dst.len();
 
-        let nd_round_own = Hmac {
-            secret_key: rand_key.clone(),
-            data: own_hmac,
-            sha2: self.sha2,
-        };
+        hash_ores.input(&self.opad);
+        hash_ores.input(&hash_ires.result());
 
-        let nd_round_received = Hmac {
-            secret_key: rand_key,
-            data: expected_hmac.to_vec(),
-            sha2: self.sha2,
-        };
-
-        if util::compare_ct(&nd_round_own.finalize(), &nd_round_received.finalize()).is_err() {
-            Err(ValidationCryptoError)
-        } else {
-            Ok(true)
-        }
+        dst.copy_from_slice(&hash_ores.result()[..dst_len]);
+    }
+    /// Wipe `ipad` and `opad` form state.
+    pub fn wipe(&mut self) {
+        util::memzero(&mut self.ipad);
+        util::memzero(&mut self.opad);
     }
 }
 
-/// HMAC used for PBKDF2.
-pub fn pbkdf2_hmac(
-    ipad: &[u8],
-    opad: &[u8],
-    data: &[u8],
-    hmac: ShaVariantOption,
-) -> Vec<u8> {
+/// Check HMAC validity by computing one from the current struct fields and comparing this
+/// to the passed HMAC. Comparison is done in constant time and with Double-HMAC Verification.
+pub fn verify(
+    expected: &[u8],
+    secret_key: &[u8],
+    message: &[u8],
+) -> Result<bool, ValidationCryptoError> {
+    let mut mac = init(secret_key);
+    mac.update(message);
 
-    let mut mac = Vec::new();
-    mac.extend_from_slice(opad);
-    mac.extend_from_slice(ipad);
-    mac.extend_from_slice(data);
-    let tmp = hmac.hash(&mac.split_off(opad.len()));
-    mac.extend_from_slice(&tmp);
-    mac = hmac.hash(&mac);
+    let mut rand_key: HLenArray = [0u8; HLEN];
+    util::gen_rand_key(&mut rand_key).unwrap();
 
+    let mut nd_round_mac = init(secret_key);
+    let mut nd_round_expected = init(secret_key);
+
+    nd_round_mac.update(&mac.finalize());
+    nd_round_expected.update(expected);
+
+    if util::compare_ct(&nd_round_mac.finalize(), &nd_round_expected.finalize()).is_err() {
+        Err(ValidationCryptoError)
+    } else {
+        Ok(true)
+    }
+}
+
+#[inline(always)]
+/// Initialize Hmac struct with a given key.
+pub fn init(secret_key: &[u8]) -> Hmac {
+    let mut mac = Hmac {
+        ipad: [0x36; BLOCKSIZE],
+        opad: [0x5C; BLOCKSIZE],
+        hasher: Sha512::default(),
+    };
+
+    mac.pad_key_io(secret_key);
     mac
 }
 
 #[test]
 fn finalize_and_veriy_true() {
-    let own_hmac = Hmac {
-        secret_key: "Jefe".as_bytes().to_vec(),
-        data: "what do ya want for nothing?".as_bytes().to_vec(),
-        sha2: ShaVariantOption::SHA256,
-    };
-    let recieved_hmac = Hmac {
-        secret_key: "Jefe".as_bytes().to_vec(),
-        data: "what do ya want for nothing?".as_bytes().to_vec(),
-        sha2: ShaVariantOption::SHA256,
-    };
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
 
-    assert_eq!(own_hmac.verify(&recieved_hmac.finalize()).unwrap(), true);
-}
+    let mut mac = init(secret_key);
+    mac.update(data);
 
-#[test]
-fn veriy_false_wrong_secret_key() {
-    let own_hmac = Hmac {
-        secret_key: "Jefe".as_bytes().to_vec(),
-        data: "what do ya want for nothing?".as_bytes().to_vec(),
-        sha2: ShaVariantOption::SHA256,
-    };
-    let false_hmac = Hmac {
-        secret_key: "Jefe".as_bytes().to_vec(),
-        data: "what do ya want for something?".as_bytes().to_vec(),
-        sha2: ShaVariantOption::SHA256,
-    };
-
-    assert!(own_hmac.verify(&false_hmac.finalize()).is_err());
+    assert_eq!(verify(&mac.finalize(), secret_key, data).unwrap(), true);
 }
 
 #[test]
 fn veriy_false_wrong_data() {
-    let own_hmac = Hmac {
-        secret_key: "Jefe".as_bytes().to_vec(),
-        data: "what do ya want for nothing?".as_bytes().to_vec(),
-        sha2: ShaVariantOption::SHA256,
-    };
-    let false_hmac = Hmac {
-        secret_key: "Jose".as_bytes().to_vec(),
-        data: "what do ya want for nothing?".as_bytes().to_vec(),
-        sha2: ShaVariantOption::SHA256,
-    };
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
 
-    assert!(own_hmac.verify(&false_hmac.finalize()).is_err());
+    let mut mac = init(secret_key);
+    mac.update(data);
+
+    assert_eq!(
+        verify(
+            &mac.finalize(),
+            secret_key,
+            "what do ya want for something?".as_bytes()
+        ).unwrap(),
+        true
+    );
+}
+
+#[test]
+fn veriy_false_wrong_secret_key() {
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
+
+    let mut mac = init(secret_key);
+    mac.update(data);
+
+    assert_eq!(
+        verify(&mac.finalize(), "Jose".as_bytes(), data).unwrap(),
+        true
+    );
 }
