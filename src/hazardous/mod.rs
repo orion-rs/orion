@@ -31,3 +31,6 @@ pub mod pbkdf2;
 
 /// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 pub mod cshake;
+
+/// Constant values and types.
+pub mod constants;
