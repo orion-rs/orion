@@ -36,7 +36,7 @@ pub struct Hmac {
 impl Drop for Hmac {
     fn drop(&mut self) {
         util::memzero(&mut self.ipad);
-        util::memzero(&mut self.opad);
+        util::memzero(&mut self.opad)
     }
 }
 
