@@ -46,7 +46,6 @@ impl Drop for Hmac {
 /// # Parameters:
 /// - `secret_key`:  The authentication key
 /// - `data`: Data to be authenticated
-/// - `sha2`: Cryptographic hash function
 ///
 /// See [RFC](https://tools.ietf.org/html/rfc2104#section-2) for more information.
 ///
@@ -57,40 +56,15 @@ impl Drop for Hmac {
 /// # Example:
 /// ### Generating HMAC:
 /// ```
-/// use orion::hazardous::hmac::Hmac;
-/// use orion::core::util::gen_rand_key;
-/// use orion::core::options::ShaVariantOption;
-///
-/// let key = gen_rand_key(32).unwrap();
-/// let message = gen_rand_key(32).unwrap();
-///
-/// let hmac = Hmac {
-///     secret_key: key,
-///     data: message,
-///     sha2: ShaVariantOption::SHA256
-/// };
-///
-/// hmac.finalize();
+/// use orion::hazardous::hmac;
 /// ```
 /// ### Verifying HMAC:
 /// ```
-/// use orion::hazardous::hmac::Hmac;
-/// use orion::core::options::ShaVariantOption;
+/// use orion::hazardous::hmac;
 ///
 /// let key = "Some key.";
 /// let msg = "Some message.";
 ///
-/// let hmac = Hmac {
-///     secret_key: key.as_bytes().to_vec(),
-///     data: msg.as_bytes().to_vec(),
-///     sha2: ShaVariantOption::SHA256
-/// };
-/// let received_hmac = Hmac {
-///     secret_key: key.as_bytes().to_vec(),
-///     data: msg.as_bytes().to_vec(),
-///     sha2: ShaVariantOption::SHA256
-/// };
-/// assert_eq!(hmac.verify(&received_hmac.finalize()).unwrap(), true);
 /// ```
 
 impl Hmac {
@@ -98,13 +72,11 @@ impl Hmac {
     /// Pad `key` with `ipad` and `opad`.
     fn pad_key_io(&mut self, key: &[u8]) {
         if key.len() > BLOCKSIZE {
-
             self.ipad[..HLEN].copy_from_slice(&Sha512::digest(&key));
 
             for (idx, itm) in self.ipad.iter_mut().take(64).enumerate() {
                 *itm ^= 0x36;
                 self.opad[idx] = *itm ^ 0x6A;
-
             }
         } else {
             for (idx, itm) in key.iter().enumerate() {
@@ -220,13 +192,12 @@ fn veriy_false_wrong_data() {
     let mut mac = init(secret_key);
     mac.update(data);
 
-    assert_eq!(
+    assert!(
         verify(
             &mac.finalize(),
             secret_key,
             "what do ya want for something?".as_bytes()
-        ).unwrap(),
-        true
+        ).is_err()
     );
 }
 
@@ -238,8 +209,5 @@ fn veriy_false_wrong_secret_key() {
     let mut mac = init(secret_key);
     mac.update(data);
 
-    assert_eq!(
-        verify(&mac.finalize(), "Jose".as_bytes(), data).unwrap(),
-        true
-    );
+    assert!(verify(&mac.finalize(), "Jose".as_bytes(), data).is_err());
 }
