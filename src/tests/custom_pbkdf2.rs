@@ -22,7 +22,7 @@
 
 // Testing against custom test vectors.
 // These test vectors have been generated with the cryptography.io Python package.
-// More information here: https://github.com/brycx/PBKDF2-HMAC-SHA2-Test-Vectors
+// More information here: https://github.com/brycx/Test-Vector-Generation/
 
 #[cfg(test)]
 mod custom_test_vectors {
