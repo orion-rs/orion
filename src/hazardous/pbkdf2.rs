@@ -124,7 +124,7 @@ pub fn derive_key(
 
     for (idx, dk_block) in dk_out.chunks_mut(HLEN).enumerate() {
         function_f(salt, iterations, idx + 1, dk_block, &mut hmac);
-        // Reset the HMAC state to clear the data from tis iteration
+        // Reset the HMAC state to clear the data from this iteration
         hmac.reset();
     }
 
