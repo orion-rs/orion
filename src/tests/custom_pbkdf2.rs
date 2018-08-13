@@ -95,4 +95,30 @@ mod custom_test_vectors {
         // verify() also runs derive_key()
         assert!(verify(&expected_dk, password, salt, iter, &mut dk_out).unwrap());
     }
+
+    #[test]
+    fn sha512_test_case_6() {
+        let password = "passwd".as_bytes();
+        let salt = "salt".as_bytes();
+        let iter = 1;
+        let mut dk_out = [0u8; 128];
+
+        let expected_dk = decode("c74319d99499fc3e9013acff597c23c5baf0a0bec5634c46b8352b793e324723d55caa76b2b25c43402dcfdc06cdcf66f95b7d0429420b39520006749c51a04ef3eb99e576617395a178ba33214793e48045132928a9e9bf2661769fdc668f31798597aaf6da70dd996a81019726084d70f152baed8aafe2227c07636c6ddece").unwrap();
+
+        // verify() also runs derive_key()
+        assert!(verify(&expected_dk, password, salt, iter, &mut dk_out).unwrap());
+    }
+
+    #[test]
+    fn sha512_test_case_7() {
+        let password = "Password".as_bytes();
+        let salt = "NaCl".as_bytes();
+        let iter = 80000;
+        let mut dk_out = [0u8; 128];
+
+        let expected_dk = decode("e6337d6fbeb645c794d4a9b5b75b7b30dac9ac50376a91df1f4460f6060d5addb2c1fd1f84409abacc67de7eb4056e6bb06c2d82c3ef4ccd1bded0f675ed97c65c33d39f81248454327aa6d03fd049fc5cbb2b5e6dac08e8ace996cdc960b1bd4530b7e754773d75f67a733fdb99baf6470e42ffcb753c15c352d4800fb6f9d6").unwrap();
+
+        // verify() also runs derive_key()
+        assert!(verify(&expected_dk, password, salt, iter, &mut dk_out).unwrap());
+    }
 }
