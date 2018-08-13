@@ -20,8 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#![forbid(dead_code, warnings, unused_imports)]
 #![no_std]
+#![forbid(dead_code, warnings, unused_imports, unsafe_code)]
 
 extern crate byte_tools;
 extern crate rand;
