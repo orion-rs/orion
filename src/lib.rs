@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 #![no_std]
-#![forbid(dead_code, warnings, unused_imports, unsafe_code)]
+#![forbid(warnings, unsafe_code)]
 
 extern crate byte_tools;
 extern crate rand;
