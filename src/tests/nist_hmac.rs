@@ -16,33 +16,28 @@
 // Testing against NIST CAVP HMACVS test vectors
 extern crate ring;
 use self::ring::{error, test};
-use core::options::ShaVariantOption;
-use hazardous::hmac::Hmac;
+use hazardous::hmac;
 
 fn hmac_test_runner(
-    option: ShaVariantOption,
     key: &[u8],
     input: &[u8],
     output: &[u8],
     is_ok: bool,
 ) -> Result<(), error::Unspecified> {
-    let hmac = Hmac {
-        secret_key: key.to_vec(),
-        data: input.to_vec(),
-        sha2: option,
-    };
+    let mut mac = hmac::init(key);
+    mac.update(input);
 
-    let digest = hmac.finalize();
+    let digest = mac.finalize();
 
-    assert_eq!(is_ok, digest == output);
+    assert_eq!(is_ok, digest.as_ref() == output.as_ref());
 
     // To conform with the Result construction of compare functions
     match is_ok {
         true => {
-            assert_eq!(is_ok, hmac.verify(output).unwrap());
+            assert_eq!(is_ok, hmac::verify(output, key, input).unwrap());
         }
         false => {
-            assert!(hmac.verify(output).is_err());
+            assert!(hmac::verify(output, key, input).is_err());
         }
     }
 
@@ -58,18 +53,21 @@ fn hmac_tests() {
         let mut input = test_case.consume_bytes("Input");
         let output = test_case.consume_bytes("Output");
 
-        let alg = match digest_alg.as_ref() {
-            "SHA256" => ShaVariantOption::SHA256,
-            "SHA384" => ShaVariantOption::SHA384,
-            "SHA512" => ShaVariantOption::SHA512,
+        let run: bool = match digest_alg.as_ref() {
+            "SHA256" => false, // Not supported anymore
+            "SHA384" => false, // Not supported anymore
+            "SHA512" => true,
             _ => panic!("option not found"),
         };
+        if run {
+            hmac_test_runner(&key_value[..], &input[..], &output[..], true)?;
 
-        hmac_test_runner(alg, &key_value[..], &input[..], &output[..], true)?;
+            // Tamper with the input and check that verification fails
+            input[0] ^= 1;
 
-        // Tamper with the input and check that verification fails
-        input[0] ^= 1;
-
-        hmac_test_runner(alg, &key_value[..], &input[..], &output[..], false)
+            hmac_test_runner(&key_value[..], &input[..], &output[..], false)
+        } else {
+            Ok(())
+        }
     });
 }

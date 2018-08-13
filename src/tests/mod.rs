@@ -23,6 +23,9 @@
 /// Test HMAC aginast RFC test vectors.
 pub mod rfc_hmac;
 
+/// Test against NIST CAVP test vectors;
+pub mod nist_hmac;
+
 /// Test HKDF aginast RFC test vectors.
 pub mod other_hkdf;
 
