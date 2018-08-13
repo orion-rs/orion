@@ -66,9 +66,11 @@ mod custom_hkdf {
 
     #[test]
     fn test_case_2() {
-        let ikm = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2\
+        let ikm =
+            "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2\
              02122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f40414243444546474849\
-             4a4b4c4d4e4f".as_bytes();
+             4a4b4c4d4e4f"
+                .as_bytes();
         let salt = "salt".as_bytes();
         let info = "random InF\0".as_bytes();
         let mut okm = [0u8; 128];
@@ -92,9 +94,11 @@ mod custom_hkdf {
     #[test]
     fn test_case_3() {
         let ikm = "password".as_bytes();
-        let salt = "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7\
+        let salt =
+            "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7\
              f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a\
-             8a9aaabacadaeaf".as_bytes();
+             8a9aaabacadaeaf"
+                .as_bytes();
         let info = decode("").unwrap();
         let mut okm = [0u8; 256];
 
@@ -126,12 +130,12 @@ mod custom_hkdf {
 
         let expected_okm = decode(
             "2033ff164f1c52fff45984131a8e791da83f41b681d33f254cbd9fdc2e376f485ef07a5132a\
-            461a43efa454439b75dc270177a9871b4ceccc1c4d354d89a8e22ca4362839e55576088f3a3d\
-            b677b3c7c2841f1f49bd646519020a0ac868390d52d3c96497c125bcf5a7083ad10422ec0b8f\
-            9a0c3f9d8eaa049173a67282d8393fdd8f24d78bb458b02eba60137c445f456c6e1922b8db02\
-            706efee900f5aa4b49cf407f8ac85297a09c29e2a16ef3a02da90ce8268a150cfa1e5325926f\
-            0bdefae6dabea86af6401d67c3c9a62e21db7ade26641628301d321f6d000034eae6e570321b\
-            bb8eb2a36bd954b7c39dcb950b1bf55e1b3deffc06855f77513950d03"
+             461a43efa454439b75dc270177a9871b4ceccc1c4d354d89a8e22ca4362839e55576088f3a3d\
+             b677b3c7c2841f1f49bd646519020a0ac868390d52d3c96497c125bcf5a7083ad10422ec0b8f\
+             9a0c3f9d8eaa049173a67282d8393fdd8f24d78bb458b02eba60137c445f456c6e1922b8db02\
+             706efee900f5aa4b49cf407f8ac85297a09c29e2a16ef3a02da90ce8268a150cfa1e5325926f\
+             0bdefae6dabea86af6401d67c3c9a62e21db7ade26641628301d321f6d000034eae6e570321b\
+             bb8eb2a36bd954b7c39dcb950b1bf55e1b3deffc06855f77513950d03",
         ).unwrap();
         assert!(hkdf_test_runner(
             &expected_okm,
@@ -166,8 +170,9 @@ mod custom_hkdf {
         let ikm = "pass\0word".as_bytes();
         let salt = "saltSALTSALTSALTSALTSALTSALTSALTSALTSALTSALTSALTSALT".as_bytes();
         let info = "b0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbccc\
-             dcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f\
-             3f4f5f6f7f8f9fafbfcfdfeff".as_bytes();
+                    dcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f\
+                    3f4f5f6f7f8f9fafbfcfdfeff"
+            .as_bytes();
         let mut okm = [0u8; 16];
 
         let expected_okm = decode("ae4107effdae85d156832ec28e6e84e6").unwrap();

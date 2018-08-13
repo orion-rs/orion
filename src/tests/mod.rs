@@ -32,5 +32,5 @@ pub mod custom_hkdf;
 /// Test PBKDF2 aginast custom test vectors.
 pub mod custom_pbkdf2;
 
-// Test cSHAKE against official test vectors from the KeccakCodePackage.
+/// Test cSHAKE against official test vectors from the KeccakCodePackage.
 pub mod official_cshake;
