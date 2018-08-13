@@ -47,7 +47,7 @@ use utilities::{errors::*, util};
 /// use orion::default;
 /// use orion::utilities::util;
 ///
-/// let mut key = [0u8; 64]
+/// let mut key = [0u8; 64];
 /// util::gen_rand_key(&mut key).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
@@ -71,7 +71,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
 /// use orion::default;
 /// use orion::utilities::util;
 ///
-/// let mut key = [0u8; 64]
+/// let mut key = [0u8; 64];
 /// util::gen_rand_key(&mut key).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
@@ -116,7 +116,7 @@ pub fn hmac_verify(
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info, 32).unwrap();
+/// let hkdf = default::hkdf(&salt, data, info).unwrap();
 /// ```
 pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
     if salt.len() < 16 {
@@ -143,8 +143,8 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownC
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info, 32).unwrap();
-/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 32).unwrap(), true);
+/// let hkdf = default::hkdf(&salt, data, info).unwrap();
+/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info).unwrap(), true);
 /// ```
 pub fn hkdf_verify(
     expected_dk: &[u8],
@@ -195,6 +195,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
     let mut dk = [0u8; 64];
     let mut salt = [0u8; 32];
     util::gen_rand_key(&mut salt).unwrap();
+
     pbkdf2::derive_key(password, &salt, 512_000, &mut dk[32..]).unwrap();
 
     dk[..32].copy_from_slice(&salt);
@@ -225,7 +226,7 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
         return Err(ValidationCryptoError);
     }
 
-    let mut dk = [0u8; 64];
+    let mut dk = [0u8; 32];
     let salt = &expected_dk[..32];
 
     pbkdf2::verify(&expected_dk[32..], password, salt, 512_000, &mut dk)
@@ -395,7 +396,7 @@ mod test {
         let mut password = [0u8; 64];
         util::gen_rand_key(&mut password).unwrap();
 
-        let pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        let pbkdf2_dk: [u8; 64] = default::pbkdf2(&password).unwrap();
 
         assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap(), true);
     }
