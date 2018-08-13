@@ -138,7 +138,7 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownC
 /// Verify an HKDF-HMAC-SHA512 derived key in constant time.
 ///
 /// # About:
-/// The expected key must be of length 32. This function uses `default::hkdf()`.
+/// The expected key must be of length 32. This uses `default::hkdf()`.
 ///
 /// # Example:
 ///
@@ -178,7 +178,7 @@ pub fn hkdf_verify(
 /// - An array of 64 bytes is returned.
 ///
 /// The first 32 bytes of this array is the salt used to derive the key and the last 32 bytes
-/// is the actual derived key. When using this function with `default::pbkdf2_verify`
+/// is the actual derived key. When using this function with `default::pbkdf2_verify()`
 /// then the seperation of salt and password are automatically handeled.
 ///
 /// # Exceptions:
@@ -212,12 +212,12 @@ pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
 
 /// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
 /// # About:
-/// This function is meant to be used with the `default::pbkdf2` function in orion's default API. It can be
+/// This function is meant to be used with the `default::pbkdf2()` function in orion's default API. It can be
 /// used without it, but then the `expected_dk` passed to the function must be constructed just as in
-/// `default::pbkdf2`. See documention on `default::pbkdf2` for details on this.
+/// `default::pbkdf2()`. See documention on `default::pbkdf2()` for details on this.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The expected derived key length is not 64 bytes.
+/// - The length of `expected_dk` is not 64 bytes.
 /// # Example:
 ///
 /// ```

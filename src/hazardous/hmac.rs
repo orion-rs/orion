@@ -89,7 +89,7 @@ impl Hmac {
 
             for (idx, itm) in self.ipad.iter_mut().take(64).enumerate() {
                 *itm ^= 0x36;
-                self.opad[idx] = *itm ^ 0x6A;
+                self.opad[idx] = *itm ^ 0x6A; // XOR with result of (0x5C ^ 0x36) to inverse
             }
         } else {
             for (idx, itm) in key.iter().enumerate() {

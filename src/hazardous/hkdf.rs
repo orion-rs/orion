@@ -65,13 +65,13 @@
 //! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap());
 //! ```
 
-use hazardous::constants::{HLenArray, HLEN};
+use hazardous::constants::HLEN;
 use hazardous::hmac;
 use utilities::{errors::*, util};
 
 #[inline(always)]
 /// The HKDF extract step.
-pub fn extract(salt: &[u8], ikm: &[u8]) -> HLenArray {
+pub fn extract(salt: &[u8], ikm: &[u8]) -> [u8; 64] {
     let mut prk = hmac::init(salt);
     prk.update(ikm);
 
@@ -95,10 +95,10 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
         hmac.update(&[idx as u8 + 1_u8]);
 
         let block_len = hlen_block.len();
-        //hlen_block.copy_from_slice(&hmac.finalize_with_opad(&opad, )[..block_len]);
         hmac.finalize_with_dst(&mut hlen_block[..block_len]);
 
         // Check if it's the last iteration, if yes don't process anything
+        // only works if `okm_out.len()` is not a multiple of HLEN
         if block_len < HLEN {
             break;
         } else {

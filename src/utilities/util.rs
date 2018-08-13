@@ -25,7 +25,7 @@ use subtle::ConstantTimeEq;
 use utilities::errors;
 
 #[inline(never)]
-/// Return a random byte vector of a given length. This uses rand's
+/// Fill `dst` with random bytes. This uses rand's
 /// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html). Length of `dst` must be >= 1.
 pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
     if dst.is_empty() {
