@@ -19,10 +19,10 @@ professional. Look in the Alternatives section if this means orion is not for yo
 
 
 Currently contains:
-* HMAC with SHA256, SHA384, SHA512 and SHA512/256.
-* HKDF with the above HMAC options.
-* PBKDF2 with the above HMAC options.
-* cSHAKE128 and cSHAKE256.
+* HMAC-SHA512
+* HKDF-HMAC-SHA512.
+* PBKDF2-HMAC-SHA512.
+* cSHAKE256.
 
 ***Note on cSHAKE***:
 The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
@@ -31,35 +31,13 @@ will produce **incorrect results on big-endian based systems**. See [issue here]
 ### Usage
 ```rust
 extern crate orion;
-use orion::{default, core::util};
+use orion::default;
 
-// HMAC-SHA512/256
-let key = util::gen_rand_key(64).unwrap();
-let msg = "Some message".as_bytes();
+let password = "Password to be hashed".as_bytes();
 
-let expected_hmac = default::hmac(&key, msg).unwrap();
-assert!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap());
+let password_hash = default::pbkdf2(password).unwrap();
 
-// HKDF-HMAC-SHA512/256
-let salt = util::gen_rand_key(64).unwrap();
-let data = "Some data".as_bytes();
-let info = "Some info".as_bytes();
-
-let dk = default::hkdf(&salt, data, info, 64).unwrap();
-assert!(default::hkdf_verify(&dk, &salt, data, info, 64).unwrap());
-
-// PBKDF2-HMAC-SHA512/256
-let password = "Secret password".as_bytes();
-
-let dk = default::pbkdf2(password).unwrap();
-assert!(default::pbkdf2_verify(&dk, password).unwrap());
-
-// cSHAKE256
-let data = "Not so random data".as_bytes();
-let custom = "Custom".as_bytes();
-
-let hash = default::cshake(data, custom).unwrap();
-assert!(default::cshake_verify(hash, data, custom).unwrap());
+assert!(default::pbkdf2_verify(&password_hash, password).unwrap());
 ```
 
 
