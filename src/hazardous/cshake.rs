@@ -35,7 +35,7 @@
 //! let custom = b"Email signature";
 //! let mut out = [0u8; 64];
 //!
-//! let mut hash = init(custom, None).unwrap();
+//! let mut hash = cshake::init(custom, None).unwrap();
 //! hash.update(input);
 //!
 //! hash.finalize(&mut out).unwrap();
