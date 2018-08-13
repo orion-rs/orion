@@ -25,10 +25,10 @@
 
 extern crate byte_tools;
 extern crate rand;
+extern crate seckey;
 extern crate sha2;
 extern crate subtle;
 extern crate tiny_keccak;
-extern crate seckey;
 
 /// Core functionality such as generating a salt/key/IV/nonce.
 pub mod utilities;

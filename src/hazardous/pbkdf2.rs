@@ -64,7 +64,6 @@
 //! assert!(pbkdf2::verify(&exp_dk, "Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap());
 //! ```
 
-
 use byte_tools::write_u32_be;
 use hazardous::constants::{HLenArray, HLEN};
 use hazardous::hmac;

@@ -59,13 +59,11 @@
 //! assert!(hmac::verify(&mac.finalize(), &key, msg.as_bytes()).unwrap());
 //! ```
 
-
-
 use core::mem;
 use hazardous::constants::{BlocksizeArray, HLenArray, BLOCKSIZE, HLEN};
+use seckey::zero;
 use sha2::{Digest, Sha512};
 use utilities::{errors::*, util};
-use seckey::zero;
 
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
