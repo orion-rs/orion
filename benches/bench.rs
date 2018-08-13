@@ -21,7 +21,12 @@ fn bench_hmac(b: &mut Bencher) {
 fn bench_hkdf(b: &mut Bencher) {
     b.iter(|| {
         let mut okm_out = [0u8; 64];
-        hkdf::derive_key(&vec![0x01; 64], &vec![0x01; 64], &vec![0x01; 64], &mut okm_out).unwrap();
+        hkdf::derive_key(
+            &vec![0x01; 64],
+            &vec![0x01; 64],
+            &vec![0x01; 64],
+            &mut okm_out,
+        ).unwrap();
     });
 }
 
