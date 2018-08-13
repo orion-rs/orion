@@ -98,7 +98,7 @@ impl CShake {
 
     /// Return a cSHAKE hash.
     pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if dst_out.len() < 1 || dst_out.len() > 65536 {
+        if dst_out.is_empty() || dst_out.len() > 65536 {
             return Err(UnknownCryptoError);
         }
 

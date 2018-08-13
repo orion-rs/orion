@@ -73,7 +73,7 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
     if okm_out.len() > 16320 {
         return Err(UnknownCryptoError);
     }
-    if okm_out.len() < 1 {
+    if okm_out.is_empty() {
         return Err(UnknownCryptoError);
     }
 

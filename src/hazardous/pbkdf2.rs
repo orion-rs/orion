@@ -22,7 +22,7 @@
 
 use byte_tools::write_u32_be;
 use hazardous::constants::{HLenArray, HLEN};
-use hazardous::hmac::*;
+use hazardous::hmac;
 use utilities::{errors::*, util};
 
 /// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
@@ -62,7 +62,13 @@ use utilities::{errors::*, util};
 /// ```
 
 #[inline(always)]
-fn function_f(salt: &[u8], iterations: usize, index: usize, dk_block: &mut [u8], hmac: &mut Hmac) {
+fn function_f(
+    salt: &[u8],
+    iterations: usize,
+    index: usize,
+    dk_block: &mut [u8],
+    hmac: &mut hmac::Hmac,
+) {
     let block_len = dk_block.len();
 
     let mut u_step: HLenArray = [0u8; 64];
@@ -100,11 +106,11 @@ pub fn derive_key(
     if dk_out.len() > 274_877_906_880 {
         return Err(UnknownCryptoError);
     }
-    if dk_out.len() < 1 {
+    if dk_out.is_empty() {
         return Err(UnknownCryptoError);
     }
 
-    let mut hmac = init(password);
+    let mut hmac = hmac::init(password);
 
     for (idx, dk_block) in dk_out.chunks_mut(HLEN).enumerate() {
         function_f(salt, iterations, idx + 1, dk_block, &mut hmac);

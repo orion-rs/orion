@@ -24,6 +24,7 @@ use core::mem;
 use hazardous::constants::{BlocksizeArray, HLenArray, BLOCKSIZE, HLEN};
 use sha2::{Digest, Sha512};
 use utilities::{errors::*, util};
+use seckey::zero;
 
 /// HMAC (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
@@ -35,8 +36,8 @@ pub struct Hmac {
 
 impl Drop for Hmac {
     fn drop(&mut self) {
-        util::memzero(&mut self.ipad);
-        util::memzero(&mut self.opad)
+        zero(&mut self.ipad);
+        zero(&mut self.opad)
     }
 }
 
@@ -126,11 +127,6 @@ impl Hmac {
         hash_ores.input(&hash_ires.result());
 
         dst.copy_from_slice(&hash_ores.result()[..dst_len]);
-    }
-    /// Wipe `ipad` and `opad` form state.
-    pub fn wipe(&mut self) {
-        util::memzero(&mut self.ipad);
-        util::memzero(&mut self.opad);
     }
 }
 

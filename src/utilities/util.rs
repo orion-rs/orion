@@ -20,29 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use core::{mem, ptr};
 use rand::{rngs::OsRng, RngCore};
 use subtle::ConstantTimeEq;
 use utilities::errors;
 
 #[inline(never)]
-pub fn memzero(src: &mut [u8]) {
-    assert_eq!(src.is_empty(), false);
-    let src_len = mem::size_of_val(src);
-
-    unsafe {
-        let src_ptr: *mut u8 = src.as_mut_ptr();
-        ptr::write_bytes(src_ptr, 0u8, src_len);
-    }
-
-    mem::drop(src)
-}
-
-#[inline(never)]
 /// Return a random byte vector of a given length. This uses rand's
 /// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html). Length of `dst` must be >= 1.
 pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
-    if dst.len() < 1 {
+    if dst.is_empty() {
         return Err(errors::UnknownCryptoError);
     }
 
@@ -113,68 +99,4 @@ fn test_ct_ne() {
 fn test_ct_ne_reg() {
     assert!(compare_ct(&[0], &[0, 1]).is_err());
     assert!(compare_ct(&[0, 1], &[0]).is_err());
-}
-
-#[test]
-fn memzero_1() {
-    let mut src = [0x3F; 64];
-    let mut res = true;
-    memzero(&mut src);
-
-    for idx in 0..64 {
-        let tmp = src[idx] ^ 0u8;
-
-        if tmp ^ 0u8 != 0u8 {
-            res = false;
-            break;
-        }
-    }
-
-    assert!(res);
-}
-
-#[test]
-fn memzero_2() {
-    let mut src = [0x6F; 128];
-    let mut res = true;
-    memzero(&mut src);
-
-    for idx in 0..128 {
-        let tmp = src[idx] ^ 0u8;
-
-        if tmp ^ 0u8 != 0u8 {
-            res = false;
-            break;
-        }
-    }
-
-    assert!(res);
-}
-
-#[test]
-#[should_panic]
-fn memzero_mod() {
-    let mut src = [0x5C; 128];
-    let mut res = true;
-    memzero(&mut src);
-
-    src[5..17].copy_from_slice(&[0x35; 12]);
-
-    for idx in 0..128 {
-        let tmp = src[idx] ^ 0u8;
-
-        if tmp ^ 0u8 != 0u8 {
-            res = false;
-            break;
-        }
-    }
-
-    assert!(res);
-}
-
-#[test]
-#[should_panic]
-fn memzero_empty_src() {
-    let mut src = [0x5C; 0];
-    memzero(&mut src);
 }
