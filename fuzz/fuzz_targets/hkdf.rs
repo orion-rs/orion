@@ -4,35 +4,27 @@ extern crate libfuzzer_sys;
 extern crate orion;
 extern crate rand;
 
-use orion::core::options::ShaVariantOption;
-use orion::hazardous::hkdf::Hkdf;
+use orion::hazardous::hkdf;
 use rand::prelude::*;
 
-fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8], len_max: usize, hmac: ShaVariantOption) {
+fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8], len_max: usize) {
     let mut rng = rand::thread_rng();
     let okm_len_rand = rng.gen_range(1, len_max + 1);
 
-    let dk = Hkdf {
-        salt: salt.to_vec(),
-        ikm: ikm.to_vec(),
-        info: info.to_vec(),
-        length: okm_len_rand,
-        hmac,
-    };
+    let prk = hkdf::extract(ikm, salt);
+    let mut dk_out = vec![0u8; okm_len_rand];
+    hkdf::expand(&prk, info, &mut dk_out).unwrap();
 
-    let prk = dk.extract(ikm, salt);
-    let dk_fin = dk.expand(&prk).unwrap();
-
-    assert_eq!(dk_fin, dk.derive_key().unwrap());
-    assert_eq!(dk.verify(&dk_fin).unwrap(), true);
+    let exp_okm = dk_out.clone();
+    assert!(hkdf::verify(&exp_okm, salt, ikm, info, &mut dk_out).unwrap());
 }
 
 fuzz_target!(|data: &[u8]| {
-    fuzz_hkdf(data, data, data, 8160, ShaVariantOption::SHA256);
+    fuzz_hkdf(data, data, data, 8160);
 
-    fuzz_hkdf(data, data, data, 12240, ShaVariantOption::SHA384);
+    fuzz_hkdf(data, data, data, 12240);
 
-    fuzz_hkdf(data, data, data, 16320, ShaVariantOption::SHA512);
+    fuzz_hkdf(data, data, data, 16320);
 
-    fuzz_hkdf(data, data, data, 8160, ShaVariantOption::SHA512Trunc256);
+    fuzz_hkdf(data, data, data, 8160);
 });

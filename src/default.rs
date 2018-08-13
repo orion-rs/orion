@@ -20,15 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use core::options::KeccakVariantOption;
-use core::options::ShaVariantOption;
-use core::{errors::*, util};
-use hazardous::cshake::CShake;
-use hazardous::hkdf::Hkdf;
-use hazardous::hmac::Hmac;
-use hazardous::pbkdf2::Pbkdf2;
+use hazardous::cshake;
+use hazardous::hkdf;
+use hazardous::hmac;
+use hazardous::pbkdf2;
+use utilities::{errors::*, util};
 
-/// HMAC-SHA512/256.
+/// HMAC-SHA512.
 /// # Parameters:
 /// - `secret_key`:  The authentication key
 /// - `data`: Data to be authenticated
@@ -41,41 +39,43 @@ use hazardous::pbkdf2::Pbkdf2;
 ///
 /// # Security:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this.  The recommended length for a secret key is the SHA functions digest
-/// size in bytes.
+/// in `util` can be used for this.
 ///
 /// # Example:
 /// ```
 /// use orion::default;
-/// use orion::core::util;
+/// use orion::utilities::util;
 ///
-/// let key = util::gen_rand_key(64).unwrap();
+/// let mut key = [0u8; 64];
+/// util::gen_rand_key(&mut key).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
 /// let hmac = default::hmac(&key, msg).unwrap();
 /// ```
-pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
     if secret_key.len() < 64 {
         return Err(UnknownCryptoError);
     }
 
-    let mac = Hmac {
-        secret_key: secret_key.to_vec(),
-        data: data.to_vec(),
-        sha2: ShaVariantOption::SHA512Trunc256,
-    };
+    let mut mac = hmac::init(secret_key);
+    mac.update(data);
 
     Ok(mac.finalize())
 }
 
-/// Verify an HMAC-SHA512/256 against a key and data in constant time, with Double-HMAC Verification.
+/// Verify a HMAC-SHA512 MAC in constant time, with Double-HMAC Verification.
+///
+/// # About:
+/// This uses `default::hmac()` to generate the MAC.
+///
 /// # Example:
 ///
 /// ```
 /// use orion::default;
-/// use orion::core::util;
+/// use orion::utilities::util;
 ///
-/// let key = util::gen_rand_key(64).unwrap();
+/// let mut key = [0u8; 64];
+/// util::gen_rand_key(&mut key).unwrap();
 /// let msg = "Some message.".as_bytes();
 ///
 /// let expected_hmac = default::hmac(&key, msg).unwrap();
@@ -86,21 +86,19 @@ pub fn hmac_verify(
     secret_key: &[u8],
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let mac = Hmac {
-        secret_key: secret_key.to_vec(),
-        data: data.to_vec(),
-        sha2: ShaVariantOption::SHA512Trunc256,
-    };
-
-    mac.verify(&expected_hmac)
+    hmac::verify(&expected_hmac, secret_key, data)
 }
 
-/// HKDF-HMAC-SHA512/256.
+/// HKDF-HMAC-SHA512.
+///
+/// # About:
+/// The output length is set to 32, which makes the derived key suitable for use with AES256.
+///
 /// # Parameters:
-/// - `salt`:  Optional salt value
+/// - `salt`:  Salt value
 /// - `input`: Input keying material
 /// - `info`: Optional context and application specific information (can be a zero-length string)
-/// - `len`: Length of output keying material
+///
 ///
 /// See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
 ///
@@ -111,85 +109,76 @@ pub fn hmac_verify(
 /// # Security:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
 /// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-/// HKDF is not suitable for password storage. Even though a salt value is optional, it is strongly
-/// recommended to use one.
+/// HKDF is not suitable for password storage.
 ///
 /// # Example:
 /// ```
 /// use orion::default;
-/// use orion::core::util;
+/// use orion::utilities::util;
 ///
-/// let salt = util::gen_rand_key(32).unwrap();
+/// let mut salt = [0u8; 32];
+/// util::gen_rand_key(&mut salt).unwrap();
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info, 32).unwrap();
+/// let hkdf = default::hkdf(&salt, data, info).unwrap();
 /// ```
-pub fn hkdf(
-    salt: &[u8],
-    input: &[u8],
-    info: &[u8],
-    len: usize,
-) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
     if salt.len() < 16 {
         return Err(UnknownCryptoError);
     }
 
-    let hkdf = Hkdf {
-        salt: salt.to_vec(),
-        ikm: input.to_vec(),
-        info: info.to_vec(),
-        length: len,
-        hmac: ShaVariantOption::SHA512Trunc256,
-    };
+    let mut okm = [0u8; 32];
 
-    hkdf.derive_key()
+    hkdf::derive_key(salt, input, info, &mut okm).unwrap();
+
+    Ok(okm)
 }
 
-/// Verify an HKDF-HMAC-SHA512/256 derived key in constant time. Both derived keys must
-/// be of equal length.
+/// Verify an HKDF-HMAC-SHA512 derived key in constant time.
+///
+/// # About:
+/// The expected key must be of length 32. This uses `default::hkdf()`.
+///
 /// # Example:
 ///
 /// ```
 /// use orion::default;
-/// use orion::core::util;
+/// use orion::utilities::util;
 ///
-/// let salt = util::gen_rand_key(32).unwrap();
+/// let mut salt = [0u8; 32];
+/// util::gen_rand_key(&mut salt).unwrap();
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info, 32).unwrap();
-/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info, 32).unwrap(), true);
+/// let hkdf = default::hkdf(&salt, data, info).unwrap();
+/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info).unwrap(), true);
 /// ```
 pub fn hkdf_verify(
     expected_dk: &[u8],
     salt: &[u8],
     input: &[u8],
     info: &[u8],
-    len: usize,
 ) -> Result<bool, ValidationCryptoError> {
-    let hkdf = Hkdf {
-        salt: salt.to_vec(),
-        ikm: input.to_vec(),
-        info: info.to_vec(),
-        length: len,
-        hmac: ShaVariantOption::SHA512Trunc256,
-    };
+    if expected_dk.len() != 32 {
+        return Err(ValidationCryptoError);
+    }
 
-    hkdf.verify(&expected_dk)
+    let mut okm = [0u8; 32];
+
+    hkdf::verify(&expected_dk, salt, input, info, &mut okm)
 }
 
-/// PBKDF2-HMAC-SHA512/256. Suitable for password storage.
+/// PBKDF2-HMAC-SHA512. Suitable for password storage.
 /// # About:
 /// This is meant to be used for password storage.
 /// - A salt of 32 bytes is automatically generated.
 /// - The derived key length is set to 32.
 /// - 512.000 iterations are used.
-/// - The salt is prepended to the password before being passed to the PBKDF2 function.
-/// - A byte vector of 64 bytes is returned.
+/// - An array of 64 bytes is returned.
 ///
-/// The first 32 bytes of this vector is the salt used to derive the key and the last 32 bytes
-/// is the actual derived key. When using this function with `default::pbkdf2_verify`
+/// The first 32 bytes of this array is the salt used to derive the key and the last 32 bytes
+/// is the actual derived key. When using this function with `default::pbkdf2_verify()`
 /// then the seperation of salt and password are automatically handeled.
 ///
 /// # Exceptions:
@@ -205,46 +194,30 @@ pub fn hkdf_verify(
 ///
 /// let derived_password = default::pbkdf2(password);
 /// ```
-pub fn pbkdf2(password: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
     if password.len() < 14 {
         return Err(UnknownCryptoError);
     }
 
-    let salt: Vec<u8> = util::gen_rand_key(32).unwrap();
-    // Prepend salt to password before deriving key
-    let mut pass_extented: Vec<u8> = Vec::new();
-    pass_extented.extend_from_slice(&salt);
-    pass_extented.extend_from_slice(password);
-    // Prepend salt to derived key
-    let mut dk = Vec::new();
-    dk.extend_from_slice(&salt);
+    let mut dk = [0u8; 64];
+    let mut salt = [0u8; 32];
+    util::gen_rand_key(&mut salt).unwrap();
 
-    let pbkdf2_dk = Pbkdf2 {
-        password: pass_extented,
-        salt,
-        iterations: 512_000,
-        dklen: 32,
-        hmac: ShaVariantOption::SHA512Trunc256,
-    };
+    pbkdf2::derive_key(password, &salt, 512_000, &mut dk[32..]).unwrap();
 
-    // Output format: First 32 bytes are the salt, last 32 bytes are the derived key
-    dk.extend_from_slice(&pbkdf2_dk.derive_key().unwrap());
-
-    if dk.len() != 64 {
-        return Err(UnknownCryptoError);
-    }
+    dk[..32].copy_from_slice(&salt);
 
     Ok(dk)
 }
 
-/// Verify PBKDF2-HMAC-SHA512/256 derived key in constant time.
+/// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
 /// # About:
-/// This function is meant to be used with the `default::pbkdf2` function in orion's default API. It can be
+/// This function is meant to be used with the `default::pbkdf2()` function in orion's default API. It can be
 /// used without it, but then the `expected_dk` passed to the function must be constructed just as in
-/// `default::pbkdf2`. See documention on `default::pbkdf2` for details on this.
+/// `default::pbkdf2()`. See documention on `default::pbkdf2()` for details on this.
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The expected derived key length is not 64 bytes.
+/// - The length of `expected_dk` is not 64 bytes.
 /// # Example:
 ///
 /// ```
@@ -260,30 +233,10 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
         return Err(ValidationCryptoError);
     }
 
-    let salt: Vec<u8> = expected_dk[..32].to_vec();
-    let mut pass_extented: Vec<u8> = Vec::new();
-    pass_extented.extend_from_slice(&salt);
-    pass_extented.extend_from_slice(password);
+    let mut dk = [0u8; 32];
+    let salt = &expected_dk[..32];
 
-    // Prepend salt to derived key
-    let mut dk = Vec::new();
-    dk.extend_from_slice(&salt);
-
-    let pbkdf2_dk = Pbkdf2 {
-        password: pass_extented,
-        salt,
-        iterations: 512_000,
-        dklen: 32,
-        hmac: ShaVariantOption::SHA512Trunc256,
-    };
-
-    dk.extend_from_slice(&pbkdf2_dk.derive_key().unwrap());
-
-    if util::compare_ct(&dk, expected_dk).is_err() {
-        Err(ValidationCryptoError)
-    } else {
-        Ok(true)
-    }
+    pbkdf2::verify(&expected_dk[32..], password, salt, 512_000, &mut dk)
 }
 
 /// cSHAKE256.
@@ -317,19 +270,25 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
 ///
 /// let hash = default::cshake(data, custom).unwrap();
 /// ```
-pub fn cshake(input: &[u8], custom: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-    let cshake = CShake {
-        input: input.to_vec(),
-        name: Vec::new(),
-        custom: custom.to_vec(),
-        length: 64,
-        keccak: KeccakVariantOption::KECCAK512,
-    };
+pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
+    if custom.is_empty() {
+        return Err(UnknownCryptoError);
+    }
 
-    cshake.finalize()
+    let mut hash = [0u8; 64];
+
+    let mut cshake = cshake::init(custom, None).unwrap();
+    cshake.update(input);
+    cshake.finalize(&mut hash).unwrap();
+
+    Ok(hash)
 }
 
-/// Verify a cSHAKE256 hash in constant time. The expected hash must be of length 64.
+/// Verify a cSHAKE256 hash in constant time.
+///
+/// # About:
+/// The expected hash must be of length 64. This uses `default::cshake()`.
+///
 /// # Example:
 ///
 /// ```
@@ -346,15 +305,15 @@ pub fn cshake_verify(
     input: &[u8],
     custom: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let cshake = CShake {
-        input: input.to_vec(),
-        name: Vec::new(),
-        custom: custom.to_vec(),
-        length: 64,
-        keccak: KeccakVariantOption::KECCAK512,
-    };
+    if expected.len() != 64 {
+        return Err(ValidationCryptoError);
+    }
 
-    cshake.verify(&expected)
+    if util::compare_ct(expected, &cshake(input, custom).unwrap()).is_err() {
+        Err(ValidationCryptoError)
+    } else {
+        Ok(true)
+    }
 }
 
 #[cfg(test)]
@@ -362,18 +321,18 @@ mod test {
 
     extern crate hex;
     use self::hex::decode;
-    use core::util;
     use default;
+    use utilities::util;
 
     #[test]
     fn hmac_secret_key_too_short() {
-        assert!(default::hmac(&vec![0x61; 10], &vec![0x61; 10]).is_err());
+        assert!(default::hmac(&[0x61; 10], &[0x61; 10]).is_err());
     }
 
     #[test]
     fn hmac_secret_key_allowed_len() {
-        default::hmac(&vec![0x61; 64], &vec![0x61; 10]).unwrap();
-        default::hmac(&vec![0x61; 78], &vec![0x61; 10]).unwrap();
+        default::hmac(&[0x61; 64], &[0x61; 10]).unwrap();
+        default::hmac(&[0x61; 78], &[0x61; 10]).unwrap();
     }
 
     #[test]
@@ -406,73 +365,100 @@ mod test {
 
     #[test]
     fn hkdf_verify() {
-        let salt = util::gen_rand_key(64).unwrap();
+        let mut salt = [0u8; 64];
+        util::gen_rand_key(&mut salt).unwrap();
         let data = "Some data.".as_bytes();
         let info = "Some info.".as_bytes();
 
-        let hkdf_dk = default::hkdf(&salt, data, info, 64).unwrap();
+        let hkdf_dk = default::hkdf(&salt, data, info).unwrap();
 
         assert_eq!(
-            default::hkdf_verify(&hkdf_dk, &salt, data, info, 64).unwrap(),
+            default::hkdf_verify(&hkdf_dk, &salt, data, info).unwrap(),
             true
         );
     }
 
     #[test]
     fn hkdf_verify_err() {
-        let salt = util::gen_rand_key(64).unwrap();
+        let mut salt = [0u8; 64];
+        util::gen_rand_key(&mut salt).unwrap();
         let data = "Some data.".as_bytes();
         let info = "Some info.".as_bytes();
 
-        let mut hkdf_dk = default::hkdf(&salt, data, info, 64).unwrap();
-        hkdf_dk.extend_from_slice(&[0u8; 4]);
+        let mut hkdf_dk = default::hkdf(&salt, data, info).unwrap();
+        hkdf_dk[..4].copy_from_slice(&[0u8; 4]);
 
-        assert!(default::hkdf_verify(&hkdf_dk, &salt, data, info, 64).is_err());
+        assert!(default::hkdf_verify(&hkdf_dk, &salt, data, info).is_err());
     }
 
     #[test]
+    fn hkdf_verify_exptected_too_long() {
+        let mut salt = [0u8; 64];
+        util::gen_rand_key(&mut salt).unwrap();
+        let data = "Some data.".as_bytes();
+        let info = "Some info.".as_bytes();
+
+        assert!(default::hkdf_verify(&salt, &salt, data, info).is_err());
+    }
+
+    #[test]
+    fn hkdf_verify_exptected_too_short() {
+        let mut salt = [0u8; 16];
+        util::gen_rand_key(&mut salt).unwrap();
+        let data = "Some data.".as_bytes();
+        let info = "Some info.".as_bytes();
+
+        assert!(default::hkdf_verify(&salt, &salt, data, info).is_err());
+    }
+
+
+    #[test]
     fn hkdf_salt_too_short() {
-        assert!(default::hkdf(&vec![0x61; 10], &vec![0x61; 10], &vec![0x61; 10], 20).is_err());
+        assert!(default::hkdf(&[0x61; 10], &[0x61; 10], &[0x61; 10]).is_err());
     }
 
     #[test]
     fn hkdf_salt_allowed_len() {
-        default::hkdf(&vec![0x61; 67], &vec![0x61; 10], &vec![0x61; 10], 20).unwrap();
-        default::hkdf(&vec![0x61; 89], &vec![0x61; 10], &vec![0x61; 10], 20).unwrap();
+        default::hkdf(&[0x61; 67], &[0x61; 10], &[0x61; 10]).unwrap();
+        default::hkdf(&[0x61; 89], &[0x61; 10], &[0x61; 10]).unwrap();
     }
 
     #[test]
     fn pbkdf2_verify() {
-        let password = util::gen_rand_key(64).unwrap();
+        let mut password = [0u8; 64];
+        util::gen_rand_key(&mut password).unwrap();
 
-        let pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        let pbkdf2_dk: [u8; 64] = default::pbkdf2(&password).unwrap();
 
         assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap(), true);
     }
 
     #[test]
     fn pbkdf2_verify_err() {
-        let password = util::gen_rand_key(64).unwrap();
+        let mut password = [0u8; 64];
+        util::gen_rand_key(&mut password).unwrap();
 
         let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
-        pbkdf2_dk.extend_from_slice(&[0u8; 4]);
+        pbkdf2_dk[..10].copy_from_slice(&[0x61; 10]);
 
         assert!(default::pbkdf2_verify(&pbkdf2_dk, &password).is_err());
     }
 
     #[test]
     fn pbkdf2_verify_expected_dk_too_long() {
-        let password = util::gen_rand_key(32).unwrap();
+        let mut password = [0u8; 32];
+        util::gen_rand_key(&mut password).unwrap();
 
-        let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
-        pbkdf2_dk.extend_from_slice(&[0u8; 1]);
+        let mut pbkdf2_dk = [0u8; 65];
+        pbkdf2_dk[..64].copy_from_slice(&default::pbkdf2(&password).unwrap());
 
         assert!(default::pbkdf2_verify(&pbkdf2_dk, &password).is_err());
     }
 
     #[test]
     fn pbkdf2_verify_expected_dk_too_short() {
-        let password = util::gen_rand_key(64).unwrap();
+        let mut password = [0u8; 64];
+        util::gen_rand_key(&mut password).unwrap();
 
         let pbkdf2_dk = default::pbkdf2(&password).unwrap();
 
@@ -481,14 +467,17 @@ mod test {
 
     #[test]
     fn pbkdf2_password_too_short() {
-        let password = util::gen_rand_key(13).unwrap();
+        let mut password = [0u8; 13];
+        util::gen_rand_key(&mut password).unwrap();
 
         assert!(default::pbkdf2(&password).is_err());
     }
 
     #[test]
     fn cshake_ok() {
-        let data = util::gen_rand_key(64).unwrap();
+        let mut data = [0u8; 64];
+        util::gen_rand_key(&mut data).unwrap();
+
         let custom = "Some custom string".as_bytes();
 
         assert!(default::cshake(&data, custom).is_ok());
@@ -496,7 +485,9 @@ mod test {
 
     #[test]
     fn cshake_empty_custom_err() {
-        let data = util::gen_rand_key(64).unwrap();
+        let mut data = [0u8; 64];
+        util::gen_rand_key(&mut data).unwrap();
+
         let custom = "".as_bytes();
 
         assert!(default::cshake(&data, custom).is_err());
@@ -504,7 +495,9 @@ mod test {
 
     #[test]
     fn cshake_verify() {
-        let data = util::gen_rand_key(64).unwrap();
+        let mut data = [0u8; 64];
+        util::gen_rand_key(&mut data).unwrap();
+
         let custom = "Some custom string".as_bytes();
 
         let cshake = default::cshake(&data, custom).unwrap();
@@ -517,7 +510,9 @@ mod test {
 
     #[test]
     fn cshake_verify_err() {
-        let data = util::gen_rand_key(64).unwrap();
+        let mut data = [0u8; 64];
+        util::gen_rand_key(&mut data).unwrap();
+
         let custom = "Some custom string".as_bytes();
 
         let cshake = default::cshake(&data, custom).unwrap();
@@ -527,7 +522,9 @@ mod test {
 
     #[test]
     fn cshake_verify_err_len() {
-        let data = util::gen_rand_key(64).unwrap();
+        let mut data = [0u8; 64];
+        util::gen_rand_key(&mut data).unwrap();
+
         let custom = "Some custom string".as_bytes();
 
         let cshake = default::cshake(&data, custom).unwrap();

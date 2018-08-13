@@ -20,17 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
-pub mod hmac;
+/// Errors for orion's cryptographic operations.
+pub mod errors;
 
-/// HKDF-HMAC-SHA512 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
-pub mod hkdf;
-
-/// PBKDF2-HMAC-SHA512 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
-pub mod pbkdf2;
-
-/// cSHAKE256 as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
-pub mod cshake;
-
-/// Constant values and types.
-pub mod constants;
+/// Utility functions such as constant time comparison.
+pub mod util;

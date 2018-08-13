@@ -20,190 +20,131 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # Parameters:
+//! - `password`: Password
+//! - `salt`: Salt value
+//! - `iterations`: Iteration count
+//! - `dk_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `dk_out`
+//!
+//! See [RFC](https://tools.ietf.org/html/rfc8018#section-5.2) for more information.
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//! - The length of `dk_out` is less than 1
+//! - The length of `dk_out` is greater than (2^32 - 1) * hLen
+//! - The specified iteration count is less than 1
+//!
+//! # Security:
+//! Salts should always be generated using a CSPRNG. The `gen_rand_key` function
+//! in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
+//! The iteration count should be set as high as feasible.
+//! # Example:
+//! ### Generating derived key:
+//! ```
+//! use orion::hazardous::pbkdf2;
+//! use orion::utilities::util;
+//!
+//! let mut salt = [0u8; 16];
+//! util::gen_rand_key(&mut salt);
+//! let mut dk_out = [0u8; 64];
+//!
+//! pbkdf2::derive_key("Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap();
+//! ```
+//! ### Verifying derived key:
+//! ```
+//! use orion::hazardous::pbkdf2;
+//! use orion::utilities::util;
+//!
+//! let mut salt = [0u8; 16];
+//! util::gen_rand_key(&mut salt);
+//! let mut dk_out = [0u8; 64];
+//!
+//! pbkdf2::derive_key("Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap();
+//! let exp_dk = dk_out;
+//! assert!(pbkdf2::verify(&exp_dk, "Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap());
+//! ```
+
 use byte_tools::write_u32_be;
-use clear_on_drop::clear::Clear;
-use core::options::ShaVariantOption;
-use core::{errors::*, util};
-use hazardous::hmac::*;
+use hazardous::constants::{HLenArray, HLEN};
+use hazardous::hmac;
+use utilities::{errors::*, util};
 
-/// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
-/// [RFC 8018](https://tools.ietf.org/html/rfc8018).
-///
-/// Fields `password` and `salt` are zeroed out on drop.
-pub struct Pbkdf2 {
-    pub password: Vec<u8>,
-    pub salt: Vec<u8>,
-    pub iterations: usize,
-    pub dklen: usize,
-    pub hmac: ShaVariantOption,
-}
+#[inline(always)]
+fn function_f(
+    salt: &[u8],
+    iterations: usize,
+    index: usize,
+    dk_block: &mut [u8],
+    hmac: &mut hmac::Hmac,
+) {
+    let block_len = dk_block.len();
 
-impl Drop for Pbkdf2 {
-    fn drop(&mut self) {
-        Clear::clear(&mut self.password);
-        Clear::clear(&mut self.salt)
-    }
-}
+    let mut u_step: HLenArray = [0u8; 64];
+    // First 4 bytes used for index BE conversion
+    write_u32_be(&mut u_step[..4], index as u32);
+    hmac.update(salt);
+    hmac.update(&u_step[..4]);
 
-/// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
-/// [RFC 8018](https://tools.ietf.org/html/rfc8018).
-///
-/// # Parameters:
-/// - `password`: Password
-/// - `salt`: Salt value
-/// - `iterations`: Iteration count
-/// - `dklen`: Length of the derived key
-/// - `hmac`: Pseudorandom function
-///
-/// See [RFC](https://tools.ietf.org/html/rfc8018#section-5.2) for more information.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The specified dklen is less than 1
-/// - The specified dklen is greater than (2^32 - 1) * hLen
-/// - The specified iteration count is less than 1
-///
-/// # Security:
-/// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-/// The iteration count should be set as high as feasible.
-/// # Example:
-/// ### Generating derived key:
-/// ```
-/// use orion::hazardous::pbkdf2::Pbkdf2;
-/// use orion::core::util::gen_rand_key;
-/// use orion::core::options::ShaVariantOption;
-///
-/// let password = gen_rand_key(32).unwrap();
-/// let salt = gen_rand_key(32).unwrap();
-///
-/// let dk = Pbkdf2 {
-///     password: password,
-///     salt: salt,
-///     iterations: 10000,
-///     dklen: 64,
-///     hmac: ShaVariantOption::SHA256
-/// };
-///
-/// dk.derive_key().unwrap();
-/// ```
-/// ### Verifying derived key:
-/// ```
-/// use orion::hazardous::pbkdf2::Pbkdf2;
-/// use orion::core::util::gen_rand_key;
-/// use orion::core::options::ShaVariantOption;
-///
-/// let password = gen_rand_key(32).unwrap();
-/// let salt = gen_rand_key(32).unwrap();
-///
-/// let dk = Pbkdf2 {
-///     password: password,
-///     salt: salt,
-///     iterations: 10000,
-///     dklen: 64,
-///     hmac: ShaVariantOption::SHA256
-/// };
-///
-/// let derived_key = dk.derive_key().unwrap();
-/// assert_eq!(dk.verify(&derived_key).unwrap(), true);
-/// ```
+    hmac.finalize_with_dst(&mut u_step);
+    dk_block.copy_from_slice(&u_step[..block_len]);
 
-impl Pbkdf2 {
-    /// Return the maximum derived key dklen ((2^32 - 1) * hLen).
-    fn max_dklen(&self) -> usize {
-        match self.hmac.output_size() {
-            32 => 137_438_953_440,
-            48 => 206_158_430_160,
-            64 => 274_877_906_880,
-            _ => panic!(UnknownCryptoError),
-        }
-    }
+    if iterations > 1 {
+        for _ in 1..iterations {
+            hmac.reset();
+            hmac.update(&u_step);
+            hmac.finalize_with_dst(&mut u_step);
 
-    /// Returns a PRK using HMAC as the PRF. The parameters `ipad` and `opad` are constructed
-    /// in the `derive_key`. They are used to speed up HMAC calls.
-    fn prf(&self, ipad: &[u8], opad: &[u8], data: &[u8]) -> Vec<u8> {
-        pbkdf2_hmac(ipad, opad, data, self.hmac)
-    }
-
-    /// Function F as described in the RFC.
-    fn function_f(&self, index: u32, ipad: &[u8], opad: &[u8], salt_ext: &mut [u8]) -> Vec<u8> {
-
-        let pos = salt_ext.len() - 4;
-        write_u32_be(&mut salt_ext[pos..], index);
-
-        // First iteration
-        let mut f_result: Vec<u8> = self.prf(ipad, opad, &salt_ext);
-
-        // Remaining iterations
-        if self.iterations > 1 {
-
-            let mut u_step = Vec::new();
-            u_step.extend_from_slice(&f_result);
-
-            for _ in 1..self.iterations {
-                u_step = self.prf(ipad, opad, &u_step);
-
-                for index in 0..f_result.len() {
-                    f_result[index] ^= u_step[index];
-                }
+            for (idx, val) in u_step[..block_len].iter().enumerate() {
+                dk_block[idx] ^= val;
             }
         }
+    }
+}
 
-        f_result
+#[inline(always)]
+/// PBKDF2-SHA512 (Password-Based Key Derivation Function 2) as specified in the
+/// [RFC 8018](https://tools.ietf.org/html/rfc8018).
+pub fn derive_key(
+    password: &[u8],
+    salt: &[u8],
+    iterations: usize,
+    dk_out: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+    if iterations < 1 {
+        return Err(UnknownCryptoError);
+    }
+    if dk_out.len() > 274_877_906_880 {
+        return Err(UnknownCryptoError);
+    }
+    if dk_out.is_empty() {
+        return Err(UnknownCryptoError);
     }
 
-    /// Main PBKDF2 function. Returns a derived key.
-    pub fn derive_key(&self) -> Result<Vec<u8>, UnknownCryptoError> {
-        if self.iterations < 1 {
-            return Err(UnknownCryptoError);
-        }
-        if self.dklen > self.max_dklen() {
-            return Err(UnknownCryptoError);
-        }
-        if self.dklen < 1 {
-            return Err(UnknownCryptoError);
-        }
+    let mut hmac = hmac::init(password);
 
-        let hlen_blocks: usize = 1 + ((self.dklen - 1) / self.hmac.output_size());
-
-        let pad_const = Hmac {
-            secret_key: Vec::new(),
-            data: Vec::new(),
-            sha2: self.hmac,
-        };
-        let (mut ipad, mut opad) = pad_const.pad_key(&self.password);
-        let mut salt_ext = self.salt.clone();
-        // We need 4 bytes of space for the index value
-        salt_ext.extend_from_slice(&[0u8; 4]);
-        let mut derived_key: Vec<u8> = Vec::new();
-
-        for index in 1..hlen_blocks + 1 {
-            derived_key.extend_from_slice(&self.function_f(index as u32, &ipad, &opad, &mut salt_ext));
-            // Given that hlen_blocks is rounded correctly, then the `index as u32`
-            // should not be able to overflow. If the maximum dklen is selected,
-            // along with the highest output size, then hlen_blocks will equal
-            // exactly `u32::max_value()`
-        }
-
-        Clear::clear(&mut ipad);
-        Clear::clear(&mut opad);
-
-        derived_key.truncate(self.dklen);
-
-        Ok(derived_key)
+    for (idx, dk_block) in dk_out.chunks_mut(HLEN).enumerate() {
+        function_f(salt, iterations, idx + 1, dk_block, &mut hmac);
+        // Reset the HMAC state to clear the data from this iteration
+        hmac.reset();
     }
 
-    /// Verify a derived key by comparing one from the current struct fields with the derived key
-    /// passed to the function. Comparison is done in constant time. Both derived keys must be
-    /// of equal length.
-    pub fn verify(&self, expected_dk: &[u8]) -> Result<bool, ValidationCryptoError> {
-        let own_dk = self.derive_key().unwrap();
+    Ok(())
+}
 
-        if util::compare_ct(&own_dk, expected_dk).is_err() {
-            Err(ValidationCryptoError)
-        } else {
-            Ok(true)
-        }
+/// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
+pub fn verify(
+    expected_dk: &[u8],
+    password: &[u8],
+    salt: &[u8],
+    iterations: usize,
+    dk_out: &mut [u8],
+) -> Result<bool, ValidationCryptoError> {
+    derive_key(password, salt, iterations, dk_out).unwrap();
+
+    if util::compare_ct(&dk_out, expected_dk).is_err() {
+        Err(ValidationCryptoError)
+    } else {
+        Ok(true)
     }
 }
 
@@ -212,154 +153,87 @@ mod test {
 
     extern crate hex;
     use self::hex::decode;
-    use core::options::ShaVariantOption;
-    use hazardous::pbkdf2::Pbkdf2;
-
-    #[test]
-    fn dklen_too_high_sha256() {
-        let too_long = ((2_u64.pow(32) - 1) * 32 as u64) as usize + 1;
-
-        let dk = Pbkdf2 {
-            password: "password".as_bytes().to_vec(),
-            salt: "salt".as_bytes().to_vec(),
-            iterations: 1,
-            dklen: too_long,
-            hmac: ShaVariantOption::SHA256,
-        };
-
-        assert!(dk.derive_key().is_err());
-    }
-
-    #[test]
-    fn dklen_too_high_sha384() {
-        let too_long = ((2_u64.pow(32) - 1) * 48 as u64) as usize + 1;
-
-        let dk = Pbkdf2 {
-            password: "password".as_bytes().to_vec(),
-            salt: "salt".as_bytes().to_vec(),
-            iterations: 1,
-            dklen: too_long,
-            hmac: ShaVariantOption::SHA384,
-        };
-
-        assert!(dk.derive_key().is_err());
-    }
-
-    #[test]
-    fn dklen_too_high_sha512() {
-        let too_long = ((2_u64.pow(32) - 1) * 64 as u64) as usize + 1;
-
-        let dk = Pbkdf2 {
-            password: "password".as_bytes().to_vec(),
-            salt: "salt".as_bytes().to_vec(),
-            iterations: 1,
-            dklen: too_long,
-            hmac: ShaVariantOption::SHA512,
-        };
-
-        assert!(dk.derive_key().is_err());
-    }
+    use hazardous::pbkdf2::*;
 
     #[test]
     fn zero_iterations_err() {
-        let dk = Pbkdf2 {
-            password: "password".as_bytes().to_vec(),
-            salt: "salt".as_bytes().to_vec(),
-            iterations: 0,
-            dklen: 15,
-            hmac: ShaVariantOption::SHA256,
-        };
+        let password = "password".as_bytes();
+        let salt = "salt".as_bytes();
+        let iterations: usize = 0;
+        let mut okm_out = [0u8; 15];
 
-        assert!(dk.derive_key().is_err());
+        assert!(derive_key(password, salt, iterations, &mut okm_out).is_err());
     }
 
     #[test]
     fn zero_dklen_err() {
-        let dk = Pbkdf2 {
-            password: "password".as_bytes().to_vec(),
-            salt: "salt".as_bytes().to_vec(),
-            iterations: 2,
-            dklen: 0,
-            hmac: ShaVariantOption::SHA256,
-        };
+        let password = "password".as_bytes();
+        let salt = "salt".as_bytes();
+        let iterations: usize = 1;
+        let mut okm_out = [0u8; 0];
 
-        assert!(dk.derive_key().is_err());
+        assert!(derive_key(password, salt, iterations, &mut okm_out).is_err());
     }
 
     #[test]
     fn verify_true() {
-        let dk = Pbkdf2 {
-            password: "pass\0word".as_bytes().to_vec(),
-            salt: "sa\0lt".as_bytes().to_vec(),
-            iterations: 4096,
-            dklen: 16,
-            hmac: ShaVariantOption::SHA512,
-        };
+        let password = "pass\0word".as_bytes();
+        let salt = "sa\0lt".as_bytes();
+        let iterations: usize = 4096;
+        let mut okm_out = [0u8; 16];
 
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
-        assert_eq!(dk.verify(&expected_dk).unwrap(), true);
+        assert_eq!(
+            verify(&expected_dk, password, salt, iterations, &mut okm_out).unwrap(),
+            true
+        );
     }
 
     #[test]
     fn verify_false_wrong_salt() {
-        // Salt value differs between this and the previous test case
-        let dk = Pbkdf2 {
-            password: "pass\0word".as_bytes().to_vec(),
-            salt: "".as_bytes().to_vec(),
-            iterations: 4096,
-            dklen: 16,
-            hmac: ShaVariantOption::SHA512,
-        };
+        let password = "pass\0word".as_bytes();
+        let salt = "".as_bytes();
+        let iterations: usize = 4096;
+        let mut okm_out = [0u8; 16];
 
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
-        assert!(dk.verify(&expected_dk).is_err());
+        assert!(verify(&expected_dk, password, salt, iterations, &mut okm_out).is_err());
     }
-
     #[test]
     fn verify_false_wrong_password() {
-        let dk = Pbkdf2 {
-            password: "none".as_bytes().to_vec(),
-            salt: "sa\0lt".as_bytes().to_vec(),
-            iterations: 4096,
-            dklen: 16,
-            hmac: ShaVariantOption::SHA512,
-        };
+        let password = "".as_bytes();
+        let salt = "sa\0lt".as_bytes();
+        let iterations: usize = 4096;
+        let mut okm_out = [0u8; 16];
 
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
-        assert!(dk.verify(&expected_dk).is_err());
+        assert!(verify(&expected_dk, password, salt, iterations, &mut okm_out).is_err());
     }
 
     #[test]
     fn verify_diff_dklen_error() {
-        // Different dklen than expected dk
-        let dk = Pbkdf2 {
-            password: "pass\0word".as_bytes().to_vec(),
-            salt: "sa\0lt".as_bytes().to_vec(),
-            iterations: 4096,
-            dklen: 32,
-            hmac: ShaVariantOption::SHA512,
-        };
+        let password = "pass\0word".as_bytes();
+        let salt = "sa\0lt".as_bytes();
+        let iterations: usize = 4096;
+        let mut okm_out = [0u8; 32];
 
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
-        assert!(dk.verify(&expected_dk).is_err());
+        assert!(verify(&expected_dk, password, salt, iterations, &mut okm_out).is_err());
     }
 
     #[test]
     fn verify_diff_iter_error() {
-        let dk = Pbkdf2 {
-            password: "pass\0word".as_bytes().to_vec(),
-            salt: "sa\0lt".as_bytes().to_vec(),
-            iterations: 800,
-            dklen: 16,
-            hmac: ShaVariantOption::SHA512,
-        };
+        let password = "pass\0word".as_bytes();
+        let salt = "sa\0lt".as_bytes();
+        let iterations: usize = 512;
+        let mut okm_out = [0u8; 16];
 
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
-        assert!(dk.verify(&expected_dk).is_err());
+        assert!(verify(&expected_dk, password, salt, iterations, &mut okm_out).is_err());
     }
 }

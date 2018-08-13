@@ -4,12 +4,13 @@ extern crate libfuzzer_sys;
 extern crate orion;
 extern crate rand;
 
-use orion::core::util;
 use orion::default;
+use orion::utilities::util;
 use rand::Rng;
 
 fn fuzz_default(data: &[u8]) -> () {
-    let rand_salt = util::gen_rand_key(64).unwrap();
+    let mut rand_salt = [0u8; 64];
+    util::gen_rand_key(&mut rand_salt).unwrap();
     let mut rng = rand::thread_rng();
 
     // cSHAKE `custom` can't be empty
@@ -17,14 +18,11 @@ fn fuzz_default(data: &[u8]) -> () {
     mod_custom.push(0u8);
 
     if rng.gen() {
-        let len_hkdf: usize = rng.gen_range(1, 8161);
-
         default::hkdf_verify(
-            &default::hkdf(&rand_salt, data, data, len_hkdf).unwrap(),
+            &default::hkdf(&rand_salt, data, data).unwrap(),
             &rand_salt,
             &data,
             data,
-            len_hkdf,
         ).unwrap();
 
         default::hmac_verify(&default::hmac(&rand_salt, data).unwrap(), &rand_salt, data).unwrap();
@@ -34,7 +32,11 @@ fn fuzz_default(data: &[u8]) -> () {
 
         default::pbkdf2_verify(&default::pbkdf2(&password).unwrap(), &password).unwrap();
 
-        default::cshake_verify(&default::cshake(&data, &mod_custom).unwrap(), &data, &mod_custom).unwrap();
+        default::cshake_verify(
+            &default::cshake(&data, &mod_custom).unwrap(),
+            &data,
+            &mod_custom,
+        ).unwrap();
         default::cshake_verify(
             &default::cshake("".as_bytes(), &mod_custom).unwrap(),
             "".as_bytes(),

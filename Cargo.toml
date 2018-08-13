@@ -1,10 +1,10 @@
 [package]
 name = "orion"
-version = "0.4.3"
+version = "0.5.0"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Easy and usable rust crypto"
 keywords = [ "cryptography", "hmac", "hkdf", "pbkdf2", "cshake" ]
-categories = [ "cryptography" ]
+categories = [ "cryptography", "no-std" ]
 readme = "README.md"
 repository = "https://github.com/brycx/orion"
 documentation = "https://docs.rs/orion"
@@ -14,15 +14,16 @@ exclude = [
     ".travis.yml",
     "benches/*",
     "fuzz/*",
+    "src/tests/*"
 ]
 
 [dependencies]
 rand = "0.5.5"
 sha2 = "0.7.1"
 tiny-keccak = "1.4.2"
-clear_on_drop = "0.2.3"
 byte-tools = "0.2.0"
-constant_time_eq = "0.1.3"
+subtle = "0.7.0"
+seckey = "0.9.1"
 
 [dev-dependencies]
 hex = "0.3.2"
