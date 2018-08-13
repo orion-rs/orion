@@ -392,6 +392,27 @@ mod test {
     }
 
     #[test]
+    fn hkdf_verify_exptected_too_long() {
+        let mut salt = [0u8; 64];
+        util::gen_rand_key(&mut salt).unwrap();
+        let data = "Some data.".as_bytes();
+        let info = "Some info.".as_bytes();
+
+        assert!(default::hkdf_verify(&salt, &salt, data, info).is_err());
+    }
+
+    #[test]
+    fn hkdf_verify_exptected_too_short() {
+        let mut salt = [0u8; 16];
+        util::gen_rand_key(&mut salt).unwrap();
+        let data = "Some data.".as_bytes();
+        let info = "Some info.".as_bytes();
+
+        assert!(default::hkdf_verify(&salt, &salt, data, info).is_err());
+    }
+
+
+    #[test]
     fn hkdf_salt_too_short() {
         assert!(default::hkdf(&[0x61; 10], &[0x61; 10], &[0x61; 10]).is_err());
     }
