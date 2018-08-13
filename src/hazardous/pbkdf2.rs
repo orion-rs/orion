@@ -20,46 +20,55 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # Parameters:
+//! - `password`: Password
+//! - `salt`: Salt value
+//! - `iterations`: Iteration count
+//! - `dk_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `dk_out`
+//!
+//! See [RFC](https://tools.ietf.org/html/rfc8018#section-5.2) for more information.
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//! - The length of `dk_out` is less than 1
+//! - The length of `dk_out` is greater than (2^32 - 1) * hLen
+//! - The specified iteration count is less than 1
+//!
+//! # Security:
+//! Salts should always be generated using a CSPRNG. The `gen_rand_key` function
+//! in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
+//! The iteration count should be set as high as feasible.
+//! # Example:
+//! ### Generating derived key:
+//! ```
+//! use orion::hazardous::pbkdf2;
+//! use orion::utilities::util;
+//!
+//! let mut salt = [0u8; 16];
+//! util::gen_rand_key(&mut salt);
+//! let mut dk_out = [0u8; 64];
+//!
+//! pbkdf2::derive_key("Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap();
+//! ```
+//! ### Verifying derived key:
+//! ```
+//! use orion::hazardous::pbkdf2;
+//! use orion::utilities::util;
+//!
+//! let mut salt = [0u8; 16];
+//! util::gen_rand_key(&mut salt);
+//! let mut dk_out = [0u8; 64];
+//!
+//! pbkdf2::derive_key("Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap();
+//! let exp_dk = dk_out;
+//! assert!(pbkdf2::verify(&exp_dk, "Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap());
+//! ```
+
+
 use byte_tools::write_u32_be;
 use hazardous::constants::{HLenArray, HLEN};
 use hazardous::hmac;
 use utilities::{errors::*, util};
-
-/// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
-/// [RFC 8018](https://tools.ietf.org/html/rfc8018).
-///
-/// Fields `password` and `salt` are zeroed out on drop.
-
-/// PBKDF2 (Password-Based Key Derivation Function 2) as specified in the
-/// [RFC 8018](https://tools.ietf.org/html/rfc8018).
-///
-/// # Parameters:
-/// - `password`: Password
-/// - `salt`: Salt value
-/// - `iterations`: Iteration count
-/// - `okm_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
-///
-/// See [RFC](https://tools.ietf.org/html/rfc8018#section-5.2) for more information.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The specified dklen is less than 1
-/// - The specified dklen is greater than (2^32 - 1) * hLen
-/// - The specified iteration count is less than 1
-///
-/// # Security:
-/// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-/// The iteration count should be set as high as feasible.
-/// # Example:
-/// ### Generating derived key:
-/// ```
-/// use orion::hazardous::pbkdf2;
-/// ```
-/// ### Verifying derived key:
-/// ```
-/// use orion::hazardous::pbkdf2;
-/// ```
 
 #[inline(always)]
 fn function_f(
@@ -94,6 +103,8 @@ fn function_f(
 }
 
 #[inline(always)]
+/// PBKDF2-SHA512 (Password-Based Key Derivation Function 2) as specified in the
+/// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 pub fn derive_key(
     password: &[u8],
     salt: &[u8],
@@ -119,9 +130,7 @@ pub fn derive_key(
     Ok(())
 }
 
-/// Verify a derived key by comparing one from the current struct fields with the derived key
-/// passed to the function. Comparison is done in constant time. Both derived keys must be
-/// of equal length.
+/// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
 pub fn verify(
     expected_dk: &[u8],
     password: &[u8],

@@ -26,7 +26,7 @@ use hazardous::hmac;
 use hazardous::pbkdf2;
 use utilities::{errors::*, util};
 
-/// HMAC-SHA512/256.
+/// HMAC-SHA512.
 /// # Parameters:
 /// - `secret_key`:  The authentication key
 /// - `data`: Data to be authenticated
@@ -39,8 +39,7 @@ use utilities::{errors::*, util};
 ///
 /// # Security:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this.  The recommended length for a secret key is the SHA functions digest
-/// size in bytes.
+/// in `util` can be used for this.
 ///
 /// # Example:
 /// ```
@@ -64,7 +63,11 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
     Ok(mac.finalize())
 }
 
-/// Verify an HMAC-SHA512/256 against a key and data in constant time, with Double-HMAC Verification.
+/// Verify a HMAC-SHA512 MAC in constant time, with Double-HMAC Verification.
+///
+/// # About:
+/// This uses `default::hmac()` to generate the MAC.
+///
 /// # Example:
 ///
 /// ```
@@ -86,13 +89,16 @@ pub fn hmac_verify(
     hmac::verify(&expected_hmac, secret_key, data)
 }
 
-/// HKDF-HMAC-SHA512/256.
+/// HKDF-HMAC-SHA512.
+///
+/// # About:
+/// The output length is set to 32, which makes the derived key suitable for use with AES256.
+///
 /// # Parameters:
-/// - `salt`:  Optional salt value
+/// - `salt`:  Salt value
 /// - `input`: Input keying material
 /// - `info`: Optional context and application specific information (can be a zero-length string)
 ///
-/// The output length is set to 32, which makes the derived key suitbale for use as key with AES256.
 ///
 /// See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
 ///
@@ -103,8 +109,7 @@ pub fn hmac_verify(
 /// # Security:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
 /// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-/// HKDF is not suitable for password storage. Even though a salt value is optional, it is strongly
-/// recommended to use one.
+/// HKDF is not suitable for password storage.
 ///
 /// # Example:
 /// ```
@@ -130,8 +135,11 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownC
     Ok(okm)
 }
 
-/// Verify an HKDF-HMAC-SHA512/256 derived key in constant time. The expected key must be of length 32,
-/// as this function uses `default::hkdf()`.
+/// Verify an HKDF-HMAC-SHA512 derived key in constant time.
+///
+/// # About:
+/// The expected key must be of length 32. This function uses `default::hkdf()`.
+///
 /// # Example:
 ///
 /// ```
@@ -161,16 +169,15 @@ pub fn hkdf_verify(
     hkdf::verify(&expected_dk, salt, input, info, &mut okm)
 }
 
-/// PBKDF2-HMAC-SHA512/256. Suitable for password storage.
+/// PBKDF2-HMAC-SHA512. Suitable for password storage.
 /// # About:
 /// This is meant to be used for password storage.
 /// - A salt of 32 bytes is automatically generated.
 /// - The derived key length is set to 32.
 /// - 512.000 iterations are used.
-/// - The salt is prepended to the password before being passed to the PBKDF2 function.
-/// - A byte vector of 64 bytes is returned.
+/// - An array of 64 bytes is returned.
 ///
-/// The first 32 bytes of this vector is the salt used to derive the key and the last 32 bytes
+/// The first 32 bytes of this array is the salt used to derive the key and the last 32 bytes
 /// is the actual derived key. When using this function with `default::pbkdf2_verify`
 /// then the seperation of salt and password are automatically handeled.
 ///
@@ -203,7 +210,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
     Ok(dk)
 }
 
-/// Verify PBKDF2-HMAC-SHA512/256 derived key in constant time.
+/// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
 /// # About:
 /// This function is meant to be used with the `default::pbkdf2` function in orion's default API. It can be
 /// used without it, but then the `expected_dk` passed to the function must be constructed just as in
@@ -277,7 +284,11 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
     Ok(hash)
 }
 
-/// Verify a cSHAKE256 hash in constant time. The expected hash must be of length 64.
+/// Verify a cSHAKE256 hash in constant time.
+///
+/// # About:
+/// The expected hash must be of length 64. This uses `default::cshake()`.
+///
 /// # Example:
 ///
 /// ```

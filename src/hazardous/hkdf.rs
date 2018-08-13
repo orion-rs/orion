@@ -20,47 +20,58 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # Parameters:
+//! - `salt`:  Optional salt value
+//! - `ikm`: Input keying material
+//! - `info`: Optional context and application specific information (can be a zero-length string)
+//! - `okm_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
+//!
+//! See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//! - The length of `okm_out` is less than 1
+//! - The length of `okm_out` is greater than 255 * hash_output_size_in_bytes
+//!
+//! # Security:
+//! Salts should always be generated using a CSPRNG. The `gen_rand_key` function
+//! in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
+//! HKDF is not suitable for password storage. Even though a salt value is optional, it is strongly
+//! recommended to use one.
+//!
+//! # Example:
+//! ### Generating derived key:
+//! ```
+//! use orion::utilities::util;
+//! use orion::hazardous::hkdf;
+//!
+//! let mut salt = [0u8; 16];
+//! util::gen_rand_key(&mut salt).unwrap();
+//! let mut okm_out = [0u8; 32];
+//!
+//! hkdf::derive_key(&salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
+//! ```
+//! ### Verifying derived key:
+//! ```
+//! use orion::utilities::util;
+//! use orion::hazardous::hkdf;
+//!
+//! let mut salt = [0u8; 16];
+//! util::gen_rand_key(&mut salt).unwrap();
+//! let mut okm_out = [0u8; 32];
+//!
+//! hkdf::derive_key(&salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
+//! let exp_okm = okm_out;
+//! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap());
+//! ```
+
+
 use hazardous::constants::{HLenArray, HLEN};
 use hazardous::hmac;
 use utilities::{errors::*, util};
 
-/// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
-/// [RFC 5869](https://tools.ietf.org/html/rfc5869).
-///
-/// Fields `salt`, `ikm` and `info` are zeroed out on drop.
-
-/// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the
-/// [RFC 5869](https://tools.ietf.org/html/rfc5869).
-/// # Parameters:
-/// - `salt`:  Optional salt value
-/// - `ikm`: Input keying material
-/// - `info`: Optional context and application specific information (can be a zero-length string)
-/// - `okm_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
-///
-/// See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The specified length is less than 1
-/// - The specified length is greater than 255 * hash_output_size_in_bytes
-///
-/// # Security:
-/// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-/// HKDF is not suitable for password storage. Even though a salt value is optional, it is strongly
-/// recommended to use one.
-///
-/// # Example:
-/// ### Generating derived key:
-/// ```
-/// use orion::hazardous::hkdf;
-/// ```
-/// ### Verifying derived key:
-/// ```
-/// use orion::hazardous::hkdf;
-/// ```
-
 #[inline(always)]
+/// The HKDF extract step.
 pub fn extract(salt: &[u8], ikm: &[u8]) -> HLenArray {
     let mut prk = hmac::init(salt);
     prk.update(ikm);
@@ -69,6 +80,7 @@ pub fn extract(salt: &[u8], ikm: &[u8]) -> HLenArray {
 }
 
 #[inline(always)]
+/// The HKDF expand step.
 pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
     if okm_out.len() > 16320 {
         return Err(UnknownCryptoError);
@@ -99,7 +111,7 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
     Ok(())
 }
 
-/// Combine Extract and Expand to return a derived key.
+/// Combine `extract` and `expand` to return a derived key.
 pub fn derive_key(
     salt: &[u8],
     ikm: &[u8],
@@ -109,9 +121,7 @@ pub fn derive_key(
     expand(&extract(salt, ikm), info, okm_out)
 }
 
-/// Verify a derived key by comparing one from the current struct fields to the derived key
-/// passed to the function. Comparison is done in constant time. Both derived keys must be
-/// of equal length.
+/// Verify a derived key in constant time.
 pub fn verify(
     expected_dk: &[u8],
     salt: &[u8],

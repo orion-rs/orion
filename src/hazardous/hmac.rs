@@ -20,13 +20,54 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # Parameters:
+//! - `secret_key`:  The authentication key
+//! - `data`: Data to be authenticated
+//!
+//! See [RFC](https://tools.ietf.org/html/rfc2104#section-2) for more information.
+//!
+//! # Security:
+//! The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
+//! in `util` can be used for this.  The recommended length for a secret key is the SHA functions digest
+//! size in bytes.
+//! # Example:
+//! ### Generating HMAC:
+//! ```
+//! use orion::hazardous::hmac;
+//! use orion::utilities::util;
+//!
+//! let mut key = [0u8; 64];
+//! util::gen_rand_key(&mut key);
+//! let msg = "Some message.";
+//!
+//! let mut mac = hmac::init(&key);
+//! mac.update(msg.as_bytes());
+//! mac.finalize();
+//! ```
+//! ### Verifying HMAC:
+//! ```
+//! use orion::hazardous::hmac;
+//! use orion::utilities::util;
+//!
+//! let mut key = [0u8; 64];
+//! util::gen_rand_key(&mut key);
+//! let msg = "Some message.";
+//!
+//! let mut mac = hmac::init(&key);
+//! mac.update(msg.as_bytes());
+//!
+//! assert!(hmac::verify(&mac.finalize(), &key, msg.as_bytes()).unwrap());
+//! ```
+
+
+
 use core::mem;
 use hazardous::constants::{BlocksizeArray, HLenArray, BLOCKSIZE, HLEN};
 use sha2::{Digest, Sha512};
 use utilities::{errors::*, util};
 use seckey::zero;
 
-/// HMAC (Hash-based Message Authentication Code) as specified in the
+/// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub struct Hmac {
     ipad: BlocksizeArray,
@@ -40,33 +81,6 @@ impl Drop for Hmac {
         zero(&mut self.opad)
     }
 }
-
-/// HMAC (Hash-based Message Authentication Code) as specified in the
-/// [RFC 2104](https://tools.ietf.org/html/rfc2104).
-///
-/// # Parameters:
-/// - `secret_key`:  The authentication key
-/// - `data`: Data to be authenticated
-///
-/// See [RFC](https://tools.ietf.org/html/rfc2104#section-2) for more information.
-///
-/// # Security:
-/// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this.  The recommended length for a secret key is the SHA functions digest
-/// size in bytes.
-/// # Example:
-/// ### Generating HMAC:
-/// ```
-/// use orion::hazardous::hmac;
-/// ```
-/// ### Verifying HMAC:
-/// ```
-/// use orion::hazardous::hmac;
-///
-/// let key = "Some key.";
-/// let msg = "Some message.";
-///
-/// ```
 
 impl Hmac {
     #[inline(always)]
@@ -101,7 +115,7 @@ impl Hmac {
 
     #[inline(always)]
     /// Return MAC.
-    pub fn finalize(&mut self) -> HLenArray {
+    pub fn finalize(&mut self) -> [u8; 64] {
         let mut hash_ires = Sha512::default();
         mem::swap(&mut self.hasher, &mut hash_ires);
 
@@ -130,8 +144,7 @@ impl Hmac {
     }
 }
 
-/// Check HMAC validity by computing one from the current struct fields and comparing this
-/// to the passed HMAC. Comparison is done in constant time and with Double-HMAC Verification.
+/// Verify a HMAC-SHA512 MAC in constant time, with Double-HMAC Verification.
 pub fn verify(
     expected: &[u8],
     secret_key: &[u8],
@@ -157,7 +170,7 @@ pub fn verify(
 }
 
 #[inline(always)]
-/// Initialize Hmac struct with a given key.
+/// Initialize `Hmac` struct with a given key.
 pub fn init(secret_key: &[u8]) -> Hmac {
     let mut mac = Hmac {
         ipad: [0x36; BLOCKSIZE],

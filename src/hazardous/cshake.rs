@@ -20,60 +20,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! ### Notes:
+//! The cSHAKE256 implementation currently relies on the `tiny-keccak` crate. Currently this crate
+//! will produce ***incorrect results on big-endian based systems***. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
+//!
+//! # Security:
+//! cSHAKE256 has a security strength of 256 bits. The recommended output length for cSHAKE256 is 64.
+//!
+//! # Example:
+//! ```
+//! use orion::hazardous::cshake;
+//!
+//! let input = b"\x00\x01\x02\x03";
+//! let custom = b"Email signature";
+//! let mut out = [0u8; 64];
+//!
+//! let mut hash = init(custom, None).unwrap();
+//! hash.update(input);
+//!
+//! hash.finalize(&mut out).unwrap();
+//! ```
 use byte_tools::write_u64_be;
 use core::mem;
 use tiny_keccak::Keccak;
 use utilities::errors::*;
 
-/// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
-///
-
-/// cSHAKE as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
-///
+/// cSHAKE256 as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 /// # Parameters:
 /// - `input`:  The main input string
-/// - `name`: Function-name string
-/// - `custom`: Customization string
-/// - `dst_out`: Destination buffer for the digest. The length of the digest is implied by the length of `out`
-///
-///
-/// "The customization string is intended to avoid a collision between these two cSHAKE values—it
-/// will be very difficult for an attacker to somehow force one computation (the email signature)
-/// to yield the same result as the other computation (the key fingerprint) if different values
-/// of S are used." See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
-///
-/// ### Notes:
-/// The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
-/// will produce ***incorrect results on big-endian based systems***. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
-///
-/// `name` is a special parameter that in most cases should be just set to a zero string:
-/// "This is intended for use by NIST in defining SHA-3-derived functions, and should only be set
-/// to values defined by NIST". See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
+/// - `dst_out`: Destination buffer for the digest. The length of the digest is implied by the length of `dst_out`
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - Both `name` and `custom` are empty
-/// - The specified length is zero
-/// - The specified length is greater than 65536
-/// - If the length of either `name` or `custom` is greater than 65536
-///
-/// The reason that `name` and `custom` cannot both be empty is because that would be equivalent to
-/// a SHAKE call.
-///
-/// # Security:
-/// cSHAKE128 has a security strength of 128 bits, whereas cSHAKE256 has a security strength of
-/// 256 bits. The recommended output length for cSHAKE128 is 32 and 64 for cSHAKE256.
-///
-/// # Example:
-/// ```
-/// use orion::hazardous::cshake;
-/// ```
-
+/// - The length of `dst_out` is zero
+/// - The length of `dst_out` is greater than 65536
 pub struct CShake {
     hasher: Keccak,
 }
 
 impl CShake {
+    /// Initial setup with encoding of `custom` and `name`.
     fn setup(&mut self, custom: &[u8], name: &[u8]) {
         // Only append the left encoded rate, not the rate itself as with `name` and `custom`
         let (encoded, offset) = left_encode(136_u64);
@@ -91,9 +77,9 @@ impl CShake {
         // Pad with zeroes before calling pad() in finalize()
         self.hasher.fill_block();
     }
-
-    pub fn update(&mut self, data: &[u8]) {
-        self.hasher.update(data);
+    /// Set `input`. Can be called repeatedly.
+    pub fn update(&mut self, input: &[u8]) {
+        self.hasher.update(input);
     }
 
     /// Return a cSHAKE hash.
@@ -111,8 +97,29 @@ impl CShake {
     }
 }
 
+/// Initialize a `CShake struct`.
+/// # Parameters:
+/// - `name`: Optional function-name string. If `None` it is set to a zero-length string.
+/// - `custom`: Customization string
+///
+/// "The customization string is intended to avoid a collision between these two cSHAKE values—it
+/// will be very difficult for an attacker to somehow force one computation (the email signature)
+/// to yield the same result as the other computation (the key fingerprint) if different values
+/// of S are used." See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
+///
+/// `name` is a special parameter that in most cases should be just set to a zero string:
+/// "This is intended for use by NIST in defining SHA-3-derived functions, and should only be set
+/// to values defined by NIST". See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - Both `name` and `custom` are empty
+/// - If the length of either `name` or `custom` is greater than 65536
+///
+/// The reason that `name` and `custom` cannot both be empty is because that would be equivalent to
+/// a SHAKE call.
 pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoError> {
-    // 136 is the rate
+    // 136 is the rate of Keccak512
     let mut hash = CShake {
         hasher: Keccak::new(136, 0x04),
     };
