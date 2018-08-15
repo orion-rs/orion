@@ -70,7 +70,8 @@ use utilities::{errors::*, util};
 pub struct Hmac {
     ipad: BlocksizeArray,
     opad: BlocksizeArray,
-    hasher: Sha512,
+    opad_hasher: Sha512,
+    ipad_hasher: Sha512,
 }
 
 impl Drop for Hmac {
@@ -98,31 +99,34 @@ impl Hmac {
             }
         }
 
-        self.hasher.input(&self.ipad);
+        self.ipad_hasher.input(&self.ipad);
+        self.opad_hasher.input(&self.opad);
     }
 
     /// Reset to `init()` state.
     pub fn reset(&mut self) {
-        self.hasher.input(&self.ipad);
+        self.ipad_hasher.input(&self.ipad);
+        self.opad_hasher.input(&self.opad);
     }
 
     /// This can be called multiple times.
     pub fn update(&mut self, message: &[u8]) {
-        self.hasher.input(message);
+        self.ipad_hasher.input(message);
     }
 
     #[inline(always)]
     /// Return MAC.
     pub fn finalize(&mut self) -> [u8; 64] {
         let mut hash_ires = Sha512::default();
-        mem::swap(&mut self.hasher, &mut hash_ires);
+        mem::swap(&mut self.ipad_hasher, &mut hash_ires);
 
-        let mut hash_ores = Sha512::default();
-        hash_ores.input(&self.opad);
-        hash_ores.input(&hash_ires.result());
+        self.opad_hasher.input(&hash_ires.result());
+
+        let mut o_hash = Sha512::default();
+        mem::swap(&mut self.opad_hasher, &mut o_hash);
 
         let mut mac: HLenArray = [0u8; HLEN];
-        mac.copy_from_slice(&hash_ores.result());
+        mac.copy_from_slice(&o_hash.result());
         mac
     }
 
@@ -130,15 +134,15 @@ impl Hmac {
     /// Retrieve MAC and copy to `dst`.
     pub fn finalize_with_dst(&mut self, dst: &mut [u8]) {
         let mut hash_ires = Sha512::default();
-        mem::swap(&mut self.hasher, &mut hash_ires);
+        mem::swap(&mut self.ipad_hasher, &mut hash_ires);
 
-        let mut hash_ores = Sha512::default();
+        self.opad_hasher.input(&hash_ires.result());
+
+        let mut o_hash = Sha512::default();
+        mem::swap(&mut self.opad_hasher, &mut o_hash);
         let dst_len = dst.len();
 
-        hash_ores.input(&self.opad);
-        hash_ores.input(&hash_ires.result());
-
-        dst.copy_from_slice(&hash_ores.result()[..dst_len]);
+        dst.copy_from_slice(&o_hash.result()[..dst_len]);
     }
 }
 
@@ -173,7 +177,8 @@ pub fn init(secret_key: &[u8]) -> Hmac {
     let mut mac = Hmac {
         ipad: [0x36; BLOCKSIZE],
         opad: [0x5C; BLOCKSIZE],
-        hasher: Sha512::default(),
+        opad_hasher: Sha512::default(),
+        ipad_hasher: Sha512::default(),
     };
 
     mac.pad_key_io(secret_key);

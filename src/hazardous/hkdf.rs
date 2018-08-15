@@ -89,6 +89,7 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
     }
 
     let mut hmac = hmac::init(prk);
+    let okm_len = okm_out.len();
 
     for (idx, hlen_block) in okm_out.chunks_mut(HLEN).enumerate() {
         hmac.update(info);
@@ -98,8 +99,7 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
         hmac.finalize_with_dst(&mut hlen_block[..block_len]);
 
         // Check if it's the last iteration, if yes don't process anything
-        // only works if `okm_out.len()` is not a multiple of HLEN
-        if block_len < HLEN {
+        if block_len < HLEN || (block_len * (idx + 1) == okm_len) {
             break;
         } else {
             hmac.reset();
