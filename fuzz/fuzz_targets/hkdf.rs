@@ -25,6 +25,4 @@ fuzz_target!(|data: &[u8]| {
     fuzz_hkdf(data, data, data, 12240);
 
     fuzz_hkdf(data, data, data, 16320);
-
-    fuzz_hkdf(data, data, data, 8160);
 });
