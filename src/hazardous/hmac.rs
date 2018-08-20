@@ -72,6 +72,7 @@ pub struct Hmac {
     opad: BlocksizeArray,
     opad_hasher: Sha512,
     ipad_hasher: Sha512,
+    is_finalized: bool,
 }
 
 impl Drop for Hmac {
@@ -105,7 +106,12 @@ impl Hmac {
 
     /// Reset to `init()` state.
     pub fn reset(&mut self) {
-        self.ipad_hasher.input(&self.ipad);
+        if self.is_finalized {
+            self.ipad_hasher.input(&self.ipad);
+            self.is_finalized = false;
+        } else {
+            panic!("No reaosn to reset");
+        }
     }
 
     /// This can be called multiple times.
@@ -116,6 +122,13 @@ impl Hmac {
     #[inline(always)]
     /// Return MAC.
     pub fn finalize(&mut self) -> [u8; 64] {
+
+        if self.is_finalized {
+            panic!("You need to reset before calling finalize again");
+        }
+
+        self.is_finalized = true;
+
         let mut hash_ires = Sha512::default();
         mem::swap(&mut self.ipad_hasher, &mut hash_ires);
 
@@ -130,6 +143,13 @@ impl Hmac {
     #[inline(always)]
     /// Retrieve MAC and copy to `dst`.
     pub fn finalize_with_dst(&mut self, dst: &mut [u8]) {
+
+        if self.is_finalized {
+            panic!("You need to reset before calling finalize again");
+        }
+
+        self.is_finalized = true;
+
         let mut hash_ires = Sha512::default();
         mem::swap(&mut self.ipad_hasher, &mut hash_ires);
 
@@ -174,6 +194,7 @@ pub fn init(secret_key: &[u8]) -> Hmac {
         opad: [0x5C; BLOCKSIZE],
         opad_hasher: Sha512::default(),
         ipad_hasher: Sha512::default(),
+        is_finalized: false,
     };
 
     mac.pad_key_io(secret_key);
@@ -217,4 +238,41 @@ fn veriy_false_wrong_secret_key() {
     mac.update(data);
 
     assert!(verify(&mac.finalize(), "Jose".as_bytes(), data).is_err());
+}
+
+#[test]
+#[should_panic]
+fn double_finalize_err() {
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
+
+    let mut mac = init(secret_key);
+    mac.update(data);
+    mac.finalize();
+    mac.finalize();
+}
+
+#[test]
+fn double_finalize_with_reset_ok() {
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
+
+    let mut mac = init(secret_key);
+    mac.update(data);
+    mac.finalize();
+    mac.reset();
+    mac.update("Test".as_bytes());
+    mac.finalize();
+}
+
+#[test]
+fn double_finalize_with_reset_no_update_ok() {
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
+
+    let mut mac = init(secret_key);
+    mac.update(data);
+    mac.finalize();
+    mac.reset();
+    mac.finalize();
 }
