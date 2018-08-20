@@ -106,7 +106,6 @@ impl Hmac {
     /// Reset to `init()` state.
     pub fn reset(&mut self) {
         self.ipad_hasher.input(&self.ipad);
-        self.opad_hasher.input(&self.opad);
     }
 
     /// This can be called multiple times.
@@ -120,10 +119,8 @@ impl Hmac {
         let mut hash_ires = Sha512::default();
         mem::swap(&mut self.ipad_hasher, &mut hash_ires);
 
-        self.opad_hasher.input(&hash_ires.result());
-
-        let mut o_hash = Sha512::default();
-        mem::swap(&mut self.opad_hasher, &mut o_hash);
+        let mut o_hash = self.opad_hasher.clone();
+        o_hash.input(&hash_ires.result());
 
         let mut mac: HLenArray = [0u8; HLEN];
         mac.copy_from_slice(&o_hash.result());
@@ -136,10 +133,8 @@ impl Hmac {
         let mut hash_ires = Sha512::default();
         mem::swap(&mut self.ipad_hasher, &mut hash_ires);
 
-        self.opad_hasher.input(&hash_ires.result());
-
-        let mut o_hash = Sha512::default();
-        mem::swap(&mut self.opad_hasher, &mut o_hash);
+        let mut o_hash = self.opad_hasher.clone();
+        o_hash.input(&hash_ires.result());
         let dst_len = dst.len();
 
         dst.copy_from_slice(&o_hash.result()[..dst_len]);
