@@ -26,6 +26,11 @@
 //!
 //! See [RFC](https://tools.ietf.org/html/rfc2104#section-2) for more information.
 //!
+//! # Exceptions:
+//! An exception will be thrown if:
+//! - Either `finalize()` or `finalize_with_dst()` is called twice in a row without calling `reset()`
+//! in between
+//!
 //! # Security:
 //! The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
 //! in `util` can be used for this.  The recommended length for a secret key is the SHA functions digest
