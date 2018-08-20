@@ -115,7 +115,7 @@ impl Hmac {
             self.ipad_hasher.input(&self.ipad);
             self.is_finalized = false;
         } else {
-            panic!("No reaosn to reset");
+            panic!("No need to reset");
         }
     }
 
@@ -129,7 +129,7 @@ impl Hmac {
     pub fn finalize(&mut self) -> [u8; 64] {
 
         if self.is_finalized {
-            panic!("You need to reset before calling finalize again");
+            panic!("You need to reset before calling finalize() again");
         }
 
         self.is_finalized = true;
@@ -150,7 +150,7 @@ impl Hmac {
     pub fn finalize_with_dst(&mut self, dst: &mut [u8]) {
 
         if self.is_finalized {
-            panic!("You need to reset before calling finalize again");
+            panic!("You need to reset before calling finalize_with_dst() again");
         }
 
         self.is_finalized = true;

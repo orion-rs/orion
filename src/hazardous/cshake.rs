@@ -54,8 +54,12 @@ use utilities::errors::*;
 /// An exception will be thrown if:
 /// - The length of `dst_out` is zero
 /// - The length of `dst_out` is greater than 65536
+/// - `finalize()` is called twice in a row without calling `reset()`
+/// in between
 pub struct CShake {
+    setup_hasher: Keccak,
     hasher: Keccak,
+    is_finalized: bool,
 }
 
 impl CShake {
@@ -76,14 +80,30 @@ impl CShake {
 
         // Pad with zeroes before calling pad() in finalize()
         self.hasher.fill_block();
+        self.setup_hasher = self.hasher.clone();
+    }
+    /// Reset to `init()` state.
+    pub fn reset(&mut self) {
+        if self.is_finalized {
+            self.hasher = self.setup_hasher.clone();
+            self.is_finalized = false;
+        } else {
+            panic!("No need to reset");
+        }
     }
     /// Set `input`. Can be called repeatedly.
     pub fn update(&mut self, input: &[u8]) {
         self.hasher.update(input);
     }
-
     /// Return a cSHAKE hash.
     pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
+
+        if self.is_finalized {
+            panic!("You need to reset before calling finalize() again");
+        }
+
+        self.is_finalized = true;
+
         if dst_out.is_empty() || dst_out.len() > 65536 {
             return Err(UnknownCryptoError);
         }
@@ -119,10 +139,6 @@ impl CShake {
 /// The reason that `name` and `custom` cannot both be empty is because that would be equivalent to
 /// a SHAKE call.
 pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoError> {
-    // 136 is the rate of Keccak512
-    let mut hash = CShake {
-        hasher: Keccak::new(136, 0x04),
-    };
 
     // "When N and S are both empty strings, cSHAKE(X, L, N, S) is equivalent to SHAKE as
     // defined in FIPS 202"
@@ -136,6 +152,13 @@ pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoE
     if name_val.len() > 65536 || custom.len() > 65536 {
         return Err(UnknownCryptoError);
     }
+
+    // 136 is the rate of Keccak512
+    let mut hash = CShake {
+        setup_hasher: Keccak::new(136, 0x04),
+        hasher: Keccak::new(136, 0x04),
+        is_finalized: false,
+    };
 
     hash.setup(custom, name_val);
 
@@ -317,5 +340,48 @@ mod test {
                         \xA7\x4C\x41\x2B\xB4\xC7\x46\x46\x95\x27\x28\x1C\x8C";
 
         assert_ne!(out.as_ref(), expected.as_ref());
+    }
+
+    #[test]
+    #[should_panic]
+    fn double_finalize_err() {
+        let input = b"\x00\x01\x02\x03";
+        let custom = b"";
+        let name = b"Email Signature";
+        let mut out = [0u8; 64];
+
+        let mut cshake = init(custom, Some(name)).unwrap();
+        cshake.update(input);
+        cshake.finalize(&mut out).unwrap();
+        cshake.finalize(&mut out).unwrap();
+    }
+
+    #[test]
+    fn double_finalize_with_reset_ok() {
+        let input = b"\x00\x01\x02\x03";
+        let custom = b"";
+        let name = b"Email Signature";
+        let mut out = [0u8; 64];
+
+        let mut cshake = init(custom, Some(name)).unwrap();
+        cshake.update(input);
+        cshake.finalize(&mut out).unwrap();
+        cshake.reset();
+        cshake.update(input);
+        cshake.finalize(&mut out).unwrap();
+    }
+
+    #[test]
+    fn double_finalize_with_reset_no_update_ok() {
+        let input = b"\x00\x01\x02\x03";
+        let custom = b"";
+        let name = b"Email Signature";
+        let mut out = [0u8; 64];
+
+        let mut cshake = init(custom, Some(name)).unwrap();
+        cshake.update(input);
+        cshake.finalize(&mut out).unwrap();
+        cshake.reset();
+        cshake.finalize(&mut out).unwrap();
     }
 }
