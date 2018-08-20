@@ -75,9 +75,9 @@ fn function_f(
     iterations: usize,
     index: usize,
     dk_block: &mut [u8],
+    block_len: usize,
     hmac: &mut hmac::Hmac,
 ) {
-    let block_len = dk_block.len();
 
     let mut u_step: HLenArray = [0u8; 64];
     // First 4 bytes used for index BE conversion
@@ -124,9 +124,12 @@ pub fn derive_key(
     let dk_len = dk_out.len();
 
     for (idx, dk_block) in dk_out.chunks_mut(HLEN).enumerate() {
-        function_f(salt, iterations, idx + 1, dk_block, &mut hmac);
+        let block_len = dk_block.len();
+        assert!(block_len <= dk_len);
+
+        function_f(salt, iterations, idx + 1, dk_block, block_len, &mut hmac);
         // Check if it's the last iteration, if yes don't process anything
-        if dk_block.len() < HLEN || (dk_block.len() * (idx + 1) == dk_len) {
+        if block_len < HLEN || (block_len * (idx + 1) == dk_len) {
             break;
         } else {
             hmac.reset();

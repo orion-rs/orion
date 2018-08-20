@@ -92,10 +92,11 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
     let okm_len = okm_out.len();
 
     for (idx, hlen_block) in okm_out.chunks_mut(HLEN).enumerate() {
+        let block_len = hlen_block.len();
+        assert!(block_len <= okm_len);
+
         hmac.update(info);
         hmac.update(&[idx as u8 + 1_u8]);
-
-        let block_len = hlen_block.len();
         hmac.finalize_with_dst(&mut hlen_block[..block_len]);
 
         // Check if it's the last iteration, if yes don't process anything
