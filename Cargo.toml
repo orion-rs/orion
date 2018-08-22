@@ -21,7 +21,7 @@ exclude = [
 rand = "0.5.5"
 sha2 = "0.7.1"
 tiny-keccak = "1.4.2"
-byte-tools = "0.2.0"
+byte-tools = "0.3.0"
 subtle = "0.7.0"
 seckey = "0.9.1"
 
