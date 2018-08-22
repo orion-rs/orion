@@ -23,7 +23,7 @@
 #![no_std]
 #![forbid(warnings, unsafe_code)]
 
-extern crate byte_tools;
+extern crate byteorder;
 extern crate rand;
 extern crate seckey;
 extern crate sha2;

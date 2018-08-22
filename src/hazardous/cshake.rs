@@ -40,7 +40,7 @@
 //!
 //! hash.finalize(&mut out).unwrap();
 //! ```
-use byte_tools::write_u64_be;
+use byteorder::{ByteOrder, BigEndian};
 use core::mem;
 use tiny_keccak::Keccak;
 use utilities::errors::*;
@@ -173,7 +173,7 @@ fn left_encode(x: u64) -> ([u8; 9], usize) {
     if x == 0 {
         offset = 8;
     } else {
-        write_u64_be(&mut input[1..], x.to_le());
+        BigEndian::write_u64(&mut input[1..], x.to_le());
         for idx in &input {
             if *idx != 0 {
                 break;
