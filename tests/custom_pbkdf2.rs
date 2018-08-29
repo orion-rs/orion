@@ -28,8 +28,10 @@
 mod custom_test_vectors {
 
     extern crate hex;
+    extern crate orion;
+
     use self::hex::decode;
-    use hazardous::pbkdf2::*;
+    use self::orion::hazardous::pbkdf2::*;
 
     #[test]
     fn sha512_test_case_1() {

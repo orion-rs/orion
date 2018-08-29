@@ -25,8 +25,10 @@
 mod rfc4231 {
 
     extern crate hex;
+    extern crate orion;
+
     use self::hex::decode;
-    use hazardous::hmac;
+    use self::orion::hazardous::hmac;
 
     fn hmac_test_runner(
         secret_key: &[u8],

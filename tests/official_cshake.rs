@@ -25,7 +25,9 @@
 #[cfg(test)]
 mod kcp_test_vectors {
 
-    use hazardous::cshake;
+    extern crate orion;
+
+    use self::orion::hazardous::cshake;
 
     #[test]
     fn cshake_256_test_case_1() {

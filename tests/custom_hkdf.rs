@@ -28,8 +28,10 @@
 mod custom_hkdf {
 
     extern crate hex;
+    extern crate orion;
+
     use self::hex::decode;
-    use hazardous::hkdf::*;
+    use self::orion::hazardous::hkdf::*;
 
     fn hkdf_test_runner(
         excp_okm: &[u8],

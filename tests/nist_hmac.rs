@@ -15,8 +15,10 @@
 
 // Testing against NIST CAVP HMACVS test vectors
 extern crate ring;
+extern crate orion;
+
 use self::ring::{error, test};
-use hazardous::hmac;
+use self::orion::hazardous::hmac;
 
 fn hmac_test_runner(
     key: &[u8],
@@ -45,8 +47,8 @@ fn hmac_test_runner(
 }
 
 #[test]
-fn hmac_tests() {
-    test::from_file("src/tests/test_data/HMAC_fmt.rsp", |section, test_case| {
+fn nist_hmac() {
+    test::from_file("tests/test_data/HMAC_fmt.rsp", |section, test_case| {
         assert_eq!(section, "");
         let digest_alg = test_case.consume_string("HMAC");
         let key_value = test_case.consume_bytes("Key");

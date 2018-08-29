@@ -38,7 +38,3 @@ pub mod default;
 
 /// Low-level API.
 pub mod hazardous;
-
-/// Testing module for orion.
-#[cfg(test)]
-pub mod tests;
