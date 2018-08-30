@@ -64,7 +64,9 @@
 //! assert!(hmac::verify(&mac.finalize(), &key, msg.as_bytes()).unwrap());
 //! ```
 
-use core::mem;
+extern crate core;
+
+use self::core::mem;
 use hazardous::constants::{BlocksizeArray, HLenArray, BLOCKSIZE, HLEN};
 use seckey::zero;
 use sha2::{Digest, Sha512};
@@ -166,25 +168,17 @@ impl Hmac {
     }
 }
 
-/// Verify a HMAC-SHA512 MAC in constant time, with Double-HMAC Verification.
+/// Verify a HMAC-SHA512 MAC in constant time.
 pub fn verify(
     expected: &[u8],
     secret_key: &[u8],
     message: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
+
     let mut mac = init(secret_key);
     mac.update(message);
 
-    let mut rand_key: HLenArray = [0u8; HLEN];
-    util::gen_rand_key(&mut rand_key).unwrap();
-
-    let mut nd_round_mac = init(secret_key);
-    let mut nd_round_expected = init(secret_key);
-
-    nd_round_mac.update(&mac.finalize());
-    nd_round_expected.update(expected);
-
-    if util::compare_ct(&nd_round_mac.finalize(), &nd_round_expected.finalize()).is_err() {
+    if util::compare_ct(&mac.finalize(), expected).is_err() {
         Err(ValidationCryptoError)
     } else {
         Ok(true)

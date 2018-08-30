@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use hazardous::constants::*;
 use hazardous::cshake;
 use hazardous::hkdf;
 use hazardous::hmac;
@@ -86,6 +87,20 @@ pub fn hmac_verify(
     secret_key: &[u8],
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
+
+    let mut mac = hmac::init(secret_key);
+    mac.update(data);
+
+    let mut rand_key: HLenArray = [0u8; HLEN];
+    util::gen_rand_key(&mut rand_key).unwrap();
+
+    let mut nd_round_mac = hmac::init(secret_key);
+    let mut nd_round_expected = hmac::init(secret_key);
+
+    nd_round_mac.update(&mac.finalize());
+    nd_round_expected.update(expected_hmac);
+
+
     hmac::verify(&expected_hmac, secret_key, data)
 }
 
