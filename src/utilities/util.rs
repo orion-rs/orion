@@ -29,6 +29,7 @@ use utilities::errors;
 #[cfg(feature="safe_api")]
 /// Fill `dst` with random bytes. This uses rand's
 /// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html). Length of `dst` must be >= 1.
+/// Not available in `no_std` context.
 pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
     if dst.is_empty() {
         return Err(errors::UnknownCryptoError);

@@ -35,7 +35,7 @@ extern crate tiny_keccak;
 pub mod utilities;
 
 #[cfg(feature="safe_api")]
-/// High-level API with safer defaults. Includes HMAC, HKDF, PBKDF2 and cSHAKE.
+/// High-level API with safer defaults. Not available in `no_std` context.
 pub mod default;
 
 /// Low-level API.
