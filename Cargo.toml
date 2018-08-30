@@ -18,12 +18,16 @@ exclude = [
 ]
 
 [dependencies]
-rand = "0.5.5"
+rand = { version = "0.5.5", optional = true }
 sha2 = "0.7.1"
 tiny-keccak = "1.4.2"
 byteorder = { version = "1.2.6", default-features = false }
 subtle = "0.7.0"
 seckey = "0.9.1"
+
+[features]
+default = [ "safe_api" ]
+safe_api = [ "rand" ]
 
 [dev-dependencies]
 hex = "0.3.2"

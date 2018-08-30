@@ -20,7 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use core::fmt;
+extern crate core;
+
+use self::core::fmt;
+#[cfg(feature="safe_api")]
 use rand;
 
 /// Opaque error.
@@ -33,6 +36,7 @@ impl fmt::Display for UnknownCryptoError {
     }
 }
 
+#[cfg(feature="safe_api")]
 // Required for rand's generators
 impl From<rand::Error> for UnknownCryptoError {
     fn from(_: rand::Error) -> Self {

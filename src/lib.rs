@@ -20,10 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#![no_std]
-#![forbid(warnings, unsafe_code)]
+#![cfg_attr(not(feature = "safe_api"), no_std)]
+#![forbid(unsafe_code)]
 
 extern crate byteorder;
+#[cfg(feature="safe_api")]
 extern crate rand;
 extern crate seckey;
 extern crate sha2;
@@ -33,6 +34,7 @@ extern crate tiny_keccak;
 /// Core functionality such as generating a salt/key/IV/nonce.
 pub mod utilities;
 
+#[cfg(feature="safe_api")]
 /// High-level API with safer defaults. Includes HMAC, HKDF, PBKDF2 and cSHAKE.
 pub mod default;
 

@@ -20,11 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#[cfg(feature="safe_api")]
 use rand::{rngs::OsRng, RngCore};
 use subtle::ConstantTimeEq;
 use utilities::errors;
 
 #[inline(never)]
+#[cfg(feature="safe_api")]
 /// Fill `dst` with random bytes. This uses rand's
 /// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html). Length of `dst` must be >= 1.
 pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
@@ -52,12 +54,14 @@ pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError
     }
 }
 
+#[cfg(feature="safe_api")]
 #[test]
 fn rand_key_len_ok() {
     let mut dst = [0u8; 64];
     gen_rand_key(&mut dst).unwrap();
 }
 
+#[cfg(feature="safe_api")]
 #[test]
 fn rand_key_len_error() {
     let mut dst = [0u8; 0];
@@ -68,6 +72,7 @@ fn rand_key_len_error() {
     assert_eq!(err, errors::UnknownCryptoError);
 }
 
+#[cfg(feature="safe_api")]
 #[test]
 fn test_ct_eq_ok() {
     let buf_1 = [0x06; 10];

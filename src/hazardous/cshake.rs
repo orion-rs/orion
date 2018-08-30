@@ -40,8 +40,10 @@
 //!
 //! hash.finalize(&mut out).unwrap();
 //! ```
+extern crate core;
+
 use byteorder::{ByteOrder, BigEndian};
-use core::mem;
+use self::core::mem;
 use tiny_keccak::Keccak;
 use utilities::errors::*;
 
