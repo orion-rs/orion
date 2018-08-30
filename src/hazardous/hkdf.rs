@@ -42,27 +42,23 @@
 //! # Example:
 //! ### Generating derived key:
 //! ```
-//! use orion::utilities::util;
 //! use orion::hazardous::hkdf;
 //!
-//! let mut salt = [0u8; 16];
-//! util::gen_rand_key(&mut salt).unwrap();
+//! let salt = "Very insecure salt, should NOT be used".as_bytes();
 //! let mut okm_out = [0u8; 32];
 //!
-//! hkdf::derive_key(&salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
+//! hkdf::derive_key(salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
 //! ```
 //! ### Verifying derived key:
 //! ```
-//! use orion::utilities::util;
 //! use orion::hazardous::hkdf;
 //!
-//! let mut salt = [0u8; 16];
-//! util::gen_rand_key(&mut salt).unwrap();
+//! let salt = "Very insecure salt, should NOT be used".as_bytes();
 //! let mut okm_out = [0u8; 32];
 //!
-//! hkdf::derive_key(&salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
+//! hkdf::derive_key(salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
 //! let exp_okm = okm_out;
-//! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap());
+//! assert!(hkdf::verify(&exp_okm, salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap());
 //! ```
 
 use hazardous::constants::HLEN;

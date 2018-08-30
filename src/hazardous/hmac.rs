@@ -39,26 +39,22 @@
 //! ### Generating HMAC:
 //! ```
 //! use orion::hazardous::hmac;
-//! use orion::utilities::util;
 //!
-//! let mut key = [0u8; 64];
-//! util::gen_rand_key(&mut key);
+//! let key = "Very insecure key, should NOT be used".as_bytes();
 //! let msg = "Some message.";
 //!
-//! let mut mac = hmac::init(&key);
+//! let mut mac = hmac::init(key);
 //! mac.update(msg.as_bytes());
 //! mac.finalize();
 //! ```
 //! ### Verifying HMAC:
 //! ```
 //! use orion::hazardous::hmac;
-//! use orion::utilities::util;
 //!
-//! let mut key = [0u8; 64];
-//! util::gen_rand_key(&mut key);
+//! let key = "Very insecure key, should NOT be used".as_bytes();
 //! let msg = "Some message.";
 //!
-//! let mut mac = hmac::init(&key);
+//! let mut mac = hmac::init(key);
 //! mac.update(msg.as_bytes());
 //!
 //! assert!(hmac::verify(&mac.finalize(), &key, msg.as_bytes()).unwrap());
