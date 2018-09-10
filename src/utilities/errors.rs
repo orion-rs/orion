@@ -50,6 +50,15 @@ pub struct ValidationCryptoError;
 
 impl fmt::Display for ValidationCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ValidationCryptoError")
+        write!(f, "ValidationCryptoError - Failed verification")
+    }
+}
+
+/// Error for calling a finalization method on an object that needs to be reset first.
+pub struct FinalizationCryptoError;
+
+impl fmt::Display for FinalizationCryptoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FinalizationCryptoError - Missing reset")
     }
 }
