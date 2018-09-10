@@ -45,7 +45,7 @@
 //!
 //! let mut mac = hmac::init(key);
 //! mac.update(msg.as_bytes());
-//! mac.finalize();
+//! mac.finalize().unwrap();
 //! ```
 //! ### Verifying HMAC:
 //! ```
@@ -57,7 +57,7 @@
 //! let mut mac = hmac::init(key);
 //! mac.update(msg.as_bytes());
 //!
-//! assert!(hmac::verify(&mac.finalize(), &key, msg.as_bytes()).unwrap());
+//! assert!(hmac::verify(&mac.finalize().unwrap(), &key, msg.as_bytes()).unwrap());
 //! ```
 
 extern crate core;
@@ -124,10 +124,10 @@ impl Hmac {
 
     #[inline(always)]
     /// Return MAC.
-    pub fn finalize(&mut self) -> [u8; 64] {
+    pub fn finalize(&mut self) -> Result<[u8; 64], FinalizationCryptoError> {
 
         if self.is_finalized {
-            panic!("You need to reset before calling finalize() again");
+            return Err(FinalizationCryptoError);
         }
 
         self.is_finalized = true;
@@ -140,15 +140,16 @@ impl Hmac {
 
         let mut mac: HLenArray = [0u8; HLEN];
         mac.copy_from_slice(&o_hash.result());
-        mac
+
+        Ok(mac)
     }
 
     #[inline(always)]
     /// Retrieve MAC and copy to `dst`.
-    pub fn finalize_with_dst(&mut self, dst: &mut [u8]) {
+    pub fn finalize_with_dst(&mut self, dst: &mut [u8]) -> Result<(), FinalizationCryptoError> {
 
         if self.is_finalized {
-            panic!("You need to reset before calling finalize_with_dst() again");
+            return Err(FinalizationCryptoError);
         }
 
         self.is_finalized = true;
@@ -161,6 +162,8 @@ impl Hmac {
         let dst_len = dst.len();
 
         dst.copy_from_slice(&o_hash.result()[..dst_len]);
+
+        Ok(())
     }
 }
 
@@ -174,7 +177,7 @@ pub fn verify(
     let mut mac = init(secret_key);
     mac.update(message);
 
-    if util::compare_ct(&mac.finalize(), expected).is_err() {
+    if util::compare_ct(&mac.finalize().unwrap(), expected).is_err() {
         Err(ValidationCryptoError)
     } else {
         Ok(true)
@@ -197,14 +200,14 @@ pub fn init(secret_key: &[u8]) -> Hmac {
 }
 
 #[test]
-fn finalize_and_veriy_true() {
+fn finalize_and_verify_true() {
     let secret_key = "Jefe".as_bytes();
     let data = "what do ya want for nothing?".as_bytes();
 
     let mut mac = init(secret_key);
     mac.update(data);
 
-    assert_eq!(verify(&mac.finalize(), secret_key, data).unwrap(), true);
+    assert_eq!(verify(&mac.finalize().unwrap(), secret_key, data).unwrap(), true);
 }
 
 #[test]
@@ -217,7 +220,7 @@ fn veriy_false_wrong_data() {
 
     assert!(
         verify(
-            &mac.finalize(),
+            &mac.finalize().unwrap(),
             secret_key,
             "what do ya want for something?".as_bytes()
         ).is_err()
@@ -232,7 +235,7 @@ fn veriy_false_wrong_secret_key() {
     let mut mac = init(secret_key);
     mac.update(data);
 
-    assert!(verify(&mac.finalize(), "Jose".as_bytes(), data).is_err());
+    assert!(verify(&mac.finalize().unwrap(), "Jose".as_bytes(), data).is_err());
 }
 
 #[test]
@@ -243,8 +246,8 @@ fn double_finalize_err() {
 
     let mut mac = init(secret_key);
     mac.update(data);
-    mac.finalize();
-    mac.finalize();
+    mac.finalize().unwrap();
+    mac.finalize().unwrap();
 }
 
 #[test]
@@ -254,10 +257,10 @@ fn double_finalize_with_reset_ok() {
 
     let mut mac = init(secret_key);
     mac.update(data);
-    mac.finalize();
+    mac.finalize().unwrap();
     mac.reset();
     mac.update("Test".as_bytes());
-    mac.finalize();
+    mac.finalize().unwrap();
 }
 
 #[test]
@@ -267,7 +270,7 @@ fn double_finalize_with_reset_no_update_ok() {
 
     let mut mac = init(secret_key);
     mac.update(data);
-    mac.finalize();
+    mac.finalize().unwrap();
     mac.reset();
-    mac.finalize();
+    mac.finalize().unwrap();
 }

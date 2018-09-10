@@ -61,7 +61,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
     let mut mac = hmac::init(secret_key);
     mac.update(data);
 
-    Ok(mac.finalize())
+    Ok(mac.finalize().unwrap())
 }
 
 /// Verify a HMAC-SHA512 MAC in constant time, with Double-HMAC Verification.
@@ -97,7 +97,7 @@ pub fn hmac_verify(
     let mut nd_round_mac = hmac::init(secret_key);
     let mut nd_round_expected = hmac::init(secret_key);
 
-    nd_round_mac.update(&mac.finalize());
+    nd_round_mac.update(&mac.finalize().unwrap());
     nd_round_expected.update(expected_hmac);
 
 

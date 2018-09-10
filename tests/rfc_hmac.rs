@@ -40,7 +40,7 @@ mod rfc4231 {
         let mut mac = hmac::init(secret_key);
         mac.update(data);
 
-        let res = mac.finalize();
+        let res = mac.finalize().unwrap();
         let len = match trunc {
             Some(ref length) => *length,
             None => 64,

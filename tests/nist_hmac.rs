@@ -29,7 +29,7 @@ fn hmac_test_runner(
     let mut mac = hmac::init(key);
     mac.update(input);
 
-    let digest = mac.finalize();
+    let digest = mac.finalize().unwrap();
 
     assert_eq!(is_ok, digest.as_ref() == output.as_ref());
 

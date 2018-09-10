@@ -27,10 +27,16 @@ use self::core::fmt;
 use rand;
 
 /// Opaque error.
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct UnknownCryptoError;
 
 impl fmt::Display for UnknownCryptoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "UnknownCryptoError")
+    }
+}
+
+impl fmt::Debug for UnknownCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "UnknownCryptoError")
     }
@@ -45,10 +51,16 @@ impl From<rand::Error> for UnknownCryptoError {
 }
 
 /// Error for a failed verification.
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct ValidationCryptoError;
 
 impl fmt::Display for ValidationCryptoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ValidationCryptoError - Failed verification")
+    }
+}
+
+impl fmt::Debug for ValidationCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "ValidationCryptoError - Failed verification")
     }
@@ -58,6 +70,12 @@ impl fmt::Display for ValidationCryptoError {
 pub struct FinalizationCryptoError;
 
 impl fmt::Display for FinalizationCryptoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "FinalizationCryptoError - Missing reset")
+    }
+}
+
+impl fmt::Debug for FinalizationCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FinalizationCryptoError - Missing reset")
     }
