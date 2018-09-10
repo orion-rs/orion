@@ -43,7 +43,9 @@ assert!(default::pbkdf2_verify(&password_hash, password).unwrap());
 ### Enabling `no_std`
 To use orion in a `no_std` context, you need to specify the dependency as such:
 
-`orion = { version = "*", default-features = false }`
+```
+orion = { version = "*", default-features = false }
+```
 
 Note that this means you will not have access to the `default` API.
 This is because the `default` API depends on the `OsRng`, which in turn depends on `std`.
