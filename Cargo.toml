@@ -14,7 +14,8 @@ exclude = [
     ".travis.yml",
     "benches/*",
     "fuzz/*",
-    "tests/*"
+    "tests/*",
+    "logo/*"
 ]
 
 [dependencies]
