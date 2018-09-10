@@ -72,7 +72,6 @@ use utilities::{errors::*, util};
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub struct Hmac {
     ipad: BlocksizeArray,
-    opad: BlocksizeArray,
     opad_hasher: Sha512,
     ipad_hasher: Sha512,
     is_finalized: bool,
@@ -80,8 +79,7 @@ pub struct Hmac {
 
 impl Drop for Hmac {
     fn drop(&mut self) {
-        zero(&mut self.ipad);
-        zero(&mut self.opad)
+        zero(&mut self.ipad)
     }
 }
 
@@ -89,22 +87,26 @@ impl Hmac {
     #[inline(always)]
     /// Pad `key` with `ipad` and `opad`.
     fn pad_key_io(&mut self, key: &[u8]) {
+
+        let mut opad: BlocksizeArray = [0x5C; BLOCKSIZE];
+
         if key.len() > BLOCKSIZE {
             self.ipad[..HLEN].copy_from_slice(&Sha512::digest(&key));
 
-            for (idx, itm) in self.ipad.iter_mut().take(64).enumerate() {
+            for (idx, itm) in self.ipad.iter_mut().take(HLEN).enumerate() {
                 *itm ^= 0x36;
-                self.opad[idx] = *itm ^ 0x6A; // XOR with result of (0x5C ^ 0x36) to inverse
+                opad[idx] = *itm ^ 0x6A; // XOR with result of (0x5C ^ 0x36) to inverse
             }
         } else {
             for (idx, itm) in key.iter().enumerate() {
                 self.ipad[idx] ^= itm;
-                self.opad[idx] ^= itm;
+                opad[idx] ^= itm;
             }
         }
 
         self.ipad_hasher.input(&self.ipad);
-        self.opad_hasher.input(&self.opad);
+        self.opad_hasher.input(&opad);
+        zero(&mut opad);
     }
 
     /// Reset to `init()` state.
@@ -189,7 +191,6 @@ pub fn verify(
 pub fn init(secret_key: &[u8]) -> Hmac {
     let mut mac = Hmac {
         ipad: [0x36; BLOCKSIZE],
-        opad: [0x5C; BLOCKSIZE],
         opad_hasher: Sha512::default(),
         ipad_hasher: Sha512::default(),
         is_finalized: false,
