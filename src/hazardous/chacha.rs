@@ -155,6 +155,8 @@ pub fn chacha20_encrypt(
         ct_chunk.copy_from_slice(&serialized_block[..pt_chunk.len()]);
     }
 
+    zero(&mut serialized_block);
+
     Ok(())
 }
 
