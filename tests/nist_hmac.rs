@@ -14,11 +14,11 @@
 // CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 // Testing against NIST CAVP HMACVS test vectors
-extern crate ring;
 extern crate orion;
+extern crate ring;
 
-use self::ring::{error, test};
 use self::orion::hazardous::hmac;
+use self::ring::{error, test};
 
 fn hmac_test_runner(
     key: &[u8],

@@ -28,3 +28,5 @@ pub const HLEN: usize = 64;
 pub type BlocksizeArray = [u8; BLOCKSIZE];
 /// Type for an array of length `HLEN`.
 pub type HLenArray = [u8; HLEN];
+/// The ChaCha state represented as an array of 16 32-bit unsigned integers.
+pub type ChaChaState = [u32; 16];

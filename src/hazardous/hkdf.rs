@@ -93,7 +93,8 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
 
         hmac.update(info);
         hmac.update(&[idx as u8 + 1_u8]);
-        hmac.finalize_with_dst(&mut hlen_block[..block_len]).unwrap();
+        hmac.finalize_with_dst(&mut hlen_block[..block_len])
+            .unwrap();
 
         // Check if it's the last iteration, if yes don't process anything
         if block_len < HLEN || (block_len * (idx + 1) == okm_len) {

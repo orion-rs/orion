@@ -60,7 +60,7 @@
 //! assert!(pbkdf2::verify(&exp_dk, "Secret password".as_bytes(), salt, 10000, &mut dk_out).unwrap());
 //! ```
 
-use byteorder::{ByteOrder, BigEndian};
+use byteorder::{BigEndian, ByteOrder};
 use hazardous::constants::{HLenArray, HLEN};
 use hazardous::hmac;
 use utilities::{errors::*, util};
@@ -74,7 +74,6 @@ fn function_f(
     block_len: usize,
     hmac: &mut hmac::Hmac,
 ) {
-
     let mut u_step: HLenArray = [0u8; 64];
     // First 4 bytes used for index BE conversion
     BigEndian::write_u32(&mut u_step[..4], index as u32);

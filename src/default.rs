@@ -87,7 +87,6 @@ pub fn hmac_verify(
     secret_key: &[u8],
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-
     let mut mac = hmac::init(secret_key);
     mac.update(data);
 
@@ -99,7 +98,6 @@ pub fn hmac_verify(
 
     nd_round_mac.update(&mac.finalize().unwrap());
     nd_round_expected.update(expected_hmac);
-
 
     hmac::verify(&expected_hmac, secret_key, data)
 }
@@ -425,7 +423,6 @@ mod test {
 
         assert!(default::hkdf_verify(&salt, &salt, data, info).is_err());
     }
-
 
     #[test]
     fn hkdf_salt_too_short() {

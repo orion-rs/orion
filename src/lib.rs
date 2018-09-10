@@ -24,7 +24,7 @@
 #![forbid(unsafe_code)]
 
 extern crate byteorder;
-#[cfg(feature="safe_api")]
+#[cfg(feature = "safe_api")]
 extern crate rand;
 extern crate seckey;
 extern crate sha2;
@@ -34,7 +34,7 @@ extern crate tiny_keccak;
 /// Core functionality such as generating a salt/key/IV/nonce.
 pub mod utilities;
 
-#[cfg(feature="safe_api")]
+#[cfg(feature = "safe_api")]
 /// High-level API with safer defaults. Not available in `no_std` context.
 pub mod default;
 

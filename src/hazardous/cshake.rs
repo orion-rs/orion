@@ -42,8 +42,8 @@
 //! ```
 extern crate core;
 
-use byteorder::{ByteOrder, BigEndian};
 use self::core::mem;
+use byteorder::{BigEndian, ByteOrder};
 use tiny_keccak::Keccak;
 use utilities::errors::*;
 
@@ -99,7 +99,6 @@ impl CShake {
     }
     /// Return a cSHAKE hash.
     pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
-
         if self.is_finalized {
             panic!("You need to reset before calling finalize() again");
         }
@@ -141,7 +140,6 @@ impl CShake {
 /// The reason that `name` and `custom` cannot both be empty is because that would be equivalent to
 /// a SHAKE call.
 pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoError> {
-
     // "When N and S are both empty strings, cSHAKE(X, L, N, S) is equivalent to SHAKE as
     // defined in FIPS 202"
     let name_val = match name {

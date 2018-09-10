@@ -87,7 +87,6 @@ impl Hmac {
     #[inline(always)]
     /// Pad `key` with `ipad` and `opad`.
     fn pad_key_io(&mut self, key: &[u8]) {
-
         let mut opad: BlocksizeArray = [0x5C; BLOCKSIZE];
 
         if key.len() > BLOCKSIZE {
@@ -127,7 +126,6 @@ impl Hmac {
     #[inline(always)]
     /// Return MAC.
     pub fn finalize(&mut self) -> Result<[u8; 64], FinalizationCryptoError> {
-
         if self.is_finalized {
             return Err(FinalizationCryptoError);
         }
@@ -149,7 +147,6 @@ impl Hmac {
     #[inline(always)]
     /// Retrieve MAC and copy to `dst`.
     pub fn finalize_with_dst(&mut self, dst: &mut [u8]) -> Result<(), FinalizationCryptoError> {
-
         if self.is_finalized {
             return Err(FinalizationCryptoError);
         }
@@ -175,7 +172,6 @@ pub fn verify(
     secret_key: &[u8],
     message: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-
     let mut mac = init(secret_key);
     mac.update(message);
 
@@ -208,7 +204,10 @@ fn finalize_and_verify_true() {
     let mut mac = init(secret_key);
     mac.update(data);
 
-    assert_eq!(verify(&mac.finalize().unwrap(), secret_key, data).unwrap(), true);
+    assert_eq!(
+        verify(&mac.finalize().unwrap(), secret_key, data).unwrap(),
+        true
+    );
 }
 
 #[test]
