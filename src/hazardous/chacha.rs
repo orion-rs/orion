@@ -20,10 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[cfg(test)]
-extern crate hex;
-#[cfg(test)]
-use self::hex::decode;
 use byteorder::{ByteOrder, LittleEndian};
 use hazardous::constants::ChaChaState;
 use seckey::zero;
@@ -259,10 +255,6 @@ fn test_chacha20_block_results() {
 #[test]
 // From https://tools.ietf.org/html/rfc7539#section-2.1
 fn test_chacha20_encrypt_decrypt_results() {
-    let mut chacha_state = InternalState {
-        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    };
-
     let key = [
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
         0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
