@@ -113,7 +113,7 @@ impl Hmac {
             self.ipad_hasher.input(&self.ipad);
             self.is_finalized = false;
         } else {
-            panic!("No need to reset");
+            ()
         }
     }
 
