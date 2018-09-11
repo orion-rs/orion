@@ -21,12 +21,14 @@
 // SOFTWARE.
 
 /// The blocksize for the hash function SHA512.
-pub const BLOCKSIZE: usize = 128;
+pub const SHA2_BLOCKSIZE: usize = 128;
 /// The output size for the hash function SHA512.
 pub const HLEN: usize = 64;
 /// Type for an array of length `BLOCKSIZE`.
-pub type BlocksizeArray = [u8; BLOCKSIZE];
+pub type BlocksizeArray = [u8; SHA2_BLOCKSIZE];
 /// Type for an array of length `HLEN`.
 pub type HLenArray = [u8; HLEN];
 /// The ChaCha state represented as an array of 16 32-bit unsigned integers.
 pub type ChaChaState = [u32; 16];
+/// The blocksize whihc ChaCha20 operates on.
+pub const CHACHA_BLOCKSIZE: usize = 64;

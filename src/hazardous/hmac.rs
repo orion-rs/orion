@@ -63,7 +63,7 @@
 extern crate core;
 
 use self::core::mem;
-use hazardous::constants::{BlocksizeArray, HLenArray, BLOCKSIZE, HLEN};
+use hazardous::constants::{BlocksizeArray, HLenArray, SHA2_BLOCKSIZE, HLEN};
 use seckey::zero;
 use sha2::{Digest, Sha512};
 use utilities::{errors::*, util};
@@ -87,9 +87,9 @@ impl Hmac {
     #[inline(always)]
     /// Pad `key` with `ipad` and `opad`.
     fn pad_key_io(&mut self, key: &[u8]) {
-        let mut opad: BlocksizeArray = [0x5C; BLOCKSIZE];
+        let mut opad: BlocksizeArray = [0x5C; SHA2_BLOCKSIZE];
 
-        if key.len() > BLOCKSIZE {
+        if key.len() > SHA2_BLOCKSIZE {
             self.ipad[..HLEN].copy_from_slice(&Sha512::digest(&key));
 
             for (idx, itm) in self.ipad.iter_mut().take(HLEN).enumerate() {
@@ -186,7 +186,7 @@ pub fn verify(
 /// Initialize `Hmac` struct with a given key.
 pub fn init(secret_key: &[u8]) -> Hmac {
     let mut mac = Hmac {
-        ipad: [0x36; BLOCKSIZE],
+        ipad: [0x36; SHA2_BLOCKSIZE],
         opad_hasher: Sha512::default(),
         ipad_hasher: Sha512::default(),
         is_finalized: false,
