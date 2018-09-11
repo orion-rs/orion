@@ -115,9 +115,7 @@ impl InternalState {
             return Err(UnknownCryptoError);
         }
 
-        for (word, dst_byte) in self.buffer.iter().zip(dst_block.chunks_mut(4)) {
-            LittleEndian::write_u32_into(&[*word], dst_byte);
-        }
+        LittleEndian::write_u32_into(&self.buffer, dst_block);
 
         Ok(())
     }
