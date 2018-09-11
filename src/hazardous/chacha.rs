@@ -84,15 +84,16 @@ impl InternalState {
         // Split key into little-endian 4-byte chunks
         for (idx_count, key_chunk) in key.chunks(4).enumerate() {
             // Indexing starts from the 4th word in the ChaCha20 state
-            assert!(idx_count + 1 < 12);
+            assert!((idx_count + 1) < 12);
             self.buffer[idx_count + 4] = LittleEndian::read_u32(&key_chunk);
         }
 
         self.buffer[12] = block_count.to_le();
 
-        self.buffer[13] = LittleEndian::read_u32(&nonce[..4]);
-        self.buffer[14] = LittleEndian::read_u32(&nonce[4..8]);
-        self.buffer[15] = LittleEndian::read_u32(&nonce[8..12]);
+        for (idx, nonce_chunk) in nonce.chunks(4).enumerate() {
+            // Indexing starts from the 13th word in the ChaCha20 state
+            self.buffer[idx + 13] = LittleEndian::read_u32(nonce_chunk);
+        }
 
         Ok(())
     }
@@ -144,12 +145,14 @@ pub fn chacha20_encrypt(
         .zip(dst_ciphertext.chunks_mut(CHACHA_BLOCKSIZE))
         .enumerate()
     {
-        let chunk_counter = initial_counter.checked_add(counter as u32).unwrap();
-        chacha_state.chacha20_block(key, nonce, chunk_counter);
+        let block_counter = initial_counter.checked_add(counter as u32).unwrap();
+
+        chacha_state.chacha20_block(key, nonce, block_counter);
         chacha_state.serialize_state(&mut keystream_block).unwrap();
+
         debug_assert!(keystream_block.len() >= plaintext_block.len());
         for (idx, itm) in plaintext_block.iter().enumerate() {
-            keystream_block[idx] ^= *itm;
+            keystream_block[idx] ^= itm;
         }
         // `ct_chunk` and `pt_chunk` have the same length so indexing is no problem here
         ciphertext_block.copy_from_slice(&keystream_block[..plaintext_block.len()]);
