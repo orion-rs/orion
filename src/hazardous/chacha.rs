@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 use byteorder::{ByteOrder, LittleEndian};
-use hazardous::constants::ChaChaState;
+use hazardous::constants::{CHACHA_BLOCKSIZE, ChaChaState};
 use seckey::zero;
 use utilities::errors::UnknownCryptoError;
 
@@ -111,7 +111,7 @@ impl InternalState {
     }
     /// Serialize a ChaCha20 block into an byte array.
     fn serialize_state(&mut self, dst_block: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if !(dst_block.len() == 64) {
+        if !(dst_block.len() == CHACHA_BLOCKSIZE) {
             return Err(UnknownCryptoError);
         }
 
@@ -139,11 +139,11 @@ pub fn chacha20_encrypt(
         buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     };
 
-    let mut keystream_block = [0u8; 64];
+    let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 
     for (counter, (plaintext_block, ciphertext_block)) in plaintext
-        .chunks(64)
-        .zip(dst_ciphertext.chunks_mut(64))
+        .chunks(CHACHA_BLOCKSIZE)
+        .zip(dst_ciphertext.chunks_mut(CHACHA_BLOCKSIZE))
         .enumerate()
     {
         let chunk_counter = initial_counter.checked_add(counter as u32).unwrap();
