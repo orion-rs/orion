@@ -166,7 +166,8 @@ mod rfc7539 {
             0xd1,
         ];
 
-        let mut plaintext = "'Twas brillig, and the slithy toves.Did gyre and gimble in the \
+        let mut plaintext =
+        "'Twas brillig, and the slithy toves.Did gyre and gimble in the \
         wabe:.All mimsy were the borogoves,.And the mome raths outgrabe."
             .as_bytes()
             .to_vec();

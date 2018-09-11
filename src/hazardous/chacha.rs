@@ -84,6 +84,7 @@ impl InternalState {
         // Split key into little-endian 4-byte chunks
         for (idx_count, key_chunk) in key.chunks(4).enumerate() {
             // Indexing starts from the 4th word in the ChaCha20 state
+            assert!(idx_count + 1 < 12);
             self.buffer[idx_count + 4] = LittleEndian::read_u32(&key_chunk);
         }
 
@@ -114,8 +115,8 @@ impl InternalState {
             return Err(UnknownCryptoError);
         }
 
-        for (idx, word) in self.buffer.iter().enumerate() {
-            LittleEndian::write_u32_into(&[*word], &mut dst_block[idx * 4..(idx + 1) * 4]);
+        for (word, dst_byte) in self.buffer.iter().zip(dst_block.chunks_mut(4)) {
+            LittleEndian::write_u32_into(&[*word], dst_byte);
         }
 
         Ok(())
@@ -138,25 +139,25 @@ pub fn chacha20_encrypt(
         buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     };
 
-    let mut serialized_block = [0u8; 64];
+    let mut keystream_block = [0u8; 64];
 
-    for (counter, (pt_chunk, ct_chunk)) in plaintext
+    for (counter, (plaintext_block, ciphertext_block)) in plaintext
         .chunks(64)
         .zip(dst_ciphertext.chunks_mut(64))
         .enumerate()
     {
         let chunk_counter = initial_counter.checked_add(counter as u32).unwrap();
         chacha_state.chacha20_block(key, nonce, chunk_counter);
-        chacha_state.serialize_state(&mut serialized_block).unwrap();
-        debug_assert!(serialized_block.len() >= pt_chunk.len());
-        for (idx, itm) in pt_chunk.iter().enumerate() {
-            serialized_block[idx] ^= *itm;
+        chacha_state.serialize_state(&mut keystream_block).unwrap();
+        debug_assert!(keystream_block.len() >= plaintext_block.len());
+        for (idx, itm) in plaintext_block.iter().enumerate() {
+            keystream_block[idx] ^= *itm;
         }
         // `ct_chunk` and `pt_chunk` have the same length so indexing is no problem here
-        ct_chunk.copy_from_slice(&serialized_block[..pt_chunk.len()]);
+        ciphertext_block.copy_from_slice(&keystream_block[..plaintext_block.len()]);
     }
 
-    zero(&mut serialized_block);
+    zero(&mut keystream_block);
 
     Ok(())
 }
