@@ -140,6 +140,7 @@ pub fn chacha20_encrypt(
 
     let mut chacha_state = init(key, nonce).unwrap();
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
+    let mut keystream_state: ChaChaState = [0u32; 16];
 
     for (counter, (plaintext_block, ciphertext_block)) in plaintext
         .chunks(CHACHA_BLOCKSIZE)
@@ -147,10 +148,10 @@ pub fn chacha20_encrypt(
         .enumerate()
     {
         let block_counter = initial_counter.checked_add(counter as u32).unwrap();
-        let state_buf = chacha_state.chacha20_block(block_counter.to_le());
+        keystream_state = chacha_state.chacha20_block(block_counter);
 
         chacha_state
-            .serialize_block(&state_buf, &mut keystream_block)
+            .serialize_block(&keystream_state, &mut keystream_block)
             .unwrap();
 
         for (idx, itm) in plaintext_block.iter().enumerate() {
@@ -160,6 +161,7 @@ pub fn chacha20_encrypt(
     }
 
     zero(&mut keystream_block);
+    zero(&mut keystream_state);
 
     Ok(())
 }
