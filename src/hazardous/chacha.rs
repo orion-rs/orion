@@ -85,7 +85,7 @@ impl InternalState {
     }
 
     /// The ChaCha20 block function. Returns a single block.
-    fn chacha20_block(&mut self, block_count: u32) -> [u32; 16] {
+    fn chacha20_block(&mut self, block_count: u32) -> ChaChaState {
         // Update block counter
         self.buffer[12] = block_count.to_le();
 
@@ -147,7 +147,7 @@ pub fn chacha20_encrypt(
         .enumerate()
     {
         let block_counter = initial_counter.checked_add(counter as u32).unwrap();
-        let state_buf = chacha_state.chacha20_block(block_counter);
+        let state_buf = chacha_state.chacha20_block(block_counter.to_le());
 
         chacha_state
             .serialize_block(&state_buf, &mut keystream_block)
