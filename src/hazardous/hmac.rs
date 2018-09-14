@@ -63,7 +63,7 @@
 extern crate core;
 
 use self::core::mem;
-use hazardous::constants::{BlocksizeArray, HLenArray, SHA2_BLOCKSIZE, HLEN};
+use hazardous::constants::{BlocksizeArray, HLenArray, HLEN, SHA2_BLOCKSIZE};
 use seckey::zero;
 use sha2::{Digest, Sha512};
 use utilities::{errors::*, util};

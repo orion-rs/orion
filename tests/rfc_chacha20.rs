@@ -133,10 +133,10 @@ mod rfc7539 {
 
         let mut plaintext =
             "Any submission to the IETF intended by the Contributor for \
-            publication as all or part of an IETF Internet-Draft or RFC and any statement made \
-            within the context of an IETF activity is considered an \"IETF Contribution\". \
-            Such statements include oral statements in IETF sessions, as well as written and \
-            electronic communications made at any time or place, which are addressed to"
+             publication as all or part of an IETF Internet-Draft or RFC and any statement made \
+             within the context of an IETF activity is considered an \"IETF Contribution\". \
+             Such statements include oral statements in IETF sessions, as well as written and \
+             electronic communications made at any time or place, which are addressed to"
                 .as_bytes()
                 .to_vec();
 
@@ -166,9 +166,8 @@ mod rfc7539 {
             0xd1,
         ];
 
-        let mut plaintext =
-        "'Twas brillig, and the slithy toves.Did gyre and gimble in the \
-        wabe:.All mimsy were the borogoves,.And the mome raths outgrabe."
+        let mut plaintext = "'Twas brillig, and the slithy toves.Did gyre and gimble in the \
+                             wabe:.All mimsy were the borogoves,.And the mome raths outgrabe."
             .as_bytes()
             .to_vec();
 

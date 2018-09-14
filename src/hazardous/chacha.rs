@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 use byteorder::{ByteOrder, LittleEndian};
-use hazardous::constants::{CHACHA_BLOCKSIZE, ChaChaState};
+use hazardous::constants::{ChaChaState, CHACHA_BLOCKSIZE};
 use seckey::zero;
 use utilities::errors::UnknownCryptoError;
 
@@ -64,62 +64,66 @@ impl InternalState {
         self.quarter_round(3, 4, 9, 14);
     }
 
-    fn init_chacha20_state(
-        &mut self,
-        key: &[u8],
-        nonce: &[u8],
-        block_count: u32,
-    ) -> Result<(), UnknownCryptoError> {
-        if !(key.len() == 32) {
+    fn init_state(&mut self, key: &[u8], nonce: &[u8]) -> Result<(), UnknownCryptoError> {
+        if key.len() != 32 {
             return Err(UnknownCryptoError);
         }
-        if !(nonce.len() == 12) {
+        if nonce.len() != 12 {
             return Err(UnknownCryptoError);
         }
 
-        // Init state with four constants
-        self.buffer = [
-            0x61707865, 0x3320646e, 0x79622d32, 0x6b206574, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        ];
-        // Split key into little-endian 4-byte chunks
-        for (idx_count, key_chunk) in key.chunks(4).enumerate() {
-            // Indexing starts from the 4th word in the ChaCha20 state
-            assert!((idx_count + 1) < 12);
-            self.buffer[idx_count + 4] = LittleEndian::read_u32(&key_chunk);
-        }
+        // Setup state with constants
+        self.buffer[0] = 0x6170_7865_u32;
+        self.buffer[1] = 0x3320_646e_u32;
+        self.buffer[2] = 0x7962_2d32_u32;
+        self.buffer[3] = 0x6b20_6574_u32;
 
+        LittleEndian::read_u32_into(key, &mut self.buffer[4..12]);
+        LittleEndian::read_u32_into(nonce, &mut self.buffer[13..16]);
+
+        Ok(())
+    }
+
+    /// The ChaCha20 block function. Returns a single block.
+    fn chacha20_block(&mut self, block_count: u32) -> [u32; 16] {
+        // Update block counter
         self.buffer[12] = block_count.to_le();
 
-        for (idx, nonce_chunk) in nonce.chunks(4).enumerate() {
-            // Indexing starts from the 13th word in the ChaCha20 state
-            self.buffer[idx + 13] = LittleEndian::read_u32(nonce_chunk);
-        }
-
-        Ok(())
-    }
-    /// The ChaCha20 block function. Returns a single block.
-    fn chacha20_block(&mut self, key: &[u8], nonce: &[u8], block_count: u32) {
-        self.init_chacha20_state(key, nonce, block_count).unwrap();
-        let original_state: InternalState = self.clone();
+        let mut working_state: InternalState = self.clone();
 
         for _ in 0..10 {
-            self.process_inner_block();
+            working_state.process_inner_block();
+        }
+        for idx in 0..16 {
+            working_state.buffer[idx] = working_state.buffer[idx].wrapping_add(self.buffer[idx]);
         }
 
-        for (idx, word) in self.buffer.iter_mut().enumerate() {
-            *word = word.wrapping_add(original_state.buffer[idx]);
-        }
+        working_state.buffer
     }
-    /// Serialize a ChaCha20 block into an byte array.
-    fn serialize_state(&mut self, dst_block: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if !(dst_block.len() == CHACHA_BLOCKSIZE) {
+
+    fn serialize_block(
+        &mut self,
+        src_block: &ChaChaState,
+        dst_block: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        if dst_block.len() != CHACHA_BLOCKSIZE {
             return Err(UnknownCryptoError);
         }
 
-        LittleEndian::write_u32_into(&self.buffer, dst_block);
+        LittleEndian::write_u32_into(src_block, dst_block);
 
         Ok(())
     }
+}
+
+fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
+    let mut chacha_state = InternalState {
+        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    };
+
+    chacha_state.init_state(key, nonce).unwrap();
+
+    Ok(chacha_state)
 }
 
 /// The ChaCha20 encryption function.
@@ -134,10 +138,7 @@ pub fn chacha20_encrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut chacha_state = InternalState {
-        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    };
-
+    let mut chacha_state = init(key, nonce).unwrap();
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 
     for (counter, (plaintext_block, ciphertext_block)) in plaintext
@@ -146,16 +147,16 @@ pub fn chacha20_encrypt(
         .enumerate()
     {
         let block_counter = initial_counter.checked_add(counter as u32).unwrap();
+        let state_buf = chacha_state.chacha20_block(block_counter);
 
-        chacha_state.chacha20_block(key, nonce, block_counter);
-        chacha_state.serialize_state(&mut keystream_block).unwrap();
+        chacha_state
+            .serialize_block(&state_buf, &mut keystream_block)
+            .unwrap();
 
-        debug_assert!(keystream_block.len() >= plaintext_block.len());
         for (idx, itm) in plaintext_block.iter().enumerate() {
-            keystream_block[idx] ^= itm;
+            // `ct_chunk` and `pt_chunk` have the same length so indexing is no problem here
+            ciphertext_block[idx] = keystream_block[idx] ^ itm;
         }
-        // `ct_chunk` and `pt_chunk` have the same length so indexing is no problem here
-        ciphertext_block.copy_from_slice(&keystream_block[..plaintext_block.len()]);
     }
 
     zero(&mut keystream_block);
@@ -175,7 +176,6 @@ pub fn chacha20_decrypt(
 }
 
 #[test]
-// From https://tools.ietf.org/html/rfc7539#section-2.1
 fn test_quarter_round_results() {
     let mut chacha_state = InternalState {
         buffer: [
@@ -198,7 +198,6 @@ fn test_quarter_round_results() {
 }
 
 #[test]
-// From https://tools.ietf.org/html/rfc7539#section-2.1
 fn test_quarter_round_results_on_indices() {
     let mut chacha_state = InternalState {
         buffer: [
@@ -214,17 +213,11 @@ fn test_quarter_round_results_on_indices() {
     ];
 
     chacha_state.quarter_round(2, 7, 8, 13);
-
     assert_eq!(chacha_state.buffer[..], expected);
 }
 
 #[test]
-// From https://tools.ietf.org/html/rfc7539#section-2.1
 fn test_chacha20_block_results() {
-    let mut chacha_state = InternalState {
-        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    };
-
     let key = [
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
         0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
@@ -246,23 +239,21 @@ fn test_chacha20_block_results() {
         0x0f0e0d0c, 0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c, 0x00000001, 0x09000000,
         0x4a000000, 0x00000000,
     ];
+    // Test initial key-steup
+    let mut state = init(&key, &nonce).unwrap();
+    state.buffer[12] = 1_u32;
+    assert_eq!(state.buffer[..], expected_init[..]);
 
-    let mut test_init_key = chacha_state.clone();
-    test_init_key.init_chacha20_state(&key, &nonce, 1).unwrap();
-    assert_eq!(test_init_key.buffer[..], expected_init[..]);
-
-    chacha_state.chacha20_block(&key, &nonce, 1);
+    let keystream_block = state.chacha20_block(1);
     let mut ser_block = [0u8; 64];
-    chacha_state.serialize_state(&mut ser_block).unwrap();
+    state
+        .serialize_block(&keystream_block, &mut ser_block)
+        .unwrap();
     assert_eq!(ser_block[..], expected[..]);
 }
 
 #[test]
 fn chacha20_block_test_1() {
-    let mut chacha_state = InternalState {
-        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    };
-
     let key = [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -285,20 +276,19 @@ fn chacha20_block_test_1() {
         0x69b687c3, 0x8665eeb2,
     ];
 
-    chacha_state.chacha20_block(&key, &nonce, 0);
-    assert_eq!(chacha_state.buffer[..], expected_state[..]);
+    let mut state = init(&key, &nonce).unwrap();
+    let keystream_block = state.chacha20_block(0);
+    assert_eq!(keystream_block[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
-    chacha_state.serialize_state(&mut ser_block).unwrap();
+    state
+        .serialize_block(&keystream_block, &mut ser_block)
+        .unwrap();
     assert_eq!(ser_block[..], expected[..]);
 }
 
 #[test]
 fn chacha20_block_test_2() {
-    let mut chacha_state = InternalState {
-        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    };
-
     let key = [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -321,20 +311,19 @@ fn chacha20_block_test_2() {
         0x1f0ae1ac, 0x6f4d794b,
     ];
 
-    chacha_state.chacha20_block(&key, &nonce, 1);
-    assert_eq!(chacha_state.buffer[..], expected_state[..]);
+    let mut state = init(&key, &nonce).unwrap();
+    let keystream_block = state.chacha20_block(1);
+    assert_eq!(keystream_block[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
-    chacha_state.serialize_state(&mut ser_block).unwrap();
+    state
+        .serialize_block(&keystream_block, &mut ser_block)
+        .unwrap();
     assert_eq!(ser_block[..], expected[..]);
 }
 
 #[test]
 fn chacha20_block_test_3() {
-    let mut chacha_state = InternalState {
-        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    };
-
     let key = [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -357,20 +346,19 @@ fn chacha20_block_test_3() {
         0xebdd4aa6, 0xa0136c00,
     ];
 
-    chacha_state.chacha20_block(&key, &nonce, 1);
-    assert_eq!(chacha_state.buffer[..], expected_state[..]);
+    let mut state = init(&key, &nonce).unwrap();
+    let keystream_block = state.chacha20_block(1);
+    assert_eq!(keystream_block[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
-    chacha_state.serialize_state(&mut ser_block).unwrap();
+    state
+        .serialize_block(&keystream_block, &mut ser_block)
+        .unwrap();
     assert_eq!(ser_block[..], expected[..]);
 }
 
 #[test]
 fn chacha20_block_test_4() {
-    let mut chacha_state = InternalState {
-        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    };
-
     let key = [
         0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -393,20 +381,19 @@ fn chacha20_block_test_4() {
         0x87f47473, 0x96f0992e,
     ];
 
-    chacha_state.chacha20_block(&key, &nonce, 2);
-    assert_eq!(chacha_state.buffer[..], expected_state[..]);
+    let mut state = init(&key, &nonce).unwrap();
+    let keystream_block = state.chacha20_block(2);
+    assert_eq!(keystream_block[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
-    chacha_state.serialize_state(&mut ser_block).unwrap();
+    state
+        .serialize_block(&keystream_block, &mut ser_block)
+        .unwrap();
     assert_eq!(ser_block[..], expected[..]);
 }
 
 #[test]
 fn chacha20_block_test_5() {
-    let mut chacha_state = InternalState {
-        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    };
-
     let key = [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -429,10 +416,13 @@ fn chacha20_block_test_5() {
         0x398a19fa, 0x6ded1b53,
     ];
 
-    chacha_state.chacha20_block(&key, &nonce, 0);
-    assert_eq!(chacha_state.buffer[..], expected_state[..]);
+    let mut state = init(&key, &nonce).unwrap();
+    let keystream_block = state.chacha20_block(0);
+    assert_eq!(keystream_block[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
-    chacha_state.serialize_state(&mut ser_block).unwrap();
+    state
+        .serialize_block(&keystream_block, &mut ser_block)
+        .unwrap();
     assert_eq!(ser_block[..], expected[..]);
 }
