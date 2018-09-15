@@ -27,7 +27,7 @@ fn ro_hmac(buf1: &[u8], buf2: &[u8]) {
 
     let mut orion_hmac = hmac::init(key);
     orion_hmac.update(message);
-    let orion_signature = orion_hmac.finalize();
+    let orion_signature = orion_hmac.finalize().unwrap();
 
     let v_key = ring_hmac::VerificationKey::new(return_digest(), key);
 
