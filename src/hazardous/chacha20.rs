@@ -146,6 +146,12 @@ pub fn chacha20_encrypt(
     if plaintext.len() != dst_ciphertext.len() {
         return Err(UnknownCryptoError);
     }
+    // Err on empty `plaintext` because the `dst_ciphertext` is user-controlled, so if we
+    // don't panic here and just return `dst_ciphertext` when the user encrypts an empty plaintext,
+    // they might think the plaintext wasn't empty when checking data in `dst_ciphertext` after encryption
+    if plaintext.is_empty() {
+        return Err(UnknownCryptoError);
+    }
 
     let mut chacha_state = InternalState {
         buffer: [0_u32; 16],
