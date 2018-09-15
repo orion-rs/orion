@@ -73,10 +73,10 @@ impl InternalState {
         }
 
         // Setup state with constants
-        self.buffer[0] = 0x6170_7865_u32;
-        self.buffer[1] = 0x3320_646e_u32;
-        self.buffer[2] = 0x7962_2d32_u32;
-        self.buffer[3] = 0x6b20_6574_u32;
+        self.buffer[0] = 0x6170_7865_u32.to_le();
+        self.buffer[1] = 0x3320_646e_u32.to_le();
+        self.buffer[2] = 0x7962_2d32_u32.to_le();
+        self.buffer[3] = 0x6b20_6574_u32.to_le();
 
         LittleEndian::read_u32_into(key, &mut self.buffer[4..12]);
         LittleEndian::read_u32_into(nonce, &mut self.buffer[13..16]);
@@ -177,6 +177,7 @@ pub fn chacha20_decrypt(
     chacha20_encrypt(key, nonce, initial_counter, ciphertext, dst_plaintext)
 }
 
+// The following test-cases are form the [RFC 7539](https://tools.ietf.org/html/rfc7539.html).
 #[test]
 fn test_quarter_round_results() {
     let mut chacha_state = InternalState {
@@ -485,14 +486,21 @@ fn test_key_schedule() {
     assert_eq!(first_state, state.buffer);
 
     // Next iteration call, increase counter
-    let second_block_state = state.chacha20_block(1+1);
+    let second_block_state = state.chacha20_block(1 + 1);
     assert_eq!(second_block_state, second_block);
     // Test second internal state
     assert_eq!(second_state, state.buffer);
 
     let mut actual_keystream = [0u8; 128];
     // Append first keystream block
-    state.serialize_block(&first_block_state, &mut actual_keystream[..64]).unwrap();
-    state.serialize_block(&second_block_state, &mut actual_keystream[64..]).unwrap();
-    assert_eq!(actual_keystream[..expected_keystream.len()].as_ref(), expected_keystream.as_ref());
+    state
+        .serialize_block(&first_block_state, &mut actual_keystream[..64])
+        .unwrap();
+    state
+        .serialize_block(&second_block_state, &mut actual_keystream[64..])
+        .unwrap();
+    assert_eq!(
+        actual_keystream[..expected_keystream.len()].as_ref(),
+        expected_keystream.as_ref()
+    );
 }
