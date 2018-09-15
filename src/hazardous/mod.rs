@@ -35,4 +35,4 @@ pub mod cshake;
 /// Constant values and types.
 pub mod constants;
 
-pub mod chacha;
+pub mod chacha20;

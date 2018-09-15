@@ -27,7 +27,7 @@ mod rfc7539 {
     extern crate std;
 
     use self::hex::decode;
-    use self::orion::hazardous::chacha::{chacha20_decrypt, chacha20_encrypt};
+    use self::orion::hazardous::chacha20::{chacha20_decrypt, chacha20_encrypt};
 
     fn test_runner(key: &[u8], nonce: &[u8], init_block_count: u32, pt: &mut [u8], ct: &mut [u8]) {
         let original_pt = pt.to_vec();
