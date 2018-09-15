@@ -20,6 +20,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// TODO: Add doc exmaples and notes
+
+//! ### Notes:
+//!
+//!
+//! # Security:
+//! - Authenticity:
+//! - Nonce misuse:
+//!
+//! # Example:
+//! ```
+//! use orion::hazardous::chacha20;
+//!
+//! ```
 use byteorder::{ByteOrder, LittleEndian};
 use hazardous::constants::{ChaChaState, CHACHA_BLOCKSIZE};
 use seckey::zero;
