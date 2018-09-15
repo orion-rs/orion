@@ -152,6 +152,11 @@ pub fn chacha20_encrypt(
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
     }
+    // Check data limitation for key,nonce combination at max is (2^32)-2
+    if plaintext.len() as u32 == u32::max_value() {
+        // `usize::max_value() as u32` == `u32::max_value()` so we have to compare equals
+        return Err(UnknownCryptoError);
+    }
 
     let mut chacha_state = InternalState {
         buffer: [0_u32; 16],
