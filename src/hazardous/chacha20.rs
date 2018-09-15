@@ -205,6 +205,28 @@ pub fn chacha20_decrypt(
     chacha20_encrypt(key, nonce, initial_counter, ciphertext, dst_plaintext)
 }
 
+
+
+#[test]
+fn test_bad_key_nonce_size() {
+
+    let mut chacha_state = InternalState {
+        buffer: [0_u32; 16],
+    };
+
+    assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 12]).is_err());
+    assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 12]).is_err());
+    assert!(chacha_state.init_state(&[0u8; 32], &[0u8; 10]).is_err());
+    assert!(chacha_state.init_state(&[0u8; 32], &[0u8; 15]).is_err());
+    assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 10]).is_err());
+    assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 15]).is_err());
+    assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 10]).is_err());
+    assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 15]).is_err());
+}
+
+
+
+
 #[cfg(test)]
 // Convenience function for testing.
 fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
