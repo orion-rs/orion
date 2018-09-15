@@ -63,7 +63,7 @@ impl InternalState {
         self.quarter_round(2, 7, 8, 13);
         self.quarter_round(3, 4, 9, 14);
     }
-
+    /// Initialize the ChaCha state with a `key` and `nonce`.
     fn init_state(&mut self, key: &[u8], nonce: &[u8]) -> Result<(), UnknownCryptoError> {
         if key.len() != 32 {
             return Err(UnknownCryptoError);
@@ -100,7 +100,7 @@ impl InternalState {
 
         working_state.buffer
     }
-
+    /// Serialize a keystream block of 16 u32's, into a little-endian byte array.
     fn serialize_block(
         &mut self,
         src_block: &ChaChaState,
@@ -116,16 +116,6 @@ impl InternalState {
     }
 }
 
-fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
-    let mut chacha_state = InternalState {
-        buffer: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    };
-
-    chacha_state.init_state(key, nonce).unwrap();
-
-    Ok(chacha_state)
-}
-
 /// The ChaCha20 encryption function.
 pub fn chacha20_encrypt(
     key: &[u8],
@@ -138,7 +128,12 @@ pub fn chacha20_encrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut chacha_state = init(key, nonce).unwrap();
+    let mut chacha_state = InternalState {
+        buffer: [0_u32; 16],
+    };
+
+    chacha_state.init_state(key, nonce).unwrap();
+
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
     let mut keystream_state: ChaChaState = [0u32; 16];
 
@@ -177,6 +172,17 @@ pub fn chacha20_decrypt(
     chacha20_encrypt(key, nonce, initial_counter, ciphertext, dst_plaintext)
 }
 
+#[cfg(test)]
+// Convenience function for testing.
+fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
+    let mut chacha_state = InternalState {
+        buffer: [0_u32; 16],
+    };
+
+    chacha_state.init_state(key, nonce).unwrap();
+
+    Ok(chacha_state)
+}
 // The following test-cases are form the [RFC 7539](https://tools.ietf.org/html/rfc7539.html).
 #[test]
 fn test_quarter_round_results() {
