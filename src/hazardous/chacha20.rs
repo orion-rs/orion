@@ -161,7 +161,9 @@ pub fn chacha20_encrypt(
         .zip(dst_ciphertext.chunks_mut(CHACHA_BLOCKSIZE))
         .enumerate()
     {
-        let block_counter = initial_counter.checked_add(counter as u32).unwrap();
+        let block_counter = initial_counter
+            .checked_add(counter as u32)
+            .expect("Internal counter overflow");
         keystream_state = chacha_state.chacha20_block(block_counter);
 
         chacha_state
@@ -169,7 +171,8 @@ pub fn chacha20_encrypt(
             .unwrap();
 
         for (idx, itm) in plaintext_block.iter().enumerate() {
-            // `ct_chunk` and `pt_chunk` have the same length so indexing is no problem here
+            // `ciphertext_block` and `plaintext_block` have the same length
+            // due to chunks(), so indexing is no problem here
             ciphertext_block[idx] = keystream_block[idx] ^ itm;
         }
     }
