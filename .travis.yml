@@ -26,7 +26,7 @@ matrix:
       rust: nightly
       install:
         - cargo install xargo || true
-        - rustup target install armv7-unknown-linux-gnueabihf
+        - rustup target install thumbv7em-none-eabihf
         - rustup component add rust-src
       script:
         - xargo build --no-default-features --verbose --target $TARGET
