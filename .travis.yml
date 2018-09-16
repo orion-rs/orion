@@ -1,23 +1,52 @@
 language: rust
 sudo: required
 dist: trusty
+services: docker
+
 addons:
     apt:
         packages:
             - libssl-dev
 cache: cargo
-rust:
-  - stable
-  - beta
-  - nightly
+
 matrix:
-  allow_failures:
+  include:
+    - rust: stable
+      script:
+        - cargo clean
+        - cargo test
+        - cargo test --no-default-features
     - rust: nightly
-script:
-- cargo clean
-- cargo build
-- cargo test
-- cargo test --no-default-features
+      script:
+        - cargo clean
+        - cargo test
+        - cargo test --no-default-features
+    # Ensure building in no_std is possible
+    - env: TARGET=thumbv7em-none-eabihf
+      rust: nightly
+      install:
+        - cargo install xargo || true
+        - rustup target install armv7-unknown-linux-gnueabihf
+        - rustup component add rust-src
+      script:
+        - xargo build --no-default-features --verbose --target $TARGET
+    - env: TARGET=powerpc64-unknown-linux-gnu
+      rust:
+        - stable
+        - nightly
+      script:
+        - cross test --target $TARGET
+    - env: TARGET=i686-unknown-linux-gnu
+      rust:
+        - stable
+        - nightly
+      script:
+        - cross test --target $TARGET
+
+
+install:
+  - cargo install cross || true
+
 
 after_success: |
   if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
