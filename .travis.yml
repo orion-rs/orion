@@ -33,13 +33,11 @@ matrix:
     - env: TARGET=powerpc64-unknown-linux-gnu
       rust:
         - stable
-        - nightly
       script:
         - cross test --target $TARGET
     - env: TARGET=i686-unknown-linux-gnu
       rust:
         - stable
-        - nightly
       script:
         - cross test --target $TARGET
 
