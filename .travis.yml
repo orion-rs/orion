@@ -31,13 +31,11 @@ matrix:
       script:
         - xargo build --no-default-features --verbose --target $TARGET
     - env: TARGET=powerpc64-unknown-linux-gnu
-      rust:
-        - stable
+      rust: stable
       script:
         - cross test --target $TARGET
     - env: TARGET=i686-unknown-linux-gnu
-      rust:
-        - stable
+      rust: stable
       script:
         - cross test --target $TARGET
 
