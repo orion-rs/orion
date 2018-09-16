@@ -234,6 +234,15 @@ fn test_diff_ct_pt_len() {
     assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 64], &mut dst).is_ok());
 }
 
+#[test]
+#[should_panic]
+fn test_err_on_empty_pt() {
+
+    let mut dst = [0u8; 64];
+
+    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
+}
+
 
 
 
