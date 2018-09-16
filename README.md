@@ -23,6 +23,7 @@ Currently contains:
 * HKDF-HMAC-SHA512.
 * PBKDF2-HMAC-SHA512.
 * cSHAKE256.
+* IETF ChaCha20.
 
 ***Note on cSHAKE***:
 The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate

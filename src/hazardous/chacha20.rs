@@ -20,19 +20,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// TODO: Add doc exmaples and notes
-
-//! ### Notes:
+//! # Parameters:
+//! - `key`: The secret key.
+//! - `nonce`: The nonce value.
+//! - `initial_counter`: The initial counter value. In most cases this is either `1` or `0`.
+//! - `ciphertext`: The encrypted data.
+//! - `plaintext`: The data to be encrypted.
+//! - `dst_out`: Destination array that will hold the ciphertext/plaintext after encryption/decryption.
 //!
+//! See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//! - The length of the `key` is not `32` bytes.
+//! - The length of the `nonce` is not `12` bytes.
+//! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
+//! - `plaintext` or `ciphertext` are empty.
+//! - `plaintext` or `ciphertext` are longer than (2^32)-1.
 //!
 //! # Security:
-//! - Authenticity:
-//! - Nonce misuse:
+//! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
+//! the security of all data that has been encrypted with that given key is compromised.
+//!
+//! Functions `chacha20_encrypt` and `chacha20_decrypt` do not provide any data integrity. If you need
+//! data integrity, you should be using the `ChaCha20_Poly1305` construct instead. See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
 //!
 //! # Example:
 //! ```
-//! use orion::hazardous::chacha20;
+//! use orion::hazardous::chacha20::*;
+//! use orion::utilities::util;
 //!
+//! let mut dst_out_pt = [0u8; 15];
+//! let mut dst_out_ct = [0u8; 15];
+//! let mut key = [0u8; 32];
+//! let mut nonce = [0u8; 12];
+//! let message = "Data to protect".as_bytes();
+//!
+//! util::gen_rand_key(&mut key).unwrap();
+//! util::gen_rand_key(&mut nonce).unwrap();
+//!
+//! // Encrypt
+//! chacha20_encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
+//! // Decrypt
+//! chacha20_decrypt(&key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
+//!
+//! assert_eq!(dst_out_pt, message);
 //! ```
 use byteorder::{ByteOrder, LittleEndian};
 use hazardous::constants::{ChaChaState, CHACHA_BLOCKSIZE};
@@ -141,9 +173,9 @@ pub fn chacha20_encrypt(
     nonce: &[u8],
     initial_counter: u32,
     plaintext: &[u8],
-    dst_ciphertext: &mut [u8],
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if dst_ciphertext.len() < plaintext.len() {
+    if dst_out.len() < plaintext.len() {
         return Err(UnknownCryptoError);
     }
     // Err on empty `plaintext` because the `dst_ciphertext` is user-controlled, so if we
@@ -169,7 +201,7 @@ pub fn chacha20_encrypt(
 
     for (counter, (plaintext_block, ciphertext_block)) in plaintext
         .chunks(CHACHA_BLOCKSIZE)
-        .zip(dst_ciphertext.chunks_mut(CHACHA_BLOCKSIZE))
+        .zip(dst_out.chunks_mut(CHACHA_BLOCKSIZE))
         .enumerate()
     {
         let block_counter = initial_counter
@@ -200,9 +232,9 @@ pub fn chacha20_decrypt(
     nonce: &[u8],
     initial_counter: u32,
     ciphertext: &[u8],
-    dst_plaintext: &mut [u8],
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    chacha20_encrypt(key, nonce, initial_counter, ciphertext, dst_plaintext)
+    chacha20_encrypt(key, nonce, initial_counter, ciphertext, dst_out)
 }
 
 
