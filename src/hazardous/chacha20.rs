@@ -41,12 +41,12 @@ use utilities::errors::UnknownCryptoError;
 
 #[derive(Clone)]
 struct InternalState {
-    buffer: ChaChaState,
+    state: ChaChaState,
 }
 
 impl Drop for InternalState {
     fn drop(&mut self) {
-        zero(&mut self.buffer)
+        zero(&mut self.state)
     }
 }
 
@@ -54,9 +54,9 @@ impl InternalState {
     #[inline(always)]
     /// Perform a single round on index `x`, `y` and `z` with an `n_bit_rotation` left-rotation.
     fn round(&mut self, x: usize, y: usize, z: usize, n_bit_rotation: u32) {
-        self.buffer[x] = self.buffer[x].wrapping_add(self.buffer[z]);
-        self.buffer[y] ^= self.buffer[x];
-        self.buffer[y] = self.buffer[y].rotate_left(n_bit_rotation);
+        self.state[x] = self.state[x].wrapping_add(self.state[z]);
+        self.state[y] ^= self.state[x];
+        self.state[y] = self.state[y].rotate_left(n_bit_rotation);
     }
     #[inline(always)]
     /// ChaCha quarter round on a `InternalState`. Indexed by four `usize`s.
@@ -91,13 +91,13 @@ impl InternalState {
         }
 
         // Setup state with constants
-        self.buffer[0] = 0x6170_7865_u32.to_le();
-        self.buffer[1] = 0x3320_646e_u32.to_le();
-        self.buffer[2] = 0x7962_2d32_u32.to_le();
-        self.buffer[3] = 0x6b20_6574_u32.to_le();
+        self.state[0] = 0x6170_7865_u32.to_le();
+        self.state[1] = 0x3320_646e_u32.to_le();
+        self.state[2] = 0x7962_2d32_u32.to_le();
+        self.state[3] = 0x6b20_6574_u32.to_le();
 
-        LittleEndian::read_u32_into(key, &mut self.buffer[4..12]);
-        LittleEndian::read_u32_into(nonce, &mut self.buffer[13..16]);
+        LittleEndian::read_u32_into(key, &mut self.state[4..12]);
+        LittleEndian::read_u32_into(nonce, &mut self.state[13..16]);
 
         Ok(())
     }
@@ -105,7 +105,7 @@ impl InternalState {
     /// The ChaCha20 block function. Returns a single block.
     fn chacha20_block(&mut self, block_count: u32) -> ChaChaState {
         // Update block counter
-        self.buffer[12] = block_count.to_le();
+        self.state[12] = block_count.to_le();
 
         let mut working_state: InternalState = self.clone();
 
@@ -113,10 +113,10 @@ impl InternalState {
             working_state.process_inner_block();
         }
         for idx in 0..16 {
-            working_state.buffer[idx] = working_state.buffer[idx].wrapping_add(self.buffer[idx]);
+            working_state.state[idx] = working_state.state[idx].wrapping_add(self.state[idx]);
         }
 
-        working_state.buffer
+        working_state.state
     }
     #[inline(always)]
     /// Serialize a keystream block of 16 u32's, into a little-endian byte array.
@@ -159,7 +159,7 @@ pub fn chacha20_encrypt(
     }
 
     let mut chacha_state = InternalState {
-        buffer: [0_u32; 16],
+        state: [0_u32; 16],
     };
 
     chacha_state.init_state(key, nonce).unwrap();
@@ -211,7 +211,7 @@ pub fn chacha20_decrypt(
 fn test_bad_key_nonce_size() {
 
     let mut chacha_state = InternalState {
-        buffer: [0_u32; 16],
+        state: [0_u32; 16],
     };
 
     assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 12]).is_err());
@@ -264,7 +264,7 @@ fn test_pass_on_one_iter_max_initial_counter() {
 // Convenience function for testing.
 fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
     let mut chacha_state = InternalState {
-        buffer: [0_u32; 16],
+        state: [0_u32; 16],
     };
 
     chacha_state.init_state(key, nonce).unwrap();
@@ -275,7 +275,7 @@ fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
 #[test]
 fn test_quarter_round_results() {
     let mut chacha_state = InternalState {
-        buffer: [
+        state: [
             0x11111111, 0x01020304, 0x9b8d6f43, 0x01234567, 0x11111111, 0x01020304, 0x9b8d6f43,
             0x01234567, 0x11111111, 0x01020304, 0x9b8d6f43, 0x01234567, 0x11111111, 0x01020304,
             0x9b8d6f43, 0x01234567,
@@ -288,16 +288,16 @@ fn test_quarter_round_results() {
     chacha_state.quarter_round(8, 9, 10, 11);
     chacha_state.quarter_round(12, 13, 14, 15);
 
-    assert_eq!(chacha_state.buffer[0..4], expected);
-    assert_eq!(chacha_state.buffer[4..8], expected);
-    assert_eq!(chacha_state.buffer[8..12], expected);
-    assert_eq!(chacha_state.buffer[12..16], expected);
+    assert_eq!(chacha_state.state[0..4], expected);
+    assert_eq!(chacha_state.state[4..8], expected);
+    assert_eq!(chacha_state.state[8..12], expected);
+    assert_eq!(chacha_state.state[12..16], expected);
 }
 
 #[test]
 fn test_quarter_round_results_on_indices() {
     let mut chacha_state = InternalState {
-        buffer: [
+        state: [
             0x879531e0, 0xc5ecf37d, 0x516461b1, 0xc9a62f8a, 0x44c20ef3, 0x3390af7f, 0xd9fc690b,
             0x2a5f714c, 0x53372767, 0xb00a5631, 0x974c541a, 0x359e9963, 0x5c971061, 0x3d631689,
             0x2098d9d6, 0x91dbd320,
@@ -310,7 +310,7 @@ fn test_quarter_round_results_on_indices() {
     ];
 
     chacha_state.quarter_round(2, 7, 8, 13);
-    assert_eq!(chacha_state.buffer[..], expected);
+    assert_eq!(chacha_state.state[..], expected);
 }
 
 #[test]
@@ -338,8 +338,8 @@ fn test_chacha20_block_results() {
     ];
     // Test initial key-steup
     let mut state = init(&key, &nonce).unwrap();
-    state.buffer[12] = 1_u32;
-    assert_eq!(state.buffer[..], expected_init[..]);
+    state.state[12] = 1_u32;
+    assert_eq!(state.state[..], expected_init[..]);
 
     let keystream_block = state.chacha20_block(1);
     let mut ser_block = [0u8; 64];
@@ -577,13 +577,13 @@ fn test_key_schedule() {
     let first_block_state = state.chacha20_block(1);
     assert_eq!(first_block_state, first_block);
     // Test first internal state
-    assert_eq!(first_state, state.buffer);
+    assert_eq!(first_state, state.state);
 
     // Next iteration call, increase counter
     let second_block_state = state.chacha20_block(1 + 1);
     assert_eq!(second_block_state, second_block);
     // Test second internal state
-    assert_eq!(second_state, state.buffer);
+    assert_eq!(second_state, state.state);
 
     let mut actual_keystream = [0u8; 128];
     // Append first keystream block
