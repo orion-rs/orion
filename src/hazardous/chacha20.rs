@@ -243,9 +243,6 @@ fn test_err_on_empty_pt() {
     chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
 }
 
-
-
-
 #[cfg(test)]
 // Convenience function for testing.
 fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
