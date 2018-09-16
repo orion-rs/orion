@@ -143,7 +143,7 @@ pub fn chacha20_encrypt(
     plaintext: &[u8],
     dst_ciphertext: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if plaintext.len() != dst_ciphertext.len() {
+    if dst_ciphertext.len() < plaintext.len() {
         return Err(UnknownCryptoError);
     }
     // Err on empty `plaintext` because the `dst_ciphertext` is user-controlled, so if we
@@ -222,6 +222,16 @@ fn test_bad_key_nonce_size() {
     assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 15]).is_err());
     assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 10]).is_err());
     assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 15]).is_err());
+}
+
+#[test]
+fn test_diff_ct_pt_len() {
+
+    let mut dst = [0u8; 64];
+
+    assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 65], &mut dst).is_err());
+    assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 63], &mut dst).is_ok());
+    assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 64], &mut dst).is_ok());
 }
 
 
