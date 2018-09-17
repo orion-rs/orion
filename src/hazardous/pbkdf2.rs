@@ -42,22 +42,26 @@
 //! ### Generating derived key:
 //! ```
 //! use orion::hazardous::pbkdf2;
+//! use orion::utilities::util;
 //!
-//! let salt = "Very insecure salt, should NOT be used".as_bytes();
+//! let mut salt = [0u8; 32];
+//! util::gen_rand_key(&mut salt).unwrap();
 //! let mut dk_out = [0u8; 64];
 //!
-//! pbkdf2::derive_key("Secret password".as_bytes(), salt, 10000, &mut dk_out).unwrap();
+//! pbkdf2::derive_key("Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap();
 //! ```
 //! ### Verifying derived key:
 //! ```
 //! use orion::hazardous::pbkdf2;
+//! use orion::utilities::util;
 //!
-//! let salt = "Very insecure salt, should NOT be used".as_bytes();
+//! let mut salt = [0u8; 32];
+//! util::gen_rand_key(&mut salt).unwrap();
 //! let mut dk_out = [0u8; 64];
 //!
-//! pbkdf2::derive_key("Secret password".as_bytes(), salt, 10000, &mut dk_out).unwrap();
+//! pbkdf2::derive_key("Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap();
 //! let exp_dk = dk_out;
-//! assert!(pbkdf2::verify(&exp_dk, "Secret password".as_bytes(), salt, 10000, &mut dk_out).unwrap());
+//! assert!(pbkdf2::verify(&exp_dk, "Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap());
 //! ```
 
 use byteorder::{BigEndian, ByteOrder};
