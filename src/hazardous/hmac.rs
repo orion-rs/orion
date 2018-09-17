@@ -46,7 +46,7 @@
 //! let msg = "Some message.";
 //!
 //! let mut mac = hmac::init(&key);
-//! mac.update(msg.as_bytes());
+//! mac.update(msg.as_bytes()).unwrap();
 //! mac.finalize().unwrap();
 //! ```
 //! ### Verifying HMAC:
@@ -59,7 +59,7 @@
 //! let msg = "Some message.";
 //!
 //! let mut mac = hmac::init(&key);
-//! mac.update(msg.as_bytes());
+//! mac.update(msg.as_bytes()).unwrap();
 //!
 //! assert!(hmac::verify(&mac.finalize().unwrap(), &key, msg.as_bytes()).unwrap());
 //! ```
