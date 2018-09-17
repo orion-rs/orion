@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Testing against RFC 7539 test vectors
+// Testing against RFC 8439 test vectors
 #[cfg(test)]
-mod rfc7539 {
+mod rfc8439 {
 
     extern crate hex;
     extern crate orion;
