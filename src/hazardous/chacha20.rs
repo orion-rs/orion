@@ -275,7 +275,7 @@ fn test_err_on_empty_pt() {
 
 #[test]
 #[should_panic]
-fn test_panic_on_inital_counter_overflow() {
+fn test_panic_on_initial_counter_overflow() {
     let mut dst = [0u8; 65];
 
     encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 65], &mut dst).unwrap();
