@@ -123,8 +123,13 @@ impl Hmac {
     }
 
     /// This can be called multiple times.
-    pub fn update(&mut self, message: &[u8]) {
-        self.ipad_hasher.input(message);
+    pub fn update(&mut self, message: &[u8]) -> Result<(), FinalizationCryptoError>{
+        if self.is_finalized {
+            return Err(FinalizationCryptoError);
+        } else {
+            self.ipad_hasher.input(message);
+            Ok(())
+        }
     }
 
     #[inline(always)]
@@ -177,7 +182,7 @@ pub fn verify(
     message: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
     let mut mac = init(secret_key);
-    mac.update(message);
+    mac.update(message).unwrap();
 
     if util::compare_ct(&mac.finalize().unwrap(), expected).is_err() {
         Err(ValidationCryptoError)
@@ -206,7 +211,7 @@ fn finalize_and_verify_true() {
     let data = "what do ya want for nothing?".as_bytes();
 
     let mut mac = init(secret_key);
-    mac.update(data);
+    mac.update(data).unwrap();
 
     assert_eq!(
         verify(&mac.finalize().unwrap(), secret_key, data).unwrap(),
@@ -220,7 +225,7 @@ fn veriy_false_wrong_data() {
     let data = "what do ya want for nothing?".as_bytes();
 
     let mut mac = init(secret_key);
-    mac.update(data);
+    mac.update(data).unwrap();
 
     assert!(
         verify(
@@ -237,7 +242,7 @@ fn veriy_false_wrong_secret_key() {
     let data = "what do ya want for nothing?".as_bytes();
 
     let mut mac = init(secret_key);
-    mac.update(data);
+    mac.update(data).unwrap();
 
     assert!(verify(&mac.finalize().unwrap(), "Jose".as_bytes(), data).is_err());
 }
@@ -249,7 +254,7 @@ fn double_finalize_err() {
     let data = "what do ya want for nothing?".as_bytes();
 
     let mut mac = init(secret_key);
-    mac.update(data);
+    mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.finalize().unwrap();
 }
@@ -260,10 +265,10 @@ fn double_finalize_with_reset_ok() {
     let data = "what do ya want for nothing?".as_bytes();
 
     let mut mac = init(secret_key);
-    mac.update(data);
+    mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.reset();
-    mac.update("Test".as_bytes());
+    mac.update("Test".as_bytes()).unwrap();
     mac.finalize().unwrap();
 }
 
@@ -273,8 +278,20 @@ fn double_finalize_with_reset_no_update_ok() {
     let data = "what do ya want for nothing?".as_bytes();
 
     let mut mac = init(secret_key);
-    mac.update(data);
+    mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.reset();
     mac.finalize().unwrap();
+}
+
+#[test]
+#[should_panic]
+fn double_update_after_finalize_err() {
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
+
+    let mut mac = init(secret_key);
+    mac.update(data).unwrap();
+    mac.finalize().unwrap();
+    mac.update(data).unwrap();
 }
