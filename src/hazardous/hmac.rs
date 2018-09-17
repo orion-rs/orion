@@ -29,6 +29,7 @@
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - Either `finalize()` or `finalize_with_dst()` is called twice in a row without calling `reset()`
+//! - `update()` is called after `finalize()` without a `reset()` in between
 //! in between
 //!
 //! # Security:
@@ -123,7 +124,7 @@ impl Hmac {
     }
 
     /// This can be called multiple times.
-    pub fn update(&mut self, message: &[u8]) -> Result<(), FinalizationCryptoError>{
+    pub fn update(&mut self, message: &[u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
             return Err(FinalizationCryptoError);
         } else {
@@ -293,5 +294,17 @@ fn double_update_after_finalize_err() {
     let mut mac = init(secret_key);
     mac.update(data).unwrap();
     mac.finalize().unwrap();
+    mac.update(data).unwrap();
+}
+
+#[test]
+fn double_update_with_reset_ok() {
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
+
+    let mut mac = init(secret_key);
+    mac.update(data).unwrap();
+    mac.finalize().unwrap();
+    mac.reset();
     mac.update(data).unwrap();
 }

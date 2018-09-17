@@ -36,7 +36,7 @@
 //! let mut out = [0u8; 64];
 //!
 //! let mut hash = cshake::init(custom, None).unwrap();
-//! hash.update(input);
+//! hash.update(input).unwrap();
 //!
 //! hash.finalize(&mut out).unwrap();
 //! ```
@@ -56,8 +56,8 @@ use utilities::errors::*;
 /// An exception will be thrown if:
 /// - The length of `dst_out` is zero
 /// - The length of `dst_out` is greater than 65536
-/// - `finalize()` is called twice in a row without calling `reset()`
-/// in between
+/// - `finalize()` is called twice in a row without calling `reset()` in between
+/// - `update()` is called after `finalize()` without a `reset()` in between
 pub struct CShake {
     setup_hasher: Keccak,
     hasher: Keccak,
@@ -90,12 +90,17 @@ impl CShake {
             self.hasher = self.setup_hasher.clone();
             self.is_finalized = false;
         } else {
-            panic!("No need to reset");
+            ()
         }
     }
     /// Set `input`. Can be called repeatedly.
-    pub fn update(&mut self, input: &[u8]) {
-        self.hasher.update(input);
+    pub fn update(&mut self, input: &[u8]) -> Result<(), FinalizationCryptoError> {
+        if self.is_finalized {
+            return Err(FinalizationCryptoError);
+        } else {
+            self.hasher.update(input);
+            Ok(())
+        }
     }
     /// Return a cSHAKE hash.
     pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
@@ -242,7 +247,7 @@ mod test {
         let mut out = [0u8; 0];
 
         let mut hash = init(custom, Some(name)).unwrap();
-        hash.update(input);
+        hash.update(input).unwrap();
 
         assert!(hash.finalize(&mut out).is_err());
     }
@@ -255,7 +260,7 @@ mod test {
         let mut out = [0u8; 65537];
 
         let mut hash = init(custom, Some(name)).unwrap();
-        hash.update(input);
+        hash.update(input).unwrap();
 
         assert!(hash.finalize(&mut out).is_err());
     }
@@ -292,7 +297,7 @@ mod test {
         let mut out = [0u8; 17];
 
         let mut cshake = init(custom, None).unwrap();
-        cshake.update(input);
+        cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
 
         let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
@@ -311,7 +316,7 @@ mod test {
         let mut out = [0u8; 64];
 
         let mut cshake = init(custom, None).unwrap();
-        cshake.update(input);
+        cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
 
         let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
@@ -331,7 +336,7 @@ mod test {
         let mut out = [0u8; 64];
 
         let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input);
+        cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
 
         let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
@@ -351,7 +356,7 @@ mod test {
         let mut out = [0u8; 64];
 
         let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input);
+        cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
         cshake.finalize(&mut out).unwrap();
     }
@@ -364,10 +369,10 @@ mod test {
         let mut out = [0u8; 64];
 
         let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input);
+        cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
         cshake.reset();
-        cshake.update(input);
+        cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
     }
 
@@ -379,9 +384,37 @@ mod test {
         let mut out = [0u8; 64];
 
         let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input);
+        cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
         cshake.reset();
         cshake.finalize(&mut out).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn double_update_after_finalize_err() {
+        let input = b"\x00\x01\x02\x03";
+        let custom = b"";
+        let name = b"Email Signature";
+        let mut out = [0u8; 64];
+
+        let mut cshake = init(custom, Some(name)).unwrap();
+        cshake.update(input).unwrap();
+        cshake.finalize(&mut out).unwrap();
+        cshake.update(input).unwrap();
+    }
+
+    #[test]
+    fn double_update_with_reset_ok() {
+        let input = b"\x00\x01\x02\x03";
+        let custom = b"";
+        let name = b"Email Signature";
+        let mut out = [0u8; 64];
+
+        let mut cshake = init(custom, Some(name)).unwrap();
+        cshake.update(input).unwrap();
+        cshake.finalize(&mut out).unwrap();
+        cshake.reset();
+        cshake.update(input).unwrap();
     }
 }

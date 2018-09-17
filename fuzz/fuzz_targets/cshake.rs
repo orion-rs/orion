@@ -17,7 +17,7 @@ fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize) {
 
     let mut hash_out = vec![0u8; len_rand];
     let mut cshake = cshake::init(&mod_custom, Some(name)).unwrap();
-    cshake.update(input);
+    cshake.update(input).unwrap();
     cshake.finalize(&mut hash_out).unwrap();
 }
 

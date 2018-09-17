@@ -36,7 +36,7 @@ mod kcp_test_vectors {
         let mut out = [0u8; 64];
 
         let mut cshake = cshake::init(custom, None).unwrap();
-        cshake.update(input);
+        cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
 
         let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
@@ -66,7 +66,7 @@ mod kcp_test_vectors {
         let mut out = [0u8; 64];
 
         let mut cshake = cshake::init(custom, None).unwrap();
-        cshake.update(input);
+        cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
 
         let expected = b"\x07\xDC\x27\xB1\x1E\x51\xFB\xAC\x75\xBC\x7B\x3C\x1D\x98\x3E\x8B\x4B\x85\

@@ -291,42 +291,10 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
     let mut hash = [0u8; 64];
 
     let mut cshake = cshake::init(custom, None).unwrap();
-    cshake.update(input);
+    cshake.update(input).unwrap();
     cshake.finalize(&mut hash).unwrap();
 
     Ok(hash)
-}
-
-/// Verify a cSHAKE256 hash in constant time.
-///
-/// # About:
-/// The expected hash must be of length 64. This uses `default::cshake()`.
-///
-/// # Example:
-///
-/// ```
-/// use orion::default;
-///
-/// let data = "Not so random data".as_bytes();
-/// let custom = "Custom".as_bytes();
-///
-/// let hash = default::cshake(data, custom).unwrap();
-/// assert_eq!(default::cshake_verify(&hash, data, custom).unwrap(), true);
-/// ```
-pub fn cshake_verify(
-    expected: &[u8],
-    input: &[u8],
-    custom: &[u8],
-) -> Result<bool, ValidationCryptoError> {
-    if expected.len() != 64 {
-        return Err(ValidationCryptoError);
-    }
-
-    if util::compare_ct(expected, &cshake(input, custom).unwrap()).is_err() {
-        Err(ValidationCryptoError)
-    } else {
-        Ok(true)
-    }
 }
 
 #[cfg(test)]
@@ -503,44 +471,5 @@ mod test {
         let custom = "".as_bytes();
 
         assert!(default::cshake(&data, custom).is_err());
-    }
-
-    #[test]
-    fn cshake_verify() {
-        let mut data = [0u8; 64];
-        util::gen_rand_key(&mut data).unwrap();
-
-        let custom = "Some custom string".as_bytes();
-
-        let cshake = default::cshake(&data, custom).unwrap();
-
-        assert_eq!(
-            default::cshake_verify(&cshake, &data, custom).unwrap(),
-            true
-        );
-    }
-
-    #[test]
-    fn cshake_verify_err() {
-        let mut data = [0u8; 64];
-        util::gen_rand_key(&mut data).unwrap();
-
-        let custom = "Some custom string".as_bytes();
-
-        let cshake = default::cshake(&data, custom).unwrap();
-
-        assert!(default::cshake_verify(&cshake, "Wrong data".as_bytes(), custom).is_err());
-    }
-
-    #[test]
-    fn cshake_verify_err_len() {
-        let mut data = [0u8; 64];
-        util::gen_rand_key(&mut data).unwrap();
-
-        let custom = "Some custom string".as_bytes();
-
-        let cshake = default::cshake(&data, custom).unwrap();
-
-        assert!(default::cshake_verify(&cshake[..63], &data, custom).is_err());
     }
 }

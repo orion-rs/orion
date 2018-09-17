@@ -13,7 +13,7 @@ use test::Bencher;
 fn bench_hmac(b: &mut Bencher) {
     b.iter(|| {
         let mut mac = hmac::init(&vec![0x01; 64]);
-        mac.update(&vec![0x01; 64]);
+        mac.update(&vec![0x01; 64]).unwrap();
         mac.finalize().unwrap();
     });
 }
@@ -44,7 +44,7 @@ fn bench_cshake(b: &mut Bencher) {
     b.iter(|| {
         let mut hash_out = [0u8; 64];
         let mut cshake = cshake::init(&vec![0x01; 64], None).unwrap();
-        cshake.update(&vec![0x01; 64]);
+        cshake.update(&vec![0x01; 64]).unwrap();
         cshake.finalize(&mut hash_out).unwrap();
     });
 }
