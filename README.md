@@ -23,7 +23,7 @@ Currently contains:
 * HKDF-HMAC-SHA512.
 * PBKDF2-HMAC-SHA512.
 * cSHAKE256.
-* IETF ChaCha20.
+* ChaCha20.
 
 ***Note on cSHAKE***:
 The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
@@ -88,6 +88,7 @@ Can be found [here](https://github.com/brycx/orion/releases).
 - [RustCrypto HKDF](https://crates.io/crates/hkdf)
 - [RustCrypto PBKDF2](https://crates.io/crates/pbkdf2)
 - [sp800-185](https://crates.io/crates/sp800-185) (cSHAKE)
+- [chacha](https://crates.io/crates/chacha) (ChaCha20)
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.
