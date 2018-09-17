@@ -21,29 +21,33 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `key`: The secret key.
-//! - `nonce`: The nonce value.
-//! - `initial_counter`: The initial counter value. In most cases this is either `1` or `0`.
-//! - `ciphertext`: The encrypted data.
-//! - `plaintext`: The data to be encrypted.
-//! - `dst_out`: Destination array that will hold the ciphertext/plaintext after encryption/decryption.
+//! - `key`: The secret key
+//! - `nonce`: The nonce value
+//! - `initial_counter`: The initial counter value. In most cases this is either `1` or `0`
+//! - `ciphertext`: The encrypted data
+//! - `plaintext`: The data to be encrypted
+//! - `dst_out`: Destination array that will hold the ciphertext/plaintext after encryption/decryption
 //!
 //! See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of the `key` is not `32` bytes.
-//! - The length of the `nonce` is not `12` bytes.
-//! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
-//! - `plaintext` or `ciphertext` are empty.
-//! - `plaintext` or `ciphertext` are longer than (2^32)-1.
+//! - The length of the `key` is not `32` bytes
+//! - The length of the `nonce` is not `12` bytes
+//! - The length of `dst_out` is less than `plaintext` or `ciphertext`
+//! - `plaintext` or `ciphertext` are empty
+//! - `plaintext` or `ciphertext` are longer than (2^32)-2
+//!
+//! Even though `dst_out` is allowed to be of greater length than `plaintext`, the `ciphertext` produced by ChaCh20
+//! will always be of the same length as the `plaintext`.
 //!
 //! # Security:
 //! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 //! the security of all data that has been encrypted with that given key is compromised.
 //!
 //! Functions `encrypt` and `decrypt` do not provide any data integrity. If you need
-//! data integrity, you should be using the `ChaCha20_Poly1305` construct instead. See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
+//! data integrity, you should be using a `ChaCha20_Poly1305` construct instead.
+//! See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
 //!
 //! # Example:
 //! ```
@@ -60,9 +64,9 @@
 //! util::gen_rand_key(&mut nonce).unwrap();
 //!
 //!
-//! chacha20::encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
+//! chacha20::encrypt(&key, &nonce, 1, message, &mut dst_out_ct);
 //!
-//! chacha20::decrypt(&key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
+//! chacha20::decrypt(&key, &nonce, 1, &dst_out_ct, &mut dst_out_pt);
 //!
 //! assert_eq!(dst_out_pt, message);
 //! ```

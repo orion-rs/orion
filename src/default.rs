@@ -67,9 +67,6 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
 
 /// Verify a HMAC-SHA512 MAC in constant time, with Double-HMAC Verification.
 ///
-/// # About:
-/// This uses `default::hmac()` to generate the MAC.
-///
 /// # Example:
 ///
 /// ```
@@ -151,8 +148,9 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownC
 
 /// Verify an HKDF-HMAC-SHA512 derived key in constant time.
 ///
-/// # About:
-/// The expected key must be of length 32. This uses `default::hkdf()`.
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The length of `expected_dk` is not 32 bytes
 ///
 /// # Example:
 ///
@@ -192,8 +190,8 @@ pub fn hkdf_verify(
 /// - An array of 64 bytes is returned.
 ///
 /// The first 32 bytes of this array is the salt used to derive the key and the last 32 bytes
-/// is the actual derived key. When using this function with `default::pbkdf2_verify()`
-/// then the seperation of salt and password are automatically handeled.
+/// is the actual derived key. When using this function with `default::pbkdf2_verify()`,
+/// then the seperation of the salt and the derived key are automatically handeled.
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
@@ -248,9 +246,8 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
     }
 
     let mut dk = [0u8; 32];
-    let salt = &expected_dk[..32];
 
-    pbkdf2::verify(&expected_dk[32..], password, salt, 512_000, &mut dk)
+    pbkdf2::verify(&expected_dk[32..], password, &expected_dk[..32], 512_000, &mut dk)
 }
 
 /// cSHAKE256.
@@ -301,7 +298,7 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// IETF ChaCha20 encryption.
 /// # About:
 /// - The nonce is automatically generated
-/// - Returns vectors where the first 12 bytes are the nonce and the rest is the ciphertext
+/// - Returns a vector where the first 12 bytes are the nonce and the rest is the ciphertext
 /// - The initial counter is set to `1`
 ///
 /// # Parameters:
@@ -309,8 +306,9 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// - `key`: The secret key used to encrypt the `plaintext`
 ///
 /// # Security:
-/// This does not provide any data integrity. If you need data integrity, you should be using the
-/// `ChaCha20_Poly1305` construct instead. See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
+/// This does not provide any data integrity. If you need data integrity, you should be using a
+/// `ChaCha20_Poly1305` construct instead. In most cases you would want data integrity.
+/// See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
@@ -343,20 +341,21 @@ pub fn chacha20_encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 /// IETF ChaCha20 decryption.
 /// # About:
 /// - The initial counter is set to `1`
-/// - The ciphertext passed must be of the same format as the one returned by `default::chacha20_enrypt()`
+/// - The ciphertext passed must be of the same format as the one returned by `default::chacha20_encrypt()`
 ///
 /// # Parameters:
 /// - `ciphertext`:  The data to be decrypted with the first 12 bytes being the nonce
 /// - `key`: The secret key used to decrypt the `ciphertext`
 ///
 /// # Security:
-/// This does not provide any data integrity. If you need data integrity, you should be using the
-/// `ChaCha20_Poly1305` construct instead. See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
+/// This does not provide any data integrity. If you need data integrity, you should be using a
+/// `ChaCha20_Poly1305` construct instead. In most cases you would want data integrity.
+/// See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - `key` is not 32 bytes
-/// - `ciphertext` is less than 13 bytes is length
+/// - `ciphertext` is less than 13 bytes
 /// - `ciphertext` is longer than (2^32)-14
 ///
 /// # Example:
@@ -364,7 +363,7 @@ pub fn chacha20_encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 /// use orion::default;
 /// use orion::utilities::util;
 ///
-/// let mut key = [0u8; 32]; // Replace this with the key used for encryption
+/// let mut key = [0u8; 32]; // Replace this with the key used for decryption
 /// util::gen_rand_key(&mut key).unwrap();
 ///
 /// // Sample encrypted data where the first 12 bytes are the nonce
@@ -373,7 +372,6 @@ pub fn chacha20_encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 /// let decrypted_data = default::chacha20_decrypt(&key, ciphertext).unwrap();
 /// ```
 pub fn chacha20_decrypt(key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-
     if ciphertext.len() < 13 {
         return Err(UnknownCryptoError);
     }

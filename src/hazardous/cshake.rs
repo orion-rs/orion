@@ -128,7 +128,7 @@ impl CShake {
     }
 }
 
-/// Initialize a `CShake struct`.
+/// Initialize a `CShake` struct.
 /// # Parameters:
 /// - `name`: Optional function-name string. If `None` it is set to a zero-length string.
 /// - `custom`: Customization string
