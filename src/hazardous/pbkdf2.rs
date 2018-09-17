@@ -81,8 +81,8 @@ fn function_f(
     let mut u_step: HLenArray = [0u8; 64];
     // First 4 bytes used for index BE conversion
     BigEndian::write_u32(&mut u_step[..4], index as u32);
-    hmac.update(salt);
-    hmac.update(&u_step[..4]);
+    hmac.update(salt).unwrap();
+    hmac.update(&u_step[..4]).unwrap();
 
     hmac.finalize_with_dst(&mut u_step).unwrap();
     dk_block.copy_from_slice(&u_step[..block_len]);
@@ -90,7 +90,7 @@ fn function_f(
     if iterations > 1 {
         for _ in 1..iterations {
             hmac.reset();
-            hmac.update(&u_step);
+            hmac.update(&u_step).unwrap();
             hmac.finalize_with_dst(&mut u_step).unwrap();
 
             for (idx, val) in u_step[..block_len].iter().enumerate() {

@@ -38,7 +38,7 @@ mod rfc4231 {
         should_be: bool,
     ) -> bool {
         let mut mac = hmac::init(secret_key);
-        mac.update(data);
+        mac.update(data).unwrap();
 
         let res = mac.finalize().unwrap();
         let len = match trunc {

@@ -73,7 +73,7 @@ use utilities::{errors::*, util};
 /// The HKDF extract step.
 pub fn extract(salt: &[u8], ikm: &[u8]) -> [u8; 64] {
     let mut prk = hmac::init(salt);
-    prk.update(ikm);
+    prk.update(ikm).unwrap();
 
     prk.finalize().unwrap()
 }
@@ -95,8 +95,8 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
         let block_len = hlen_block.len();
         assert!(block_len <= okm_len);
 
-        hmac.update(info);
-        hmac.update(&[idx as u8 + 1_u8]);
+        hmac.update(info).unwrap();
+        hmac.update(&[idx as u8 + 1_u8]).unwrap();
         hmac.finalize_with_dst(&mut hlen_block[..block_len])
             .unwrap();
 
@@ -105,7 +105,7 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
             break;
         } else {
             hmac.reset();
-            hmac.update(&hlen_block);
+            hmac.update(&hlen_block).unwrap();
         }
     }
 

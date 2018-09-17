@@ -27,7 +27,7 @@ fn hmac_test_runner(
     is_ok: bool,
 ) -> Result<(), error::Unspecified> {
     let mut mac = hmac::init(key);
-    mac.update(input);
+    mac.update(input).unwrap();
 
     let digest = mac.finalize().unwrap();
 
