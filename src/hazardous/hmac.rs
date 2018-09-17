@@ -124,7 +124,7 @@ impl Hmac {
     /// This can be called multiple times.
     pub fn update(&mut self, message: &[u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
-            return Err(FinalizationCryptoError);
+            Err(FinalizationCryptoError)
         } else {
             self.ipad_hasher.input(message);
             Ok(())

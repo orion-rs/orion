@@ -67,8 +67,8 @@ pub struct CShake {
 impl CShake {
     /// A function that checks the `dst_out` in `finalize`, so that return errors are seperated.
     fn check_dst_out(&mut self, dst_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if dst_out.is_empty() || dst_out.len() > 65536 {
-            return Err(UnknownCryptoError);
+        if dst_out.is_empty() || (dst_out.len() > 65536) {
+            Err(UnknownCryptoError)
         } else {
             Ok(())
         }
@@ -104,7 +104,7 @@ impl CShake {
     /// Set `input`. Can be called repeatedly.
     pub fn update(&mut self, input: &[u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
-            return Err(FinalizationCryptoError);
+            Err(FinalizationCryptoError)
         } else {
             self.hasher.update(input);
             Ok(())
