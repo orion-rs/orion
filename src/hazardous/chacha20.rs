@@ -42,12 +42,12 @@
 //! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 //! the security of all data that has been encrypted with that given key is compromised.
 //!
-//! Functions `chacha20_encrypt` and `chacha20_decrypt` do not provide any data integrity. If you need
+//! Functions `encrypt` and `decrypt` do not provide any data integrity. If you need
 //! data integrity, you should be using the `ChaCha20_Poly1305` construct instead. See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
 //!
 //! # Example:
 //! ```
-//! use orion::hazardous::chacha20::*;
+//! use orion::hazardous::chacha20;
 //! use orion::utilities::util;
 //!
 //! let mut dst_out_pt = [0u8; 15];
@@ -59,10 +59,10 @@
 //! util::gen_rand_key(&mut key).unwrap();
 //! util::gen_rand_key(&mut nonce).unwrap();
 //!
-//! // Encrypt
-//! chacha20_encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
-//! // Decrypt
-//! chacha20_decrypt(&key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
+//!
+//! chacha20::encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
+//!
+//! chacha20::decrypt(&key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
 //!
 //! assert_eq!(dst_out_pt, message);
 //! ```
@@ -168,7 +168,7 @@ impl InternalState {
 }
 
 /// The ChaCha20 encryption function.
-pub fn chacha20_encrypt(
+pub fn encrypt(
     key: &[u8],
     nonce: &[u8],
     initial_counter: u32,
@@ -227,14 +227,14 @@ pub fn chacha20_encrypt(
 }
 
 /// The ChaCha20 decryption function.
-pub fn chacha20_decrypt(
+pub fn decrypt(
     key: &[u8],
     nonce: &[u8],
     initial_counter: u32,
     ciphertext: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    chacha20_encrypt(key, nonce, initial_counter, ciphertext, dst_out)
+    encrypt(key, nonce, initial_counter, ciphertext, dst_out)
 }
 
 
@@ -261,9 +261,9 @@ fn test_diff_ct_pt_len() {
 
     let mut dst = [0u8; 64];
 
-    assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 65], &mut dst).is_err());
-    assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 63], &mut dst).is_ok());
-    assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 64], &mut dst).is_ok());
+    assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 65], &mut dst).is_err());
+    assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 63], &mut dst).is_ok());
+    assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 64], &mut dst).is_ok());
 }
 
 #[test]
@@ -272,7 +272,7 @@ fn test_err_on_empty_pt() {
 
     let mut dst = [0u8; 64];
 
-    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
+    encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
 }
 
 #[test]
@@ -281,7 +281,7 @@ fn test_panic_on_inital_counter_overflow() {
 
     let mut dst = [0u8; 65];
 
-    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 65], &mut dst).unwrap();
+    encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 65], &mut dst).unwrap();
 }
 
 #[test]
@@ -289,7 +289,7 @@ fn test_pass_on_one_iter_max_initial_counter() {
 
     let mut dst = [0u8; 64];
     // Should pass because only one iteration is completed, so block_counter will not increase
-    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 64], &mut dst).unwrap();
+    encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 64], &mut dst).unwrap();
 }
 
 #[cfg(test)]
