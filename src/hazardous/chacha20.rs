@@ -37,6 +37,7 @@
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`
 //! - `plaintext` or `ciphertext` are empty
 //! - `plaintext` or `ciphertext` are longer than (2^32)-2
+//! - The `initial_counter` is high enough to cause a potential overflow
 //!
 //! Even though `dst_out` is allowed to be of greater length than `plaintext`, the `ciphertext` produced by ChaCh20
 //! will always be of the same length as the `plaintext`.
@@ -138,7 +139,7 @@ impl InternalState {
         Ok(())
     }
     #[inline(always)]
-    /// The ChaCha20 block function. Returns a single block.
+    /// The ChaCha20 block function. Returns a single keystream block.
     fn chacha20_block(&mut self, block_count: u32) -> ChaChaState {
         // Update block counter
         self.state[12] = block_count.to_le();
@@ -206,10 +207,12 @@ pub fn encrypt(
         .zip(dst_out.chunks_mut(CHACHA_BLOCKSIZE))
         .enumerate()
     {
-        let block_counter = initial_counter
-            .checked_add(counter as u32)
-            .expect("Internal counter overflow");
-        keystream_state = chacha_state.chacha20_block(block_counter);
+        let block_counter = initial_counter.checked_add(counter as u32);
+        if block_counter.is_some() {
+            keystream_state = chacha_state.chacha20_block(block_counter.unwrap());
+        } else {
+            return Err(UnknownCryptoError);
+        }
 
         chacha_state
             .serialize_block(&keystream_state, &mut keystream_block)
@@ -583,7 +586,7 @@ fn test_key_schedule() {
         0xe8bcfb88, 0xedc49139,
     ];
 
-    // Expected Keystream
+    // Expected keystream
     let expected_keystream = [
         0x22, 0x4f, 0x51, 0xf3, 0x40, 0x1b, 0xd9, 0xe1, 0x2f, 0xde, 0x27, 0x6f, 0xb8, 0x63, 0x1d,
         0xed, 0x8c, 0x13, 0x1f, 0x82, 0x3d, 0x2c, 0x06, 0xe2, 0x7e, 0x4f, 0xca, 0xec, 0x9e, 0xf3,
@@ -596,7 +599,7 @@ fn test_key_schedule() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    // Block call with inital counter
+    // Block call with initial counter
     let first_block_state = state.chacha20_block(1);
     assert_eq!(first_block_state, first_block);
     // Test first internal state
