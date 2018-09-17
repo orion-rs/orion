@@ -16,7 +16,7 @@ fuzz_target!(|data: &[u8]| {
 
     let mut rng = rand::thread_rng();
     if rng.gen() {
-        // Random inital counter value, most times it will be 0 or 1
+        // Random inital counter value
         let icount: u32 = rng.gen_range(0, 4097);
 
         let mut dst_pt = vec![0u8; data.len()];

@@ -397,7 +397,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn double_update_after_finalize_err() {
+    fn update_after_finalize_err() {
         let input = b"\x00\x01\x02\x03";
         let custom = b"";
         let name = b"Email Signature";
@@ -410,7 +410,7 @@ mod test {
     }
 
     #[test]
-    fn double_update_with_reset_ok() {
+    fn update_after_finalize_with_reset_ok() {
         let input = b"\x00\x01\x02\x03";
         let custom = b"";
         let name = b"Email Signature";

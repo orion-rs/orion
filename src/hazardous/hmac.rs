@@ -285,7 +285,7 @@ fn double_finalize_with_reset_no_update_ok() {
 
 #[test]
 #[should_panic]
-fn double_update_after_finalize_err() {
+fn update_after_finalize_err() {
     let secret_key = "Jefe".as_bytes();
     let data = "what do ya want for nothing?".as_bytes();
 
@@ -296,7 +296,7 @@ fn double_update_after_finalize_err() {
 }
 
 #[test]
-fn double_update_with_reset_ok() {
+fn update_after_finalize_with_reset_ok() {
     let secret_key = "Jefe".as_bytes();
     let data = "what do ya want for nothing?".as_bytes();
 

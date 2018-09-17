@@ -275,7 +275,7 @@ fn test_err_on_empty_pt() {
 
 #[test]
 #[should_panic]
-fn test_panic_on_initial_counter_overflow() {
+fn test_err_on_initial_counter_overflow() {
     let mut dst = [0u8; 65];
 
     encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 65], &mut dst).unwrap();
@@ -297,8 +297,9 @@ fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
 
     Ok(chacha_state)
 }
-// The following test-cases are form the [RFC 7539](https://tools.ietf.org/html/rfc7539.html).
+
 #[test]
+// From https://tools.ietf.org/html/rfc7539
 fn test_quarter_round_results() {
     let mut chacha_state = InternalState {
         state: [
@@ -321,6 +322,7 @@ fn test_quarter_round_results() {
 }
 
 #[test]
+// From https://tools.ietf.org/html/rfc7539
 fn test_quarter_round_results_on_indices() {
     let mut chacha_state = InternalState {
         state: [
@@ -340,6 +342,7 @@ fn test_quarter_round_results_on_indices() {
 }
 
 #[test]
+// From https://tools.ietf.org/html/rfc7539
 fn test_chacha20_block_results() {
     let key = [
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
@@ -376,6 +379,7 @@ fn test_chacha20_block_results() {
 }
 
 #[test]
+// From https://tools.ietf.org/html/rfc7539
 fn chacha20_block_test_1() {
     let key = [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -411,6 +415,7 @@ fn chacha20_block_test_1() {
 }
 
 #[test]
+// From https://tools.ietf.org/html/rfc7539
 fn chacha20_block_test_2() {
     let key = [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -446,6 +451,7 @@ fn chacha20_block_test_2() {
 }
 
 #[test]
+// From https://tools.ietf.org/html/rfc7539
 fn chacha20_block_test_3() {
     let key = [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -481,6 +487,7 @@ fn chacha20_block_test_3() {
 }
 
 #[test]
+// From https://tools.ietf.org/html/rfc7539
 fn chacha20_block_test_4() {
     let key = [
         0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -516,6 +523,7 @@ fn chacha20_block_test_4() {
 }
 
 #[test]
+// From https://tools.ietf.org/html/rfc7539
 fn chacha20_block_test_5() {
     let key = [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -551,6 +559,7 @@ fn chacha20_block_test_5() {
 }
 
 #[test]
+// From https://tools.ietf.org/html/rfc7539
 fn test_key_schedule() {
     let key = [
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
