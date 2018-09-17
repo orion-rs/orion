@@ -19,16 +19,21 @@ fuzz_target!(|data: &[u8]| {
         // Random inital counter value
         let icount: u32 = rng.gen_range(0, 4097);
 
-        let mut dst_pt = vec![0u8; data.len()];
-        let mut dst_ct = vec![0u8; data.len()];
+        let mut pt = Vec::from(data);
+        if data.is_empty() {
+            pt.push(1u8);
+        }
+
+        let mut dst_pt = vec![0u8; pt.len()];
+        let mut dst_ct = vec![0u8; pt.len()];
 
         // Encrypt data
-        chacha20::encrypt(&key, &nonce, icount, &data, &mut dst_ct).unwrap();
+        chacha20::encrypt(&key, &nonce, icount, &pt, &mut dst_ct).unwrap();
         // Decrypt the ciphertext and verify it matches data
         chacha20::decrypt(&key, &nonce, icount, &dst_ct, &mut dst_pt).unwrap();
-        assert_eq!(&dst_pt, &data);
+        assert_eq!(&dst_pt, &pt);
         // Obvios not equal on plaintext to decrypt input
-        chacha20::decrypt(&key, &nonce, icount, &data, &mut dst_pt).unwrap();
-        assert_ne!(&dst_pt, &data);
+        chacha20::decrypt(&key, &nonce, icount, &pt, &mut dst_pt).unwrap();
+        assert_ne!(&dst_pt, &pt);
     }
 });
