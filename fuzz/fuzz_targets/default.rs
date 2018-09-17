@@ -11,6 +11,8 @@ use rand::Rng;
 fn fuzz_default(data: &[u8]) -> () {
     let mut rand_salt = [0u8; 64];
     util::gen_rand_key(&mut rand_salt).unwrap();
+    let mut rand_key = [0u8; 32];
+    util::gen_rand_key(&mut rand_key).unwrap();
     let mut rng = rand::thread_rng();
 
     // cSHAKE `custom` can't be empty
@@ -32,16 +34,15 @@ fn fuzz_default(data: &[u8]) -> () {
 
         default::pbkdf2_verify(&default::pbkdf2(&password).unwrap(), &password).unwrap();
 
-        default::cshake_verify(
-            &default::cshake(&data, &mod_custom).unwrap(),
-            &data,
-            &mod_custom,
+        default::cshake(&data, &mod_custom).unwrap();
+        default::cshake("".as_bytes(), &mod_custom).unwrap();
+
+        let dec_data = default::chacha20_decrypt(
+            &rand_key,
+            &default::chacha20_encrypt(&rand_key, &data).unwrap()
         ).unwrap();
-        default::cshake_verify(
-            &default::cshake("".as_bytes(), &mod_custom).unwrap(),
-            "".as_bytes(),
-            &mod_custom,
-        ).unwrap();
+
+        assert_eq!(dec_data, data);
     }
 }
 
