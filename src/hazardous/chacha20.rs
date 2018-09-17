@@ -190,9 +190,7 @@ pub fn encrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut chacha_state = InternalState {
-        state: [0_u32; 16],
-    };
+    let mut chacha_state = InternalState { state: [0_u32; 16] };
 
     chacha_state.init_state(key, nonce).unwrap();
 
@@ -237,14 +235,9 @@ pub fn decrypt(
     encrypt(key, nonce, initial_counter, ciphertext, dst_out)
 }
 
-
-
 #[test]
 fn test_bad_key_nonce_size() {
-
-    let mut chacha_state = InternalState {
-        state: [0_u32; 16],
-    };
+    let mut chacha_state = InternalState { state: [0_u32; 16] };
 
     assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 12]).is_err());
     assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 12]).is_err());
@@ -258,7 +251,6 @@ fn test_bad_key_nonce_size() {
 
 #[test]
 fn test_diff_ct_pt_len() {
-
     let mut dst = [0u8; 64];
 
     assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 65], &mut dst).is_err());
@@ -269,7 +261,6 @@ fn test_diff_ct_pt_len() {
 #[test]
 #[should_panic]
 fn test_err_on_empty_pt() {
-
     let mut dst = [0u8; 64];
 
     encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
@@ -278,7 +269,6 @@ fn test_err_on_empty_pt() {
 #[test]
 #[should_panic]
 fn test_panic_on_inital_counter_overflow() {
-
     let mut dst = [0u8; 65];
 
     encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 65], &mut dst).unwrap();
@@ -286,7 +276,6 @@ fn test_panic_on_inital_counter_overflow() {
 
 #[test]
 fn test_pass_on_one_iter_max_initial_counter() {
-
     let mut dst = [0u8; 64];
     // Should pass because only one iteration is completed, so block_counter will not increase
     encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 64], &mut dst).unwrap();
@@ -295,9 +284,7 @@ fn test_pass_on_one_iter_max_initial_counter() {
 #[cfg(test)]
 // Convenience function for testing.
 fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
-    let mut chacha_state = InternalState {
-        state: [0_u32; 16],
-    };
+    let mut chacha_state = InternalState { state: [0_u32; 16] };
 
     chacha_state.init_state(key, nonce).unwrap();
 
