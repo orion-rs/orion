@@ -247,7 +247,13 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
 
     let mut dk = [0u8; 32];
 
-    pbkdf2::verify(&expected_dk[32..], password, &expected_dk[..32], 512_000, &mut dk)
+    pbkdf2::verify(
+        &expected_dk[32..],
+        password,
+        &expected_dk[..32],
+        512_000,
+        &mut dk,
+    )
 }
 
 /// cSHAKE256.
