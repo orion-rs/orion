@@ -356,7 +356,7 @@ pub fn chacha20_encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - `key` is not 32 bytes
-/// - `ciphertext` is empty
+/// - `ciphertext` is less than 13 bytes is length
 /// - `ciphertext` is longer than (2^32)-14
 ///
 /// # Example:
@@ -373,6 +373,11 @@ pub fn chacha20_encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 /// let decrypted_data = default::chacha20_decrypt(&key, ciphertext).unwrap();
 /// ```
 pub fn chacha20_decrypt(key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+
+    if ciphertext.len() < 13 {
+        return Err(UnknownCryptoError);
+    }
+
     let mut nonce = [0u8; 12];
     nonce.copy_from_slice(&ciphertext[..12]);
 
@@ -584,12 +589,12 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn chacha20_ciphertext_empty_err() {
+    fn chacha20_ciphertext_less_than_13_err() {
         let mut key = [0u8; 32];
         util::gen_rand_key(&mut key).unwrap();
-        let plaintext = "".as_bytes().to_vec();
+        let ciphertext = [0u8; 12];
 
-        default::chacha20_decrypt(&key, &plaintext).unwrap();
+        default::chacha20_decrypt(&key, &ciphertext).unwrap();
     }
 
     #[test]
@@ -597,9 +602,9 @@ mod test {
     fn chacha20_small_key_err_dec() {
         let mut key = [0u8; 31];
         util::gen_rand_key(&mut key).unwrap();
-        let plaintext = "".as_bytes().to_vec();
+        let ciphertext = "".as_bytes().to_vec();
 
-        default::chacha20_decrypt(&key, &plaintext).unwrap();
+        default::chacha20_decrypt(&key, &ciphertext).unwrap();
     }
 
     #[test]
@@ -617,9 +622,9 @@ mod test {
     fn chacha20_big_key_err_dec() {
         let mut key = [0u8; 35];
         util::gen_rand_key(&mut key).unwrap();
-        let plaintext = "".as_bytes().to_vec();
+        let ciphertext = "".as_bytes().to_vec();
 
-        default::chacha20_decrypt(&key, &plaintext).unwrap();
+        default::chacha20_decrypt(&key, &ciphertext).unwrap();
     }
 
     #[test]
