@@ -12,6 +12,7 @@ cargo-fuzz = true
 rand = "0.5.5"
 ring = "0.13.2"
 sp800-185 = "0.2.0"
+chacha = "0.2.0"
 
 
 [dependencies.orion]
@@ -53,3 +54,7 @@ path = "fuzz_targets/sp800_185_compare.rs"
 [[bin]]
 name = "chacha20"
 path = "fuzz_targets/chacha20.rs"
+
+[[bin]]
+name = "chacha_compare"
+path = "fuzz_targets/chacha_compare.rs"
