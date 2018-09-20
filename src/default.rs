@@ -305,7 +305,7 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// # About:
 /// - The nonce is automatically generated
 /// - Returns a vector where the first 12 bytes are the nonce and the rest is the ciphertext
-/// - The initial counter is set to `1`
+/// - The initial counter is set to `0`
 ///
 /// # Parameters:
 /// - `plaintext`:  The data to be encrypted
@@ -346,7 +346,7 @@ pub fn chacha20_encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 
 /// IETF ChaCha20 decryption.
 /// # About:
-/// - The initial counter is set to `1`
+/// - The initial counter is set to `0`
 /// - The ciphertext passed must be of the same format as the one returned by `default::chacha20_encrypt()`
 ///
 /// # Parameters:
