@@ -65,9 +65,9 @@
 //! util::gen_rand_key(&mut nonce).unwrap();
 //!
 //!
-//! chacha20::encrypt(&key, &nonce, 1, message, &mut dst_out_ct);
+//! chacha20::encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
 //!
-//! chacha20::decrypt(&key, &nonce, 1, &dst_out_ct, &mut dst_out_pt);
+//! chacha20::decrypt(&key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
 //!
 //! assert_eq!(dst_out_pt, message);
 //! ```
