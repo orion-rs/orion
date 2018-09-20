@@ -339,7 +339,7 @@ pub fn chacha20_encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, Unknown
     let mut dst_out = vec![0u8; plaintext.len() + 12];
     dst_out[..12].copy_from_slice(&nonce);
 
-    chacha20::encrypt(key, &nonce, 1, plaintext, &mut dst_out[12..]).unwrap();
+    chacha20::encrypt(key, &nonce, 0, plaintext, &mut dst_out[12..]).unwrap();
 
     Ok(dst_out)
 }
@@ -387,7 +387,7 @@ pub fn chacha20_decrypt(key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, Unknow
 
     let mut dst_out = vec![0u8; ciphertext.len() - 12];
 
-    chacha20::decrypt(key, &nonce, 1, &ciphertext[12..], &mut dst_out).unwrap();
+    chacha20::decrypt(key, &nonce, 0, &ciphertext[12..], &mut dst_out).unwrap();
 
     Ok(dst_out)
 }
