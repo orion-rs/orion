@@ -29,7 +29,10 @@ fuzz_target!(|data: &[u8]| {
         apply_from_input_heap(&mut custom, &input, message.len());
     }
 
-    let mut hash_out = vec![0u8; input.len()];
+    // Max iteration count will be (255*256) + 1 = 65281
+    let out_len = (input[0] as usize * 256) + 1;
+    let mut hash_out = vec![0u8; out_len];
+
     let mut cshake = cshake::init(&custom, Some(&name)).unwrap();
     cshake.update(&message).unwrap();
     cshake.finalize(&mut hash_out).unwrap();

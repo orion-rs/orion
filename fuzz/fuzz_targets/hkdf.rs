@@ -23,7 +23,9 @@ fuzz_target!(|data: &[u8]| {
     apply_from_input_heap(&mut salt, &input, ikm.len());
     apply_from_input_heap(&mut info, &input, ikm.len() + salt.len());
 
-    let mut okm_out = vec![0u8; input.len()];
+    // Max iteration count will be (255*63) + 1 = 16066
+    let out_len = (input[0] as usize * 63) + 1;
+    let mut okm_out = vec![0u8; out_len];
 
     hkdf::derive_key(&salt, &ikm, &info, &mut okm_out).unwrap();
     let exp_okm = okm_out.clone();
