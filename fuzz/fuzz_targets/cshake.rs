@@ -2,28 +2,35 @@
 #[macro_use]
 extern crate libfuzzer_sys;
 extern crate orion;
-extern crate rand;
+pub mod util;
 
 use orion::hazardous::cshake;
-use rand::prelude::*;
-
-fn fuzz_cshake(input: &[u8], name: &[u8], custom: &[u8], len_max: usize) {
-    let mut rng = rand::thread_rng();
-    let len_rand = rng.gen_range(1, len_max + 1);
-
-    // They can't both be empty
-    let mut mod_custom = custom.to_vec();
-    mod_custom.push(0u8);
-
-    let mut hash_out = vec![0u8; len_rand];
-    let mut cshake = cshake::init(&mod_custom, Some(name)).unwrap();
-    cshake.update(input).unwrap();
-    cshake.finalize(&mut hash_out).unwrap();
-}
+use self::util::*;
 
 fuzz_target!(|data: &[u8]| {
-    fuzz_cshake(data, data, data, 65536);
-    fuzz_cshake(data, &Vec::new(), data, 65536);
-    fuzz_cshake(data, data, &Vec::new(), 65536);
-    fuzz_cshake(&Vec::new(), data, data, 65536);
+
+    let mut input = Vec::from(data);
+    // Input data cannot be empty, because the first byte will be used to determine
+    // where the input should be split
+    if input.is_empty() {
+        input.push(0u8);
+    }
+
+    let mut message = vec![0u8; input[0] as usize];
+    apply_from_input_fixed(&mut message, &input, 0);
+    let mut name = Vec::new();
+    let mut custom = Vec::new();
+
+    // If input[0] > 127 then set name to something else than an empty string
+    if input[0] > 127 {
+        apply_from_input_heap(&mut custom, &input, message.len());
+        apply_from_input_heap(&mut name, &input, custom.len() + message.len());
+    } else {
+        apply_from_input_heap(&mut custom, &input, message.len());
+    }
+
+    let mut hash_out = vec![0u8; input.len()];
+    let mut cshake = cshake::init(&custom, Some(&name)).unwrap();
+    cshake.update(&message).unwrap();
+    cshake.finalize(&mut hash_out).unwrap();
 });
