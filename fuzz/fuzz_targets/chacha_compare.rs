@@ -2,21 +2,21 @@
 #[macro_use] extern crate libfuzzer_sys;
 extern crate orion;
 extern crate chacha;
+pub mod util;
+
 use orion::hazardous::chacha20;
-use orion::utilities::util;
 use chacha::{ChaCha, KeyStream};
+use self::util::*;
 
 fuzz_target!(|data: &[u8]| {
-    // Random nonce and key
+
     let mut key = [0u8; 32];
     let mut nonce = [0u8; 12];
-    util::gen_rand_key(&mut key).unwrap();
-    util::gen_rand_key(&mut nonce).unwrap();
+    apply_from_input_fixed(&mut key, &data, 0);
+    apply_from_input_fixed(&mut nonce, &data, 32);
 
-    let mut pt = Vec::from(data);
-    if data.is_empty() {
-        pt.push(1u8);
-    }
+    let mut pt = Vec::new();
+    apply_from_input_heap(&mut pt, data, key.len() + nonce.len());
 
     // For orion
     let mut dst_pt = vec![0u8; pt.len()];
@@ -24,9 +24,7 @@ fuzz_target!(|data: &[u8]| {
 
     // For chacha
     let mut buffer = pt.clone();
-
-    // chacha crates uses 0 as inital counter
-    // different structs because they don't reset counter
+    // Different structs because they don't reset counter
     let mut stream_enc = ChaCha::new_ietf(&key, &nonce);
     let mut stream_dec = ChaCha::new_ietf(&key, &nonce);
     // Encrypt pt
@@ -35,10 +33,10 @@ fuzz_target!(|data: &[u8]| {
     // Decrypt ct
     stream_dec.xor_read(&mut buffer_2).expect("hit end of stream far too soon");
     assert_eq!(pt, buffer_2);
+
     // chacha crates uses 0 as inital counter
     chacha20::encrypt(&key, &nonce, 0, &pt, &mut dst_ct).unwrap();
     assert_eq!(dst_ct, buffer);
     chacha20::decrypt(&key, &nonce, 0, &dst_ct, &mut dst_pt).unwrap();
     assert_eq!(&dst_pt, &pt);
-    assert_eq!(dst_pt, buffer_2);
 });

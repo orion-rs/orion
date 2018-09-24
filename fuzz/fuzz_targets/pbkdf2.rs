@@ -2,11 +2,9 @@
 #[macro_use]
 extern crate libfuzzer_sys;
 extern crate orion;
-extern crate rand;
 pub mod util;
 
 use orion::hazardous::pbkdf2;
-use rand::prelude::*;
 use self::util::*;
 
 fuzz_target!(|data: &[u8]| {
@@ -24,13 +22,10 @@ fuzz_target!(|data: &[u8]| {
     apply_from_input_heap(&mut salt, &input, password.len());
 
     let mut dk_out = vec![0u8; input.len()];
+    // Max iteration count will be (255*40) + 1 = 10201
+    let iter = (input[0] as usize * 40) + 1;
 
-    let mut rng = rand::thread_rng();
-    if rng.gen() {
-        let iter: usize = rng.gen_range(1, 10001);
-
-        pbkdf2::derive_key(&password, &salt, iter, &mut dk_out).unwrap();
-        let exp_dk = dk_out.clone();
-        assert!(pbkdf2::verify(&exp_dk, &password, &salt, iter, &mut dk_out).unwrap());
-    }
+    pbkdf2::derive_key(&password, &salt, iter, &mut dk_out).unwrap();
+    let exp_dk = dk_out.clone();
+    assert!(pbkdf2::verify(&exp_dk, &password, &salt, iter, &mut dk_out).unwrap());
 });
