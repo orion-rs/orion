@@ -128,10 +128,10 @@ impl InternalState {
         }
 
         // Setup state with constants
-        self.state[0] = 0x6170_7865_u32.to_le();
-        self.state[1] = 0x3320_646e_u32.to_le();
-        self.state[2] = 0x7962_2d32_u32.to_le();
-        self.state[3] = 0x6b20_6574_u32.to_le();
+        self.state[0] = 0x6170_7865_u32;
+        self.state[1] = 0x3320_646e_u32;
+        self.state[2] = 0x7962_2d32_u32;
+        self.state[3] = 0x6b20_6574_u32;
 
         LittleEndian::read_u32_into(key, &mut self.state[4..12]);
         LittleEndian::read_u32_into(nonce, &mut self.state[13..16]);
@@ -142,7 +142,7 @@ impl InternalState {
     /// The ChaCha20 block function. Returns a single keystream block.
     fn chacha20_block(&mut self, block_count: u32) -> ChaChaState {
         // Update block counter
-        self.state[12] = block_count.to_le();
+        self.state[12] = block_count;
 
         let mut working_state: InternalState = self.clone();
 
