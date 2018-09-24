@@ -2,27 +2,30 @@
 #[macro_use]
 extern crate libfuzzer_sys;
 extern crate orion;
-extern crate rand;
+pub mod util;
 
 use orion::hazardous::hkdf;
-use rand::prelude::*;
-
-fn fuzz_hkdf(salt: &[u8], ikm: &[u8], info: &[u8], len_max: usize) {
-    let mut rng = rand::thread_rng();
-    let okm_len_rand = rng.gen_range(1, len_max + 1);
-
-    let prk = hkdf::extract(ikm, salt);
-    let mut dk_out = vec![0u8; okm_len_rand];
-    hkdf::expand(&prk, info, &mut dk_out).unwrap();
-
-    let exp_okm = dk_out.clone();
-    assert!(hkdf::verify(&exp_okm, salt, ikm, info, &mut dk_out).unwrap());
-}
+use self::util::*;
 
 fuzz_target!(|data: &[u8]| {
-    fuzz_hkdf(data, data, data, 8160);
 
-    fuzz_hkdf(data, data, data, 12240);
+    let mut input = Vec::from(data);
+    // Input data cannot be empty, because the first byte will be used to determine
+    // where the input should be split
+    if input.is_empty() {
+        input.push(0u8);
+    }
 
-    fuzz_hkdf(data, data, data, 16320);
+    let mut ikm = vec![0u8; input[0] as usize];
+    let mut salt = Vec::new();
+    let mut info = Vec::new();
+    apply_from_input_fixed(&mut ikm, &input, 0);
+    apply_from_input_heap(&mut salt, &input, ikm.len());
+    apply_from_input_heap(&mut info, &input, ikm.len() + salt.len());
+
+    let mut okm_out = vec![0u8; input.len()];
+
+    hkdf::derive_key(&salt, &ikm, &info, &mut okm_out).unwrap();
+    let exp_okm = okm_out.clone();
+    assert!(hkdf::verify(&exp_okm, &salt, &ikm, &info, &mut okm_out).unwrap());
 });
