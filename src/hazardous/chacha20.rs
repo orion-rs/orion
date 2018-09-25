@@ -39,7 +39,7 @@
 //! - `plaintext` or `ciphertext` are longer than (2^32)-2
 //! - The `initial_counter` is high enough to cause a potential overflow
 //!
-//! Even though `dst_out` is allowed to be of greater length than `plaintext`, the `ciphertext` produced by ChaCh20
+//! Even though `dst_out` is allowed to be of greater length than `plaintext`, the `ciphertext` produced by ChaCha20
 //! will always be of the same length as the `plaintext`.
 //!
 //! # Security:
