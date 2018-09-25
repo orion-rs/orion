@@ -27,9 +27,28 @@ use utilities::errors;
 
 #[inline(never)]
 #[cfg(feature = "safe_api")]
-/// Fill `dst` with random bytes. This uses rand's
-/// [OsRng](https://docs.rs/rand/0.5.1/rand/rngs/struct.OsRng.html). Length of `dst` must be >= 1.
-/// Not available in `no_std` context.
+/// Generate random bytes. Not available in `no_std` context.
+///
+/// # About:
+/// This function can be used to generate cryptographic keys, salts or other values that rely
+/// on strong randomness. This function fills `dst` with random bytes and the amount of bytes is therefor
+/// implied by the length of `dst`.
+///
+/// This uses rand's [OsRng](https://docs.rs/rand/0.5.5/rand/rngs/struct.OsRng.html).
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The `OsRng` fails to initialize
+/// - `dst` is empty
+///
+/// # Example:
+/// ```
+/// use orion::utilities::util;
+///
+/// let mut salt = [0u8; 16];
+///
+/// util::gen_rand_key(&mut salt).unwrap();
+/// ```
 pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
     if dst.is_empty() {
         return Err(errors::UnknownCryptoError);
@@ -41,8 +60,28 @@ pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
     Ok(())
 }
 
-/// Compare two equal length slices in constant time, using the
+/// Compare two equal length slices in constant time.
+///
+/// # About:
+/// Compare two equal length slices, in constant time, using the
 /// [subtle](https://crates.io/crates/subtle) crate.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - `a` and `b` do not have the same length
+/// - `a` is not equal to `b`
+///
+/// # Example:
+/// ```
+/// use orion::utilities::util;
+///
+/// let mut mac = [0u8; 64];
+///
+/// assert!(util::compare_ct(&mac, &[0u8; 64]).is_ok());
+///
+/// util::gen_rand_key(&mut mac).unwrap();
+/// assert!(util::compare_ct(&mac, &[0u8; 64]).is_err());
+/// ```
 pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
     if a.len() != b.len() {
         return Err(errors::UnknownCryptoError);
