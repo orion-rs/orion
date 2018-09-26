@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.7.2"
+version = "0.7.3"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Easy and usable rust crypto"
 keywords = [ "cryptography", "hmac", "hkdf", "pbkdf2", "chacha20" ]
@@ -23,7 +23,7 @@ rand = { version = "0.5.5", optional = true }
 sha2 = "0.7.1"
 tiny-keccak = "1.4.2"
 byteorder = { version = "1.2.6", default-features = false }
-subtle = { version = "0.9.0", default-features = false }
+subtle = { version = "1.0.0", default-features = false }
 seckey = { version = "0.9.1", default-features = false }
 
 [features]
