@@ -73,14 +73,14 @@ use utilities::{errors::*, util};
 fn function_f(
     salt: &[u8],
     iterations: usize,
-    index: usize,
+    index: u32,
     dk_block: &mut [u8],
     block_len: usize,
     hmac: &mut hmac::Hmac,
 ) {
     let mut u_step: HLenArray = [0u8; 64];
     // First 4 bytes used for index BE conversion
-    BigEndian::write_u32(&mut u_step[..4], index as u32);
+    BigEndian::write_u32(&mut u_step[..4], index);
     hmac.update(salt).unwrap();
     hmac.update(&u_step[..4]).unwrap();
 
@@ -112,26 +112,21 @@ pub fn derive_key(
     if iterations < 1 {
         return Err(UnknownCryptoError);
     }
-    if dk_out.len() > 274_877_906_880 {
-        return Err(UnknownCryptoError);
-    }
     if dk_out.is_empty() {
         return Err(UnknownCryptoError);
     }
 
     let mut hmac = hmac::init(password);
-    let dk_len = dk_out.len();
 
     for (idx, dk_block) in dk_out.chunks_mut(HLEN).enumerate() {
         let block_len = dk_block.len();
-        assert!(block_len <= dk_len);
+        let block_idx = (1_u32).checked_add(idx as u32);
 
-        function_f(salt, iterations, idx + 1, dk_block, block_len, &mut hmac);
-        // Check if it's the last iteration, if yes don't process anything
-        if block_len < HLEN || (block_len * (idx + 1) == dk_len) {
-            break;
-        } else {
+        if block_idx.is_some() {
+            function_f(salt, iterations, block_idx.unwrap(), dk_block, block_len, &mut hmac);
             hmac.reset();
+        } else {
+            return Err(UnknownCryptoError);
         }
     }
 
