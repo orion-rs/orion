@@ -22,6 +22,7 @@
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
+#![deny(overflowing_literals)]
 
 extern crate byteorder;
 #[cfg(feature = "safe_api")]
