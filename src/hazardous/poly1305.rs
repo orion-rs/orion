@@ -20,17 +20,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// The blocksize for the hash function SHA512.
-pub const SHA2_BLOCKSIZE: usize = 128;
-/// The output size for the hash function SHA512.
-pub const HLEN: usize = 64;
-/// Type for an array of length `SHA2_BLOCKSIZE`.
-pub type BlocksizeArray = [u8; SHA2_BLOCKSIZE];
-/// Type for an array of length `HLEN`.
-pub type HLenArray = [u8; HLEN];
-/// Type for a ChaCha state represented as an array of 16 32-bit unsigned integers.
-pub type ChaChaState = [u32; 16];
-/// The blocksize which ChaCha20 operates on.
-pub const CHACHA_BLOCKSIZE: usize = 64;
-/// The blocksize which Poly1305 operates on.
-pub const POLY1305_BLOCKSIZE: usize = 16;
+//! # Parameters:
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//!
+//! # Security:
+//!
+//! # Example:
+//! ```
+//! ```
+
+use byteorder::{LittleEndian, ByteOrder};
+use hazardous::constants::POLY1305_BLOCKSIZE;
+use utilities::{errors::*, util};
+
+pub struct Poly1305 {}
+
+
+impl Drop for Poly1305 {
+
+}
+
+impl Poly1305 {
+
+    fn mul_mod_r() {}
+
+    fn clamp() {}
+
+    pub fn update() {}
+
+    pub fn finalize() {}
+
+}
+
+
+pub fn init() {}
+
+pub fn verify() {}
