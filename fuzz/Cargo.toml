@@ -13,6 +13,7 @@ rand = "0.5.5"
 ring = "0.13.2"
 sp800-185 = "0.2.0"
 chacha = "0.2.0"
+rust-crypto = "0.2.36"
 
 
 [dependencies.orion]
@@ -58,3 +59,7 @@ path = "fuzz_targets/chacha20.rs"
 [[bin]]
 name = "chacha_compare"
 path = "fuzz_targets/chacha_compare.rs"
+
+[[bin]]
+name = "poly1305_compare"
+path = "fuzz_targets/poly1305_compare.rs"
