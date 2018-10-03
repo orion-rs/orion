@@ -147,9 +147,7 @@ impl Poly1305 {
     #[inline(never)]
     fn reduce_mod_p(&mut self) {
         self.propagate_carries();
-
         let mut t = self.a;
-
         // t = a - p
         t[0] += 5;
         t[4] = t[4].wrapping_sub(1 << 26);
