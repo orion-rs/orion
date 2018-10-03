@@ -123,7 +123,14 @@ pub fn derive_key(
         let block_idx = (1_u32).checked_add(idx as u32);
 
         if block_idx.is_some() {
-            function_f(salt, iterations, block_idx.unwrap(), dk_block, block_len, &mut hmac);
+            function_f(
+                salt,
+                iterations,
+                block_idx.unwrap(),
+                dk_block,
+                block_len,
+                &mut hmac,
+            );
             hmac.reset();
         } else {
             return Err(UnknownCryptoError);
