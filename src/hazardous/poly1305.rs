@@ -1,5 +1,6 @@
 // MIT License
 
+// Copyright 2016 chacha20-poly1305-aead Developers
 // Copyright (c) 2018 brycx
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
