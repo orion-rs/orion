@@ -37,3 +37,6 @@ pub mod constants;
 
 /// IETF ChaCha20 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub mod chacha20;
+
+/// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub mod poly1305;

@@ -35,7 +35,7 @@ hex = "0.3.2"
 ring = "0.13.2"
 
 [profile.dev]
-opt-level = 2
+opt-level = 0
 
 [profile.release]
 opt-level = 3

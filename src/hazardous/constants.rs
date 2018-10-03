@@ -34,3 +34,5 @@ pub type ChaChaState = [u32; 16];
 pub const CHACHA_BLOCKSIZE: usize = 64;
 /// The blocksize which Poly1305 operates on.
 pub const POLY1305_BLOCKSIZE: usize = 16;
+/// Type for a Poly1305 tag.
+pub type Poly1305Tag = [u8; 16];
