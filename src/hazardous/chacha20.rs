@@ -72,7 +72,7 @@
 //! assert_eq!(dst_out_pt, message);
 //! ```
 use byteorder::{ByteOrder, LittleEndian};
-use hazardous::constants::{ChaChaState, CHACHA_BLOCKSIZE};
+use hazardous::constants::{ChaChaState, CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE};
 use seckey::zero;
 use utilities::errors::UnknownCryptoError;
 
@@ -120,10 +120,10 @@ impl InternalState {
     #[inline(always)]
     /// Initialize the ChaCha state with a `key` and `nonce`.
     fn init_state(&mut self, key: &[u8], nonce: &[u8]) -> Result<(), UnknownCryptoError> {
-        if key.len() != 32 {
+        if key.len() != CHACHA_KEYSIZE {
             return Err(UnknownCryptoError);
         }
-        if nonce.len() != 12 {
+        if nonce.len() != IETF_CHACHA_NONCESIZE {
             return Err(UnknownCryptoError);
         }
 

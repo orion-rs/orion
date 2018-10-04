@@ -32,7 +32,13 @@ pub type HLenArray = [u8; HLEN];
 pub type ChaChaState = [u32; 16];
 /// The blocksize which ChaCha20 operates on.
 pub const CHACHA_BLOCKSIZE: usize = 64;
+/// The key size for ChaCha20.
+pub const CHACHA_KEYSIZE: usize = 32;
+/// The nonce size for IETF ChaCha20.
+pub const IETF_CHACHA_NONCESIZE: usize = 12;
 /// The blocksize which Poly1305 operates on.
 pub const POLY1305_BLOCKSIZE: usize = 16;
 /// Type for a Poly1305 tag.
 pub type Poly1305Tag = [u8; 16];
+/// The key size for Poly1305.
+pub const POLY1305_KEYSIZE: usize = 32;
