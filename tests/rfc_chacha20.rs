@@ -20,7 +20,7 @@
 
 // Testing against RFC 8439 test vectors
 #[cfg(test)]
-mod rfc8439 {
+mod rfc8439_chacha20 {
 
     extern crate hex;
     extern crate orion;
