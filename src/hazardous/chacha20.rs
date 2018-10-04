@@ -242,6 +242,20 @@ pub fn decrypt(
     encrypt(key, nonce, initial_counter, ciphertext, dst_out)
 }
 
+/// ChaCha20 block function returning a keystream block.
+pub fn keystream_block(key: &[u8], nonce: &[u8], counter: u32) -> [u8; CHACHA_BLOCKSIZE] {
+    let mut chacha_state = InternalState { state: [0_u32; 16] };
+    chacha_state.init_state(key, nonce).unwrap();
+
+    let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
+    let mut keystream_state: ChaChaState = chacha_state.chacha20_block(counter);
+
+    chacha_state.serialize_block(&keystream_state, &mut keystream_block).unwrap();
+    zero(&mut keystream_state);
+
+    keystream_block
+}
+
 #[test]
 fn test_bad_key_nonce_size() {
     let mut chacha_state = InternalState { state: [0_u32; 16] };
