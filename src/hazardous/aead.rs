@@ -117,6 +117,9 @@ pub fn aead_ietf_chacha20_poly1305_decrypt(
     if aad.is_empty() {
         return Err(UnknownCryptoError);
     }
+    if ciphertext_with_tag.is_empty() {
+        return Err(UnknownCryptoError);
+    }
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
