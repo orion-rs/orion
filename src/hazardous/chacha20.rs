@@ -243,17 +243,30 @@ pub fn decrypt(
 }
 
 /// ChaCha20 block function returning a keystream block.
-pub fn keystream_block(key: &[u8], nonce: &[u8], counter: u32) -> [u8; CHACHA_BLOCKSIZE] {
+pub fn keystream_block(
+    key: &[u8],
+    nonce: &[u8],
+    counter: u32,
+) -> Result<[u8; CHACHA_BLOCKSIZE], UnknownCryptoError> {
+    if key.len() != CHACHA_KEYSIZE {
+        return Err(UnknownCryptoError);
+    }
+    if nonce.len() != IETF_CHACHA_NONCESIZE {
+        return Err(UnknownCryptoError);
+    }
+
     let mut chacha_state = InternalState { state: [0_u32; 16] };
     chacha_state.init_state(key, nonce).unwrap();
 
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
     let mut keystream_state: ChaChaState = chacha_state.chacha20_block(counter);
 
-    chacha_state.serialize_block(&keystream_state, &mut keystream_block).unwrap();
+    chacha_state
+        .serialize_block(&keystream_state, &mut keystream_block)
+        .unwrap();
     zero(&mut keystream_state);
 
-    keystream_block
+    Ok(keystream_block)
 }
 
 #[test]
