@@ -20,17 +20,45 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # Parameters:
+//! - `key`: The secret key
+//! - `nonce`: The nonce value
+//! - `aad`: The additional authenticated data
+//! - `ciphertext_with_tag`: The encrypted data with the corresponding 128-bit Poly1305 tag
+//! appended to it
+//! - `plaintext`: The data to be encrypted
+//! - `dst_out`: Destination array that will hold the ciphertext_with_tag/plaintext after encryption/decryption
+//!
+//! See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//! - The length of the `key` is not `32` bytes
+//! - The length of the `nonce` is not `12` bytes
+//! - The length of `dst_out` is less than `plaintext + 16` when encrypting
+//! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
+//! - `plaintext` or `ciphertext_with_tag` are empty
+//! - `plaintext` or `ciphertext_with_tag - 16` are longer than (2^32)-2
+//! - The received tag does not match the tag calculated when decrypting
+//!
+//! # Security:
+//! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
+//! the security of all data that has been encrypted with that given key is compromised.
+//!
+//! # Example:
+//! ```
+//! ```
 use byteorder::{ByteOrder, LittleEndian};
 use hazardous::chacha20;
 use hazardous::constants::{
     CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE,
 };
 use hazardous::poly1305;
+use seckey::zero;
 use utilities::errors::UnknownCryptoError;
 use utilities::util;
 
-/// AEAD_Chacha20_Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-
+/// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> [u8; POLY1305_KEYSIZE] {
     let mut poly1305_key = [0u8; POLY1305_KEYSIZE];
     poly1305_key
@@ -39,6 +67,7 @@ fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> [u8; POLY1305_KEYSIZE] {
     poly1305_key
 }
 
+/// Padding size that gives the needed bytes to pad `input` as an integral multiple of `pad_len`.
 fn padding(input: &[u8], pad_len: usize) -> usize {
     if input.len() % pad_len != 0 {
         pad_len - (input.len() % pad_len)
@@ -47,7 +76,8 @@ fn padding(input: &[u8], pad_len: usize) -> usize {
     }
 }
 
-pub fn aead_ietf_chacha20_poly1305_encrypt(
+/// `AEAD_Chacha20_Poly1305` encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn ietf_chacha20_poly1305_encrypt(
     key: &[u8],
     nonce: &[u8],
     plaintext: &[u8],
@@ -63,14 +93,11 @@ pub fn aead_ietf_chacha20_poly1305_encrypt(
     if dst_out.len() < plaintext.len() + POLY1305_BLOCKSIZE {
         return Err(UnknownCryptoError);
     }
-    if aad.is_empty() {
-        return Err(UnknownCryptoError);
-    }
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
     }
 
-    let poly1305_key = poly1305_key_gen(key, nonce);
+    let mut poly1305_key = poly1305_key_gen(key, nonce);
     chacha20::encrypt(key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
@@ -95,10 +122,13 @@ pub fn aead_ietf_chacha20_poly1305_encrypt(
 
     dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize().unwrap());
 
+    zero(&mut poly1305_key);
+
     Ok(())
 }
 
-pub fn aead_ietf_chacha20_poly1305_decrypt(
+/// `AEAD_Chacha20_Poly1305` decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn ietf_chacha20_poly1305_decrypt(
     key: &[u8],
     nonce: &[u8],
     ciphertext_with_tag: &[u8],
@@ -114,16 +144,13 @@ pub fn aead_ietf_chacha20_poly1305_decrypt(
     if dst_out.len() < ciphertext_with_tag.len() - POLY1305_BLOCKSIZE {
         return Err(UnknownCryptoError);
     }
-    if aad.is_empty() {
-        return Err(UnknownCryptoError);
-    }
     if ciphertext_with_tag.is_empty() {
         return Err(UnknownCryptoError);
     }
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
-    let poly1305_key = poly1305_key_gen(key, nonce);
+    let mut poly1305_key = poly1305_key_gen(key, nonce);
     let mut padding_max = [0u8; 16];
 
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
@@ -140,7 +167,6 @@ pub fn aead_ietf_chacha20_poly1305_decrypt(
 
     // Using the 16 bytes from padding template to store length information
     LittleEndian::write_u64(&mut padding_max[..8], aad.len() as u64);
-    // Plaintext length == ciphertext length with ChaCha20
     LittleEndian::write_u64(&mut padding_max[8..16], ciphertext_len as u64);
 
     poly1305_state.update(&padding_max[..8]).unwrap();
@@ -158,6 +184,8 @@ pub fn aead_ietf_chacha20_poly1305_decrypt(
         &ciphertext_with_tag[..ciphertext_len],
         dst_out,
     ).unwrap();
+
+    zero(&mut poly1305_key);
 
     Ok(())
 }

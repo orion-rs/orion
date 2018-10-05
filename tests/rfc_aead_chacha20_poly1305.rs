@@ -38,13 +38,13 @@ mod rfc_aead_chacha20_poly1305 {
         let mut dst_out_ct = vec![0u8; ciphertext.len() + 16];
         let mut dst_out_pt = vec![0u8; plaintext.len()];
 
-        aead_ietf_chacha20_poly1305_encrypt(&key, &nonce, &plaintext, &aad, &mut dst_out_ct)
+        ietf_chacha20_poly1305_encrypt(&key, &nonce, &plaintext, &aad, &mut dst_out_ct)
             .unwrap();
 
         assert_eq!(dst_out_ct[..plaintext.len()].as_ref(), ciphertext.as_ref());
         assert_eq!(dst_out_ct[plaintext.len()..].as_ref(), tag.as_ref());
 
-        aead_ietf_chacha20_poly1305_decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt)
+        ietf_chacha20_poly1305_decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt)
             .unwrap();
 
         assert_eq!(dst_out_pt[..].as_ref(), plaintext.as_ref());
@@ -142,7 +142,7 @@ mod rfc_aead_chacha20_poly1305 {
 
         let mut dst_out_pt = vec![0u8; ciphertext.len()];
 
-        aead_ietf_chacha20_poly1305_decrypt(&key, &nonce, &ct_plus_tag, &aad, &mut dst_out_pt)
+        ietf_chacha20_poly1305_decrypt(&key, &nonce, &ct_plus_tag, &aad, &mut dst_out_pt)
             .unwrap();
 
         assert_eq!(dst_out_pt[..].as_ref(), plaintext);
