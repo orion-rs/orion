@@ -252,7 +252,6 @@ impl Poly1305 {
             return Err(FinalizationCryptoError);
         }
 
-        // In case `message` is not POLY1305_BLOCKSIZE length
         let mut data = message;
 
         if self.leftover != 0 {
@@ -322,11 +321,11 @@ impl Poly1305 {
 
 /// Initialize `Poly1305` struct with a given one-time key.
 pub fn init(one_time_key: &[u8]) -> Result<Poly1305, UnknownCryptoError> {
-    if one_time_key.len() != 32 {
+    if one_time_key.len() != POLY1305_KEYSIZE {
         return Err(UnknownCryptoError);
     }
 
-    let mut poly_1305 = Poly1305 {
+    let mut poly_1305_state = Poly1305 {
         a: [0u32; 5],
         r: [0u32; 5],
         s: [0u32; 4],
@@ -335,9 +334,9 @@ pub fn init(one_time_key: &[u8]) -> Result<Poly1305, UnknownCryptoError> {
         is_finalized: false,
     };
 
-    poly_1305.initialize(one_time_key).unwrap();
+    poly_1305_state.initialize(one_time_key).unwrap();
 
-    Ok(poly_1305)
+    Ok(poly_1305_state)
 }
 
 /// One-shot function for generating a Poly1305 tag of a message.
