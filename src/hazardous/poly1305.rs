@@ -21,6 +21,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # About:
+//! This implementation is based on [poly1305-donna](https://github.com/floodyberry/poly1305-donna).
+//!
 //! # Parameters:
 //!
 //! # Exceptions:
