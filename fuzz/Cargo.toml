@@ -15,7 +15,6 @@ sp800-185 = "0.2.0"
 chacha = "0.2.0"
 rust-crypto = "0.2.36"
 
-
 [dependencies.orion]
 path = ".."
 [dependencies.libfuzzer-sys]
@@ -67,3 +66,11 @@ path = "fuzz_targets/poly1305_compare.rs"
 [[bin]]
 name = "poly1305"
 path = "fuzz_targets/poly1305.rs"
+
+[[bin]]
+name = "chacha20_poly1305"
+path = "fuzz_targets/chacha20_poly1305.rs"
+
+[[bin]]
+name = "chacha20_poly1305_compare"
+path = "fuzz_targets/chacha20_poly1305_compare.rs"

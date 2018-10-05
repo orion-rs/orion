@@ -1,13 +1,14 @@
 #![no_main]
-#[macro_use] extern crate libfuzzer_sys;
-extern crate orion;
+#[macro_use]
+extern crate libfuzzer_sys;
 extern crate crypto;
+extern crate orion;
 extern crate ring;
 pub mod util;
 
-use orion::hazardous::poly1305::*;
 use self::util::*;
 use crypto::mac::Mac;
+use orion::hazardous::poly1305::*;
 
 fuzz_target!(|data: &[u8]| {
     let mut key = [0u8; 32];

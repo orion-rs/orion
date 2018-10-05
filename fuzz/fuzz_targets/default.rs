@@ -39,7 +39,7 @@ fn fuzz_default(data: &[u8]) -> () {
 
         let dec_data = default::chacha20_decrypt(
             &rand_key,
-            &default::chacha20_encrypt(&rand_key, &data).unwrap()
+            &default::chacha20_encrypt(&rand_key, &data).unwrap(),
         ).unwrap();
 
         assert_eq!(dec_data, data);

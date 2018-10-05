@@ -15,7 +15,6 @@ use ring::hmac as ring_hmac;
 use ring::pbkdf2 as ring_pbkdf2;
 
 fn ro_hmac(data: &[u8]) {
-
     let mut input = Vec::from(data);
     // Input data cannot be empty, because the first byte will be used to determine
     // where the input should be split
@@ -58,7 +57,6 @@ fn ro_hmac(data: &[u8]) {
 }
 
 fn ro_hkdf(data: &[u8]) {
-
     let mut input = Vec::from(data);
     // Input data cannot be empty, because the first byte will be used to determine
     // where the input should be split
@@ -105,10 +103,24 @@ fn ro_pbkdf2(data: &[u8]) {
     let iter = (input[0] as usize * 40) + 1;
 
     pbkdf2::derive_key(&password, &salt, iter, &mut dk_out_orion).unwrap();
-    ring_pbkdf2::derive(&digest::SHA512, iter as u32, &salt, &password, &mut dk_out_ring);
+    ring_pbkdf2::derive(
+        &digest::SHA512,
+        iter as u32,
+        &salt,
+        &password,
+        &mut dk_out_ring,
+    );
 
     assert_eq!(&dk_out_ring, &dk_out_orion);
-    assert!(ring_pbkdf2::verify(&digest::SHA512, iter as u32, &salt, &password, &dk_out_orion).is_ok());
+    assert!(
+        ring_pbkdf2::verify(
+            &digest::SHA512,
+            iter as u32,
+            &salt,
+            &password,
+            &dk_out_orion
+        ).is_ok()
+    );
     assert!(pbkdf2::verify(&dk_out_ring, &password, &salt, iter, &mut dk_out_orion).unwrap());
 }
 

@@ -1,6 +1,3 @@
-
-
-
 pub fn apply_from_input_fixed(apply_to: &mut [u8], input: &[u8], lower_bound: usize) {
     if lower_bound > input.len() {
         return ();

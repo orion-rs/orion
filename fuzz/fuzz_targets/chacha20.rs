@@ -1,13 +1,13 @@
 #![no_main]
-#[macro_use] extern crate libfuzzer_sys;
+#[macro_use]
+extern crate libfuzzer_sys;
 extern crate orion;
 pub mod util;
 
-use orion::hazardous::chacha20;
 use self::util::*;
+use orion::hazardous::chacha20;
 
 fuzz_target!(|data: &[u8]| {
-
     let mut key = [0u8; 32];
     let mut nonce = [0u8; 12];
     apply_from_input_fixed(&mut key, &data, 0);
