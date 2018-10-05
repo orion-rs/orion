@@ -66,6 +66,9 @@ pub fn aead_ietf_chacha20_poly1305_encrypt(
     if aad.is_empty() {
         return Err(UnknownCryptoError);
     }
+    if plaintext.is_empty() {
+        return Err(UnknownCryptoError);
+    }
 
     let poly1305_key = poly1305_key_gen(key, nonce);
     chacha20::encrypt(key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
