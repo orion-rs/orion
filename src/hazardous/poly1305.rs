@@ -88,7 +88,7 @@ impl Poly1305 {
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::identity_op))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::assign_op_pattern))]
-    /// Process a datablock of `POLY1305_BLOCKSIZE length`.
+    /// Process a datablock of `POLY1305_BLOCKSIZE` length.
     fn process_block(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if data.len() != POLY1305_BLOCKSIZE {
             return Err(UnknownCryptoError);
@@ -179,7 +179,7 @@ impl Poly1305 {
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::identity_op))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::assign_op_pattern))]
-    /// Remaining processing after all blocks have been processed.
+    /// Remaining processing after all data blocks have been processed.
     fn process_end_of_stream(&mut self) -> () {
         // full carry h
         let mut h0: u32 = self.a[0];
@@ -444,7 +444,8 @@ fn update_after_finalize_with_reset_ok() {
     let mut poly1305_state = init(&[0u8; 32]).unwrap();
 
     poly1305_state.update(&[0u8; 16]).unwrap();
-    poly1305_state.finalize().unwrap();
+    let expected = poly1305_state.finalize().unwrap();
     poly1305_state.reset();
     poly1305_state.update(&[0u8; 16]).unwrap();
+    assert_eq!(expected.as_ref(), poly1305_state.finalize().unwrap().as_ref());
 }
