@@ -20,6 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/// AEAD (Authenticated Encryption with Associated Data) functions such as `IETF_ChaCha20_Poly1305`.
+pub mod aead;
+
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub mod hmac;
 
