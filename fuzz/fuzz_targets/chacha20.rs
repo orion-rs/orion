@@ -24,7 +24,4 @@ fuzz_target!(|data: &[u8]| {
     // Decrypt the ciphertext and verify it matches data
     chacha20::decrypt(&key, &nonce, icount, &dst_ct, &mut dst_pt).unwrap();
     assert_eq!(&dst_pt, &pt);
-    // Obvios not equal on plaintext to decrypt input
-    chacha20::decrypt(&key, &nonce, icount, &pt, &mut dst_pt).unwrap();
-    assert_ne!(&dst_pt, &pt);
 });
