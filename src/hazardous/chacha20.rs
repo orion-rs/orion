@@ -242,7 +242,7 @@ pub fn decrypt(
     encrypt(key, nonce, initial_counter, ciphertext, dst_out)
 }
 
-/// ChaCha20 block function returning a keystream block.
+/// ChaCha20 block function returning a serialized keystream block.
 pub fn keystream_block(
     key: &[u8],
     nonce: &[u8],
@@ -270,7 +270,7 @@ pub fn keystream_block(
 }
 
 #[test]
-fn test_bad_key_nonce_size() {
+fn test_bad_key_nonce_size_init() {
     let mut chacha_state = InternalState { state: [0_u32; 16] };
 
     assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 12]).is_err());
@@ -281,6 +281,16 @@ fn test_bad_key_nonce_size() {
     assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 15]).is_err());
     assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 10]).is_err());
     assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 15]).is_err());
+    assert!(chacha_state.init_state(&[0u8; 32], &[0u8; 12]).is_ok());
+}
+
+#[test]
+fn test_bad_key_nonce_size_keystream_block() {
+    assert!(keystream_block(&[0u8; 32], &[0u8; 10], 0).is_err());
+    assert!(keystream_block(&[0u8; 30], &[0u8; 10], 0).is_err());
+    assert!(keystream_block(&[0u8; 33], &[0u8; 12], 0).is_err());
+    assert!(keystream_block(&[0u8; 33], &[0u8; 13], 0).is_err());
+    assert!(keystream_block(&[0u8; 32], &[0u8; 12], 0).is_ok());
 }
 
 #[test]
@@ -397,12 +407,16 @@ fn test_chacha20_block_results() {
     state.state[12] = 1_u32;
     assert_eq!(state.state[..], expected_init[..]);
 
-    let keystream_block = state.chacha20_block(1);
+    let keystream_block_from_state = state.chacha20_block(1);
     let mut ser_block = [0u8; 64];
     state
-        .serialize_block(&keystream_block, &mut ser_block)
+        .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
+
+    let keystream_block_only = keystream_block(&key, &nonce, 1).unwrap();
+
     assert_eq!(ser_block[..], expected[..]);
+    assert_eq!(ser_block[..], keystream_block_only[..]);
 }
 
 #[test]
@@ -431,14 +445,18 @@ fn chacha20_block_test_1() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block = state.chacha20_block(0);
-    assert_eq!(keystream_block[..], expected_state[..]);
+    let keystream_block_from_state = state.chacha20_block(0);
+    assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
     state
-        .serialize_block(&keystream_block, &mut ser_block)
+        .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
+
+    let keystream_block_only = keystream_block(&key, &nonce, 0).unwrap();
+
     assert_eq!(ser_block[..], expected[..]);
+    assert_eq!(ser_block[..], keystream_block_only[..]);
 }
 
 #[test]
@@ -467,14 +485,18 @@ fn chacha20_block_test_2() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block = state.chacha20_block(1);
-    assert_eq!(keystream_block[..], expected_state[..]);
+    let keystream_block_from_state = state.chacha20_block(1);
+    assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
     state
-        .serialize_block(&keystream_block, &mut ser_block)
+        .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
+
+    let keystream_block_only = keystream_block(&key, &nonce, 1).unwrap();
+
     assert_eq!(ser_block[..], expected[..]);
+    assert_eq!(ser_block[..], keystream_block_only[..]);
 }
 
 #[test]
@@ -503,14 +525,18 @@ fn chacha20_block_test_3() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block = state.chacha20_block(1);
-    assert_eq!(keystream_block[..], expected_state[..]);
+    let keystream_block_from_state = state.chacha20_block(1);
+    assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
     state
-        .serialize_block(&keystream_block, &mut ser_block)
+        .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
+
+    let keystream_block_only = keystream_block(&key, &nonce, 1).unwrap();
+
     assert_eq!(ser_block[..], expected[..]);
+    assert_eq!(ser_block[..], keystream_block_only[..]);
 }
 
 #[test]
@@ -539,14 +565,18 @@ fn chacha20_block_test_4() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block = state.chacha20_block(2);
-    assert_eq!(keystream_block[..], expected_state[..]);
+    let keystream_block_from_state = state.chacha20_block(2);
+    assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
     state
-        .serialize_block(&keystream_block, &mut ser_block)
+        .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
+
+    let keystream_block_only = keystream_block(&key, &nonce, 2).unwrap();
+
     assert_eq!(ser_block[..], expected[..]);
+    assert_eq!(ser_block[..], keystream_block_only[..]);
 }
 
 #[test]
@@ -575,14 +605,18 @@ fn chacha20_block_test_5() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block = state.chacha20_block(0);
-    assert_eq!(keystream_block[..], expected_state[..]);
+    let keystream_block_from_state = state.chacha20_block(0);
+    assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
     state
-        .serialize_block(&keystream_block, &mut ser_block)
+        .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
+
+    let keystream_block_only = keystream_block(&key, &nonce, 0).unwrap();
+
     assert_eq!(ser_block[..], expected[..]);
+    assert_eq!(ser_block[..], keystream_block_only[..]);
 }
 
 #[test]
@@ -655,6 +689,14 @@ fn test_key_schedule() {
     state
         .serialize_block(&second_block_state, &mut actual_keystream[64..])
         .unwrap();
+    assert_eq!(
+        actual_keystream[..expected_keystream.len()].as_ref(),
+        expected_keystream.as_ref()
+    );
+
+    actual_keystream[..64].copy_from_slice(&keystream_block(&key, &nonce, 1).unwrap());
+    actual_keystream[64..].copy_from_slice(&keystream_block(&key, &nonce, 1 + 1).unwrap());
+
     assert_eq!(
         actual_keystream[..expected_keystream.len()].as_ref(),
         expected_keystream.as_ref()
