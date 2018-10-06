@@ -58,14 +58,17 @@ mod other_poly1305 {
 
     #[test]
     fn openssl_from_ring() {
-        test::from_file("tests/test_data/Poly1305_ring_openssl.rsp", |section, test_case| {
-            assert_eq!(section, "");
-            let key_value = test_case.consume_bytes("Key");
-            let input = test_case.consume_bytes("Input");
-            let output = test_case.consume_bytes("MAC");
+        test::from_file(
+            "tests/test_data/Poly1305_ring_openssl.rsp",
+            |section, test_case| {
+                assert_eq!(section, "");
+                let key_value = test_case.consume_bytes("Key");
+                let input = test_case.consume_bytes("Input");
+                let output = test_case.consume_bytes("MAC");
 
-            poly1305_test_runner(&key_value[..], &input[..], &output[..16], true)
-        });
+                poly1305_test_runner(&key_value[..], &input[..], &output[..16], true)
+            },
+        );
     }
 
     // Only test vectors from Monocypher where the input is not empty are tested
