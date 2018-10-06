@@ -19,6 +19,14 @@
 // SOFTWARE.
 
 // Testing against Google Wycheproof test vectors
+
+
+/*
+
+Latest commit when these test vectors were pulled:https://github.com/google/wycheproof/commit/8f2cba4d3fe693aa312fed6939ef5454952d830d
+
+*/
+
 #[cfg(test)]
 mod wycheproof_aead_chacha20_poly1305 {
 
