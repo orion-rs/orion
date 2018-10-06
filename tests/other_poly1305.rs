@@ -57,9 +57,9 @@ mod other_poly1305 {
     }
 
     #[test]
-    fn openssl_from_ring() {
+    fn boringssl_from_ring() {
         test::from_file(
-            "tests/test_data/Poly1305_ring_openssl.rsp",
+            "tests/test_data/Poly1305_ring_boringssl.rsp",
             |section, test_case| {
                 assert_eq!(section, "");
                 let key_value = test_case.consume_bytes("Key");
