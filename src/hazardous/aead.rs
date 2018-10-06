@@ -37,6 +37,7 @@
 //! - The length of the `nonce` is not `12` bytes
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
+//! - The length of `ciphertext_with_tag` is not greater than 16
 //! - `plaintext` or `ciphertext_with_tag` are empty
 //! - `plaintext` or `ciphertext_with_tag - 16` are longer than (2^32)-2
 //! - The received tag does not match the tag calculated when decrypting
@@ -141,10 +142,10 @@ pub fn ietf_chacha20_poly1305_decrypt(
     if nonce.len() != IETF_CHACHA_NONCESIZE {
         return Err(UnknownCryptoError);
     }
-    if dst_out.len() < ciphertext_with_tag.len() - POLY1305_BLOCKSIZE {
+    if ciphertext_with_tag.len() <= POLY1305_BLOCKSIZE {
         return Err(UnknownCryptoError);
     }
-    if ciphertext_with_tag.is_empty() {
+    if dst_out.len() < ciphertext_with_tag.len() - POLY1305_BLOCKSIZE {
         return Err(UnknownCryptoError);
     }
 
@@ -188,6 +189,40 @@ pub fn ietf_chacha20_poly1305_decrypt(
     zero(&mut poly1305_key);
 
     Ok(())
+}
+
+#[test]
+fn test_encrypt_decrypt_key_nonce_sizes() {
+    let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
+    let mut dst_out_pt = [0u8; 64];
+
+    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 30], &[0u8; 10], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_err());
+    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 30], &[0u8; 10], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_err());
+
+    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 30], &[0u8; 12], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_err());
+    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 30], &[0u8; 12], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_err());
+
+    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 32], &[0u8; 10], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_err());
+    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 32], &[0u8; 10], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_err());
+
+    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 33], &[0u8; 13], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_err());
+    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 33], &[0u8; 13], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_err());
+
+    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 32], &[0u8; 12], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_ok());
+    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 32], &[0u8; 12], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_ok());
+}
+
+#[test]
+#[should_panic]
+fn test_modified_tag_error() {
+
+    let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
+    let mut dst_out_pt = [0u8; 64];
+
+    ietf_chacha20_poly1305_encrypt(&[0u8; 32], &[0u8; 12], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).unwrap();
+    // Modify the tags first byte
+    dst_out_ct[65] ^= 1;
+    ietf_chacha20_poly1305_decrypt(&[0u8; 32], &[0u8; 12], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).unwrap();
 }
 
 #[test]
