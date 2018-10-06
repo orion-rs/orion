@@ -303,7 +303,7 @@ impl Poly1305 {
 
         if self.leftover != 0 {
             local_buffer[self.leftover] = 1;
-
+            // Pad the last block with zeroes before processing it
             for buf_itm in local_buffer
                 .iter_mut()
                 .take(POLY1305_BLOCKSIZE)
