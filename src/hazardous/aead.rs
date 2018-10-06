@@ -196,33 +196,124 @@ fn test_encrypt_decrypt_key_nonce_sizes() {
     let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
     let mut dst_out_pt = [0u8; 64];
 
-    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 30], &[0u8; 10], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_err());
-    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 30], &[0u8; 10], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_err());
+    assert!(
+        ietf_chacha20_poly1305_encrypt(
+            &[0u8; 30],
+            &[0u8; 10],
+            &[0u8; 64],
+            &[0u8; 0],
+            &mut dst_out_ct
+        ).is_err()
+    );
+    assert!(
+        ietf_chacha20_poly1305_decrypt(
+            &[0u8; 30],
+            &[0u8; 10],
+            &dst_out_ct,
+            &[0u8; 0],
+            &mut dst_out_pt
+        ).is_err()
+    );
 
-    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 30], &[0u8; 12], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_err());
-    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 30], &[0u8; 12], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_err());
+    assert!(
+        ietf_chacha20_poly1305_encrypt(
+            &[0u8; 30],
+            &[0u8; 12],
+            &[0u8; 64],
+            &[0u8; 0],
+            &mut dst_out_ct
+        ).is_err()
+    );
+    assert!(
+        ietf_chacha20_poly1305_decrypt(
+            &[0u8; 30],
+            &[0u8; 12],
+            &dst_out_ct,
+            &[0u8; 0],
+            &mut dst_out_pt
+        ).is_err()
+    );
 
-    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 32], &[0u8; 10], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_err());
-    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 32], &[0u8; 10], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_err());
+    assert!(
+        ietf_chacha20_poly1305_encrypt(
+            &[0u8; 32],
+            &[0u8; 10],
+            &[0u8; 64],
+            &[0u8; 0],
+            &mut dst_out_ct
+        ).is_err()
+    );
+    assert!(
+        ietf_chacha20_poly1305_decrypt(
+            &[0u8; 32],
+            &[0u8; 10],
+            &dst_out_ct,
+            &[0u8; 0],
+            &mut dst_out_pt
+        ).is_err()
+    );
 
-    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 33], &[0u8; 13], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_err());
-    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 33], &[0u8; 13], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_err());
+    assert!(
+        ietf_chacha20_poly1305_encrypt(
+            &[0u8; 33],
+            &[0u8; 13],
+            &[0u8; 64],
+            &[0u8; 0],
+            &mut dst_out_ct
+        ).is_err()
+    );
+    assert!(
+        ietf_chacha20_poly1305_decrypt(
+            &[0u8; 33],
+            &[0u8; 13],
+            &dst_out_ct,
+            &[0u8; 0],
+            &mut dst_out_pt
+        ).is_err()
+    );
 
-    assert!(ietf_chacha20_poly1305_encrypt(&[0u8; 32], &[0u8; 12], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).is_ok());
-    assert!(ietf_chacha20_poly1305_decrypt(&[0u8; 32], &[0u8; 12], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).is_ok());
+    assert!(
+        ietf_chacha20_poly1305_encrypt(
+            &[0u8; 32],
+            &[0u8; 12],
+            &[0u8; 64],
+            &[0u8; 0],
+            &mut dst_out_ct
+        ).is_ok()
+    );
+    assert!(
+        ietf_chacha20_poly1305_decrypt(
+            &[0u8; 32],
+            &[0u8; 12],
+            &dst_out_ct,
+            &[0u8; 0],
+            &mut dst_out_pt
+        ).is_ok()
+    );
 }
 
 #[test]
 #[should_panic]
 fn test_modified_tag_error() {
-
     let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
     let mut dst_out_pt = [0u8; 64];
 
-    ietf_chacha20_poly1305_encrypt(&[0u8; 32], &[0u8; 12], &[0u8; 64], &[0u8; 0], &mut dst_out_ct).unwrap();
+    ietf_chacha20_poly1305_encrypt(
+        &[0u8; 32],
+        &[0u8; 12],
+        &[0u8; 64],
+        &[0u8; 0],
+        &mut dst_out_ct,
+    ).unwrap();
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
-    ietf_chacha20_poly1305_decrypt(&[0u8; 32], &[0u8; 12], &dst_out_ct, &[0u8; 0], &mut dst_out_pt).unwrap();
+    ietf_chacha20_poly1305_decrypt(
+        &[0u8; 32],
+        &[0u8; 12],
+        &dst_out_ct,
+        &[0u8; 0],
+        &mut dst_out_pt,
+    ).unwrap();
 }
 
 #[test]
