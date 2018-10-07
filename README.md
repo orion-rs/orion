@@ -24,12 +24,14 @@ Currently contains:
 * PBKDF2-HMAC-SHA512.
 * cSHAKE256.
 * ChaCha20.
+* Poly1305.
+* AEAD ChaCha20Poly1305.
 
 ***Note on cSHAKE***:
 The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
 will produce **incorrect results on big-endian based systems**. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
 
-### Usage
+### Usage example
 ```rust
 extern crate orion;
 use orion::default;
@@ -83,7 +85,7 @@ Can be found [here](https://github.com/brycx/orion/releases).
 - Thanks to [@ritalinn](https://github.com/ritalinn) for the logo.
 
 ### Alternatives
-- [*ring*](https://crates.io/crates/ring) (HMAC, HKDF, PBKDF2)
+- [*ring*](https://crates.io/crates/ring) (HMAC, HKDF, PBKDF2, AEAD ChaCha20Poly1305)
 - [RustCrypto HMAC](https://crates.io/crates/hmac)
 - [RustCrypto HKDF](https://crates.io/crates/hkdf)
 - [RustCrypto PBKDF2](https://crates.io/crates/pbkdf2)
