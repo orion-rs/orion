@@ -20,7 +20,7 @@ exclude = [
 
 [dependencies]
 rand = { version = "0.5.5", optional = true }
-sha2 = "0.7.1"
+sha2 = "0.8.0"
 tiny-keccak = "1.4.2"
 byteorder = { version = "1.2.6", default-features = false }
 subtle = { version = "1.0.0", default-features = false }
