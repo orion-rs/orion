@@ -20,7 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use hazardous::chacha20;
 use hazardous::constants::*;
 use hazardous::cshake;
 use hazardous::hkdf;
@@ -301,97 +300,6 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
     Ok(hash)
 }
 
-/// IETF ChaCha20 encryption.
-/// # About:
-/// - The nonce is automatically generated
-/// - Returns a vector where the first 12 bytes are the nonce and the rest is the ciphertext
-/// - The initial counter is set to `0`
-///
-/// # Parameters:
-/// - `plaintext`:  The data to be encrypted
-/// - `key`: The secret key used to encrypt the `plaintext`
-///
-/// # Security:
-/// This does not provide any data integrity. If you need data integrity, you should be using a
-/// `ChaCha20_Poly1305` construct instead. In most cases you would want data integrity.
-/// See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - `key` is not 32 bytes
-/// - `plaintext` is empty
-/// - `plaintext` is longer than (2^32)-2
-///
-/// # Example:
-/// ```
-/// use orion::default;
-/// use orion::utilities::util;
-///
-/// let mut key = [0u8; 32]; // Replace this with the key used for encryption
-/// util::gen_rand_key(&mut key).unwrap();
-///
-/// let encrypted_data = default::chacha20_encrypt(&key, "Secret message".as_bytes()).unwrap();
-/// ```
-pub fn chacha20_encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-    let mut nonce = [0u8; 12];
-    util::gen_rand_key(&mut nonce).unwrap();
-
-    let mut dst_out = vec![0u8; plaintext.len() + 12];
-    dst_out[..12].copy_from_slice(&nonce);
-
-    chacha20::encrypt(key, &nonce, 0, plaintext, &mut dst_out[12..]).unwrap();
-
-    Ok(dst_out)
-}
-
-/// IETF ChaCha20 decryption.
-/// # About:
-/// - The initial counter is set to `0`
-/// - The ciphertext passed must be of the same format as the one returned by `default::chacha20_encrypt()`
-///
-/// # Parameters:
-/// - `ciphertext`:  The data to be decrypted with the first 12 bytes being the nonce
-/// - `key`: The secret key used to decrypt the `ciphertext`
-///
-/// # Security:
-/// This does not provide any data integrity. If you need data integrity, you should be using a
-/// `ChaCha20_Poly1305` construct instead. In most cases you would want data integrity.
-/// See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - `key` is not 32 bytes
-/// - `ciphertext` is less than 13 bytes
-/// - `ciphertext` is longer than (2^32)-14
-///
-/// # Example:
-/// ```
-/// use orion::default;
-/// use orion::utilities::util;
-///
-/// let mut key = [0u8; 32]; // Replace this with the key used for decryption
-/// util::gen_rand_key(&mut key).unwrap();
-///
-/// // Sample encrypted data where the first 12 bytes are the nonce
-/// let ciphertext = "VRjKWpyfx9p6YynWFgAvCM/ithgwXaRptiljrQDXWEI".as_bytes();
-///
-/// let decrypted_data = default::chacha20_decrypt(&key, ciphertext).unwrap();
-/// ```
-pub fn chacha20_decrypt(key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-    if ciphertext.len() < 13 {
-        return Err(UnknownCryptoError);
-    }
-
-    let mut nonce = [0u8; 12];
-    nonce.copy_from_slice(&ciphertext[..12]);
-
-    let mut dst_out = vec![0u8; ciphertext.len() - 12];
-
-    chacha20::decrypt(key, &nonce, 0, &ciphertext[12..], &mut dst_out).unwrap();
-
-    Ok(dst_out)
-}
-
 #[cfg(test)]
 mod test {
 
@@ -566,78 +474,5 @@ mod test {
         let custom = "".as_bytes();
 
         assert!(default::cshake(&data, custom).is_err());
-    }
-
-    #[test]
-    fn chacha20_encryption_decryption() {
-        let mut key = [0u8; 32];
-        util::gen_rand_key(&mut key).unwrap();
-        let plaintext = "Secret message".as_bytes().to_vec();
-
-        let dst_ciphertext = default::chacha20_encrypt(&key, &plaintext).unwrap();
-        assert!(dst_ciphertext.len() == plaintext.len() + 12);
-        let dst_plaintext = default::chacha20_decrypt(&key, &dst_ciphertext).unwrap();
-        assert!(dst_plaintext.len() == plaintext.len());
-        assert_eq!(plaintext, dst_plaintext);
-    }
-
-    #[test]
-    #[should_panic]
-    fn chacha20_plaintext_empty_err() {
-        let mut key = [0u8; 32];
-        util::gen_rand_key(&mut key).unwrap();
-        let plaintext = "".as_bytes().to_vec();
-
-        default::chacha20_encrypt(&key, &plaintext).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn chacha20_ciphertext_less_than_13_err() {
-        let mut key = [0u8; 32];
-        util::gen_rand_key(&mut key).unwrap();
-        let ciphertext = [0u8; 12];
-
-        default::chacha20_decrypt(&key, &ciphertext).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn chacha20_small_key_err_dec() {
-        let mut key = [0u8; 31];
-        util::gen_rand_key(&mut key).unwrap();
-        let ciphertext = "".as_bytes().to_vec();
-
-        default::chacha20_decrypt(&key, &ciphertext).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn chacha20_small_key_err_enc() {
-        let mut key = [0u8; 31];
-        util::gen_rand_key(&mut key).unwrap();
-        let plaintext = "".as_bytes().to_vec();
-
-        default::chacha20_encrypt(&key, &plaintext).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn chacha20_big_key_err_dec() {
-        let mut key = [0u8; 35];
-        util::gen_rand_key(&mut key).unwrap();
-        let ciphertext = "".as_bytes().to_vec();
-
-        default::chacha20_decrypt(&key, &ciphertext).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn chacha20_big_key_err_enc() {
-        let mut key = [0u8; 35];
-        util::gen_rand_key(&mut key).unwrap();
-        let plaintext = "".as_bytes().to_vec();
-
-        default::chacha20_encrypt(&key, &plaintext).unwrap();
     }
 }
