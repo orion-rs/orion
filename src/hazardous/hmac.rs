@@ -106,15 +106,15 @@ impl Hmac {
             }
         }
 
-        self.ipad_hasher.input(&self.ipad);
-        self.opad_hasher.input(&opad);
+        self.ipad_hasher.input(self.ipad.as_ref());
+        self.opad_hasher.input(opad.as_ref());
         zero(&mut opad);
     }
 
     /// Reset to `init()` state.
     pub fn reset(&mut self) {
         if self.is_finalized {
-            self.ipad_hasher.input(&self.ipad);
+            self.ipad_hasher.input(self.ipad.as_ref());
             self.is_finalized = false;
         } else {
             ()
