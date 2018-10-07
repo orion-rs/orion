@@ -7,6 +7,7 @@ use orion::hazardous::cshake;
 use orion::hazardous::hkdf;
 use orion::hazardous::hmac;
 use orion::hazardous::pbkdf2;
+use orion::hazardous::poly1305;
 use test::Bencher;
 
 #[bench]
@@ -64,5 +65,14 @@ fn bench_chacha20_decrypt(b: &mut Bencher) {
         let mut plaintext = [0u8; 256];
         let ciphertext = [0u8; 256];
         chacha20::decrypt(&[0u8; 32], &[0u8; 12], 0, &ciphertext, &mut plaintext).unwrap();
+    });
+}
+
+#[bench]
+fn bench_poly1305(b: &mut Bencher) {
+    b.iter(|| {
+        let mut mac = poly1305::init(&vec![0x01; 32]).unwrap();
+        mac.update(&vec![0x01; 64]).unwrap();
+        mac.finalize().unwrap();
     });
 }
