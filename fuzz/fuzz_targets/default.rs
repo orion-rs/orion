@@ -36,13 +36,6 @@ fn fuzz_default(data: &[u8]) -> () {
 
         default::cshake(&data, &mod_custom).unwrap();
         default::cshake("".as_bytes(), &mod_custom).unwrap();
-
-        let dec_data = default::chacha20_decrypt(
-            &rand_key,
-            &default::chacha20_encrypt(&rand_key, &data).unwrap(),
-        ).unwrap();
-
-        assert_eq!(dec_data, data);
     }
 }
 
