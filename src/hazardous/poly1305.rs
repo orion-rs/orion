@@ -22,22 +22,38 @@
 // SOFTWARE.
 
 //! # About:
-//! This implementation is based on [poly1305-donna](https://github.com/floodyberry/poly1305-donna).
+//! This implementation is based on [poly1305-donna](https://github.com/floodyberry/poly1305-donna)
+//! by Andrew Moon.
 //!
 //! # Parameters:
+//! - `message`: Message to be authenticated
+//! - `one_time_key`: One-time key used to authenticate a message
+//! - `expected`: The expected tag that needs to be verified
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - `one_time_key` is not 32 bytes
-//! - `msg_block` is not 16 bytes
 //! - `finalize()` is called twice without a `reset()` in between
 //! - `update()` is called after `finalize()` without a `reset()` in between
-//! - `message` is empty
 //!
 //! # Security:
+//! The one-time key should always be generated using a CSPRNG. The `gen_rand_key` function
+//! in `util` can be used for this.
 //!
 //! # Example:
 //! ```
+//! use orion::hazardous::poly1305;
+//! use orion::utilities::util;
+//!
+//! let mut one_time_key = [0u8; 32];
+//! util::gen_rand_key(&mut one_time_key).unwrap();
+//! let msg = "Some message.";
+//!
+//! let mut poly1305_state = poly1305::init(&one_time_key).unwrap();
+//! poly1305_state.update(msg.as_bytes()).unwrap();
+//! let tag = poly1305_state.finalize().unwrap();
+//!
+//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes()).unwrap());
 //! ```
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -249,7 +265,7 @@ impl Poly1305 {
         }
     }
     #[inline(always)]
-    /// Update state with a message block that is 16 bytes. This can be called multiple times.
+    /// Update state with a message. This can be called multiple times.
     pub fn update(&mut self, message: &[u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
             return Err(FinalizationCryptoError);
@@ -291,7 +307,7 @@ impl Poly1305 {
         Ok(())
     }
     #[inline(always)]
-    /// Retrive a Poly1305 tag.
+    /// Return a Poly1305 tag.
     pub fn finalize(&mut self) -> Result<Poly1305Tag, FinalizationCryptoError> {
         if self.is_finalized {
             return Err(FinalizationCryptoError);
@@ -322,7 +338,7 @@ impl Poly1305 {
     }
 }
 
-/// Initialize `Poly1305` struct with a given one-time key.
+/// Initialize a `Poly1305` struct with a given one-time key.
 pub fn init(one_time_key: &[u8]) -> Result<Poly1305, UnknownCryptoError> {
     if one_time_key.len() != POLY1305_KEYSIZE {
         return Err(UnknownCryptoError);
@@ -344,10 +360,6 @@ pub fn init(one_time_key: &[u8]) -> Result<Poly1305, UnknownCryptoError> {
 
 /// One-shot function for generating a Poly1305 tag of a message.
 pub fn poly1305(one_time_key: &[u8], message: &[u8]) -> Result<Poly1305Tag, UnknownCryptoError> {
-    if message.is_empty() {
-        return Err(UnknownCryptoError);
-    }
-
     let mut poly_1305_state = init(one_time_key).unwrap();
     poly_1305_state.update(message).unwrap();
     let poly_1305_tag = poly_1305_state.finalize().unwrap();
@@ -392,12 +404,6 @@ fn test_poly1305_oneshot_bad_key_err_less() {
 #[should_panic]
 fn test_poly1305_oneshot_bad_key_err_greater() {
     poly1305(&[0u8; 33], &[0u8; 16]).unwrap();
-}
-
-#[test]
-#[should_panic]
-fn test_poly1305_oneshot_bad_msg_err() {
-    poly1305(&[0u8; 32], &[0u8; 0]).unwrap();
 }
 
 #[test]

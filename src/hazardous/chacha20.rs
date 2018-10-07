@@ -58,11 +58,12 @@
 //! let mut dst_out_pt = [0u8; 15];
 //! let mut dst_out_ct = [0u8; 15];
 //! let mut key = [0u8; 32];
-//! let mut nonce = [0u8; 12];
+//! let nonce = [
+//!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
+//! ];
 //! let message = "Data to protect".as_bytes();
 //!
 //! util::gen_rand_key(&mut key).unwrap();
-//! util::gen_rand_key(&mut nonce).unwrap();
 //!
 //!
 //! chacha20::encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
