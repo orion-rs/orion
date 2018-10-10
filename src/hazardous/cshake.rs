@@ -412,11 +412,15 @@ mod test {
         let custom = b"";
         let name = b"Email Signature";
         let mut out = [0u8; 64];
+        let mut out_check = [0u8; 64];
 
         let mut cshake = init(custom, Some(name)).unwrap();
         cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
         cshake.reset();
         cshake.update(input).unwrap();
+        cshake.finalize(&mut out_check).unwrap();
+
+        assert_eq!(out.as_ref(), out_check.as_ref());
     }
 }
