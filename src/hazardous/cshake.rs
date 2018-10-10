@@ -24,6 +24,33 @@
 //! The cSHAKE256 implementation currently relies on the `tiny-keccak` crate. Currently this crate
 //! will produce ***incorrect results on big-endian based systems***. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
 //!
+//! # Parameters:
+//! - `input`:  The main input string
+//! - `dst_out`: Destination buffer for the digest. The length of the digest is implied by the length of `dst_out`
+//! - `name`: Optional function-name string. If `None` it is set to a zero-length string. It should be `None` in almost all cases
+//! - `custom`: Customization string
+//!
+//! "The customization string is intended to avoid a collision between these two cSHAKE values—it
+//! will be very difficult for an attacker to somehow force one computation (the email signature)
+//! to yield the same result as the other computation (the key fingerprint) if different values
+//! of S are used." See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
+//!
+//! `name` is a special parameter that in most cases should be just set to a zero string:
+//! "This is intended for use by NIST in defining SHA-3-derived functions, and should only be set
+//! to values defined by NIST". See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//! - The length of `dst_out` is zero
+//! - The length of `dst_out` is greater than 65536
+//! - `finalize()` is called twice in a row without calling `reset()` in between
+//! - `update()` is called after `finalize()` without a `reset()` in between
+//! - Both `name` and `custom` are empty
+//! - If the length of either `name` or `custom` is greater than 65536
+//!
+//! The reason that `name` and `custom` cannot both be empty is because that would be equivalent to
+//! a SHAKE call.
+//!
 //! # Security:
 //! cSHAKE256 has a security strength of 256 bits. The recommended output length for cSHAKE256 is 64.
 //!
@@ -48,16 +75,6 @@ use tiny_keccak::Keccak;
 use utilities::errors::*;
 
 /// cSHAKE256 as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
-/// # Parameters:
-/// - `input`:  The main input string
-/// - `dst_out`: Destination buffer for the digest. The length of the digest is implied by the length of `dst_out`
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The length of `dst_out` is zero
-/// - The length of `dst_out` is greater than 65536
-/// - `finalize()` is called twice in a row without calling `reset()` in between
-/// - `update()` is called after `finalize()` without a `reset()` in between
 pub struct CShake {
     setup_hasher: Keccak,
     hasher: Keccak,
@@ -129,26 +146,6 @@ impl CShake {
 }
 
 /// Initialize a `CShake` struct.
-/// # Parameters:
-/// - `name`: Optional function-name string. If `None` it is set to a zero-length string.
-/// - `custom`: Customization string
-///
-/// "The customization string is intended to avoid a collision between these two cSHAKE values—it
-/// will be very difficult for an attacker to somehow force one computation (the email signature)
-/// to yield the same result as the other computation (the key fingerprint) if different values
-/// of S are used." See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
-///
-/// `name` is a special parameter that in most cases should be just set to a zero string:
-/// "This is intended for use by NIST in defining SHA-3-derived functions, and should only be set
-/// to values defined by NIST". See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - Both `name` and `custom` are empty
-/// - If the length of either `name` or `custom` is greater than 65536
-///
-/// The reason that `name` and `custom` cannot both be empty is because that would be equivalent to
-/// a SHAKE call.
 pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoError> {
     // "When N and S are both empty strings, cSHAKE(X, L, N, S) is equivalent to SHAKE as
     // defined in FIPS 202"
