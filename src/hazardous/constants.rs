@@ -36,6 +36,8 @@ pub const CHACHA_BLOCKSIZE: usize = 64;
 pub const CHACHA_KEYSIZE: usize = 32;
 /// The nonce size for IETF ChaCha20.
 pub const IETF_CHACHA_NONCESIZE: usize = 12;
+/// The nonce size for HChaCha20.
+pub const HCHACHA_NONCESIZE: usize = 16;
 /// The blocksize which Poly1305 operates on.
 pub const POLY1305_BLOCKSIZE: usize = 16;
 /// Type for a Poly1305 tag.
