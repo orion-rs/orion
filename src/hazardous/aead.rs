@@ -89,7 +89,7 @@ use util;
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> [u8; POLY1305_KEYSIZE] {
     let mut poly1305_key = [0u8; POLY1305_KEYSIZE];
     poly1305_key
-        .copy_from_slice(&chacha20::keystream_block(key, nonce, 0).unwrap()[..POLY1305_KEYSIZE]);
+        .copy_from_slice(&chacha20::chacha20_keystream_block(key, nonce, 0).unwrap()[..POLY1305_KEYSIZE]);
 
     poly1305_key
 }
@@ -125,7 +125,7 @@ pub fn ietf_chacha20_poly1305_encrypt(
     }
 
     let mut poly1305_key = poly1305_key_gen(key, nonce);
-    chacha20::encrypt(key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
+    chacha20::chacha20_encrypt(key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
     let mut padding_max = [0u8; 16];
@@ -204,7 +204,7 @@ pub fn ietf_chacha20_poly1305_decrypt(
         &ciphertext_with_tag[ciphertext_len..],
     ).unwrap();
 
-    chacha20::decrypt(
+    chacha20::chacha20_decrypt(
         key,
         nonce,
         1,

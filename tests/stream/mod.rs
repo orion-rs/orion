@@ -24,8 +24,8 @@ pub mod rfc_chacha20;
 pub mod rfc_xchacha20;
 
 extern crate orion;
-use self::orion::hazardous::chacha20::{decrypt, encrypt};
-use self::orion::hazardous::chacha20::{xchacha_decrypt, xchacha_encrypt};
+use self::orion::hazardous::chacha20::{chacha20_decrypt, chacha20_encrypt};
+use self::orion::hazardous::chacha20::{xchacha20_decrypt, xchacha20_encrypt};
 
 pub fn chacha_test_runner(
     key: &[u8],
@@ -37,8 +37,8 @@ pub fn chacha_test_runner(
     let original_pt = pt.to_vec();
     let original_ct = ct.to_vec();
 
-    encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
-    decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
+    chacha20_encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
+    chacha20_decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
     assert!(&original_pt == &pt);
     assert!(&original_ct == &ct);
 }
@@ -53,8 +53,8 @@ pub fn xchacha_test_runner(
     let original_pt = pt.to_vec();
     let original_ct = ct.to_vec();
 
-    xchacha_encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
-    xchacha_decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
+    xchacha20_encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
+    xchacha20_decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
     assert!(&original_pt == &pt);
     assert!(&original_ct == &ct);
 }
