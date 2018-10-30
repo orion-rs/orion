@@ -19,15 +19,12 @@ professional. Look in the Alternatives section if this means orion is not for yo
 
 
 Currently supports:
-* HMAC-SHA512
-* HKDF-HMAC-SHA512
-* PBKDF2-HMAC-SHA512
-* cSHAKE256
-* ChaCha20
-* Poly1305
-* AEAD ChaCha20Poly1305
-* XChaCha20
-* AEAD XChaCha20Poly1305
+* **AEAD**: ChaCha20Poly1305, XChaCha20Poly1305
+* **Stream ciphers**: ChaCha20, XChaCha20
+* **KDF**: HKDF-HMAC-SHA512
+* **Password hashing**: PBKDF2-HMAC-SHA512
+* **MAC**: HMAC-SHA512, Poly1305
+* **XOF**: cSHAKE256
 
 ***Note on cSHAKE***:
 The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
