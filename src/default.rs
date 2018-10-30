@@ -305,7 +305,8 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// Authenticated encryption using XChaCha20_Poly1305.
 /// # About:
 /// - The nonce is automatically generated
-/// - Returns a vector where the first 24 bytes are the nonce and the rest is the ciphertext
+/// - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated
+/// ciphertext with tag
 ///
 /// # Parameters:
 /// - `plaintext`:  The data to be encrypted
@@ -351,7 +352,7 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
 
 /// Authenticated decryption using XChaCha20_Poly1305.
 /// # About:
-/// - The ciphertext passed must be of the same format as the one returned by `default::encrypt()`
+/// - The ciphertext must be of the same format as the one returned by `default::encrypt()`
 ///
 /// # Parameters:
 /// - `ciphertext`:  The data to be decrypted with the first 24 bytes being the nonce
