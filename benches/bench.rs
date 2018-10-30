@@ -55,7 +55,7 @@ fn bench_chacha20_encrypt(b: &mut Bencher) {
     b.iter(|| {
         let plaintext = [0u8; 256];
         let mut ciphertext = [0u8; 256];
-        chacha20::encrypt(&[0u8; 32], &[0u8; 12], 0, &plaintext, &mut ciphertext).unwrap();
+        chacha20::chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &plaintext, &mut ciphertext).unwrap();
     });
 }
 
@@ -64,7 +64,7 @@ fn bench_chacha20_decrypt(b: &mut Bencher) {
     b.iter(|| {
         let mut plaintext = [0u8; 256];
         let ciphertext = [0u8; 256];
-        chacha20::decrypt(&[0u8; 32], &[0u8; 12], 0, &ciphertext, &mut plaintext).unwrap();
+        chacha20::chacha20_decrypt(&[0u8; 32], &[0u8; 12], 0, &ciphertext, &mut plaintext).unwrap();
     });
 }
 
@@ -74,5 +74,23 @@ fn bench_poly1305(b: &mut Bencher) {
         let mut mac = poly1305::init(&vec![0x01; 32]).unwrap();
         mac.update(&vec![0x01; 64]).unwrap();
         mac.finalize().unwrap();
+    });
+}
+
+#[bench]
+fn bench_xchacha20_encrypt(b: &mut Bencher) {
+    b.iter(|| {
+        let plaintext = [0u8; 256];
+        let mut ciphertext = [0u8; 256];
+        chacha20::xchacha20_encrypt(&[0u8; 32], &[0u8; 24], 0, &plaintext, &mut ciphertext).unwrap();
+    });
+}
+
+#[bench]
+fn bench_xchacha20_decrypt(b: &mut Bencher) {
+    b.iter(|| {
+        let mut plaintext = [0u8; 256];
+        let ciphertext = [0u8; 256];
+        chacha20::xchacha20_decrypt(&[0u8; 32], &[0u8; 24], 0, &ciphertext, &mut plaintext).unwrap();
     });
 }
