@@ -82,7 +82,8 @@ fn bench_xchacha20_encrypt(b: &mut Bencher) {
     b.iter(|| {
         let plaintext = [0u8; 256];
         let mut ciphertext = [0u8; 256];
-        chacha20::xchacha20_encrypt(&[0u8; 32], &[0u8; 24], 0, &plaintext, &mut ciphertext).unwrap();
+        chacha20::xchacha20_encrypt(&[0u8; 32], &[0u8; 24], 0, &plaintext, &mut ciphertext)
+            .unwrap();
     });
 }
 
@@ -91,6 +92,7 @@ fn bench_xchacha20_decrypt(b: &mut Bencher) {
     b.iter(|| {
         let mut plaintext = [0u8; 256];
         let ciphertext = [0u8; 256];
-        chacha20::xchacha20_decrypt(&[0u8; 32], &[0u8; 24], 0, &ciphertext, &mut plaintext).unwrap();
+        chacha20::xchacha20_decrypt(&[0u8; 32], &[0u8; 24], 0, &ciphertext, &mut plaintext)
+            .unwrap();
     });
 }
