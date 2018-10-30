@@ -129,7 +129,8 @@ impl InternalState {
         }
         if (nonce.len() != IETF_CHACHA_NONCESIZE) && self.is_ietf {
             return Err(UnknownCryptoError);
-        } else if (nonce.len() != HCHACHA_NONCESIZE) && !self.is_ietf {
+        }
+        if (nonce.len() != HCHACHA_NONCESIZE) && !self.is_ietf {
             return Err(UnknownCryptoError);
         }
 
@@ -149,8 +150,8 @@ impl InternalState {
         Ok(())
     }
     #[inline(always)]
-    /// The ChaCha20 block function. Returns a single keystream block.
-    fn chacha20_block(
+    /// Process either an IETF or HChaCha20 block.
+    fn process_block(
         &mut self,
         block_count: Option<u32>,
     ) -> Result<ChaChaState, UnknownCryptoError> {
@@ -189,7 +190,8 @@ impl InternalState {
     ) -> Result<(), UnknownCryptoError> {
         if (dst_block.len() != CHACHA_BLOCKSIZE) && self.is_ietf {
             return Err(UnknownCryptoError);
-        } else if (dst_block.len() != 32) && !self.is_ietf {
+        }
+        if (dst_block.len() != 32) && !self.is_ietf {
             return Err(UnknownCryptoError);
         }
 
@@ -245,7 +247,7 @@ pub fn encrypt(
         let block_counter = initial_counter.checked_add(counter as u32);
         if block_counter.is_some() {
             keystream_state = chacha_state
-                .chacha20_block(Some(block_counter.unwrap()))
+                .process_block(Some(block_counter.unwrap()))
                 .unwrap();
         } else {
             return Err(UnknownCryptoError);
@@ -299,7 +301,7 @@ pub fn keystream_block(
     chacha_state.init_state(key, nonce).unwrap();
 
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
-    let mut keystream_state: ChaChaState = chacha_state.chacha20_block(Some(counter)).unwrap();
+    let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter)).unwrap();
 
     chacha_state
         .serialize_block(&keystream_state, &mut keystream_block)
@@ -317,7 +319,7 @@ pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; 32], UnknownCryptoErro
     };
     chacha_state.init_state(key, nonce).unwrap();
 
-    let mut keystream_state = chacha_state.chacha20_block(None).unwrap();
+    let mut keystream_state = chacha_state.process_block(None).unwrap();
     let mut keystream_block: [u8; 32] = [0u8; 32];
     chacha_state
         .serialize_block(&keystream_state, &mut keystream_block)
@@ -474,7 +476,7 @@ fn test_chacha20_block_results() {
     state.state[12] = 1_u32;
     assert_eq!(state.state[..], expected_init[..]);
 
-    let keystream_block_from_state = state.chacha20_block(Some(1)).unwrap();
+    let keystream_block_from_state = state.process_block(Some(1)).unwrap();
     let mut ser_block = [0u8; 64];
     state
         .serialize_block(&keystream_block_from_state, &mut ser_block)
@@ -512,7 +514,7 @@ fn chacha20_block_test_1() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block_from_state = state.chacha20_block(Some(0)).unwrap();
+    let keystream_block_from_state = state.process_block(Some(0)).unwrap();
     assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
@@ -552,7 +554,7 @@ fn chacha20_block_test_2() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block_from_state = state.chacha20_block(Some(1)).unwrap();
+    let keystream_block_from_state = state.process_block(Some(1)).unwrap();
     assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
@@ -592,7 +594,7 @@ fn chacha20_block_test_3() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block_from_state = state.chacha20_block(Some(1)).unwrap();
+    let keystream_block_from_state = state.process_block(Some(1)).unwrap();
     assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
@@ -632,7 +634,7 @@ fn chacha20_block_test_4() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block_from_state = state.chacha20_block(Some(2)).unwrap();
+    let keystream_block_from_state = state.process_block(Some(2)).unwrap();
     assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
@@ -672,7 +674,7 @@ fn chacha20_block_test_5() {
     ];
 
     let mut state = init(&key, &nonce).unwrap();
-    let keystream_block_from_state = state.chacha20_block(Some(0)).unwrap();
+    let keystream_block_from_state = state.process_block(Some(0)).unwrap();
     assert_eq!(keystream_block_from_state[..], expected_state[..]);
 
     let mut ser_block = [0u8; 64];
@@ -737,13 +739,13 @@ fn test_key_schedule() {
 
     let mut state = init(&key, &nonce).unwrap();
     // Block call with initial counter
-    let first_block_state = state.chacha20_block(Some(1)).unwrap();
+    let first_block_state = state.process_block(Some(1)).unwrap();
     assert_eq!(first_block_state, first_block);
     // Test first internal state
     assert_eq!(first_state, state.state);
 
     // Next iteration call, increase counter
-    let second_block_state = state.chacha20_block(Some(1 + 1)).unwrap();
+    let second_block_state = state.process_block(Some(1 + 1)).unwrap();
     assert_eq!(second_block_state, second_block);
     // Test second internal state
     assert_eq!(second_state, state.state);
