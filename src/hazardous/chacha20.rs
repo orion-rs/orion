@@ -74,7 +74,7 @@
 //! ```
 use byteorder::{ByteOrder, LittleEndian};
 use hazardous::constants::{
-    ChaChaState, CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
+    ChaChaState, CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, HCHACHA_OUTSIZE, IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE
 };
 use seckey::zero;
 use utilities::errors::UnknownCryptoError;
@@ -191,7 +191,7 @@ impl InternalState {
         if (dst_block.len() != CHACHA_BLOCKSIZE) && self.is_ietf {
             return Err(UnknownCryptoError);
         }
-        if (dst_block.len() != 32) && !self.is_ietf {
+        if (dst_block.len() != HCHACHA_OUTSIZE) && !self.is_ietf {
             return Err(UnknownCryptoError);
         }
 
@@ -205,6 +205,8 @@ impl InternalState {
         Ok(())
     }
 }
+
+
 
 /// The ChaCha20 encryption function.
 pub fn encrypt(
@@ -312,7 +314,7 @@ pub fn keystream_block(
 }
 
 /// HChaCha20 as described in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master/draft-arciszewski-xchacha-rfc-03.txt).
-pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
+pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
     let mut chacha_state = InternalState {
         state: [0_u32; 16],
         is_ietf: false,
@@ -320,7 +322,7 @@ pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; 32], UnknownCryptoErro
     chacha_state.init_state(key, nonce).unwrap();
 
     let mut keystream_state = chacha_state.process_block(None).unwrap();
-    let mut keystream_block: [u8; 32] = [0u8; 32];
+    let mut keystream_block: [u8; HCHACHA_OUTSIZE] = [0u8; HCHACHA_OUTSIZE];
     chacha_state
         .serialize_block(&keystream_state, &mut keystream_block)
         .unwrap();
@@ -329,6 +331,39 @@ pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; 32], UnknownCryptoErro
 
     Ok(keystream_block)
 }
+
+pub fn xchacha_encrypt(
+    key: &[u8],
+    nonce: &[u8],
+    initial_counter: u32,
+    plaintext: &[u8],
+    dst_out: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+    if nonce.len() != XCHACHA_NONCESIZE {
+        return Err(UnknownCryptoError);
+    }
+
+    let mut subkey = hchacha20(key, &nonce[0..16]).unwrap();
+    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
+    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
+
+    encrypt(&subkey, &prefixed_nonce, initial_counter, plaintext, dst_out).unwrap();
+
+    zero(&mut subkey);
+
+    Ok(())
+}
+
+pub fn xchacha_decrypt(
+    key: &[u8],
+    nonce: &[u8],
+    initial_counter: u32,
+    ciphertext: &[u8],
+    dst_out: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+    xchacha_encrypt(key, nonce, initial_counter, ciphertext, dst_out)
+}
+
 
 #[test]
 fn test_bad_key_nonce_size_init() {

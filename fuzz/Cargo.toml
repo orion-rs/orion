@@ -74,3 +74,7 @@ path = "fuzz_targets/chacha20_poly1305.rs"
 [[bin]]
 name = "chacha20_poly1305_compare"
 path = "fuzz_targets/chacha20_poly1305_compare.rs"
+
+[[bin]]
+name = "xchacha20_compare"
+path = "fuzz_targets/xchacha20_compare.rs"
