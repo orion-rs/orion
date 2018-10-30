@@ -21,6 +21,8 @@
 #[cfg(test)]
 pub mod boringssl_chacha20_poly1305;
 #[cfg(test)]
+pub mod boringssl_xchacha20_poly1305;
+#[cfg(test)]
 pub mod other_aead_xchacha20_poly1305;
 #[cfg(test)]
 pub mod rfc_aead_chacha20_poly1305;
