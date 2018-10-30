@@ -78,7 +78,7 @@
 use byteorder::{ByteOrder, LittleEndian};
 use hazardous::chacha20;
 use hazardous::constants::{
-    CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE,
+    CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE, XCHACHA_NONCESIZE,
 };
 use hazardous::poly1305;
 use seckey::zero;
@@ -213,6 +213,51 @@ pub fn ietf_chacha20_poly1305_decrypt(
     ).unwrap();
 
     zero(&mut poly1305_key);
+
+    Ok(())
+}
+
+pub fn xchacha20_poly1305_encrypt(
+    key: &[u8],
+    nonce: &[u8],
+    plaintext: &[u8],
+    aad: &[u8],
+    dst_out: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+    if nonce.len() != XCHACHA_NONCESIZE {
+        return Err(UnknownCryptoError);
+    }
+
+    let mut subkey = chacha20::hchacha20(key, &nonce[0..16]).unwrap();
+    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
+    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
+
+    ietf_chacha20_poly1305_encrypt(&subkey, &prefixed_nonce, plaintext, aad, dst_out).unwrap();
+
+    zero(&mut subkey);
+
+    Ok(())
+}
+
+pub fn xchacha20_poly1305_decrypt(
+    key: &[u8],
+    nonce: &[u8],
+    ciphertext_with_tag: &[u8],
+    aad: &[u8],
+    dst_out: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+    if nonce.len() != XCHACHA_NONCESIZE {
+        return Err(UnknownCryptoError);
+    }
+
+    let mut subkey = chacha20::hchacha20(key, &nonce[0..16]).unwrap();
+    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
+    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
+
+    ietf_chacha20_poly1305_decrypt(&subkey, &prefixed_nonce, ciphertext_with_tag, aad, dst_out)
+        .unwrap();
+
+    zero(&mut subkey);
 
     Ok(())
 }

@@ -74,7 +74,8 @@
 //! ```
 use byteorder::{ByteOrder, LittleEndian};
 use hazardous::constants::{
-    ChaChaState, CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, HCHACHA_OUTSIZE, IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE
+    ChaChaState, CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, HCHACHA_OUTSIZE,
+    IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE,
 };
 use seckey::zero;
 use utilities::errors::UnknownCryptoError;
@@ -205,8 +206,6 @@ impl InternalState {
         Ok(())
     }
 }
-
-
 
 /// The ChaCha20 encryption function.
 pub fn encrypt(
@@ -347,7 +346,13 @@ pub fn xchacha_encrypt(
     let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
     prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
 
-    encrypt(&subkey, &prefixed_nonce, initial_counter, plaintext, dst_out).unwrap();
+    encrypt(
+        &subkey,
+        &prefixed_nonce,
+        initial_counter,
+        plaintext,
+        dst_out,
+    ).unwrap();
 
     zero(&mut subkey);
 
@@ -363,7 +368,6 @@ pub fn xchacha_decrypt(
 ) -> Result<(), UnknownCryptoError> {
     xchacha_encrypt(key, nonce, initial_counter, ciphertext, dst_out)
 }
-
 
 #[test]
 fn test_bad_key_nonce_size_init() {
