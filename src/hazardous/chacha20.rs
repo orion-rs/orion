@@ -331,7 +331,7 @@ pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], Unkn
     Ok(keystream_block)
 }
 
-/// `XChaCha20_Poly1305` encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn xchacha20_encrypt(
     key: &[u8],
     nonce: &[u8],
@@ -360,7 +360,7 @@ pub fn xchacha20_encrypt(
     Ok(())
 }
 
-/// `XChaCha20_Poly1305` decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn xchacha20_decrypt(
     key: &[u8],
     nonce: &[u8],
