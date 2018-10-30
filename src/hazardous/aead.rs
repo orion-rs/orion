@@ -142,7 +142,6 @@ pub fn ietf_chacha20_poly1305_encrypt(
 
     // Using the 16 bytes from padding template to store length information
     LittleEndian::write_u64(&mut padding_max[..8], aad.len() as u64);
-    // Plaintext length == ciphertext length with ChaCha20
     LittleEndian::write_u64(&mut padding_max[8..16], plaintext.len() as u64);
 
     poly1305_state.update(&padding_max[..8]).unwrap();
