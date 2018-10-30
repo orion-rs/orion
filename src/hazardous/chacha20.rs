@@ -414,12 +414,39 @@ fn test_bad_key_nonce_size_keystream_block() {
 }
 
 #[test]
+fn test_bad_nonce_size_xchacha() {
+    let mut dst = [0u8; 64];
+
+    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 78], 0, &[0u8; 64], &mut dst).is_err());
+    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 23], 0, &[0u8; 64], &mut dst).is_err());
+    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 35], 0, &[0u8; 64], &mut dst).is_err());
+    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 13], 0, &[0u8; 64], &mut dst).is_err());
+    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 24], 0, &[0u8; 64], &mut dst).is_ok());
+}
+
+#[test]
 fn test_diff_ct_pt_len() {
     let mut dst = [0u8; 64];
 
     assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 65], &mut dst).is_err());
     assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 63], &mut dst).is_ok());
     assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 64], &mut dst).is_ok());
+}
+
+#[test]
+#[should_panic]
+fn test_err_on_diff_ct_pt_len_xchacha_long() {
+    let mut dst = [0u8; 64];
+
+    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 128], &mut dst).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn test_err_on_diff_ct_pt_len_xchacha_short() {
+    let mut dst = [0u8; 64];
+
+    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
 }
 
 #[test]
