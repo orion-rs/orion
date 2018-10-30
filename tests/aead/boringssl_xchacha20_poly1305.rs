@@ -28,37 +28,9 @@ empty input/output so any such test cases are not run through here either.
 #[cfg(test)]
 mod boringssl_aead_xchacha20_poly1305 {
 
-    extern crate orion;
     extern crate ring;
-
-    use self::orion::hazardous::aead;
-    use self::ring::{error, test};
-
-    fn xchacha20_poly1305_test_runner(
-        key: &[u8],
-        nonce: &[u8],
-        aad: &[u8],
-        tag: &[u8],
-        input: &[u8],
-        output: &[u8],
-    ) -> Result<(), error::Unspecified> {
-        let mut dst_ct_out = vec![0u8; input.len() + 16];
-        let mut dst_pt_out = vec![0u8; input.len()];
-
-        assert!(
-            aead::xchacha20_poly1305_encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok()
-        );
-        assert!(dst_ct_out[..input.len()].as_ref() == output);
-        assert!(dst_ct_out[input.len()..].as_ref() == tag);
-
-        assert!(
-            aead::xchacha20_poly1305_decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out)
-                .is_ok()
-        );
-        assert!(dst_pt_out[..].as_ref() == input);
-
-        Ok(())
-    }
+    use self::ring::test;
+    use aead::*;
 
     #[test]
     fn boringssl_xchacha20_poly1305() {
@@ -77,7 +49,7 @@ mod boringssl_aead_xchacha20_poly1305 {
                 if input.is_empty() || output.is_empty() {
                     Ok(())
                 } else {
-                    xchacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output)
+                    chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output)
                 }
             },
         );

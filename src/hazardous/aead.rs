@@ -88,8 +88,9 @@ use util;
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> [u8; POLY1305_KEYSIZE] {
     let mut poly1305_key = [0u8; POLY1305_KEYSIZE];
-    poly1305_key
-        .copy_from_slice(&chacha20::chacha20_keystream_block(key, nonce, 0).unwrap()[..POLY1305_KEYSIZE]);
+    poly1305_key.copy_from_slice(
+        &chacha20::chacha20_keystream_block(key, nonce, 0).unwrap()[..POLY1305_KEYSIZE],
+    );
 
     poly1305_key
 }

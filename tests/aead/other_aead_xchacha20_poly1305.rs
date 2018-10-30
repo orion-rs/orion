@@ -69,6 +69,7 @@ mod rfc_aead_xchacha20_poly1305 {
         ];
 
         // This test vectors ciphertext already includes the tag
+        // So the default test runner can't be used
         let mut dst_out_ct = vec![0u8; expected_ct.len()];
         let mut dst_out_pt = vec![0u8; plaintext.len()];
 

@@ -18,13 +18,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[cfg(test)]
 pub mod boringssl_chacha20_poly1305;
-#[cfg(test)]
 pub mod boringssl_xchacha20_poly1305;
-#[cfg(test)]
 pub mod other_aead_xchacha20_poly1305;
-#[cfg(test)]
 pub mod rfc_aead_chacha20_poly1305;
-#[cfg(test)]
 pub mod wycheproof_chacha20_poly1305;
+
+extern crate orion;
+extern crate ring;
+use self::orion::hazardous::aead;
+use self::orion::hazardous::constants;
+use self::ring::error;
+
+fn chacha20_poly1305_test_runner(
+    key: &[u8],
+    nonce: &[u8],
+    aad: &[u8],
+    tag: &[u8],
+    input: &[u8],
+    output: &[u8],
+) -> Result<(), error::Unspecified> {
+    let mut dst_ct_out = vec![0u8; input.len() + 16];
+    let mut dst_pt_out = vec![0u8; input.len()];
+
+    // Determine variant based on NONCE size
+    if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
+        assert!(
+            aead::ietf_chacha20_poly1305_encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok()
+        );
+        assert!(
+            aead::ietf_chacha20_poly1305_decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out)
+                .is_ok()
+        );
+    }
+
+    if nonce.len() == constants::XCHACHA_NONCESIZE {
+        assert!(aead::xchacha20_poly1305_encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok());
+
+        assert!(
+            aead::xchacha20_poly1305_decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out).is_ok()
+        );
+    }
+
+    assert!(dst_ct_out[..input.len()].as_ref() == output);
+    assert!(dst_ct_out[input.len()..].as_ref() == tag);
+    assert!(dst_pt_out[..].as_ref() == input);
+
+    Ok(())
+}
