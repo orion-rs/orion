@@ -82,8 +82,8 @@ use hazardous::constants::{
 };
 use hazardous::poly1305;
 use seckey::zero;
-use utilities::errors::UnknownCryptoError;
-use utilities::util;
+use errors::UnknownCryptoError;
+use util;
 
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> [u8; POLY1305_KEYSIZE] {

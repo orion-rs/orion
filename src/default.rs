@@ -26,7 +26,8 @@ use hazardous::cshake;
 use hazardous::hkdf;
 use hazardous::hmac;
 use hazardous::pbkdf2;
-use utilities::{errors::*, util};
+use errors::*;
+use util;
 
 /// HMAC-SHA512.
 /// # Parameters:
@@ -46,7 +47,7 @@ use utilities::{errors::*, util};
 /// # Example:
 /// ```
 /// use orion::default;
-/// use orion::utilities::util;
+/// use orion::util;
 ///
 /// let mut key = [0u8; 64];
 /// util::gen_rand_key(&mut key).unwrap();
@@ -71,7 +72,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
 ///
 /// ```
 /// use orion::default;
-/// use orion::utilities::util;
+/// use orion::util;
 ///
 /// let mut key = [0u8; 64];
 /// util::gen_rand_key(&mut key).unwrap();
@@ -125,7 +126,7 @@ pub fn hmac_verify(
 /// # Example:
 /// ```
 /// use orion::default;
-/// use orion::utilities::util;
+/// use orion::util;
 ///
 /// let mut salt = [0u8; 32];
 /// util::gen_rand_key(&mut salt).unwrap();
@@ -156,7 +157,7 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownC
 ///
 /// ```
 /// use orion::default;
-/// use orion::utilities::util;
+/// use orion::util;
 ///
 /// let mut salt = [0u8; 32];
 /// util::gen_rand_key(&mut salt).unwrap();
@@ -323,7 +324,7 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// # Example:
 /// ```
 /// use orion::default;
-/// use orion::utilities::util;
+/// use orion::util;
 ///
 /// let mut key = [0u8; 32]; // Replace this with the key used for encryption
 /// util::gen_rand_key(&mut key).unwrap();
@@ -370,7 +371,7 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
 /// # Example:
 /// ```
 /// use orion::default;
-/// use orion::utilities::util;
+/// use orion::util;
 ///
 /// let mut key = [0u8; 32]; // Replace this with the key used for decryption
 /// util::gen_rand_key(&mut key).unwrap();
@@ -407,7 +408,7 @@ mod test {
     extern crate hex;
     use self::hex::decode;
     use default;
-    use utilities::util;
+    use util;
 
     #[test]
     fn hmac_secret_key_too_short() {

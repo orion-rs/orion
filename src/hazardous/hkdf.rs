@@ -43,7 +43,7 @@
 //! ### Generating derived key:
 //! ```
 //! use orion::hazardous::hkdf;
-//! use orion::utilities::util;
+//! use orion::util;
 //!
 //! let mut salt = [0u8; 32];
 //! util::gen_rand_key(&mut salt).unwrap();
@@ -54,7 +54,7 @@
 //! ### Verifying derived key:
 //! ```
 //! use orion::hazardous::hkdf;
-//! use orion::utilities::util;
+//! use orion::util;
 //!
 //! let mut salt = [0u8; 32];
 //! util::gen_rand_key(&mut salt).unwrap();
@@ -67,7 +67,8 @@
 
 use hazardous::constants::HLEN;
 use hazardous::hmac;
-use utilities::{errors::*, util};
+use errors::*;
+use util;
 
 #[inline(always)]
 /// The HKDF extract step.

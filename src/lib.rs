@@ -34,7 +34,10 @@ extern crate subtle;
 extern crate tiny_keccak;
 
 /// Core functionality such as generating a salt/key/IV/nonce.
-pub mod utilities;
+pub mod util;
+
+/// Errors for orion's cryptographic operations.
+pub mod errors;
 
 #[cfg(feature = "safe_api")]
 /// High-level API with safer defaults. Not available in `no_std` context.

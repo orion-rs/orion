@@ -43,7 +43,7 @@
 //! # Example:
 //! ```
 //! use orion::hazardous::poly1305;
-//! use orion::utilities::util;
+//! use orion::util;
 //!
 //! let mut one_time_key = [0u8; 32];
 //! util::gen_rand_key(&mut one_time_key).unwrap();
@@ -59,7 +59,8 @@
 use byteorder::{ByteOrder, LittleEndian};
 use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use seckey::zero;
-use utilities::{errors::*, util};
+use errors::*;
+use util;
 
 pub struct Poly1305 {
     a: [u32; 5],

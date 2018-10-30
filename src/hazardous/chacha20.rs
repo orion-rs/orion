@@ -53,7 +53,7 @@
 //! # Example:
 //! ```
 //! use orion::hazardous::chacha20;
-//! use orion::utilities::util;
+//! use orion::util;
 //!
 //! let mut dst_out_pt = [0u8; 15];
 //! let mut dst_out_ct = [0u8; 15];
@@ -78,7 +78,7 @@ use hazardous::constants::{
     IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE,
 };
 use seckey::zero;
-use utilities::errors::UnknownCryptoError;
+use errors::UnknownCryptoError;
 
 #[derive(Clone)]
 struct InternalState {
