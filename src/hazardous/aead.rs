@@ -218,6 +218,7 @@ pub fn ietf_chacha20_poly1305_decrypt(
     Ok(())
 }
 
+/// `AEAD_XChaCha20_Poly1305` encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn xchacha20_poly1305_encrypt(
     key: &[u8],
     nonce: &[u8],
@@ -240,6 +241,7 @@ pub fn xchacha20_poly1305_encrypt(
     Ok(())
 }
 
+/// `AEAD_XChaCha20_Poly1305` decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn xchacha20_poly1305_decrypt(
     key: &[u8],
     nonce: &[u8],
