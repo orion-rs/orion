@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use hazardous::aead;
 use hazardous::constants::*;
 use hazardous::cshake;
 use hazardous::hkdf;
@@ -300,6 +301,106 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
     Ok(hash)
 }
 
+/// Authenticated encryption using XChaCha20_Poly1305.
+/// # About:
+/// - The nonce is automatically generated
+/// - Returns a vector where the first 24 bytes are the nonce and the rest is the ciphertext
+///
+/// # Parameters:
+/// - `plaintext`:  The data to be encrypted
+/// - `key`: The secret key used to encrypt the `plaintext`
+///
+/// # Security:
+/// It is critical for security that a given nonce is not re-used with a given key. Should this happen,
+/// the security of all data that has been encrypted with that given key is compromised.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - `key` is not 32 bytes
+/// - `plaintext` is empty
+/// - `plaintext` is longer than (2^32)-2
+///
+/// # Example:
+/// ```
+/// use orion::default;
+/// use orion::utilities::util;
+///
+/// let mut key = [0u8; 32]; // Replace this with the key used for encryption
+/// util::gen_rand_key(&mut key).unwrap();
+///
+/// let encrypted_data = default::encrypt(&key, "Secret message".as_bytes()).unwrap();
+/// ```
+pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+    let mut nonce = [0u8; XCHACHA_NONCESIZE];
+    util::gen_rand_key(&mut nonce).unwrap();
+
+    let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
+    dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce);
+
+    aead::xchacha20_poly1305_encrypt(
+        key,
+        &nonce,
+        plaintext,
+        &[0u8; 0],
+        &mut dst_out[XCHACHA_NONCESIZE..],
+    ).unwrap();
+
+    Ok(dst_out)
+}
+
+/// Authenticated decryption using XChaCha20_Poly1305.
+/// # About:
+/// - The ciphertext passed must be of the same format as the one returned by `default::encrypt()`
+///
+/// # Parameters:
+/// - `ciphertext`:  The data to be decrypted with the first 24 bytes being the nonce
+/// - `key`: The secret key used to decrypt the `ciphertext`
+///
+/// # Security:
+/// It is critical for security that a given nonce is not re-used with a given key. Should this happen,
+/// the security of all data that has been encrypted with that given key is compromised.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - `key` is not 32 bytes
+/// - `ciphertext` is less than 41 bytes
+/// - `ciphertext` is longer than (2^32)-14
+/// - The received tag does not match the calculated tag
+///
+/// # Example:
+/// ```
+/// use orion::default;
+/// use orion::utilities::util;
+///
+/// let mut key = [0u8; 32]; // Replace this with the key used for decryption
+/// util::gen_rand_key(&mut key).unwrap();
+///
+/// let ciphertext = default::encrypt(&key, "Secret message".as_bytes()).unwrap();
+///
+/// let decrypted_data = default::decrypt(&key, &ciphertext).unwrap();
+/// ```
+pub fn decrypt(key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+    // `+ 1` to avoid empty ciphertexts
+    if ciphertext.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
+        return Err(UnknownCryptoError);
+    }
+
+    let mut nonce = [0u8; XCHACHA_NONCESIZE];
+    nonce.copy_from_slice(&ciphertext[..XCHACHA_NONCESIZE]);
+
+    let mut dst_out = vec![0u8; ciphertext.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
+
+    aead::xchacha20_poly1305_decrypt(
+        key,
+        &nonce,
+        &ciphertext[XCHACHA_NONCESIZE..],
+        &[0u8; 0],
+        &mut dst_out,
+    ).unwrap();
+
+    Ok(dst_out)
+}
+
 #[cfg(test)]
 mod test {
 
@@ -474,5 +575,78 @@ mod test {
         let custom = "".as_bytes();
 
         assert!(default::cshake(&data, custom).is_err());
+    }
+
+    #[test]
+    fn auth_enc_encryption_decryption() {
+        let mut key = [0u8; 32];
+        util::gen_rand_key(&mut key).unwrap();
+        let plaintext = "Secret message".as_bytes().to_vec();
+
+        let dst_ciphertext = default::encrypt(&key, &plaintext).unwrap();
+        assert!(dst_ciphertext.len() == plaintext.len() + (24 + 16));
+        let dst_plaintext = default::decrypt(&key, &dst_ciphertext).unwrap();
+        assert!(dst_plaintext.len() == plaintext.len());
+        assert_eq!(plaintext, dst_plaintext);
+    }
+
+    #[test]
+    #[should_panic]
+    fn auth_enc_plaintext_empty_err() {
+        let mut key = [0u8; 32];
+        util::gen_rand_key(&mut key).unwrap();
+        let plaintext = "".as_bytes().to_vec();
+
+        default::encrypt(&key, &plaintext).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn auth_enc_ciphertext_less_than_13_err() {
+        let mut key = [0u8; 32];
+        util::gen_rand_key(&mut key).unwrap();
+        let ciphertext = [0u8; 12];
+
+        default::decrypt(&key, &ciphertext).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn auth_enc_small_key_err_dec() {
+        let mut key = [0u8; 31];
+        util::gen_rand_key(&mut key).unwrap();
+        let ciphertext = "".as_bytes().to_vec();
+
+        default::decrypt(&key, &ciphertext).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn auth_enc_small_key_err_enc() {
+        let mut key = [0u8; 31];
+        util::gen_rand_key(&mut key).unwrap();
+        let plaintext = "".as_bytes().to_vec();
+
+        default::encrypt(&key, &plaintext).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn auth_enc_big_key_err_dec() {
+        let mut key = [0u8; 35];
+        util::gen_rand_key(&mut key).unwrap();
+        let ciphertext = "".as_bytes().to_vec();
+
+        default::decrypt(&key, &ciphertext).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn auth_enc_big_key_err_enc() {
+        let mut key = [0u8; 35];
+        util::gen_rand_key(&mut key).unwrap();
+        let plaintext = "".as_bytes().to_vec();
+
+        default::encrypt(&key, &plaintext).unwrap();
     }
 }

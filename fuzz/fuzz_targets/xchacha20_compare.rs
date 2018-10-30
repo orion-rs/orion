@@ -1,15 +1,15 @@
 #![no_main]
-#[macro_use] extern crate libfuzzer_sys;
-extern crate orion;
+#[macro_use]
+extern crate libfuzzer_sys;
 extern crate chacha;
+extern crate orion;
 pub mod util;
 
-use orion::hazardous::chacha20;
-use chacha::{ChaCha, KeyStream};
 use self::util::*;
+use chacha::{ChaCha, KeyStream};
+use orion::hazardous::chacha20;
 
 fuzz_target!(|data: &[u8]| {
-
     let mut key = [0u8; 32];
     let mut nonce = [0u8; 24];
     apply_from_input_fixed(&mut key, &data, 0);
@@ -28,10 +28,14 @@ fuzz_target!(|data: &[u8]| {
     let mut stream_enc = ChaCha::new_xchacha20(&key, &nonce);
     let mut stream_dec = ChaCha::new_xchacha20(&key, &nonce);
     // Encrypt pt
-    stream_enc.xor_read(&mut buffer).expect("hit end of stream far too soon");
+    stream_enc
+        .xor_read(&mut buffer)
+        .expect("hit end of stream far too soon");
     let mut buffer_2 = buffer.clone();
     // Decrypt ct
-    stream_dec.xor_read(&mut buffer_2).expect("hit end of stream far too soon");
+    stream_dec
+        .xor_read(&mut buffer_2)
+        .expect("hit end of stream far too soon");
     assert_eq!(pt, buffer_2);
 
     // chacha crates uses 0 as inital counter

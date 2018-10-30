@@ -36,6 +36,11 @@ fn fuzz_default(data: &[u8]) -> () {
 
         default::cshake(&data, &mod_custom).unwrap();
         default::cshake("".as_bytes(), &mod_custom).unwrap();
+
+        let dec_data =
+            default::decrypt(&rand_key, &default::encrypt(&rand_key, &data).unwrap()).unwrap();
+
+        assert_eq!(dec_data, data);
     }
 }
 
