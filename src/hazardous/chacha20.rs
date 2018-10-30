@@ -381,6 +381,21 @@ fn test_bad_key_nonce_size_init() {
     assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 10]).is_err());
     assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 15]).is_err());
     assert!(chacha_state.init_state(&[0u8; 32], &[0u8; 12]).is_ok());
+
+    let mut hchacha_state = InternalState {
+        state: [0_u32; 16],
+        is_ietf: false,
+    };
+
+    assert!(hchacha_state.init_state(&[0u8; 30], &[0u8; 16]).is_err());
+    assert!(hchacha_state.init_state(&[0u8; 35], &[0u8; 16]).is_err());
+    assert!(hchacha_state.init_state(&[0u8; 32], &[0u8; 15]).is_err());
+    assert!(hchacha_state.init_state(&[0u8; 32], &[0u8; 17]).is_err());
+    assert!(hchacha_state.init_state(&[0u8; 30], &[0u8; 15]).is_err());
+    assert!(hchacha_state.init_state(&[0u8; 35], &[0u8; 17]).is_err());
+    assert!(hchacha_state.init_state(&[0u8; 35], &[0u8; 15]).is_err());
+    assert!(hchacha_state.init_state(&[0u8; 30], &[0u8; 17]).is_err());
+    assert!(hchacha_state.init_state(&[0u8; 32], &[0u8; 16]).is_ok());
 }
 
 #[test]
@@ -411,6 +426,14 @@ fn test_err_on_empty_pt() {
 
 #[test]
 #[should_panic]
+fn test_err_on_empty_pt_xchacha() {
+    let mut dst = [0u8; 64];
+
+    assert!(xchacha_encrypt(&[0u8; 32], &[0u8; 24], 0, &[0u8; 0], &mut dst).is_err());
+}
+
+#[test]
+#[should_panic]
 fn test_err_on_initial_counter_overflow() {
     let mut dst = [0u8; 65];
 
@@ -418,10 +441,19 @@ fn test_err_on_initial_counter_overflow() {
 }
 
 #[test]
+#[should_panic]
+fn test_err_on_initial_counter_overflow_xchacha() {
+    let mut dst = [0u8; 65];
+
+    xchacha_encrypt(&[0u8; 32], &[0u8; 24], 4294967295, &[0u8; 65], &mut dst).unwrap();
+}
+
+#[test]
 fn test_pass_on_one_iter_max_initial_counter() {
     let mut dst = [0u8; 64];
     // Should pass because only one iteration is completed, so block_counter will not increase
     encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 64], &mut dst).unwrap();
+    xchacha_encrypt(&[0u8; 32], &[0u8; 24], 4294967295, &[0u8; 64], &mut dst).unwrap();
 }
 
 #[cfg(test)]
