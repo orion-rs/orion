@@ -200,7 +200,7 @@ impl Poly1305 {
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::assign_op_pattern))]
     /// Remaining processing after all data blocks have been processed.
-    fn process_end_of_stream(&mut self) -> () {
+    fn process_end_of_stream(&mut self) {
         // full carry h
         let mut h0: u32 = self.a[0];
         let mut h1: u32 = self.a[1];
@@ -261,9 +261,7 @@ impl Poly1305 {
             self.a = [0u32; 5];
             self.leftover = 0;
             self.is_finalized = false;
-        } else {
-            ()
-        }
+        } else { }
     }
     #[inline(always)]
     /// Update state with a message. This can be called multiple times.

@@ -117,9 +117,7 @@ impl Hmac {
         if self.is_finalized {
             self.ipad_hasher.input(self.ipad.as_ref());
             self.is_finalized = false;
-        } else {
-            ()
-        }
+        } else { }
     }
 
     /// This can be called multiple times.
