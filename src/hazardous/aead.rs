@@ -76,13 +76,13 @@
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
 use byteorder::{ByteOrder, LittleEndian};
+use errors::UnknownCryptoError;
 use hazardous::chacha20;
 use hazardous::constants::{
     CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE, XCHACHA_NONCESIZE,
 };
 use hazardous::poly1305;
 use seckey::zero;
-use errors::UnknownCryptoError;
 use util;
 
 /// Poly1305 key generation using IETF ChaCha20.

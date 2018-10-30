@@ -24,21 +24,10 @@
 mod draft_rfc_xchacha20 {
 
     extern crate hex;
-    extern crate orion;
     extern crate std;
 
     use self::hex::decode;
-    use self::orion::hazardous::chacha20::{xchacha_decrypt, xchacha_encrypt};
-
-    fn test_runner(key: &[u8], nonce: &[u8], init_block_count: u32, pt: &mut [u8], ct: &mut [u8]) {
-        let original_pt = pt.to_vec();
-        let original_ct = ct.to_vec();
-
-        xchacha_encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
-        xchacha_decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
-        assert!(&original_pt == &pt);
-        assert!(&original_ct == &ct);
-    }
+    use stream::*;
 
     #[test]
     fn xchacha20_encryption_test_0() {
@@ -70,6 +59,6 @@ mod draft_rfc_xchacha20 {
              93b93111c1a55dd7421a10184974c7c5",
         ).unwrap();
 
-        test_runner(&key, &nonce, 0, &mut plaintext, &mut expected);
+        xchacha_test_runner(&key, &nonce, 0, &mut plaintext, &mut expected);
     }
 }

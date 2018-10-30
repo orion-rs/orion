@@ -18,11 +18,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[cfg(test)]
 pub mod other_chacha20;
-#[cfg(test)]
 pub mod other_hchacha20;
-#[cfg(test)]
 pub mod rfc_chacha20;
-#[cfg(test)]
 pub mod rfc_xchacha20;
+
+extern crate orion;
+use self::orion::hazardous::chacha20::{decrypt, encrypt};
+use self::orion::hazardous::chacha20::{xchacha_decrypt, xchacha_encrypt};
+
+pub fn chacha_test_runner(
+    key: &[u8],
+    nonce: &[u8],
+    init_block_count: u32,
+    pt: &mut [u8],
+    ct: &mut [u8],
+) {
+    let original_pt = pt.to_vec();
+    let original_ct = ct.to_vec();
+
+    encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
+    decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
+    assert!(&original_pt == &pt);
+    assert!(&original_ct == &ct);
+}
+
+pub fn xchacha_test_runner(
+    key: &[u8],
+    nonce: &[u8],
+    init_block_count: u32,
+    pt: &mut [u8],
+    ct: &mut [u8],
+) {
+    let original_pt = pt.to_vec();
+    let original_ct = ct.to_vec();
+
+    xchacha_encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
+    xchacha_decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
+    assert!(&original_pt == &pt);
+    assert!(&original_ct == &ct);
+}

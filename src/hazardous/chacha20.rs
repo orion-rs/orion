@@ -73,12 +73,12 @@
 //! assert_eq!(dst_out_pt, message);
 //! ```
 use byteorder::{ByteOrder, LittleEndian};
+use errors::UnknownCryptoError;
 use hazardous::constants::{
     ChaChaState, CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, HCHACHA_OUTSIZE,
     IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE,
 };
 use seckey::zero;
-use errors::UnknownCryptoError;
 
 #[derive(Clone)]
 struct InternalState {

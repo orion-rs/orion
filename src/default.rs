@@ -20,13 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use errors::*;
 use hazardous::aead;
 use hazardous::constants::*;
 use hazardous::cshake;
 use hazardous::hkdf;
 use hazardous::hmac;
 use hazardous::pbkdf2;
-use errors::*;
 use util;
 
 /// HMAC-SHA512.

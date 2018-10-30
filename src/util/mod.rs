@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use errors;
 #[cfg(feature = "safe_api")]
 use rand::{rngs::OsRng, RngCore};
 use subtle::ConstantTimeEq;
-use errors;
 
 #[inline(never)]
 #[cfg(feature = "safe_api")]

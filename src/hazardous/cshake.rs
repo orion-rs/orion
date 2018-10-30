@@ -71,8 +71,8 @@ extern crate core;
 
 use self::core::mem;
 use byteorder::{BigEndian, ByteOrder};
-use tiny_keccak::Keccak;
 use errors::*;
+use tiny_keccak::Keccak;
 
 /// cSHAKE256 as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 pub struct CShake {

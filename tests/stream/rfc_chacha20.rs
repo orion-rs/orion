@@ -23,21 +23,10 @@
 mod rfc8439_chacha20 {
 
     extern crate hex;
-    extern crate orion;
     extern crate std;
 
     use self::hex::decode;
-    use self::orion::hazardous::chacha20::{decrypt, encrypt};
-
-    fn test_runner(key: &[u8], nonce: &[u8], init_block_count: u32, pt: &mut [u8], ct: &mut [u8]) {
-        let original_pt = pt.to_vec();
-        let original_ct = ct.to_vec();
-
-        encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
-        decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
-        assert!(&original_pt == &pt);
-        assert!(&original_ct == &ct);
-    }
+    use stream::*;
 
     #[test]
     fn chacha20_encryption_test_0() {
@@ -67,7 +56,7 @@ mod rfc8439_chacha20 {
                 .as_bytes()
                 .to_vec();
 
-        test_runner(&key, &nonce, 1, &mut plaintext, &mut expected);
+        chacha_test_runner(&key, &nonce, 1, &mut plaintext, &mut expected);
     }
 
     #[test]
@@ -85,7 +74,7 @@ mod rfc8439_chacha20 {
              7724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586",
         ).unwrap();
 
-        test_runner(&key, &nonce, 0, &mut plaintext, &mut expected);
+        chacha_test_runner(&key, &nonce, 0, &mut plaintext, &mut expected);
     }
 
     #[test]
@@ -117,7 +106,7 @@ mod rfc8439_chacha20 {
              ccafb341b2384dd902f3d1ab7ac61dd29c6f21ba5b862f3730e37cfdc4fd806c22f221",
         ).unwrap();
 
-        test_runner(&key, &nonce, 1, &mut plaintext, &mut expected);
+        chacha_test_runner(&key, &nonce, 1, &mut plaintext, &mut expected);
     }
 
     #[test]
@@ -137,6 +126,6 @@ mod rfc8439_chacha20 {
         055716ead6962568f87d3f3f7704c6a8d1bcd1bf4d50d6154b6da731b187b58dfd728afa36757a797ac188d1"
         ).unwrap();
 
-        test_runner(&key, &nonce, 42, &mut plaintext, &mut expected);
+        chacha_test_runner(&key, &nonce, 42, &mut plaintext, &mut expected);
     }
 }

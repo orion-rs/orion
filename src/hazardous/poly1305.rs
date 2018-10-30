@@ -57,9 +57,9 @@
 //! ```
 
 use byteorder::{ByteOrder, LittleEndian};
+use errors::*;
 use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use seckey::zero;
-use errors::*;
 use util;
 
 pub struct Poly1305 {

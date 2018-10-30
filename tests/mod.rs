@@ -21,10 +21,10 @@
 #[cfg(test)]
 pub mod aead;
 #[cfg(test)]
-pub mod stream;
+pub mod kdf;
 #[cfg(test)]
 pub mod mac;
 #[cfg(test)]
-pub mod kdf;
+pub mod stream;
 #[cfg(test)]
 pub mod xof;

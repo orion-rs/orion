@@ -29,22 +29,8 @@ mod other_hkdf {
     extern crate orion;
 
     use self::hex::decode;
-    use self::orion::hazardous::hkdf::*;
 
-    fn hkdf_test_runner(
-        excp_prk: &[u8],
-        excp_okm: &[u8],
-        salt: &[u8],
-        ikm: &[u8],
-        info: &[u8],
-        okm_out: &mut [u8],
-    ) -> bool {
-        let actual_prk = extract(&salt, &ikm);
-
-        expand(&actual_prk, &info, okm_out).unwrap();
-
-        (actual_prk.as_ref() == excp_prk) == (okm_out == excp_okm)
-    }
+    use kdf::hkdf_test_runner;
 
     #[test]
     fn test_case_1() {
@@ -62,7 +48,7 @@ mod other_hkdf {
         ).unwrap();
 
         assert!(hkdf_test_runner(
-            &expected_prk,
+            Some(&expected_prk),
             &expected_okm,
             &salt,
             &ikm,
@@ -87,7 +73,7 @@ mod other_hkdf {
             ).unwrap();
 
         assert!(hkdf_test_runner(
-            &expected_prk,
+            Some(&expected_prk),
             &expected_okm,
             &salt,
             &ikm,
@@ -112,7 +98,7 @@ mod other_hkdf {
         ).unwrap();
 
         assert!(hkdf_test_runner(
-            &expected_prk,
+            Some(&expected_prk),
             &expected_okm,
             &salt,
             &ikm,
@@ -136,7 +122,7 @@ mod other_hkdf {
             "7413e8997e020610fbf6823f2ce14bff01875db1ca55f68cfcf3954dc8aff53559bd5e3028b080f7c068",
         ).unwrap();
         assert!(hkdf_test_runner(
-            &expected_prk,
+            Some(&expected_prk),
             &expected_okm,
             &salt,
             &ikm,
@@ -161,7 +147,7 @@ mod other_hkdf {
         ).unwrap();
 
         assert!(hkdf_test_runner(
-            &expected_prk,
+            Some(&expected_prk),
             &expected_okm,
             &salt,
             &ikm,

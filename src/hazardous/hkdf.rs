@@ -65,9 +65,9 @@
 //! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap());
 //! ```
 
+use errors::*;
 use hazardous::constants::HLEN;
 use hazardous::hmac;
-use errors::*;
 use util;
 
 #[inline(always)]
