@@ -386,14 +386,11 @@ pub fn decrypt(key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoEr
         return Err(UnknownCryptoError);
     }
 
-    let mut nonce = [0u8; XCHACHA_NONCESIZE];
-    nonce.copy_from_slice(&ciphertext[..XCHACHA_NONCESIZE]);
-
     let mut dst_out = vec![0u8; ciphertext.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
     aead::xchacha20_poly1305_decrypt(
         key,
-        &nonce,
+        &ciphertext[..XCHACHA_NONCESIZE],
         &ciphertext[XCHACHA_NONCESIZE..],
         &[0u8; 0],
         &mut dst_out,
