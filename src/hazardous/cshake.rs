@@ -178,7 +178,7 @@ fn left_encode(x: u64) -> ([u8; 9], usize) {
         8
     } else {
         let mut tmp: usize = 0;
-        BigEndian::write_u64(&mut input[1..], x.to_le());
+        BigEndian::write_u64(&mut input[1..], x);
         for idx in &input {
             if *idx != 0 {
                 break;
