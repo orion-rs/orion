@@ -62,6 +62,7 @@ use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use seckey::zero;
 use util;
 
+/// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub struct Poly1305 {
     a: [u32; 5],
     r: [u32; 5],
