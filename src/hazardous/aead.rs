@@ -29,12 +29,11 @@
 //! - `plaintext`: The data to be encrypted
 //! - `dst_out`: Destination array that will hold the ciphertext_with_tag/plaintext after encryption/decryption
 //!
-//! See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
-//!
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The length of the `key` is not `32` bytes
-//! - The length of the `nonce` is not `12` bytes
+//! - The length of the `nonce` is not an acceptable length (`12` with ChaCha20, `16` with HChaCha20 and
+//! `24` with XChaCha20).
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
 //! - The length of `ciphertext_with_tag` is not greater than 16
@@ -65,7 +64,7 @@
 //! Ladies and Gentlemen of the class of '99: If I could offer you o\
 //! nly one tip for the future, sunscreen would be it.";
 //!
-//! // Length of above plaintext is 114.
+//! // Length of above plaintext is 114 and then we accomodate 16 for the Poly1305 tag.
 //!
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! aead::ietf_chacha20_poly1305_encrypt(&key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();

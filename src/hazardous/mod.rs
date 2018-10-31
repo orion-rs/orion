@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// `ChaCha20_Poly1305` AEAD (Authenticated Encryption with Associated Data).
+/// AEAD (Authenticated Encryption with Associated Data) constructions.
 pub mod aead;
 
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
@@ -38,7 +38,7 @@ pub mod cshake;
 /// Constant values and types.
 pub mod constants;
 
-/// IETF ChaCha20 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+/// IETF ChaCha20, XChaCha20 and HChaCha20.
 pub mod chacha20;
 
 /// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).

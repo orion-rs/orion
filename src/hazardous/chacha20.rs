@@ -207,7 +207,7 @@ impl InternalState {
     }
 }
 
-/// The ChaCha20 encryption function.
+/// The ChaCha20 encryption function as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439)..
 pub fn chacha20_encrypt(
     key: &[u8],
     nonce: &[u8],
@@ -271,7 +271,7 @@ pub fn chacha20_encrypt(
     Ok(())
 }
 
-/// The ChaCha20 decryption function.
+/// The ChaCha20 decryption function as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439)..
 pub fn chacha20_decrypt(
     key: &[u8],
     nonce: &[u8],

@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! LIBRARY DESCRIPTION GOES HERE
+//! Pure-Rust cryptography library. See more in the [wiki](https://github.com/brycx/orion/wiki).
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
 #![deny(overflowing_literals)]

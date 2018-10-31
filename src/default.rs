@@ -306,7 +306,7 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// # About:
 /// - The nonce is automatically generated
 /// - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated
-/// ciphertext with tag
+/// ciphertext with corresponding Poly1305 tag
 ///
 /// # Parameters:
 /// - `plaintext`:  The data to be encrypted
@@ -333,6 +333,10 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// let encrypted_data = default::encrypt(&key, "Secret message".as_bytes()).unwrap();
 /// ```
 pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+    if plaintext.is_empty() {
+        return Err(UnknownCryptoError);
+    }
+
     let mut nonce = [0u8; XCHACHA_NONCESIZE];
     util::gen_rand_key(&mut nonce).unwrap();
 
@@ -355,7 +359,8 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
 /// - The ciphertext must be of the same format as the one returned by `default::encrypt()`
 ///
 /// # Parameters:
-/// - `ciphertext`:  The data to be decrypted with the first 24 bytes being the nonce
+/// - `ciphertext`:  The data to be decrypted with the first 24 bytes being the nonce and the last
+/// 16 bytes being the corresponding Poly1305 authentication tag
 /// - `key`: The secret key used to decrypt the `ciphertext`
 ///
 /// # Security:
