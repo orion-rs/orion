@@ -30,18 +30,6 @@ Currently supports:
 The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
 will produce **incorrect results on big-endian based systems**. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
 
-### Usage example
-```rust
-extern crate orion;
-use orion::default;
-
-let password = "Password to be hashed".as_bytes();
-
-let password_hash = default::pbkdf2(password).unwrap();
-
-assert!(default::pbkdf2_verify(&password_hash, password).unwrap());
-```
-
 ### Enabling `no_std`
 To use orion in a `no_std` context, you need to specify the dependency as such:
 
