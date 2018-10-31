@@ -175,19 +175,20 @@ pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoE
 /// The left_encode function as specified in the NIST SP 800-185.
 fn left_encode(x: u64) -> ([u8; 9], usize) {
     let mut input = [0u8; 9];
-    let mut offset: usize = 0;
-
-    if x == 0 {
-        offset = 8;
+    let offset: usize = if x == 0 {
+        8
     } else {
+        let mut tmp: usize = 0;
         BigEndian::write_u64(&mut input[1..], x.to_le());
         for idx in &input {
             if *idx != 0 {
                 break;
             }
-            offset += 1;
+            tmp += 1;
         }
-    }
+
+        tmp
+    };
 
     input[offset - 1] = (9 - offset) as u8;
 
