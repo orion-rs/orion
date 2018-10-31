@@ -42,7 +42,7 @@
 //! ### Generating derived key:
 //! ```
 //! use orion::hazardous::pbkdf2;
-//! use orion::utilities::util;
+//! use orion::util;
 //!
 //! let mut salt = [0u8; 32];
 //! util::gen_rand_key(&mut salt).unwrap();
@@ -53,7 +53,7 @@
 //! ### Verifying derived key:
 //! ```
 //! use orion::hazardous::pbkdf2;
-//! use orion::utilities::util;
+//! use orion::util;
 //!
 //! let mut salt = [0u8; 32];
 //! util::gen_rand_key(&mut salt).unwrap();
@@ -65,9 +65,10 @@
 //! ```
 
 use byteorder::{BigEndian, ByteOrder};
+use errors::*;
 use hazardous::constants::{HLenArray, HLEN};
 use hazardous::hmac;
-use utilities::{errors::*, util};
+use util;
 
 #[inline(always)]
 fn function_f(

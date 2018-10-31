@@ -12,36 +12,22 @@ This library is not suitable for production code. There are no guarantees for th
 
 ### About
 This library aims to provide easy and usable crypto. 'Usable' meaning exposing high-level
-API's that are easy to use and hard to misuse.  
+API's that are easy to use and hard to misuse. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
 
 In case you missed the warning above: **don't use orion for production code or instances where you need absolute confidence in security**. While security is a top priority goal for this library, the author is no
 professional. Look in the Alternatives section if this means orion is not for you.
 
-
-Currently contains:
-* HMAC-SHA512
-* HKDF-HMAC-SHA512.
-* PBKDF2-HMAC-SHA512.
-* cSHAKE256.
-* ChaCha20.
-* Poly1305.
-* AEAD ChaCha20Poly1305.
+Currently supports:
+* **AEAD**: ChaCha20Poly1305, XChaCha20Poly1305
+* **Stream ciphers**: ChaCha20, XChaCha20
+* **KDF**: HKDF-HMAC-SHA512
+* **Password hashing**: PBKDF2-HMAC-SHA512
+* **MAC**: HMAC-SHA512, Poly1305
+* **XOF**: cSHAKE256
 
 ***Note on cSHAKE***:
 The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
 will produce **incorrect results on big-endian based systems**. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
-
-### Usage example
-```rust
-extern crate orion;
-use orion::default;
-
-let password = "Password to be hashed".as_bytes();
-
-let password_hash = default::pbkdf2(password).unwrap();
-
-assert!(default::pbkdf2_verify(&password_hash, password).unwrap());
-```
 
 ### Enabling `no_std`
 To use orion in a `no_std` context, you need to specify the dependency as such:
@@ -90,7 +76,7 @@ Can be found [here](https://github.com/brycx/orion/releases).
 - [RustCrypto HKDF](https://crates.io/crates/hkdf)
 - [RustCrypto PBKDF2](https://crates.io/crates/pbkdf2)
 - [sp800-185](https://crates.io/crates/sp800-185) (cSHAKE)
-- [chacha](https://crates.io/crates/chacha) (ChaCha20)
+- [chacha](https://crates.io/crates/chacha) (ChaCha20, XChaCha20)
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.

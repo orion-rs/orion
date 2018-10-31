@@ -22,20 +22,7 @@
 #[cfg(test)]
 mod boringssl {
 
-    extern crate orion;
-    extern crate std;
-
-    use self::orion::hazardous::chacha20::{decrypt, encrypt};
-
-    fn test_runner(key: &[u8], nonce: &[u8], init_block_count: u32, pt: &mut [u8], ct: &mut [u8]) {
-        let original_pt = pt.to_vec();
-        let original_ct = ct.to_vec();
-
-        encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
-        decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
-        assert!(&original_pt == &pt);
-        assert!(&original_ct == &ct);
-    }
+    use stream::*;
 
     #[test]
     fn chacha20_encryption_test_1() {
@@ -200,6 +187,6 @@ mod boringssl {
             0xcf, 0x4a,
         ];
 
-        test_runner(&key, &nonce, 42, &mut plaintext, &mut expected);
+        chacha_test_runner(&key, &nonce, 42, &mut plaintext, &mut expected);
     }
 }

@@ -34,8 +34,14 @@ pub type ChaChaState = [u32; 16];
 pub const CHACHA_BLOCKSIZE: usize = 64;
 /// The key size for ChaCha20.
 pub const CHACHA_KEYSIZE: usize = 32;
+/// The size of the subkey that HChaCha20 returns.
+pub const HCHACHA_OUTSIZE: usize = 32;
 /// The nonce size for IETF ChaCha20.
 pub const IETF_CHACHA_NONCESIZE: usize = 12;
+/// The nonce size for HChaCha20.
+pub const HCHACHA_NONCESIZE: usize = 16;
+/// The nonce size for XChaCha20.
+pub const XCHACHA_NONCESIZE: usize = 24;
 /// The blocksize which Poly1305 operates on.
 pub const POLY1305_BLOCKSIZE: usize = 16;
 /// Type for a Poly1305 tag.

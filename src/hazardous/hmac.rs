@@ -38,7 +38,7 @@
 //! ### Generating HMAC:
 //! ```
 //! use orion::hazardous::hmac;
-//! use orion::utilities::util;
+//! use orion::util;
 //!
 //! let mut key = [0u8; 64];
 //! util::gen_rand_key(&mut key).unwrap();
@@ -51,7 +51,7 @@
 //! ### Verifying HMAC:
 //! ```
 //! use orion::hazardous::hmac;
-//! use orion::utilities::util;
+//! use orion::util;
 //!
 //! let mut key = [0u8; 64];
 //! util::gen_rand_key(&mut key).unwrap();
@@ -66,10 +66,11 @@
 extern crate core;
 
 use self::core::mem;
+use errors::*;
 use hazardous::constants::{BlocksizeArray, HLenArray, HLEN, SHA2_BLOCKSIZE};
 use seckey::zero;
 use sha2::{Digest, Sha512};
-use utilities::{errors::*, util};
+use util;
 
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
@@ -117,7 +118,6 @@ impl Hmac {
             self.ipad_hasher.input(self.ipad.as_ref());
             self.is_finalized = false;
         } else {
-            ()
         }
     }
 

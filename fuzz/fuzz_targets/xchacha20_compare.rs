@@ -11,7 +11,7 @@ use orion::hazardous::chacha20;
 
 fuzz_target!(|data: &[u8]| {
     let mut key = [0u8; 32];
-    let mut nonce = [0u8; 12];
+    let mut nonce = [0u8; 24];
     apply_from_input_fixed(&mut key, &data, 0);
     apply_from_input_fixed(&mut nonce, &data, 32);
 
@@ -25,8 +25,8 @@ fuzz_target!(|data: &[u8]| {
     // For chacha
     let mut buffer = pt.clone();
     // Different structs because they don't reset counter
-    let mut stream_enc = ChaCha::new_ietf(&key, &nonce);
-    let mut stream_dec = ChaCha::new_ietf(&key, &nonce);
+    let mut stream_enc = ChaCha::new_xchacha20(&key, &nonce);
+    let mut stream_dec = ChaCha::new_xchacha20(&key, &nonce);
     // Encrypt pt
     stream_enc
         .xor_read(&mut buffer)
@@ -39,8 +39,8 @@ fuzz_target!(|data: &[u8]| {
     assert_eq!(pt, buffer_2);
 
     // chacha crates uses 0 as inital counter
-    chacha20::encrypt(&key, &nonce, 0, &pt, &mut dst_ct).unwrap();
+    chacha20::xchacha20_encrypt(&key, &nonce, 0, &pt, &mut dst_ct).unwrap();
     assert_eq!(dst_ct, buffer);
-    chacha20::decrypt(&key, &nonce, 0, &dst_ct, &mut dst_pt).unwrap();
+    chacha20::xchacha20_decrypt(&key, &nonce, 0, &dst_ct, &mut dst_pt).unwrap();
     assert_eq!(&dst_pt, &pt);
 });

@@ -43,7 +43,7 @@
 //! # Example:
 //! ```
 //! use orion::hazardous::poly1305;
-//! use orion::utilities::util;
+//! use orion::util;
 //!
 //! let mut one_time_key = [0u8; 32];
 //! util::gen_rand_key(&mut one_time_key).unwrap();
@@ -57,10 +57,12 @@
 //! ```
 
 use byteorder::{ByteOrder, LittleEndian};
+use errors::*;
 use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use seckey::zero;
-use utilities::{errors::*, util};
+use util;
 
+/// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub struct Poly1305 {
     a: [u32; 5],
     r: [u32; 5],
@@ -199,7 +201,7 @@ impl Poly1305 {
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::assign_op_pattern))]
     /// Remaining processing after all data blocks have been processed.
-    fn process_end_of_stream(&mut self) -> () {
+    fn process_end_of_stream(&mut self) {
         // full carry h
         let mut h0: u32 = self.a[0];
         let mut h1: u32 = self.a[1];
@@ -261,7 +263,6 @@ impl Poly1305 {
             self.leftover = 0;
             self.is_finalized = false;
         } else {
-            ()
         }
     }
     #[inline(always)]

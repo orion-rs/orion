@@ -71,8 +71,8 @@ extern crate core;
 
 use self::core::mem;
 use byteorder::{BigEndian, ByteOrder};
+use errors::*;
 use tiny_keccak::Keccak;
-use utilities::errors::*;
 
 /// cSHAKE256 as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 pub struct CShake {
@@ -115,7 +115,6 @@ impl CShake {
             self.hasher = self.setup_hasher.clone();
             self.is_finalized = false;
         } else {
-            ()
         }
     }
     /// Set `input`. Can be called repeatedly.

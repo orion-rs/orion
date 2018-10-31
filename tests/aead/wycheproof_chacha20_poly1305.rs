@@ -33,31 +33,7 @@ mod wycheproof_aead_chacha20_poly1305 {
     extern crate orion;
 
     use self::hex::decode;
-    use self::orion::hazardous::aead;
-
-    fn chacha20_poly1305_test_runner(
-        key: &[u8],
-        nonce: &[u8],
-        aad: &[u8],
-        tag: &[u8],
-        input: &[u8],
-        output: &[u8],
-    ) {
-        let mut dst_ct_out = vec![0u8; input.len() + 16];
-        let mut dst_pt_out = vec![0u8; input.len()];
-
-        assert!(
-            aead::ietf_chacha20_poly1305_encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok()
-        );
-        assert!(dst_ct_out[..input.len()].as_ref() == output);
-        assert!(dst_ct_out[input.len()..].as_ref() == tag);
-
-        assert!(
-            aead::ietf_chacha20_poly1305_decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out)
-                .is_ok()
-        );
-        assert!(dst_pt_out[..].as_ref() == input);
-    }
+    use aead::*;
 
     #[test]
     fn wycheproof_test_case_1() {
@@ -71,7 +47,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: rfc7539
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     /*
@@ -92,7 +68,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -107,7 +83,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
     */
     #[test]
@@ -122,7 +98,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -137,7 +113,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -152,7 +128,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -167,7 +143,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -182,7 +158,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -197,7 +173,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -212,7 +188,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -227,7 +203,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -242,7 +218,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -257,7 +233,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -272,7 +248,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -287,7 +263,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -302,7 +278,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -317,7 +293,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -332,7 +308,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -347,7 +323,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -362,7 +338,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -377,7 +353,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -394,7 +370,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -411,7 +387,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -428,7 +404,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -445,7 +421,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -460,7 +436,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -475,7 +451,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -490,7 +466,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -505,7 +481,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -520,7 +496,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -535,7 +511,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -550,7 +526,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -565,7 +541,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -580,7 +556,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -595,7 +571,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -610,7 +586,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -625,7 +601,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -641,7 +617,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -657,7 +633,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -672,7 +648,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -689,7 +665,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -704,7 +680,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -719,7 +695,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -736,7 +712,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -751,7 +727,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -766,7 +742,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -783,7 +759,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -798,7 +774,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -813,7 +789,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -830,7 +806,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -845,7 +821,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -860,7 +836,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -877,7 +853,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -892,7 +868,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -907,7 +883,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -924,7 +900,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -939,7 +915,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -954,7 +930,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -971,7 +947,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -986,7 +962,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1001,7 +977,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment:
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1017,7 +993,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 0 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1033,7 +1009,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 1 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1049,7 +1025,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 7 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1065,7 +1041,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 8 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1081,7 +1057,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 31 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1097,7 +1073,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 32 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1113,7 +1089,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 33 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1129,7 +1105,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 63 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1145,7 +1121,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 64 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1161,7 +1137,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 77 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1177,7 +1153,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 80 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1193,7 +1169,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 96 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1209,7 +1185,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 97 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1225,7 +1201,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 120 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1241,7 +1217,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 121 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1257,7 +1233,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 126 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1273,7 +1249,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 127 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1289,7 +1265,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 63 and 127 in tag expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1305,7 +1281,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Tag changed to all zero expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1321,7 +1297,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: tag change to all 1 expected tag:a3e3fdf9fba6861b5ad2607f40b7f447
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1337,7 +1313,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 0 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1353,7 +1329,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 1 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1369,7 +1345,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 7 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1385,7 +1361,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 8 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1401,7 +1377,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 31 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1417,7 +1393,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 32 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1433,7 +1409,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 33 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1449,7 +1425,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 63 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1465,7 +1441,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 64 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1481,7 +1457,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 77 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1497,7 +1473,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 80 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1513,7 +1489,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 96 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1529,7 +1505,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 97 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1545,7 +1521,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 120 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1561,7 +1537,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 121 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1577,7 +1553,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 126 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1593,7 +1569,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 127 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1609,7 +1585,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Flipped bit 63 and 127 in tag expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1625,7 +1601,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: Tag changed to all zero expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1641,7 +1617,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: tag change to all 1 expected tag:27da374f17b7f1b23844a5490bfc4001
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1656,7 +1632,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1671,7 +1647,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1686,7 +1662,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1701,7 +1677,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1716,7 +1692,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1731,7 +1707,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1746,7 +1722,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1761,7 +1737,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1776,7 +1752,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1791,7 +1767,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1806,7 +1782,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1821,7 +1797,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: checking for int overflows
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1837,7 +1813,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: special case tag
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1853,7 +1829,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: special case tag
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1869,7 +1845,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: special case tag
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1885,7 +1861,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: special case tag
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1901,7 +1877,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: special case tag
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1917,7 +1893,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: special case tag
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1933,7 +1909,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: special case tag
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1948,7 +1924,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1963,7 +1939,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1978,7 +1954,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -1993,7 +1969,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2008,7 +1984,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2023,7 +1999,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2038,7 +2014,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2053,7 +2029,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2068,7 +2044,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2083,7 +2059,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2098,7 +2074,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2113,7 +2089,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2128,7 +2104,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2143,7 +2119,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2158,7 +2134,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2173,7 +2149,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2188,7 +2164,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2203,7 +2179,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2218,7 +2194,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2233,7 +2209,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2248,7 +2224,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2263,7 +2239,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2278,7 +2254,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2293,7 +2269,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2308,7 +2284,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2323,7 +2299,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: edge case intermediate sums in poly1305
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2339,7 +2315,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: invalid nonce size
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2355,7 +2331,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: invalid nonce size
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2371,7 +2347,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: invalid nonce size
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2387,7 +2363,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: invalid nonce size
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 
     #[test]
@@ -2403,6 +2379,6 @@ mod wycheproof_aead_chacha20_poly1305 {
 
         // Wycheproof test case comment: invalid nonce size
 
-        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
 }

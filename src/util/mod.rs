@@ -20,10 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use errors;
 #[cfg(feature = "safe_api")]
 use rand::{rngs::OsRng, RngCore};
 use subtle::ConstantTimeEq;
-use utilities::errors;
 
 #[inline(never)]
 #[cfg(feature = "safe_api")]
@@ -43,7 +43,7 @@ use utilities::errors;
 ///
 /// # Example:
 /// ```
-/// use orion::utilities::util;
+/// use orion::util;
 ///
 /// let mut salt = [0u8; 16];
 ///
@@ -73,7 +73,7 @@ pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
 ///
 /// # Example:
 /// ```
-/// use orion::utilities::util;
+/// use orion::util;
 ///
 /// let mut mac = [0u8; 64];
 ///

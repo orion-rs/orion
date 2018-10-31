@@ -1,5 +1,3 @@
-// MIT License
-
 // Copyright (c) 2018 brycx
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,29 +18,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! Pure-Rust cryptography library. See more in the [wiki](https://github.com/brycx/orion/wiki).
-#![cfg_attr(not(feature = "safe_api"), no_std)]
-#![forbid(unsafe_code)]
-#![deny(overflowing_literals)]
-#![deny(missing_docs)]
-
-extern crate byteorder;
-#[cfg(feature = "safe_api")]
-extern crate rand;
-extern crate seckey;
-extern crate sha2;
-extern crate subtle;
-extern crate tiny_keccak;
-
-/// Core functionality such as generating a salt/key/IV/nonce.
-pub mod util;
-
-/// Errors for orion's cryptographic operations.
-pub mod errors;
-
-#[cfg(feature = "safe_api")]
-/// High-level API with safer defaults. Not available in `no_std` context.
-pub mod default;
-
-/// Low-level API.
-pub mod hazardous;
+#[cfg(test)]
+pub mod official_cshake;

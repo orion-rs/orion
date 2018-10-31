@@ -29,12 +29,11 @@
 //! - `plaintext`: The data to be encrypted
 //! - `dst_out`: Destination array that will hold the ciphertext_with_tag/plaintext after encryption/decryption
 //!
-//! See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
-//!
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The length of the `key` is not `32` bytes
-//! - The length of the `nonce` is not `12` bytes
+//! - The length of the `nonce` is not an acceptable length (`12` with ChaCha20, `16` with HChaCha20 and
+//! `24` with XChaCha20).
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
 //! - The length of `ciphertext_with_tag` is not greater than 16
@@ -65,7 +64,7 @@
 //! Ladies and Gentlemen of the class of '99: If I could offer you o\
 //! nly one tip for the future, sunscreen would be it.";
 //!
-//! // Length of above plaintext is 114.
+//! // Length of above plaintext is 114 and then we accomodate 16 for the Poly1305 tag.
 //!
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! aead::ietf_chacha20_poly1305_encrypt(&key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();
@@ -76,20 +75,21 @@
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
 use byteorder::{ByteOrder, LittleEndian};
+use errors::UnknownCryptoError;
 use hazardous::chacha20;
 use hazardous::constants::{
-    CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE,
+    CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE, XCHACHA_NONCESIZE,
 };
 use hazardous::poly1305;
 use seckey::zero;
-use utilities::errors::UnknownCryptoError;
-use utilities::util;
+use util;
 
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> [u8; POLY1305_KEYSIZE] {
     let mut poly1305_key = [0u8; POLY1305_KEYSIZE];
-    poly1305_key
-        .copy_from_slice(&chacha20::keystream_block(key, nonce, 0).unwrap()[..POLY1305_KEYSIZE]);
+    poly1305_key.copy_from_slice(
+        &chacha20::chacha20_keystream_block(key, nonce, 0).unwrap()[..POLY1305_KEYSIZE],
+    );
 
     poly1305_key
 }
@@ -101,6 +101,32 @@ fn padding(input: &[u8], pad_len: usize) -> usize {
     } else {
         0
     }
+}
+
+/// Process data to be authenticated using a `Poly1305` struct initialized with a one-time-key.
+fn process_authentication(
+    poly1305_state: &mut poly1305::Poly1305,
+    aad: &[u8],
+    buf: &[u8],
+    buf_in_len: usize,
+) {
+    let mut padding_max = [0u8; 16];
+
+    poly1305_state.update(aad).unwrap();
+    poly1305_state
+        .update(&padding_max[..padding(aad, 16)])
+        .unwrap();
+    poly1305_state.update(&buf[..buf_in_len]).unwrap();
+    poly1305_state
+        .update(&padding_max[..padding(&buf[..buf_in_len], 16)])
+        .unwrap();
+
+    // Using the 16 bytes from padding template to store length information
+    LittleEndian::write_u64(&mut padding_max[..8], aad.len() as u64);
+    LittleEndian::write_u64(&mut padding_max[8..16], buf_in_len as u64);
+
+    poly1305_state.update(&padding_max[..8]).unwrap();
+    poly1305_state.update(&padding_max[8..16]).unwrap();
 }
 
 /// `AEAD_ChaCha20_Poly1305` encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
@@ -125,28 +151,10 @@ pub fn ietf_chacha20_poly1305_encrypt(
     }
 
     let mut poly1305_key = poly1305_key_gen(key, nonce);
-    chacha20::encrypt(key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
+    chacha20::chacha20_encrypt(key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
-    let mut padding_max = [0u8; 16];
-
-    poly1305_state.update(aad).unwrap();
-    poly1305_state
-        .update(&padding_max[..padding(aad, 16)])
-        .unwrap();
-    poly1305_state.update(&dst_out[..plaintext.len()]).unwrap();
-    poly1305_state
-        .update(&padding_max[..padding(&dst_out[..plaintext.len()], 16)])
-        .unwrap();
-
-    // Using the 16 bytes from padding template to store length information
-    LittleEndian::write_u64(&mut padding_max[..8], aad.len() as u64);
-    // Plaintext length == ciphertext length with ChaCha20
-    LittleEndian::write_u64(&mut padding_max[8..16], plaintext.len() as u64);
-
-    poly1305_state.update(&padding_max[..8]).unwrap();
-    poly1305_state.update(&padding_max[8..16]).unwrap();
-
+    process_authentication(&mut poly1305_state, aad, &dst_out, plaintext.len());
     dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize().unwrap());
 
     zero(&mut poly1305_key);
@@ -178,33 +186,20 @@ pub fn ietf_chacha20_poly1305_decrypt(
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
     let mut poly1305_key = poly1305_key_gen(key, nonce);
-    let mut padding_max = [0u8; 16];
-
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
-    poly1305_state.update(aad).unwrap();
-    poly1305_state
-        .update(&padding_max[..padding(aad, 16)])
-        .unwrap();
-    poly1305_state
-        .update(&ciphertext_with_tag[..ciphertext_len])
-        .unwrap();
-    poly1305_state
-        .update(&padding_max[..padding(&ciphertext_with_tag[..ciphertext_len], 16)])
-        .unwrap();
-
-    // Using the 16 bytes from padding template to store length information
-    LittleEndian::write_u64(&mut padding_max[..8], aad.len() as u64);
-    LittleEndian::write_u64(&mut padding_max[8..16], ciphertext_len as u64);
-
-    poly1305_state.update(&padding_max[..8]).unwrap();
-    poly1305_state.update(&padding_max[8..16]).unwrap();
+    process_authentication(
+        &mut poly1305_state,
+        aad,
+        ciphertext_with_tag,
+        ciphertext_len,
+    );
 
     util::compare_ct(
         &poly1305_state.finalize().unwrap(),
         &ciphertext_with_tag[ciphertext_len..],
     ).unwrap();
 
-    chacha20::decrypt(
+    chacha20::chacha20_decrypt(
         key,
         nonce,
         1,
@@ -213,6 +208,53 @@ pub fn ietf_chacha20_poly1305_decrypt(
     ).unwrap();
 
     zero(&mut poly1305_key);
+
+    Ok(())
+}
+
+/// `AEAD_XChaCha20_Poly1305` encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+pub fn xchacha20_poly1305_encrypt(
+    key: &[u8],
+    nonce: &[u8],
+    plaintext: &[u8],
+    aad: &[u8],
+    dst_out: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+    if nonce.len() != XCHACHA_NONCESIZE {
+        return Err(UnknownCryptoError);
+    }
+
+    let mut subkey = chacha20::hchacha20(key, &nonce[0..16]).unwrap();
+    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
+    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
+
+    ietf_chacha20_poly1305_encrypt(&subkey, &prefixed_nonce, plaintext, aad, dst_out).unwrap();
+
+    zero(&mut subkey);
+
+    Ok(())
+}
+
+/// `AEAD_XChaCha20_Poly1305` decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+pub fn xchacha20_poly1305_decrypt(
+    key: &[u8],
+    nonce: &[u8],
+    ciphertext_with_tag: &[u8],
+    aad: &[u8],
+    dst_out: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+    if nonce.len() != XCHACHA_NONCESIZE {
+        return Err(UnknownCryptoError);
+    }
+
+    let mut subkey = chacha20::hchacha20(key, &nonce[0..16]).unwrap();
+    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
+    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
+
+    ietf_chacha20_poly1305_decrypt(&subkey, &prefixed_nonce, ciphertext_with_tag, aad, dst_out)
+        .unwrap();
+
+    zero(&mut subkey);
 
     Ok(())
 }
