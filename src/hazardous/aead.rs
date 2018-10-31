@@ -104,6 +104,32 @@ fn padding(input: &[u8], pad_len: usize) -> usize {
     }
 }
 
+/// Process data to be authenticated using a `Poly1305` struct initialized with a one-time-key.
+fn process_authentication(
+    poly1305_state: &mut poly1305::Poly1305,
+    aad: &[u8],
+    buf: &[u8],
+    buf_in_len: usize,
+) {
+    let mut padding_max = [0u8; 16];
+
+    poly1305_state.update(aad).unwrap();
+    poly1305_state
+        .update(&padding_max[..padding(aad, 16)])
+        .unwrap();
+    poly1305_state.update(&buf[..buf_in_len]).unwrap();
+    poly1305_state
+        .update(&padding_max[..padding(&buf[..buf_in_len], 16)])
+        .unwrap();
+
+    // Using the 16 bytes from padding template to store length information
+    LittleEndian::write_u64(&mut padding_max[..8], aad.len() as u64);
+    LittleEndian::write_u64(&mut padding_max[8..16], buf_in_len as u64);
+
+    poly1305_state.update(&padding_max[..8]).unwrap();
+    poly1305_state.update(&padding_max[8..16]).unwrap();
+}
+
 /// `AEAD_ChaCha20_Poly1305` encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn ietf_chacha20_poly1305_encrypt(
     key: &[u8],
@@ -129,24 +155,7 @@ pub fn ietf_chacha20_poly1305_encrypt(
     chacha20::chacha20_encrypt(key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
-    let mut padding_max = [0u8; 16];
-
-    poly1305_state.update(aad).unwrap();
-    poly1305_state
-        .update(&padding_max[..padding(aad, 16)])
-        .unwrap();
-    poly1305_state.update(&dst_out[..plaintext.len()]).unwrap();
-    poly1305_state
-        .update(&padding_max[..padding(&dst_out[..plaintext.len()], 16)])
-        .unwrap();
-
-    // Using the 16 bytes from padding template to store length information
-    LittleEndian::write_u64(&mut padding_max[..8], aad.len() as u64);
-    LittleEndian::write_u64(&mut padding_max[8..16], plaintext.len() as u64);
-
-    poly1305_state.update(&padding_max[..8]).unwrap();
-    poly1305_state.update(&padding_max[8..16]).unwrap();
-
+    process_authentication(&mut poly1305_state, aad, &dst_out, plaintext.len());
     dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize().unwrap());
 
     zero(&mut poly1305_key);
@@ -178,26 +187,13 @@ pub fn ietf_chacha20_poly1305_decrypt(
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
     let mut poly1305_key = poly1305_key_gen(key, nonce);
-    let mut padding_max = [0u8; 16];
-
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
-    poly1305_state.update(aad).unwrap();
-    poly1305_state
-        .update(&padding_max[..padding(aad, 16)])
-        .unwrap();
-    poly1305_state
-        .update(&ciphertext_with_tag[..ciphertext_len])
-        .unwrap();
-    poly1305_state
-        .update(&padding_max[..padding(&ciphertext_with_tag[..ciphertext_len], 16)])
-        .unwrap();
-
-    // Using the 16 bytes from padding template to store length information
-    LittleEndian::write_u64(&mut padding_max[..8], aad.len() as u64);
-    LittleEndian::write_u64(&mut padding_max[8..16], ciphertext_len as u64);
-
-    poly1305_state.update(&padding_max[..8]).unwrap();
-    poly1305_state.update(&padding_max[8..16]).unwrap();
+    process_authentication(
+        &mut poly1305_state,
+        aad,
+        ciphertext_with_tag,
+        ciphertext_len,
+    );
 
     util::compare_ct(
         &poly1305_state.finalize().unwrap(),

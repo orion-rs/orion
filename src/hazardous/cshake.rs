@@ -114,7 +114,8 @@ impl CShake {
         if self.is_finalized {
             self.hasher = self.setup_hasher.clone();
             self.is_finalized = false;
-        } else { }
+        } else {
+        }
     }
     /// Set `input`. Can be called repeatedly.
     pub fn update(&mut self, input: &[u8]) -> Result<(), FinalizationCryptoError> {

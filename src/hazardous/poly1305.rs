@@ -261,7 +261,8 @@ impl Poly1305 {
             self.a = [0u32; 5];
             self.leftover = 0;
             self.is_finalized = false;
-        } else { }
+        } else {
+        }
     }
     #[inline(always)]
     /// Update state with a message. This can be called multiple times.
