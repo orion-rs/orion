@@ -16,43 +16,26 @@ use ring::pbkdf2 as ring_pbkdf2;
 
 fn ro_hmac(data: &[u8]) {
     let (secret_key, message) = hmac_setup(data);
-    let s_key = ring_hmac::SigningKey::new(&digest::SHA512, &secret_key);
-    let ring_signature = ring_hmac::sign(&s_key, &message);
-
     let mut orion_hmac = hmac::init(&secret_key);
     orion_hmac.update(&message).unwrap();
     let orion_signature = orion_hmac.finalize().unwrap();
 
+    let s_key = ring_hmac::SigningKey::new(&digest::SHA512, &secret_key);
+    let ring_signature = ring_hmac::sign(&s_key, &message);
     let v_key = ring_hmac::VerificationKey::new(&digest::SHA512, &secret_key);
 
-    let mut ring_res = false;
-    let mut ring_res_switch = false;
-
-    if ring_hmac::verify(&v_key, &message, orion_signature.as_ref()).is_ok() {
-        ring_res = true;
-    }
-
-    if ring_hmac::verify(&v_key, &message, ring_signature.as_ref()).is_ok() {
-        ring_res_switch = true;
-    }
-
-    let orion_res_switch = hmac::verify(orion_signature.as_ref(), &secret_key, &message).unwrap();
-    let orion_res = hmac::verify(ring_signature.as_ref(), &secret_key, &message).unwrap();
-
-    assert!(orion_res);
-    assert!(orion_res_switch);
-    assert!(ring_res);
-    assert!(ring_res_switch);
+    assert!(hmac::verify(ring_signature.as_ref(), &secret_key, &message).unwrap());
+    assert!(ring_hmac::verify(&v_key, &message, orion_signature.as_ref()).is_ok());
 }
 
 fn ro_hkdf(data: &[u8]) {
     let (ikm, salt, info, mut okm_out_orion) = hkdf_setup(data);
     let mut okm_out_ring = okm_out_orion.clone();
-
     hkdf::derive_key(&salt, &ikm, &info, &mut okm_out_orion).unwrap();
 
     let s_key = ring_hmac::SigningKey::new(&digest::SHA512, &salt);
     ring_hkdf(&s_key, &ikm, &info, &mut okm_out_ring);
+
     assert_eq!(okm_out_orion, okm_out_ring);
 }
 

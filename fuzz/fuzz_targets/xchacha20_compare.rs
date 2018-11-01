@@ -10,37 +10,34 @@ use chacha::{ChaCha, KeyStream};
 use orion::hazardous::chacha20;
 
 fuzz_target!(|data: &[u8]| {
-    let mut key = [0u8; 32];
-    let mut nonce = [0u8; 24];
-    apply_from_input_fixed(&mut key, &data, 0);
-    apply_from_input_fixed(&mut nonce, &data, 32);
+    let (key, nonce) = chacha_key_nonce_setup(24, data);
+    // chacha crate does not allow slices of unkown length to be passed
+    let mut fixed_nonce = [0u8; 24];
+    fixed_nonce.copy_from_slice(&nonce[..]);
 
     let mut pt = Vec::new();
     apply_from_input_heap(&mut pt, data, key.len() + nonce.len());
 
-    // For orion
-    let mut dst_pt = vec![0u8; pt.len()];
-    let mut dst_ct = vec![0u8; pt.len()];
-
-    // For chacha
-    let mut buffer = pt.clone();
+    let mut chacha_ct = pt.clone();
     // Different structs because they don't reset counter
-    let mut stream_enc = ChaCha::new_xchacha20(&key, &nonce);
-    let mut stream_dec = ChaCha::new_xchacha20(&key, &nonce);
-    // Encrypt pt
+    let mut stream_enc = ChaCha::new_xchacha20(&key, &fixed_nonce);
+    let mut stream_dec = ChaCha::new_xchacha20(&key, &fixed_nonce);
+
     stream_enc
-        .xor_read(&mut buffer)
+        .xor_read(&mut chacha_ct)
         .expect("hit end of stream far too soon");
-    let mut buffer_2 = buffer.clone();
-    // Decrypt ct
+    let mut chacha_pt = chacha_ct.clone();
     stream_dec
-        .xor_read(&mut buffer_2)
+        .xor_read(&mut chacha_pt)
         .expect("hit end of stream far too soon");
-    assert_eq!(pt, buffer_2);
 
     // chacha crates uses 0 as inital counter
-    chacha20::xchacha20_encrypt(&key, &nonce, 0, &pt, &mut dst_ct).unwrap();
-    assert_eq!(dst_ct, buffer);
-    chacha20::xchacha20_decrypt(&key, &nonce, 0, &dst_ct, &mut dst_pt).unwrap();
-    assert_eq!(&dst_pt, &pt);
+    let mut orion_pt = vec![0u8; pt.len()];
+    let mut orion_ct = vec![0u8; pt.len()];
+    chacha20::xchacha20_encrypt(&key, &nonce, 0, &pt, &mut orion_ct).unwrap();
+    chacha20::xchacha20_decrypt(&key, &nonce, 0, &orion_ct, &mut orion_pt).unwrap();
+    assert_eq!(pt, chacha_pt);
+    assert_eq!(orion_ct, chacha_ct);
+    assert_eq!(orion_pt, chacha_pt);
+
 });

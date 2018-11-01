@@ -25,4 +25,6 @@ fuzz_target!(|data: &[u8]| {
         &aad,
         &mut plaintext_out_orion,
     ).unwrap();
+
+    assert_eq!(&plaintext, &plaintext_out_orion);
 });
