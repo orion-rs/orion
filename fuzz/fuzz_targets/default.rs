@@ -5,7 +5,7 @@ extern crate orion;
 extern crate rand;
 
 use orion::default;
-use orion::utilities::util;
+use orion::util;
 use rand::Rng;
 
 fn fuzz_default(data: &[u8]) -> () {

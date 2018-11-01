@@ -39,8 +39,8 @@ fuzz_target!(|data: &[u8]| {
     assert_eq!(pt, buffer_2);
 
     // chacha crates uses 0 as inital counter
-    chacha20::encrypt(&key, &nonce, 0, &pt, &mut dst_ct).unwrap();
+    chacha20::chacha20_encrypt(&key, &nonce, 0, &pt, &mut dst_ct).unwrap();
     assert_eq!(dst_ct, buffer);
-    chacha20::decrypt(&key, &nonce, 0, &dst_ct, &mut dst_pt).unwrap();
+    chacha20::chacha20_decrypt(&key, &nonce, 0, &dst_ct, &mut dst_pt).unwrap();
     assert_eq!(&dst_pt, &pt);
 });
