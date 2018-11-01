@@ -39,5 +39,4 @@ fuzz_target!(|data: &[u8]| {
     assert_eq!(pt, chacha_pt);
     assert_eq!(orion_ct, chacha_ct);
     assert_eq!(orion_pt, chacha_pt);
-
 });
