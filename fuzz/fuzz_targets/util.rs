@@ -40,3 +40,14 @@ pub fn chacha_key_nonce_setup(nonce_len: usize, data: &[u8]) -> (Vec<u8>, Vec<u8
 
     (key, nonce)
 }
+
+/// Helper function to setup key, nonce, plaintext and aad for AEAD constructions
+pub fn aead_setup_with_nonce_len(nonce_len: usize, data: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
+    let (key, nonce) = chacha_key_nonce_setup(nonce_len, data);
+    let mut aad = Vec::new();
+    apply_from_input_heap(&mut aad, data, key.len() + nonce.len());
+    let mut plaintext = Vec::new();
+    apply_from_input_heap(&mut plaintext, data, key.len() + nonce.len() + aad.len());
+
+    (key, nonce, aad, plaintext)
+}
