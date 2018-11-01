@@ -259,6 +259,15 @@ pub fn xchacha20_poly1305_decrypt(
     Ok(())
 }
 
+
+#[test]
+fn length_padding_tests() {
+    assert_eq!(padding(&[0u8; 16], 16), 0);
+    assert_eq!(padding(&[0u8; 15], 16), 1);
+    assert_eq!(padding(&[0u8; 32], 16), 0);
+    assert_eq!(padding(&[0u8; 30], 16), 2);
+}
+
 #[test]
 fn test_err_on_bad_nonce_xchacha() {
     let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
