@@ -117,9 +117,7 @@ fn process_authentication(
     let mut padding_max = [0u8; 16];
 
     poly1305_state.update(aad).unwrap();
-    poly1305_state
-        .update(&padding_max[..padding(aad)])
-        .unwrap();
+    poly1305_state.update(&padding_max[..padding(aad)]).unwrap();
     poly1305_state.update(&buf[..buf_in_len]).unwrap();
     poly1305_state
         .update(&padding_max[..padding(&buf[..buf_in_len])])
@@ -265,7 +263,6 @@ pub fn xchacha20_poly1305_decrypt(
     Ok(())
 }
 
-
 #[test]
 fn length_padding_tests() {
     // Integral multiple of 16
@@ -281,12 +278,7 @@ fn test_auth_process_with_above_length_index() {
     let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
-    process_authentication(
-        &mut poly1305_state,
-        &[0u8; 0],
-        &[0u8; 64],
-        65,
-    ).unwrap();
+    process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
 }
 
 #[test]
@@ -294,19 +286,9 @@ fn test_auth_process_ok_index_length() {
     let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
-    process_authentication(
-        &mut poly1305_state,
-        &[0u8; 0],
-        &[0u8; 64],
-        64,
-    ).unwrap();
+    process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).unwrap();
 
-    process_authentication(
-        &mut poly1305_state,
-        &[0u8; 0],
-        &[0u8; 64],
-        0,
-    ).unwrap();
+    process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 0).unwrap();
 }
 
 #[test]
@@ -502,21 +484,21 @@ fn test_modified_tag_error() {
 
 #[test]
 fn test_bad_pt_ct_lengths() {
-
     let mut dst_out_ct_1 = [0u8; 79]; // 64 + Poly1305TagLen = 80
     let mut dst_out_ct_2 = [0u8; 80]; // 64 + Poly1305TagLen = 80
 
     let mut dst_out_pt_1 = [0u8; 63];
     let mut dst_out_pt_2 = [0u8; 64];
 
-
-    assert!(ietf_chacha20_poly1305_encrypt(
-        &[0u8; 32],
-        &[0u8; 12],
-        &dst_out_pt_2,
-        &[0u8; 0],
-        &mut dst_out_ct_1,
-    ).is_err());
+    assert!(
+        ietf_chacha20_poly1305_encrypt(
+            &[0u8; 32],
+            &[0u8; 12],
+            &dst_out_pt_2,
+            &[0u8; 0],
+            &mut dst_out_ct_1,
+        ).is_err()
+    );
 
     ietf_chacha20_poly1305_encrypt(
         &[0u8; 32],
@@ -526,13 +508,15 @@ fn test_bad_pt_ct_lengths() {
         &mut dst_out_ct_2,
     ).unwrap();
 
-    assert!(ietf_chacha20_poly1305_decrypt(
-        &[0u8; 32],
-        &[0u8; 12],
-        &dst_out_ct_2,
-        &[0u8; 0],
-        &mut dst_out_pt_1,
-    ).is_err());
+    assert!(
+        ietf_chacha20_poly1305_decrypt(
+            &[0u8; 32],
+            &[0u8; 12],
+            &dst_out_ct_2,
+            &[0u8; 0],
+            &mut dst_out_pt_1,
+        ).is_err()
+    );
 
     ietf_chacha20_poly1305_decrypt(
         &[0u8; 32],
