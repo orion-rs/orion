@@ -30,7 +30,7 @@ pub fn apply_from_input_heap(apply_to: &mut Vec<u8>, input: &[u8], lower_bound: 
     }
 }
 
-/// Helper function to setup key and nonce for ChaCha20/XChaCha20.
+/// Helper function to setup key and nonce for ChaCha20/XChaCha20/hchacha20.
 pub fn chacha_key_nonce_setup(nonce_len: usize, data: &[u8]) -> ([u8; 32], Vec<u8>) {
     let mut key = [0u8; 32];
     let mut nonce = vec![0u8; nonce_len];
