@@ -488,6 +488,8 @@ fn test_pass_on_one_iter_max_initial_counter() {
     let mut dst = [0u8; 64];
     // Should pass because only one iteration is completed, so block_counter will not increase
     chacha20_encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 64], &mut dst).unwrap();
+    // keystream_block never increases the provided counter
+    chacha20_keystream_block(&[0u8; 32], &[0u8; 12], 4294967295).unwrap();
     xchacha20_encrypt(&[0u8; 32], &[0u8; 24], 4294967295, &[0u8; 64], &mut dst).unwrap();
 }
 
