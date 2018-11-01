@@ -374,6 +374,27 @@ pub fn xchacha20_decrypt(
 }
 
 #[test]
+fn test_process_block_wrong_combination_of_variant_and_nonce() {
+    let mut chacha_state_ietf = InternalState {
+        state: [0_u32; 16],
+        is_ietf: true,
+    };
+    chacha_state_ietf.init_state(&[0u8; 32], &[0u8; 12]).unwrap();
+
+    let mut chacha_state_hchacha = InternalState {
+        state: [0_u32; 16],
+        is_ietf: false,
+    };
+
+    chacha_state_hchacha.init_state(&[0u8; 32], &[0u8; 16]).unwrap();
+
+    assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
+    assert!(chacha_state_ietf.process_block(None).is_err());
+    assert!(chacha_state_hchacha.process_block(None).is_ok());
+    assert!(chacha_state_ietf.process_block(Some(1)).is_ok());
+}
+
+#[test]
 fn test_bad_key_nonce_size_init() {
     let mut chacha_state = InternalState {
         state: [0_u32; 16],
