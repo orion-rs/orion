@@ -23,14 +23,13 @@ pub mod other_hchacha20;
 pub mod rfc_chacha20;
 pub mod rfc_xchacha20;
 
-extern crate orion;
 extern crate hex;
+extern crate orion;
 
-use self::orion::hazardous::constants;
+use self::hex::decode;
 use self::orion::hazardous::chacha20::{chacha20_decrypt, chacha20_encrypt, hchacha20};
 use self::orion::hazardous::chacha20::{xchacha20_decrypt, xchacha20_encrypt};
-use self::hex::decode;
-
+use self::orion::hazardous::constants;
 
 pub fn chacha_test_runner(
     key: &[u8],
@@ -57,8 +56,7 @@ pub fn chacha_test_runner(
 }
 
 pub fn hchacha_test_runner(key: &str, nonce: &str, output_expected: &str) {
-    let actual: [u8; 32] =
-        hchacha20(&decode(key).unwrap(), &decode(nonce).unwrap()).unwrap();
+    let actual: [u8; 32] = hchacha20(&decode(key).unwrap(), &decode(nonce).unwrap()).unwrap();
 
     assert_eq!(&actual, &decode(output_expected).unwrap()[..]);
 }

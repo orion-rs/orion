@@ -96,3 +96,10 @@ fn bench_xchacha20_decrypt(b: &mut Bencher) {
             .unwrap();
     });
 }
+
+#[bench]
+fn bench_hchacha20(b: &mut Bencher) {
+    b.iter(|| {
+        chacha20::hchacha20(&[0u8; 32], &[0u8; 16]).unwrap();
+    });
+}

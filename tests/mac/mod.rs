@@ -54,11 +54,7 @@ fn hmac_test_runner(
     Ok(())
 }
 
-fn poly1305_test_runner(
-    key: &[u8],
-    input: &[u8],
-    output: &[u8],
-) -> Result<(), error::Unspecified> {
+fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), error::Unspecified> {
     let mut state = poly1305::init(key).unwrap();
     state.update(input).unwrap();
 
