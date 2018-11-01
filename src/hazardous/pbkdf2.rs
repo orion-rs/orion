@@ -71,6 +71,7 @@ use hazardous::hmac;
 use util;
 
 #[inline(always)]
+/// The F function as described in the RFC.
 fn function_f(
     salt: &[u8],
     iterations: usize,
