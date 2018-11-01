@@ -501,6 +501,49 @@ fn test_modified_tag_error() {
 }
 
 #[test]
+fn test_bad_pt_ct_lengths() {
+
+    let mut dst_out_ct_1 = [0u8; 79]; // 64 + Poly1305TagLen = 80
+    let mut dst_out_ct_2 = [0u8; 80]; // 64 + Poly1305TagLen = 80
+
+    let mut dst_out_pt_1 = [0u8; 63];
+    let mut dst_out_pt_2 = [0u8; 64];
+
+
+    assert!(ietf_chacha20_poly1305_encrypt(
+        &[0u8; 32],
+        &[0u8; 12],
+        &dst_out_pt_2,
+        &[0u8; 0],
+        &mut dst_out_ct_1,
+    ).is_err());
+
+    ietf_chacha20_poly1305_encrypt(
+        &[0u8; 32],
+        &[0u8; 12],
+        &dst_out_pt_2,
+        &[0u8; 0],
+        &mut dst_out_ct_2,
+    ).unwrap();
+
+    assert!(ietf_chacha20_poly1305_decrypt(
+        &[0u8; 32],
+        &[0u8; 12],
+        &dst_out_ct_2,
+        &[0u8; 0],
+        &mut dst_out_pt_1,
+    ).is_err());
+
+    ietf_chacha20_poly1305_decrypt(
+        &[0u8; 32],
+        &[0u8; 12],
+        &dst_out_ct_2,
+        &[0u8; 0],
+        &mut dst_out_pt_2,
+    ).unwrap();
+}
+
+#[test]
 fn rfc_8439_test_poly1305_key_gen_1() {
     let key = [0u8; 32];
     let nonce = [
