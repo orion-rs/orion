@@ -260,7 +260,73 @@ pub fn xchacha20_poly1305_decrypt(
 }
 
 #[test]
-fn test_encrypt_decrypt_key_nonce_sizes() {
+fn test_err_on_bad_nonce_xchacha() {
+    let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
+    let mut dst_out_pt = [0u8; 64];
+
+    assert!(
+        xchacha20_poly1305_encrypt(
+            &[0u8; 32],
+            &[0u8; 23],
+            &[0u8; 64],
+            &[0u8; 0],
+            &mut dst_out_ct
+        ).is_err()
+    );
+
+    assert!(
+        xchacha20_poly1305_decrypt(
+            &[0u8; 32],
+            &[0u8; 23],
+            &dst_out_ct,
+            &[0u8; 0],
+            &mut dst_out_pt
+        ).is_err()
+    );
+
+    assert!(
+        xchacha20_poly1305_encrypt(
+            &[0u8; 32],
+            &[0u8; 25],
+            &[0u8; 64],
+            &[0u8; 0],
+            &mut dst_out_ct
+        ).is_err()
+    );
+
+    assert!(
+        xchacha20_poly1305_decrypt(
+            &[0u8; 32],
+            &[0u8; 25],
+            &dst_out_ct,
+            &[0u8; 0],
+            &mut dst_out_pt
+        ).is_err()
+    );
+
+    assert!(
+        xchacha20_poly1305_encrypt(
+            &[0u8; 32],
+            &[0u8; 24],
+            &[0u8; 64],
+            &[0u8; 0],
+            &mut dst_out_ct
+        ).is_ok()
+    );
+
+    assert!(
+        xchacha20_poly1305_decrypt(
+            &[0u8; 32],
+            &[0u8; 24],
+            &dst_out_ct,
+            &[0u8; 0],
+            &mut dst_out_pt
+        ).is_ok()
+    );
+}
+
+#[test]
+fn test_err_bad_key_nonce_sizes_ietf() {
     let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
     let mut dst_out_pt = [0u8; 64];
 
