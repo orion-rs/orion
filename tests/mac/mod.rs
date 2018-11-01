@@ -18,11 +18,61 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[cfg(test)]
 pub mod nist_hmac;
-#[cfg(test)]
 pub mod other_poly1305;
-#[cfg(test)]
 pub mod rfc_hmac;
-#[cfg(test)]
 pub mod rfc_poly1305;
+
+extern crate orion;
+extern crate ring;
+
+use self::orion::hazardous::hmac;
+use self::orion::hazardous::poly1305;
+use self::ring::error;
+
+fn hmac_test_runner(
+    secret_key: &[u8],
+    data: &[u8],
+    expected: &[u8],
+    trunc: Option<usize>,
+) -> Result<(), error::Unspecified> {
+    let mut mac = hmac::init(secret_key);
+    mac.update(data).unwrap();
+
+    let res = mac.finalize().unwrap();
+    let len = match trunc {
+        Some(ref length) => *length,
+        None => 64,
+    };
+
+    assert_eq!(res[..len].as_ref(), expected[..len].as_ref());
+    // If the MACs are modified, then they should not be equal to the expected
+    let mut bad_res = res[..len].to_vec();
+    bad_res[0] ^= 1;
+    assert_ne!(&bad_res[..len], expected);
+
+    Ok(())
+}
+
+fn poly1305_test_runner(
+    key: &[u8],
+    input: &[u8],
+    output: &[u8],
+) -> Result<(), error::Unspecified> {
+    let mut state = poly1305::init(key).unwrap();
+    state.update(input).unwrap();
+
+    let tag_stream = state.finalize().unwrap();
+    let tag_one_shot = poly1305::poly1305(key, input).unwrap();
+
+    assert_eq!(tag_stream.as_ref(), output.as_ref());
+    assert_eq!(tag_one_shot.as_ref(), output.as_ref());
+    assert!(poly1305::verify(output, key, input).unwrap());
+
+    // If the MACs are modified, then they should not be equal to the expected
+    let mut bad_tag = tag_stream.to_vec();
+    bad_tag[0] ^= 1;
+    assert_ne!(&bad_tag, &output);
+
+    Ok(())
+}

@@ -22,24 +22,7 @@
 #[cfg(test)]
 mod rfc8439_poly1305 {
 
-    extern crate orion;
-    extern crate std;
-
-    use self::orion::hazardous::poly1305;
-
-    fn test_runner(expected: &[u8], key: &[u8], message: &[u8]) {
-        // Test both stream and one-shot
-        let mut poly1305_state = poly1305::init(&key).unwrap();
-        poly1305_state.update(message).unwrap();
-        let orion_stream_tag = poly1305_state.finalize().unwrap();
-
-        let orion_oneshot_tag = poly1305::poly1305(&key, &message).unwrap();
-
-        assert_eq!(expected, orion_oneshot_tag);
-        assert_eq!(orion_stream_tag, orion_oneshot_tag);
-        assert!(poly1305::verify(&expected, &key, &message).unwrap());
-        assert!(poly1305::verify(&orion_oneshot_tag, &key, &message).unwrap());
-    }
+    use mac::poly1305_test_runner;
 
     #[test]
     fn test_case_0() {
@@ -54,7 +37,7 @@ mod rfc8439_poly1305 {
             0x27, 0xa9,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -63,7 +46,7 @@ mod rfc8439_poly1305 {
         let message = [0u8; 64];
         let expected = [0u8; 16];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -85,7 +68,7 @@ mod rfc8439_poly1305 {
             0x86, 0x3e,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -107,7 +90,7 @@ mod rfc8439_poly1305 {
             0x0c, 0xf0,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -125,7 +108,7 @@ mod rfc8439_poly1305 {
             0xeb, 0x62,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -141,7 +124,7 @@ mod rfc8439_poly1305 {
             0x00, 0x00,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -160,7 +143,7 @@ mod rfc8439_poly1305 {
             0x00, 0x00,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -181,7 +164,7 @@ mod rfc8439_poly1305 {
             0x00, 0x00,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -199,7 +182,7 @@ mod rfc8439_poly1305 {
         ];
         let expected = [0u8; 16];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -218,7 +201,7 @@ mod rfc8439_poly1305 {
             0xff, 0xff,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -240,7 +223,7 @@ mod rfc8439_poly1305 {
             0x00, 0x00,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 
     #[test]
@@ -261,6 +244,6 @@ mod rfc8439_poly1305 {
             0x00, 0x00,
         ];
 
-        test_runner(&expected, &key, &message);
+        poly1305_test_runner(&key, &message, &expected).unwrap();
     }
 }

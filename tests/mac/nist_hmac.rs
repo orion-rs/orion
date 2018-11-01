@@ -14,37 +14,10 @@
 // CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 // Testing against NIST CAVP HMACVS test vectors
-extern crate orion;
 extern crate ring;
 
-use self::orion::hazardous::hmac;
-use self::ring::{error, test};
-
-fn hmac_test_runner(
-    key: &[u8],
-    input: &[u8],
-    output: &[u8],
-    is_ok: bool,
-) -> Result<(), error::Unspecified> {
-    let mut mac = hmac::init(key);
-    mac.update(input).unwrap();
-
-    let digest = mac.finalize().unwrap();
-
-    assert_eq!(is_ok, digest.as_ref() == output.as_ref());
-
-    // To conform with the Result construction of compare functions
-    match is_ok {
-        true => {
-            assert_eq!(is_ok, hmac::verify(output, key, input).unwrap());
-        }
-        false => {
-            assert!(hmac::verify(output, key, input).is_err());
-        }
-    }
-
-    Ok(())
-}
+use self::ring::test;
+use mac::hmac_test_runner;
 
 #[test]
 fn nist_hmac() {
@@ -52,22 +25,18 @@ fn nist_hmac() {
         assert_eq!(section, "");
         let digest_alg = test_case.consume_string("HMAC");
         let key_value = test_case.consume_bytes("Key");
-        let mut input = test_case.consume_bytes("Input");
+        let input = test_case.consume_bytes("Input");
         let output = test_case.consume_bytes("Output");
-
+        // Only run if SHA512
         let run: bool = match digest_alg.as_ref() {
-            "SHA256" => false, // Not supported anymore
-            "SHA384" => false, // Not supported anymore
+            "SHA256" => false,
+            "SHA384" => false,
             "SHA512" => true,
             _ => panic!("option not found"),
         };
+
         if run {
-            hmac_test_runner(&key_value[..], &input[..], &output[..], true)?;
-
-            // Tamper with the input and check that verification fails
-            input[0] ^= 1;
-
-            hmac_test_runner(&key_value[..], &input[..], &output[..], false)
+            hmac_test_runner(&key_value[..], &input[..], &output[..], None)
         } else {
             Ok(())
         }

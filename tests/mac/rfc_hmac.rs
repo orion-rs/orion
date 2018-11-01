@@ -25,32 +25,9 @@
 mod rfc4231 {
 
     extern crate hex;
-    extern crate orion;
 
     use self::hex::decode;
-    use self::orion::hazardous::hmac;
-
-    fn hmac_test_runner(
-        secret_key: &[u8],
-        data: &[u8],
-        expected: &[u8],
-        trunc: Option<usize>,
-        should_be: bool,
-    ) -> bool {
-        let mut mac = hmac::init(secret_key);
-        mac.update(data).unwrap();
-
-        let res = mac.finalize().unwrap();
-        let len = match trunc {
-            Some(ref length) => *length,
-            None => 64,
-        };
-
-        // If the MACs are modified, then they should not be equal to the expected
-        assert_ne!(&res[..len - 1], expected);
-
-        should_be == (res[..len] == expected[..len])
-    }
+    use mac::hmac_test_runner;
 
     #[test]
     fn test_case_1() {
@@ -61,13 +38,7 @@ mod rfc4231 {
              daa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854",
         ).unwrap();
 
-        assert!(hmac_test_runner(
-            &secret_key,
-            &data,
-            &expected_hmac_512,
-            None,
-            true
-        ));
+        assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None).is_ok());
     }
 
     #[test]
@@ -80,13 +51,7 @@ mod rfc4231 {
              9758bf75c05a994a6d034f65f8f0e6fdcaeab1a34d4a6b4b636e070a38bce737",
         ).unwrap();
 
-        assert!(hmac_test_runner(
-            &secret_key,
-            &data,
-            &expected_hmac_512,
-            None,
-            true
-        ));
+        assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
     }
 
     #[test]
@@ -102,13 +67,7 @@ mod rfc4231 {
              bf3e848279a722c806b485a47e67c807b946a337bee8942674278859e13292fb",
         ).unwrap();
 
-        assert!(hmac_test_runner(
-            &secret_key,
-            &data,
-            &expected_hmac_512,
-            None,
-            true
-        ));
+        assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
     }
 
     #[test]
@@ -124,13 +83,7 @@ mod rfc4231 {
              a91ca5c11aa25eb4d679275cc5788063a5f19741120c4f2de2adebeb10a298dd",
         ).unwrap();
 
-        assert!(hmac_test_runner(
-            &secret_key,
-            &data,
-            &expected_hmac_512,
-            None,
-            true
-        ));
+        assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
     }
 
     #[test]
@@ -140,13 +93,7 @@ mod rfc4231 {
 
         let expected_hmac_512 = decode("415fad6271580a531d4179bc891d87a6").unwrap();
 
-        assert!(hmac_test_runner(
-            &secret_key,
-            &data,
-            &expected_hmac_512,
-            Some(16),
-            true
-        ));
+        assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, Some(16),).is_ok());
     }
 
     #[test]
@@ -168,13 +115,7 @@ mod rfc4231 {
              6b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598",
         ).unwrap();
 
-        assert!(hmac_test_runner(
-            &secret_key,
-            &data,
-            &expected_hmac_512,
-            None,
-            true
-        ));
+        assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
     }
 
     #[test]
@@ -199,12 +140,6 @@ mod rfc4231 {
              b6022cac3c4982b10d5eeb55c3e4de15134676fb6de0446065c97440fa8c6a58",
         ).unwrap();
 
-        assert!(hmac_test_runner(
-            &secret_key,
-            &data,
-            &expected_hmac_512,
-            None,
-            true
-        ));
+        assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
     }
 }
