@@ -111,3 +111,13 @@ pub fn pbkdf2_setup(data: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>, usize) {
 
     (password, salt, dk_out, iter)
 }
+
+/// Helper function to setup one time key and message for Poly1305.
+pub fn poly1305_setup(data: &[u8]) -> ([u8; 32], Vec<u8>) {
+    let mut key = [0u8; 32];
+    apply_from_input_fixed(&mut key, &data, 0);
+    let mut message = Vec::new();
+    apply_from_input_heap(&mut message, data, key.len());
+
+    (key, message)
+}

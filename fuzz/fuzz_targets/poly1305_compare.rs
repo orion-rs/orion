@@ -11,12 +11,7 @@ use crypto::mac::Mac;
 use orion::hazardous::poly1305::*;
 
 fuzz_target!(|data: &[u8]| {
-    let mut key = [0u8; 32];
-    apply_from_input_fixed(&mut key, &data, 0);
-
-    let mut message = Vec::new();
-    apply_from_input_heap(&mut message, data, key.len());
-
+    let (key, message) = poly1305_setup(data);
     // Test both stream and one-shot
     let mut poly1305_state = init(&key).unwrap();
     poly1305_state.update(&message).unwrap();
