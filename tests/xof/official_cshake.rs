@@ -25,28 +25,19 @@
 #[cfg(test)]
 mod kcp_test_vectors {
 
-    extern crate orion;
-
-    use self::orion::hazardous::cshake;
+    use xof::cshake_test_runner;
 
     #[test]
     fn cshake_256_test_case_1() {
         let input = b"\x00\x01\x02\x03";
         let custom = b"Email Signature";
-        let mut out = [0u8; 64];
-
-        let mut cshake = cshake::init(custom, None).unwrap();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out).unwrap();
-
         let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
                         \xE4\xC8\x7B\xFF\x32\xC9\x69\x9D\x5B\x68\x96\xEE\xE0\xED\xD1\x64\x02\
                         \x0E\x2B\xE0\x56\x08\x58\xD9\xC0\x0C\x03\x7E\x34\xA9\x69\x37\xC5\x61\
                         \xA7\x4C\x41\x2B\xB4\xC7\x46\x46\x95\x27\x28\x1C\x8C"
             .to_vec();
 
-        assert_eq!(expected.len(), out.len());
-        assert_eq!(out[..], expected[..]);
+        cshake_test_runner(input, custom, &expected);
     }
 
     #[test]
@@ -63,19 +54,12 @@ mod kcp_test_vectors {
                     \xAB\xAC\xAD\xAE\xAF\xB0\xB1\xB2\xB3\xB4\xB5\xB6\xB7\xB8\xB9\xBA\xBB\xBC\xBD\
                     \xBE\xBF\xC0\xC1\xC2\xC3\xC4\xC5\xC6\xC7";
         let custom = b"Email Signature";
-        let mut out = [0u8; 64];
-
-        let mut cshake = cshake::init(custom, None).unwrap();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out).unwrap();
-
         let expected = b"\x07\xDC\x27\xB1\x1E\x51\xFB\xAC\x75\xBC\x7B\x3C\x1D\x98\x3E\x8B\x4B\x85\
                             \xFB\x1D\xEF\xAF\x21\x89\x12\xAC\x86\x43\x02\x73\x09\x17\x27\xF4\x2B\x17\
                             \xED\x1D\xF6\x3E\x8E\xC1\x18\xF0\x4B\x23\x63\x3C\x1D\xFB\x15\x74\xC8\xFB\
                             \x55\xCB\x45\xDA\x8E\x25\xAF\xB0\x92\xBB"
                 .to_vec();
 
-        assert_eq!(expected.len(), out.len());
-        assert_eq!(out[..], expected[..]);
+        cshake_test_runner(input, custom, &expected);
     }
 }
