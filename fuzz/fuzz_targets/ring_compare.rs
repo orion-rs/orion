@@ -15,18 +15,7 @@ use ring::hmac as ring_hmac;
 use ring::pbkdf2 as ring_pbkdf2;
 
 fn ro_hmac(data: &[u8]) {
-    let mut input = Vec::from(data);
-    // Input data cannot be empty, because the first byte will be used to determine
-    // where the input should be split
-    if input.is_empty() {
-        input.push(0u8);
-    }
-
-    let mut secret_key = vec![0u8; input[0] as usize];
-    let mut message = Vec::new();
-    apply_from_input_fixed(&mut secret_key, &input, 0);
-    apply_from_input_heap(&mut message, &input, secret_key.len());
-
+    let (secret_key, message) = hmac_setup(data);
     let s_key = ring_hmac::SigningKey::new(&digest::SHA512, &secret_key);
     let ring_signature = ring_hmac::sign(&s_key, &message);
 
@@ -57,25 +46,8 @@ fn ro_hmac(data: &[u8]) {
 }
 
 fn ro_hkdf(data: &[u8]) {
-    let mut input = Vec::from(data);
-    // Input data cannot be empty, because the first byte will be used to determine
-    // where the input should be split
-    if input.is_empty() {
-        input.push(0u8);
-    }
-
-    let mut ikm = vec![0u8; input[0] as usize];
-    let mut salt = Vec::new();
-    let mut info = Vec::new();
-    apply_from_input_fixed(&mut ikm, &input, 0);
-    apply_from_input_heap(&mut salt, &input, ikm.len());
-    apply_from_input_heap(&mut info, &input, ikm.len() + salt.len());
-
-    // Max iteration count will be (255*63) + 1 = 16066
-    let out_len = (input[0] as usize * 63) + 1;
-
-    let mut okm_out_orion = vec![0u8; out_len];
-    let mut okm_out_ring = vec![0u8; out_len];
+    let (ikm, salt, info, mut okm_out_orion) = hkdf_setup(data);
+    let mut okm_out_ring = okm_out_orion.clone();
 
     hkdf::derive_key(&salt, &ikm, &info, &mut okm_out_orion).unwrap();
 
@@ -85,22 +57,8 @@ fn ro_hkdf(data: &[u8]) {
 }
 
 fn ro_pbkdf2(data: &[u8]) {
-    let mut input = Vec::from(data);
-    // Input data cannot be empty, because the first byte will be used to determine
-    // where the input should be split
-    if input.is_empty() {
-        input.push(0u8);
-    }
-
-    let mut password = vec![0u8; input[0] as usize];
-    let mut salt = Vec::new();
-    apply_from_input_fixed(&mut password, &input, 0);
-    apply_from_input_heap(&mut salt, &input, password.len());
-
-    let mut dk_out_orion = vec![0u8; input.len()];
-    let mut dk_out_ring = vec![0u8; input.len()];
-    // Max iteration count will be (255*40) + 1 = 10201
-    let iter = (input[0] as usize * 40) + 1;
+    let (password, salt, mut dk_out_orion, iter) = pbkdf2_setup(data);
+    let mut dk_out_ring = dk_out_orion.clone();
 
     pbkdf2::derive_key(&password, &salt, iter, &mut dk_out_orion).unwrap();
     ring_pbkdf2::derive(
@@ -126,8 +84,6 @@ fn ro_pbkdf2(data: &[u8]) {
 
 fuzz_target!(|data: &[u8]| {
     ro_hmac(data);
-
     ro_hkdf(data);
-
     ro_pbkdf2(data);
 });

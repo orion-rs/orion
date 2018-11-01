@@ -30,7 +30,7 @@ pub fn apply_from_input_heap(apply_to: &mut Vec<u8>, input: &[u8], lower_bound: 
     }
 }
 
-/// Helper function to setup key and nonce for ChaCha20/XChaCha20
+/// Helper function to setup key and nonce for ChaCha20/XChaCha20.
 pub fn chacha_key_nonce_setup(nonce_len: usize, data: &[u8]) -> ([u8; 32], Vec<u8>) {
     let mut key = [0u8; 32];
     let mut nonce = vec![0u8; nonce_len];
@@ -41,7 +41,7 @@ pub fn chacha_key_nonce_setup(nonce_len: usize, data: &[u8]) -> ([u8; 32], Vec<u
     (key, nonce)
 }
 
-/// Helper function to setup key, nonce, plaintext and aad for AEAD constructions
+/// Helper function to setup key, nonce, plaintext and aad for AEAD constructions.
 pub fn aead_setup_with_nonce_len(
     nonce_len: usize,
     data: &[u8],
@@ -53,4 +53,61 @@ pub fn aead_setup_with_nonce_len(
     apply_from_input_heap(&mut plaintext, data, key.len() + nonce.len() + aad.len());
 
     (key, nonce, aad, plaintext)
+}
+
+/// Helper function to setup secret key and message for HMAC.
+pub fn hmac_setup(data: &[u8]) -> (Vec<u8>, Vec<u8>) {
+    let mut input = Vec::from(data);
+    // Input data cannot be empty, because the first byte will be used to determine
+    // where the input should be split
+    if input.is_empty() {
+        input.push(0u8);
+    }
+
+    let mut secret_key = vec![0u8; input[0] as usize];
+    let mut message = Vec::new();
+    apply_from_input_heap(&mut secret_key, &input, 0);
+    apply_from_input_heap(&mut message, &input, secret_key.len());
+
+    (secret_key, message)
+}
+
+/// Helper function to setup ikm, salt, info and okm_out for HKDF.
+pub fn hkdf_setup(data: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
+    let mut input = Vec::from(data);
+    // Input data cannot be empty, because the first byte will be used to determine
+    // where the input should be split
+    if input.is_empty() {
+        input.push(0u8);
+    }
+
+    let mut ikm = vec![0u8; input[0] as usize];
+    let mut salt = Vec::new();
+    let mut info = Vec::new();
+    apply_from_input_heap(&mut ikm, &input, 0);
+    apply_from_input_heap(&mut salt, &input, ikm.len());
+    apply_from_input_heap(&mut info, &input, ikm.len() + salt.len());
+
+    // Max iteration count will be (255*63) + 1 = 16066
+    let out_len = (input[0] as usize * 63) + 1;
+    let okm_out = vec![0u8; out_len];
+
+    (ikm, salt, info, okm_out)
+}
+
+/// Helper function to setup password, salt, dk_out and iteration count for PBKDF2.
+pub fn pbkdf2_setup(data: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>, usize) {
+    let mut input = Vec::from(data);
+    // Input data cannot be empty, because the first byte will be used to determine
+    // where the input should be split
+    if input.is_empty() {
+        input.push(0u8);
+    }
+    // Using the same setup from HMAC to determine password and salt
+    let (password, salt) = hmac_setup(data);
+    let dk_out = vec![0u8; input.len()];
+    // Max iteration count will be (255*40) + 1 = 10201
+    let iter = (input[0] as usize * 40) + 1;
+
+    (password, salt, dk_out, iter)
 }
