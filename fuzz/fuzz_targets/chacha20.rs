@@ -8,11 +8,7 @@ use self::util::*;
 use orion::hazardous::chacha20;
 
 fuzz_target!(|data: &[u8]| {
-    let mut key = [0u8; 32];
-    let mut nonce = [0u8; 12];
-    apply_from_input_fixed(&mut key, &data, 0);
-    apply_from_input_fixed(&mut nonce, &data, 32);
-
+    let (key, nonce) = chacha_key_nonce_setup(12, data);
     let mut pt = Vec::new();
     apply_from_input_heap(&mut pt, data, key.len() + nonce.len());
 

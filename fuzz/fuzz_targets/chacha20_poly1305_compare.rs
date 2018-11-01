@@ -8,10 +8,9 @@ pub mod util;
 use util::*;
 
 fuzz_target!(|data: &[u8]| {
-    let mut key = [0u8; 32];
-    let mut nonce = [0u8; 12];
-    apply_from_input_fixed(&mut key, &data, 0);
-    apply_from_input_fixed(&mut nonce, &data, 32);
+
+    let (key, nonce) = chacha_key_nonce_setup(12, data);
+
     let mut aad = Vec::new();
     apply_from_input_heap(&mut aad, data, key.len() + nonce.len());
     let mut plaintext = Vec::new();
@@ -39,6 +38,7 @@ fuzz_target!(|data: &[u8]| {
     let dec_key = ring::aead::OpeningKey::new(&ring::aead::CHACHA20_POLY1305, &key).unwrap();
 
     let mut ciphertext_with_tag_ring: Vec<u8> = vec![0u8; plaintext.len() + 16];
+    let mut plaintext_out_ring = Vec::new();
     // Insert plaintext
     ciphertext_with_tag_ring[..plaintext.len()].copy_from_slice(&plaintext);
 
@@ -55,7 +55,6 @@ fuzz_target!(|data: &[u8]| {
         &ciphertext_with_tag_orion[plaintext.len()..].as_ref()
     );
     ring::aead::open_in_place(&dec_key, &nonce, &aad, 0, &mut ciphertext_with_tag_ring).unwrap();
-    let mut plaintext_out_ring = Vec::new();
     plaintext_out_ring.extend_from_slice(&ciphertext_with_tag_ring);
     assert_eq!(
         &ciphertext_with_tag_ring[..plaintext.len()].as_ref(),

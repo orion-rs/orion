@@ -14,9 +14,10 @@ pub fn apply_from_input_fixed(apply_to: &mut [u8], input: &[u8], lower_bound: us
     if input.len() >= (lower_bound + a_len) {
         apply_to.copy_from_slice(&input[lower_bound..(lower_bound + a_len)]);
     } else if lower_bound < input.len() {
-            let size = input.len() - lower_bound;
-            apply_to[..size].copy_from_slice(&input[lower_bound..]);
-    } else { }
+        let size = input.len() - lower_bound;
+        apply_to[..size].copy_from_slice(&input[lower_bound..]);
+    } else {
+    }
 }
 
 /// Apply fuzzer input data to a vector that can be any size, except for none. `lower_bound` is
@@ -27,4 +28,15 @@ pub fn apply_from_input_heap(apply_to: &mut Vec<u8>, input: &[u8], lower_bound: 
     } else {
         apply_to.extend_from_slice(&input[lower_bound..]);
     }
+}
+
+/// Helper function to setup key and nonce for ChaCha20/XChaCha20
+pub fn chacha_key_nonce_setup(nonce_len: usize, data: &[u8]) -> (Vec<u8>, Vec<u8>) {
+    let mut key = vec![0u8; 32];
+    let mut nonce = vec![0u8; nonce_len];
+
+    apply_from_input_fixed(&mut key, data, 0);
+    apply_from_input_fixed(&mut nonce, data, key.len());
+
+    (key, nonce)
 }
