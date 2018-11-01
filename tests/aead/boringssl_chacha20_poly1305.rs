@@ -32,7 +32,7 @@ mod boringssl_aead_chacha20_poly1305 {
 
     extern crate ring;
     use self::ring::test;
-    use aead::*;
+    use aead::aead_test_runner as chacha20_poly1305_test_runner;
 
     #[test]
     fn boringssl_chacha20_poly1305() {

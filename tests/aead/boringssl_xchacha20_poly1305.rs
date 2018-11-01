@@ -30,7 +30,7 @@ mod boringssl_aead_xchacha20_poly1305 {
 
     extern crate ring;
     use self::ring::test;
-    use aead::*;
+    use aead::aead_test_runner as xchacha20_poly1305_test_runner;
 
     #[test]
     fn boringssl_xchacha20_poly1305() {
@@ -49,7 +49,7 @@ mod boringssl_aead_xchacha20_poly1305 {
                 if input.is_empty() || output.is_empty() {
                     Ok(())
                 } else {
-                    chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output)
+                    xchacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output)
                 }
             },
         );

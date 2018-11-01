@@ -23,30 +23,8 @@
 mod rfc_aead_chacha20_poly1305 {
 
     extern crate orion;
-    extern crate std;
-
     use self::orion::hazardous::aead::*;
-
-    fn test_runner(
-        key: &[u8],
-        nonce: &[u8],
-        aad: &[u8],
-        plaintext: &[u8],
-        ciphertext: &[u8],
-        tag: &[u8],
-    ) {
-        let mut dst_out_ct = vec![0u8; ciphertext.len() + 16];
-        let mut dst_out_pt = vec![0u8; plaintext.len()];
-
-        ietf_chacha20_poly1305_encrypt(&key, &nonce, &plaintext, &aad, &mut dst_out_ct).unwrap();
-
-        assert_eq!(dst_out_ct[..plaintext.len()].as_ref(), ciphertext.as_ref());
-        assert_eq!(dst_out_ct[plaintext.len()..].as_ref(), tag.as_ref());
-
-        ietf_chacha20_poly1305_decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
-
-        assert_eq!(dst_out_pt[..].as_ref(), plaintext.as_ref());
-    }
+    use aead::aead_test_runner as chacha20_poly1305_test_runner;
 
     #[test]
     fn test_case_0() {
@@ -80,7 +58,8 @@ mod rfc_aead_chacha20_poly1305 {
             0x06, 0x91,
         ];
 
-        test_runner(&key, &nonce, &aad, plaintext, &expected_ct, &expected_tag);
+        chacha20_poly1305_test_runner(&key, &nonce, &aad, &expected_tag, plaintext, &expected_ct)
+            .unwrap();
     }
 
     #[test]

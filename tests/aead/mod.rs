@@ -30,7 +30,7 @@ use self::orion::hazardous::aead;
 use self::orion::hazardous::constants;
 use self::ring::error;
 
-fn chacha20_poly1305_test_runner(
+fn aead_test_runner(
     key: &[u8],
     nonce: &[u8],
     aad: &[u8],

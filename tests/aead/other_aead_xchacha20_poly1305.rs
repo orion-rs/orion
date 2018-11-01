@@ -18,19 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Testing against https://github.com/bikeshedders/xchacha-rfc/blob/master/draft-arciszewski-xchacha-rfc-03.txt test vectors
-// Pulled at commit: https://github.com/bikeshedders/xchacha-rfc/commit/984b586f3cb3c32ae475c2580c505755e6de97dd
+// Sodiumoxide test vector: https://github.com/sodiumoxide/sodiumoxide/blob/master/src/crypto/aead/xchacha20poly1305_ietf.rs
+// Pulled at commit: https://github.com/sodiumoxide/sodiumoxide/commit/0be9734cc2ddb07ac0cd7cc67cf48afd6982cc91
 #[cfg(test)]
-mod rfc_aead_xchacha20_poly1305 {
+mod other_aead_xchacha20_poly1305 {
 
     extern crate orion;
-    extern crate std;
-
     use self::orion::hazardous::aead::*;
 
     #[test]
-    // Sodiumoxide test vector: https://github.com/sodiumoxide/sodiumoxide/blob/master/src/crypto/aead/xchacha20poly1305_ietf.rs
-    // Pulled at commit: https://github.com/sodiumoxide/sodiumoxide/commit/0be9734cc2ddb07ac0cd7cc67cf48afd6982cc91
     fn test_case_0() {
         let key = [
             0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d,
