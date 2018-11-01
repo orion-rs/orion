@@ -123,7 +123,7 @@ impl InternalState {
         self.quarter_round(3, 4, 9, 14);
     }
     #[inline(always)]
-    /// Initialize the ChaCha state with a `key` and `nonce`.
+    /// Initialize either a ChaCha or HChaCha state with a `key` and `nonce`.
     fn init_state(&mut self, key: &[u8], nonce: &[u8]) -> Result<(), UnknownCryptoError> {
         if key.len() != CHACHA_KEYSIZE {
             return Err(UnknownCryptoError);
@@ -142,6 +142,7 @@ impl InternalState {
         self.state[3] = 0x6b20_6574_u32;
 
         LittleEndian::read_u32_into(key, &mut self.state[4..12]);
+
         if self.is_ietf {
             LittleEndian::read_u32_into(nonce, &mut self.state[13..16]);
         } else {
@@ -151,7 +152,7 @@ impl InternalState {
         Ok(())
     }
     #[inline(always)]
-    /// Process either an IETF or HChaCha20 block.
+    /// Process either a ChaCha20 or HChaCha20 block.
     fn process_block(
         &mut self,
         block_count: Option<u32>,
@@ -163,8 +164,8 @@ impl InternalState {
             return Err(UnknownCryptoError);
         }
 
+        // Only set block counter if not HChaCha
         if self.is_ietf {
-            // Update block counter
             self.state[12] = block_count.unwrap();
         }
 
@@ -207,7 +208,7 @@ impl InternalState {
     }
 }
 
-/// The ChaCha20 encryption function as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439)..
+/// The ChaCha20 encryption function as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn chacha20_encrypt(
     key: &[u8],
     nonce: &[u8],
@@ -271,7 +272,7 @@ pub fn chacha20_encrypt(
     Ok(())
 }
 
-/// The ChaCha20 decryption function as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439)..
+/// The ChaCha20 decryption function as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn chacha20_decrypt(
     key: &[u8],
     nonce: &[u8],
@@ -307,6 +308,7 @@ pub fn chacha20_keystream_block(
     chacha_state
         .serialize_block(&keystream_state, &mut keystream_block)
         .unwrap();
+
     zero(&mut keystream_state);
 
     Ok(keystream_block)
