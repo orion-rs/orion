@@ -94,10 +94,10 @@ fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> [u8; POLY1305_KEYSIZE] {
     poly1305_key
 }
 
-/// Padding size that gives the needed bytes to pad `input` as an integral multiple of `pad_len`.
-fn padding(input: &[u8], pad_len: usize) -> usize {
-    if input.len() % pad_len != 0 {
-        pad_len - (input.len() % pad_len)
+/// Padding size that gives the needed bytes to pad `input` to an integral multiple of 16.
+fn padding(input: &[u8]) -> usize {
+    if input.len() % 16 != 0 {
+        16 - (input.len() % 16)
     } else {
         0
     }
@@ -118,11 +118,11 @@ fn process_authentication(
 
     poly1305_state.update(aad).unwrap();
     poly1305_state
-        .update(&padding_max[..padding(aad, 16)])
+        .update(&padding_max[..padding(aad)])
         .unwrap();
     poly1305_state.update(&buf[..buf_in_len]).unwrap();
     poly1305_state
-        .update(&padding_max[..padding(&buf[..buf_in_len], 16)])
+        .update(&padding_max[..padding(&buf[..buf_in_len])])
         .unwrap();
 
     // Using the 16 bytes from padding template to store length information
@@ -268,10 +268,11 @@ pub fn xchacha20_poly1305_decrypt(
 
 #[test]
 fn length_padding_tests() {
-    assert_eq!(padding(&[0u8; 16], 16), 0);
-    assert_eq!(padding(&[0u8; 15], 16), 1);
-    assert_eq!(padding(&[0u8; 32], 16), 0);
-    assert_eq!(padding(&[0u8; 30], 16), 2);
+    // Integral multiple of 16
+    assert_eq!(padding(&[0u8; 16]), 0);
+    assert_eq!(padding(&[0u8; 15]), 1);
+    assert_eq!(padding(&[0u8; 32]), 0);
+    assert_eq!(padding(&[0u8; 30]), 2);
 }
 
 #[test]
