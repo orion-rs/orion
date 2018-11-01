@@ -24,8 +24,13 @@ pub mod rfc_chacha20;
 pub mod rfc_xchacha20;
 
 extern crate orion;
-use self::orion::hazardous::chacha20::{chacha20_decrypt, chacha20_encrypt};
+extern crate hex;
+
+use self::orion::hazardous::constants;
+use self::orion::hazardous::chacha20::{chacha20_decrypt, chacha20_encrypt, hchacha20};
 use self::orion::hazardous::chacha20::{xchacha20_decrypt, xchacha20_encrypt};
+use self::hex::decode;
+
 
 pub fn chacha_test_runner(
     key: &[u8],
@@ -37,24 +42,23 @@ pub fn chacha_test_runner(
     let original_pt = pt.to_vec();
     let original_ct = ct.to_vec();
 
-    chacha20_encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
-    chacha20_decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
+    // Selecting variant based on nonce size
+    if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
+        chacha20_encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
+        chacha20_decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
+    }
+    if nonce.len() == constants::XCHACHA_NONCESIZE {
+        xchacha20_encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
+        xchacha20_decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
+    }
+
     assert!(&original_pt == &pt);
     assert!(&original_ct == &ct);
 }
 
-pub fn xchacha_test_runner(
-    key: &[u8],
-    nonce: &[u8],
-    init_block_count: u32,
-    pt: &mut [u8],
-    ct: &mut [u8],
-) {
-    let original_pt = pt.to_vec();
-    let original_ct = ct.to_vec();
+pub fn hchacha_test_runner(key: &str, nonce: &str, output_expected: &str) {
+    let actual: [u8; 32] =
+        hchacha20(&decode(key).unwrap(), &decode(nonce).unwrap()).unwrap();
 
-    xchacha20_encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
-    xchacha20_decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
-    assert!(&original_pt == &pt);
-    assert!(&original_ct == &ct);
+    assert_eq!(&actual, &decode(output_expected).unwrap()[..]);
 }

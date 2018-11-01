@@ -24,10 +24,9 @@
 mod draft_rfc_xchacha20 {
 
     extern crate hex;
-    extern crate std;
 
     use self::hex::decode;
-    use stream::*;
+    use stream::chacha_test_runner;
 
     #[test]
     fn xchacha20_encryption_test_0() {
@@ -59,6 +58,6 @@ mod draft_rfc_xchacha20 {
              93b93111c1a55dd7421a10184974c7c5",
         ).unwrap();
 
-        xchacha_test_runner(&key, &nonce, 0, &mut plaintext, &mut expected);
+        chacha_test_runner(&key, &nonce, 0, &mut plaintext, &mut expected);
     }
 }

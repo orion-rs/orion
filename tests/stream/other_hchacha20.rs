@@ -24,18 +24,7 @@
 #[cfg(test)]
 mod monocypher_hchacha20 {
 
-    extern crate hex;
-    extern crate orion;
-
-    use self::hex::decode;
-    use self::orion::hazardous::chacha20;
-
-    fn test_runner(key: &str, nonce: &str, output_expected: &str) {
-        let actual: [u8; 32] =
-            chacha20::hchacha20(&decode(key).unwrap(), &decode(nonce).unwrap()).unwrap();
-
-        assert_eq!(&actual, &decode(output_expected).unwrap()[..]);
-    }
+    use stream::hchacha_test_runner as test_runner;
 
     #[test]
     fn test_case_0() {
