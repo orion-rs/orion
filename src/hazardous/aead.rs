@@ -109,7 +109,11 @@ fn process_authentication(
     aad: &[u8],
     buf: &[u8],
     buf_in_len: usize,
-) {
+) -> Result<(), UnknownCryptoError> {
+    if buf_in_len > buf.len() {
+        return Err(UnknownCryptoError);
+    }
+
     let mut padding_max = [0u8; 16];
 
     poly1305_state.update(aad).unwrap();
@@ -127,6 +131,8 @@ fn process_authentication(
 
     poly1305_state.update(&padding_max[..8]).unwrap();
     poly1305_state.update(&padding_max[8..16]).unwrap();
+
+    Ok(())
 }
 
 /// `AEAD_ChaCha20_Poly1305` encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
@@ -154,7 +160,7 @@ pub fn ietf_chacha20_poly1305_encrypt(
     chacha20::chacha20_encrypt(key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
-    process_authentication(&mut poly1305_state, aad, &dst_out, plaintext.len());
+    process_authentication(&mut poly1305_state, aad, &dst_out, plaintext.len()).unwrap();
     dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize().unwrap());
 
     zero(&mut poly1305_key);
@@ -192,7 +198,7 @@ pub fn ietf_chacha20_poly1305_decrypt(
         aad,
         ciphertext_with_tag,
         ciphertext_len,
-    );
+    ).unwrap();
 
     util::compare_ct(
         &poly1305_state.finalize().unwrap(),
@@ -266,6 +272,40 @@ fn length_padding_tests() {
     assert_eq!(padding(&[0u8; 15], 16), 1);
     assert_eq!(padding(&[0u8; 32], 16), 0);
     assert_eq!(padding(&[0u8; 30], 16), 2);
+}
+
+#[test]
+#[should_panic]
+fn test_auth_process_with_above_length_index() {
+    let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
+    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
+
+    process_authentication(
+        &mut poly1305_state,
+        &[0u8; 0],
+        &[0u8; 64],
+        65,
+    ).unwrap();
+}
+
+#[test]
+fn test_auth_process_ok_index_length() {
+    let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
+    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
+
+    process_authentication(
+        &mut poly1305_state,
+        &[0u8; 0],
+        &[0u8; 64],
+        64,
+    ).unwrap();
+
+    process_authentication(
+        &mut poly1305_state,
+        &[0u8; 0],
+        &[0u8; 64],
+        0,
+    ).unwrap();
 }
 
 #[test]
