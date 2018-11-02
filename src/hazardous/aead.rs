@@ -27,16 +27,15 @@
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 128-bit Poly1305 tag
 //! appended to it
 //! - `plaintext`: The data to be encrypted
-//! - `dst_out`: Destination array that will hold the ciphertext_with_tag/plaintext after encryption/decryption
+//! - `dst_out`: Destination array that will hold the `ciphertext_with_tag`/`plaintext` after encryption/decryption
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The length of the `key` is not `32` bytes
-//! - The length of the `nonce` is not an acceptable length (`12` with ChaCha20, `16` with HChaCha20 and
-//! `24` with XChaCha20).
+//! - The `nonce` is not an acceptable length (`12` for IETF and `24` for XChaCha20Poly1305).
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
-//! - The length of `ciphertext_with_tag` is not greater than 16
+//! - The length of `ciphertext_with_tag` is not greater than `16`
 //! - `plaintext` or `ciphertext_with_tag` are empty
 //! - `plaintext` or `ciphertext_with_tag - 16` are longer than (2^32)-2
 //! - The received tag does not match the calculated tag when decrypting
@@ -216,7 +215,7 @@ pub fn ietf_chacha20_poly1305_decrypt(
     Ok(())
 }
 
-/// `AEAD_XChaCha20_Poly1305` encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// `AEAD_XChaCha20_Poly1305` encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn xchacha20_poly1305_encrypt(
     key: &[u8],
     nonce: &[u8],
@@ -239,7 +238,7 @@ pub fn xchacha20_poly1305_encrypt(
     Ok(())
 }
 
-/// `AEAD_XChaCha20_Poly1305` decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// `AEAD_XChaCha20_Poly1305` decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn xchacha20_poly1305_decrypt(
     key: &[u8],
     nonce: &[u8],
