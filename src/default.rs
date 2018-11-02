@@ -34,11 +34,9 @@ use util;
 /// - `secret_key`:  The authentication key
 /// - `data`: Data to be authenticated
 ///
-/// See [RFC](https://tools.ietf.org/html/rfc2104#section-2) for more information.
-///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the secret key is less than 64 bytes.
+/// - The length of the secret key is less than 64 bytes
 ///
 /// # Security:
 /// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
@@ -68,6 +66,15 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
 
 /// Verify a HMAC-SHA512 MAC in constant time, with Double-HMAC Verification.
 ///
+/// # Parameters:
+/// - `expected_hmac`: The expected HMAC
+/// - `secret_key`: The authentication key
+/// - `data`: Data to be authenticated
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The calculated HMAC does not match the expected
+///
 /// # Example:
 ///
 /// ```
@@ -79,7 +86,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
 /// let msg = "Some message.".as_bytes();
 ///
 /// let expected_hmac = default::hmac(&key, msg).unwrap();
-/// assert_eq!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap(), true);
+/// assert!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap());
 /// ```
 pub fn hmac_verify(
     expected_hmac: &[u8],
@@ -104,19 +111,17 @@ pub fn hmac_verify(
 /// HKDF-HMAC-SHA512.
 ///
 /// # About:
-/// The output length is set to 32, which makes the derived key suitable for use with AES256.
+/// The output length is set to 32, which makes the derived key suitable for use with orions AEAD
+/// constructions and `default::encrypt()`/`default::decrypt()`.
 ///
 /// # Parameters:
-/// - `salt`:  Salt value
+/// - `salt`: Salt value
 /// - `input`: Input keying material
 /// - `info`: Optional context and application specific information (can be a zero-length string)
 ///
-///
-/// See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
-///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the salt is less than 16 bytes.
+/// - The length of the salt is less than 16 bytes
 ///
 /// # Security:
 /// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
@@ -133,7 +138,7 @@ pub fn hmac_verify(
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info).unwrap();
+/// let derived_key = default::hkdf(&salt, data, info).unwrap();
 /// ```
 pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
     if salt.len() < 16 {
@@ -149,9 +154,16 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownC
 
 /// Verify an HKDF-HMAC-SHA512 derived key in constant time.
 ///
+/// # Parameters:
+/// - `expected_dk` : The expected HKDF derived key
+/// - `salt`: Salt value
+/// - `input`: Input keying material
+/// - `info`: Optional context and application specific information (can be a zero-length string)
+///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of `expected_dk` is not 32 bytes
+/// - The derived key does not match the expected
 ///
 /// # Example:
 ///
@@ -164,8 +176,8 @@ pub fn hkdf(salt: &[u8], input: &[u8], info: &[u8]) -> Result<[u8; 32], UnknownC
 /// let data = "Some data.".as_bytes();
 /// let info = "Some info.".as_bytes();
 ///
-/// let hkdf = default::hkdf(&salt, data, info).unwrap();
-/// assert_eq!(default::hkdf_verify(&hkdf, &salt, data, info).unwrap(), true);
+/// let derived_key = default::hkdf(&salt, data, info).unwrap();
+/// assert!(default::hkdf_verify(&derived_key, &salt, data, info).unwrap());
 /// ```
 pub fn hkdf_verify(
     expected_dk: &[u8],
@@ -194,9 +206,12 @@ pub fn hkdf_verify(
 /// is the actual derived key. When using this function with `default::pbkdf2_verify()`,
 /// then the seperation of the salt and the derived key are automatically handeled.
 ///
+/// # Parameters:
+/// - `password` : The password to be hashed
+///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of the password is less than 14 bytes.
+/// - The length of the password is less than 14 bytes
 ///
 /// # Example:
 ///
@@ -228,9 +243,16 @@ pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
 /// This function is meant to be used with the `default::pbkdf2()` function in orion's default API. It can be
 /// used without it, but then the `expected_dk` passed to the function must be constructed just as in
 /// `default::pbkdf2()`. See documention on `default::pbkdf2()` for details on this.
+///
+/// # Parameters:
+/// - `expected_dk`: The expected password hash
+/// - `password` : The password to be hashed
+///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The length of `expected_dk` is not 64 bytes.
+/// - The length of `expected_dk` is not 64 bytes
+/// - The password hash does not match the expected
+///
 /// # Example:
 ///
 /// ```
@@ -239,7 +261,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
 /// let password = "Secret password".as_bytes();
 ///
 /// let derived_password = default::pbkdf2(password).unwrap();
-/// assert_eq!(default::pbkdf2_verify(&derived_password, password).unwrap(), true);
+/// assert!(default::pbkdf2_verify(&derived_password, password).unwrap());
 /// ```
 pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, ValidationCryptoError> {
     if expected_dk.len() != 64 {
@@ -302,11 +324,11 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
     Ok(hash)
 }
 
-/// Authenticated encryption using XChaCha20_Poly1305.
+/// Authenticated encryption using XChaCha20Poly1305.
 /// # About:
 /// - The nonce is automatically generated
 /// - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated
-/// ciphertext with corresponding Poly1305 tag
+/// ciphertext with the corresponding Poly1305 tag
 ///
 /// # Parameters:
 /// - `plaintext`:  The data to be encrypted
@@ -354,7 +376,7 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
     Ok(dst_out)
 }
 
-/// Authenticated decryption using XChaCha20_Poly1305.
+/// Authenticated decryption using XChaCha20Poly1305.
 /// # About:
 /// - The ciphertext must be of the same format as the one returned by `default::encrypt()`
 ///
@@ -371,7 +393,7 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
 /// An exception will be thrown if:
 /// - `key` is not 32 bytes
 /// - `ciphertext` is less than 41 bytes
-/// - `ciphertext` is longer than (2^32)-14
+/// - `ciphertext` is longer than (2^32)-2
 /// - The received tag does not match the calculated tag
 ///
 /// # Example:

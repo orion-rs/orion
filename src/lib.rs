@@ -41,7 +41,7 @@ pub mod util;
 pub mod errors;
 
 #[cfg(feature = "safe_api")]
-/// High-level API with safer defaults. Not available in `no_std` context.
+/// High-level API with safer defaults. Not available in a `no_std` context.
 pub mod default;
 
 /// Low-level API.
