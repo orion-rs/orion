@@ -32,6 +32,7 @@
 //! An exception will be thrown if:
 //! - The length of `okm_out` is less than 1
 //! - The length of `okm_out` is greater than 255 * hash_output_size_in_bytes
+//! - The derived key does not match the expected when verifying
 //!
 //! # Security:
 //! Salts should always be generated using a CSPRNG. The `gen_rand_key` function

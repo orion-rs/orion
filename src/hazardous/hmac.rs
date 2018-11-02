@@ -30,10 +30,12 @@
 //! An exception will be thrown if:
 //! - Either `finalize()` or `finalize_with_dst()` is called twice without a `reset()` in between
 //! - `update()` is called after `finalize()` without a `reset()` in between
+//! - The HMAC does not match the expected when verifying
 //!
 //! # Security:
 //! The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
 //! in `util` can be used for this. The recommended length for a secret key is 64.
+//!
 //! # Example:
 //! ### Generating HMAC:
 //! ```

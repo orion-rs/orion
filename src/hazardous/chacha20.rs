@@ -28,27 +28,33 @@
 //! - `plaintext`: The data to be encrypted
 //! - `dst_out`: Destination array that will hold the ciphertext/plaintext after encryption/decryption
 //!
-//! See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
-//!
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The length of the `key` is not `32` bytes
-//! - The length of the `nonce` is not of an accepted length (check `constants` to see list)
+//! - The `nonce` is an accepted length (`12` for IETF, `16` for HChaCha20 and `24` for XChaCha20)
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`
 //! - `plaintext` or `ciphertext` are empty
 //! - `plaintext` or `ciphertext` are longer than (2^32)-2
 //! - The `initial_counter` is high enough to cause a potential overflow
 //!
-//! Even though `dst_out` is allowed to be of greater length than `plaintext`, the `ciphertext` produced by ChaCha20
-//! will always be of the same length as the `plaintext`.
+//! Even though `dst_out` is allowed to be of greater length than `plaintext`, the `ciphertext`
+//! produced by `chacha20`/`xchacha20` will always be of the same length as the `plaintext`.
+//!
+//! ### Note:
+//! The `chacha20_keystream_block` is for use-cases where more control over the keystream used for
+//! encryption/decryption is desired. This function's `counter` parameter is never increased
+//! and therefor is not checked for potential overflow on increase either.
 //!
 //! # Security:
 //! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 //! the security of all data that has been encrypted with that given key is compromised.
 //!
-//! Functions `encrypt` and `decrypt` do not provide any data integrity. If you need
-//! data integrity, you should be using a `ChaCha20_Poly1305` construct instead.
-//! See [RFC](https://tools.ietf.org/html/rfc8439) for more information.
+//! Functions herein do not provide any data integrity. If you need
+//! data integrity, which is nearly ***always the case***, you should use an AEAD construction instead.
+//! See orions `aead` module for this.
+//!
+//! Only a `nonce` for `XChaCha20` is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
+//! in `util` can be used for this.
 //!
 //! # Example:
 //! ```
@@ -314,7 +320,7 @@ pub fn chacha20_keystream_block(
     Ok(keystream_block)
 }
 
-/// HChaCha20 as described in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// The HChaCha20 function as described in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
     let mut chacha_state = InternalState {
         state: [0_u32; 16],
@@ -333,7 +339,7 @@ pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], Unkn
     Ok(keystream_block)
 }
 
-/// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// The XChaCha20 encryption function as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn xchacha20_encrypt(
     key: &[u8],
     nonce: &[u8],
@@ -362,7 +368,7 @@ pub fn xchacha20_encrypt(
     Ok(())
 }
 
-/// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// The XChaCha20 decryption function as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn xchacha20_decrypt(
     key: &[u8],
     nonce: &[u8],

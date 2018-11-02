@@ -20,10 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! ### Notes:
-//! The cSHAKE256 implementation currently relies on the `tiny-keccak` crate. Currently this crate
-//! will produce ***incorrect results on big-endian based systems***. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
-//!
 //! # Parameters:
 //! - `input`:  The main input string
 //! - `dst_out`: Destination buffer for the digest. The length of the digest is implied by the length of `dst_out`
@@ -38,6 +34,10 @@
 //! `name` is a special parameter that in most cases should be just set to a zero string:
 //! "This is intended for use by NIST in defining SHA-3-derived functions, and should only be set
 //! to values defined by NIST". See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
+//!
+//! ### Note:
+//! The cSHAKE256 implementation currently relies on the `tiny-keccak` crate. Currently this crate
+//! will produce ***incorrect results on big-endian based systems***. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
 //!
 //! # Exceptions:
 //! An exception will be thrown if:

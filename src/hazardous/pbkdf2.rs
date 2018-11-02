@@ -33,6 +33,7 @@
 //! - The length of `dk_out` is less than 1
 //! - The length of `dk_out` is greater than (2^32 - 1) * hLen
 //! - The specified iteration count is less than 1
+//! - The hashed password does not match the expected when verifying
 //!
 //! # Security:
 //! Salts should always be generated using a CSPRNG. The `gen_rand_key` function

@@ -35,6 +35,7 @@
 //! - `one_time_key` is not 32 bytes
 //! - `finalize()` is called twice without a `reset()` in between
 //! - `update()` is called after `finalize()` without a `reset()` in between
+//! - The calculated tag does not match the expected when verifying
 //!
 //! # Security:
 //! The one-time key should always be generated using a CSPRNG. The `gen_rand_key` function
