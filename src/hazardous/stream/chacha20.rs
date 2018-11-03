@@ -31,7 +31,7 @@
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The length of the `key` is not `32` bytes
-//! - The `nonce` is an accepted length (`12` for IETF, `16` for HChaCha20 and `24` for XChaCha20)
+//! - The length of the `nonce` is not `12` bytes (`16` for HChaCha20)
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`
 //! - `plaintext` or `ciphertext` are empty
 //! - `plaintext` or `ciphertext` are longer than (2^32)-2
@@ -41,7 +41,7 @@
 //! produced by `chacha20`/`xchacha20` will always be of the same length as the `plaintext`.
 //!
 //! ### Note:
-//! The `chacha20_keystream_block` is for use-cases where more control over the keystream used for
+//! `keystream_block` is for use-cases where more control over the keystream used for
 //! encryption/decryption is desired. This function's `counter` parameter is never increased
 //! and therefor is not checked for potential overflow on increase either.
 //!
@@ -53,28 +53,30 @@
 //! data integrity, which is nearly ***always the case***, you should use an AEAD construction instead.
 //! See orions `aead` module for this.
 //!
-//! Only a `nonce` for `XChaCha20` is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
+//! Only a `nonce` for XChaCha20 is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
 //! in `util` can be used for this.
 //!
 //! # Example:
 //! ```
-//! use orion::hazardous::chacha20;
+//! use orion::hazardous::stream::chacha20;
 //! use orion::util;
 //!
-//! let mut dst_out_pt = [0u8; 15];
-//! let mut dst_out_ct = [0u8; 15];
 //! let mut key = [0u8; 32];
+//! util::gen_rand_key(&mut key).unwrap();
+//!
 //! let nonce = [
 //!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
 //! ];
+//!
+//! // Length of this message is 15
 //! let message = "Data to protect".as_bytes();
 //!
-//! util::gen_rand_key(&mut key).unwrap();
+//! let mut dst_out_pt = [0u8; 15];
+//! let mut dst_out_ct = [0u8; 15];
 //!
+//! chacha20::encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
 //!
-//! chacha20::chacha20_encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
-//!
-//! chacha20::chacha20_decrypt(&key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
+//! chacha20::decrypt(&key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
 //!
 //! assert_eq!(dst_out_pt, message);
 //! ```
@@ -82,7 +84,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use errors::UnknownCryptoError;
 use hazardous::constants::{
     ChaChaState, CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, HCHACHA_OUTSIZE,
-    IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE,
+    IETF_CHACHA_NONCESIZE,
 };
 use seckey::zero;
 
@@ -214,8 +216,8 @@ impl InternalState {
     }
 }
 
-/// The ChaCha20 encryption function as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn chacha20_encrypt(
+/// IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn encrypt(
     key: &[u8],
     nonce: &[u8],
     initial_counter: u32,
@@ -278,19 +280,19 @@ pub fn chacha20_encrypt(
     Ok(())
 }
 
-/// The ChaCha20 decryption function as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn chacha20_decrypt(
+/// IETF ChaCha20 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn decrypt(
     key: &[u8],
     nonce: &[u8],
     initial_counter: u32,
     ciphertext: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    chacha20_encrypt(key, nonce, initial_counter, ciphertext, dst_out)
+    encrypt(key, nonce, initial_counter, ciphertext, dst_out)
 }
 
-/// ChaCha20 block function returning a serialized keystream block.
-pub fn chacha20_keystream_block(
+/// IETF ChaCha20 block function returning a serialized keystream block.
+pub fn keystream_block(
     key: &[u8],
     nonce: &[u8],
     counter: u32,
@@ -320,7 +322,7 @@ pub fn chacha20_keystream_block(
     Ok(keystream_block)
 }
 
-/// The HChaCha20 function as described in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
     let mut chacha_state = InternalState {
         state: [0_u32; 16],
@@ -337,46 +339,6 @@ pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], Unkn
     zero(&mut keystream_state);
 
     Ok(keystream_block)
-}
-
-/// The XChaCha20 encryption function as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
-pub fn xchacha20_encrypt(
-    key: &[u8],
-    nonce: &[u8],
-    initial_counter: u32,
-    plaintext: &[u8],
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    if nonce.len() != XCHACHA_NONCESIZE {
-        return Err(UnknownCryptoError);
-    }
-
-    let mut subkey = hchacha20(key, &nonce[0..16]).unwrap();
-    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
-    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
-
-    chacha20_encrypt(
-        &subkey,
-        &prefixed_nonce,
-        initial_counter,
-        plaintext,
-        dst_out,
-    ).unwrap();
-
-    zero(&mut subkey);
-
-    Ok(())
-}
-
-/// The XChaCha20 decryption function as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
-pub fn xchacha20_decrypt(
-    key: &[u8],
-    nonce: &[u8],
-    initial_counter: u32,
-    ciphertext: &[u8],
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    xchacha20_encrypt(key, nonce, initial_counter, ciphertext, dst_out)
 }
 
 #[test]
@@ -487,31 +449,20 @@ fn test_bad_key_nonce_size_init() {
 
 #[test]
 fn test_bad_key_nonce_size_keystream_block() {
-    assert!(chacha20_keystream_block(&[0u8; 32], &[0u8; 10], 0).is_err());
-    assert!(chacha20_keystream_block(&[0u8; 30], &[0u8; 10], 0).is_err());
-    assert!(chacha20_keystream_block(&[0u8; 33], &[0u8; 12], 0).is_err());
-    assert!(chacha20_keystream_block(&[0u8; 33], &[0u8; 13], 0).is_err());
-    assert!(chacha20_keystream_block(&[0u8; 32], &[0u8; 12], 0).is_ok());
-}
-
-#[test]
-fn test_bad_nonce_size_xchacha() {
-    let mut dst = [0u8; 64];
-
-    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 78], 0, &[0u8; 64], &mut dst).is_err());
-    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 23], 0, &[0u8; 64], &mut dst).is_err());
-    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 35], 0, &[0u8; 64], &mut dst).is_err());
-    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 13], 0, &[0u8; 64], &mut dst).is_err());
-    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 24], 0, &[0u8; 64], &mut dst).is_ok());
+    assert!(keystream_block(&[0u8; 32], &[0u8; 10], 0).is_err());
+    assert!(keystream_block(&[0u8; 30], &[0u8; 10], 0).is_err());
+    assert!(keystream_block(&[0u8; 33], &[0u8; 12], 0).is_err());
+    assert!(keystream_block(&[0u8; 33], &[0u8; 13], 0).is_err());
+    assert!(keystream_block(&[0u8; 32], &[0u8; 12], 0).is_ok());
 }
 
 #[test]
 fn test_diff_ct_pt_len() {
     let mut dst = [0u8; 64];
 
-    assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 65], &mut dst).is_err());
-    assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 63], &mut dst).is_ok());
-    assert!(chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 64], &mut dst).is_ok());
+    assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 65], &mut dst).is_err());
+    assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 63], &mut dst).is_ok());
+    assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 64], &mut dst).is_ok());
 }
 
 #[test]
@@ -519,7 +470,7 @@ fn test_diff_ct_pt_len() {
 fn test_err_on_diff_ct_pt_len_xchacha_long() {
     let mut dst = [0u8; 64];
 
-    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 128], &mut dst).unwrap();
+    encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 128], &mut dst).unwrap();
 }
 
 #[test]
@@ -527,7 +478,7 @@ fn test_err_on_diff_ct_pt_len_xchacha_long() {
 fn test_err_on_diff_ct_pt_len_xchacha_short() {
     let mut dst = [0u8; 64];
 
-    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
+    encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
 }
 
 #[test]
@@ -535,15 +486,7 @@ fn test_err_on_diff_ct_pt_len_xchacha_short() {
 fn test_err_on_empty_pt() {
     let mut dst = [0u8; 64];
 
-    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
-}
-
-#[test]
-#[should_panic]
-fn test_err_on_empty_pt_xchacha() {
-    let mut dst = [0u8; 64];
-
-    assert!(xchacha20_encrypt(&[0u8; 32], &[0u8; 24], 0, &[0u8; 0], &mut dst).is_err());
+    encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
 }
 
 #[test]
@@ -551,25 +494,16 @@ fn test_err_on_empty_pt_xchacha() {
 fn test_err_on_initial_counter_overflow() {
     let mut dst = [0u8; 65];
 
-    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 65], &mut dst).unwrap();
-}
-
-#[test]
-#[should_panic]
-fn test_err_on_initial_counter_overflow_xchacha() {
-    let mut dst = [0u8; 65];
-
-    xchacha20_encrypt(&[0u8; 32], &[0u8; 24], 4294967295, &[0u8; 65], &mut dst).unwrap();
+    encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 65], &mut dst).unwrap();
 }
 
 #[test]
 fn test_pass_on_one_iter_max_initial_counter() {
     let mut dst = [0u8; 64];
     // Should pass because only one iteration is completed, so block_counter will not increase
-    chacha20_encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 64], &mut dst).unwrap();
+    encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 64], &mut dst).unwrap();
     // keystream_block never increases the provided counter
-    chacha20_keystream_block(&[0u8; 32], &[0u8; 12], 4294967295).unwrap();
-    xchacha20_encrypt(&[0u8; 32], &[0u8; 24], 4294967295, &[0u8; 64], &mut dst).unwrap();
+    keystream_block(&[0u8; 32], &[0u8; 12], 4294967295).unwrap();
 }
 
 #[cfg(test)]
@@ -665,7 +599,7 @@ fn test_chacha20_block_results() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = chacha20_keystream_block(&key, &nonce, 1).unwrap();
+    let keystream_block_only = keystream_block(&key, &nonce, 1).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -705,7 +639,7 @@ fn chacha20_block_test_1() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = chacha20_keystream_block(&key, &nonce, 0).unwrap();
+    let keystream_block_only = keystream_block(&key, &nonce, 0).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -745,7 +679,7 @@ fn chacha20_block_test_2() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = chacha20_keystream_block(&key, &nonce, 1).unwrap();
+    let keystream_block_only = keystream_block(&key, &nonce, 1).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -785,7 +719,7 @@ fn chacha20_block_test_3() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = chacha20_keystream_block(&key, &nonce, 1).unwrap();
+    let keystream_block_only = keystream_block(&key, &nonce, 1).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -825,7 +759,7 @@ fn chacha20_block_test_4() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = chacha20_keystream_block(&key, &nonce, 2).unwrap();
+    let keystream_block_only = keystream_block(&key, &nonce, 2).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -865,7 +799,7 @@ fn chacha20_block_test_5() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = chacha20_keystream_block(&key, &nonce, 0).unwrap();
+    let keystream_block_only = keystream_block(&key, &nonce, 0).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -946,8 +880,8 @@ fn test_key_schedule() {
         expected_keystream.as_ref()
     );
 
-    actual_keystream[..64].copy_from_slice(&chacha20_keystream_block(&key, &nonce, 1).unwrap());
-    actual_keystream[64..].copy_from_slice(&chacha20_keystream_block(&key, &nonce, 1 + 1).unwrap());
+    actual_keystream[..64].copy_from_slice(&keystream_block(&key, &nonce, 1).unwrap());
+    actual_keystream[64..].copy_from_slice(&keystream_block(&key, &nonce, 1 + 1).unwrap());
 
     assert_eq!(
         actual_keystream[..expected_keystream.len()].as_ref(),

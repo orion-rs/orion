@@ -5,7 +5,7 @@ extern crate orion;
 pub mod util;
 
 use self::util::*;
-use orion::hazardous::chacha20;
+use orion::hazardous::stream::chacha20;
 
 fuzz_target!(|data: &[u8]| {
     let (key, nonce) = chacha_key_nonce_setup(16, data);

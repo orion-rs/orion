@@ -75,7 +75,7 @@
 //! ```
 use errors::UnknownCryptoError;
 use hazardous::aead::chacha20poly1305;
-use hazardous::chacha20;
+use hazardous::stream::chacha20;
 use hazardous::constants::{IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE};
 use seckey::zero;
 

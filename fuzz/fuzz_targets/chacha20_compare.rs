@@ -7,7 +7,7 @@ pub mod util;
 
 use self::util::*;
 use chacha::{ChaCha, KeyStream};
-use orion::hazardous::chacha20;
+use orion::hazardous::stream::chacha20;
 
 fuzz_target!(|data: &[u8]| {
     let (key, nonce) = chacha_key_nonce_setup(12, data);
@@ -34,8 +34,8 @@ fuzz_target!(|data: &[u8]| {
     // chacha crates uses 0 as inital counter
     let mut orion_pt = vec![0u8; pt.len()];
     let mut orion_ct = vec![0u8; pt.len()];
-    chacha20::chacha20_encrypt(&key, &nonce, 0, &pt, &mut orion_ct).unwrap();
-    chacha20::chacha20_decrypt(&key, &nonce, 0, &orion_ct, &mut orion_pt).unwrap();
+    chacha20::encrypt(&key, &nonce, 0, &pt, &mut orion_ct).unwrap();
+    chacha20::decrypt(&key, &nonce, 0, &orion_ct, &mut orion_pt).unwrap();
     assert_eq!(pt, chacha_pt);
     assert_eq!(orion_ct, chacha_ct);
     assert_eq!(orion_pt, chacha_pt);
