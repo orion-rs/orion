@@ -26,8 +26,8 @@ pub mod rfc_poly1305;
 extern crate orion;
 extern crate ring;
 
-use self::orion::hazardous::hmac;
-use self::orion::hazardous::poly1305;
+use self::orion::hazardous::mac::hmac;
+use self::orion::hazardous::mac::poly1305;
 use self::ring::error;
 
 fn hmac_test_runner(

@@ -25,7 +25,7 @@ use hazardous::aead;
 use hazardous::constants::*;
 use hazardous::cshake;
 use hazardous::hkdf;
-use hazardous::hmac;
+use hazardous::mac::hmac;
 use hazardous::pbkdf2;
 use util;
 

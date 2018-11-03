@@ -5,7 +5,7 @@ extern crate orion;
 pub mod util;
 
 use self::util::*;
-use orion::hazardous::poly1305::*;
+use orion::hazardous::mac::poly1305::*;
 
 fuzz_target!(|data: &[u8]| {
     let (key, message) = poly1305_setup(data);

@@ -20,23 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// AEAD (Authenticated Encryption with Associated Data).
-pub mod aead;
+/// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
+pub mod hmac;
 
-/// MAC (Message Authentication Code).
-pub mod mac;
-
-/// HKDF-HMAC-SHA512 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
-pub mod hkdf;
-
-/// PBKDF2-HMAC-SHA512 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
-pub mod pbkdf2;
-
-/// cSHAKE256 as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
-pub mod cshake;
-
-/// Constant values and types.
-pub mod constants;
-
-/// IETF ChaCha20, XChaCha20 and HChaCha20.
-pub mod chacha20;
+/// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub mod poly1305;

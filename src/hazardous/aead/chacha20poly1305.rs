@@ -54,7 +54,7 @@
 //!
 //! let mut key = [0u8; 32];
 //! util::gen_rand_key(&mut key).unwrap();
-//! 
+//!
 //! let nonce = [ 0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47 ];
 //! let aad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
 //! let plaintext = b"\
@@ -78,7 +78,7 @@ use hazardous::chacha20;
 use hazardous::constants::{
     CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE,
 };
-use hazardous::poly1305;
+use hazardous::mac::poly1305;
 use seckey::zero;
 use util;
 

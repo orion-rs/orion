@@ -5,9 +5,9 @@ extern crate test;
 use orion::hazardous::chacha20;
 use orion::hazardous::cshake;
 use orion::hazardous::hkdf;
-use orion::hazardous::hmac;
+use orion::hazardous::mac::hmac;
 use orion::hazardous::pbkdf2;
-use orion::hazardous::poly1305;
+use orion::hazardous::mac::poly1305;
 use test::Bencher;
 
 #[bench]

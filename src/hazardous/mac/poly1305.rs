@@ -43,7 +43,7 @@
 //!
 //! # Example:
 //! ```
-//! use orion::hazardous::poly1305;
+//! use orion::hazardous::mac::poly1305;
 //! use orion::util;
 //!
 //! let mut one_time_key = [0u8; 32];

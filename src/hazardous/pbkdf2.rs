@@ -68,7 +68,7 @@
 use byteorder::{BigEndian, ByteOrder};
 use errors::*;
 use hazardous::constants::{HLenArray, HLEN};
-use hazardous::hmac;
+use hazardous::mac::hmac;
 use util;
 
 #[inline(always)]

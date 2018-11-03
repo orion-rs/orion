@@ -5,7 +5,7 @@ extern crate orion;
 pub mod util;
 
 use self::util::*;
-use orion::hazardous::hmac;
+use orion::hazardous::mac::hmac;
 
 fuzz_target!(|data: &[u8]| {
     let (secret_key, message) = hmac_setup(data);

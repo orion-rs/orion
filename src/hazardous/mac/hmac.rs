@@ -52,7 +52,7 @@
 //! ```
 //! ### Verifying HMAC:
 //! ```
-//! use orion::hazardous::hmac;
+//! use orion::hazardous::mac::hmac;
 //! use orion::util;
 //!
 //! let mut key = [0u8; 64];
