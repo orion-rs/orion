@@ -5,7 +5,7 @@ extern crate orion;
 pub mod util;
 
 use self::util::*;
-use orion::hazardous::hkdf;
+use orion::hazardous::kdf::hkdf;
 
 fuzz_target!(|data: &[u8]| {
     let (ikm, salt, info, mut okm_out) = hkdf_setup(data);

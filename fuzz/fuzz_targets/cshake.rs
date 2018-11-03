@@ -5,7 +5,7 @@ extern crate orion;
 pub mod util;
 
 use self::util::*;
-use orion::hazardous::cshake;
+use orion::hazardous::xof::cshake;
 
 fuzz_target!(|data: &[u8]| {
     let mut input = Vec::from(data);

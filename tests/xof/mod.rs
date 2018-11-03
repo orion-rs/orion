@@ -22,7 +22,7 @@ pub mod official_cshake;
 
 extern crate orion;
 
-use self::orion::hazardous::cshake;
+use self::orion::hazardous::xof::cshake;
 
 // All test vectors currently don't use a "name" paramter, so this is left None
 pub fn cshake_test_runner(input: &[u8], custom: &[u8], expected: &[u8]) {

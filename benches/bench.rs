@@ -3,11 +3,11 @@ extern crate orion;
 extern crate test;
 
 use orion::hazardous::stream::*;
-use orion::hazardous::cshake;
-use orion::hazardous::hkdf;
+use orion::hazardous::xof::cshake;
+use orion::hazardous::kdf::hkdf;
 use orion::hazardous::mac::hmac;
 use orion::hazardous::mac::poly1305;
-use orion::hazardous::pbkdf2;
+use orion::hazardous::kdf::pbkdf2;
 use test::Bencher;
 
 #[bench]

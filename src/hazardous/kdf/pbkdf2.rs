@@ -42,7 +42,7 @@
 //! # Example:
 //! ### Generating derived key:
 //! ```
-//! use orion::hazardous::pbkdf2;
+//! use orion::hazardous::kdf::pbkdf2;
 //! use orion::util;
 //!
 //! let mut salt = [0u8; 32];
@@ -53,7 +53,7 @@
 //! ```
 //! ### Verifying derived key:
 //! ```
-//! use orion::hazardous::pbkdf2;
+//! use orion::hazardous::kdf::pbkdf2;
 //! use orion::util;
 //!
 //! let mut salt = [0u8; 32];
@@ -165,7 +165,7 @@ mod test {
 
     extern crate hex;
     use self::hex::decode;
-    use hazardous::pbkdf2::*;
+    use hazardous::kdf::pbkdf2::*;
 
     #[test]
     fn zero_iterations_err() {

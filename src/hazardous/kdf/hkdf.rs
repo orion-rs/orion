@@ -43,7 +43,7 @@
 //! # Example:
 //! ### Generating derived key:
 //! ```
-//! use orion::hazardous::hkdf;
+//! use orion::hazardous::kdf::hkdf;
 //! use orion::util;
 //!
 //! let mut salt = [0u8; 32];
@@ -54,7 +54,7 @@
 //! ```
 //! ### Verifying derived key:
 //! ```
-//! use orion::hazardous::hkdf;
+//! use orion::hazardous::kdf::hkdf;
 //! use orion::util;
 //!
 //! let mut salt = [0u8; 32];
@@ -145,7 +145,7 @@ pub fn verify(
 mod test {
     extern crate hex;
     use self::hex::decode;
-    use hazardous::hkdf::*;
+    use hazardous::kdf::hkdf::*;
 
     #[test]
     fn hkdf_maximum_length_512() {

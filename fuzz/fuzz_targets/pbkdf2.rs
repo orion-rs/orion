@@ -5,7 +5,7 @@ extern crate orion;
 pub mod util;
 
 use self::util::*;
-use orion::hazardous::pbkdf2;
+use orion::hazardous::kdf::pbkdf2;
 
 fuzz_target!(|data: &[u8]| {
     let (password, salt, mut dk_out, iter) = pbkdf2_setup(data);

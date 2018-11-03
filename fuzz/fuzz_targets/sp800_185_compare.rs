@@ -6,7 +6,7 @@ extern crate sp800_185;
 pub mod util;
 
 use self::util::*;
-use orion::hazardous::cshake;
+use orion::hazardous::xof::cshake;
 use sp800_185::CShake as sp_cshake;
 
 fuzz_target!(|data: &[u8]| {

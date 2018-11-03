@@ -56,7 +56,7 @@
 //!
 //! # Example:
 //! ```
-//! use orion::hazardous::cshake;
+//! use orion::hazardous::xof::cshake;
 //!
 //! let input = b"\x00\x01\x02\x03";
 //! let custom = b"Email signature";
@@ -197,7 +197,7 @@ fn left_encode(x: u64) -> ([u8; 9], usize) {
 #[cfg(test)]
 mod test {
 
-    use hazardous::cshake::*;
+    use hazardous::xof::cshake::*;
 
     #[test]
     fn test_left_encode() {

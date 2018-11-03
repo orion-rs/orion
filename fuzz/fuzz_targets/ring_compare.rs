@@ -6,9 +6,9 @@ extern crate ring;
 pub mod util;
 
 use self::util::*;
-use orion::hazardous::hkdf;
+use orion::hazardous::kdf::hkdf;
 use orion::hazardous::mac::hmac;
-use orion::hazardous::pbkdf2;
+use orion::hazardous::kdf::pbkdf2;
 use ring::digest;
 use ring::hkdf::extract_and_expand as ring_hkdf;
 use ring::hmac as ring_hmac;
