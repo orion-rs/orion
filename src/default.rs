@@ -544,14 +544,39 @@ mod test {
     }
 
     #[test]
-    fn pbkdf2_verify_err() {
+    #[should_panic]
+    fn pbkdf2_verify_err_modified_salt() {
         let mut password = [0u8; 64];
         util::gen_rand_key(&mut password).unwrap();
 
         let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
         pbkdf2_dk[..10].copy_from_slice(&[0x61; 10]);
 
-        assert!(default::pbkdf2_verify(&pbkdf2_dk, &password).is_err());
+        default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn pbkdf2_verify_err_modified_password() {
+        let mut password = [0u8; 64];
+        util::gen_rand_key(&mut password).unwrap();
+
+        let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        pbkdf2_dk[70..80].copy_from_slice(&[0x61; 10]);
+
+        default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn pbkdf2_verify_err_modified_salt_and_password() {
+        let mut password = [0u8; 64];
+        util::gen_rand_key(&mut password).unwrap();
+
+        let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        pbkdf2_dk[63..73].copy_from_slice(&[0x61; 10]);
+
+        default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap();
     }
 
     #[test]
