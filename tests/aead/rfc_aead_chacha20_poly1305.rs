@@ -23,7 +23,7 @@
 mod rfc_aead_chacha20_poly1305 {
 
     extern crate orion;
-    use self::orion::hazardous::aead::*;
+    use self::orion::hazardous::aead;
     use aead::aead_test_runner as chacha20_poly1305_test_runner;
 
     #[test]
@@ -119,7 +119,7 @@ mod rfc_aead_chacha20_poly1305 {
 
         let mut dst_out_pt = vec![0u8; ciphertext.len()];
 
-        ietf_chacha20_poly1305_decrypt(&key, &nonce, &ct_plus_tag, &aad, &mut dst_out_pt).unwrap();
+        aead::chacha20poly1305::decrypt(&key, &nonce, &ct_plus_tag, &aad, &mut dst_out_pt).unwrap();
 
         assert_eq!(dst_out_pt[..].as_ref(), plaintext);
     }

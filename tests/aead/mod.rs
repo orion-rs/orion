@@ -44,19 +44,19 @@ fn aead_test_runner(
     // Determine variant based on NONCE size
     if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
         assert!(
-            aead::ietf_chacha20_poly1305_encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok()
+            aead::chacha20poly1305::encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok()
         );
         assert!(
-            aead::ietf_chacha20_poly1305_decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out)
+            aead::chacha20poly1305::decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out)
                 .is_ok()
         );
     }
 
     if nonce.len() == constants::XCHACHA_NONCESIZE {
-        assert!(aead::xchacha20_poly1305_encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok());
+        assert!(aead::xchacha20poly1305::encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok());
 
         assert!(
-            aead::xchacha20_poly1305_decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out).is_ok()
+            aead::xchacha20poly1305::decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out).is_ok()
         );
     }
 

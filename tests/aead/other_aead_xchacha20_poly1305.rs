@@ -24,7 +24,7 @@
 mod other_aead_xchacha20_poly1305 {
 
     extern crate orion;
-    use self::orion::hazardous::aead::*;
+    use self::orion::hazardous::aead;
 
     #[test]
     fn test_case_0() {
@@ -69,7 +69,7 @@ mod other_aead_xchacha20_poly1305 {
         let mut dst_out_ct = vec![0u8; expected_ct.len()];
         let mut dst_out_pt = vec![0u8; plaintext.len()];
 
-        xchacha20_poly1305_encrypt(&key, &nonce, &plaintext, &aad, &mut dst_out_ct).unwrap();
+        aead::xchacha20poly1305::encrypt(&key, &nonce, &plaintext, &aad, &mut dst_out_ct).unwrap();
 
         assert_eq!(
             dst_out_ct[..plaintext.len()].as_ref(),
@@ -81,7 +81,7 @@ mod other_aead_xchacha20_poly1305 {
             expected_ct[plaintext.len()..].as_ref()
         );
 
-        xchacha20_poly1305_decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
+        aead::xchacha20poly1305::decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
 
         assert_eq!(dst_out_pt[..].as_ref(), plaintext.as_ref());
     }

@@ -32,7 +32,7 @@
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The length of the `key` is not `32` bytes
-//! - The `nonce` is not an acceptable length (`12` for IETF and `24` for XChaCha20Poly1305).
+//! - The length of the `nonce` is not `12` bytes
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
 //! - The length of `ciphertext_with_tag` is not greater than `16`
@@ -44,24 +44,19 @@
 //! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 //! the security of all data that has been encrypted with that given key is compromised.
 //!
-//! Only a `nonce` for `XChaCha20Poly1305` is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
+//! Only a `nonce` for `xchacha20poly1305` is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
 //! in `util` can be used for this.
 //!
 //! # Example:
 //! ```
 //! use orion::hazardous::aead;
+//! use orion::util;
 //!
-//! let key = [
-//!     0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d,
-//!     0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b,
-//!     0x9c, 0x9d, 0x9e, 0x9f,
-//! ];
-//! let nonce = [
-//!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
-//! ];
-//! let aad = [
-//!     0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
-//! ];
+//! let mut key = [0u8; 32];
+//! util::gen_rand_key(&mut key).unwrap();
+//! 
+//! let nonce = [ 0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47 ];
+//! let aad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
 //! let plaintext = b"\
 //! Ladies and Gentlemen of the class of '99: If I could offer you o\
 //! nly one tip for the future, sunscreen would be it.";
@@ -69,10 +64,11 @@
 //! // Length of above plaintext is 114 and then we accomodate 16 for the Poly1305 tag.
 //!
 //! let mut dst_out_ct = [0u8; 114 + 16];
-//! aead::ietf_chacha20_poly1305_encrypt(&key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();
-//!
 //! let mut dst_out_pt = [0u8; 114];
-//! aead::ietf_chacha20_poly1305_decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
+//!
+//! aead::chacha20poly1305::encrypt(&key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();
+//!
+//! aead::chacha20poly1305::decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
@@ -80,7 +76,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use errors::UnknownCryptoError;
 use hazardous::chacha20;
 use hazardous::constants::{
-    CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE, XCHACHA_NONCESIZE,
+    CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE,
 };
 use hazardous::poly1305;
 use seckey::zero;
@@ -135,8 +131,8 @@ fn process_authentication(
     Ok(())
 }
 
-/// `AEAD_ChaCha20_Poly1305` encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn ietf_chacha20_poly1305_encrypt(
+/// AEAD ChaCha20Poly1305 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn encrypt(
     key: &[u8],
     nonce: &[u8],
     plaintext: &[u8],
@@ -168,8 +164,8 @@ pub fn ietf_chacha20_poly1305_encrypt(
     Ok(())
 }
 
-/// `AEAD_ChaCha20_Poly1305` decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn ietf_chacha20_poly1305_decrypt(
+/// AEAD ChaCha20Poly1305 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn decrypt(
     key: &[u8],
     nonce: &[u8],
     ciphertext_with_tag: &[u8],
@@ -218,53 +214,6 @@ pub fn ietf_chacha20_poly1305_decrypt(
     Ok(())
 }
 
-/// `AEAD_XChaCha20_Poly1305` encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
-pub fn xchacha20_poly1305_encrypt(
-    key: &[u8],
-    nonce: &[u8],
-    plaintext: &[u8],
-    aad: &[u8],
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    if nonce.len() != XCHACHA_NONCESIZE {
-        return Err(UnknownCryptoError);
-    }
-
-    let mut subkey = chacha20::hchacha20(key, &nonce[0..16]).unwrap();
-    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
-    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
-
-    ietf_chacha20_poly1305_encrypt(&subkey, &prefixed_nonce, plaintext, aad, dst_out).unwrap();
-
-    zero(&mut subkey);
-
-    Ok(())
-}
-
-/// `AEAD_XChaCha20_Poly1305` decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
-pub fn xchacha20_poly1305_decrypt(
-    key: &[u8],
-    nonce: &[u8],
-    ciphertext_with_tag: &[u8],
-    aad: &[u8],
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    if nonce.len() != XCHACHA_NONCESIZE {
-        return Err(UnknownCryptoError);
-    }
-
-    let mut subkey = chacha20::hchacha20(key, &nonce[0..16]).unwrap();
-    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
-    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
-
-    ietf_chacha20_poly1305_decrypt(&subkey, &prefixed_nonce, ciphertext_with_tag, aad, dst_out)
-        .unwrap();
-
-    zero(&mut subkey);
-
-    Ok(())
-}
-
 #[test]
 fn length_padding_tests() {
     // Integral multiple of 16
@@ -294,78 +243,12 @@ fn test_auth_process_ok_index_length() {
 }
 
 #[test]
-fn test_err_on_bad_nonce_xchacha() {
-    let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
-    let mut dst_out_pt = [0u8; 64];
-
-    assert!(
-        xchacha20_poly1305_encrypt(
-            &[0u8; 32],
-            &[0u8; 23],
-            &[0u8; 64],
-            &[0u8; 0],
-            &mut dst_out_ct
-        ).is_err()
-    );
-
-    assert!(
-        xchacha20_poly1305_decrypt(
-            &[0u8; 32],
-            &[0u8; 23],
-            &dst_out_ct,
-            &[0u8; 0],
-            &mut dst_out_pt
-        ).is_err()
-    );
-
-    assert!(
-        xchacha20_poly1305_encrypt(
-            &[0u8; 32],
-            &[0u8; 25],
-            &[0u8; 64],
-            &[0u8; 0],
-            &mut dst_out_ct
-        ).is_err()
-    );
-
-    assert!(
-        xchacha20_poly1305_decrypt(
-            &[0u8; 32],
-            &[0u8; 25],
-            &dst_out_ct,
-            &[0u8; 0],
-            &mut dst_out_pt
-        ).is_err()
-    );
-
-    assert!(
-        xchacha20_poly1305_encrypt(
-            &[0u8; 32],
-            &[0u8; 24],
-            &[0u8; 64],
-            &[0u8; 0],
-            &mut dst_out_ct
-        ).is_ok()
-    );
-
-    assert!(
-        xchacha20_poly1305_decrypt(
-            &[0u8; 32],
-            &[0u8; 24],
-            &dst_out_ct,
-            &[0u8; 0],
-            &mut dst_out_pt
-        ).is_ok()
-    );
-}
-
-#[test]
 fn test_err_bad_key_nonce_sizes_ietf() {
     let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
     let mut dst_out_pt = [0u8; 64];
 
     assert!(
-        ietf_chacha20_poly1305_encrypt(
+        encrypt(
             &[0u8; 30],
             &[0u8; 10],
             &[0u8; 64],
@@ -374,7 +257,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
         ).is_err()
     );
     assert!(
-        ietf_chacha20_poly1305_decrypt(
+        decrypt(
             &[0u8; 30],
             &[0u8; 10],
             &dst_out_ct,
@@ -384,7 +267,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
     );
 
     assert!(
-        ietf_chacha20_poly1305_encrypt(
+        encrypt(
             &[0u8; 30],
             &[0u8; 12],
             &[0u8; 64],
@@ -393,7 +276,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
         ).is_err()
     );
     assert!(
-        ietf_chacha20_poly1305_decrypt(
+        decrypt(
             &[0u8; 30],
             &[0u8; 12],
             &dst_out_ct,
@@ -403,7 +286,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
     );
 
     assert!(
-        ietf_chacha20_poly1305_encrypt(
+        encrypt(
             &[0u8; 32],
             &[0u8; 10],
             &[0u8; 64],
@@ -412,7 +295,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
         ).is_err()
     );
     assert!(
-        ietf_chacha20_poly1305_decrypt(
+        decrypt(
             &[0u8; 32],
             &[0u8; 10],
             &dst_out_ct,
@@ -422,7 +305,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
     );
 
     assert!(
-        ietf_chacha20_poly1305_encrypt(
+        encrypt(
             &[0u8; 33],
             &[0u8; 13],
             &[0u8; 64],
@@ -431,7 +314,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
         ).is_err()
     );
     assert!(
-        ietf_chacha20_poly1305_decrypt(
+        decrypt(
             &[0u8; 33],
             &[0u8; 13],
             &dst_out_ct,
@@ -441,7 +324,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
     );
 
     assert!(
-        ietf_chacha20_poly1305_encrypt(
+        encrypt(
             &[0u8; 32],
             &[0u8; 12],
             &[0u8; 64],
@@ -450,7 +333,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
         ).is_ok()
     );
     assert!(
-        ietf_chacha20_poly1305_decrypt(
+        decrypt(
             &[0u8; 32],
             &[0u8; 12],
             &dst_out_ct,
@@ -466,7 +349,7 @@ fn test_modified_tag_error() {
     let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
     let mut dst_out_pt = [0u8; 64];
 
-    ietf_chacha20_poly1305_encrypt(
+    encrypt(
         &[0u8; 32],
         &[0u8; 12],
         &[0u8; 64],
@@ -475,7 +358,7 @@ fn test_modified_tag_error() {
     ).unwrap();
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
-    ietf_chacha20_poly1305_decrypt(
+    decrypt(
         &[0u8; 32],
         &[0u8; 12],
         &dst_out_ct,
@@ -493,7 +376,7 @@ fn test_bad_pt_ct_lengths() {
     let mut dst_out_pt_2 = [0u8; 64];
 
     assert!(
-        ietf_chacha20_poly1305_encrypt(
+        encrypt(
             &[0u8; 32],
             &[0u8; 12],
             &dst_out_pt_2,
@@ -502,7 +385,7 @@ fn test_bad_pt_ct_lengths() {
         ).is_err()
     );
 
-    ietf_chacha20_poly1305_encrypt(
+    encrypt(
         &[0u8; 32],
         &[0u8; 12],
         &dst_out_pt_2,
@@ -511,7 +394,7 @@ fn test_bad_pt_ct_lengths() {
     ).unwrap();
 
     assert!(
-        ietf_chacha20_poly1305_decrypt(
+        decrypt(
             &[0u8; 32],
             &[0u8; 12],
             &dst_out_ct_2,
@@ -520,7 +403,7 @@ fn test_bad_pt_ct_lengths() {
         ).is_err()
     );
 
-    ietf_chacha20_poly1305_decrypt(
+    decrypt(
         &[0u8; 32],
         &[0u8; 12],
         &dst_out_ct_2,

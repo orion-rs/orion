@@ -11,14 +11,14 @@ fuzz_target!(|data: &[u8]| {
     let mut ciphertext_with_tag_orion: Vec<u8> = vec![0u8; plaintext.len() + 16];
     let mut plaintext_out_orion = vec![0u8; plaintext.len()];
 
-    orion::hazardous::aead::ietf_chacha20_poly1305_encrypt(
+    orion::hazardous::aead::chacha20poly1305::encrypt(
         &key,
         &nonce,
         &plaintext,
         &aad,
         &mut ciphertext_with_tag_orion,
     ).unwrap();
-    orion::hazardous::aead::ietf_chacha20_poly1305_decrypt(
+    orion::hazardous::aead::chacha20poly1305::decrypt(
         &key,
         &nonce,
         &ciphertext_with_tag_orion,

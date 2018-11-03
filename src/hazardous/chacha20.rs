@@ -385,14 +385,18 @@ fn test_process_block_wrong_combination_of_variant_and_nonce() {
         state: [0_u32; 16],
         is_ietf: true,
     };
-    chacha_state_ietf.init_state(&[0u8; 32], &[0u8; 12]).unwrap();
+    chacha_state_ietf
+        .init_state(&[0u8; 32], &[0u8; 12])
+        .unwrap();
 
     let mut chacha_state_hchacha = InternalState {
         state: [0_u32; 16],
         is_ietf: false,
     };
 
-    chacha_state_hchacha.init_state(&[0u8; 32], &[0u8; 16]).unwrap();
+    chacha_state_hchacha
+        .init_state(&[0u8; 32], &[0u8; 16])
+        .unwrap();
 
     assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
     assert!(chacha_state_ietf.process_block(None).is_err());
@@ -407,7 +411,9 @@ fn test_serialize_block_wrong_combination_of_variant_and_dst() {
         is_ietf: true,
     };
 
-    chacha_state_ietf.init_state(&[0u8; 32], &[0u8; 12]).unwrap();
+    chacha_state_ietf
+        .init_state(&[0u8; 32], &[0u8; 12])
+        .unwrap();
 
     let mut chacha_state_hchacha = InternalState {
         state: [0_u32; 16],
@@ -417,15 +423,33 @@ fn test_serialize_block_wrong_combination_of_variant_and_dst() {
     let mut hchacha_out = [0u8; HCHACHA_OUTSIZE];
     let mut ietf_out = [0u8; CHACHA_BLOCKSIZE];
 
-    chacha_state_hchacha.init_state(&[0u8; 32], &[0u8; 16]).unwrap();
+    chacha_state_hchacha
+        .init_state(&[0u8; 32], &[0u8; 16])
+        .unwrap();
 
     let ietf_src = chacha_state_ietf.process_block(Some(1)).unwrap();
     let hchacha_src = chacha_state_hchacha.process_block(None).unwrap();
 
-    assert!(chacha_state_hchacha.serialize_block(&hchacha_src, &mut ietf_out).is_err());
-    assert!(chacha_state_ietf.serialize_block(&ietf_src, &mut hchacha_out).is_err());
-    assert!(chacha_state_hchacha.serialize_block(&hchacha_src, &mut hchacha_out).is_ok());
-    assert!(chacha_state_ietf.serialize_block(&ietf_src, &mut ietf_out).is_ok());
+    assert!(
+        chacha_state_hchacha
+            .serialize_block(&hchacha_src, &mut ietf_out)
+            .is_err()
+    );
+    assert!(
+        chacha_state_ietf
+            .serialize_block(&ietf_src, &mut hchacha_out)
+            .is_err()
+    );
+    assert!(
+        chacha_state_hchacha
+            .serialize_block(&hchacha_src, &mut hchacha_out)
+            .is_ok()
+    );
+    assert!(
+        chacha_state_ietf
+            .serialize_block(&ietf_src, &mut ietf_out)
+            .is_ok()
+    );
 }
 
 #[test]

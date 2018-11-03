@@ -365,7 +365,7 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
     let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
     dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce);
 
-    aead::xchacha20_poly1305_encrypt(
+    aead::xchacha20poly1305::encrypt(
         key,
         &nonce,
         plaintext,
@@ -416,7 +416,7 @@ pub fn decrypt(key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoEr
 
     let mut dst_out = vec![0u8; ciphertext.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
-    aead::xchacha20_poly1305_decrypt(
+    aead::xchacha20poly1305::decrypt(
         key,
         &ciphertext[..XCHACHA_NONCESIZE],
         &ciphertext[XCHACHA_NONCESIZE..],
