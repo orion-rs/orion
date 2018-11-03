@@ -7,8 +7,8 @@ pub mod util;
 
 use self::util::*;
 use orion::hazardous::kdf::hkdf;
-use orion::hazardous::mac::hmac;
 use orion::hazardous::kdf::pbkdf2;
+use orion::hazardous::mac::hmac;
 use ring::digest;
 use ring::hkdf::extract_and_expand as ring_hkdf;
 use ring::hmac as ring_hmac;
