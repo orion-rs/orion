@@ -131,7 +131,7 @@ impl InternalState {
         self.quarter_round(3, 4, 9, 14);
     }
     #[inline(always)]
-    /// Initialize either a ChaCha or HChaCha state with a `key` and `nonce`.
+    /// Initialize either a ChaCha or HChaCha state with a `secret_key` and `nonce`.
     fn init_state(&mut self, secret_key: &[u8], nonce: &[u8]) -> Result<(), UnknownCryptoError> {
         if secret_key.len() != CHACHA_KEYSIZE {
             return Err(UnknownCryptoError);
@@ -233,7 +233,7 @@ pub fn encrypt(
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
     }
-    // Check data limitation for key,nonce combination at max is (2^32)-2
+    // Check data limitation for secret_key,nonce combination at max is (2^32)-2
     if plaintext.len() as u32 == u32::max_value() {
         // `usize::max_value() as u32` == `u32::max_value()` so we have to compare equals
         return Err(UnknownCryptoError);
