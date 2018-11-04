@@ -23,10 +23,10 @@
 use errors::*;
 use hazardous::aead;
 use hazardous::constants::*;
-use hazardous::xof::cshake;
 use hazardous::kdf::hkdf;
-use hazardous::mac::hmac;
 use hazardous::kdf::pbkdf2;
+use hazardous::mac::hmac;
+use hazardous::xof::cshake;
 use util;
 
 /// HMAC-SHA512.

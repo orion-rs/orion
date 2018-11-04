@@ -75,8 +75,8 @@
 //! ```
 use errors::UnknownCryptoError;
 use hazardous::aead::chacha20poly1305;
-use hazardous::stream::chacha20;
 use hazardous::constants::{IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE};
+use hazardous::stream::chacha20;
 use seckey::zero;
 
 /// AEAD XChaCha20Poly1305 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).

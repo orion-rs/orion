@@ -61,7 +61,7 @@
 //! util::gen_rand_key(&mut key).unwrap();
 //! util::gen_rand_key(&mut nonce).unwrap();
 //!
-//! // Length of this message is 15 
+//! // Length of this message is 15
 //! let message = "Data to protect".as_bytes();
 //!
 //! let mut dst_out_pt = [0u8; 15];
