@@ -397,6 +397,20 @@ fn test_poly1305_oneshot_ok() {
 }
 
 #[test]
+fn test_poly1305_verify_ok() {
+    let tag = poly1305(&[0u8; 32], &[0u8; 16]).unwrap();
+    verify(&tag, &[0u8; 32], &[0u8; 16]).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn test_poly1305_verify_err() {
+    let mut tag = poly1305(&[0u8; 32], &[0u8; 16]).unwrap();
+    tag[0] ^= 1;
+    verify(&tag, &[0u8; 32], &[0u8; 16]).unwrap();
+}
+
+#[test]
 #[should_panic]
 fn test_poly1305_oneshot_bad_key_err_less() {
     poly1305(&[0u8; 31], &[0u8; 16]).unwrap();
