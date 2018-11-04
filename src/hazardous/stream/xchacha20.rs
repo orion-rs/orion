@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `key`: The secret key
+//! - `secret_key`: The secret key
 //! - `nonce`: The nonce value
 //! - `initial_counter`: The initial counter value. In most cases this is `0`
 //! - `ciphertext`: The encrypted data
@@ -30,7 +30,7 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of the `key` is not `32` bytes
+//! - The length of the `secret_key` is not `32` bytes
 //! - The length of the `nonce` is not `24` bytes
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`
 //! - `plaintext` or `ciphertext` are empty
