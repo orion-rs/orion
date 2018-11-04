@@ -49,8 +49,12 @@
 //!
 //! ### Note:
 //! `keystream_block` is for use-cases where more control over the keystream used for
-//! encryption/decryption is desired. This function's `counter` parameter is never increased
+//! encryption/decryption is desired. It does not encrypt anything. This function's `counter` parameter is never increased
 //! and therefor is not checked for potential overflow on increase either.
+//! Only use it if you are absolutely sure you actually need to use it.
+//! 
+//! `hchacha20` is used to generate subkeys for XChaCha20 and does not encrypt anything.
+//! Only use it if you are absolutely sure you actually need to use it.
 //!
 //! # Security:
 //! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
