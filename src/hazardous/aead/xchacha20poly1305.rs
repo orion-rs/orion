@@ -199,7 +199,7 @@ fn test_modified_tag_error() {
 
     encrypt(
         &[0u8; 32],
-        &[0u8; 12],
+        &[0u8; 24],
         &[0u8; 64],
         &[0u8; 0],
         &mut dst_out_ct,
@@ -208,7 +208,7 @@ fn test_modified_tag_error() {
     dst_out_ct[65] ^= 1;
     decrypt(
         &[0u8; 32],
-        &[0u8; 12],
+        &[0u8; 24],
         &dst_out_ct,
         &[0u8; 0],
         &mut dst_out_pt,
