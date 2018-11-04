@@ -20,7 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! Pure-Rust cryptography library. See more in the [wiki](https://github.com/brycx/orion/wiki).
+//! orion - A usable pure-Rust cryptography library.
+//!
+//! Most functionality that you would need access to should be available through orion's `default`
+//! API. This API includes authenticated secret-key encryption, password hashing and more.
+//!
+//! Usage of the `hazardous` module is only intended for advanced users.
+//!
+//! You can read more about orion in the project [wiki](https://github.com/brycx/orion/wiki).
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
 #![deny(overflowing_literals)]
