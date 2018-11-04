@@ -23,11 +23,15 @@
 //! # Parameters:
 //! - `secret_key`: The secret key
 //! - `nonce`: The nonce value
-//! - `aad`: The additional authenticated data
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be an empty slice)
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 128-bit Poly1305 tag
 //! appended to it
 //! - `plaintext`: The data to be encrypted
 //! - `dst_out`: Destination array that will hold the `ciphertext_with_tag`/`plaintext` after encryption/decryption
+//!
+//! `ad`: "A typical use for these data is to authenticate version numbers, timestamps or
+//! monotonically increasing counters in order to discard previous messages and prevent
+//! replay attacks." See [libsodium docs](https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data) for more information.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
@@ -44,8 +48,10 @@
 //! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 //! the security of all data that has been encrypted with that given key is compromised.
 //!
-//! Only a `nonce` for `xchacha20poly1305` is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
+//! Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
 //! in `util` can be used for this.
+//!
+//! It is recommended to use XChaCha20Poly1305 when possible.
 //!
 //! # Example:
 //! ```
@@ -57,7 +63,7 @@
 //! util::gen_rand_key(&mut secret_key).unwrap();
 //! util::gen_rand_key(&mut nonce).unwrap();
 //!
-//! let aad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
+//! let ad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
 //! let plaintext = b"\
 //! Ladies and Gentlemen of the class of '99: If I could offer you o\
 //! nly one tip for the future, sunscreen would be it.";
@@ -66,10 +72,10 @@
 //!
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
-//!
-//! aead::xchacha20poly1305::encrypt(&secret_key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();
-//!
-//! aead::xchacha20poly1305::decrypt(&secret_key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
+//! // Encrypt and place ciphertext + tag in dst_out_ct
+//! aead::xchacha20poly1305::encrypt(&secret_key, &nonce, plaintext, &ad, &mut dst_out_ct).unwrap();
+//! // Verify tag, if correct then decrypt and place plaintext in dst_out_pt
+//! aead::xchacha20poly1305::decrypt(&secret_key, &nonce, &dst_out_ct, &ad, &mut dst_out_pt).unwrap();
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
@@ -84,7 +90,7 @@ pub fn encrypt(
     secret_key: &[u8],
     nonce: &[u8],
     plaintext: &[u8],
-    aad: &[u8],
+    ad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     if nonce.len() != XCHACHA_NONCESIZE {
@@ -95,7 +101,7 @@ pub fn encrypt(
     let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
     prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
 
-    chacha20poly1305::encrypt(&subkey, &prefixed_nonce, plaintext, aad, dst_out).unwrap();
+    chacha20poly1305::encrypt(&subkey, &prefixed_nonce, plaintext, ad, dst_out).unwrap();
 
     zero(&mut subkey);
 
@@ -107,7 +113,7 @@ pub fn decrypt(
     secret_key: &[u8],
     nonce: &[u8],
     ciphertext_with_tag: &[u8],
-    aad: &[u8],
+    ad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     if nonce.len() != XCHACHA_NONCESIZE {
@@ -118,7 +124,7 @@ pub fn decrypt(
     let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
     prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
 
-    chacha20poly1305::decrypt(&subkey, &prefixed_nonce, ciphertext_with_tag, aad, dst_out).unwrap();
+    chacha20poly1305::decrypt(&subkey, &prefixed_nonce, ciphertext_with_tag, ad, dst_out).unwrap();
 
     zero(&mut subkey);
 

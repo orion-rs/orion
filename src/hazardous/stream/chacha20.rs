@@ -28,6 +28,13 @@
 //! - `plaintext`: The data to be encrypted
 //! - `dst_out`: Destination array that will hold the ciphertext/plaintext after encryption/decryption
 //!
+//! `nonce`: "Counters and LFSRs are both acceptable ways of generating unique nonces, as is
+//! encrypting a counter using a block cipher with a 64-bit block size
+//! such as DES.  Note that it is not acceptable to use a truncation of a
+//! counter encrypted with block ciphers with 128-bit or 256-bit blocks,
+//! because such a truncation may repeat after a short time." See [RFC](https://tools.ietf.org/html/rfc8439)
+//! for more information.
+//!
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The length of the `secret_key` is not `32` bytes

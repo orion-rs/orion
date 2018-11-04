@@ -23,11 +23,22 @@
 //! # Parameters:
 //! - `secret_key`: The secret key
 //! - `nonce`: The nonce value
-//! - `aad`: The additional authenticated data
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be an empty slice)
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 128-bit Poly1305 tag
 //! appended to it
 //! - `plaintext`: The data to be encrypted
 //! - `dst_out`: Destination array that will hold the `ciphertext_with_tag`/`plaintext` after encryption/decryption
+//!
+//! `ad`: "A typical use for these data is to authenticate version numbers, timestamps or
+//! monotonically increasing counters in order to discard previous messages and prevent
+//! replay attacks." See [libsodium docs](https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data) for more information.
+//!
+//! `nonce`: "Counters and LFSRs are both acceptable ways of generating unique nonces, as is
+//! encrypting a counter using a block cipher with a 64-bit block size
+//! such as DES.  Note that it is not acceptable to use a truncation of a
+//! counter encrypted with block ciphers with 128-bit or 256-bit blocks,
+//! because such a truncation may repeat after a short time." See [RFC](https://tools.ietf.org/html/rfc8439#section-3)
+//! for more information.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
@@ -44,8 +55,10 @@
 //! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 //! the security of all data that has been encrypted with that given key is compromised.
 //!
-//! Only a `nonce` for `xchacha20poly1305` is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
+//! Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
 //! in `util` can be used for this.
+//!
+//! It is recommended to use XChaCha20Poly1305 when possible.
 //!
 //! # Example:
 //! ```
@@ -56,7 +69,7 @@
 //! util::gen_rand_key(&mut secret_key).unwrap();
 //!
 //! let nonce = [ 0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47 ];
-//! let aad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
+//! let ad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
 //! let plaintext = b"\
 //! Ladies and Gentlemen of the class of '99: If I could offer you o\
 //! nly one tip for the future, sunscreen would be it.";
@@ -65,10 +78,10 @@
 //!
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
-//!
-//! aead::chacha20poly1305::encrypt(&secret_key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();
-//!
-//! aead::chacha20poly1305::decrypt(&secret_key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
+//! // Encrypt and place ciphertext + tag in dst_out_ct
+//! aead::chacha20poly1305::encrypt(&secret_key, &nonce, plaintext, &ad, &mut dst_out_ct).unwrap();
+//! // Verify tag, if correct then decrypt and place plaintext in dst_out_pt
+//! aead::chacha20poly1305::decrypt(&secret_key, &nonce, &dst_out_ct, &ad, &mut dst_out_pt).unwrap();
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
@@ -103,7 +116,7 @@ fn padding(input: &[u8]) -> usize {
 /// Process data to be authenticated using a `Poly1305` struct initialized with a one-time-key.
 fn process_authentication(
     poly1305_state: &mut poly1305::Poly1305,
-    aad: &[u8],
+    ad: &[u8],
     buf: &[u8],
     buf_in_len: usize,
 ) -> Result<(), UnknownCryptoError> {
@@ -113,15 +126,15 @@ fn process_authentication(
 
     let mut padding_max = [0u8; 16];
 
-    poly1305_state.update(aad).unwrap();
-    poly1305_state.update(&padding_max[..padding(aad)]).unwrap();
+    poly1305_state.update(ad).unwrap();
+    poly1305_state.update(&padding_max[..padding(ad)]).unwrap();
     poly1305_state.update(&buf[..buf_in_len]).unwrap();
     poly1305_state
         .update(&padding_max[..padding(&buf[..buf_in_len])])
         .unwrap();
 
     // Using the 16 bytes from padding template to store length information
-    LittleEndian::write_u64(&mut padding_max[..8], aad.len() as u64);
+    LittleEndian::write_u64(&mut padding_max[..8], ad.len() as u64);
     LittleEndian::write_u64(&mut padding_max[8..16], buf_in_len as u64);
 
     poly1305_state.update(&padding_max[..8]).unwrap();
@@ -135,7 +148,7 @@ pub fn encrypt(
     secret_key: &[u8],
     nonce: &[u8],
     plaintext: &[u8],
-    aad: &[u8],
+    ad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     if secret_key.len() != CHACHA_KEYSIZE {
@@ -155,7 +168,7 @@ pub fn encrypt(
     chacha20::encrypt(secret_key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
-    process_authentication(&mut poly1305_state, aad, &dst_out, plaintext.len()).unwrap();
+    process_authentication(&mut poly1305_state, ad, &dst_out, plaintext.len()).unwrap();
     dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize().unwrap());
 
     zero(&mut poly1305_key);
@@ -168,7 +181,7 @@ pub fn decrypt(
     secret_key: &[u8],
     nonce: &[u8],
     ciphertext_with_tag: &[u8],
-    aad: &[u8],
+    ad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     if secret_key.len() != CHACHA_KEYSIZE {
@@ -190,7 +203,7 @@ pub fn decrypt(
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
     process_authentication(
         &mut poly1305_state,
-        aad,
+        ad,
         ciphertext_with_tag,
         ciphertext_len,
     ).unwrap();

@@ -328,7 +328,8 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// # About:
 /// - The nonce is automatically generated
 /// - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated
-/// ciphertext with the corresponding Poly1305 tag
+/// ciphertext with the last 16 bytes being the corresponding Poly1305 tag
+/// - Uses XChaCha20Poly1305 with no `ad`
 ///
 /// # Parameters:
 /// - `plaintext`:  The data to be encrypted
