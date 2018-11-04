@@ -16,6 +16,7 @@ matrix:
         - cargo clean
         - cargo test
         - cargo test --tests --no-default-features
+        - cargo audit
     - rust: nightly
       script:
         - cargo clean
@@ -45,6 +46,7 @@ before_cache: |
 
 install:
   - cargo install cross || true
+  - cargo install cargo-audit
 
 
 after_success: |
