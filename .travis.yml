@@ -12,6 +12,8 @@ cache: cargo
 matrix:
   include:
     - rust: stable
+      install:
+        - cargo install --force cargo-audit
       script:
         - cargo clean
         - cargo test
@@ -43,11 +45,8 @@ before_cache: |
     RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
   fi
 
-
 install:
   - cargo install cross || true
-  - cargo install cargo-audit
-
 
 after_success: |
   if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
