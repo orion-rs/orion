@@ -11,8 +11,8 @@ This library is not suitable for production code. There are no guarantees for th
 
 
 ### About
-This library aims to provide easy and usable crypto. 'Usable' meaning exposing high-level
-API's that are easy to use and hard to misuse. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
+orion is a cryptography library written in pure-Rust which aims to provide easy and usable crypto. 'Usable' meaning exposing high-level API's that are easy to use and hard to misuse. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
+
 
 In case you missed the warning above: **don't use orion for production code or instances where you need absolute confidence in security**. While security is a top priority goal for this library, the author is no
 professional. Look in the Alternatives section if this means orion is not for you.
