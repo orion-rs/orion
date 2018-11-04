@@ -308,3 +308,15 @@ fn update_after_finalize_with_reset_ok() {
     mac.reset();
     mac.update(data).unwrap();
 }
+
+#[test]
+fn double_reset_ok() {
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
+
+    let mut mac = init(secret_key);
+    mac.update(data).unwrap();
+    mac.finalize().unwrap();
+    mac.reset();
+    mac.reset();
+}

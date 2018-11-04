@@ -423,4 +423,18 @@ mod test {
 
         assert_eq!(out.as_ref(), out_check.as_ref());
     }
+
+    #[test]
+    fn double_reset_ok() {
+        let input = b"\x00\x01\x02\x03";
+        let custom = b"";
+        let name = b"Email Signature";
+        let mut out = [0u8; 64];
+
+        let mut cshake = init(custom, Some(name)).unwrap();
+        cshake.update(input).unwrap();
+        cshake.finalize(&mut out).unwrap();
+        cshake.reset();
+        cshake.reset();
+    }
 }

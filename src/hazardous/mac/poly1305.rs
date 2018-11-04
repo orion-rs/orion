@@ -462,3 +462,13 @@ fn update_after_finalize_with_reset_ok() {
         poly1305_state.finalize().unwrap().as_ref()
     );
 }
+
+#[test]
+fn double_reset_ok() {
+    let mut poly1305_state = init(&[0u8; 32]).unwrap();
+
+    poly1305_state.update(&[0u8; 16]).unwrap();
+    poly1305_state.finalize().unwrap();
+    poly1305_state.reset();
+    poly1305_state.reset();
+}
