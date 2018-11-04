@@ -412,6 +412,46 @@ fn test_bad_pt_ct_lengths() {
 }
 
 #[test]
+fn test_bad_ct_length_and_empty_out_decrypt() {
+    let dst_out_ct_1 = [0u8; POLY1305_BLOCKSIZE];
+    let dst_out_ct_2 = [0u8; POLY1305_BLOCKSIZE - 1];
+    let dst_out_ct_3 = [0u8; POLY1305_BLOCKSIZE + 1];
+
+    let mut dst_out_pt_1 = [0u8; 64];
+    let mut dst_out_pt_2 = [0u8; 0];
+
+    assert!(
+        decrypt(
+            &[0u8; 32],
+            &[0u8; 12],
+            &dst_out_ct_1,
+            &[0u8; 0],
+            &mut dst_out_pt_1,
+        ).is_err()
+    );
+
+    assert!(
+        decrypt(
+            &[0u8; 32],
+            &[0u8; 12],
+            &dst_out_ct_2,
+            &[0u8; 0],
+            &mut dst_out_pt_1,
+        ).is_err()
+    );
+
+    assert!(
+        decrypt(
+            &[0u8; 32],
+            &[0u8; 12],
+            &dst_out_ct_3,
+            &[0u8; 0],
+            &mut dst_out_pt_2,
+        ).is_err()
+    );
+}
+
+#[test]
 fn rfc_8439_test_poly1305_key_gen_1() {
     let key = [0u8; 32];
     let nonce = [
