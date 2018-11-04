@@ -261,6 +261,19 @@ fn double_finalize_err() {
 }
 
 #[test]
+#[should_panic]
+fn double_finalize_with_dst_err() {
+    let secret_key = "Jefe".as_bytes();
+    let data = "what do ya want for nothing?".as_bytes();
+    let mut dst = [0u8; 64];
+
+    let mut mac = init(secret_key);
+    mac.update(data).unwrap();
+    mac.finalize_with_dst(&mut dst).unwrap();
+    mac.finalize_with_dst(&mut dst).unwrap();
+}
+
+#[test]
 fn double_finalize_with_reset_ok() {
     let secret_key = "Jefe".as_bytes();
     let data = "what do ya want for nothing?".as_bytes();
