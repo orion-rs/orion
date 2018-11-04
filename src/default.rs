@@ -332,7 +332,7 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 ///
 /// # Parameters:
 /// - `plaintext`:  The data to be encrypted
-/// - `key`: The secret key used to encrypt the `plaintext`
+/// - `secret_key`: The secret key used to encrypt the `plaintext`
 ///
 /// # Security:
 /// It is critical for security that a given nonce is not re-used with a given key. Should this happen,
@@ -340,7 +340,7 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - `key` is not 32 bytes
+/// - `secret_key` is not 32 bytes
 /// - `plaintext` is empty
 /// - `plaintext` is longer than (2^32)-2
 ///
@@ -349,12 +349,12 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// use orion::default;
 /// use orion::util;
 ///
-/// let mut key = [0u8; 32]; // Replace this with the key used for encryption
-/// util::gen_rand_key(&mut key).unwrap();
+/// let mut secret_key = [0u8; 32]; // Replace this with the key used for encryption
+/// util::gen_rand_key(&mut secret_key).unwrap();
 ///
-/// let encrypted_data = default::encrypt(&key, "Secret message".as_bytes()).unwrap();
+/// let encrypted_data = default::encrypt(&secret_key, "Secret message".as_bytes()).unwrap();
 /// ```
-pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn encrypt(secret_key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
     }
@@ -366,7 +366,7 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
     dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce);
 
     aead::xchacha20poly1305::encrypt(
-        key,
+        secret_key,
         &nonce,
         plaintext,
         &[0u8; 0],
@@ -383,7 +383,7 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
 /// # Parameters:
 /// - `ciphertext`:  The data to be decrypted with the first 24 bytes being the nonce and the last
 /// 16 bytes being the corresponding Poly1305 authentication tag
-/// - `key`: The secret key used to decrypt the `ciphertext`
+/// - `secret_key`: The secret key used to decrypt the `ciphertext`
 ///
 /// # Security:
 /// It is critical for security that a given nonce is not re-used with a given key. Should this happen,
@@ -391,7 +391,7 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - `key` is not 32 bytes
+/// - `secret_key` is not 32 bytes
 /// - `ciphertext` is less than 41 bytes
 /// - `ciphertext` is longer than (2^32)-2
 /// - The received tag does not match the calculated tag
@@ -401,14 +401,14 @@ pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoErr
 /// use orion::default;
 /// use orion::util;
 ///
-/// let mut key = [0u8; 32]; // Replace this with the key used for decryption
-/// util::gen_rand_key(&mut key).unwrap();
+/// let mut secret_key = [0u8; 32]; // Replace this with the key used for decryption
+/// util::gen_rand_key(&mut secret_key).unwrap();
 ///
-/// let ciphertext = default::encrypt(&key, "Secret message".as_bytes()).unwrap();
+/// let ciphertext = default::encrypt(&secret_key, "Secret message".as_bytes()).unwrap();
 ///
-/// let decrypted_data = default::decrypt(&key, &ciphertext).unwrap();
+/// let decrypted_data = default::decrypt(&secret_key, &ciphertext).unwrap();
 /// ```
-pub fn decrypt(key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn decrypt(secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     // `+ 1` to avoid empty ciphertexts
     if ciphertext.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
         return Err(UnknownCryptoError);
@@ -417,7 +417,7 @@ pub fn decrypt(key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoEr
     let mut dst_out = vec![0u8; ciphertext.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
     aead::xchacha20poly1305::decrypt(
-        key,
+        secret_key,
         &ciphertext[..XCHACHA_NONCESIZE],
         &ciphertext[XCHACHA_NONCESIZE..],
         &[0u8; 0],

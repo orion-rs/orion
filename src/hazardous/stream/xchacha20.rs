@@ -56,9 +56,9 @@
 //! use orion::hazardous::stream::xchacha20;
 //! use orion::util;
 //!
-//! let mut key = [0u8; 32];
+//! let mut secret_key = [0u8; 32];
 //! let mut nonce = [0u8; 24];
-//! util::gen_rand_key(&mut key).unwrap();
+//! util::gen_rand_key(&mut secret_key).unwrap();
 //! util::gen_rand_key(&mut nonce).unwrap();
 //!
 //! // Length of this message is 15
@@ -67,9 +67,9 @@
 //! let mut dst_out_pt = [0u8; 15];
 //! let mut dst_out_ct = [0u8; 15];
 //!
-//! xchacha20::encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
+//! xchacha20::encrypt(&secret_key, &nonce, 0, message, &mut dst_out_ct);
 //!
-//! xchacha20::decrypt(&key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
+//! xchacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
 //!
 //! assert_eq!(dst_out_pt, message);
 //! ```
@@ -80,7 +80,7 @@ use seckey::zero;
 
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn encrypt(
-    key: &[u8],
+    secret_key: &[u8],
     nonce: &[u8],
     initial_counter: u32,
     plaintext: &[u8],
@@ -90,7 +90,7 @@ pub fn encrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut subkey = chacha20::hchacha20(key, &nonce[0..16]).unwrap();
+    let mut subkey = chacha20::hchacha20(secret_key, &nonce[0..16]).unwrap();
     let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
     prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
 
@@ -109,13 +109,13 @@ pub fn encrypt(
 
 /// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn decrypt(
-    key: &[u8],
+    secret_key: &[u8],
     nonce: &[u8],
     initial_counter: u32,
     ciphertext: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    encrypt(key, nonce, initial_counter, ciphertext, dst_out)
+    encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
 #[test]

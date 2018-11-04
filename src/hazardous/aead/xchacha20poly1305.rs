@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `key`: The secret key
+//! - `secret_key`: The secret key
 //! - `nonce`: The nonce value
 //! - `aad`: The additional authenticated data
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 128-bit Poly1305 tag
@@ -31,7 +31,7 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of the `key` is not `32` bytes
+//! - The length of the `secret_key` is not `32` bytes
 //! - The length of the `nonce` is not `24` bytes
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
@@ -52,9 +52,9 @@
 //! use orion::hazardous::aead;
 //! use orion::util;
 //!
-//! let mut key = [0u8; 32];
+//! let mut secret_key = [0u8; 32];
 //! let mut nonce = [0u8; 24];
-//! util::gen_rand_key(&mut key).unwrap();
+//! util::gen_rand_key(&mut secret_key).unwrap();
 //! util::gen_rand_key(&mut nonce).unwrap();
 //!
 //! let aad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
@@ -67,9 +67,9 @@
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
 //!
-//! aead::xchacha20poly1305::encrypt(&key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();
+//! aead::xchacha20poly1305::encrypt(&secret_key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();
 //!
-//! aead::xchacha20poly1305::decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
+//! aead::xchacha20poly1305::decrypt(&secret_key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
@@ -81,7 +81,7 @@ use seckey::zero;
 
 /// AEAD XChaCha20Poly1305 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn encrypt(
-    key: &[u8],
+    secret_key: &[u8],
     nonce: &[u8],
     plaintext: &[u8],
     aad: &[u8],
@@ -91,7 +91,7 @@ pub fn encrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut subkey = chacha20::hchacha20(key, &nonce[0..16]).unwrap();
+    let mut subkey = chacha20::hchacha20(secret_key, &nonce[0..16]).unwrap();
     let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
     prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
 
@@ -104,7 +104,7 @@ pub fn encrypt(
 
 /// AEAD XChaCha20Poly1305 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn decrypt(
-    key: &[u8],
+    secret_key: &[u8],
     nonce: &[u8],
     ciphertext_with_tag: &[u8],
     aad: &[u8],
@@ -114,7 +114,7 @@ pub fn decrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut subkey = chacha20::hchacha20(key, &nonce[0..16]).unwrap();
+    let mut subkey = chacha20::hchacha20(secret_key, &nonce[0..16]).unwrap();
     let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
     prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
 

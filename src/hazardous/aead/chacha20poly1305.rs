@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `key`: The secret key
+//! - `secret_key`: The secret key
 //! - `nonce`: The nonce value
 //! - `aad`: The additional authenticated data
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 128-bit Poly1305 tag
@@ -31,7 +31,7 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of the `key` is not `32` bytes
+//! - The length of the `secret_key` is not `32` bytes
 //! - The length of the `nonce` is not `12` bytes
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
@@ -52,8 +52,8 @@
 //! use orion::hazardous::aead;
 //! use orion::util;
 //!
-//! let mut key = [0u8; 32];
-//! util::gen_rand_key(&mut key).unwrap();
+//! let mut secret_key = [0u8; 32];
+//! util::gen_rand_key(&mut secret_key).unwrap();
 //!
 //! let nonce = [ 0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47 ];
 //! let aad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
@@ -66,9 +66,9 @@
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
 //!
-//! aead::chacha20poly1305::encrypt(&key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();
+//! aead::chacha20poly1305::encrypt(&secret_key, &nonce, plaintext, &aad, &mut dst_out_ct).unwrap();
 //!
-//! aead::chacha20poly1305::decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
+//! aead::chacha20poly1305::decrypt(&secret_key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
@@ -132,13 +132,13 @@ fn process_authentication(
 
 /// AEAD ChaCha20Poly1305 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn encrypt(
-    key: &[u8],
+    secret_key: &[u8],
     nonce: &[u8],
     plaintext: &[u8],
     aad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if key.len() != CHACHA_KEYSIZE {
+    if secret_key.len() != CHACHA_KEYSIZE {
         return Err(UnknownCryptoError);
     }
     if nonce.len() != IETF_CHACHA_NONCESIZE {
@@ -151,8 +151,8 @@ pub fn encrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut poly1305_key = poly1305_key_gen(key, nonce);
-    chacha20::encrypt(key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
+    let mut poly1305_key = poly1305_key_gen(secret_key, nonce);
+    chacha20::encrypt(secret_key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, aad, &dst_out, plaintext.len()).unwrap();
@@ -165,13 +165,13 @@ pub fn encrypt(
 
 /// AEAD ChaCha20Poly1305 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn decrypt(
-    key: &[u8],
+    secret_key: &[u8],
     nonce: &[u8],
     ciphertext_with_tag: &[u8],
     aad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if key.len() != CHACHA_KEYSIZE {
+    if secret_key.len() != CHACHA_KEYSIZE {
         return Err(UnknownCryptoError);
     }
     if nonce.len() != IETF_CHACHA_NONCESIZE {
@@ -186,7 +186,7 @@ pub fn decrypt(
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
-    let mut poly1305_key = poly1305_key_gen(key, nonce);
+    let mut poly1305_key = poly1305_key_gen(secret_key, nonce);
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
     process_authentication(
         &mut poly1305_state,
@@ -201,7 +201,7 @@ pub fn decrypt(
     ).unwrap();
 
     chacha20::decrypt(
-        key,
+        secret_key,
         nonce,
         1,
         &ciphertext_with_tag[..ciphertext_len],

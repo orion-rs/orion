@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `key`: The secret key
+//! - `secret_key`: The secret key
 //! - `nonce`: The nonce value
 //! - `initial_counter`: The initial counter value. In most cases this is `0`
 //! - `ciphertext`: The encrypted data
@@ -30,7 +30,7 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of the `key` is not `32` bytes
+//! - The length of the `secret_key` is not `32` bytes
 //! - The length of the `nonce` is not `12` bytes (`16` for HChaCha20)
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`
 //! - `plaintext` or `ciphertext` are empty
@@ -61,8 +61,8 @@
 //! use orion::hazardous::stream::chacha20;
 //! use orion::util;
 //!
-//! let mut key = [0u8; 32];
-//! util::gen_rand_key(&mut key).unwrap();
+//! let mut secret_key = [0u8; 32];
+//! util::gen_rand_key(&mut secret_key).unwrap();
 //!
 //! let nonce = [
 //!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
@@ -74,9 +74,9 @@
 //! let mut dst_out_pt = [0u8; 15];
 //! let mut dst_out_ct = [0u8; 15];
 //!
-//! chacha20::encrypt(&key, &nonce, 0, message, &mut dst_out_ct);
+//! chacha20::encrypt(&secret_key, &nonce, 0, message, &mut dst_out_ct);
 //!
-//! chacha20::decrypt(&key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
+//! chacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
 //!
 //! assert_eq!(dst_out_pt, message);
 //! ```
@@ -132,8 +132,8 @@ impl InternalState {
     }
     #[inline(always)]
     /// Initialize either a ChaCha or HChaCha state with a `key` and `nonce`.
-    fn init_state(&mut self, key: &[u8], nonce: &[u8]) -> Result<(), UnknownCryptoError> {
-        if key.len() != CHACHA_KEYSIZE {
+    fn init_state(&mut self, secret_key: &[u8], nonce: &[u8]) -> Result<(), UnknownCryptoError> {
+        if secret_key.len() != CHACHA_KEYSIZE {
             return Err(UnknownCryptoError);
         }
         if (nonce.len() != IETF_CHACHA_NONCESIZE) && self.is_ietf {
@@ -149,7 +149,7 @@ impl InternalState {
         self.state[2] = 0x7962_2d32_u32;
         self.state[3] = 0x6b20_6574_u32;
 
-        LittleEndian::read_u32_into(key, &mut self.state[4..12]);
+        LittleEndian::read_u32_into(secret_key, &mut self.state[4..12]);
 
         if self.is_ietf {
             LittleEndian::read_u32_into(nonce, &mut self.state[13..16]);
@@ -218,7 +218,7 @@ impl InternalState {
 
 /// IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn encrypt(
-    key: &[u8],
+    secret_key: &[u8],
     nonce: &[u8],
     initial_counter: u32,
     plaintext: &[u8],
@@ -244,7 +244,7 @@ pub fn encrypt(
         is_ietf: true,
     };
 
-    chacha_state.init_state(key, nonce).unwrap();
+    chacha_state.init_state(secret_key, nonce).unwrap();
 
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
     let mut keystream_state: ChaChaState = [0u32; 16];
@@ -282,22 +282,22 @@ pub fn encrypt(
 
 /// IETF ChaCha20 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn decrypt(
-    key: &[u8],
+    secret_key: &[u8],
     nonce: &[u8],
     initial_counter: u32,
     ciphertext: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    encrypt(key, nonce, initial_counter, ciphertext, dst_out)
+    encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
 /// IETF ChaCha20 block function returning a serialized keystream block.
 pub fn keystream_block(
-    key: &[u8],
+    secret_key: &[u8],
     nonce: &[u8],
     counter: u32,
 ) -> Result<[u8; CHACHA_BLOCKSIZE], UnknownCryptoError> {
-    if key.len() != CHACHA_KEYSIZE {
+    if secret_key.len() != CHACHA_KEYSIZE {
         return Err(UnknownCryptoError);
     }
     if nonce.len() != IETF_CHACHA_NONCESIZE {
@@ -308,7 +308,7 @@ pub fn keystream_block(
         state: [0_u32; 16],
         is_ietf: true,
     };
-    chacha_state.init_state(key, nonce).unwrap();
+    chacha_state.init_state(secret_key, nonce).unwrap();
 
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
     let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter)).unwrap();
@@ -323,12 +323,12 @@ pub fn keystream_block(
 }
 
 /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
-pub fn hchacha20(key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
+pub fn hchacha20(secret_key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
     let mut chacha_state = InternalState {
         state: [0_u32; 16],
         is_ietf: false,
     };
-    chacha_state.init_state(key, nonce).unwrap();
+    chacha_state.init_state(secret_key, nonce).unwrap();
 
     let mut keystream_state = chacha_state.process_block(None).unwrap();
     let mut keystream_block: [u8; HCHACHA_OUTSIZE] = [0u8; HCHACHA_OUTSIZE];
