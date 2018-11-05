@@ -1,27 +1,27 @@
 #![no_main]
 #[macro_use]
 extern crate libfuzzer_sys;
-extern crate crypto;
 extern crate orion;
-extern crate ring;
+extern crate sodiumoxide;
 pub mod util;
 
 use self::util::*;
-use crypto::mac::Mac;
 use orion::hazardous::mac::poly1305::*;
+use sodiumoxide::crypto::onetimeauth::poly1305;
 
 fuzz_target!(|data: &[u8]| {
     let (key, message) = poly1305_setup(data);
-    // Test both stream and one-shot
+
     let mut poly1305_state = init(&key).unwrap();
     poly1305_state.update(&message).unwrap();
     let orion_stream_tag = poly1305_state.finalize().unwrap();
 
-    let mut crypto_poly1305_state = crypto::poly1305::Poly1305::new(&key);
-    crypto_poly1305_state.input(&message);
-    let mut crypto_stream_tag = [0u8; 16];
-    crypto_poly1305_state.raw_result(&mut crypto_stream_tag);
+    let sodium_poly1305_key = sodiumoxide::crypto::onetimeauth::Key::from_slice(&key).unwrap();
+    let sodium_tag = poly1305::authenticate(&message, &sodium_poly1305_key);
 
-    assert_eq!(orion_stream_tag, crypto_stream_tag);
-    assert!(verify(&crypto_stream_tag, &key, &message).unwrap());
+    assert_eq!(orion_stream_tag, sodium_tag.as_ref());
+    // Let orion verify sodiumoxide tag
+    assert!(verify(&sodium_tag.as_ref(), &key, &message).unwrap());
+    // Let sodiumoxide verify orion tag
+    assert!(poly1305::verify(&sodium_tag, &message, &sodium_poly1305_key));
 });

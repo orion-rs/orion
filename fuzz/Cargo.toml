@@ -12,7 +12,7 @@ cargo-fuzz = true
 ring = "0.13.2"
 sp800-185 = "0.2.0"
 chacha = "0.2.0"
-rust-crypto = "0.2.36"
+sodiumoxide = "0.1.0"
 
 [dependencies.orion]
 path = ".."
@@ -89,3 +89,7 @@ path = "fuzz_targets/xchacha20.rs"
 [[bin]]
 name = "xchacha20_poly1305"
 path = "fuzz_targets/xchacha20_poly1305.rs"
+
+[[bin]]
+name = "xchacha20_poly1305_compare"
+path = "fuzz_targets/xchacha20_poly1305_compare.rs"
