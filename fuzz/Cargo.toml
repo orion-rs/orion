@@ -12,7 +12,7 @@ cargo-fuzz = true
 ring = "0.13.2"
 sp800-185 = "0.2.0"
 chacha = "0.2.0"
-sodiumoxide = "0.1.0"
+sodiumoxide = { git = "https://github.com/sodiumoxide/sodiumoxide" }
 
 [dependencies.orion]
 path = ".."

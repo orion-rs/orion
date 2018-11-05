@@ -10,6 +10,8 @@ use orion::hazardous::mac::poly1305::*;
 use sodiumoxide::crypto::onetimeauth::poly1305;
 
 fuzz_target!(|data: &[u8]| {
+    sodiumoxide::init().unwrap();
+
     let (key, message) = poly1305_setup(data);
 
     let mut poly1305_state = init(&key).unwrap();
@@ -23,5 +25,9 @@ fuzz_target!(|data: &[u8]| {
     // Let orion verify sodiumoxide tag
     assert!(verify(&sodium_tag.as_ref(), &key, &message).unwrap());
     // Let sodiumoxide verify orion tag
-    assert!(poly1305::verify(&sodium_tag, &message, &sodium_poly1305_key));
+    assert!(poly1305::verify(
+        &sodium_tag,
+        &message,
+        &sodium_poly1305_key
+    ));
 });
