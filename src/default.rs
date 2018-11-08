@@ -74,6 +74,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The calculated HMAC does not match the expected
+/// - The `OsRng` fails to initialize or read from its source
 ///
 /// # Example:
 ///
@@ -212,6 +213,7 @@ pub fn hkdf_verify(
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - The length of the password is less than 14 bytes
+/// - The `OsRng` fails to initialize or read from its source
 ///
 /// # Example:
 ///
@@ -344,6 +346,7 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// - `secret_key` is not 32 bytes
 /// - `plaintext` is empty
 /// - `plaintext` is longer than (2^32)-2
+/// - The `OsRng` fails to initialize or read from its source
 ///
 /// # Example:
 /// ```

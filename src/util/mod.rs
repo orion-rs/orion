@@ -38,7 +38,7 @@ use subtle::ConstantTimeEq;
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
-/// - The `OsRng` fails to initialize
+/// - The `OsRng` fails to initialize or read from its source
 /// - `dst` is empty
 ///
 /// # Example:
