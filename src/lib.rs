@@ -32,6 +32,7 @@
 #![forbid(unsafe_code)]
 #![deny(overflowing_literals)]
 #![deny(missing_docs)]
+#![deny(warnings)]
 
 extern crate byteorder;
 #[cfg(feature = "safe_api")]
