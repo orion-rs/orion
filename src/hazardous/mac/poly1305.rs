@@ -63,6 +63,45 @@ use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use seckey::zero;
 use util;
 
+/// A one-time key used for calculating the MAC.
+pub struct OneTimeKey {
+    value: [u8; POLY1305_KEYSIZE]
+}
+
+impl Drop for OneTimeKey {
+    fn drop(&mut self) {
+        zero(&mut self.value)
+    }
+}
+
+impl OneTimeKey {
+    /// Make OneTimeKey from a byte slice.
+    fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        if slice.len() != POLY1305_KEYSIZE {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut secret_key = [0u8; POLY1305_KEYSIZE];
+        secret_key.copy_from_slice(slice);
+
+        Ok(Self { value: secret_key })
+    }
+    /// Return the OneTimeKey as byte slice.
+    fn as_bytes(&self) -> [u8; POLY1305_KEYSIZE] {
+        self.value
+    }
+    #[cfg(feature = "safe_api")]
+    /// Randomly generate a OneTimeKey using a CSPRNG. Not available in `no_std` context.
+    fn generate() -> Self {
+        let mut secret_key = [0u8; POLY1305_KEYSIZE];
+        util::gen_rand_key(&mut secret_key).unwrap();
+
+        Self {
+            value: secret_key
+        }
+    }
+}
+
 /// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub struct Poly1305 {
     a: [u32; 5],

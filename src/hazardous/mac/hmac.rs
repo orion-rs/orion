@@ -74,6 +74,46 @@ use seckey::zero;
 use sha2::{Digest, Sha512};
 use util;
 
+/// A secret key used for calculating the MAC.
+pub struct SecretKey {
+    value: [u8; SHA2_BLOCKSIZE]
+}
+
+impl Drop for SecretKey {
+    fn drop(&mut self) {
+        zero(&mut self.value)
+    }
+}
+
+impl SecretKey {
+    /// Make SecretKey from a byte slice.
+    fn from_slice(slice: &[u8]) -> Self {
+        let mut secret_key = [0u8; SHA2_BLOCKSIZE];
+
+        let slice_len = slice.len();
+
+        if slice_len > SHA2_BLOCKSIZE {
+            secret_key[..HLEN].copy_from_slice(&Sha512::digest(slice));
+        } else {
+            secret_key[..slice_len].copy_from_slice(slice);
+        }
+
+        Self {
+            value: secret_key
+        }
+    }
+    #[cfg(feature = "safe_api")]
+    /// Randomly generate a SecretKey using a CSPRNG. Not available in `no_std` context.
+    fn generate() -> Self {
+        let mut secret_key = [0u8; SHA2_BLOCKSIZE];
+        util::gen_rand_key(&mut secret_key).unwrap();
+
+        Self {
+            value: secret_key
+        }
+    }
+}
+
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub struct Hmac {
@@ -195,6 +235,7 @@ pub fn verify(
 #[inline(always)]
 /// Initialize `Hmac` struct with a given key.
 pub fn init(secret_key: &[u8]) -> Hmac {
+
     let mut mac = Hmac {
         ipad: [0x36; SHA2_BLOCKSIZE],
         opad_hasher: Sha512::default(),

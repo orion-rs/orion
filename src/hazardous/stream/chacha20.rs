@@ -52,7 +52,7 @@
 //! encryption/decryption is desired. It does not encrypt anything. This function's `counter` parameter is never increased
 //! and therefor is not checked for potential overflow on increase either.
 //! Only use it if you are absolutely sure you actually need to use it.
-//! 
+//!
 //! `hchacha20` is used to generate subkeys for XChaCha20 and does not encrypt anything.
 //! Only use it if you are absolutely sure you actually need to use it.
 //!
@@ -98,6 +98,43 @@ use hazardous::constants::{
     IETF_CHACHA_NONCESIZE,
 };
 use seckey::zero;
+#[cfg(feature = "safe_api")]
+use util;
+
+/// A secret key used for calculating the MAC.
+pub struct SecretKey {
+    value: [u8; CHACHA_KEYSIZE]
+}
+
+impl Drop for SecretKey {
+    fn drop(&mut self) {
+        zero(&mut self.value)
+    }
+}
+
+impl SecretKey {
+    /// Make SecretKey from a byte slice.
+    fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        if slice.len() != CHACHA_KEYSIZE {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut secret_key = [0u8; CHACHA_KEYSIZE];
+        secret_key.copy_from_slice(slice);
+
+        Ok(Self { value: secret_key })
+    }
+    #[cfg(feature = "safe_api")]
+    /// Randomly generate a SecretKey using a CSPRNG. Not available in `no_std` context.
+    fn generate() -> Self {
+        let mut secret_key = [0u8; CHACHA_KEYSIZE];
+        util::gen_rand_key(&mut secret_key).unwrap();
+
+        Self {
+            value: secret_key
+        }
+    }
+}
 
 #[derive(Clone)]
 struct InternalState {

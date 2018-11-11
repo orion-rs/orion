@@ -94,6 +94,8 @@ use hazardous::mac::poly1305;
 use hazardous::stream::chacha20;
 use seckey::zero;
 use util;
+pub use hazardous::stream::chacha20::SecretKey;
+
 
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> [u8; POLY1305_KEYSIZE] {
