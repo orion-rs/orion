@@ -26,8 +26,8 @@ pub mod wycheproof_chacha20_poly1305;
 
 extern crate orion;
 extern crate ring;
-use self::aead::chacha20poly1305::SecretKey;
 use self::aead::chacha20poly1305;
+use self::aead::chacha20poly1305::SecretKey;
 use self::aead::xchacha20poly1305;
 use self::orion::hazardous::aead;
 use self::orion::hazardous::constants;
@@ -46,47 +46,76 @@ fn aead_test_runner(
 
     // Determine variant based on NONCE size
     if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
-        assert!(
-            aead::chacha20poly1305::encrypt(
-                SecretKey::from_slice(&key).unwrap(),
-                chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
-                input,
-                aad,
-                &mut dst_ct_out
-            ).is_ok()
-        );
-        assert!(
-            aead::chacha20poly1305::decrypt(
-                SecretKey::from_slice(&key).unwrap(),
-                chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
-                &dst_ct_out,
-                aad,
-                &mut dst_pt_out
-            ).is_ok()
-        );
+        aead::chacha20poly1305::encrypt(
+            SecretKey::from_slice(&key).unwrap(),
+            chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            input,
+            aad,
+            &mut dst_ct_out,
+        ).unwrap();
+        aead::chacha20poly1305::decrypt(
+            SecretKey::from_slice(&key).unwrap(),
+            chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            &dst_ct_out,
+            aad,
+            &mut dst_pt_out,
+        ).unwrap();
     }
 
     if nonce.len() == constants::XCHACHA_NONCESIZE {
-        assert!(
-            aead::xchacha20poly1305::encrypt(
-                SecretKey::from_slice(&key).unwrap(),
-                xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
-                input,
-                aad,
-                &mut dst_ct_out
-            ).is_ok()
-        );
+        aead::xchacha20poly1305::encrypt(
+            SecretKey::from_slice(&key).unwrap(),
+            xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            input,
+            aad,
+            &mut dst_ct_out,
+        ).unwrap();
 
-        assert!(
-            aead::xchacha20poly1305::decrypt(
-                SecretKey::from_slice(&key).unwrap(),
-                xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
-                &dst_ct_out,
-                aad,
-                &mut dst_pt_out
-            ).is_ok()
-        );
+        aead::xchacha20poly1305::decrypt(
+            SecretKey::from_slice(&key).unwrap(),
+            xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            &dst_ct_out,
+            aad,
+            &mut dst_pt_out,
+        ).unwrap();
     }
+
+    assert!(dst_ct_out[..input.len()].as_ref() == output);
+    assert!(dst_ct_out[input.len()..].as_ref() == tag);
+    assert!(dst_pt_out[..].as_ref() == input);
+
+    Ok(())
+}
+
+/// Wycheproof only runs against ChaCha20Poly1305. So we don't need to check for variants
+/// and we must be able to detect the test cases that have been marked #[should_panic]
+/// in the Wycheproof test module.
+fn wycheproof_test_runner(
+    key: &[u8],
+    nonce: &[u8],
+    aad: &[u8],
+    tag: &[u8],
+    input: &[u8],
+    output: &[u8],
+) -> Result<(), error::Unspecified> {
+    let mut dst_ct_out = vec![0u8; input.len() + 16];
+    let mut dst_pt_out = vec![0u8; input.len()];
+
+    aead::chacha20poly1305::encrypt(
+        SecretKey::from_slice(&key).unwrap(),
+        chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+        input,
+        aad,
+        &mut dst_ct_out,
+    ).unwrap();
+
+    aead::chacha20poly1305::decrypt(
+        SecretKey::from_slice(&key).unwrap(),
+        chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+        &dst_ct_out,
+        aad,
+        &mut dst_pt_out,
+    ).unwrap();
 
     assert!(dst_ct_out[..input.len()].as_ref() == output);
     assert!(dst_ct_out[input.len()..].as_ref() == tag);
