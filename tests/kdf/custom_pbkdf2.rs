@@ -29,7 +29,7 @@ mod custom_test_vectors {
 
     extern crate hex;
     extern crate orion;
-
+    /*
     use self::hex::decode;
     use self::orion::hazardous::kdf::pbkdf2::*;
 
@@ -123,4 +123,5 @@ mod custom_test_vectors {
         // verify() also runs derive_key()
         assert!(verify(&expected_dk, password, salt, iter, &mut dk_out).unwrap());
     }
+    */
 }

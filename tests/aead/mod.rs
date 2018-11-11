@@ -27,6 +27,8 @@ pub mod wycheproof_chacha20_poly1305;
 extern crate orion;
 extern crate ring;
 use self::aead::chacha20poly1305::SecretKey;
+use self::aead::chacha20poly1305::Nonce as IETFNonce;
+use self::aead::xchacha20poly1305::Nonce as XNonce;
 use self::orion::hazardous::aead;
 use self::orion::hazardous::constants;
 use self::ring::error;
@@ -47,7 +49,7 @@ fn aead_test_runner(
         assert!(
             aead::chacha20poly1305::encrypt(
                 SecretKey::from_slice(key).unwrap(),
-                nonce,
+                IETFNonce::from_slice(nonce).unwrap(),
                 input,
                 aad,
                 &mut dst_ct_out
@@ -56,7 +58,7 @@ fn aead_test_runner(
         assert!(
             aead::chacha20poly1305::decrypt(
                 SecretKey::from_slice(key).unwrap(),
-                nonce,
+                IETFNonce::from_slice(nonce).unwrap(),
                 &dst_ct_out,
                 aad,
                 &mut dst_pt_out
@@ -68,7 +70,7 @@ fn aead_test_runner(
         assert!(
             aead::xchacha20poly1305::encrypt(
                 SecretKey::from_slice(key).unwrap(),
-                nonce,
+                XNonce::from_slice(nonce).unwrap(),
                 input,
                 aad,
                 &mut dst_ct_out
@@ -78,7 +80,7 @@ fn aead_test_runner(
         assert!(
             aead::xchacha20poly1305::decrypt(
                 SecretKey::from_slice(key).unwrap(),
-                nonce,
+                XNonce::from_slice(nonce).unwrap(),
                 &dst_ct_out,
                 aad,
                 &mut dst_pt_out

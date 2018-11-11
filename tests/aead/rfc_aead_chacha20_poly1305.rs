@@ -121,7 +121,7 @@ mod rfc_aead_chacha20_poly1305 {
 
         aead::chacha20poly1305::decrypt(
             aead::chacha20poly1305::SecretKey::from_slice(&key).unwrap(),
-            &nonce,
+            aead::chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &ct_plus_tag,
             &aad,
             &mut dst_out_pt,

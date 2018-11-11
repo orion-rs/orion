@@ -46,14 +46,14 @@ pub fn chacha_test_runner(
     if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
         chacha20::encrypt(
             SecretKey::from_slice(&key).unwrap(),
-            &nonce,
+            chacha20::Nonce::from_slice(&nonce).unwrap(),
             init_block_count,
             &original_pt,
             ct,
         ).unwrap();
         chacha20::decrypt(
             SecretKey::from_slice(&key).unwrap(),
-            &nonce,
+            chacha20::Nonce::from_slice(&nonce).unwrap(),
             init_block_count,
             &original_ct,
             pt,
@@ -62,14 +62,14 @@ pub fn chacha_test_runner(
     if nonce.len() == constants::XCHACHA_NONCESIZE {
         xchacha20::encrypt(
             SecretKey::from_slice(&key).unwrap(),
-            &nonce,
+            xchacha20::Nonce::from_slice(&nonce).unwrap(),
             init_block_count,
             &original_pt,
             ct,
         ).unwrap();
         xchacha20::decrypt(
             SecretKey::from_slice(&key).unwrap(),
-            &nonce,
+            xchacha20::Nonce::from_slice(&nonce).unwrap(),
             init_block_count,
             &original_ct,
             pt,

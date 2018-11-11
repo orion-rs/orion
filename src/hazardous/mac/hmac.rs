@@ -69,9 +69,9 @@ extern crate core;
 
 use self::core::mem;
 use errors::*;
-use hazardous::constants::{BlocksizeArray, HLenArray, HLEN, SHA2_BLOCKSIZE};
-use seckey::zero;
+use hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE};
 use sha2::{Digest, Sha512};
+use subtle::ConstantTimeEq;
 use util;
 use zeroize::Zeroize;
 
@@ -115,6 +115,58 @@ impl SecretKey {
     }
 }
 
+/// A struct representing a MAC.
+pub struct Mac {
+    value: [u8; HLEN],
+}
+
+impl PartialEq for Mac {
+    fn eq(&self, other: &Mac) -> bool {
+        if self
+            .unsafe_as_bytes()
+            .ct_eq(&other.unsafe_as_bytes())
+            .unwrap_u8()
+            == 1
+        {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn ne(&self, other: &Mac) -> bool {
+        if self
+            .unsafe_as_bytes()
+            .ct_eq(&other.unsafe_as_bytes())
+            .unwrap_u8()
+            == 0
+        {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+impl Mac {
+    /// Make Mac from a byte slice.
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        if slice.len() != HLEN {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut mac = [0u8; HLEN];
+        mac.copy_from_slice(slice);
+
+        Ok(Self { value: mac })
+    }
+    /// Return the Mac as byte slice. WARNING: Provides no protection against unsafe
+    /// comparison operations.
+    pub fn unsafe_as_bytes(&self) -> [u8; HLEN] {
+        self.value
+    }
+}
+
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub struct Hmac {
@@ -126,7 +178,7 @@ pub struct Hmac {
 
 impl Drop for Hmac {
     fn drop(&mut self) {
-        zero(&mut self.ipad)
+        self.ipad.as_mut().zeroize();
     }
 }
 
@@ -144,7 +196,7 @@ impl Hmac {
 
         self.ipad_hasher.input(self.ipad.as_ref());
         self.opad_hasher.input(opad.as_ref());
-        zero(&mut opad);
+        opad.as_mut().zeroize();
     }
 
     /// Reset to `init()` state.
@@ -168,7 +220,7 @@ impl Hmac {
 
     #[inline(always)]
     /// Return MAC.
-    pub fn finalize(&mut self) -> Result<[u8; 64], FinalizationCryptoError> {
+    pub fn finalize(&mut self) -> Result<Mac, FinalizationCryptoError> {
         if self.is_finalized {
             return Err(FinalizationCryptoError);
         }
@@ -181,15 +233,13 @@ impl Hmac {
         let mut o_hash = self.opad_hasher.clone();
         o_hash.input(&hash_ires.result());
 
-        let mut mac: HLenArray = [0u8; HLEN];
-        mac.copy_from_slice(&o_hash.result());
+        let mac = Mac::from_slice(&o_hash.result()).unwrap();
 
         Ok(mac)
     }
-
     #[inline(always)]
     /// Retrieve MAC and copy to `dst`.
-    pub fn finalize_with_dst(&mut self, dst: &mut [u8]) -> Result<(), FinalizationCryptoError> {
+    pub fn finalize_with_dst(&mut self, dst: &mut Mac) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
             return Err(FinalizationCryptoError);
         }
@@ -201,9 +251,8 @@ impl Hmac {
 
         let mut o_hash = self.opad_hasher.clone();
         o_hash.input(&hash_ires.result());
-        let dst_len = dst.len();
 
-        dst.copy_from_slice(&o_hash.result()[..dst_len]);
+        dst.value.copy_from_slice(&o_hash.result());
 
         Ok(())
     }
@@ -225,17 +274,17 @@ pub fn init(secret_key: SecretKey) -> Hmac {
 
 /// Verify a HMAC-SHA512 MAC in constant time.
 pub fn verify(
-    expected: &[u8],
+    expected: Mac,
     secret_key: SecretKey,
     message: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
     let mut mac = init(secret_key);
     mac.update(message).unwrap();
 
-    if util::compare_ct(&mac.finalize().unwrap(), expected).is_err() {
-        Err(ValidationCryptoError)
-    } else {
+    if mac.finalize().unwrap() == expected {
         Ok(true)
+    } else {
+        Err(ValidationCryptoError)
     }
 }
 
@@ -249,7 +298,7 @@ fn finalize_and_verify_true() {
 
     assert_eq!(
         verify(
-            &mac.finalize().unwrap(),
+            mac.finalize().unwrap(),
             SecretKey::from_slice("Jefe".as_bytes()),
             data
         ).unwrap(),
@@ -267,7 +316,7 @@ fn veriy_false_wrong_data() {
 
     assert!(
         verify(
-            &mac.finalize().unwrap(),
+            mac.finalize().unwrap(),
             SecretKey::from_slice("Jefe".as_bytes()),
             "what do ya want for something?".as_bytes()
         ).is_err()
@@ -284,7 +333,7 @@ fn veriy_false_wrong_secret_key() {
 
     assert!(
         verify(
-            &mac.finalize().unwrap(),
+            mac.finalize().unwrap(),
             SecretKey::from_slice("Jose".as_bytes()),
             data
         ).is_err()
@@ -308,7 +357,7 @@ fn double_finalize_err() {
 fn double_finalize_with_dst_err() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
-    let mut dst = [0u8; 64];
+    let mut dst = Mac::from_slice(&[0u8; 64]).unwrap();
 
     let mut mac = init(secret_key);
     mac.update(data).unwrap();

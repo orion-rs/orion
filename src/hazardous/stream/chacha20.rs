@@ -139,6 +139,35 @@ impl SecretKey {
     }
 }
 
+/// A nonce for IETF ChaCha20.
+pub struct Nonce {
+    value: [u8; IETF_CHACHA_NONCESIZE],
+}
+
+impl Drop for Nonce {
+    fn drop(&mut self) {
+        self.value.as_mut().zeroize();
+    }
+}
+
+impl Nonce {
+    /// Make Nonce from a byte slice.
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        if slice.len() != IETF_CHACHA_NONCESIZE {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut ietf_nonce = [0u8; IETF_CHACHA_NONCESIZE];
+        ietf_nonce.copy_from_slice(slice);
+
+        Ok(Self { value: ietf_nonce })
+    }
+    /// Return Nonce as bytes.
+    pub fn as_bytes(&self) -> [u8; IETF_CHACHA_NONCESIZE] {
+        self.value
+    }
+}
+
 #[derive(Clone)]
 struct InternalState {
     state: ChaChaState,
@@ -271,7 +300,7 @@ impl InternalState {
 /// IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn encrypt(
     secret_key: SecretKey,
-    nonce: &[u8],
+    nonce: Nonce,
     initial_counter: u32,
     plaintext: &[u8],
     dst_out: &mut [u8],
@@ -296,7 +325,7 @@ pub fn encrypt(
         is_ietf: true,
     };
 
-    chacha_state.init_state(secret_key, nonce).unwrap();
+    chacha_state.init_state(secret_key, &nonce.as_bytes()).unwrap();
 
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
     let mut keystream_state: ChaChaState = [0u32; 16];
@@ -335,7 +364,7 @@ pub fn encrypt(
 /// IETF ChaCha20 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn decrypt(
     secret_key: SecretKey,
-    nonce: &[u8],
+    nonce: Nonce,
     initial_counter: u32,
     ciphertext: &[u8],
     dst_out: &mut [u8],
@@ -346,18 +375,14 @@ pub fn decrypt(
 /// IETF ChaCha20 block function returning a serialized keystream block.
 pub fn keystream_block(
     secret_key: SecretKey,
-    nonce: &[u8],
+    nonce: Nonce,
     counter: u32,
 ) -> Result<[u8; CHACHA_BLOCKSIZE], UnknownCryptoError> {
-    if nonce.len() != IETF_CHACHA_NONCESIZE {
-        return Err(UnknownCryptoError);
-    }
-
     let mut chacha_state = InternalState {
         state: [0_u32; 16],
         is_ietf: true,
     };
-    chacha_state.init_state(secret_key, nonce).unwrap();
+    chacha_state.init_state(secret_key, &nonce.as_bytes()).unwrap();
 
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
     let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter)).unwrap();
@@ -371,6 +396,7 @@ pub fn keystream_block(
     Ok(keystream_block)
 }
 
+#[doc(hidden)]
 /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn hchacha20(
     secret_key: SecretKey,
@@ -512,10 +538,10 @@ fn test_bad_key_nonce_size_init() {
 }
 
 #[test]
-fn test_bad_key_nonce_size_keystream_block() {
-    assert!(keystream_block(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 10], 0).is_err());
-    assert!(keystream_block(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 13], 0).is_err());
-    assert!(keystream_block(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12], 0).is_ok());
+fn test_nonce_sizes() {
+    assert!(Nonce::from_slice(&[0u8; 10]).is_err());
+    assert!(Nonce::from_slice(&[0u8; 13]).is_err());
+    assert!(Nonce::from_slice(&[0u8; 12]).is_ok());
 }
 
 #[test]
@@ -535,7 +561,7 @@ fn test_diff_ct_pt_len() {
     assert!(
         encrypt(
             SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 12],
+            Nonce::from_slice(&[0u8; 12]).unwrap(),
             0,
             &[0u8; 65],
             &mut dst
@@ -544,7 +570,7 @@ fn test_diff_ct_pt_len() {
     assert!(
         encrypt(
             SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 12],
+            Nonce::from_slice(&[0u8; 12]).unwrap(),
             0,
             &[0u8; 63],
             &mut dst
@@ -553,7 +579,7 @@ fn test_diff_ct_pt_len() {
     assert!(
         encrypt(
             SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 12],
+            Nonce::from_slice(&[0u8; 12]).unwrap(),
             0,
             &[0u8; 64],
             &mut dst
@@ -568,7 +594,7 @@ fn test_err_on_diff_ct_pt_len_xchacha_long() {
 
     encrypt(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 12],
+        Nonce::from_slice(&[0u8; 12]).unwrap(),
         0,
         &[0u8; 128],
         &mut dst,
@@ -582,7 +608,7 @@ fn test_err_on_diff_ct_pt_len_xchacha_short() {
 
     encrypt(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 12],
+        Nonce::from_slice(&[0u8; 12]).unwrap(),
         0,
         &[0u8; 0],
         &mut dst,
@@ -596,7 +622,7 @@ fn test_err_on_empty_pt() {
 
     encrypt(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 12],
+        Nonce::from_slice(&[0u8; 12]).unwrap(),
         0,
         &[0u8; 0],
         &mut dst,
@@ -610,7 +636,7 @@ fn test_err_on_initial_counter_overflow() {
 
     encrypt(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 12],
+        Nonce::from_slice(&[0u8; 12]).unwrap(),
         4294967295,
         &[0u8; 65],
         &mut dst,
@@ -623,7 +649,7 @@ fn test_pass_on_one_iter_max_initial_counter() {
     // Should pass because only one iteration is completed, so block_counter will not increase
     encrypt(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 12],
+        Nonce::from_slice(&[0u8; 12]).unwrap(),
         4294967295,
         &[0u8; 64],
         &mut dst,
@@ -631,7 +657,7 @@ fn test_pass_on_one_iter_max_initial_counter() {
     // keystream_block never increases the provided counter
     keystream_block(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 12],
+        Nonce::from_slice(&[0u8; 12]).unwrap(),
         4294967295,
     ).unwrap();
 }
@@ -732,7 +758,7 @@ fn test_chacha20_block_results() {
         .unwrap();
 
     let keystream_block_only =
-        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1).unwrap();
+        keystream_block(SecretKey::from_slice(&key).unwrap(), Nonce::from_slice(&nonce).unwrap(), 1).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -773,7 +799,7 @@ fn chacha20_block_test_1() {
         .unwrap();
 
     let keystream_block_only =
-        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 0).unwrap();
+        keystream_block(SecretKey::from_slice(&key).unwrap(), Nonce::from_slice(&nonce).unwrap(), 0).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -814,7 +840,7 @@ fn chacha20_block_test_2() {
         .unwrap();
 
     let keystream_block_only =
-        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1).unwrap();
+        keystream_block(SecretKey::from_slice(&key).unwrap(), Nonce::from_slice(&nonce).unwrap(), 1).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -855,7 +881,7 @@ fn chacha20_block_test_3() {
         .unwrap();
 
     let keystream_block_only =
-        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1).unwrap();
+        keystream_block(SecretKey::from_slice(&key).unwrap(), Nonce::from_slice(&nonce).unwrap(), 1).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -896,7 +922,7 @@ fn chacha20_block_test_4() {
         .unwrap();
 
     let keystream_block_only =
-        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 2).unwrap();
+        keystream_block(SecretKey::from_slice(&key).unwrap(), Nonce::from_slice(&nonce).unwrap(), 2).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -937,7 +963,7 @@ fn chacha20_block_test_5() {
         .unwrap();
 
     let keystream_block_only =
-        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 0).unwrap();
+        keystream_block(SecretKey::from_slice(&key).unwrap(), Nonce::from_slice(&nonce).unwrap(), 0).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -1019,10 +1045,10 @@ fn test_key_schedule() {
     );
 
     actual_keystream[..64].copy_from_slice(
-        &keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1).unwrap(),
+        &keystream_block(SecretKey::from_slice(&key).unwrap(), Nonce::from_slice(&nonce).unwrap(), 1).unwrap(),
     );
     actual_keystream[64..].copy_from_slice(
-        &keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1 + 1).unwrap(),
+        &keystream_block(SecretKey::from_slice(&key).unwrap(), Nonce::from_slice(&nonce).unwrap(), 1 + 1).unwrap(),
     );
 
     assert_eq!(

@@ -46,9 +46,9 @@ fn hmac_test_runner(
         None => 64,
     };
 
-    assert_eq!(res[..len].as_ref(), expected[..len].as_ref());
+    assert_eq!(res.unsafe_as_bytes()[..len].as_ref(), expected[..len].as_ref());
     // If the MACs are modified, then they should not be equal to the expected
-    let mut bad_res = res[..len].to_vec();
+    let mut bad_res = res.unsafe_as_bytes()[..len].to_vec();
     bad_res[0] ^= 1;
     assert_ne!(&bad_res[..len], expected);
 

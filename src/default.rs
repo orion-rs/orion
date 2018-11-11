@@ -54,7 +54,7 @@ use util;
 ///
 /// let hmac = default::hmac(&key, msg).unwrap();
 /// ```
-pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
+pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<hmac::Mac, UnknownCryptoError> {
     if secret_key.len() < 64 {
         return Err(UnknownCryptoError);
     }
@@ -91,7 +91,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
 /// assert!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap());
 /// ```
 pub fn hmac_verify(
-    expected_hmac: &[u8],
+    expected_hmac: hmac::Mac,
     secret_key: &[u8],
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
@@ -101,15 +101,19 @@ pub fn hmac_verify(
     let mut rand_key: HLenArray = [0u8; HLEN];
     util::gen_rand_key(&mut rand_key).unwrap();
 
-    let mut nd_round_mac = hmac::init(hmac::SecretKey::from_slice(secret_key));
-    let mut nd_round_expected = hmac::init(hmac::SecretKey::from_slice(secret_key));
+    let mut nd_round_mac = hmac::init(hmac::SecretKey::from_slice(&rand_key));
+    let mut nd_round_expected = hmac::init(hmac::SecretKey::from_slice(&rand_key));
 
-    nd_round_mac.update(&mac.finalize().unwrap()).unwrap();
-    nd_round_expected.update(expected_hmac).unwrap();
+    nd_round_mac
+        .update(&mac.finalize().unwrap().unsafe_as_bytes())
+        .unwrap();
+    nd_round_expected
+        .update(&expected_hmac.unsafe_as_bytes())
+        .unwrap();
 
     hmac::verify(
-        &expected_hmac,
-        hmac::SecretKey::from_slice(secret_key),
+        nd_round_expected.finalize().unwrap(),
+        hmac::SecretKey::from_slice(&rand_key),
         data,
     )
 }
@@ -477,10 +481,10 @@ mod test {
         let hmac_bob = default::hmac(&sec_key_correct, &msg).unwrap();
 
         assert_eq!(
-            default::hmac_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
+            default::hmac_verify(hmac_bob, &sec_key_correct, &msg).unwrap(),
             true
         );
-        assert!(default::hmac_verify(&hmac_bob, &sec_key_false, &msg).is_err());
+        assert!(default::hmac_verify(hmac_bob, &sec_key_false, &msg).is_err());
     }
 
     #[test]

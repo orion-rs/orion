@@ -81,28 +81,26 @@
 //! ```
 use errors::UnknownCryptoError;
 use hazardous::aead::chacha20poly1305;
-use hazardous::constants::{IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE};
+use hazardous::constants::IETF_CHACHA_NONCESIZE;
 use hazardous::stream::chacha20;
 pub use hazardous::stream::chacha20::SecretKey;
+pub use hazardous::stream::xchacha20::Nonce;
+use hazardous::stream::chacha20::Nonce as IETFNonce;
 
 /// AEAD XChaCha20Poly1305 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn encrypt(
     secret_key: SecretKey,
-    nonce: &[u8],
+    nonce: Nonce,
     plaintext: &[u8],
     ad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if nonce.len() != XCHACHA_NONCESIZE {
-        return Err(UnknownCryptoError);
-    }
-
     let subkey: SecretKey =
-        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce[0..16]).unwrap()).unwrap();
-    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
-    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
+        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap()).unwrap();
+    let mut prefixed_nonce = IETFNonce::from_slice(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
+    prefixed_nonce.as_bytes()[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
 
-    chacha20poly1305::encrypt(subkey, &prefixed_nonce, plaintext, ad, dst_out).unwrap();
+    chacha20poly1305::encrypt(subkey, prefixed_nonce, plaintext, ad, dst_out).unwrap();
 
     Ok(())
 }
@@ -110,86 +108,19 @@ pub fn encrypt(
 /// AEAD XChaCha20Poly1305 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn decrypt(
     secret_key: SecretKey,
-    nonce: &[u8],
+    nonce: Nonce,
     ciphertext_with_tag: &[u8],
     ad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if nonce.len() != XCHACHA_NONCESIZE {
-        return Err(UnknownCryptoError);
-    }
-
     let subkey: SecretKey =
-        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce[0..16]).unwrap()).unwrap();
-    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
-    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
+        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap()).unwrap();
+    let mut prefixed_nonce = IETFNonce::from_slice(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
+    prefixed_nonce.as_bytes()[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
 
-    chacha20poly1305::decrypt(subkey, &prefixed_nonce, ciphertext_with_tag, ad, dst_out).unwrap();
+    chacha20poly1305::decrypt(subkey, prefixed_nonce, ciphertext_with_tag, ad, dst_out).unwrap();
 
     Ok(())
-}
-
-#[test]
-fn test_err_on_bad_nonce_xchacha() {
-    let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
-    let mut dst_out_pt = [0u8; 64];
-
-    assert!(
-        encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 23],
-            &[0u8; 64],
-            &[0u8; 0],
-            &mut dst_out_ct
-        ).is_err()
-    );
-    assert!(
-        decrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 23],
-            &dst_out_ct,
-            &[0u8; 0],
-            &mut dst_out_pt
-        ).is_err()
-    );
-
-    assert!(
-        encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 25],
-            &[0u8; 64],
-            &[0u8; 0],
-            &mut dst_out_ct
-        ).is_err()
-    );
-    assert!(
-        decrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 25],
-            &dst_out_ct,
-            &[0u8; 0],
-            &mut dst_out_pt
-        ).is_err()
-    );
-
-    assert!(
-        encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 24],
-            &[0u8; 64],
-            &[0u8; 0],
-            &mut dst_out_ct
-        ).is_ok()
-    );
-    assert!(
-        decrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 24],
-            &dst_out_ct,
-            &[0u8; 0],
-            &mut dst_out_pt
-        ).is_ok()
-    );
 }
 
 #[test]
@@ -200,7 +131,7 @@ fn test_modified_tag_error() {
 
     encrypt(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 24],
+        Nonce::from_slice(&[0u8; 24]).unwrap(),
         &[0u8; 64],
         &[0u8; 0],
         &mut dst_out_ct,
@@ -209,7 +140,7 @@ fn test_modified_tag_error() {
     dst_out_ct[65] ^= 1;
     decrypt(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 24],
+        Nonce::from_slice(&[0u8; 24]).unwrap(),
         &dst_out_ct,
         &[0u8; 0],
         &mut dst_out_pt,

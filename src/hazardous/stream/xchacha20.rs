@@ -77,25 +77,52 @@ use errors::UnknownCryptoError;
 use hazardous::constants::{IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE};
 use hazardous::stream::chacha20;
 pub use hazardous::stream::chacha20::SecretKey;
+use hazardous::stream::chacha20::Nonce as IETFNonce;
+use zeroize::Zeroize;
+
+/// A nonce for XChaCha20.
+pub struct Nonce {
+    value: [u8; XCHACHA_NONCESIZE],
+}
+
+impl Drop for Nonce {
+    fn drop(&mut self) {
+        self.value.as_mut().zeroize();
+    }
+}
+
+impl Nonce {
+    /// Make Nonce from a byte slice.
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        if slice.len() != XCHACHA_NONCESIZE {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut xchacha_nonce = [0u8; XCHACHA_NONCESIZE];
+        xchacha_nonce.copy_from_slice(slice);
+
+        Ok(Self { value: xchacha_nonce })
+    }
+    /// Return Nonce as bytes.
+    pub fn as_bytes(&self) -> [u8; XCHACHA_NONCESIZE] {
+        self.value
+    }
+}
 
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn encrypt(
     secret_key: SecretKey,
-    nonce: &[u8],
+    nonce: Nonce,
     initial_counter: u32,
     plaintext: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if nonce.len() != XCHACHA_NONCESIZE {
-        return Err(UnknownCryptoError);
-    }
-
     let subkey: SecretKey =
-        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce[0..16]).unwrap()).unwrap();
-    let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
-    prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
+        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap()).unwrap();
+    let mut prefixed_nonce = IETFNonce::from_slice(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
+    prefixed_nonce.as_bytes()[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
 
-    chacha20::encrypt(subkey, &prefixed_nonce, initial_counter, plaintext, dst_out).unwrap();
+    chacha20::encrypt(subkey, prefixed_nonce, initial_counter, plaintext, dst_out).unwrap();
 
     Ok(())
 }
@@ -103,7 +130,7 @@ pub fn encrypt(
 /// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn decrypt(
     secret_key: SecretKey,
-    nonce: &[u8],
+    nonce: Nonce,
     initial_counter: u32,
     ciphertext: &[u8],
     dst_out: &mut [u8],
@@ -112,54 +139,10 @@ pub fn decrypt(
 }
 
 #[test]
-fn test_bad_nonce_size_xchacha() {
-    let mut dst = [0u8; 64];
-
-    assert!(
-        encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 78],
-            0,
-            &[0u8; 64],
-            &mut dst
-        ).is_err()
-    );
-    assert!(
-        encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 23],
-            0,
-            &[0u8; 64],
-            &mut dst
-        ).is_err()
-    );
-    assert!(
-        encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 35],
-            0,
-            &[0u8; 64],
-            &mut dst
-        ).is_err()
-    );
-    assert!(
-        encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 13],
-            0,
-            &[0u8; 64],
-            &mut dst
-        ).is_err()
-    );
-    assert!(
-        encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 24],
-            0,
-            &[0u8; 64],
-            &mut dst
-        ).is_ok()
-    );
+fn test_nonce_sizes() {
+    assert!(Nonce::from_slice(&[0u8; 23]).is_err());
+    assert!(Nonce::from_slice(&[0u8; 25]).is_err());
+    assert!(Nonce::from_slice(&[0u8; 24]).is_ok());
 }
 
 #[test]
@@ -170,7 +153,7 @@ fn test_err_on_empty_pt_xchacha() {
     assert!(
         encrypt(
             SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &[0u8; 24],
+            Nonce::from_slice(&[0u8; 24]).unwrap(),
             0,
             &[0u8; 0],
             &mut dst
@@ -185,7 +168,7 @@ fn test_err_on_initial_counter_overflow_xchacha() {
 
     encrypt(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 24],
+        Nonce::from_slice(&[0u8; 24]).unwrap(),
         4294967295,
         &[0u8; 65],
         &mut dst,
@@ -198,7 +181,7 @@ fn test_pass_on_one_iter_max_initial_counter() {
     // Should pass because only one iteration is completed, so block_counter will not increase
     encrypt(
         SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 24],
+        Nonce::from_slice(&[0u8; 24]).unwrap(),
         4294967295,
         &[0u8; 64],
         &mut dst,
