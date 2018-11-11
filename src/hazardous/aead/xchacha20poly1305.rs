@@ -82,9 +82,9 @@
 use errors::UnknownCryptoError;
 use hazardous::aead::chacha20poly1305;
 use hazardous::stream::chacha20;
+use hazardous::stream::chacha20::Nonce as IETFNonce;
 pub use hazardous::stream::chacha20::SecretKey;
 pub use hazardous::stream::xchacha20::Nonce;
-use hazardous::stream::chacha20::Nonce as IETFNonce;
 
 /// AEAD XChaCha20Poly1305 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn encrypt(
@@ -95,11 +95,18 @@ pub fn encrypt(
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     let subkey: SecretKey =
-        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap()).unwrap();
+        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap())
+            .unwrap();
     let mut prefixed_nonce = [0u8; 12];
     prefixed_nonce[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
 
-    chacha20poly1305::encrypt(subkey, IETFNonce::from_slice(&prefixed_nonce).unwrap(), plaintext, ad, dst_out).unwrap();
+    chacha20poly1305::encrypt(
+        subkey,
+        IETFNonce::from_slice(&prefixed_nonce).unwrap(),
+        plaintext,
+        ad,
+        dst_out,
+    ).unwrap();
 
     Ok(())
 }
@@ -113,11 +120,18 @@ pub fn decrypt(
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     let subkey: SecretKey =
-        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap()).unwrap();
+        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap())
+            .unwrap();
     let mut prefixed_nonce = [0u8; 12];
     prefixed_nonce[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
 
-    chacha20poly1305::decrypt(subkey, IETFNonce::from_slice(&prefixed_nonce).unwrap(), ciphertext_with_tag, ad, dst_out).unwrap();
+    chacha20poly1305::decrypt(
+        subkey,
+        IETFNonce::from_slice(&prefixed_nonce).unwrap(),
+        ciphertext_with_tag,
+        ad,
+        dst_out,
+    ).unwrap();
 
     Ok(())
 }

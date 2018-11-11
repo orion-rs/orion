@@ -91,15 +91,18 @@ use hazardous::constants::{POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use hazardous::mac::poly1305;
 use hazardous::mac::poly1305::OneTimeKey;
 use hazardous::stream::chacha20;
-pub use hazardous::stream::chacha20::SecretKey;
 pub use hazardous::stream::chacha20::Nonce;
+pub use hazardous::stream::chacha20::SecretKey;
 use util;
 
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> OneTimeKey {
     let poly1305_key = OneTimeKey::from_slice(
-        &chacha20::keystream_block(SecretKey::from_slice(&key).unwrap(), Nonce::from_slice(&nonce).unwrap(), 0).unwrap()
-            [..POLY1305_KEYSIZE],
+        &chacha20::keystream_block(
+            SecretKey::from_slice(&key).unwrap(),
+            Nonce::from_slice(&nonce).unwrap(),
+            0,
+        ).unwrap()[..POLY1305_KEYSIZE],
     ).unwrap();
 
     poly1305_key
