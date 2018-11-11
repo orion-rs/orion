@@ -122,29 +122,10 @@ pub struct Mac {
 
 impl PartialEq for Mac {
     fn eq(&self, other: &Mac) -> bool {
-        if self
-            .unsafe_as_bytes()
+        self.unsafe_as_bytes()
             .ct_eq(&other.unsafe_as_bytes())
             .unwrap_u8()
             == 1
-        {
-            true
-        } else {
-            false
-        }
-    }
-
-    fn ne(&self, other: &Mac) -> bool {
-        if self
-            .unsafe_as_bytes()
-            .ct_eq(&other.unsafe_as_bytes())
-            .unwrap_u8()
-            == 0
-        {
-            true
-        } else {
-            false
-        }
     }
 }
 
@@ -185,7 +166,7 @@ impl Drop for Hmac {
 impl Hmac {
     #[inline(always)]
     /// Pad `key` with `ipad` and `opad`.
-    fn pad_key_io(&mut self, key: SecretKey) {
+    fn pad_key_io(&mut self, key: &SecretKey) {
         let mut opad: BlocksizeArray = [0x5C; SHA2_BLOCKSIZE];
         // `key` has already been padded with zeroes to a length of SHA2_BLOCKSIZE
         // in SecretKey::from_slice
@@ -260,7 +241,7 @@ impl Hmac {
 
 #[inline(always)]
 /// Initialize `Hmac` struct with a given key.
-pub fn init(secret_key: SecretKey) -> Hmac {
+pub fn init(secret_key: &SecretKey) -> Hmac {
     let mut mac = Hmac {
         ipad: [0x36; SHA2_BLOCKSIZE],
         opad_hasher: Sha512::default(),
@@ -274,14 +255,14 @@ pub fn init(secret_key: SecretKey) -> Hmac {
 
 /// Verify a HMAC-SHA512 MAC in constant time.
 pub fn verify(
-    expected: Mac,
-    secret_key: SecretKey,
+    expected: &Mac,
+    secret_key: &SecretKey,
     message: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
     let mut mac = init(secret_key);
     mac.update(message).unwrap();
 
-    if mac.finalize().unwrap() == expected {
+    if &mac.finalize().unwrap() == expected {
         Ok(true)
     } else {
         Err(ValidationCryptoError)
@@ -293,13 +274,13 @@ fn finalize_and_verify_true() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
 
     assert_eq!(
         verify(
-            mac.finalize().unwrap(),
-            SecretKey::from_slice("Jefe".as_bytes()),
+            &mac.finalize().unwrap(),
+            &SecretKey::from_slice("Jefe".as_bytes()),
             data
         ).unwrap(),
         true
@@ -311,13 +292,13 @@ fn veriy_false_wrong_data() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
 
     assert!(
         verify(
-            mac.finalize().unwrap(),
-            SecretKey::from_slice("Jefe".as_bytes()),
+            &mac.finalize().unwrap(),
+            &SecretKey::from_slice("Jefe".as_bytes()),
             "what do ya want for something?".as_bytes()
         ).is_err()
     );
@@ -328,13 +309,13 @@ fn veriy_false_wrong_secret_key() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
 
     assert!(
         verify(
-            mac.finalize().unwrap(),
-            SecretKey::from_slice("Jose".as_bytes()),
+            &mac.finalize().unwrap(),
+            &SecretKey::from_slice("Jose".as_bytes()),
             data
         ).is_err()
     );
@@ -346,7 +327,7 @@ fn double_finalize_err() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.finalize().unwrap();
@@ -359,7 +340,7 @@ fn double_finalize_with_dst_err() {
     let data = "what do ya want for nothing?".as_bytes();
     let mut dst = Mac::from_slice(&[0u8; 64]).unwrap();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
     mac.finalize_with_dst(&mut dst).unwrap();
     mac.finalize_with_dst(&mut dst).unwrap();
@@ -370,7 +351,7 @@ fn double_finalize_with_reset_ok() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.reset();
@@ -383,7 +364,7 @@ fn double_finalize_with_reset_no_update_ok() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.reset();
@@ -396,7 +377,7 @@ fn update_after_finalize_err() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.update(data).unwrap();
@@ -407,7 +388,7 @@ fn update_after_finalize_with_reset_ok() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.reset();
@@ -419,7 +400,7 @@ fn double_reset_ok() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(secret_key);
+    let mut mac = init(&secret_key);
     mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.reset();

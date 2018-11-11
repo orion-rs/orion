@@ -28,7 +28,7 @@ extern crate ring;
 
 use self::orion::hazardous::mac::hmac;
 use self::orion::hazardous::mac::poly1305;
-use self::orion::hazardous::mac::poly1305::OneTimeKey;
+use self::poly1305::OneTimeKey;
 use self::ring::error;
 
 fn hmac_test_runner(
@@ -37,7 +37,7 @@ fn hmac_test_runner(
     expected: &[u8],
     trunc: Option<usize>,
 ) -> Result<(), error::Unspecified> {
-    let mut mac = hmac::init(hmac::SecretKey::from_slice(secret_key));
+    let mut mac = hmac::init(&hmac::SecretKey::from_slice(secret_key));
     mac.update(data).unwrap();
 
     let res = mac.finalize().unwrap();
@@ -59,15 +59,15 @@ fn hmac_test_runner(
 }
 
 fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), error::Unspecified> {
-    let mut state = poly1305::init(OneTimeKey::from_slice(key).unwrap()).unwrap();
+    let mut state = poly1305::init(&OneTimeKey::from_slice(key).unwrap()).unwrap();
     state.update(input).unwrap();
 
     let tag_stream = state.finalize().unwrap();
-    let tag_one_shot = poly1305::poly1305(OneTimeKey::from_slice(key).unwrap(), input).unwrap();
+    let tag_one_shot = poly1305::poly1305(&OneTimeKey::from_slice(key).unwrap(), input).unwrap();
 
     assert_eq!(tag_stream.as_ref(), output.as_ref());
     assert_eq!(tag_one_shot.as_ref(), output.as_ref());
-    assert!(poly1305::verify(output, OneTimeKey::from_slice(key).unwrap(), input).unwrap());
+    assert!(poly1305::verify(output, &OneTimeKey::from_slice(key).unwrap(), input).unwrap());
 
     // If the MACs are modified, then they should not be equal to the expected
     let mut bad_tag = tag_stream.to_vec();

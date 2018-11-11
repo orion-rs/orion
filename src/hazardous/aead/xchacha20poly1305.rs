@@ -88,8 +88,8 @@ pub use hazardous::stream::xchacha20::Nonce;
 
 /// AEAD XChaCha20Poly1305 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn encrypt(
-    secret_key: SecretKey,
-    nonce: Nonce,
+    secret_key: &SecretKey,
+    nonce: &Nonce,
     plaintext: &[u8],
     ad: &[u8],
     dst_out: &mut [u8],
@@ -101,8 +101,8 @@ pub fn encrypt(
     prefixed_nonce[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
 
     chacha20poly1305::encrypt(
-        subkey,
-        IETFNonce::from_slice(&prefixed_nonce).unwrap(),
+        &subkey,
+        &IETFNonce::from_slice(&prefixed_nonce).unwrap(),
         plaintext,
         ad,
         dst_out,
@@ -113,8 +113,8 @@ pub fn encrypt(
 
 /// AEAD XChaCha20Poly1305 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn decrypt(
-    secret_key: SecretKey,
-    nonce: Nonce,
+    secret_key: &SecretKey,
+    nonce: &Nonce,
     ciphertext_with_tag: &[u8],
     ad: &[u8],
     dst_out: &mut [u8],
@@ -126,8 +126,8 @@ pub fn decrypt(
     prefixed_nonce[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
 
     chacha20poly1305::decrypt(
-        subkey,
-        IETFNonce::from_slice(&prefixed_nonce).unwrap(),
+        &subkey,
+        &IETFNonce::from_slice(&prefixed_nonce).unwrap(),
         ciphertext_with_tag,
         ad,
         dst_out,
@@ -143,8 +143,8 @@ fn test_modified_tag_error() {
     let mut dst_out_pt = [0u8; 64];
 
     encrypt(
-        SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        Nonce::from_slice(&[0u8; 24]).unwrap(),
+        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &Nonce::from_slice(&[0u8; 24]).unwrap(),
         &[0u8; 64],
         &[0u8; 0],
         &mut dst_out_ct,
@@ -152,8 +152,8 @@ fn test_modified_tag_error() {
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
     decrypt(
-        SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        Nonce::from_slice(&[0u8; 24]).unwrap(),
+        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &Nonce::from_slice(&[0u8; 24]).unwrap(),
         &dst_out_ct,
         &[0u8; 0],
         &mut dst_out_pt,

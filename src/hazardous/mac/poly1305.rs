@@ -124,7 +124,7 @@ impl Poly1305 {
     #[inline(always)]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
     /// Initialize `Poly1305` struct for a given key.
-    fn initialize(&mut self, key: OneTimeKey) -> Result<(), UnknownCryptoError> {
+    fn initialize(&mut self, key: &OneTimeKey) -> Result<(), UnknownCryptoError> {
         // clamp(r)
         self.r[0] = (LittleEndian::read_u32(&key.as_bytes()[0..4])) & 0x3ffffff;
         self.r[1] = (LittleEndian::read_u32(&key.as_bytes()[3..7]) >> 2) & 0x3ffff03;
@@ -140,7 +140,7 @@ impl Poly1305 {
         Ok(())
     }
     #[inline(never)]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::cast_lossless))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::identity_op))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
@@ -231,7 +231,7 @@ impl Poly1305 {
         Ok(())
     }
     #[inline(never)]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::cast_lossless))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::identity_op))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
@@ -376,7 +376,7 @@ impl Poly1305 {
 }
 
 /// Initialize a `Poly1305` struct with a given one-time key.
-pub fn init(one_time_key: OneTimeKey) -> Result<Poly1305, UnknownCryptoError> {
+pub fn init(one_time_key: &OneTimeKey) -> Result<Poly1305, UnknownCryptoError> {
     let mut poly_1305_state = Poly1305 {
         a: [0u32; 5],
         r: [0u32; 5],
@@ -393,7 +393,7 @@ pub fn init(one_time_key: OneTimeKey) -> Result<Poly1305, UnknownCryptoError> {
 
 /// One-shot function for generating a Poly1305 tag of a message.
 pub fn poly1305(
-    one_time_key: OneTimeKey,
+    one_time_key: &OneTimeKey,
     message: &[u8],
 ) -> Result<Poly1305Tag, UnknownCryptoError> {
     let mut poly_1305_state = init(one_time_key).unwrap();
@@ -406,7 +406,7 @@ pub fn poly1305(
 /// Verify a Poly1305 tag in constant time.
 pub fn verify(
     expected: &[u8],
-    one_time_key: OneTimeKey,
+    one_time_key: &OneTimeKey,
     message: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
     let tag = poly1305(one_time_key, message).unwrap();
@@ -427,15 +427,15 @@ fn test_wrong_key_len() {
 
 #[test]
 fn test_poly1305_oneshot_ok() {
-    assert!(poly1305(OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).is_ok());
+    assert!(poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).is_ok());
 }
 
 #[test]
 fn test_poly1305_verify_ok() {
-    let tag = poly1305(OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
+    let tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
     verify(
         &tag,
-        OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
+        &OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
         &[0u8; 16],
     ).unwrap();
 }
@@ -443,11 +443,11 @@ fn test_poly1305_verify_ok() {
 #[test]
 #[should_panic]
 fn test_poly1305_verify_err() {
-    let mut tag = poly1305(OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
+    let mut tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
     tag[0] ^= 1;
     verify(
         &tag,
-        OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
+        &OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
         &[0u8; 16],
     ).unwrap();
 }
@@ -455,19 +455,19 @@ fn test_poly1305_verify_err() {
 #[test]
 #[should_panic]
 fn test_poly1305_oneshot_bad_key_err_less() {
-    poly1305(OneTimeKey::from_slice(&[0u8; 31]).unwrap(), &[0u8; 16]).unwrap();
+    poly1305(&OneTimeKey::from_slice(&[0u8; 31]).unwrap(), &[0u8; 16]).unwrap();
 }
 
 #[test]
 #[should_panic]
 fn test_poly1305_oneshot_bad_key_err_greater() {
-    poly1305(OneTimeKey::from_slice(&[0u8; 33]).unwrap(), &[0u8; 16]).unwrap();
+    poly1305(&OneTimeKey::from_slice(&[0u8; 33]).unwrap(), &[0u8; 16]).unwrap();
 }
 
 #[test]
 #[should_panic]
 fn double_finalize_err() {
-    let mut poly1305_state = init(OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
+    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
 
     poly1305_state.update(&[0u8; 16]).unwrap();
     poly1305_state.finalize().unwrap();
@@ -476,7 +476,7 @@ fn double_finalize_err() {
 
 #[test]
 fn double_finalize_with_reset_ok() {
-    let mut poly1305_state = init(OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
+    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
 
     poly1305_state.update(&[0u8; 16]).unwrap();
     poly1305_state.finalize().unwrap();
@@ -487,7 +487,7 @@ fn double_finalize_with_reset_ok() {
 
 #[test]
 fn double_finalize_with_reset_no_update_ok() {
-    let mut poly1305_state = init(OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
+    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
 
     poly1305_state.update(&[0u8; 16]).unwrap();
     poly1305_state.finalize().unwrap();
@@ -498,7 +498,7 @@ fn double_finalize_with_reset_no_update_ok() {
 #[test]
 #[should_panic]
 fn update_after_finalize_err() {
-    let mut poly1305_state = init(OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
+    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
 
     poly1305_state.update(&[0u8; 16]).unwrap();
     poly1305_state.finalize().unwrap();
@@ -507,7 +507,7 @@ fn update_after_finalize_err() {
 
 #[test]
 fn update_after_finalize_with_reset_ok() {
-    let mut poly1305_state = init(OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
+    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
 
     poly1305_state.update(&[0u8; 16]).unwrap();
     let expected = poly1305_state.finalize().unwrap();
@@ -521,7 +521,7 @@ fn update_after_finalize_with_reset_ok() {
 
 #[test]
 fn double_reset_ok() {
-    let mut poly1305_state = init(OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
+    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap()).unwrap();
 
     poly1305_state.update(&[0u8; 16]).unwrap();
     poly1305_state.finalize().unwrap();

@@ -97,15 +97,13 @@ use util;
 
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> OneTimeKey {
-    let poly1305_key = OneTimeKey::from_slice(
+    OneTimeKey::from_slice(
         &chacha20::keystream_block(
-            SecretKey::from_slice(&key).unwrap(),
-            Nonce::from_slice(&nonce).unwrap(),
+            &SecretKey::from_slice(&key).unwrap(),
+            &Nonce::from_slice(&nonce).unwrap(),
             0,
         ).unwrap()[..POLY1305_KEYSIZE],
-    ).unwrap();
-
-    poly1305_key
+    ).unwrap()
 }
 
 /// Padding size that gives the needed bytes to pad `input` to an integral multiple of 16.
@@ -149,8 +147,8 @@ fn process_authentication(
 
 /// AEAD ChaCha20Poly1305 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn encrypt(
-    secret_key: SecretKey,
-    nonce: Nonce,
+    secret_key: &SecretKey,
+    nonce: &Nonce,
     plaintext: &[u8],
     ad: &[u8],
     dst_out: &mut [u8],
@@ -170,7 +168,7 @@ pub fn encrypt(
         plaintext,
         &mut dst_out[..plaintext.len()],
     ).unwrap();
-    let mut poly1305_state = poly1305::init(poly1305_key).unwrap();
+    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, ad, &dst_out, plaintext.len()).unwrap();
     dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize().unwrap());
@@ -180,8 +178,8 @@ pub fn encrypt(
 
 /// AEAD ChaCha20Poly1305 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn decrypt(
-    secret_key: SecretKey,
-    nonce: Nonce,
+    secret_key: &SecretKey,
+    nonce: &Nonce,
     ciphertext_with_tag: &[u8],
     ad: &[u8],
     dst_out: &mut [u8],
@@ -196,7 +194,7 @@ pub fn decrypt(
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
     let poly1305_key = poly1305_key_gen(&secret_key.as_bytes(), &nonce.as_bytes());
-    let mut poly1305_state = poly1305::init(poly1305_key).unwrap();
+    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
     process_authentication(&mut poly1305_state, ad, ciphertext_with_tag, ciphertext_len).unwrap();
 
     util::compare_ct(
@@ -228,7 +226,7 @@ fn length_padding_tests() {
 #[should_panic]
 fn test_auth_process_with_above_length_index() {
     let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
-    let mut poly1305_state = poly1305::init(poly1305_key).unwrap();
+    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
 }
@@ -236,7 +234,7 @@ fn test_auth_process_with_above_length_index() {
 #[test]
 fn test_auth_process_ok_index_length() {
     let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
-    let mut poly1305_state = poly1305::init(poly1305_key).unwrap();
+    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).unwrap();
 
@@ -257,8 +255,8 @@ fn test_modified_tag_error() {
     let mut dst_out_pt = [0u8; 64];
 
     encrypt(
-        SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        Nonce::from_slice(&[0u8; 12]).unwrap(),
+        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &[0u8; 64],
         &[0u8; 0],
         &mut dst_out_ct,
@@ -266,8 +264,8 @@ fn test_modified_tag_error() {
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
     decrypt(
-        SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        Nonce::from_slice(&[0u8; 12]).unwrap(),
+        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_ct,
         &[0u8; 0],
         &mut dst_out_pt,
@@ -284,8 +282,8 @@ fn test_bad_pt_ct_lengths() {
 
     assert!(
         encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_pt_2,
             &[0u8; 0],
             &mut dst_out_ct_1,
@@ -293,8 +291,8 @@ fn test_bad_pt_ct_lengths() {
     );
 
     encrypt(
-        SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        Nonce::from_slice(&[0u8; 12]).unwrap(),
+        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_pt_2,
         &[0u8; 0],
         &mut dst_out_ct_2,
@@ -302,8 +300,8 @@ fn test_bad_pt_ct_lengths() {
 
     assert!(
         decrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_2,
             &[0u8; 0],
             &mut dst_out_pt_1,
@@ -311,8 +309,8 @@ fn test_bad_pt_ct_lengths() {
     );
 
     decrypt(
-        SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        Nonce::from_slice(&[0u8; 12]).unwrap(),
+        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_ct_2,
         &[0u8; 0],
         &mut dst_out_pt_2,
@@ -330,8 +328,8 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
 
     assert!(
         decrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_1,
             &[0u8; 0],
             &mut dst_out_pt_1,
@@ -340,8 +338,8 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
 
     assert!(
         decrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_2,
             &[0u8; 0],
             &mut dst_out_pt_1,
@@ -350,8 +348,8 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
 
     assert!(
         decrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_3,
             &[0u8; 0],
             &mut dst_out_pt_2,

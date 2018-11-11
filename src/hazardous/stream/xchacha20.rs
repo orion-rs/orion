@@ -113,8 +113,8 @@ impl Nonce {
 
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn encrypt(
-    secret_key: SecretKey,
-    nonce: Nonce,
+    secret_key: &SecretKey,
+    nonce: &Nonce,
     initial_counter: u32,
     plaintext: &[u8],
     dst_out: &mut [u8],
@@ -126,8 +126,8 @@ pub fn encrypt(
     prefixed_nonce[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
 
     chacha20::encrypt(
-        subkey,
-        IETFNonce::from_slice(&prefixed_nonce).unwrap(),
+        &subkey,
+        &IETFNonce::from_slice(&prefixed_nonce).unwrap(),
         initial_counter,
         plaintext,
         dst_out,
@@ -138,8 +138,8 @@ pub fn encrypt(
 
 /// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn decrypt(
-    secret_key: SecretKey,
-    nonce: Nonce,
+    secret_key: &SecretKey,
+    nonce: &Nonce,
     initial_counter: u32,
     ciphertext: &[u8],
     dst_out: &mut [u8],
@@ -161,8 +161,8 @@ fn test_err_on_empty_pt_xchacha() {
 
     assert!(
         encrypt(
-            SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            Nonce::from_slice(&[0u8; 24]).unwrap(),
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 24]).unwrap(),
             0,
             &[0u8; 0],
             &mut dst
@@ -176,8 +176,8 @@ fn test_err_on_initial_counter_overflow_xchacha() {
     let mut dst = [0u8; 65];
 
     encrypt(
-        SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        Nonce::from_slice(&[0u8; 24]).unwrap(),
+        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &Nonce::from_slice(&[0u8; 24]).unwrap(),
         4294967295,
         &[0u8; 65],
         &mut dst,
@@ -189,8 +189,8 @@ fn test_pass_on_one_iter_max_initial_counter() {
     let mut dst = [0u8; 64];
     // Should pass because only one iteration is completed, so block_counter will not increase
     encrypt(
-        SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        Nonce::from_slice(&[0u8; 24]).unwrap(),
+        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &Nonce::from_slice(&[0u8; 24]).unwrap(),
         4294967295,
         &[0u8; 64],
         &mut dst,

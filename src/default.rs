@@ -59,7 +59,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<hmac::Mac, UnknownCryptoEr
         return Err(UnknownCryptoError);
     }
 
-    let mut mac = hmac::init(hmac::SecretKey::from_slice(secret_key));
+    let mut mac = hmac::init(&hmac::SecretKey::from_slice(secret_key));
     mac.update(data).unwrap();
 
     Ok(mac.finalize().unwrap())
@@ -95,14 +95,14 @@ pub fn hmac_verify(
     secret_key: &[u8],
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let mut mac = hmac::init(hmac::SecretKey::from_slice(secret_key));
+    let mut mac = hmac::init(&hmac::SecretKey::from_slice(secret_key));
     mac.update(data).unwrap();
 
     let mut rand_key: HLenArray = [0u8; HLEN];
     util::gen_rand_key(&mut rand_key).unwrap();
 
-    let mut nd_round_mac = hmac::init(hmac::SecretKey::from_slice(&rand_key));
-    let mut nd_round_expected = hmac::init(hmac::SecretKey::from_slice(&rand_key));
+    let mut nd_round_mac = hmac::init(&hmac::SecretKey::from_slice(&rand_key));
+    let mut nd_round_expected = hmac::init(&hmac::SecretKey::from_slice(&rand_key));
 
     nd_round_mac
         .update(&mac.finalize().unwrap().unsafe_as_bytes())
@@ -112,8 +112,8 @@ pub fn hmac_verify(
         .unwrap();
 
     hmac::verify(
-        nd_round_expected.finalize().unwrap(),
-        hmac::SecretKey::from_slice(&rand_key),
+        &nd_round_expected.finalize().unwrap(),
+        &hmac::SecretKey::from_slice(&rand_key),
         data,
     )
 }
@@ -379,8 +379,8 @@ pub fn encrypt(secret_key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCr
     dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce);
 
     aead::xchacha20poly1305::encrypt(
-        SecretKey::from_slice(secret_key).unwrap(),
-        aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+        &SecretKey::from_slice(secret_key).unwrap(),
+        &aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
         plaintext,
         &[0u8; 0],
         &mut dst_out[XCHACHA_NONCESIZE..],
@@ -430,8 +430,8 @@ pub fn decrypt(secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownC
     let mut dst_out = vec![0u8; ciphertext.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
     aead::xchacha20poly1305::decrypt(
-        SecretKey::from_slice(&secret_key).unwrap(),
-        aead::xchacha20poly1305::Nonce::from_slice(&ciphertext[..XCHACHA_NONCESIZE]).unwrap(),
+        &SecretKey::from_slice(&secret_key).unwrap(),
+        &aead::xchacha20poly1305::Nonce::from_slice(&ciphertext[..XCHACHA_NONCESIZE]).unwrap(),
         &ciphertext[XCHACHA_NONCESIZE..],
         &[0u8; 0],
         &mut dst_out,

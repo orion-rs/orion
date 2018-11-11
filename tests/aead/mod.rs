@@ -47,15 +47,15 @@ fn aead_test_runner(
     // Determine variant based on NONCE size
     if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
         aead::chacha20poly1305::encrypt(
-            SecretKey::from_slice(&key).unwrap(),
-            chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            &SecretKey::from_slice(&key).unwrap(),
+            &chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             input,
             aad,
             &mut dst_ct_out,
         ).unwrap();
         aead::chacha20poly1305::decrypt(
-            SecretKey::from_slice(&key).unwrap(),
-            chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            &SecretKey::from_slice(&key).unwrap(),
+            &chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &dst_ct_out,
             aad,
             &mut dst_pt_out,
@@ -64,16 +64,16 @@ fn aead_test_runner(
 
     if nonce.len() == constants::XCHACHA_NONCESIZE {
         aead::xchacha20poly1305::encrypt(
-            SecretKey::from_slice(&key).unwrap(),
-            xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            &SecretKey::from_slice(&key).unwrap(),
+            &xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             input,
             aad,
             &mut dst_ct_out,
         ).unwrap();
 
         aead::xchacha20poly1305::decrypt(
-            SecretKey::from_slice(&key).unwrap(),
-            xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            &SecretKey::from_slice(&key).unwrap(),
+            &xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &dst_ct_out,
             aad,
             &mut dst_pt_out,
@@ -102,16 +102,16 @@ fn wycheproof_test_runner(
     let mut dst_pt_out = vec![0u8; input.len()];
 
     aead::chacha20poly1305::encrypt(
-        SecretKey::from_slice(&key).unwrap(),
-        chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+        &SecretKey::from_slice(&key).unwrap(),
+        &chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
         input,
         aad,
         &mut dst_ct_out,
     ).unwrap();
 
     aead::chacha20poly1305::decrypt(
-        SecretKey::from_slice(&key).unwrap(),
-        chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+        &SecretKey::from_slice(&key).unwrap(),
+        &chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
         &dst_ct_out,
         aad,
         &mut dst_pt_out,
