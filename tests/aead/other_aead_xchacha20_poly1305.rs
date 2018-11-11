@@ -69,7 +69,13 @@ mod other_aead_xchacha20_poly1305 {
         let mut dst_out_ct = vec![0u8; expected_ct.len()];
         let mut dst_out_pt = vec![0u8; plaintext.len()];
 
-        aead::xchacha20poly1305::encrypt(&key, &nonce, &plaintext, &aad, &mut dst_out_ct).unwrap();
+        aead::xchacha20poly1305::encrypt(
+            aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
+            &nonce,
+            &plaintext,
+            &aad,
+            &mut dst_out_ct,
+        ).unwrap();
 
         assert_eq!(
             dst_out_ct[..plaintext.len()].as_ref(),
@@ -81,7 +87,13 @@ mod other_aead_xchacha20_poly1305 {
             expected_ct[plaintext.len()..].as_ref()
         );
 
-        aead::xchacha20poly1305::decrypt(&key, &nonce, &dst_out_ct, &aad, &mut dst_out_pt).unwrap();
+        aead::xchacha20poly1305::decrypt(
+            aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
+            &nonce,
+            &dst_out_ct,
+            &aad,
+            &mut dst_out_pt,
+        ).unwrap();
 
         assert_eq!(dst_out_pt[..].as_ref(), plaintext.as_ref());
     }

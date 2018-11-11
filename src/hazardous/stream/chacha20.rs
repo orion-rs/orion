@@ -103,7 +103,7 @@ use util;
 
 /// A secret key used for calculating the MAC.
 pub struct SecretKey {
-    value: [u8; CHACHA_KEYSIZE]
+    value: [u8; CHACHA_KEYSIZE],
 }
 
 impl Drop for SecretKey {
@@ -114,7 +114,7 @@ impl Drop for SecretKey {
 
 impl SecretKey {
     /// Make SecretKey from a byte slice.
-    fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != CHACHA_KEYSIZE {
             return Err(UnknownCryptoError);
         }
@@ -124,15 +124,17 @@ impl SecretKey {
 
         Ok(Self { value: secret_key })
     }
+    /// Return SecretKey as byte slice.
+    pub fn as_bytes(&self) -> [u8; CHACHA_KEYSIZE] {
+        self.value
+    }
     #[cfg(feature = "safe_api")]
     /// Randomly generate a SecretKey using a CSPRNG. Not available in `no_std` context.
-    fn generate() -> Self {
+    pub fn generate() -> Self {
         let mut secret_key = [0u8; CHACHA_KEYSIZE];
         util::gen_rand_key(&mut secret_key).unwrap();
 
-        Self {
-            value: secret_key
-        }
+        Self { value: secret_key }
     }
 }
 
@@ -180,10 +182,11 @@ impl InternalState {
     }
     #[inline(always)]
     /// Initialize either a ChaCha or HChaCha state with a `secret_key` and `nonce`.
-    fn init_state(&mut self, secret_key: &[u8], nonce: &[u8]) -> Result<(), UnknownCryptoError> {
-        if secret_key.len() != CHACHA_KEYSIZE {
-            return Err(UnknownCryptoError);
-        }
+    fn init_state(
+        &mut self,
+        secret_key: SecretKey,
+        nonce: &[u8],
+    ) -> Result<(), UnknownCryptoError> {
         if (nonce.len() != IETF_CHACHA_NONCESIZE) && self.is_ietf {
             return Err(UnknownCryptoError);
         }
@@ -197,7 +200,7 @@ impl InternalState {
         self.state[2] = 0x7962_2d32_u32;
         self.state[3] = 0x6b20_6574_u32;
 
-        LittleEndian::read_u32_into(secret_key, &mut self.state[4..12]);
+        LittleEndian::read_u32_into(&secret_key.as_bytes(), &mut self.state[4..12]);
 
         if self.is_ietf {
             LittleEndian::read_u32_into(nonce, &mut self.state[13..16]);
@@ -266,7 +269,7 @@ impl InternalState {
 
 /// IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn encrypt(
-    secret_key: &[u8],
+    secret_key: SecretKey,
     nonce: &[u8],
     initial_counter: u32,
     plaintext: &[u8],
@@ -330,7 +333,7 @@ pub fn encrypt(
 
 /// IETF ChaCha20 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn decrypt(
-    secret_key: &[u8],
+    secret_key: SecretKey,
     nonce: &[u8],
     initial_counter: u32,
     ciphertext: &[u8],
@@ -341,13 +344,10 @@ pub fn decrypt(
 
 /// IETF ChaCha20 block function returning a serialized keystream block.
 pub fn keystream_block(
-    secret_key: &[u8],
+    secret_key: SecretKey,
     nonce: &[u8],
     counter: u32,
 ) -> Result<[u8; CHACHA_BLOCKSIZE], UnknownCryptoError> {
-    if secret_key.len() != CHACHA_KEYSIZE {
-        return Err(UnknownCryptoError);
-    }
     if nonce.len() != IETF_CHACHA_NONCESIZE {
         return Err(UnknownCryptoError);
     }
@@ -371,7 +371,10 @@ pub fn keystream_block(
 }
 
 /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
-pub fn hchacha20(secret_key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
+pub fn hchacha20(
+    secret_key: SecretKey,
+    nonce: &[u8],
+) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
     let mut chacha_state = InternalState {
         state: [0_u32; 16],
         is_ietf: false,
@@ -396,7 +399,7 @@ fn test_process_block_wrong_combination_of_variant_and_nonce() {
         is_ietf: true,
     };
     chacha_state_ietf
-        .init_state(&[0u8; 32], &[0u8; 12])
+        .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
         .unwrap();
 
     let mut chacha_state_hchacha = InternalState {
@@ -405,7 +408,7 @@ fn test_process_block_wrong_combination_of_variant_and_nonce() {
     };
 
     chacha_state_hchacha
-        .init_state(&[0u8; 32], &[0u8; 16])
+        .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
         .unwrap();
 
     assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
@@ -422,7 +425,7 @@ fn test_serialize_block_wrong_combination_of_variant_and_dst() {
     };
 
     chacha_state_ietf
-        .init_state(&[0u8; 32], &[0u8; 12])
+        .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
         .unwrap();
 
     let mut chacha_state_hchacha = InternalState {
@@ -434,7 +437,7 @@ fn test_serialize_block_wrong_combination_of_variant_and_dst() {
     let mut ietf_out = [0u8; CHACHA_BLOCKSIZE];
 
     chacha_state_hchacha
-        .init_state(&[0u8; 32], &[0u8; 16])
+        .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
         .unwrap();
 
     let ietf_src = chacha_state_ietf.process_block(Some(1)).unwrap();
@@ -469,48 +472,92 @@ fn test_bad_key_nonce_size_init() {
         is_ietf: true,
     };
 
-    assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 12]).is_err());
-    assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 12]).is_err());
-    assert!(chacha_state.init_state(&[0u8; 32], &[0u8; 10]).is_err());
-    assert!(chacha_state.init_state(&[0u8; 32], &[0u8; 15]).is_err());
-    assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 10]).is_err());
-    assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 15]).is_err());
-    assert!(chacha_state.init_state(&[0u8; 35], &[0u8; 10]).is_err());
-    assert!(chacha_state.init_state(&[0u8; 30], &[0u8; 15]).is_err());
-    assert!(chacha_state.init_state(&[0u8; 32], &[0u8; 12]).is_ok());
+    assert!(
+        chacha_state
+            .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15])
+            .is_err()
+    );
+    assert!(
+        chacha_state
+            .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 10])
+            .is_err()
+    );
+    assert!(
+        chacha_state
+            .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
+            .is_ok()
+    );
 
     let mut hchacha_state = InternalState {
         state: [0_u32; 16],
         is_ietf: false,
     };
 
-    assert!(hchacha_state.init_state(&[0u8; 30], &[0u8; 16]).is_err());
-    assert!(hchacha_state.init_state(&[0u8; 35], &[0u8; 16]).is_err());
-    assert!(hchacha_state.init_state(&[0u8; 32], &[0u8; 15]).is_err());
-    assert!(hchacha_state.init_state(&[0u8; 32], &[0u8; 17]).is_err());
-    assert!(hchacha_state.init_state(&[0u8; 30], &[0u8; 15]).is_err());
-    assert!(hchacha_state.init_state(&[0u8; 35], &[0u8; 17]).is_err());
-    assert!(hchacha_state.init_state(&[0u8; 35], &[0u8; 15]).is_err());
-    assert!(hchacha_state.init_state(&[0u8; 30], &[0u8; 17]).is_err());
-    assert!(hchacha_state.init_state(&[0u8; 32], &[0u8; 16]).is_ok());
+    assert!(
+        hchacha_state
+            .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15])
+            .is_err()
+    );
+    assert!(
+        hchacha_state
+            .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 17])
+            .is_err()
+    );
+    assert!(
+        hchacha_state
+            .init_state(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
+            .is_ok()
+    );
 }
 
 #[test]
 fn test_bad_key_nonce_size_keystream_block() {
-    assert!(keystream_block(&[0u8; 32], &[0u8; 10], 0).is_err());
-    assert!(keystream_block(&[0u8; 30], &[0u8; 10], 0).is_err());
-    assert!(keystream_block(&[0u8; 33], &[0u8; 12], 0).is_err());
-    assert!(keystream_block(&[0u8; 33], &[0u8; 13], 0).is_err());
-    assert!(keystream_block(&[0u8; 32], &[0u8; 12], 0).is_ok());
+    assert!(keystream_block(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 10], 0).is_err());
+    assert!(keystream_block(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 13], 0).is_err());
+    assert!(keystream_block(SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12], 0).is_ok());
+}
+
+#[test]
+fn test_key_sizes() {
+    assert!(SecretKey::from_slice(&[0u8; 0]).is_err());
+    assert!(SecretKey::from_slice(&[0u8; 1]).is_err());
+    assert!(SecretKey::from_slice(&[0u8; 31]).is_err());
+    assert!(SecretKey::from_slice(&[0u8; 64]).is_err());
+    assert!(SecretKey::from_slice(&[0u8; 33]).is_err());
+    assert!(SecretKey::from_slice(&[0u8; 32]).is_ok());
 }
 
 #[test]
 fn test_diff_ct_pt_len() {
     let mut dst = [0u8; 64];
 
-    assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 65], &mut dst).is_err());
-    assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 63], &mut dst).is_ok());
-    assert!(encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 64], &mut dst).is_ok());
+    assert!(
+        encrypt(
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &[0u8; 12],
+            0,
+            &[0u8; 65],
+            &mut dst
+        ).is_err()
+    );
+    assert!(
+        encrypt(
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &[0u8; 12],
+            0,
+            &[0u8; 63],
+            &mut dst
+        ).is_ok()
+    );
+    assert!(
+        encrypt(
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &[0u8; 12],
+            0,
+            &[0u8; 64],
+            &mut dst
+        ).is_ok()
+    );
 }
 
 #[test]
@@ -518,7 +565,13 @@ fn test_diff_ct_pt_len() {
 fn test_err_on_diff_ct_pt_len_xchacha_long() {
     let mut dst = [0u8; 64];
 
-    encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 128], &mut dst).unwrap();
+    encrypt(
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &[0u8; 12],
+        0,
+        &[0u8; 128],
+        &mut dst,
+    ).unwrap();
 }
 
 #[test]
@@ -526,7 +579,13 @@ fn test_err_on_diff_ct_pt_len_xchacha_long() {
 fn test_err_on_diff_ct_pt_len_xchacha_short() {
     let mut dst = [0u8; 64];
 
-    encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
+    encrypt(
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &[0u8; 12],
+        0,
+        &[0u8; 0],
+        &mut dst,
+    ).unwrap();
 }
 
 #[test]
@@ -534,7 +593,13 @@ fn test_err_on_diff_ct_pt_len_xchacha_short() {
 fn test_err_on_empty_pt() {
     let mut dst = [0u8; 64];
 
-    encrypt(&[0u8; 32], &[0u8; 12], 0, &[0u8; 0], &mut dst).unwrap();
+    encrypt(
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &[0u8; 12],
+        0,
+        &[0u8; 0],
+        &mut dst,
+    ).unwrap();
 }
 
 #[test]
@@ -542,16 +607,32 @@ fn test_err_on_empty_pt() {
 fn test_err_on_initial_counter_overflow() {
     let mut dst = [0u8; 65];
 
-    encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 65], &mut dst).unwrap();
+    encrypt(
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &[0u8; 12],
+        4294967295,
+        &[0u8; 65],
+        &mut dst,
+    ).unwrap();
 }
 
 #[test]
 fn test_pass_on_one_iter_max_initial_counter() {
     let mut dst = [0u8; 64];
     // Should pass because only one iteration is completed, so block_counter will not increase
-    encrypt(&[0u8; 32], &[0u8; 12], 4294967295, &[0u8; 64], &mut dst).unwrap();
+    encrypt(
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &[0u8; 12],
+        4294967295,
+        &[0u8; 64],
+        &mut dst,
+    ).unwrap();
     // keystream_block never increases the provided counter
-    keystream_block(&[0u8; 32], &[0u8; 12], 4294967295).unwrap();
+    keystream_block(
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &[0u8; 12],
+        4294967295,
+    ).unwrap();
 }
 
 #[cfg(test)]
@@ -562,7 +643,9 @@ fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
         is_ietf: true,
     };
 
-    chacha_state.init_state(key, nonce).unwrap();
+    chacha_state
+        .init_state(SecretKey::from_slice(key).unwrap(), nonce)
+        .unwrap();
 
     Ok(chacha_state)
 }
@@ -647,7 +730,8 @@ fn test_chacha20_block_results() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = keystream_block(&key, &nonce, 1).unwrap();
+    let keystream_block_only =
+        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -687,7 +771,8 @@ fn chacha20_block_test_1() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = keystream_block(&key, &nonce, 0).unwrap();
+    let keystream_block_only =
+        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 0).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -727,7 +812,8 @@ fn chacha20_block_test_2() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = keystream_block(&key, &nonce, 1).unwrap();
+    let keystream_block_only =
+        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -767,7 +853,8 @@ fn chacha20_block_test_3() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = keystream_block(&key, &nonce, 1).unwrap();
+    let keystream_block_only =
+        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -807,7 +894,8 @@ fn chacha20_block_test_4() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = keystream_block(&key, &nonce, 2).unwrap();
+    let keystream_block_only =
+        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 2).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -847,7 +935,8 @@ fn chacha20_block_test_5() {
         .serialize_block(&keystream_block_from_state, &mut ser_block)
         .unwrap();
 
-    let keystream_block_only = keystream_block(&key, &nonce, 0).unwrap();
+    let keystream_block_only =
+        keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 0).unwrap();
 
     assert_eq!(ser_block[..], expected[..]);
     assert_eq!(ser_block[..], keystream_block_only[..]);
@@ -928,8 +1017,12 @@ fn test_key_schedule() {
         expected_keystream.as_ref()
     );
 
-    actual_keystream[..64].copy_from_slice(&keystream_block(&key, &nonce, 1).unwrap());
-    actual_keystream[64..].copy_from_slice(&keystream_block(&key, &nonce, 1 + 1).unwrap());
+    actual_keystream[..64].copy_from_slice(
+        &keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1).unwrap(),
+    );
+    actual_keystream[64..].copy_from_slice(
+        &keystream_block(SecretKey::from_slice(&key).unwrap(), &nonce, 1 + 1).unwrap(),
+    );
 
     assert_eq!(
         actual_keystream[..expected_keystream.len()].as_ref(),

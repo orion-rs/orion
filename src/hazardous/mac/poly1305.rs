@@ -65,7 +65,7 @@ use util;
 
 /// A one-time key used for calculating the MAC.
 pub struct OneTimeKey {
-    value: [u8; POLY1305_KEYSIZE]
+    value: [u8; POLY1305_KEYSIZE],
 }
 
 impl Drop for OneTimeKey {
@@ -76,7 +76,7 @@ impl Drop for OneTimeKey {
 
 impl OneTimeKey {
     /// Make OneTimeKey from a byte slice.
-    fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != POLY1305_KEYSIZE {
             return Err(UnknownCryptoError);
         }
@@ -87,18 +87,16 @@ impl OneTimeKey {
         Ok(Self { value: secret_key })
     }
     /// Return the OneTimeKey as byte slice.
-    fn as_bytes(&self) -> [u8; POLY1305_KEYSIZE] {
+    pub fn as_bytes(&self) -> [u8; POLY1305_KEYSIZE] {
         self.value
     }
     #[cfg(feature = "safe_api")]
     /// Randomly generate a OneTimeKey using a CSPRNG. Not available in `no_std` context.
-    fn generate() -> Self {
+    pub fn generate() -> Self {
         let mut secret_key = [0u8; POLY1305_KEYSIZE];
         util::gen_rand_key(&mut secret_key).unwrap();
 
-        Self {
-            value: secret_key
-        }
+        Self { value: secret_key }
     }
 }
 

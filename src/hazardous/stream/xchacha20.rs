@@ -76,12 +76,11 @@
 use errors::UnknownCryptoError;
 use hazardous::constants::{IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE};
 use hazardous::stream::chacha20;
-use seckey::zero;
 pub use hazardous::stream::chacha20::SecretKey;
 
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn encrypt(
-    secret_key: &[u8],
+    secret_key: SecretKey,
     nonce: &[u8],
     initial_counter: u32,
     plaintext: &[u8],
@@ -91,26 +90,19 @@ pub fn encrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut subkey = chacha20::hchacha20(secret_key, &nonce[0..16]).unwrap();
+    let subkey: SecretKey =
+        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce[0..16]).unwrap()).unwrap();
     let mut prefixed_nonce: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
     prefixed_nonce[4..12].copy_from_slice(&nonce[16..24]);
 
-    chacha20::encrypt(
-        &subkey,
-        &prefixed_nonce,
-        initial_counter,
-        plaintext,
-        dst_out,
-    ).unwrap();
-
-    zero(&mut subkey);
+    chacha20::encrypt(subkey, &prefixed_nonce, initial_counter, plaintext, dst_out).unwrap();
 
     Ok(())
 }
 
 /// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn decrypt(
-    secret_key: &[u8],
+    secret_key: SecretKey,
     nonce: &[u8],
     initial_counter: u32,
     ciphertext: &[u8],
@@ -123,11 +115,51 @@ pub fn decrypt(
 fn test_bad_nonce_size_xchacha() {
     let mut dst = [0u8; 64];
 
-    assert!(encrypt(&[0u8; 32], &[0u8; 78], 0, &[0u8; 64], &mut dst).is_err());
-    assert!(encrypt(&[0u8; 32], &[0u8; 23], 0, &[0u8; 64], &mut dst).is_err());
-    assert!(encrypt(&[0u8; 32], &[0u8; 35], 0, &[0u8; 64], &mut dst).is_err());
-    assert!(encrypt(&[0u8; 32], &[0u8; 13], 0, &[0u8; 64], &mut dst).is_err());
-    assert!(encrypt(&[0u8; 32], &[0u8; 24], 0, &[0u8; 64], &mut dst).is_ok());
+    assert!(
+        encrypt(
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &[0u8; 78],
+            0,
+            &[0u8; 64],
+            &mut dst
+        ).is_err()
+    );
+    assert!(
+        encrypt(
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &[0u8; 23],
+            0,
+            &[0u8; 64],
+            &mut dst
+        ).is_err()
+    );
+    assert!(
+        encrypt(
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &[0u8; 35],
+            0,
+            &[0u8; 64],
+            &mut dst
+        ).is_err()
+    );
+    assert!(
+        encrypt(
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &[0u8; 13],
+            0,
+            &[0u8; 64],
+            &mut dst
+        ).is_err()
+    );
+    assert!(
+        encrypt(
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &[0u8; 24],
+            0,
+            &[0u8; 64],
+            &mut dst
+        ).is_ok()
+    );
 }
 
 #[test]
@@ -135,7 +167,15 @@ fn test_bad_nonce_size_xchacha() {
 fn test_err_on_empty_pt_xchacha() {
     let mut dst = [0u8; 64];
 
-    assert!(encrypt(&[0u8; 32], &[0u8; 24], 0, &[0u8; 0], &mut dst).is_err());
+    assert!(
+        encrypt(
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &[0u8; 24],
+            0,
+            &[0u8; 0],
+            &mut dst
+        ).is_err()
+    );
 }
 
 #[test]
@@ -143,12 +183,24 @@ fn test_err_on_empty_pt_xchacha() {
 fn test_err_on_initial_counter_overflow_xchacha() {
     let mut dst = [0u8; 65];
 
-    encrypt(&[0u8; 32], &[0u8; 24], 4294967295, &[0u8; 65], &mut dst).unwrap();
+    encrypt(
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &[0u8; 24],
+        4294967295,
+        &[0u8; 65],
+        &mut dst,
+    ).unwrap();
 }
 
 #[test]
 fn test_pass_on_one_iter_max_initial_counter() {
     let mut dst = [0u8; 64];
     // Should pass because only one iteration is completed, so block_counter will not increase
-    encrypt(&[0u8; 32], &[0u8; 24], 4294967295, &[0u8; 64], &mut dst).unwrap();
+    encrypt(
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &[0u8; 24],
+        4294967295,
+        &[0u8; 64],
+        &mut dst,
+    ).unwrap();
 }

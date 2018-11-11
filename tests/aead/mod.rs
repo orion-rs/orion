@@ -26,6 +26,7 @@ pub mod wycheproof_chacha20_poly1305;
 
 extern crate orion;
 extern crate ring;
+use self::aead::chacha20poly1305::SecretKey;
 use self::orion::hazardous::aead;
 use self::orion::hazardous::constants;
 use self::ring::error;
@@ -43,17 +44,45 @@ fn aead_test_runner(
 
     // Determine variant based on NONCE size
     if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
-        assert!(aead::chacha20poly1305::encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok());
         assert!(
-            aead::chacha20poly1305::decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out).is_ok()
+            aead::chacha20poly1305::encrypt(
+                SecretKey::from_slice(key).unwrap(),
+                nonce,
+                input,
+                aad,
+                &mut dst_ct_out
+            ).is_ok()
+        );
+        assert!(
+            aead::chacha20poly1305::decrypt(
+                SecretKey::from_slice(key).unwrap(),
+                nonce,
+                &dst_ct_out,
+                aad,
+                &mut dst_pt_out
+            ).is_ok()
         );
     }
 
     if nonce.len() == constants::XCHACHA_NONCESIZE {
-        assert!(aead::xchacha20poly1305::encrypt(key, nonce, input, aad, &mut dst_ct_out).is_ok());
+        assert!(
+            aead::xchacha20poly1305::encrypt(
+                SecretKey::from_slice(key).unwrap(),
+                nonce,
+                input,
+                aad,
+                &mut dst_ct_out
+            ).is_ok()
+        );
 
         assert!(
-            aead::xchacha20poly1305::decrypt(key, nonce, &dst_ct_out, aad, &mut dst_pt_out).is_ok()
+            aead::xchacha20poly1305::decrypt(
+                SecretKey::from_slice(key).unwrap(),
+                nonce,
+                &dst_ct_out,
+                aad,
+                &mut dst_pt_out
+            ).is_ok()
         );
     }
 

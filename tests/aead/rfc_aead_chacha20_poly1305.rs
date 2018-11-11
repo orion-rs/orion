@@ -119,7 +119,13 @@ mod rfc_aead_chacha20_poly1305 {
 
         let mut dst_out_pt = vec![0u8; ciphertext.len()];
 
-        aead::chacha20poly1305::decrypt(&key, &nonce, &ct_plus_tag, &aad, &mut dst_out_pt).unwrap();
+        aead::chacha20poly1305::decrypt(
+            aead::chacha20poly1305::SecretKey::from_slice(&key).unwrap(),
+            &nonce,
+            &ct_plus_tag,
+            &aad,
+            &mut dst_out_pt,
+        ).unwrap();
 
         assert_eq!(dst_out_pt[..].as_ref(), plaintext);
     }

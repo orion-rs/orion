@@ -87,21 +87,19 @@
 //! ```
 use byteorder::{ByteOrder, LittleEndian};
 use errors::UnknownCryptoError;
-use hazardous::constants::{
-    CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE,
-};
+use hazardous::constants::{IETF_CHACHA_NONCESIZE, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use hazardous::mac::poly1305;
+use hazardous::mac::poly1305::OneTimeKey;
 use hazardous::stream::chacha20;
-use seckey::zero;
-use util;
 pub use hazardous::stream::chacha20::SecretKey;
-
+use util;
 
 /// Poly1305 key generation using IETF ChaCha20.
-fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> [u8; POLY1305_KEYSIZE] {
-    let mut poly1305_key = [0u8; POLY1305_KEYSIZE];
-    poly1305_key
-        .copy_from_slice(&chacha20::keystream_block(key, nonce, 0).unwrap()[..POLY1305_KEYSIZE]);
+fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> OneTimeKey {
+    let poly1305_key = OneTimeKey::from_slice(
+        &chacha20::keystream_block(SecretKey::from_slice(&key).unwrap(), nonce, 0).unwrap()
+            [..POLY1305_KEYSIZE],
+    ).unwrap();
 
     poly1305_key
 }
@@ -147,15 +145,12 @@ fn process_authentication(
 
 /// AEAD ChaCha20Poly1305 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn encrypt(
-    secret_key: &[u8],
+    secret_key: SecretKey,
     nonce: &[u8],
     plaintext: &[u8],
     ad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if secret_key.len() != CHACHA_KEYSIZE {
-        return Err(UnknownCryptoError);
-    }
     if nonce.len() != IETF_CHACHA_NONCESIZE {
         return Err(UnknownCryptoError);
     }
@@ -166,29 +161,30 @@ pub fn encrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut poly1305_key = poly1305_key_gen(secret_key, nonce);
-    chacha20::encrypt(secret_key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
-    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
+    let poly1305_key = poly1305_key_gen(&secret_key.as_bytes(), nonce);
+    chacha20::encrypt(
+        secret_key,
+        nonce,
+        1,
+        plaintext,
+        &mut dst_out[..plaintext.len()],
+    ).unwrap();
+    let mut poly1305_state = poly1305::init(&poly1305_key.as_bytes()).unwrap();
 
     process_authentication(&mut poly1305_state, ad, &dst_out, plaintext.len()).unwrap();
     dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize().unwrap());
-
-    zero(&mut poly1305_key);
 
     Ok(())
 }
 
 /// AEAD ChaCha20Poly1305 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn decrypt(
-    secret_key: &[u8],
+    secret_key: SecretKey,
     nonce: &[u8],
     ciphertext_with_tag: &[u8],
     ad: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if secret_key.len() != CHACHA_KEYSIZE {
-        return Err(UnknownCryptoError);
-    }
     if nonce.len() != IETF_CHACHA_NONCESIZE {
         return Err(UnknownCryptoError);
     }
@@ -201,14 +197,9 @@ pub fn decrypt(
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
-    let mut poly1305_key = poly1305_key_gen(secret_key, nonce);
-    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
-    process_authentication(
-        &mut poly1305_state,
-        ad,
-        ciphertext_with_tag,
-        ciphertext_len,
-    ).unwrap();
+    let poly1305_key = poly1305_key_gen(&secret_key.as_bytes(), nonce);
+    let mut poly1305_state = poly1305::init(&poly1305_key.as_bytes()).unwrap();
+    process_authentication(&mut poly1305_state, ad, ciphertext_with_tag, ciphertext_len).unwrap();
 
     util::compare_ct(
         &poly1305_state.finalize().unwrap(),
@@ -222,8 +213,6 @@ pub fn decrypt(
         &ciphertext_with_tag[..ciphertext_len],
         dst_out,
     ).unwrap();
-
-    zero(&mut poly1305_key);
 
     Ok(())
 }
@@ -241,7 +230,7 @@ fn length_padding_tests() {
 #[should_panic]
 fn test_auth_process_with_above_length_index() {
     let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
-    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
+    let mut poly1305_state = poly1305::init(&poly1305_key.as_bytes()).unwrap();
 
     process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
 }
@@ -249,7 +238,7 @@ fn test_auth_process_with_above_length_index() {
 #[test]
 fn test_auth_process_ok_index_length() {
     let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
-    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
+    let mut poly1305_state = poly1305::init(&poly1305_key.as_bytes()).unwrap();
 
     process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).unwrap();
 
@@ -263,7 +252,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
 
     assert!(
         encrypt(
-            &[0u8; 30],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 10],
             &[0u8; 64],
             &[0u8; 0],
@@ -272,7 +261,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
     );
     assert!(
         decrypt(
-            &[0u8; 30],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 10],
             &dst_out_ct,
             &[0u8; 0],
@@ -282,45 +271,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
 
     assert!(
         encrypt(
-            &[0u8; 30],
-            &[0u8; 12],
-            &[0u8; 64],
-            &[0u8; 0],
-            &mut dst_out_ct
-        ).is_err()
-    );
-    assert!(
-        decrypt(
-            &[0u8; 30],
-            &[0u8; 12],
-            &dst_out_ct,
-            &[0u8; 0],
-            &mut dst_out_pt
-        ).is_err()
-    );
-
-    assert!(
-        encrypt(
-            &[0u8; 32],
-            &[0u8; 10],
-            &[0u8; 64],
-            &[0u8; 0],
-            &mut dst_out_ct
-        ).is_err()
-    );
-    assert!(
-        decrypt(
-            &[0u8; 32],
-            &[0u8; 10],
-            &dst_out_ct,
-            &[0u8; 0],
-            &mut dst_out_pt
-        ).is_err()
-    );
-
-    assert!(
-        encrypt(
-            &[0u8; 33],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 13],
             &[0u8; 64],
             &[0u8; 0],
@@ -329,7 +280,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
     );
     assert!(
         decrypt(
-            &[0u8; 33],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 13],
             &dst_out_ct,
             &[0u8; 0],
@@ -339,7 +290,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
 
     assert!(
         encrypt(
-            &[0u8; 32],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 12],
             &[0u8; 64],
             &[0u8; 0],
@@ -348,7 +299,7 @@ fn test_err_bad_key_nonce_sizes_ietf() {
     );
     assert!(
         decrypt(
-            &[0u8; 32],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 12],
             &dst_out_ct,
             &[0u8; 0],
@@ -364,7 +315,7 @@ fn test_modified_tag_error() {
     let mut dst_out_pt = [0u8; 64];
 
     encrypt(
-        &[0u8; 32],
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &[0u8; 12],
         &[0u8; 64],
         &[0u8; 0],
@@ -373,7 +324,7 @@ fn test_modified_tag_error() {
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
     decrypt(
-        &[0u8; 32],
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &[0u8; 12],
         &dst_out_ct,
         &[0u8; 0],
@@ -391,7 +342,7 @@ fn test_bad_pt_ct_lengths() {
 
     assert!(
         encrypt(
-            &[0u8; 32],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 12],
             &dst_out_pt_2,
             &[0u8; 0],
@@ -400,7 +351,7 @@ fn test_bad_pt_ct_lengths() {
     );
 
     encrypt(
-        &[0u8; 32],
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &[0u8; 12],
         &dst_out_pt_2,
         &[0u8; 0],
@@ -409,7 +360,7 @@ fn test_bad_pt_ct_lengths() {
 
     assert!(
         decrypt(
-            &[0u8; 32],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 12],
             &dst_out_ct_2,
             &[0u8; 0],
@@ -418,7 +369,7 @@ fn test_bad_pt_ct_lengths() {
     );
 
     decrypt(
-        &[0u8; 32],
+        SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &[0u8; 12],
         &dst_out_ct_2,
         &[0u8; 0],
@@ -437,7 +388,7 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
 
     assert!(
         decrypt(
-            &[0u8; 32],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 12],
             &dst_out_ct_1,
             &[0u8; 0],
@@ -447,7 +398,7 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
 
     assert!(
         decrypt(
-            &[0u8; 32],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 12],
             &dst_out_ct_2,
             &[0u8; 0],
@@ -457,7 +408,7 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
 
     assert!(
         decrypt(
-            &[0u8; 32],
+            SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &[0u8; 12],
             &dst_out_ct_3,
             &[0u8; 0],
@@ -478,7 +429,7 @@ fn rfc_8439_test_poly1305_key_gen_1() {
         0x0d, 0xc7,
     ];
 
-    assert_eq!(poly1305_key_gen(&key, &nonce).as_ref(), expected.as_ref());
+    assert_eq!(poly1305_key_gen(&key, &nonce).as_bytes(), expected.as_ref());
 }
 
 #[test]
@@ -497,7 +448,7 @@ fn rfc_8439_test_poly1305_key_gen_2() {
         0xb7, 0x39,
     ];
 
-    assert_eq!(poly1305_key_gen(&key, &nonce).as_ref(), expected.as_ref());
+    assert_eq!(poly1305_key_gen(&key, &nonce).as_bytes(), expected.as_ref());
 }
 
 #[test]
@@ -516,5 +467,5 @@ fn rfc_8439_test_poly1305_key_gen_3() {
         0x10, 0xae,
     ];
 
-    assert_eq!(poly1305_key_gen(&key, &nonce).as_ref(), expected.as_ref());
+    assert_eq!(poly1305_key_gen(&key, &nonce).as_bytes(), expected.as_ref());
 }

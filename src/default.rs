@@ -26,6 +26,7 @@ use hazardous::constants::*;
 use hazardous::kdf::hkdf;
 use hazardous::kdf::pbkdf2;
 use hazardous::mac::hmac;
+use hazardous::stream::chacha20::SecretKey;
 use hazardous::xof::cshake;
 use util;
 
@@ -370,7 +371,7 @@ pub fn encrypt(secret_key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCr
     dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce);
 
     aead::xchacha20poly1305::encrypt(
-        secret_key,
+        SecretKey::from_slice(secret_key).unwrap(),
         &nonce,
         plaintext,
         &[0u8; 0],
@@ -421,7 +422,7 @@ pub fn decrypt(secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownC
     let mut dst_out = vec![0u8; ciphertext.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
     aead::xchacha20poly1305::decrypt(
-        secret_key,
+        SecretKey::from_slice(&secret_key).unwrap(),
         &ciphertext[..XCHACHA_NONCESIZE],
         &ciphertext[XCHACHA_NONCESIZE..],
         &[0u8; 0],

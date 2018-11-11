@@ -76,7 +76,7 @@ use util;
 
 /// A secret key used for calculating the MAC.
 pub struct SecretKey {
-    value: [u8; SHA2_BLOCKSIZE]
+    value: [u8; SHA2_BLOCKSIZE],
 }
 
 impl Drop for SecretKey {
@@ -98,9 +98,7 @@ impl SecretKey {
             secret_key[..slice_len].copy_from_slice(slice);
         }
 
-        Self {
-            value: secret_key
-        }
+        Self { value: secret_key }
     }
     #[cfg(feature = "safe_api")]
     /// Randomly generate a SecretKey using a CSPRNG. Not available in `no_std` context.
@@ -108,9 +106,7 @@ impl SecretKey {
         let mut secret_key = [0u8; SHA2_BLOCKSIZE];
         util::gen_rand_key(&mut secret_key).unwrap();
 
-        Self {
-            value: secret_key
-        }
+        Self { value: secret_key }
     }
 }
 
@@ -235,7 +231,6 @@ pub fn verify(
 #[inline(always)]
 /// Initialize `Hmac` struct with a given key.
 pub fn init(secret_key: &[u8]) -> Hmac {
-
     let mut mac = Hmac {
         ipad: [0x36; SHA2_BLOCKSIZE],
         opad_hasher: Sha512::default(),

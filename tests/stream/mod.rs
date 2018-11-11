@@ -26,6 +26,7 @@ pub mod rfc_xchacha20;
 extern crate hex;
 extern crate orion;
 
+use self::chacha20::SecretKey;
 use self::hex::decode;
 use self::orion::hazardous::constants;
 use self::orion::hazardous::stream::chacha20;
@@ -43,12 +44,36 @@ pub fn chacha_test_runner(
 
     // Selecting variant based on nonce size
     if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
-        chacha20::encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
-        chacha20::decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
+        chacha20::encrypt(
+            SecretKey::from_slice(&key).unwrap(),
+            &nonce,
+            init_block_count,
+            &original_pt,
+            ct,
+        ).unwrap();
+        chacha20::decrypt(
+            SecretKey::from_slice(&key).unwrap(),
+            &nonce,
+            init_block_count,
+            &original_ct,
+            pt,
+        ).unwrap();
     }
     if nonce.len() == constants::XCHACHA_NONCESIZE {
-        xchacha20::encrypt(&key, &nonce, init_block_count, &original_pt, ct).unwrap();
-        xchacha20::decrypt(&key, &nonce, init_block_count, &original_ct, pt).unwrap();
+        xchacha20::encrypt(
+            SecretKey::from_slice(&key).unwrap(),
+            &nonce,
+            init_block_count,
+            &original_pt,
+            ct,
+        ).unwrap();
+        xchacha20::decrypt(
+            SecretKey::from_slice(&key).unwrap(),
+            &nonce,
+            init_block_count,
+            &original_ct,
+            pt,
+        ).unwrap();
     }
 
     assert!(&original_pt == &pt);
@@ -56,8 +81,10 @@ pub fn chacha_test_runner(
 }
 
 pub fn hchacha_test_runner(key: &str, nonce: &str, output_expected: &str) {
-    let actual: [u8; 32] =
-        chacha20::hchacha20(&decode(key).unwrap(), &decode(nonce).unwrap()).unwrap();
+    let actual: [u8; 32] = chacha20::hchacha20(
+        SecretKey::from_slice(&decode(key).unwrap()).unwrap(),
+        &decode(nonce).unwrap(),
+    ).unwrap();
 
     assert_eq!(&actual, &decode(output_expected).unwrap()[..]);
 }
