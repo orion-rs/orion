@@ -100,13 +100,14 @@ pub fn hmac_verify(
     let mut rand_key: HLenArray = [0u8; HLEN];
     util::gen_rand_key(&mut rand_key).unwrap();
 
-    let mut nd_round_mac = hmac::init(secret_key);
-    let mut nd_round_expected = hmac::init(secret_key);
-
-    nd_round_mac.update(&mac.finalize().unwrap()).unwrap();
+    let mut nd_round_expected = hmac::init(&rand_key);
     nd_round_expected.update(expected_hmac).unwrap();
 
-    hmac::verify(&expected_hmac, secret_key, data)
+    hmac::verify(
+        &nd_round_expected.finalize().unwrap(),
+        &rand_key,
+        &mac.finalize().unwrap(),
+    )
 }
 
 /// HKDF-HMAC-SHA512.

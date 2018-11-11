@@ -52,7 +52,7 @@
 //! encryption/decryption is desired. It does not encrypt anything. This function's `counter` parameter is never increased
 //! and therefor is not checked for potential overflow on increase either.
 //! Only use it if you are absolutely sure you actually need to use it.
-//! 
+//!
 //! `hchacha20` is used to generate subkeys for XChaCha20 and does not encrypt anything.
 //! Only use it if you are absolutely sure you actually need to use it.
 //!
@@ -334,7 +334,10 @@ pub fn keystream_block(
 }
 
 /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
-pub fn hchacha20(secret_key: &[u8], nonce: &[u8]) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
+pub fn hchacha20(
+    secret_key: &[u8],
+    nonce: &[u8],
+) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
     let mut chacha_state = InternalState {
         state: [0_u32; 16],
         is_ietf: false,

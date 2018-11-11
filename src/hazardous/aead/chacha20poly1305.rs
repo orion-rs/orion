@@ -165,7 +165,13 @@ pub fn encrypt(
     }
 
     let mut poly1305_key = poly1305_key_gen(secret_key, nonce);
-    chacha20::encrypt(secret_key, nonce, 1, plaintext, &mut dst_out[..plaintext.len()]).unwrap();
+    chacha20::encrypt(
+        secret_key,
+        nonce,
+        1,
+        plaintext,
+        &mut dst_out[..plaintext.len()],
+    ).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, ad, &dst_out, plaintext.len()).unwrap();
@@ -201,12 +207,7 @@ pub fn decrypt(
 
     let mut poly1305_key = poly1305_key_gen(secret_key, nonce);
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
-    process_authentication(
-        &mut poly1305_state,
-        ad,
-        ciphertext_with_tag,
-        ciphertext_len,
-    ).unwrap();
+    process_authentication(&mut poly1305_state, ad, ciphertext_with_tag, ciphertext_len).unwrap();
 
     util::compare_ct(
         &poly1305_state.finalize().unwrap(),
