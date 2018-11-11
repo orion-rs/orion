@@ -26,7 +26,10 @@ use hazardous::constants::*;
 use hazardous::kdf::hkdf;
 use hazardous::kdf::pbkdf2;
 use hazardous::mac::hmac;
-use hazardous::stream::chacha20::SecretKey;
+pub use hazardous::aead::xchacha20poly1305::SecretKey;
+pub use hazardous::mac::hmac::SecretKey as HmacKey;
+use hazardous::mac::hmac::Mac;
+use hazardous::aead::xchacha20poly1305::Nonce;
 use hazardous::xof::cshake;
 use util;
 
@@ -46,20 +49,15 @@ use util;
 /// # Example:
 /// ```
 /// use orion::default;
-/// use orion::util;
 ///
-/// let mut key = [0u8; 64];
-/// util::gen_rand_key(&mut key).unwrap();
+/// let key = default::HmacKey::generate();
 /// let msg = "Some message.".as_bytes();
 ///
 /// let hmac = default::hmac(&key, msg).unwrap();
 /// ```
-pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<hmac::Mac, UnknownCryptoError> {
-    if secret_key.len() < 64 {
-        return Err(UnknownCryptoError);
-    }
+pub fn hmac(secret_key: &HmacKey, data: &[u8]) -> Result<Mac, UnknownCryptoError> {
 
-    let mut mac = hmac::init(&hmac::SecretKey::from_slice(secret_key));
+    let mut mac = hmac::init(secret_key);
     mac.update(data).unwrap();
 
     Ok(mac.finalize().unwrap())
@@ -83,38 +81,31 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<hmac::Mac, UnknownCryptoEr
 /// use orion::default;
 /// use orion::util;
 ///
-/// let mut key = [0u8; 64];
-/// util::gen_rand_key(&mut key).unwrap();
+/// let key = default::HmacKey::generate();
 /// let msg = "Some message.".as_bytes();
 ///
 /// let expected_hmac = default::hmac(&key, msg).unwrap();
 /// assert!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap());
 /// ```
 pub fn hmac_verify(
-    expected_hmac: hmac::Mac,
-    secret_key: &[u8],
+    expected_hmac: &Mac,
+    secret_key: &HmacKey,
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let mut mac = hmac::init(&hmac::SecretKey::from_slice(secret_key));
+    let mut mac = hmac::init(secret_key);
     mac.update(data).unwrap();
 
-    let mut rand_key: HLenArray = [0u8; HLEN];
-    util::gen_rand_key(&mut rand_key).unwrap();
+    let rand_key = hmac::SecretKey::generate();
+    let mut nd_round_expected = hmac::init(&rand_key);
 
-    let mut nd_round_mac = hmac::init(&hmac::SecretKey::from_slice(&rand_key));
-    let mut nd_round_expected = hmac::init(&hmac::SecretKey::from_slice(&rand_key));
-
-    nd_round_mac
-        .update(&mac.finalize().unwrap().unsafe_as_bytes())
-        .unwrap();
     nd_round_expected
         .update(&expected_hmac.unsafe_as_bytes())
         .unwrap();
 
     hmac::verify(
         &nd_round_expected.finalize().unwrap(),
-        &hmac::SecretKey::from_slice(&rand_key),
-        data,
+        &rand_key,
+        &mac.finalize().unwrap().unsafe_as_bytes(),
     )
 }
 
@@ -360,27 +351,24 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// # Example:
 /// ```
 /// use orion::default;
-/// use orion::util;
 ///
-/// let mut secret_key = [0u8; 32]; // Replace this with the key used for encryption
-/// util::gen_rand_key(&mut secret_key).unwrap();
+/// let mut secret_key = default::SecretKey::generate();
 ///
 /// let encrypted_data = default::encrypt(&secret_key, "Secret message".as_bytes()).unwrap();
 /// ```
-pub fn encrypt(secret_key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn encrypt(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
     }
 
-    let mut nonce = [0u8; XCHACHA_NONCESIZE];
-    util::gen_rand_key(&mut nonce).unwrap();
+    let nonce = Nonce::generate();
 
     let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
-    dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce);
+    dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes());
 
     aead::xchacha20poly1305::encrypt(
-        &SecretKey::from_slice(secret_key).unwrap(),
-        &aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+        secret_key,
+        &nonce,
         plaintext,
         &[0u8; 0],
         &mut dst_out[XCHACHA_NONCESIZE..],
@@ -412,16 +400,14 @@ pub fn encrypt(secret_key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCr
 /// # Example:
 /// ```
 /// use orion::default;
-/// use orion::util;
 ///
-/// let mut secret_key = [0u8; 32]; // Replace this with the key used for decryption
-/// util::gen_rand_key(&mut secret_key).unwrap();
+/// let secret_key = default::SecretKey::generate();
 ///
 /// let ciphertext = default::encrypt(&secret_key, "Secret message".as_bytes()).unwrap();
 ///
 /// let decrypted_data = default::decrypt(&secret_key, &ciphertext).unwrap();
 /// ```
-pub fn decrypt(secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn decrypt(secret_key: &SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     // `+ 1` to avoid empty ciphertexts
     if ciphertext.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
         return Err(UnknownCryptoError);
@@ -430,8 +416,8 @@ pub fn decrypt(secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownC
     let mut dst_out = vec![0u8; ciphertext.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
     aead::xchacha20poly1305::decrypt(
-        &SecretKey::from_slice(&secret_key).unwrap(),
-        &aead::xchacha20poly1305::Nonce::from_slice(&ciphertext[..XCHACHA_NONCESIZE]).unwrap(),
+        secret_key,
+        &Nonce::from_slice(&ciphertext[..XCHACHA_NONCESIZE]).unwrap(),
         &ciphertext[XCHACHA_NONCESIZE..],
         &[0u8; 0],
         &mut dst_out,
@@ -444,47 +430,23 @@ pub fn decrypt(secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownC
 mod test {
 
     extern crate hex;
-    use self::hex::decode;
     use default;
+    use default::SecretKey;
     use util;
 
     #[test]
-    fn hmac_secret_key_too_short() {
-        assert!(default::hmac(&[0x61; 10], &[0x61; 10]).is_err());
-    }
-
-    #[test]
-    fn hmac_secret_key_allowed_len() {
-        default::hmac(&[0x61; 64], &[0x61; 10]).unwrap();
-        default::hmac(&[0x61; 78], &[0x61; 10]).unwrap();
-    }
-
-    #[test]
     fn hmac_verify() {
-        let sec_key_correct = decode(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaa",
-        ).unwrap();
-        // Change compared to the above: Two additional a's at the end
-        let sec_key_false = decode(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-             aaaaaaaa",
-        ).unwrap();
+        let sec_key_correct = default::HmacKey::generate();
+        let sec_key_false = default::HmacKey::generate();
         let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
         let hmac_bob = default::hmac(&sec_key_correct, &msg).unwrap();
 
         assert_eq!(
-            default::hmac_verify(hmac_bob, &sec_key_correct, &msg).unwrap(),
+            default::hmac_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
             true
         );
-        assert!(default::hmac_verify(hmac_bob, &sec_key_false, &msg).is_err());
+        assert!(default::hmac_verify(&hmac_bob, &sec_key_false, &msg).is_err());
     }
 
     #[test]
@@ -643,8 +605,7 @@ mod test {
 
     #[test]
     fn auth_enc_encryption_decryption() {
-        let mut key = [0u8; 32];
-        util::gen_rand_key(&mut key).unwrap();
+        let key = SecretKey::generate();
         let plaintext = "Secret message".as_bytes().to_vec();
 
         let dst_ciphertext = default::encrypt(&key, &plaintext).unwrap();
@@ -657,8 +618,7 @@ mod test {
     #[test]
     #[should_panic]
     fn auth_enc_plaintext_empty_err() {
-        let mut key = [0u8; 32];
-        util::gen_rand_key(&mut key).unwrap();
+        let key = SecretKey::generate();
         let plaintext = "".as_bytes().to_vec();
 
         default::encrypt(&key, &plaintext).unwrap();
@@ -667,50 +627,9 @@ mod test {
     #[test]
     #[should_panic]
     fn auth_enc_ciphertext_less_than_13_err() {
-        let mut key = [0u8; 32];
-        util::gen_rand_key(&mut key).unwrap();
+        let key = SecretKey::generate();
         let ciphertext = [0u8; 12];
 
         default::decrypt(&key, &ciphertext).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn auth_enc_small_key_err_dec() {
-        let mut key = [0u8; 31];
-        util::gen_rand_key(&mut key).unwrap();
-        let ciphertext = "".as_bytes().to_vec();
-
-        default::decrypt(&key, &ciphertext).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn auth_enc_small_key_err_enc() {
-        let mut key = [0u8; 31];
-        util::gen_rand_key(&mut key).unwrap();
-        let plaintext = "".as_bytes().to_vec();
-
-        default::encrypt(&key, &plaintext).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn auth_enc_big_key_err_dec() {
-        let mut key = [0u8; 35];
-        util::gen_rand_key(&mut key).unwrap();
-        let ciphertext = "".as_bytes().to_vec();
-
-        default::decrypt(&key, &ciphertext).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn auth_enc_big_key_err_enc() {
-        let mut key = [0u8; 35];
-        util::gen_rand_key(&mut key).unwrap();
-        let plaintext = "".as_bytes().to_vec();
-
-        default::encrypt(&key, &plaintext).unwrap();
     }
 }

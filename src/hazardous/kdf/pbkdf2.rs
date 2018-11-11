@@ -87,14 +87,15 @@ fn function_f(
     hmac.update(salt).unwrap();
     hmac.update(&u_step[..4]).unwrap();
 
-    hmac.finalize_with_dst(&mut u_step).unwrap();
+    u_step.copy_from_slice(&hmac.finalize().unwrap().unsafe_as_bytes());
     dk_block.copy_from_slice(&u_step[..block_len]);
 
     if iterations > 1 {
         for _ in 1..iterations {
             hmac.reset();
             hmac.update(&u_step).unwrap();
-            hmac.finalize_with_dst(&mut u_step).unwrap();
+            u_step.copy_from_slice(&hmac.finalize().unwrap().unsafe_as_bytes());
+
 
             for (idx, val) in u_step[..block_len].iter().enumerate() {
                 dk_block[idx] ^= val;
@@ -119,7 +120,7 @@ pub fn derive_key(
         return Err(UnknownCryptoError);
     }
 
-    let mut hmac = hmac::init(hmac::SecretKey::from_slice(password));
+    let mut hmac = hmac::init(&hmac::SecretKey::from_slice(password));
 
     for (idx, dk_block) in dk_out.chunks_mut(HLEN).enumerate() {
         let block_len = dk_block.len();

@@ -54,12 +54,9 @@
 //! # Example:
 //! ```
 //! use orion::hazardous::stream::xchacha20;
-//! use orion::util;
 //!
-//! let mut secret_key = [0u8; 32];
-//! let mut nonce = [0u8; 24];
-//! util::gen_rand_key(&mut secret_key).unwrap();
-//! util::gen_rand_key(&mut nonce).unwrap();
+//! let secret_key = xchacha20::SecretKey::generate();
+//! let nonce = xchacha20::Nonce::generate();
 //!
 //! // Length of this message is 15
 //! let message = "Data to protect".as_bytes();
@@ -79,6 +76,8 @@ use hazardous::stream::chacha20;
 use hazardous::stream::chacha20::Nonce as IETFNonce;
 pub use hazardous::stream::chacha20::SecretKey;
 use zeroize::Zeroize;
+#[cfg(feature = "safe_api")]
+use util;
 
 /// A nonce for XChaCha20.
 pub struct Nonce {
@@ -108,6 +107,14 @@ impl Nonce {
     /// Return Nonce as bytes.
     pub fn as_bytes(&self) -> [u8; XCHACHA_NONCESIZE] {
         self.value
+    }
+    #[cfg(feature = "safe_api")]
+    /// Randomly generate a SecretKey using a CSPRNG of length 32. Not available in `no_std` context.
+    pub fn generate() -> Self {
+        let mut nonce = [0u8; XCHACHA_NONCESIZE];
+        util::gen_rand_key(&mut nonce).unwrap();
+
+        Self { value: nonce }
     }
 }
 

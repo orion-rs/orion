@@ -44,10 +44,8 @@
 //! # Example:
 //! ```
 //! use orion::hazardous::mac::poly1305;
-//! use orion::util;
 //!
-//! let mut one_time_key = [0u8; 32];
-//! util::gen_rand_key(&mut one_time_key).unwrap();
+//! let one_time_key = poly1305::OneTimeKey::generate();
 //! let msg = "Some message.";
 //!
 //! let mut poly1305_state = poly1305::init(&one_time_key).unwrap();
@@ -94,7 +92,7 @@ impl OneTimeKey {
         self.value
     }
     #[cfg(feature = "safe_api")]
-    /// Randomly generate a OneTimeKey using a CSPRNG. Not available in `no_std` context.
+    /// Randomly generate a OneTimeKey using a CSPRNG of length 32. Not available in `no_std` context.
     pub fn generate() -> Self {
         let mut secret_key = [0u8; POLY1305_KEYSIZE];
         util::gen_rand_key(&mut secret_key).unwrap();

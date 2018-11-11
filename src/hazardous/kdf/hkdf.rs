@@ -73,8 +73,8 @@ use util;
 
 #[inline(always)]
 /// The HKDF extract step.
-pub fn extract(salt: &[u8], ikm: &[u8]) -> [u8; 64] {
-    let mut prk = hmac::init(hmac::SecretKey::from_slice(salt));
+pub fn extract(salt: &[u8], ikm: &[u8]) -> hmac::Mac {
+    let mut prk = hmac::init(&hmac::SecretKey::from_slice(salt));
     prk.update(ikm).unwrap();
 
     prk.finalize().unwrap()
@@ -82,7 +82,7 @@ pub fn extract(salt: &[u8], ikm: &[u8]) -> [u8; 64] {
 
 #[inline(always)]
 /// The HKDF expand step.
-pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
+pub fn expand(prk: &hmac::Mac, info: &[u8], okm_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
     if okm_out.len() > 16320 {
         return Err(UnknownCryptoError);
     }
@@ -90,7 +90,7 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
         return Err(UnknownCryptoError);
     }
 
-    let mut hmac = hmac::init(hmac::SecretKey::from_slice(prk));
+    let mut hmac = hmac::init(&hmac::SecretKey::from_slice(&prk.unsafe_as_bytes()));
     let okm_len = okm_out.len();
 
     for (idx, hlen_block) in okm_out.chunks_mut(HLEN).enumerate() {
@@ -99,8 +99,7 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
 
         hmac.update(info).unwrap();
         hmac.update(&[idx as u8 + 1_u8]).unwrap();
-        hmac.finalize_with_dst(&mut hlen_block[..block_len])
-            .unwrap();
+        hlen_block.copy_from_slice(&hmac.finalize().unwrap().unsafe_as_bytes()[..block_len]);
 
         // Check if it's the last iteration, if yes don't process anything
         if block_len < HLEN || (block_len * (idx + 1) == okm_len) {

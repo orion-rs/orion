@@ -40,10 +40,8 @@
 //! ### Generating HMAC:
 //! ```
 //! use orion::hazardous::mac::hmac;
-//! use orion::util;
 //!
-//! let mut key = [0u8; 64];
-//! util::gen_rand_key(&mut key).unwrap();
+//! let key = hmac::SecretKey::generate();
 //! let msg = "Some message.";
 //!
 //! let mut mac = hmac::init(&key);
@@ -53,10 +51,8 @@
 //! ### Verifying HMAC:
 //! ```
 //! use orion::hazardous::mac::hmac;
-//! use orion::util;
 //!
-//! let mut key = [0u8; 64];
-//! util::gen_rand_key(&mut key).unwrap();
+//! let key = hmac::SecretKey::generate();
 //! let msg = "Some message.";
 //!
 //! let mut mac = hmac::init(&key);
@@ -107,7 +103,7 @@ impl SecretKey {
         self.value
     }
     #[cfg(feature = "safe_api")]
-    /// Randomly generate a SecretKey using a CSPRNG. Not available in `no_std` context.
+    /// Randomly generate a SecretKey using a CSPRNG of length 128. Not available in `no_std` context.
     pub fn generate() -> Self {
         let mut secret_key = [0u8; SHA2_BLOCKSIZE];
         util::gen_rand_key(&mut secret_key).unwrap();
@@ -220,25 +216,6 @@ impl Hmac {
 
         Ok(mac)
     }
-    #[inline(always)]
-    /// Retrieve MAC and copy to `dst`.
-    pub fn finalize_with_dst(&mut self, dst: &mut Mac) -> Result<(), FinalizationCryptoError> {
-        if self.is_finalized {
-            return Err(FinalizationCryptoError);
-        }
-
-        self.is_finalized = true;
-
-        let mut hash_ires = Sha512::default();
-        mem::swap(&mut self.ipad_hasher, &mut hash_ires);
-
-        let mut o_hash = self.opad_hasher.clone();
-        o_hash.input(&hash_ires.result());
-
-        dst.value.copy_from_slice(&o_hash.result());
-
-        Ok(())
-    }
 }
 
 #[inline(always)]
@@ -333,19 +310,6 @@ fn double_finalize_err() {
     mac.update(data).unwrap();
     mac.finalize().unwrap();
     mac.finalize().unwrap();
-}
-
-#[test]
-#[should_panic]
-fn double_finalize_with_dst_err() {
-    let secret_key = SecretKey::from_slice("Jefe".as_bytes());
-    let data = "what do ya want for nothing?".as_bytes();
-    let mut dst = Mac::from_slice(&[0u8; 64]).unwrap();
-
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
-    mac.finalize_with_dst(&mut dst).unwrap();
-    mac.finalize_with_dst(&mut dst).unwrap();
 }
 
 #[test]

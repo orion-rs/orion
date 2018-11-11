@@ -70,14 +70,12 @@
 //! # Example:
 //! ```
 //! use orion::hazardous::stream::chacha20;
-//! use orion::util;
 //!
-//! let mut secret_key = [0u8; 32];
-//! util::gen_rand_key(&mut secret_key).unwrap();
+//! let secret_key = chacha20::SecretKey::generate();
 //!
-//! let nonce = [
+//! let nonce = chacha20::Nonce::from_slice(&[
 //!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
-//! ];
+//! ]).unwrap();
 //!
 //! // Length of this message is 15
 //! let message = "Data to protect".as_bytes();
@@ -130,7 +128,7 @@ impl SecretKey {
         self.value
     }
     #[cfg(feature = "safe_api")]
-    /// Randomly generate a SecretKey using a CSPRNG. Not available in `no_std` context.
+    /// Randomly generate a SecretKey using a CSPRNG of length 32. Not available in `no_std` context.
     pub fn generate() -> Self {
         let mut secret_key = [0u8; CHACHA_KEYSIZE];
         util::gen_rand_key(&mut secret_key).unwrap();

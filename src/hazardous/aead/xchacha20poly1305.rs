@@ -56,12 +56,9 @@
 //! # Example:
 //! ```
 //! use orion::hazardous::aead;
-//! use orion::util;
 //!
-//! let mut secret_key = [0u8; 32];
-//! let mut nonce = [0u8; 24];
-//! util::gen_rand_key(&mut secret_key).unwrap();
-//! util::gen_rand_key(&mut nonce).unwrap();
+//! let secret_key = aead::xchacha20poly1305::SecretKey::generate();
+//! let nonce = aead::xchacha20poly1305::Nonce::generate();
 //!
 //! let ad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
 //! let plaintext = b"\
