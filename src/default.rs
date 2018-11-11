@@ -380,7 +380,7 @@ pub fn encrypt(secret_key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, UnknownCr
 
     aead::xchacha20poly1305::encrypt(
         SecretKey::from_slice(secret_key).unwrap(),
-        &nonce,
+        aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
         plaintext,
         &[0u8; 0],
         &mut dst_out[XCHACHA_NONCESIZE..],
@@ -431,7 +431,7 @@ pub fn decrypt(secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, UnknownC
 
     aead::xchacha20poly1305::decrypt(
         SecretKey::from_slice(&secret_key).unwrap(),
-        &ciphertext[..XCHACHA_NONCESIZE],
+        aead::xchacha20poly1305::Nonce::from_slice(&ciphertext[..XCHACHA_NONCESIZE]).unwrap(),
         &ciphertext[XCHACHA_NONCESIZE..],
         &[0u8; 0],
         &mut dst_out,
