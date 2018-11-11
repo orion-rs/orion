@@ -29,6 +29,7 @@ extern crate ring;
 use self::orion::hazardous::mac::hmac;
 use self::orion::hazardous::mac::poly1305;
 use self::poly1305::OneTimeKey;
+use self::poly1305::Tag;
 use self::ring::error;
 
 fn hmac_test_runner(
@@ -65,14 +66,20 @@ fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), e
     let tag_stream = state.finalize().unwrap();
     let tag_one_shot = poly1305::poly1305(&OneTimeKey::from_slice(key).unwrap(), input).unwrap();
 
-    assert_eq!(tag_stream.as_ref(), output.as_ref());
-    assert_eq!(tag_one_shot.as_ref(), output.as_ref());
-    assert!(poly1305::verify(output, &OneTimeKey::from_slice(key).unwrap(), input).unwrap());
+    assert!(tag_stream == Tag::from_slice(&output).unwrap());
+    assert!(tag_one_shot == Tag::from_slice(&output).unwrap());
+    assert!(
+        poly1305::verify(
+            &Tag::from_slice(&output).unwrap(),
+            &OneTimeKey::from_slice(key).unwrap(),
+            input
+        ).unwrap()
+    );
 
     // If the MACs are modified, then they should not be equal to the expected
-    let mut bad_tag = tag_stream.to_vec();
+    let mut bad_tag = tag_stream.unsafe_as_bytes();
     bad_tag[0] ^= 1;
-    assert_ne!(&bad_tag, &output);
+    assert!(Tag::from_slice(&bad_tag).unwrap() != Tag::from_slice(&output).unwrap());
 
     Ok(())
 }

@@ -61,6 +61,8 @@ use byteorder::{ByteOrder, LittleEndian};
 use errors::*;
 use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use seckey::zero;
+use subtle::ConstantTimeEq;
+#[cfg(feature = "safe_api")]
 use util;
 use zeroize::Zeroize;
 
@@ -98,6 +100,40 @@ impl OneTimeKey {
         util::gen_rand_key(&mut secret_key).unwrap();
 
         Self { value: secret_key }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+/// A struct representing a Poly1305 tag.
+pub struct Tag {
+    value: [u8; POLY1305_BLOCKSIZE],
+}
+
+impl PartialEq for Tag {
+    fn eq(&self, other: &Tag) -> bool {
+        self.unsafe_as_bytes()
+            .ct_eq(&other.unsafe_as_bytes())
+            .unwrap_u8()
+            == 1
+    }
+}
+
+impl Tag {
+    /// Make Tag from a byte slice.
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        if slice.len() != POLY1305_BLOCKSIZE {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut mac = [0u8; POLY1305_BLOCKSIZE];
+        mac.copy_from_slice(slice);
+
+        Ok(Self { value: mac })
+    }
+    /// Return the Mac as byte slice. WARNING: Provides no protection against unsafe
+    /// comparison operations.
+    pub fn unsafe_as_bytes(&self) -> [u8; POLY1305_BLOCKSIZE] {
+        self.value
     }
 }
 
@@ -345,7 +381,7 @@ impl Poly1305 {
     }
     #[inline(always)]
     /// Return a Poly1305 tag.
-    pub fn finalize(&mut self) -> Result<Poly1305Tag, FinalizationCryptoError> {
+    pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
         if self.is_finalized {
             return Err(FinalizationCryptoError);
         }
@@ -371,7 +407,7 @@ impl Poly1305 {
         self.process_end_of_stream();
         LittleEndian::write_u32_into(&self.a[0..4], &mut local_buffer);
 
-        Ok(local_buffer)
+        Ok(Tag::from_slice(&local_buffer).unwrap())
     }
 }
 
@@ -392,29 +428,25 @@ pub fn init(one_time_key: &OneTimeKey) -> Result<Poly1305, UnknownCryptoError> {
 }
 
 /// One-shot function for generating a Poly1305 tag of a message.
-pub fn poly1305(
-    one_time_key: &OneTimeKey,
-    message: &[u8],
-) -> Result<Poly1305Tag, UnknownCryptoError> {
+pub fn poly1305(one_time_key: &OneTimeKey, message: &[u8]) -> Result<Tag, UnknownCryptoError> {
     let mut poly_1305_state = init(one_time_key).unwrap();
     poly_1305_state.update(message).unwrap();
-    let poly_1305_tag = poly_1305_state.finalize().unwrap();
 
-    Ok(poly_1305_tag)
+    Ok(poly_1305_state.finalize().unwrap())
 }
 
 /// Verify a Poly1305 tag in constant time.
 pub fn verify(
-    expected: &[u8],
+    expected: &Tag,
     one_time_key: &OneTimeKey,
     message: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
     let tag = poly1305(one_time_key, message).unwrap();
 
-    if util::compare_ct(&tag, expected).is_err() {
-        Err(ValidationCryptoError)
-    } else {
+    if &tag == expected {
         Ok(true)
+    } else {
+        Err(ValidationCryptoError)
     }
 }
 
@@ -444,7 +476,7 @@ fn test_poly1305_verify_ok() {
 #[should_panic]
 fn test_poly1305_verify_err() {
     let mut tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
-    tag[0] ^= 1;
+    tag.value[0] ^= 1;
     verify(
         &tag,
         &OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
@@ -513,10 +545,7 @@ fn update_after_finalize_with_reset_ok() {
     let expected = poly1305_state.finalize().unwrap();
     poly1305_state.reset();
     poly1305_state.update(&[0u8; 16]).unwrap();
-    assert_eq!(
-        expected.as_ref(),
-        poly1305_state.finalize().unwrap().as_ref()
-    );
+    assert!(&expected == &poly1305_state.finalize().unwrap());
 }
 
 #[test]

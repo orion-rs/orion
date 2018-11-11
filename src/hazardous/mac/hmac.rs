@@ -72,6 +72,7 @@ use errors::*;
 use hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE};
 use sha2::{Digest, Sha512};
 use subtle::ConstantTimeEq;
+#[cfg(feature = "safe_api")]
 use util;
 use zeroize::Zeroize;
 
@@ -115,6 +116,7 @@ impl SecretKey {
     }
 }
 
+#[derive(Clone, Copy)]
 /// A struct representing a MAC.
 pub struct Mac {
     value: [u8; HLEN],

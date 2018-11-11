@@ -171,7 +171,8 @@ pub fn encrypt(
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, ad, &dst_out, plaintext.len()).unwrap();
-    dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize().unwrap());
+    dst_out[plaintext.len()..]
+        .copy_from_slice(&poly1305_state.finalize().unwrap().unsafe_as_bytes());
 
     Ok(())
 }
@@ -198,7 +199,7 @@ pub fn decrypt(
     process_authentication(&mut poly1305_state, ad, ciphertext_with_tag, ciphertext_len).unwrap();
 
     util::compare_ct(
-        &poly1305_state.finalize().unwrap(),
+        &poly1305_state.finalize().unwrap().unsafe_as_bytes(),
         &ciphertext_with_tag[ciphertext_len..],
     ).unwrap();
 
