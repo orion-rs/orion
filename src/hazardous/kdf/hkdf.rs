@@ -74,7 +74,7 @@ use util;
 #[inline(always)]
 /// The HKDF extract step.
 pub fn extract(salt: &[u8], ikm: &[u8]) -> [u8; 64] {
-    let mut prk = hmac::init(salt);
+    let mut prk = hmac::init(hmac::SecretKey::from_slice(salt));
     prk.update(ikm).unwrap();
 
     prk.finalize().unwrap()
@@ -90,7 +90,7 @@ pub fn expand(prk: &[u8], info: &[u8], okm_out: &mut [u8]) -> Result<(), Unknown
         return Err(UnknownCryptoError);
     }
 
-    let mut hmac = hmac::init(prk);
+    let mut hmac = hmac::init(hmac::SecretKey::from_slice(prk));
     let okm_len = okm_out.len();
 
     for (idx, hlen_block) in okm_out.chunks_mut(HLEN).enumerate() {

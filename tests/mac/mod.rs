@@ -37,7 +37,7 @@ fn hmac_test_runner(
     expected: &[u8],
     trunc: Option<usize>,
 ) -> Result<(), error::Unspecified> {
-    let mut mac = hmac::init(secret_key);
+    let mut mac = hmac::init(hmac::SecretKey::from_slice(secret_key));
     mac.update(data).unwrap();
 
     let res = mac.finalize().unwrap();

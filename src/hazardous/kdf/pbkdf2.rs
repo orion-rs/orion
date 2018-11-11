@@ -119,7 +119,7 @@ pub fn derive_key(
         return Err(UnknownCryptoError);
     }
 
-    let mut hmac = hmac::init(password);
+    let mut hmac = hmac::init(hmac::SecretKey::from_slice(password));
 
     for (idx, dk_block) in dk_out.chunks_mut(HLEN).enumerate() {
         let block_len = dk_block.len();

@@ -59,7 +59,7 @@ pub fn hmac(secret_key: &[u8], data: &[u8]) -> Result<[u8; 64], UnknownCryptoErr
         return Err(UnknownCryptoError);
     }
 
-    let mut mac = hmac::init(secret_key);
+    let mut mac = hmac::init(hmac::SecretKey::from_slice(secret_key));
     mac.update(data).unwrap();
 
     Ok(mac.finalize().unwrap())
@@ -95,19 +95,23 @@ pub fn hmac_verify(
     secret_key: &[u8],
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let mut mac = hmac::init(secret_key);
+    let mut mac = hmac::init(hmac::SecretKey::from_slice(secret_key));
     mac.update(data).unwrap();
 
     let mut rand_key: HLenArray = [0u8; HLEN];
     util::gen_rand_key(&mut rand_key).unwrap();
 
-    let mut nd_round_mac = hmac::init(secret_key);
-    let mut nd_round_expected = hmac::init(secret_key);
+    let mut nd_round_mac = hmac::init(hmac::SecretKey::from_slice(secret_key));
+    let mut nd_round_expected = hmac::init(hmac::SecretKey::from_slice(secret_key));
 
     nd_round_mac.update(&mac.finalize().unwrap()).unwrap();
     nd_round_expected.update(expected_hmac).unwrap();
 
-    hmac::verify(&expected_hmac, secret_key, data)
+    hmac::verify(
+        &expected_hmac,
+        hmac::SecretKey::from_slice(secret_key),
+        data,
+    )
 }
 
 /// HKDF-HMAC-SHA512.
