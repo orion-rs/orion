@@ -41,6 +41,7 @@ extern crate seckey;
 extern crate sha2;
 extern crate subtle;
 extern crate tiny_keccak;
+extern crate zeroize;
 
 /// Core functionality such as generating a salt/key/IV/nonce.
 pub mod util;

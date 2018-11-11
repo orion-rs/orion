@@ -169,7 +169,7 @@ pub fn encrypt(
         plaintext,
         &mut dst_out[..plaintext.len()],
     ).unwrap();
-    let mut poly1305_state = poly1305::init(&poly1305_key.as_bytes()).unwrap();
+    let mut poly1305_state = poly1305::init(poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, ad, &dst_out, plaintext.len()).unwrap();
     dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize().unwrap());
@@ -198,7 +198,7 @@ pub fn decrypt(
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
     let poly1305_key = poly1305_key_gen(&secret_key.as_bytes(), nonce);
-    let mut poly1305_state = poly1305::init(&poly1305_key.as_bytes()).unwrap();
+    let mut poly1305_state = poly1305::init(poly1305_key).unwrap();
     process_authentication(&mut poly1305_state, ad, ciphertext_with_tag, ciphertext_len).unwrap();
 
     util::compare_ct(
@@ -230,7 +230,7 @@ fn length_padding_tests() {
 #[should_panic]
 fn test_auth_process_with_above_length_index() {
     let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
-    let mut poly1305_state = poly1305::init(&poly1305_key.as_bytes()).unwrap();
+    let mut poly1305_state = poly1305::init(poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
 }
@@ -238,7 +238,7 @@ fn test_auth_process_with_above_length_index() {
 #[test]
 fn test_auth_process_ok_index_length() {
     let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
-    let mut poly1305_state = poly1305::init(&poly1305_key.as_bytes()).unwrap();
+    let mut poly1305_state = poly1305::init(poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).unwrap();
 

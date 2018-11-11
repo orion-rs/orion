@@ -100,6 +100,7 @@ use hazardous::constants::{
 use seckey::zero;
 #[cfg(feature = "safe_api")]
 use util;
+use zeroize::Zeroize;
 
 /// A secret key used for calculating the MAC.
 pub struct SecretKey {
@@ -108,7 +109,7 @@ pub struct SecretKey {
 
 impl Drop for SecretKey {
     fn drop(&mut self) {
-        zero(&mut self.value)
+        self.value.as_mut().zeroize();
     }
 }
 
