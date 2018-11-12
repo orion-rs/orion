@@ -34,8 +34,7 @@ pub fn hkdf_test_runner(
     info: &[u8],
     okm_out: &mut [u8],
 ) -> bool {
-
-    let actual_prk = extract(&salt, &ikm);
+    let actual_prk = extract(&Salt::from_slice(&salt), &ikm);
 
     if excp_prk.is_some() {
         assert!(actual_prk == hmac::Mac::from_slice(excp_prk.unwrap()).unwrap());
@@ -44,7 +43,7 @@ pub fn hkdf_test_runner(
     expand(&actual_prk, &info, okm_out).unwrap();
 
     let mut okm_one_shot_dst = okm_out.to_vec();
-    derive_key(salt, ikm, info, &mut okm_one_shot_dst).unwrap();
+    derive_key(&Salt::from_slice(&salt), ikm, info, &mut okm_one_shot_dst).unwrap();
 
     ((okm_out == excp_okm) == (okm_one_shot_dst == excp_okm))
 }

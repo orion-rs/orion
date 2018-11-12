@@ -45,23 +45,17 @@
 //! ### Generating derived key:
 //! ```
 //! use orion::hazardous::kdf::hkdf;
-//! use orion::util;
 //!
-//! let mut salt = [0u8; 32];
-//! util::gen_rand_key(&mut salt).unwrap();
+//! let salt = hkdf::Salt::generate();
 //! let mut okm_out = [0u8; 32];
-//!
 //! hkdf::derive_key(&salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
 //! ```
 //! ### Verifying derived key:
 //! ```
 //! use orion::hazardous::kdf::hkdf;
-//! use orion::util;
 //!
-//! let mut salt = [0u8; 32];
-//! util::gen_rand_key(&mut salt).unwrap();
+//! let salt = hkdf::Salt::generate();
 //! let mut okm_out = [0u8; 32];
-//!
 //! hkdf::derive_key(&salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
 //! let exp_okm = okm_out;
 //! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap());
@@ -70,13 +64,14 @@
 use errors::*;
 use hazardous::constants::HLEN;
 use hazardous::mac::hmac;
+pub use hazardous::mac::hmac::SecretKey as Salt;
 use util;
 
 #[inline(always)]
 #[must_use]
 /// The HKDF extract step.
-pub fn extract(salt: &[u8], ikm: &[u8]) -> hmac::Mac {
-    let mut prk = hmac::init(&hmac::SecretKey::from_slice(salt));
+pub fn extract(salt: &Salt, ikm: &[u8]) -> hmac::Mac {
+    let mut prk = hmac::init(salt);
     prk.update(ikm).unwrap();
 
     prk.finalize().unwrap()
@@ -119,7 +114,7 @@ pub fn expand(prk: &hmac::Mac, info: &[u8], okm_out: &mut [u8]) -> Result<(), Un
 #[must_use]
 /// Combine `extract` and `expand` to return a derived key.
 pub fn derive_key(
-    salt: &[u8],
+    salt: &Salt,
     ikm: &[u8],
     info: &[u8],
     okm_out: &mut [u8],
@@ -131,7 +126,7 @@ pub fn derive_key(
 /// Verify a derived key in constant time.
 pub fn verify(
     expected_dk: &[u8],
-    salt: &[u8],
+    salt: &Salt,
     ikm: &[u8],
     info: &[u8],
     okm_out: &mut [u8],
@@ -155,7 +150,7 @@ mod test {
     fn hkdf_maximum_length_512() {
         // Max allowed length here is 16320
         let mut okm_out = [0u8; 17000];
-        let prk = extract("".as_bytes(), "".as_bytes());
+        let prk = extract(&Salt::from_slice("".as_bytes()), "".as_bytes());
 
         assert!(expand(&prk, "".as_bytes(), &mut okm_out).is_err());
     }
@@ -163,7 +158,7 @@ mod test {
     #[test]
     fn hkdf_zero_length() {
         let mut okm_out = [0u8; 0];
-        let prk = extract("".as_bytes(), "".as_bytes());
+        let prk = extract(&Salt::from_slice("".as_bytes()), "".as_bytes());
 
         assert!(expand(&prk, "".as_bytes(), &mut okm_out).is_err());
     }
@@ -171,7 +166,7 @@ mod test {
     #[test]
     fn hkdf_verify_true() {
         let ikm = decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap();
-        let salt = decode("000102030405060708090a0b0c").unwrap();
+        let salt = Salt::from_slice(&decode("000102030405060708090a0b0c").unwrap());
         let info = decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
         let mut okm_out = [0u8; 42];
 
@@ -187,7 +182,7 @@ mod test {
 
     #[test]
     fn hkdf_verify_wrong_salt() {
-        let salt = "salt".as_bytes();
+        let salt = Salt::from_slice("salt".as_bytes());
         let ikm = decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap();
         let info = "".as_bytes();
         let mut okm_out = [0u8; 42];
@@ -197,12 +192,12 @@ mod test {
              9d201395faa4b61a96c8",
         ).unwrap();
 
-        assert!(verify(&expected_okm, salt, &ikm, info, &mut okm_out).is_err());
+        assert!(verify(&expected_okm, &salt, &ikm, info, &mut okm_out).is_err());
     }
 
     #[test]
     fn hkdf_verify_wrong_ikm() {
-        let salt = "".as_bytes();
+        let salt = Salt::from_slice("".as_bytes());
         let ikm = decode("0b").unwrap();
         let info = "".as_bytes();
         let mut okm_out = [0u8; 42];
@@ -212,12 +207,12 @@ mod test {
              9d201395faa4b61a96c8",
         ).unwrap();
 
-        assert!(verify(&expected_okm, salt, &ikm, info, &mut okm_out).is_err());
+        assert!(verify(&expected_okm, &salt, &ikm, info, &mut okm_out).is_err());
     }
 
     #[test]
     fn verify_diff_length() {
-        let salt = "".as_bytes();
+        let salt = Salt::from_slice("".as_bytes());
         let ikm = decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap();
         let info = "".as_bytes();
         let mut okm_out = [0u8; 72];
@@ -227,6 +222,6 @@ mod test {
              9d201395faa4b61a96c8",
         ).unwrap();
 
-        assert!(verify(&expected_okm, salt, &ikm, info, &mut okm_out).is_err());
+        assert!(verify(&expected_okm, &salt, &ikm, info, &mut okm_out).is_err());
     }
 }

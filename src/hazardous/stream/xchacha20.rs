@@ -75,9 +75,9 @@ use hazardous::constants::XCHACHA_NONCESIZE;
 use hazardous::stream::chacha20;
 use hazardous::stream::chacha20::Nonce as IETFNonce;
 pub use hazardous::stream::chacha20::SecretKey;
-use zeroize::Zeroize;
 #[cfg(feature = "safe_api")]
 use util;
+use zeroize::Zeroize;
 
 #[must_use]
 /// A nonce for XChaCha20.
