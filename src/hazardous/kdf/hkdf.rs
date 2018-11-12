@@ -36,9 +36,10 @@
 //!
 //! # Security:
 //! Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-//! in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-//! HKDF is not suitable for password storage. Even though a salt value is optional, it is strongly
-//! recommended to use one.
+//! in `util` can be used for this. The recommended length for a salt is 64 bytes.
+//! Even though a salt value is optional, it is strongly recommended to use one.
+//!
+//! HKDF is not suitable for password storage. For password storage refer to the PBKDF2 module.
 //!
 //! # Example:
 //! ### Generating derived key:
