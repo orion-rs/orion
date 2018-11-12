@@ -72,6 +72,7 @@ use hazardous::mac::hmac;
 use util;
 
 #[inline(always)]
+#[must_use]
 /// The HKDF extract step.
 pub fn extract(salt: &[u8], ikm: &[u8]) -> hmac::Mac {
     let mut prk = hmac::init(&hmac::SecretKey::from_slice(salt));
@@ -81,6 +82,7 @@ pub fn extract(salt: &[u8], ikm: &[u8]) -> hmac::Mac {
 }
 
 #[inline(always)]
+#[must_use]
 /// The HKDF expand step.
 pub fn expand(prk: &hmac::Mac, info: &[u8], okm_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
     if okm_out.len() > 16320 {
@@ -113,6 +115,7 @@ pub fn expand(prk: &hmac::Mac, info: &[u8], okm_out: &mut [u8]) -> Result<(), Un
     Ok(())
 }
 
+#[must_use]
 /// Combine `extract` and `expand` to return a derived key.
 pub fn derive_key(
     salt: &[u8],
@@ -123,6 +126,7 @@ pub fn derive_key(
     expand(&extract(salt, ikm), info, okm_out)
 }
 
+#[must_use]
 /// Verify a derived key in constant time.
 pub fn verify(
     expected_dk: &[u8],

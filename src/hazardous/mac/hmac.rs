@@ -72,6 +72,7 @@ use subtle::ConstantTimeEq;
 use util;
 use zeroize::Zeroize;
 
+#[must_use]
 /// A secret key used for calculating the MAC.
 pub struct SecretKey {
     value: [u8; SHA2_BLOCKSIZE],
@@ -84,6 +85,7 @@ impl Drop for SecretKey {
 }
 
 impl SecretKey {
+    #[must_use]
     /// Make SecretKey from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Self {
         let mut secret_key = [0u8; SHA2_BLOCKSIZE];
@@ -98,10 +100,12 @@ impl SecretKey {
 
         Self { value: secret_key }
     }
+    #[must_use]
     /// Return the OneTimeKey as byte slice.
     pub fn as_bytes(&self) -> [u8; SHA2_BLOCKSIZE] {
         self.value
     }
+    #[must_use]
     #[cfg(feature = "safe_api")]
     /// Randomly generate a SecretKey using a CSPRNG of length 128. Not available in `no_std` context.
     pub fn generate() -> Self {
@@ -113,6 +117,7 @@ impl SecretKey {
 }
 
 #[derive(Clone, Copy)]
+#[must_use]
 /// A struct representing a MAC.
 pub struct Mac {
     value: [u8; HLEN],
@@ -128,6 +133,7 @@ impl PartialEq for Mac {
 }
 
 impl Mac {
+    #[must_use]
     /// Make Mac from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != HLEN {
@@ -139,6 +145,7 @@ impl Mac {
 
         Ok(Self { value: mac })
     }
+    #[must_use]
     /// Return the Mac as byte slice. WARNING: Provides no protection against unsafe
     /// comparison operations.
     pub fn unsafe_as_bytes(&self) -> [u8; HLEN] {
@@ -196,7 +203,7 @@ impl Hmac {
             Ok(())
         }
     }
-
+    #[must_use]
     #[inline(always)]
     /// Return MAC.
     pub fn finalize(&mut self) -> Result<Mac, FinalizationCryptoError> {
@@ -218,6 +225,7 @@ impl Hmac {
     }
 }
 
+#[must_use]
 #[inline(always)]
 /// Initialize `Hmac` struct with a given key.
 pub fn init(secret_key: &SecretKey) -> Hmac {
@@ -232,6 +240,7 @@ pub fn init(secret_key: &SecretKey) -> Hmac {
     mac
 }
 
+#[must_use]
 /// Verify a HMAC-SHA512 MAC in constant time.
 pub fn verify(
     expected: &Mac,
@@ -308,8 +317,8 @@ fn double_finalize_err() {
 
     let mut mac = init(&secret_key);
     mac.update(data).unwrap();
-    mac.finalize().unwrap();
-    mac.finalize().unwrap();
+    let _ = mac.finalize().unwrap();
+    let _ = mac.finalize().unwrap();
 }
 
 #[test]
@@ -319,10 +328,10 @@ fn double_finalize_with_reset_ok() {
 
     let mut mac = init(&secret_key);
     mac.update(data).unwrap();
-    mac.finalize().unwrap();
+    let _ = mac.finalize().unwrap();
     mac.reset();
     mac.update("Test".as_bytes()).unwrap();
-    mac.finalize().unwrap();
+    let _ = mac.finalize().unwrap();
 }
 
 #[test]
@@ -332,9 +341,9 @@ fn double_finalize_with_reset_no_update_ok() {
 
     let mut mac = init(&secret_key);
     mac.update(data).unwrap();
-    mac.finalize().unwrap();
+    let _ = mac.finalize().unwrap();
     mac.reset();
-    mac.finalize().unwrap();
+    let _ = mac.finalize().unwrap();
 }
 
 #[test]
@@ -345,7 +354,7 @@ fn update_after_finalize_err() {
 
     let mut mac = init(&secret_key);
     mac.update(data).unwrap();
-    mac.finalize().unwrap();
+    let _ = mac.finalize().unwrap();
     mac.update(data).unwrap();
 }
 
@@ -356,7 +365,7 @@ fn update_after_finalize_with_reset_ok() {
 
     let mut mac = init(&secret_key);
     mac.update(data).unwrap();
-    mac.finalize().unwrap();
+    let _ = mac.finalize().unwrap();
     mac.reset();
     mac.update(data).unwrap();
 }
@@ -368,7 +377,7 @@ fn double_reset_ok() {
 
     let mut mac = init(&secret_key);
     mac.update(data).unwrap();
-    mac.finalize().unwrap();
+    let _ = mac.finalize().unwrap();
     mac.reset();
     mac.reset();
 }

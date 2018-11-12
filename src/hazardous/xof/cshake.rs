@@ -126,6 +126,7 @@ impl CShake {
             Ok(())
         }
     }
+    #[must_use]
     /// Return a cSHAKE hash.
     pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
@@ -144,6 +145,7 @@ impl CShake {
     }
 }
 
+#[must_use]
 /// Initialize a `CShake` struct.
 pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoError> {
     // "When N and S are both empty strings, cSHAKE(X, L, N, S) is equivalent to SHAKE as
@@ -171,6 +173,7 @@ pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoE
     Ok(hash)
 }
 
+#[must_use]
 /// The left_encode function as specified in the NIST SP 800-185.
 fn left_encode(x: u64) -> ([u8; 9], usize) {
     let mut input = [0u8; 9];

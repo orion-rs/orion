@@ -93,6 +93,7 @@ pub use hazardous::stream::chacha20::Nonce;
 pub use hazardous::stream::chacha20::SecretKey;
 use util;
 
+#[must_use]
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> OneTimeKey {
     OneTimeKey::from_slice(
@@ -104,6 +105,7 @@ fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> OneTimeKey {
     ).unwrap()
 }
 
+#[must_use]
 /// Padding size that gives the needed bytes to pad `input` to an integral multiple of 16.
 fn padding(input: &[u8]) -> usize {
     if input.len() % 16 != 0 {
@@ -113,6 +115,7 @@ fn padding(input: &[u8]) -> usize {
     }
 }
 
+#[must_use]
 /// Process data to be authenticated using a `Poly1305` struct initialized with a one-time-key.
 fn process_authentication(
     poly1305_state: &mut poly1305::Poly1305,
@@ -143,6 +146,7 @@ fn process_authentication(
     Ok(())
 }
 
+#[must_use]
 /// AEAD ChaCha20Poly1305 encryption and authentication as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn seal(
     secret_key: &SecretKey,
@@ -175,6 +179,7 @@ pub fn seal(
     Ok(())
 }
 
+#[must_use]
 /// AEAD ChaCha20Poly1305 decryption and authentication as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn open(
     secret_key: &SecretKey,

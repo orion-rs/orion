@@ -100,6 +100,7 @@ use seckey::zero;
 use util;
 use zeroize::Zeroize;
 
+#[must_use]
 /// A secret key used for calculating the MAC.
 pub struct SecretKey {
     value: [u8; CHACHA_KEYSIZE],
@@ -112,6 +113,7 @@ impl Drop for SecretKey {
 }
 
 impl SecretKey {
+    #[must_use]
     /// Make SecretKey from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != CHACHA_KEYSIZE {
@@ -123,11 +125,13 @@ impl SecretKey {
 
         Ok(Self { value: secret_key })
     }
+    #[must_use]
     /// Return SecretKey as byte slice.
     pub fn as_bytes(&self) -> [u8; CHACHA_KEYSIZE] {
         self.value
     }
     #[cfg(feature = "safe_api")]
+    #[must_use]
     /// Randomly generate a SecretKey using a CSPRNG of length 32. Not available in `no_std` context.
     pub fn generate() -> Self {
         let mut secret_key = [0u8; CHACHA_KEYSIZE];
@@ -137,6 +141,7 @@ impl SecretKey {
     }
 }
 
+#[must_use]
 /// A nonce for IETF ChaCha20.
 pub struct Nonce {
     value: [u8; IETF_CHACHA_NONCESIZE],
@@ -149,6 +154,7 @@ impl Drop for Nonce {
 }
 
 impl Nonce {
+    #[must_use]
     /// Make Nonce from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != IETF_CHACHA_NONCESIZE {
@@ -160,6 +166,7 @@ impl Nonce {
 
         Ok(Self { value: ietf_nonce })
     }
+    #[must_use]
     /// Return Nonce as bytes.
     pub fn as_bytes(&self) -> [u8; IETF_CHACHA_NONCESIZE] {
         self.value
@@ -209,6 +216,7 @@ impl InternalState {
         self.quarter_round(3, 4, 9, 14);
     }
     #[inline(always)]
+    #[must_use]
     /// Initialize either a ChaCha or HChaCha state with a `secret_key` and `nonce`.
     fn init_state(
         &mut self,
@@ -239,6 +247,7 @@ impl InternalState {
         Ok(())
     }
     #[inline(always)]
+    #[must_use]
     /// Process either a ChaCha20 or HChaCha20 block.
     fn process_block(
         &mut self,
@@ -271,6 +280,7 @@ impl InternalState {
         Ok(working_state.state)
     }
     #[inline(always)]
+    #[must_use]
     /// Serialize a keystream block of 16 u32's, into a little-endian byte array.
     fn serialize_block(
         &mut self,
@@ -295,6 +305,7 @@ impl InternalState {
     }
 }
 
+#[must_use]
 /// IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn encrypt(
     secret_key: &SecretKey,
@@ -361,6 +372,7 @@ pub fn encrypt(
     Ok(())
 }
 
+#[must_use]
 /// IETF ChaCha20 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn decrypt(
     secret_key: &SecretKey,
@@ -372,6 +384,7 @@ pub fn decrypt(
     encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
+#[must_use]
 /// IETF ChaCha20 block function returning a serialized keystream block.
 pub fn keystream_block(
     secret_key: &SecretKey,
@@ -399,6 +412,7 @@ pub fn keystream_block(
 }
 
 #[doc(hidden)]
+#[must_use]
 /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn hchacha20(
     secret_key: &SecretKey,

@@ -83,6 +83,7 @@ use hazardous::stream::chacha20::Nonce as IETFNonce;
 pub use hazardous::stream::chacha20::SecretKey;
 pub use hazardous::stream::xchacha20::Nonce;
 
+#[must_use]
 /// AEAD XChaCha20Poly1305 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn seal(
     secret_key: &SecretKey,
@@ -108,6 +109,7 @@ pub fn seal(
     Ok(())
 }
 
+#[must_use]
 /// AEAD XChaCha20Poly1305 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn open(
     secret_key: &SecretKey,

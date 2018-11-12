@@ -79,6 +79,7 @@ use zeroize::Zeroize;
 #[cfg(feature = "safe_api")]
 use util;
 
+#[must_use]
 /// A nonce for XChaCha20.
 pub struct Nonce {
     value: [u8; XCHACHA_NONCESIZE],
@@ -91,6 +92,7 @@ impl Drop for Nonce {
 }
 
 impl Nonce {
+    #[must_use]
     /// Make Nonce from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != XCHACHA_NONCESIZE {
@@ -104,10 +106,12 @@ impl Nonce {
             value: xchacha_nonce,
         })
     }
+    #[must_use]
     /// Return Nonce as bytes.
     pub fn as_bytes(&self) -> [u8; XCHACHA_NONCESIZE] {
         self.value
     }
+    #[must_use]
     #[cfg(feature = "safe_api")]
     /// Randomly generate a SecretKey using a CSPRNG of length 32. Not available in `no_std` context.
     pub fn generate() -> Self {
@@ -118,6 +122,7 @@ impl Nonce {
     }
 }
 
+#[must_use]
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn encrypt(
     secret_key: &SecretKey,
@@ -143,6 +148,7 @@ pub fn encrypt(
     Ok(())
 }
 
+#[must_use]
 /// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn decrypt(
     secret_key: &SecretKey,
