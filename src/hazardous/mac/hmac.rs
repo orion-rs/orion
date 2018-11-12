@@ -73,7 +73,21 @@ use util;
 use zeroize::Zeroize;
 
 #[must_use]
-/// A secret key used for calculating the MAC.
+/// A secret key used for HMAC.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - The `OsRng` fails to initialize or read from its source
+///
+/// # Security:
+/// To easily generate a secure secret key, use the `SecretKey::generate()`.
+///
+/// # Example:
+/// ```
+/// use orion::hazardous::mac::hmac;
+///
+/// let secret_key = hmac::SecretKey::generate();
+/// ```
 pub struct SecretKey {
     value: [u8; SHA2_BLOCKSIZE],
 }
@@ -86,7 +100,7 @@ impl Drop for SecretKey {
 
 impl SecretKey {
     #[must_use]
-    /// Make SecretKey from a byte slice.
+    /// Make a `SecretKey` from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Self {
         let mut secret_key = [0u8; SHA2_BLOCKSIZE];
 
@@ -101,13 +115,13 @@ impl SecretKey {
         Self { value: secret_key }
     }
     #[must_use]
-    /// Return the OneTimeKey as byte slice.
+    /// Return the SecretKey as byte slice.
     pub fn as_bytes(&self) -> [u8; SHA2_BLOCKSIZE] {
         self.value
     }
     #[must_use]
     #[cfg(feature = "safe_api")]
-    /// Randomly generate a SecretKey using a CSPRNG of length 128. Not available in `no_std` context.
+    /// Randomly generate a `SecretKey` of 128 bytes using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> Self {
         let mut secret_key = [0u8; SHA2_BLOCKSIZE];
         util::gen_rand_key(&mut secret_key).unwrap();
@@ -118,7 +132,16 @@ impl SecretKey {
 
 #[derive(Clone, Copy)]
 #[must_use]
-/// A struct representing a MAC.
+/// A HMAC MAC.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - `slice` is not 64 bytes
+///
+/// # Security:
+/// `Mac` implements `PartialEq` and thus prevents users from accidentally using non constant-time
+/// comparisons. However, `unsafe_as_bytes()` lets the user return the `Mac` without such a protection.
+/// You should avoid ever using `unsafe_as_bytes()`.
 pub struct Mac {
     value: [u8; HLEN],
 }
@@ -134,7 +157,7 @@ impl PartialEq for Mac {
 
 impl Mac {
     #[must_use]
-    /// Make Mac from a byte slice.
+    /// Make a `Mac` from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != HLEN {
             return Err(UnknownCryptoError);
@@ -146,7 +169,7 @@ impl Mac {
         Ok(Self { value: mac })
     }
     #[must_use]
-    /// Return the Mac as byte slice. WARNING: Provides no protection against unsafe
+    /// Return the `Mac` as byte slice. __**WARNING**__: Provides no protection against unsafe
     /// comparison operations.
     pub fn unsafe_as_bytes(&self) -> [u8; HLEN] {
         self.value

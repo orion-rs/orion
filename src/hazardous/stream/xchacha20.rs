@@ -30,8 +30,6 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of the `secret_key` is not `32` bytes
-//! - The length of the `nonce` is not `24` bytes
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`
 //! - `plaintext` or `ciphertext` are empty
 //! - `plaintext` or `ciphertext` are longer than (2^32)-2
@@ -48,8 +46,7 @@
 //! data integrity, which is nearly ***always the case***, you should use an AEAD construction instead.
 //! See orions `aead` module for this.
 //!
-//! Only a `nonce` for XChaCha20 is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
-//! in `util` can be used for this.
+//! Only a `nonce` for XChaCha20 is big enough to be randomly generated using a CSPRNG.
 //!
 //! # Example:
 //! ```
@@ -81,6 +78,22 @@ use zeroize::Zeroize;
 
 #[must_use]
 /// A nonce for XChaCha20.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - `slice` is not 24 bytes
+/// - The `OsRng` fails to initialize or read from its source
+///
+/// # Security:
+///  A `Nonce` for XChaCha20 is big enough to be randomly generated using a CSPRNG. To easily do
+/// this, use `Nonce::generate()`.
+///
+/// # Example:
+/// ```
+/// use orion::hazardous::stream::xchacha20;
+///
+/// let nonce = XChaCha20::Nonce::generate();
+/// ```
 pub struct Nonce {
     value: [u8; XCHACHA_NONCESIZE],
 }
@@ -93,7 +106,7 @@ impl Drop for Nonce {
 
 impl Nonce {
     #[must_use]
-    /// Make Nonce from a byte slice.
+    /// Make a `Nonce` from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != XCHACHA_NONCESIZE {
             return Err(UnknownCryptoError);
@@ -107,13 +120,13 @@ impl Nonce {
         })
     }
     #[must_use]
-    /// Return Nonce as bytes.
+    /// Return `Nonce` as bytes.
     pub fn as_bytes(&self) -> [u8; XCHACHA_NONCESIZE] {
         self.value
     }
     #[must_use]
     #[cfg(feature = "safe_api")]
-    /// Randomly generate a SecretKey using a CSPRNG of length 32. Not available in `no_std` context.
+    /// Randomly generate a `Nonce` using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> Self {
         let mut nonce = [0u8; XCHACHA_NONCESIZE];
         util::gen_rand_key(&mut nonce).unwrap();

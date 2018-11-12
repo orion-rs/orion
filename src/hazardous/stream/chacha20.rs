@@ -37,8 +37,6 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of the `secret_key` is not `32` bytes
-//! - The length of the `nonce` is not `12` bytes (`16` for HChaCha20)
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`
 //! - `plaintext` or `ciphertext` are empty
 //! - `plaintext` or `ciphertext` are longer than (2^32)-2
@@ -53,9 +51,6 @@
 //! and therefor is not checked for potential overflow on increase either.
 //! Only use it if you are absolutely sure you actually need to use it.
 //!
-//! `hchacha20` is used to generate subkeys for XChaCha20 and does not encrypt anything.
-//! Only use it if you are absolutely sure you actually need to use it.
-//!
 //! # Security:
 //! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 //! the security of all data that has been encrypted with that given key is compromised.
@@ -64,8 +59,7 @@
 //! data integrity, which is nearly ***always the case***, you should use an AEAD construction instead.
 //! See orions `aead` module for this.
 //!
-//! Only a `nonce` for XChaCha20 is big enough to be randomly generated using a CSPRNG. The `gen_rand_key` function
-//! in `util` can be used for this.
+//! Only a `nonce` for XChaCha20 is big enough to be randomly generated using a CSPRNG.
 //!
 //! # Example:
 //! ```
@@ -101,7 +95,22 @@ use util;
 use zeroize::Zeroize;
 
 #[must_use]
-/// A secret key used for calculating the MAC.
+/// A secret key used stream/AEAD ciphers.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - `slice` is not 32 bytes
+/// - The `OsRng` fails to initialize or read from its source
+///
+/// # Security:
+/// To easily generate a secure secret key, use the `SecretKey::generate()`.
+///
+/// # Example:
+/// ```
+/// use orion::hazardous::stream::chacha20;
+///
+/// let secret_key = chacha20::SecretKey::generate();
+/// ```
 pub struct SecretKey {
     value: [u8; CHACHA_KEYSIZE],
 }
@@ -114,7 +123,7 @@ impl Drop for SecretKey {
 
 impl SecretKey {
     #[must_use]
-    /// Make SecretKey from a byte slice.
+    /// Make a `SecretKey` from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != CHACHA_KEYSIZE {
             return Err(UnknownCryptoError);
@@ -126,13 +135,13 @@ impl SecretKey {
         Ok(Self { value: secret_key })
     }
     #[must_use]
-    /// Return SecretKey as byte slice.
+    /// Return `SecretKey` as byte slice.
     pub fn as_bytes(&self) -> [u8; CHACHA_KEYSIZE] {
         self.value
     }
     #[cfg(feature = "safe_api")]
     #[must_use]
-    /// Randomly generate a SecretKey using a CSPRNG of length 32. Not available in `no_std` context.
+    /// Randomly generate a `SecretKey` using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> Self {
         let mut secret_key = [0u8; CHACHA_KEYSIZE];
         util::gen_rand_key(&mut secret_key).unwrap();
@@ -143,6 +152,29 @@ impl SecretKey {
 
 #[must_use]
 /// A nonce for IETF ChaCha20.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - `slice` is not 12 bytes
+///
+/// # Security:
+///  A `Nonce` for IETF ChaCha20 is not big enough to be randomly generated using a CSPRNG.
+///
+/// "Counters and LFSRs are both acceptable ways of generating unique nonces, as is
+/// encrypting a counter using a block cipher with a 64-bit block size
+/// such as DES.  Note that it is not acceptable to use a truncation of a
+/// counter encrypted with block ciphers with 128-bit or 256-bit blocks,
+/// because such a truncation may repeat after a short time." See [RFC](https://tools.ietf.org/html/rfc8439)
+/// for more information.
+///
+/// # Example:
+/// ```
+/// use orion::hazardous::stream::chacha20;
+///
+/// let nonce = chacha20::Nonce::from_slice(&[
+///     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
+/// ]).unwrap();
+/// ```
 pub struct Nonce {
     value: [u8; IETF_CHACHA_NONCESIZE],
 }
@@ -155,7 +187,7 @@ impl Drop for Nonce {
 
 impl Nonce {
     #[must_use]
-    /// Make Nonce from a byte slice.
+    /// Make a `Nonce` from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != IETF_CHACHA_NONCESIZE {
             return Err(UnknownCryptoError);
@@ -167,7 +199,7 @@ impl Nonce {
         Ok(Self { value: ietf_nonce })
     }
     #[must_use]
-    /// Return Nonce as bytes.
+    /// Return `Nonce` as bytes.
     pub fn as_bytes(&self) -> [u8; IETF_CHACHA_NONCESIZE] {
         self.value
     }

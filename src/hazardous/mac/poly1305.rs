@@ -38,8 +38,8 @@
 //! - The calculated tag does not match the expected when verifying
 //!
 //! # Security:
-//! The one-time key should always be generated using a CSPRNG. The `gen_rand_key` function
-//! in `util` can be used for this.
+//! The one-time key should be generated using a CSPRNG. `OneTimeKey::generate()` or
+//! `util::gen_rand_key()` can be used for this.
 //!
 //! # Example:
 //! ```
@@ -65,7 +65,22 @@ use util;
 use zeroize::Zeroize;
 
 #[must_use]
-/// A one-time key used for calculating the MAC.
+/// A Poly1305 one-time key.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - `slice` is not 32 bytes
+/// - The `OsRng` fails to initialize or read from its source
+///
+/// # Security:
+/// To easily generate a secure one-time key, use the `OneTimeKey::generate()`.
+///
+/// # Example:
+/// ```
+/// use orion::hazardous::mac::poly1305;
+///
+/// let one_time_key = poly1305::OneTimeKey::generate();
+/// ```
 pub struct OneTimeKey {
     value: [u8; POLY1305_KEYSIZE],
 }
@@ -77,7 +92,8 @@ impl Drop for OneTimeKey {
 }
 
 impl OneTimeKey {
-    /// Make OneTimeKey from a byte slice.
+    #[must_use]
+    /// Make a `OneTimeKey` from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != POLY1305_KEYSIZE {
             return Err(UnknownCryptoError);
@@ -88,12 +104,14 @@ impl OneTimeKey {
 
         Ok(Self { value: secret_key })
     }
-    /// Return the OneTimeKey as byte slice.
+    #[must_use]
+    /// Return the `OneTimeKey` as byte slice.
     pub fn as_bytes(&self) -> [u8; POLY1305_KEYSIZE] {
         self.value
     }
+    #[must_use]
     #[cfg(feature = "safe_api")]
-    /// Randomly generate a OneTimeKey using a CSPRNG of length 32. Not available in `no_std` context.
+    /// Randomly generate a `OneTimeKey` using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> Self {
         let mut secret_key = [0u8; POLY1305_KEYSIZE];
         util::gen_rand_key(&mut secret_key).unwrap();
@@ -103,8 +121,17 @@ impl OneTimeKey {
 }
 
 #[must_use]
-#[derive(Clone, Copy, Debug)]
-/// A struct representing a Poly1305 tag.
+#[derive(Clone, Copy)]
+/// A Poly1305 tag.
+///
+/// # Exceptions:
+/// An exception will be thrown if:
+/// - `slice` is not 16 bytes
+///
+/// # Security:
+/// `Tag` implements `PartialEq` and thus prevents users from accidentally using non constant-time
+/// comparisons. However, `unsafe_as_bytes()` lets the user return the `Tag` without such a protection.
+/// You should avoid ever using `unsafe_as_bytes()`.
 pub struct Tag {
     value: [u8; POLY1305_BLOCKSIZE],
 }
@@ -119,7 +146,8 @@ impl PartialEq for Tag {
 }
 
 impl Tag {
-    /// Make Tag from a byte slice.
+    #[must_use]
+    /// Make a `Tag` from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != POLY1305_BLOCKSIZE {
             return Err(UnknownCryptoError);
@@ -130,7 +158,8 @@ impl Tag {
 
         Ok(Self { value: mac })
     }
-    /// Return the Mac as byte slice. WARNING: Provides no protection against unsafe
+    #[must_use]
+    /// Return the `Tag` as byte slice.  __**WARNING**__: Provides no protection against unsafe
     /// comparison operations.
     pub fn unsafe_as_bytes(&self) -> [u8; POLY1305_BLOCKSIZE] {
         self.value
@@ -138,6 +167,7 @@ impl Tag {
 }
 
 /// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+#[must_use]
 pub struct Poly1305 {
     a: [u32; 5],
     r: [u32; 5],
@@ -157,6 +187,7 @@ impl Drop for Poly1305 {
 }
 
 impl Poly1305 {
+    #[must_use]
     #[inline(always)]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
     /// Initialize `Poly1305` struct for a given key.
@@ -175,6 +206,7 @@ impl Poly1305 {
 
         Ok(())
     }
+    #[must_use]
     #[inline(never)]
     #[rustfmt::skip]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::cast_lossless))]
@@ -379,6 +411,7 @@ impl Poly1305 {
 
         Ok(())
     }
+    #[must_use]
     #[inline(always)]
     /// Return a Poly1305 tag.
     pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
