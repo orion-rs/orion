@@ -77,9 +77,9 @@
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
 //! // Encrypt and place ciphertext + tag in dst_out_ct
-//! aead::chacha20poly1305::seal_in_place(&secret_key, &nonce, plaintext, &ad, &mut dst_out_ct).unwrap();
+//! aead::chacha20poly1305::seal(&secret_key, &nonce, plaintext, &ad, &mut dst_out_ct).unwrap();
 //! // Verify tag, if correct then decrypt and place plaintext in dst_out_pt
-//! aead::chacha20poly1305::open_in_place(&secret_key, &nonce, &dst_out_ct, &ad, &mut dst_out_pt).unwrap();
+//! aead::chacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, &ad, &mut dst_out_pt).unwrap();
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
