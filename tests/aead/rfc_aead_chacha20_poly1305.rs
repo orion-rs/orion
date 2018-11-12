@@ -119,7 +119,7 @@ mod rfc_aead_chacha20_poly1305 {
 
         let mut dst_out_pt = vec![0u8; ciphertext.len()];
 
-        aead::chacha20poly1305::decrypt(
+        aead::chacha20poly1305::open(
             &aead::chacha20poly1305::SecretKey::from_slice(&key).unwrap(),
             &aead::chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &ct_plus_tag,

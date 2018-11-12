@@ -77,9 +77,9 @@
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
 //! // Encrypt and place ciphertext + tag in dst_out_ct
-//! aead::chacha20poly1305::encrypt(&secret_key, &nonce, plaintext, &ad, &mut dst_out_ct).unwrap();
+//! aead::chacha20poly1305::seal_in_place(&secret_key, &nonce, plaintext, &ad, &mut dst_out_ct).unwrap();
 //! // Verify tag, if correct then decrypt and place plaintext in dst_out_pt
-//! aead::chacha20poly1305::decrypt(&secret_key, &nonce, &dst_out_ct, &ad, &mut dst_out_pt).unwrap();
+//! aead::chacha20poly1305::open_in_place(&secret_key, &nonce, &dst_out_ct, &ad, &mut dst_out_pt).unwrap();
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
@@ -143,8 +143,8 @@ fn process_authentication(
     Ok(())
 }
 
-/// AEAD ChaCha20Poly1305 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn encrypt(
+/// AEAD ChaCha20Poly1305 encryption and authentication as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn seal(
     secret_key: &SecretKey,
     nonce: &Nonce,
     plaintext: &[u8],
@@ -175,8 +175,8 @@ pub fn encrypt(
     Ok(())
 }
 
-/// AEAD ChaCha20Poly1305 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn decrypt(
+/// AEAD ChaCha20Poly1305 decryption and authentication as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn open(
     secret_key: &SecretKey,
     nonce: &Nonce,
     ciphertext_with_tag: &[u8],
@@ -253,7 +253,7 @@ fn test_modified_tag_error() {
     let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
     let mut dst_out_pt = [0u8; 64];
 
-    encrypt(
+    seal(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &[0u8; 64],
@@ -262,7 +262,7 @@ fn test_modified_tag_error() {
     ).unwrap();
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
-    decrypt(
+    open(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_ct,
@@ -280,7 +280,7 @@ fn test_bad_pt_ct_lengths() {
     let mut dst_out_pt_2 = [0u8; 64];
 
     assert!(
-        encrypt(
+        seal(
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_pt_2,
@@ -289,7 +289,7 @@ fn test_bad_pt_ct_lengths() {
         ).is_err()
     );
 
-    encrypt(
+    seal(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_pt_2,
@@ -298,7 +298,7 @@ fn test_bad_pt_ct_lengths() {
     ).unwrap();
 
     assert!(
-        decrypt(
+        open(
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_2,
@@ -307,7 +307,7 @@ fn test_bad_pt_ct_lengths() {
         ).is_err()
     );
 
-    decrypt(
+    open(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_ct_2,
@@ -326,7 +326,7 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
     let mut dst_out_pt_2 = [0u8; 0];
 
     assert!(
-        decrypt(
+        open(
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_1,
@@ -336,7 +336,7 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
     );
 
     assert!(
-        decrypt(
+        open(
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_2,
@@ -346,7 +346,7 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
     );
 
     assert!(
-        decrypt(
+        open(
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_3,

@@ -354,9 +354,9 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 ///
 /// let mut secret_key = default::SecretKey::generate();
 ///
-/// let encrypted_data = default::encrypt(&secret_key, "Secret message".as_bytes()).unwrap();
+/// let encrypted_data = default::seal(&secret_key, "Secret message".as_bytes()).unwrap();
 /// ```
-pub fn encrypt(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
     }
@@ -366,7 +366,7 @@ pub fn encrypt(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unkn
     let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
     dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes());
 
-    aead::xchacha20poly1305::encrypt(
+    aead::xchacha20poly1305::seal(
         secret_key,
         &nonce,
         plaintext,
@@ -403,11 +403,11 @@ pub fn encrypt(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unkn
 ///
 /// let secret_key = default::SecretKey::generate();
 ///
-/// let ciphertext = default::encrypt(&secret_key, "Secret message".as_bytes()).unwrap();
+/// let ciphertext = default::seal(&secret_key, "Secret message".as_bytes()).unwrap();
 ///
-/// let decrypted_data = default::decrypt(&secret_key, &ciphertext).unwrap();
+/// let decrypted_data = default::open(&secret_key, &ciphertext).unwrap();
 /// ```
-pub fn decrypt(secret_key: &SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn open(secret_key: &SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     // `+ 1` to avoid empty ciphertexts
     if ciphertext.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
         return Err(UnknownCryptoError);
@@ -415,7 +415,7 @@ pub fn decrypt(secret_key: &SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, Unk
 
     let mut dst_out = vec![0u8; ciphertext.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
-    aead::xchacha20poly1305::decrypt(
+    aead::xchacha20poly1305::open(
         secret_key,
         &Nonce::from_slice(&ciphertext[..XCHACHA_NONCESIZE]).unwrap(),
         &ciphertext[XCHACHA_NONCESIZE..],
@@ -608,9 +608,9 @@ mod test {
         let key = SecretKey::generate();
         let plaintext = "Secret message".as_bytes().to_vec();
 
-        let dst_ciphertext = default::encrypt(&key, &plaintext).unwrap();
+        let dst_ciphertext = default::seal(&key, &plaintext).unwrap();
         assert!(dst_ciphertext.len() == plaintext.len() + (24 + 16));
-        let dst_plaintext = default::decrypt(&key, &dst_ciphertext).unwrap();
+        let dst_plaintext = default::open(&key, &dst_ciphertext).unwrap();
         assert!(dst_plaintext.len() == plaintext.len());
         assert_eq!(plaintext, dst_plaintext);
     }
@@ -621,7 +621,7 @@ mod test {
         let key = SecretKey::generate();
         let plaintext = "".as_bytes().to_vec();
 
-        default::encrypt(&key, &plaintext).unwrap();
+        default::seal(&key, &plaintext).unwrap();
     }
 
     #[test]
@@ -630,6 +630,6 @@ mod test {
         let key = SecretKey::generate();
         let ciphertext = [0u8; 12];
 
-        default::decrypt(&key, &ciphertext).unwrap();
+        default::open(&key, &ciphertext).unwrap();
     }
 }

@@ -69,7 +69,7 @@ mod other_aead_xchacha20_poly1305 {
         let mut dst_out_ct = vec![0u8; expected_ct.len()];
         let mut dst_out_pt = vec![0u8; plaintext.len()];
 
-        aead::xchacha20poly1305::encrypt(
+        aead::xchacha20poly1305::seal(
             &aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
             &aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &plaintext,
@@ -87,7 +87,7 @@ mod other_aead_xchacha20_poly1305 {
             expected_ct[plaintext.len()..].as_ref()
         );
 
-        aead::xchacha20poly1305::decrypt(
+        aead::xchacha20poly1305::open(
             &aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
             &aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &dst_out_ct,

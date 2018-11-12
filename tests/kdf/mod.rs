@@ -23,7 +23,8 @@ pub mod custom_pbkdf2;
 pub mod other_hkdf;
 
 extern crate orion;
-//use self::orion::hazardous::kdf::hkdf::*;
+use self::orion::hazardous::kdf::hkdf::*;
+use self::orion::hazardous::mac::hmac;
 
 pub fn hkdf_test_runner(
     excp_prk: Option<&[u8]>,
@@ -33,11 +34,11 @@ pub fn hkdf_test_runner(
     info: &[u8],
     okm_out: &mut [u8],
 ) -> bool {
-    /*
+
     let actual_prk = extract(&salt, &ikm);
 
     if excp_prk.is_some() {
-        assert_eq!(actual_prk.as_ref(), excp_prk.unwrap());
+        assert!(actual_prk == hmac::Mac::from_slice(excp_prk.unwrap()).unwrap());
     }
 
     expand(&actual_prk, &info, okm_out).unwrap();
@@ -46,6 +47,4 @@ pub fn hkdf_test_runner(
     derive_key(salt, ikm, info, &mut okm_one_shot_dst).unwrap();
 
     ((okm_out == excp_okm) == (okm_one_shot_dst == excp_okm))
-    */
-    true
 }
