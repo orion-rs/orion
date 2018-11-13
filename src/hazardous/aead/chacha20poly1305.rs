@@ -42,8 +42,6 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of the `secret_key` is not `32` bytes
-//! - The length of the `nonce` is not `12` bytes
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
 //! - The length of `ciphertext_with_tag` is not greater than `16`
