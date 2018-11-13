@@ -26,7 +26,7 @@ use hazardous::aead::xchacha20poly1305::Nonce;
 pub use hazardous::aead::xchacha20poly1305::SecretKey;
 use hazardous::constants::*;
 use hazardous::kdf::hkdf;
-pub use hazardous::kdf::hkdf::Salt;
+use hazardous::kdf::hkdf::Salt;
 use hazardous::kdf::pbkdf2;
 use hazardous::mac::hmac;
 use hazardous::mac::hmac::Mac;
@@ -115,80 +115,52 @@ pub fn hmac_verify(
 /// HKDF-HMAC-SHA512.
 ///
 /// # About:
-/// The output length is set to 32, which makes the derived key suitable for use with orions AEAD
-/// constructions and `default::encrypt()`/`default::decrypt()`.
+/// - A salt of `64` bytes is automatically generated
+/// - Returns both the salt used and the derived key as: `(salt, okm)`
 ///
 /// # Parameters:
-/// - `salt`: Salt value
-/// - `input`: Input keying material
-/// - `info`: Optional context and application specific information (can be a zero-length string)
+/// - `ikm`: Input keying material
+/// - `info`: Optional context and application specific information
+/// - `length`: The desired length of the derived key
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
+/// - `length` is greater than `16320`
+/// - The `OsRng` fails to initialize or read from its source
 ///
 /// # Security:
-/// Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
 /// HKDF is not suitable for password storage.
 ///
 /// # Example:
 /// ```
 /// use orion::default;
 ///
-/// let salt = default::Salt::generate();
+/// let secret_key = "Secret key that needs strethcing".as_bytes();
 ///
-/// let data = "Some data.".as_bytes();
-/// let info = "Some info.".as_bytes();
+/// let info = "Session key".as_bytes();
 ///
-/// let derived_key = default::hkdf(&salt, data, info);
+/// let (salt, derived_key) = default::hkdf(secret_key, Some(info), 32).unwrap();
+///
+/// // `derived_key` could now be used as encryption key with `seal`/`open`
 /// ```
-pub fn hkdf(salt: &Salt, input: &[u8], info: &[u8]) -> [u8; 32] {
-    let mut okm = [0u8; 32];
-
-    hkdf::derive_key(salt, input, info, &mut okm).unwrap();
-
-    okm
-}
-
-#[must_use]
-/// Verify an HKDF-HMAC-SHA512 derived key in constant time.
-///
-/// # Parameters:
-/// - `expected_dk` : The expected HKDF derived key
-/// - `salt`: Salt value
-/// - `input`: Input keying material
-/// - `info`: Optional context and application specific information (can be a zero-length string)
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The length of `expected_dk` is not 32 bytes
-/// - The derived key does not match the expected
-///
-/// # Example:
-///
-/// ```
-/// use orion::default;
-///
-/// let salt = default::Salt::generate();
-/// let data = "Some data.".as_bytes();
-/// let info = "Some info.".as_bytes();
-///
-/// let derived_key = default::hkdf(&salt, data, info);
-/// assert!(default::hkdf_verify(&derived_key, &salt, data, info).unwrap());
-/// ```
-pub fn hkdf_verify(
-    expected_dk: &[u8],
-    salt: &Salt,
-    input: &[u8],
-    info: &[u8],
-) -> Result<bool, ValidationCryptoError> {
-    if expected_dk.len() != 32 {
-        return Err(ValidationCryptoError);
+pub fn hkdf(ikm: &[u8], info: Option<&[u8]>, length: usize) -> Result<([u8; 64], Vec<u8>), UnknownCryptoError> {
+    if length > 16320 {
+        return Err(UnknownCryptoError);
     }
 
-    let mut okm = [0u8; 32];
+    let mut okm = vec![0u8; length];
+    let mut salt = [0u8; 64];
+    util::gen_rand_key(&mut salt).unwrap();
 
-    hkdf::verify(&expected_dk, salt, input, info, &mut okm)
+    let optional_info = if info.is_some() {
+        info.unwrap()
+    } else {
+        &[0u8; 0]
+    };
+
+    hkdf::derive_key(&Salt::from_slice(&salt), ikm, &optional_info, &mut okm).unwrap();
+
+    Ok((salt, okm))
 }
 
 #[must_use]
@@ -432,7 +404,6 @@ mod test {
 
     extern crate hex;
     use default;
-    use default::Salt;
     use default::SecretKey;
     use util;
 
@@ -452,47 +423,22 @@ mod test {
     }
 
     #[test]
-    fn hkdf_verify() {
-        let salt = Salt::generate();
+    fn hkdf_ok() {
         let data = "Some data.".as_bytes();
         let info = "Some info.".as_bytes();
 
-        let hkdf_dk = default::hkdf(&salt, data, info);
-
-        assert_eq!(
-            default::hkdf_verify(&hkdf_dk, &salt, data, info).unwrap(),
-            true
-        );
+        assert!(default::hkdf(data, Some(info), 32).is_ok());
+        assert!(default::hkdf(data, None, 32).is_ok());
     }
 
     #[test]
-    fn hkdf_verify_err() {
-        let salt = Salt::generate();
+    fn hkdf_okm_length() {
         let data = "Some data.".as_bytes();
         let info = "Some info.".as_bytes();
 
-        let mut hkdf_dk = default::hkdf(&salt, data, info);
-        hkdf_dk[..4].copy_from_slice(&[0u8; 4]);
+        assert!(default::hkdf(data, Some(info), 16321).is_err());
+        assert!(default::hkdf(data, Some(info), 16320).is_ok());
 
-        assert!(default::hkdf_verify(&hkdf_dk, &salt, data, info).is_err());
-    }
-
-    #[test]
-    fn hkdf_verify_exptected_too_long() {
-        let salt = Salt::generate();
-        let data = "Some data.".as_bytes();
-        let info = "Some info.".as_bytes();
-
-        assert!(default::hkdf_verify(&salt.as_bytes(), &salt, data, info).is_err());
-    }
-
-    #[test]
-    fn hkdf_verify_exptected_too_short() {
-        let salt = Salt::generate();
-        let data = "Some data.".as_bytes();
-        let info = "Some info.".as_bytes();
-
-        assert!(default::hkdf_verify(&salt.as_bytes(), &salt, data, info).is_err());
     }
 
     #[test]
