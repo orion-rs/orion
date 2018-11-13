@@ -42,8 +42,12 @@
 //! Using the `default` API's `password_hash` you can easily hash a password using PBKDF2, store it
 //! in a database and later use `password_hash_verify` to verify the password.
 //!
-//! ## Derive multiple keys from a single key (key derivation)
+//! ## Deriving multiple keys from a single key (key derivation)
 //! Using the `default` API's `hkdf` function, you can easily derive multiple keys from a single starting key.
+//!
+//! ## Authenticating a message
+//! Using the `default` API's `hmac` function, you can authenitcate a message and use `hmac_verify`
+//! to verify such MACs.
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]

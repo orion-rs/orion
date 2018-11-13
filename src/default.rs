@@ -34,7 +34,7 @@ pub use hazardous::mac::hmac::SecretKey as HmacKey;
 use util;
 
 #[must_use]
-/// HMAC-SHA512.
+/// Authenticate a message using HMAC-SHA512.
 /// # Parameters:
 /// - `secret_key`:  The authentication key
 /// - `data`: Data to be authenticated
@@ -64,7 +64,7 @@ pub fn hmac(secret_key: &HmacKey, data: &[u8]) -> Mac {
 }
 
 #[must_use]
-/// Verify a HMAC-SHA512 MAC in constant time, with Double-HMAC Verification.
+/// Verify a HMAC-SHA512 MAC in constant time and with Double-HMAC Verification.
 ///
 /// # Parameters:
 /// - `expected_hmac`: The expected HMAC
@@ -111,7 +111,7 @@ pub fn hmac_verify(
 }
 
 #[must_use]
-/// Derive multiple keys from a single key HKDF-HMAC-SHA512.
+/// Derive multiple keys from a single key using HKDF-HMAC-SHA512.
 ///
 /// # About:
 /// - A salt of `64` bytes is automatically generated
