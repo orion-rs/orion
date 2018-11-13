@@ -28,6 +28,23 @@
 //! Usage of the `hazardous` module is only intended for advanced users.
 //!
 //! You can read more about orion in the project [wiki](https://github.com/brycx/orion/wiki).
+//!
+//!
+//! # Common use cases
+//! The following are some common use cases for a cryptography library and how these might
+//! be solved using orion.
+//!
+//! ## Encrypting data
+//! The `default` API's `seal` and `open` functions let you encrypt and authenticate data easily
+//! using the XChaCha20Poly1305 AEAD construct.
+//!
+//! ## Hashing a password for storage and verifying it
+//! Using the `default` API's `password_hash` you can easily hash a password using PBKDF2, store it
+//! in a database and later use `password_hash_verify` to verify the password.
+//!
+//! ## Derive multiple keys from a single key (key derivation)
+//! Using the `default` API's `hkdf` function, you can easily derive multiple keys from a single starting key.
+
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
 #![deny(overflowing_literals)]

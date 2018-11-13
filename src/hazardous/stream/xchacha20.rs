@@ -92,7 +92,7 @@ use zeroize::Zeroize;
 /// ```
 /// use orion::hazardous::stream::xchacha20;
 ///
-/// let nonce = XChaCha20::Nonce::generate();
+/// let nonce = xchacha20::Nonce::generate();
 /// ```
 pub struct Nonce {
     value: [u8; XCHACHA_NONCESIZE],

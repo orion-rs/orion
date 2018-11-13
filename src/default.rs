@@ -23,7 +23,7 @@
 use errors::*;
 use hazardous::aead;
 use hazardous::aead::xchacha20poly1305::Nonce;
-pub use hazardous::aead::xchacha20poly1305::SecretKey;
+pub use hazardous::aead::xchacha20poly1305::SecretKey as EncryptionKey;
 use hazardous::constants::*;
 use hazardous::kdf::hkdf;
 use hazardous::kdf::hkdf::Salt;
@@ -112,7 +112,7 @@ pub fn hmac_verify(
 }
 
 #[must_use]
-/// HKDF-HMAC-SHA512.
+/// Derive multiple keys from a single key HKDF-HMAC-SHA512.
 ///
 /// # About:
 /// - A salt of `64` bytes is automatically generated
@@ -164,7 +164,7 @@ pub fn hkdf(ikm: &[u8], info: Option<&[u8]>, length: usize) -> Result<([u8; 64],
 }
 
 #[must_use]
-/// PBKDF2-HMAC-SHA512. Suitable for password storage.
+/// Hash a password using PBKDF2-HMAC-SHA512.
 /// # About:
 /// This is meant to be used for password storage.
 /// - A salt of 32 bytes is automatically generated.
@@ -173,7 +173,7 @@ pub fn hkdf(ikm: &[u8], info: Option<&[u8]>, length: usize) -> Result<([u8; 64],
 /// - An array of 64 bytes is returned.
 ///
 /// The first 32 bytes of this array is the salt used to derive the key and the last 32 bytes
-/// is the actual derived key. When using this function with `default::pbkdf2_verify()`,
+/// is the actual derived key. When using this function with `default::password_hash_verify()`,
 /// then the seperation of the salt and the derived key are automatically handeled.
 ///
 /// # Parameters:
@@ -191,9 +191,9 @@ pub fn hkdf(ikm: &[u8], info: Option<&[u8]>, length: usize) -> Result<([u8; 64],
 ///
 /// let password = "Secret password".as_bytes();
 ///
-/// let derived_password = default::pbkdf2(password);
+/// let derived_password = default::password_hash(password);
 /// ```
-pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
+pub fn password_hash(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
     if password.len() < 14 {
         return Err(UnknownCryptoError);
     }
@@ -210,11 +210,11 @@ pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
 }
 
 #[must_use]
-/// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
+/// Verify a hashed password using PBKDF2-HMAC-SHA512.
 /// # About:
-/// This function is meant to be used with the `default::pbkdf2()` function in orion's default API. It can be
+/// This function is meant to be used with the `default::password_hash()` function in orion's default API. It can be
 /// used without it, but then the `expected_dk` passed to the function must be constructed just as in
-/// `default::pbkdf2()`. See documention on `default::pbkdf2()` for details on this.
+/// `default::password_hash()`. See documention on `default::password_hash()` for details on this.
 ///
 /// # Parameters:
 /// - `expected_dk`: The expected password hash
@@ -232,10 +232,10 @@ pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
 ///
 /// let password = "Secret password".as_bytes();
 ///
-/// let derived_password = default::pbkdf2(password).unwrap();
-/// assert!(default::pbkdf2_verify(&derived_password, password).unwrap());
+/// let derived_password = default::password_hash(password).unwrap();
+/// assert!(default::password_hash_verify(&derived_password, password).unwrap());
 /// ```
-pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, ValidationCryptoError> {
+pub fn password_hash_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, ValidationCryptoError> {
     if expected_dk.len() != 64 {
         return Err(ValidationCryptoError);
     }
@@ -324,11 +324,11 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 /// ```
 /// use orion::default;
 ///
-/// let mut secret_key = default::SecretKey::generate();
+/// let secret_key = default::EncryptionKey::generate();
 ///
 /// let encrypted_data = default::seal(&secret_key, "Secret message".as_bytes()).unwrap();
 /// ```
-pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn seal(secret_key: &EncryptionKey, plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
     }
@@ -374,13 +374,13 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 /// ```
 /// use orion::default;
 ///
-/// let secret_key = default::SecretKey::generate();
+/// let secret_key = default::EncryptionKey::generate();
 ///
 /// let ciphertext = default::seal(&secret_key, "Secret message".as_bytes()).unwrap();
 ///
 /// let decrypted_data = default::open(&secret_key, &ciphertext).unwrap();
 /// ```
-pub fn open(secret_key: &SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn open(secret_key: &EncryptionKey, ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     // `+ 1` to avoid empty ciphertexts
     if ciphertext.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
         return Err(UnknownCryptoError);
@@ -404,7 +404,7 @@ mod test {
 
     extern crate hex;
     use default;
-    use default::SecretKey;
+    use default::EncryptionKey;
     use util;
 
     #[test]
@@ -446,9 +446,9 @@ mod test {
         let mut password = [0u8; 64];
         util::gen_rand_key(&mut password).unwrap();
 
-        let pbkdf2_dk: [u8; 64] = default::pbkdf2(&password).unwrap();
+        let pbkdf2_dk: [u8; 64] = default::password_hash(&password).unwrap();
 
-        assert_eq!(default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap(), true);
+        assert_eq!(default::password_hash_verify(&pbkdf2_dk, &password).unwrap(), true);
     }
 
     #[test]
@@ -457,10 +457,10 @@ mod test {
         let mut password = [0u8; 64];
         util::gen_rand_key(&mut password).unwrap();
 
-        let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        let mut pbkdf2_dk = default::password_hash(&password).unwrap();
         pbkdf2_dk[..10].copy_from_slice(&[0x61; 10]);
 
-        default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap();
+        default::password_hash_verify(&pbkdf2_dk, &password).unwrap();
     }
 
     #[test]
@@ -469,10 +469,10 @@ mod test {
         let mut password = [0u8; 64];
         util::gen_rand_key(&mut password).unwrap();
 
-        let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        let mut pbkdf2_dk = default::password_hash(&password).unwrap();
         pbkdf2_dk[70..80].copy_from_slice(&[0x61; 10]);
 
-        default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap();
+        default::password_hash_verify(&pbkdf2_dk, &password).unwrap();
     }
 
     #[test]
@@ -481,10 +481,10 @@ mod test {
         let mut password = [0u8; 64];
         util::gen_rand_key(&mut password).unwrap();
 
-        let mut pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        let mut pbkdf2_dk = default::password_hash(&password).unwrap();
         pbkdf2_dk[63..73].copy_from_slice(&[0x61; 10]);
 
-        default::pbkdf2_verify(&pbkdf2_dk, &password).unwrap();
+        default::password_hash_verify(&pbkdf2_dk, &password).unwrap();
     }
 
     #[test]
@@ -493,9 +493,9 @@ mod test {
         util::gen_rand_key(&mut password).unwrap();
 
         let mut pbkdf2_dk = [0u8; 65];
-        pbkdf2_dk[..64].copy_from_slice(&default::pbkdf2(&password).unwrap());
+        pbkdf2_dk[..64].copy_from_slice(&default::password_hash(&password).unwrap());
 
-        assert!(default::pbkdf2_verify(&pbkdf2_dk, &password).is_err());
+        assert!(default::password_hash_verify(&pbkdf2_dk, &password).is_err());
     }
 
     #[test]
@@ -503,9 +503,9 @@ mod test {
         let mut password = [0u8; 64];
         util::gen_rand_key(&mut password).unwrap();
 
-        let pbkdf2_dk = default::pbkdf2(&password).unwrap();
+        let pbkdf2_dk = default::password_hash(&password).unwrap();
 
-        assert!(default::pbkdf2_verify(&pbkdf2_dk[..63], &password).is_err());
+        assert!(default::password_hash_verify(&pbkdf2_dk[..63], &password).is_err());
     }
 
     #[test]
@@ -513,7 +513,7 @@ mod test {
         let mut password = [0u8; 13];
         util::gen_rand_key(&mut password).unwrap();
 
-        assert!(default::pbkdf2(&password).is_err());
+        assert!(default::password_hash(&password).is_err());
     }
 
     #[test]
@@ -538,7 +538,7 @@ mod test {
 
     #[test]
     fn auth_enc_encryption_decryption() {
-        let key = SecretKey::generate();
+        let key = EncryptionKey::generate();
         let plaintext = "Secret message".as_bytes().to_vec();
 
         let dst_ciphertext = default::seal(&key, &plaintext).unwrap();
@@ -551,7 +551,7 @@ mod test {
     #[test]
     #[should_panic]
     fn auth_enc_plaintext_empty_err() {
-        let key = SecretKey::generate();
+        let key = EncryptionKey::generate();
         let plaintext = "".as_bytes().to_vec();
 
         default::seal(&key, &plaintext).unwrap();
@@ -560,7 +560,7 @@ mod test {
     #[test]
     #[should_panic]
     fn auth_enc_ciphertext_less_than_13_err() {
-        let key = SecretKey::generate();
+        let key = EncryptionKey::generate();
         let ciphertext = [0u8; 12];
 
         default::open(&key, &ciphertext).unwrap();
