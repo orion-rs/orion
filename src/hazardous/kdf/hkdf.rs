@@ -23,7 +23,7 @@
 //! # Parameters:
 //! - `salt`:  Optional salt value
 //! - `ikm`: Input keying material
-//! - `info`: Optional context and application specific information (can be a zero-length string)
+//! - `info`: Optional context and application specific information.  If `None` then it's an empty string.
 //! - `okm_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
 //!
 //! See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
@@ -80,13 +80,18 @@ pub fn extract(salt: &Salt, ikm: &[u8]) -> hmac::Mac {
 #[must_use]
 #[inline(always)]
 /// The HKDF expand step.
-pub fn expand(prk: &hmac::Mac, info: &[u8], okm_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
+pub fn expand(prk: &hmac::Mac, info: Option<&[u8]>, okm_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
     if okm_out.len() > 16320 {
         return Err(UnknownCryptoError);
     }
     if okm_out.is_empty() {
         return Err(UnknownCryptoError);
     }
+
+    let optional_info = match info {
+        Some(ref n_val) => *n_val,
+        None => &[0u8; 0],
+    };
 
     let mut hmac = hmac::init(&hmac::SecretKey::from_slice(&prk.unsafe_as_bytes()));
     let okm_len = okm_out.len();
@@ -95,7 +100,7 @@ pub fn expand(prk: &hmac::Mac, info: &[u8], okm_out: &mut [u8]) -> Result<(), Un
         let block_len = hlen_block.len();
         assert!(block_len <= okm_len);
 
-        hmac.update(info).unwrap();
+        hmac.update(optional_info).unwrap();
         hmac.update(&[idx as u8 + 1_u8]).unwrap();
         hlen_block.copy_from_slice(&hmac.finalize().unwrap().unsafe_as_bytes()[..block_len]);
 
@@ -116,7 +121,7 @@ pub fn expand(prk: &hmac::Mac, info: &[u8], okm_out: &mut [u8]) -> Result<(), Un
 pub fn derive_key(
     salt: &Salt,
     ikm: &[u8],
-    info: &[u8],
+    info: Option<&[u8]>,
     okm_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     expand(&extract(salt, ikm), info, okm_out)
@@ -128,7 +133,7 @@ pub fn verify(
     expected_dk: &[u8],
     salt: &Salt,
     ikm: &[u8],
-    info: &[u8],
+    info: Option<&[u8]>,
     okm_out: &mut [u8],
 ) -> Result<bool, ValidationCryptoError> {
     expand(&extract(salt, ikm), info, okm_out).unwrap();
@@ -152,7 +157,7 @@ mod test {
         let mut okm_out = [0u8; 17000];
         let prk = extract(&Salt::from_slice("".as_bytes()), "".as_bytes());
 
-        assert!(expand(&prk, "".as_bytes(), &mut okm_out).is_err());
+        assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
     }
 
     #[test]
@@ -160,7 +165,7 @@ mod test {
         let mut okm_out = [0u8; 0];
         let prk = extract(&Salt::from_slice("".as_bytes()), "".as_bytes());
 
-        assert!(expand(&prk, "".as_bytes(), &mut okm_out).is_err());
+        assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
     }
 
     #[test]
@@ -175,7 +180,7 @@ mod test {
         ).unwrap();
 
         assert_eq!(
-            verify(&expected_okm, &salt, &ikm, &info, &mut okm_out).unwrap(),
+            verify(&expected_okm, &salt, &ikm, Some(&info), &mut okm_out).unwrap(),
             true
         );
     }
@@ -192,7 +197,7 @@ mod test {
              9d201395faa4b61a96c8",
         ).unwrap();
 
-        assert!(verify(&expected_okm, &salt, &ikm, info, &mut okm_out).is_err());
+        assert!(verify(&expected_okm, &salt, &ikm, Some(info), &mut okm_out).is_err());
     }
 
     #[test]
@@ -207,7 +212,7 @@ mod test {
              9d201395faa4b61a96c8",
         ).unwrap();
 
-        assert!(verify(&expected_okm, &salt, &ikm, info, &mut okm_out).is_err());
+        assert!(verify(&expected_okm, &salt, &ikm, Some(info), &mut okm_out).is_err());
     }
 
     #[test]
@@ -222,6 +227,6 @@ mod test {
              9d201395faa4b61a96c8",
         ).unwrap();
 
-        assert!(verify(&expected_okm, &salt, &ikm, info, &mut okm_out).is_err());
+        assert!(verify(&expected_okm, &salt, &ikm, Some(info), &mut okm_out).is_err());
     }
 }

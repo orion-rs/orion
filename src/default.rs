@@ -120,7 +120,7 @@ pub fn hmac_verify(
 ///
 /// # Parameters:
 /// - `ikm`: Input keying material
-/// - `info`: Optional context and application specific information
+/// - `info`: Optional context and application specific information. If `None` then it's an empty string.
 /// - `length`: The desired length of the derived key
 ///
 /// # Exceptions:
@@ -152,13 +152,7 @@ pub fn hkdf(ikm: &[u8], info: Option<&[u8]>, length: usize) -> Result<([u8; 64],
     let mut salt = [0u8; 64];
     util::gen_rand_key(&mut salt).unwrap();
 
-    let optional_info = if info.is_some() {
-        info.unwrap()
-    } else {
-        &[0u8; 0]
-    };
-
-    hkdf::derive_key(&Salt::from_slice(&salt), ikm, &optional_info, &mut okm).unwrap();
+    hkdf::derive_key(&Salt::from_slice(&salt), ikm, info, &mut okm).unwrap();
 
     Ok((salt, okm))
 }
