@@ -166,8 +166,8 @@ impl Tag {
     }
 }
 
-/// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 #[must_use]
+/// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub struct Poly1305 {
     a: [u32; 5],
     r: [u32; 5],
@@ -369,6 +369,7 @@ impl Poly1305 {
         } else {
         }
     }
+    #[must_use]
     #[inline(always)]
     /// Update state with a message. This can be called multiple times.
     pub fn update(&mut self, message: &[u8]) -> Result<(), FinalizationCryptoError> {

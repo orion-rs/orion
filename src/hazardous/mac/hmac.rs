@@ -130,8 +130,8 @@ impl SecretKey {
     }
 }
 
-#[derive(Clone, Copy)]
 #[must_use]
+#[derive(Clone, Copy)]
 /// A HMAC MAC.
 ///
 /// # Exceptions:
@@ -176,6 +176,7 @@ impl Mac {
     }
 }
 
+#[must_use]
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub struct Hmac {
@@ -216,7 +217,7 @@ impl Hmac {
         } else {
         }
     }
-
+    #[must_use]
     /// This can be called multiple times.
     pub fn update(&mut self, message: &[u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {

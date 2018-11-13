@@ -67,8 +67,8 @@ use hazardous::mac::hmac;
 pub use hazardous::mac::hmac::SecretKey as Salt;
 use util;
 
-#[inline(always)]
 #[must_use]
+#[inline(always)]
 /// The HKDF extract step.
 pub fn extract(salt: &Salt, ikm: &[u8]) -> hmac::Mac {
     let mut prk = hmac::init(salt);
@@ -77,8 +77,8 @@ pub fn extract(salt: &Salt, ikm: &[u8]) -> hmac::Mac {
     prk.finalize().unwrap()
 }
 
-#[inline(always)]
 #[must_use]
+#[inline(always)]
 /// The HKDF expand step.
 pub fn expand(prk: &hmac::Mac, info: &[u8], okm_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
     if okm_out.len() > 16320 {

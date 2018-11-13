@@ -74,6 +74,7 @@ use byteorder::{BigEndian, ByteOrder};
 use errors::*;
 use tiny_keccak::Keccak;
 
+#[must_use]
 /// cSHAKE256 as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
 pub struct CShake {
     setup_hasher: Keccak,
@@ -117,6 +118,7 @@ impl CShake {
         } else {
         }
     }
+    #[must_use]
     /// Set `input`. Can be called repeatedly.
     pub fn update(&mut self, input: &[u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {

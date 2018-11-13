@@ -139,8 +139,8 @@ impl SecretKey {
     pub fn as_bytes(&self) -> [u8; CHACHA_KEYSIZE] {
         self.value
     }
-    #[cfg(feature = "safe_api")]
     #[must_use]
+    #[cfg(feature = "safe_api")]
     /// Randomly generate a `SecretKey` using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> Self {
         let mut secret_key = [0u8; CHACHA_KEYSIZE];
@@ -247,8 +247,8 @@ impl InternalState {
         self.quarter_round(2, 7, 8, 13);
         self.quarter_round(3, 4, 9, 14);
     }
-    #[inline(always)]
     #[must_use]
+    #[inline(always)]
     /// Initialize either a ChaCha or HChaCha state with a `secret_key` and `nonce`.
     fn init_state(
         &mut self,
@@ -278,8 +278,8 @@ impl InternalState {
 
         Ok(())
     }
-    #[inline(always)]
     #[must_use]
+    #[inline(always)]
     /// Process either a ChaCha20 or HChaCha20 block.
     fn process_block(
         &mut self,
@@ -311,8 +311,8 @@ impl InternalState {
 
         Ok(working_state.state)
     }
-    #[inline(always)]
     #[must_use]
+    #[inline(always)]
     /// Serialize a keystream block of 16 u32's, into a little-endian byte array.
     fn serialize_block(
         &mut self,
@@ -443,8 +443,8 @@ pub fn keystream_block(
     Ok(keystream_block)
 }
 
-#[doc(hidden)]
 #[must_use]
+#[doc(hidden)]
 /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn hchacha20(
     secret_key: &SecretKey,
