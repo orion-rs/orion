@@ -142,7 +142,11 @@ pub fn hmac_verify(
 ///
 /// // `derived_key` could now be used as encryption key with `seal`/`open`
 /// ```
-pub fn hkdf(ikm: &[u8], info: Option<&[u8]>, length: usize) -> Result<([u8; 64], Vec<u8>), UnknownCryptoError> {
+pub fn hkdf(
+    ikm: &[u8],
+    info: Option<&[u8]>,
+    length: usize,
+) -> Result<([u8; 64], Vec<u8>), UnknownCryptoError> {
     if length > 16320 {
         return Err(UnknownCryptoError);
     }
@@ -228,7 +232,10 @@ pub fn password_hash(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
 /// let derived_password = default::password_hash(password).unwrap();
 /// assert!(default::password_hash_verify(&derived_password, password).unwrap());
 /// ```
-pub fn password_hash_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, ValidationCryptoError> {
+pub fn password_hash_verify(
+    expected_dk: &[u8],
+    password: &[u8],
+) -> Result<bool, ValidationCryptoError> {
     if expected_dk.len() != 64 {
         return Err(ValidationCryptoError);
     }
@@ -389,7 +396,6 @@ mod test {
 
         assert!(default::hkdf(data, Some(info), 16321).is_err());
         assert!(default::hkdf(data, Some(info), 16320).is_ok());
-
     }
 
     #[test]
@@ -399,7 +405,10 @@ mod test {
 
         let pbkdf2_dk: [u8; 64] = default::password_hash(&password).unwrap();
 
-        assert_eq!(default::password_hash_verify(&pbkdf2_dk, &password).unwrap(), true);
+        assert_eq!(
+            default::password_hash_verify(&pbkdf2_dk, &password).unwrap(),
+            true
+        );
     }
 
     #[test]
