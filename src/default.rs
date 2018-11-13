@@ -31,7 +31,6 @@ use hazardous::kdf::pbkdf2;
 use hazardous::mac::hmac;
 use hazardous::mac::hmac::Mac;
 pub use hazardous::mac::hmac::SecretKey as HmacKey;
-use hazardous::xof::cshake;
 use util;
 
 #[must_use]
@@ -243,52 +242,6 @@ pub fn password_hash_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool,
         512_000,
         &mut dk,
     )
-}
-
-#[must_use]
-/// cSHAKE256.
-/// # About:
-/// - Output length is 64
-///
-/// # Parameters:
-/// - `input`:  The main input string
-/// - `custom`: Customization string
-///
-/// "The customization string is intended to avoid a collision between these two cSHAKE values—it
-/// will be very difficult for an attacker to somehow force one computation (the email signature)
-/// to yield the same result as the other computation (the key fingerprint) if different values
-/// of S are used." See [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final) for more information.
-///
-/// ### Note:
-/// The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
-/// will produce ***incorrect results on big-endian based systems***. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - `custom` is empty
-/// - If the length of `custom` is greater than 65536
-///
-/// # Example:
-/// ```
-/// use orion::default;
-///
-/// let data = "Not so random data".as_bytes();
-/// let custom = "Custom".as_bytes();
-///
-/// let hash = default::cshake(data, custom).unwrap();
-/// ```
-pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
-    if custom.is_empty() {
-        return Err(UnknownCryptoError);
-    }
-
-    let mut hash = [0u8; 64];
-
-    let mut cshake = cshake::init(custom, None).unwrap();
-    cshake.update(input).unwrap();
-    cshake.finalize(&mut hash).unwrap();
-
-    Ok(hash)
 }
 
 #[must_use]
@@ -508,26 +461,6 @@ mod test {
         util::gen_rand_key(&mut password).unwrap();
 
         assert!(default::password_hash(&password).is_err());
-    }
-
-    #[test]
-    fn cshake_ok() {
-        let mut data = [0u8; 64];
-        util::gen_rand_key(&mut data).unwrap();
-
-        let custom = "Some custom string".as_bytes();
-
-        assert!(default::cshake(&data, custom).is_ok());
-    }
-
-    #[test]
-    fn cshake_empty_custom_err() {
-        let mut data = [0u8; 64];
-        util::gen_rand_key(&mut data).unwrap();
-
-        let custom = "".as_bytes();
-
-        assert!(default::cshake(&data, custom).is_err());
     }
 
     #[test]
