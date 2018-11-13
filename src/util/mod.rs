@@ -25,6 +25,7 @@ use errors;
 use rand::{rngs::OsRng, RngCore};
 use subtle::ConstantTimeEq;
 
+#[must_use]
 #[inline(never)]
 #[cfg(feature = "safe_api")]
 /// Generate random bytes. Not available in `no_std` context.
@@ -49,7 +50,6 @@ use subtle::ConstantTimeEq;
 ///
 /// util::gen_rand_key(&mut salt).unwrap();
 /// ```
-#[must_use]
 pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
     if dst.is_empty() {
         return Err(errors::UnknownCryptoError);
@@ -61,6 +61,7 @@ pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
     Ok(())
 }
 
+#[must_use]
 /// Compare two equal length slices in constant time.
 ///
 /// # About:
@@ -83,7 +84,6 @@ pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
 /// util::gen_rand_key(&mut mac).unwrap();
 /// assert!(util::compare_ct(&mac, &[0u8; 64]).is_err());
 /// ```
-#[must_use]
 pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
     if a.len() != b.len() {
         return Err(errors::UnknownCryptoError);

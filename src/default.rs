@@ -34,6 +34,7 @@ pub use hazardous::mac::hmac::SecretKey as HmacKey;
 use hazardous::xof::cshake;
 use util;
 
+#[must_use]
 /// HMAC-SHA512.
 /// # Parameters:
 /// - `secret_key`:  The authentication key
@@ -56,7 +57,6 @@ use util;
 ///
 /// let hmac = default::hmac(&key, msg);
 /// ```
-#[must_use]
 pub fn hmac(secret_key: &HmacKey, data: &[u8]) -> Mac {
     let mut mac = hmac::init(secret_key);
     mac.update(data).unwrap();
@@ -64,6 +64,7 @@ pub fn hmac(secret_key: &HmacKey, data: &[u8]) -> Mac {
     mac.finalize().unwrap()
 }
 
+#[must_use]
 /// Verify a HMAC-SHA512 MAC in constant time, with Double-HMAC Verification.
 ///
 /// # Parameters:
@@ -88,7 +89,6 @@ pub fn hmac(secret_key: &HmacKey, data: &[u8]) -> Mac {
 /// let expected_hmac = default::hmac(&key, msg);
 /// assert!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap());
 /// ```
-#[must_use]
 pub fn hmac_verify(
     expected_hmac: &Mac,
     secret_key: &HmacKey,
@@ -111,6 +111,7 @@ pub fn hmac_verify(
     )
 }
 
+#[must_use]
 /// HKDF-HMAC-SHA512.
 ///
 /// # About:
@@ -141,7 +142,6 @@ pub fn hmac_verify(
 ///
 /// let derived_key = default::hkdf(&salt, data, info);
 /// ```
-#[must_use]
 pub fn hkdf(salt: &Salt, input: &[u8], info: &[u8]) -> [u8; 32] {
     let mut okm = [0u8; 32];
 
@@ -150,6 +150,7 @@ pub fn hkdf(salt: &Salt, input: &[u8], info: &[u8]) -> [u8; 32] {
     okm
 }
 
+#[must_use]
 /// Verify an HKDF-HMAC-SHA512 derived key in constant time.
 ///
 /// # Parameters:
@@ -175,7 +176,6 @@ pub fn hkdf(salt: &Salt, input: &[u8], info: &[u8]) -> [u8; 32] {
 /// let derived_key = default::hkdf(&salt, data, info);
 /// assert!(default::hkdf_verify(&derived_key, &salt, data, info).unwrap());
 /// ```
-#[must_use]
 pub fn hkdf_verify(
     expected_dk: &[u8],
     salt: &Salt,
@@ -191,6 +191,7 @@ pub fn hkdf_verify(
     hkdf::verify(&expected_dk, salt, input, info, &mut okm)
 }
 
+#[must_use]
 /// PBKDF2-HMAC-SHA512. Suitable for password storage.
 /// # About:
 /// This is meant to be used for password storage.
@@ -220,7 +221,6 @@ pub fn hkdf_verify(
 ///
 /// let derived_password = default::pbkdf2(password);
 /// ```
-#[must_use]
 pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
     if password.len() < 14 {
         return Err(UnknownCryptoError);
@@ -237,6 +237,7 @@ pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
     Ok(dk)
 }
 
+#[must_use]
 /// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
 /// # About:
 /// This function is meant to be used with the `default::pbkdf2()` function in orion's default API. It can be
@@ -262,7 +263,6 @@ pub fn pbkdf2(password: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
 /// let derived_password = default::pbkdf2(password).unwrap();
 /// assert!(default::pbkdf2_verify(&derived_password, password).unwrap());
 /// ```
-#[must_use]
 pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, ValidationCryptoError> {
     if expected_dk.len() != 64 {
         return Err(ValidationCryptoError);
@@ -279,6 +279,7 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
     )
 }
 
+#[must_use]
 /// cSHAKE256.
 /// # About:
 /// - Output length is 64
@@ -310,7 +311,6 @@ pub fn pbkdf2_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool, Valida
 ///
 /// let hash = default::cshake(data, custom).unwrap();
 /// ```
-#[must_use]
 pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoError> {
     if custom.is_empty() {
         return Err(UnknownCryptoError);
@@ -325,6 +325,7 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
     Ok(hash)
 }
 
+#[must_use]
 /// Authenticated encryption using XChaCha20Poly1305.
 /// # About:
 /// - The nonce is automatically generated
@@ -355,7 +356,6 @@ pub fn cshake(input: &[u8], custom: &[u8]) -> Result<[u8; 64], UnknownCryptoErro
 ///
 /// let encrypted_data = default::seal(&secret_key, "Secret message".as_bytes()).unwrap();
 /// ```
-#[must_use]
 pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
@@ -377,6 +377,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
     Ok(dst_out)
 }
 
+#[must_use]
 /// Authenticated decryption using XChaCha20Poly1305.
 /// # About:
 /// - The ciphertext must be of the same format as the one returned by `default::encrypt()`
@@ -407,7 +408,6 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 ///
 /// let decrypted_data = default::open(&secret_key, &ciphertext).unwrap();
 /// ```
-#[must_use]
 pub fn open(secret_key: &SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     // `+ 1` to avoid empty ciphertexts
     if ciphertext.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
