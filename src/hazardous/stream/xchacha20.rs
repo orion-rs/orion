@@ -46,7 +46,10 @@
 //! data integrity, which is nearly ***always the case***, you should use an AEAD construction instead.
 //! See orions `aead` module for this.
 //!
-//! Only a `nonce` for XChaCha20 is big enough to be randomly generated using a CSPRNG.
+//! Only a nonce for XChaCha20 is big enough to be randomly generated using a CSPRNG.
+//! `Nonce::generate()` can be used for this.
+//!
+//! To securely generate a strong key, use `SecretKey::generate()`.
 //!
 //! # Example:
 //! ```

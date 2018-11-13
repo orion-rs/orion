@@ -44,8 +44,8 @@ use util;
 /// - The length of the secret key is less than 64 bytes
 ///
 /// # Security:
-/// The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-/// in `util` can be used for this.
+/// The secret key should always be generated using a CSPRNG. `HmacKey::generate()` can be used for
+/// this.
 ///
 /// # Example:
 /// ```
@@ -260,6 +260,8 @@ pub fn password_hash_verify(expected_dk: &[u8], password: &[u8]) -> Result<bool,
 /// It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 /// the security of all data that has been encrypted with that given key is compromised.
 ///
+/// To securely generate a strong key, use `EncryptionKey::generate()`.
+///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - `secret_key` is not 32 bytes
@@ -309,6 +311,8 @@ pub fn seal(secret_key: &EncryptionKey, plaintext: &[u8]) -> Result<Vec<u8>, Unk
 /// # Security:
 /// It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 /// the security of all data that has been encrypted with that given key is compromised.
+///
+/// To securely generate a strong key, use `EncryptionKey::generate()`.
 ///
 /// # Exceptions:
 /// An exception will be thrown if:

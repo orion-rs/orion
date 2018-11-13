@@ -33,8 +33,13 @@
 //! - The HMAC does not match the expected when verifying
 //!
 //! # Security:
-//! The secret key should always be generated using a CSPRNG. The `gen_rand_key` function
-//! in `util` can be used for this. The recommended length for a secret key is 64.
+//! The secret key should always be generated using a CSPRNG. `SecretKey::generate()` can be used
+//! for this. It generates a secret key of 128 bytes. The minimum recommended size for a secret key
+//! is 64 bytes.
+//!
+//! # Recommendation:
+//! If you are unsure of wether to use HMAC or Poly1305, it is most often better to just
+//! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!
 //! # Example:
 //! ### Generating HMAC:

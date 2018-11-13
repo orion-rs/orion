@@ -38,7 +38,9 @@
 //! # Security:
 //! Salts should always be generated using a CSPRNG. The `gen_rand_key` function
 //! in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
+//!
 //! The iteration count should be set as high as feasible.
+//!
 //! # Example:
 //! ### Generating derived key:
 //! ```

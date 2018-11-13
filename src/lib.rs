@@ -64,7 +64,7 @@ extern crate subtle;
 extern crate tiny_keccak;
 extern crate zeroize;
 
-/// Core functionality such as generating a salt/key/IV/nonce.
+/// Utilities such as constant-time comparison.
 pub mod util;
 
 /// Errors for orion's cryptographic operations.
