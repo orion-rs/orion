@@ -49,9 +49,9 @@
 //! let key = hmac::SecretKey::generate();
 //! let msg = "Some message.";
 //!
-//! let mut mac = hmac::init(&key);
-//! mac.update(msg.as_bytes()).unwrap();
-//! mac.finalize().unwrap();
+//! let mut tag = hmac::init(&key);
+//! tag.update(msg.as_bytes()).unwrap();
+//! tag.finalize().unwrap();
 //! ```
 //! ### Verifying HMAC:
 //! ```
@@ -60,10 +60,10 @@
 //! let key = hmac::SecretKey::generate();
 //! let msg = "Some message.";
 //!
-//! let mut mac = hmac::init(&key);
-//! mac.update(msg.as_bytes()).unwrap();
+//! let mut tag = hmac::init(&key);
+//! tag.update(msg.as_bytes()).unwrap();
 //!
-//! assert!(hmac::verify(&mac.finalize().unwrap(), &key, msg.as_bytes()).unwrap());
+//! assert!(hmac::verify(&tag.finalize().unwrap(), &key, msg.as_bytes()).unwrap());
 //! ```
 
 extern crate core;
@@ -147,22 +147,22 @@ impl SecretKey {
 
 #[must_use]
 #[derive(Clone, Copy)]
-/// A HMAC MAC.
+/// An HMAC Tag.
 ///
 /// # Exceptions:
 /// An exception will be thrown if:
 /// - `slice` is not 64 bytes
 ///
 /// # Security:
-/// `Mac` implements `PartialEq` and thus prevents users from accidentally using non constant-time
-/// comparisons. However, `unsafe_as_bytes()` lets the user return the `Mac` without such a protection.
+/// `Tag` implements `PartialEq` and thus prevents users from accidentally using non constant-time
+/// comparisons. However, `unsafe_as_bytes()` lets the user return the `Tag` without such a protection.
 /// You should avoid ever using `unsafe_as_bytes()`.
-pub struct Mac {
+pub struct Tag {
     value: [u8; HLEN],
 }
 
-impl PartialEq for Mac {
-    fn eq(&self, other: &Mac) -> bool {
+impl PartialEq for Tag {
+    fn eq(&self, other: &Tag) -> bool {
         self.unsafe_as_bytes()
             .ct_eq(&other.unsafe_as_bytes())
             .unwrap_u8()
@@ -170,21 +170,21 @@ impl PartialEq for Mac {
     }
 }
 
-impl Mac {
+impl Tag {
     #[must_use]
-    /// Make a `Mac` from a byte slice.
+    /// Make a `Tag` from a byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() != HLEN {
             return Err(UnknownCryptoError);
         }
 
-        let mut mac = [0u8; HLEN];
-        mac.copy_from_slice(slice);
+        let mut tag = [0u8; HLEN];
+        tag.copy_from_slice(slice);
 
-        Ok(Self { value: mac })
+        Ok(Self { value: tag })
     }
     #[must_use]
-    /// Return the `Mac` as byte slice. __**WARNING**__: Provides no protection against unsafe
+    /// Return the `Tag` as byte slice. __**WARNING**__: Provides no protection against unsafe
     /// comparison operations.
     pub fn unsafe_as_bytes(&self) -> [u8; HLEN] {
         self.value
@@ -244,8 +244,8 @@ impl Hmac {
     }
     #[must_use]
     #[inline(always)]
-    /// Return MAC.
-    pub fn finalize(&mut self) -> Result<Mac, FinalizationCryptoError> {
+    /// Return a `Tag`.
+    pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
         if self.is_finalized {
             return Err(FinalizationCryptoError);
         }
@@ -258,9 +258,9 @@ impl Hmac {
         let mut o_hash = self.opad_hasher.clone();
         o_hash.input(&hash_ires.result());
 
-        let mac = Mac::from_slice(&o_hash.result()).unwrap();
+        let tag = Tag::from_slice(&o_hash.result()).unwrap();
 
-        Ok(mac)
+        Ok(tag)
     }
 }
 
@@ -268,28 +268,28 @@ impl Hmac {
 #[inline(always)]
 /// Initialize `Hmac` struct with a given key.
 pub fn init(secret_key: &SecretKey) -> Hmac {
-    let mut mac = Hmac {
+    let mut state = Hmac {
         ipad: [0x36; SHA2_BLOCKSIZE],
         opad_hasher: Sha512::default(),
         ipad_hasher: Sha512::default(),
         is_finalized: false,
     };
 
-    mac.pad_key_io(secret_key);
-    mac
+    state.pad_key_io(secret_key);
+    state
 }
 
 #[must_use]
-/// Verify a HMAC-SHA512 MAC in constant time.
+/// Verify a HMAC-SHA512 Tag in constant time.
 pub fn verify(
-    expected: &Mac,
+    expected: &Tag,
     secret_key: &SecretKey,
     message: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let mut mac = init(secret_key);
-    mac.update(message).unwrap();
+    let mut tag = init(secret_key);
+    tag.update(message).unwrap();
 
-    if &mac.finalize().unwrap() == expected {
+    if &tag.finalize().unwrap() == expected {
         Ok(true)
     } else {
         Err(ValidationCryptoError)
@@ -301,12 +301,12 @@ fn finalize_and_verify_true() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
+    let mut tag = init(&secret_key);
+    tag.update(data).unwrap();
 
     assert_eq!(
         verify(
-            &mac.finalize().unwrap(),
+            &tag.finalize().unwrap(),
             &SecretKey::from_slice("Jefe".as_bytes()),
             data
         ).unwrap(),
@@ -319,12 +319,12 @@ fn veriy_false_wrong_data() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
+    let mut tag = init(&secret_key);
+    tag.update(data).unwrap();
 
     assert!(
         verify(
-            &mac.finalize().unwrap(),
+            &tag.finalize().unwrap(),
             &SecretKey::from_slice("Jefe".as_bytes()),
             "what do ya want for something?".as_bytes()
         ).is_err()
@@ -336,12 +336,12 @@ fn veriy_false_wrong_secret_key() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
+    let mut tag = init(&secret_key);
+    tag.update(data).unwrap();
 
     assert!(
         verify(
-            &mac.finalize().unwrap(),
+            &tag.finalize().unwrap(),
             &SecretKey::from_slice("Jose".as_bytes()),
             data
         ).is_err()
@@ -354,10 +354,10 @@ fn double_finalize_err() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
-    let _ = mac.finalize().unwrap();
-    let _ = mac.finalize().unwrap();
+    let mut tag = init(&secret_key);
+    tag.update(data).unwrap();
+    let _ = tag.finalize().unwrap();
+    let _ = tag.finalize().unwrap();
 }
 
 #[test]
@@ -365,12 +365,12 @@ fn double_finalize_with_reset_ok() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
-    let _ = mac.finalize().unwrap();
-    mac.reset();
-    mac.update("Test".as_bytes()).unwrap();
-    let _ = mac.finalize().unwrap();
+    let mut tag = init(&secret_key);
+    tag.update(data).unwrap();
+    let _ = tag.finalize().unwrap();
+    tag.reset();
+    tag.update("Test".as_bytes()).unwrap();
+    let _ = tag.finalize().unwrap();
 }
 
 #[test]
@@ -378,11 +378,11 @@ fn double_finalize_with_reset_no_update_ok() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
-    let _ = mac.finalize().unwrap();
-    mac.reset();
-    let _ = mac.finalize().unwrap();
+    let mut tag = init(&secret_key);
+    tag.update(data).unwrap();
+    let _ = tag.finalize().unwrap();
+    tag.reset();
+    let _ = tag.finalize().unwrap();
 }
 
 #[test]
@@ -391,10 +391,10 @@ fn update_after_finalize_err() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
-    let _ = mac.finalize().unwrap();
-    mac.update(data).unwrap();
+    let mut tag = init(&secret_key);
+    tag.update(data).unwrap();
+    let _ = tag.finalize().unwrap();
+    tag.update(data).unwrap();
 }
 
 #[test]
@@ -402,11 +402,11 @@ fn update_after_finalize_with_reset_ok() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
-    let _ = mac.finalize().unwrap();
-    mac.reset();
-    mac.update(data).unwrap();
+    let mut tag = init(&secret_key);
+    tag.update(data).unwrap();
+    let _ = tag.finalize().unwrap();
+    tag.reset();
+    tag.update(data).unwrap();
 }
 
 #[test]
@@ -414,9 +414,9 @@ fn double_reset_ok() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
 
-    let mut mac = init(&secret_key);
-    mac.update(data).unwrap();
-    let _ = mac.finalize().unwrap();
-    mac.reset();
-    mac.reset();
+    let mut tag = init(&secret_key);
+    tag.update(data).unwrap();
+    let _ = tag.finalize().unwrap();
+    tag.reset();
+    tag.reset();
 }

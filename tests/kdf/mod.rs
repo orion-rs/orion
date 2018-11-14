@@ -37,7 +37,7 @@ pub fn hkdf_test_runner(
     let actual_prk = extract(&Salt::from_slice(&salt), &ikm);
 
     if excp_prk.is_some() {
-        assert!(actual_prk == hmac::Mac::from_slice(excp_prk.unwrap()).unwrap());
+        assert!(actual_prk == hmac::Tag::from_slice(excp_prk.unwrap()).unwrap());
     }
 
     expand(&actual_prk, Some(&info), okm_out).unwrap();

@@ -165,10 +165,10 @@ impl Tag {
             return Err(UnknownCryptoError);
         }
 
-        let mut mac = [0u8; POLY1305_BLOCKSIZE];
-        mac.copy_from_slice(slice);
+        let mut tag = [0u8; POLY1305_BLOCKSIZE];
+        tag.copy_from_slice(slice);
 
-        Ok(Self { value: mac })
+        Ok(Self { value: tag })
     }
     #[must_use]
     /// Return the `Tag` as byte slice.  __**WARNING**__: Provides no protection against unsafe

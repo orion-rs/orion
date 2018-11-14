@@ -71,7 +71,7 @@ use util;
 #[must_use]
 #[inline(always)]
 /// The HKDF extract step.
-pub fn extract(salt: &Salt, ikm: &[u8]) -> hmac::Mac {
+pub fn extract(salt: &Salt, ikm: &[u8]) -> hmac::Tag {
     let mut prk = hmac::init(salt);
     prk.update(ikm).unwrap();
 
@@ -82,7 +82,7 @@ pub fn extract(salt: &Salt, ikm: &[u8]) -> hmac::Mac {
 #[inline(always)]
 /// The HKDF expand step.
 pub fn expand(
-    prk: &hmac::Mac,
+    prk: &hmac::Tag,
     info: Option<&[u8]>,
     okm_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {

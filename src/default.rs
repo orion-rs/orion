@@ -29,7 +29,7 @@ use hazardous::kdf::hkdf;
 use hazardous::kdf::hkdf::Salt;
 use hazardous::kdf::pbkdf2;
 use hazardous::mac::hmac;
-use hazardous::mac::hmac::Mac;
+use hazardous::mac::hmac::Tag;
 pub use hazardous::mac::hmac::SecretKey as HmacKey;
 use util;
 
@@ -56,11 +56,11 @@ use util;
 ///
 /// let hmac = default::hmac(&key, msg);
 /// ```
-pub fn hmac(secret_key: &HmacKey, data: &[u8]) -> Mac {
-    let mut mac = hmac::init(secret_key);
-    mac.update(data).unwrap();
+pub fn hmac(secret_key: &HmacKey, data: &[u8]) -> Tag {
+    let mut tag = hmac::init(secret_key);
+    tag.update(data).unwrap();
 
-    mac.finalize().unwrap()
+    tag.finalize().unwrap()
 }
 
 #[must_use]
@@ -89,12 +89,12 @@ pub fn hmac(secret_key: &HmacKey, data: &[u8]) -> Mac {
 /// assert!(default::hmac_verify(&expected_hmac, &key, &msg).unwrap());
 /// ```
 pub fn hmac_verify(
-    expected_hmac: &Mac,
+    expected_hmac: &Tag,
     secret_key: &HmacKey,
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let mut mac = hmac::init(secret_key);
-    mac.update(data).unwrap();
+    let mut tag = hmac::init(secret_key);
+    tag.update(data).unwrap();
 
     let rand_key = hmac::SecretKey::generate();
     let mut nd_round_expected = hmac::init(&rand_key);
@@ -106,7 +106,7 @@ pub fn hmac_verify(
     hmac::verify(
         &nd_round_expected.finalize().unwrap(),
         &rand_key,
-        &mac.finalize().unwrap().unsafe_as_bytes(),
+        &tag.finalize().unwrap().unsafe_as_bytes(),
     )
 }
 
