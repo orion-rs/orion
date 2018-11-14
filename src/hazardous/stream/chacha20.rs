@@ -92,6 +92,7 @@ use hazardous::constants::{
     IETF_CHACHA_NONCESIZE,
 };
 use seckey::zero;
+use subtle::ConstantTimeEq;
 #[cfg(feature = "safe_api")]
 use util;
 use zeroize::Zeroize;
@@ -123,6 +124,15 @@ impl Drop for SecretKey {
     }
 }
 
+impl PartialEq for SecretKey {
+    fn eq(&self, other: &SecretKey) -> bool {
+        self.unsafe_as_bytes()
+            .ct_eq(&other.unsafe_as_bytes())
+            .unwrap_u8()
+            == 1
+    }
+}
+
 impl SecretKey {
     #[must_use]
     /// Make a `SecretKey` from a byte slice.
@@ -137,8 +147,9 @@ impl SecretKey {
         Ok(Self { value: secret_key })
     }
     #[must_use]
-    /// Return `SecretKey` as byte slice.
-    pub fn as_bytes(&self) -> [u8; CHACHA_KEYSIZE] {
+    /// Return `SecretKey` as byte slice. __**WARNING**__: Should not be used unless strictly
+    /// needed.
+    pub fn unsafe_as_bytes(&self) -> [u8; CHACHA_KEYSIZE] {
         self.value
     }
     #[must_use]
@@ -270,7 +281,7 @@ impl InternalState {
         self.state[2] = 0x7962_2d32_u32;
         self.state[3] = 0x6b20_6574_u32;
 
-        LittleEndian::read_u32_into(&secret_key.as_bytes(), &mut self.state[4..12]);
+        LittleEndian::read_u32_into(&secret_key.unsafe_as_bytes(), &mut self.state[4..12]);
 
         if self.is_ietf {
             LittleEndian::read_u32_into(nonce, &mut self.state[13..16]);

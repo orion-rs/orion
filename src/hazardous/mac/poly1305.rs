@@ -93,6 +93,15 @@ impl Drop for OneTimeKey {
     }
 }
 
+impl PartialEq for OneTimeKey {
+    fn eq(&self, other: &OneTimeKey) -> bool {
+        self.unsafe_as_bytes()
+            .ct_eq(&other.unsafe_as_bytes())
+            .unwrap_u8()
+            == 1
+    }
+}
+
 impl OneTimeKey {
     #[must_use]
     /// Make a `OneTimeKey` from a byte slice.
@@ -107,8 +116,9 @@ impl OneTimeKey {
         Ok(Self { value: secret_key })
     }
     #[must_use]
-    /// Return the `OneTimeKey` as byte slice.
-    pub fn as_bytes(&self) -> [u8; POLY1305_KEYSIZE] {
+    /// Return the `OneTimeKey` as byte slice. __**WARNING**__: Should not be used unless strictly
+    /// needed.
+    pub fn unsafe_as_bytes(&self) -> [u8; POLY1305_KEYSIZE] {
         self.value
     }
     #[must_use]
@@ -195,16 +205,16 @@ impl Poly1305 {
     /// Initialize `Poly1305` struct for a given key.
     fn initialize(&mut self, key: &OneTimeKey) -> Result<(), UnknownCryptoError> {
         // clamp(r)
-        self.r[0] = (LittleEndian::read_u32(&key.as_bytes()[0..4])) & 0x3ffffff;
-        self.r[1] = (LittleEndian::read_u32(&key.as_bytes()[3..7]) >> 2) & 0x3ffff03;
-        self.r[2] = (LittleEndian::read_u32(&key.as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
-        self.r[3] = (LittleEndian::read_u32(&key.as_bytes()[9..13]) >> 6) & 0x3f03fff;
-        self.r[4] = (LittleEndian::read_u32(&key.as_bytes()[12..16]) >> 8) & 0x00fffff;
+        self.r[0] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[0..4])) & 0x3ffffff;
+        self.r[1] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[3..7]) >> 2) & 0x3ffff03;
+        self.r[2] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
+        self.r[3] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[9..13]) >> 6) & 0x3f03fff;
+        self.r[4] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[12..16]) >> 8) & 0x00fffff;
 
-        self.s[0] = LittleEndian::read_u32(&key.as_bytes()[16..20]);
-        self.s[1] = LittleEndian::read_u32(&key.as_bytes()[20..24]);
-        self.s[2] = LittleEndian::read_u32(&key.as_bytes()[24..28]);
-        self.s[3] = LittleEndian::read_u32(&key.as_bytes()[28..32]);
+        self.s[0] = LittleEndian::read_u32(&key.unsafe_as_bytes()[16..20]);
+        self.s[1] = LittleEndian::read_u32(&key.unsafe_as_bytes()[20..24]);
+        self.s[2] = LittleEndian::read_u32(&key.unsafe_as_bytes()[24..28]);
+        self.s[3] = LittleEndian::read_u32(&key.unsafe_as_bytes()[28..32]);
 
         Ok(())
     }

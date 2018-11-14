@@ -162,7 +162,7 @@ pub fn seal(
         return Err(UnknownCryptoError);
     }
 
-    let poly1305_key = poly1305_key_gen(&secret_key.as_bytes(), &nonce.as_bytes());
+    let poly1305_key = poly1305_key_gen(&secret_key.unsafe_as_bytes(), &nonce.as_bytes());
     chacha20::encrypt(
         secret_key,
         nonce,
@@ -197,7 +197,7 @@ pub fn open(
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
-    let poly1305_key = poly1305_key_gen(&secret_key.as_bytes(), &nonce.as_bytes());
+    let poly1305_key = poly1305_key_gen(&secret_key.unsafe_as_bytes(), &nonce.as_bytes());
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
     process_authentication(&mut poly1305_state, ad, ciphertext_with_tag, ciphertext_len).unwrap();
 
@@ -373,7 +373,7 @@ fn rfc_8439_test_poly1305_key_gen_1() {
         0x0d, 0xc7,
     ];
 
-    assert_eq!(poly1305_key_gen(&key, &nonce).as_bytes(), expected.as_ref());
+    assert_eq!(poly1305_key_gen(&key, &nonce).unsafe_as_bytes(), expected.as_ref());
 }
 
 #[test]
@@ -392,7 +392,7 @@ fn rfc_8439_test_poly1305_key_gen_2() {
         0xb7, 0x39,
     ];
 
-    assert_eq!(poly1305_key_gen(&key, &nonce).as_bytes(), expected.as_ref());
+    assert_eq!(poly1305_key_gen(&key, &nonce).unsafe_as_bytes(), expected.as_ref());
 }
 
 #[test]
@@ -411,5 +411,5 @@ fn rfc_8439_test_poly1305_key_gen_3() {
         0x10, 0xae,
     ];
 
-    assert_eq!(poly1305_key_gen(&key, &nonce).as_bytes(), expected.as_ref());
+    assert_eq!(poly1305_key_gen(&key, &nonce).unsafe_as_bytes(), expected.as_ref());
 }

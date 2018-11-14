@@ -103,6 +103,15 @@ impl Drop for SecretKey {
     }
 }
 
+impl PartialEq for SecretKey {
+    fn eq(&self, other: &SecretKey) -> bool {
+        self.unsafe_as_bytes()
+            .ct_eq(&other.unsafe_as_bytes())
+            .unwrap_u8()
+            == 1
+    }
+}
+
 impl SecretKey {
     #[must_use]
     /// Make a `SecretKey` from a byte slice.
@@ -120,8 +129,9 @@ impl SecretKey {
         Self { value: secret_key }
     }
     #[must_use]
-    /// Return the SecretKey as byte slice.
-    pub fn as_bytes(&self) -> [u8; SHA2_BLOCKSIZE] {
+    /// Return the S`ecretKey` as byte slice. __**WARNING**__: Should not be used unless strictly
+    /// needed.
+    pub fn unsafe_as_bytes(&self) -> [u8; SHA2_BLOCKSIZE] {
         self.value
     }
     #[must_use]
@@ -204,7 +214,7 @@ impl Hmac {
         let mut opad: BlocksizeArray = [0x5C; SHA2_BLOCKSIZE];
         // `key` has already been padded with zeroes to a length of SHA2_BLOCKSIZE
         // in SecretKey::from_slice
-        for (idx, itm) in key.as_bytes().iter().enumerate() {
+        for (idx, itm) in key.unsafe_as_bytes().iter().enumerate() {
             self.ipad[idx] ^= itm;
             opad[idx] ^= itm;
         }
