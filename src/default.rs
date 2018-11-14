@@ -29,8 +29,8 @@ use hazardous::kdf::hkdf;
 use hazardous::kdf::hkdf::Salt;
 use hazardous::kdf::pbkdf2;
 use hazardous::mac::hmac;
-use hazardous::mac::hmac::Tag;
 pub use hazardous::mac::hmac::SecretKey as HmacKey;
+use hazardous::mac::hmac::Tag;
 use util;
 
 #[must_use]

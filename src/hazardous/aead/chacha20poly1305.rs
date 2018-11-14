@@ -371,7 +371,10 @@ fn rfc_8439_test_poly1305_key_gen_1() {
         0x0d, 0xc7,
     ];
 
-    assert_eq!(poly1305_key_gen(&key, &nonce).unsafe_as_bytes(), expected.as_ref());
+    assert_eq!(
+        poly1305_key_gen(&key, &nonce).unsafe_as_bytes(),
+        expected.as_ref()
+    );
 }
 
 #[test]
@@ -390,7 +393,10 @@ fn rfc_8439_test_poly1305_key_gen_2() {
         0xb7, 0x39,
     ];
 
-    assert_eq!(poly1305_key_gen(&key, &nonce).unsafe_as_bytes(), expected.as_ref());
+    assert_eq!(
+        poly1305_key_gen(&key, &nonce).unsafe_as_bytes(),
+        expected.as_ref()
+    );
 }
 
 #[test]
@@ -409,5 +415,8 @@ fn rfc_8439_test_poly1305_key_gen_3() {
         0x10, 0xae,
     ];
 
-    assert_eq!(poly1305_key_gen(&key, &nonce).unsafe_as_bytes(), expected.as_ref());
+    assert_eq!(
+        poly1305_key_gen(&key, &nonce).unsafe_as_bytes(),
+        expected.as_ref()
+    );
 }
