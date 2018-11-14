@@ -50,12 +50,10 @@
 //! - The received tag does not match the calculated tag when decrypting
 //!
 //! # Security:
-//! It is critical for security that a given nonce is not re-used with a given key. Should this happen,
+//! - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 //! the security of all data that has been encrypted with that given key is compromised.
-//!
-//! Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated using a CSPRNG.
-//!
-//! To securely generate a strong key, use `SecretKey::generate()`.
+//! - Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated using a CSPRNG.
+//! - To securely generate a strong key, use `SecretKey::generate()`.
 //!
 //! # Recommendation:
 //! It is recommended to use XChaCha20Poly1305 when possible.

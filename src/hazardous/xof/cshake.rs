@@ -52,7 +52,8 @@
 //! a SHAKE call.
 //!
 //! # Security:
-//! cSHAKE256 has a security strength of 256 bits. The recommended output length for cSHAKE256 is 64.
+//! - cSHAKE256 has a security strength of 256 bits.
+//! - The recommended output length for cSHAKE256 is 64.
 //!
 //! # Example:
 //! ```

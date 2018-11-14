@@ -36,13 +36,12 @@
 //! - The hashed password does not match the expected when verifying
 //!
 //! # Security:
-//! Salts should always be generated using a CSPRNG. The `gen_rand_key` function
-//! in `util` can be used for this. The recommended length for a salt is 16 bytes as a minimum.
-//!
-//! The iteration count should be set as high as feasible.
+//! - Salts should always be generated using a CSPRNG. The `gen_rand_key` function
+//! in `util` can be used for this.
+//! - The recommended length for a salt is 16 bytes as a minimum.
+//! - The iteration count should be set as high as feasible. The recommended minimum is 10000.
 //!
 //! # Example:
-//! ### Generating derived key:
 //! ```
 //! use orion::hazardous::kdf::pbkdf2;
 //! use orion::util;
@@ -52,18 +51,9 @@
 //! let mut dk_out = [0u8; 64];
 //!
 //! pbkdf2::derive_key("Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap();
-//! ```
-//! ### Verifying derived key:
-//! ```
-//! use orion::hazardous::kdf::pbkdf2;
-//! use orion::util;
 //!
-//! let mut salt = [0u8; 32];
-//! util::gen_rand_key(&mut salt).unwrap();
-//! let mut dk_out = [0u8; 64];
-//!
-//! pbkdf2::derive_key("Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap();
 //! let exp_dk = dk_out;
+//!
 //! assert!(pbkdf2::verify(&exp_dk, "Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap());
 //! ```
 

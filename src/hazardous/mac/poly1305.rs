@@ -75,7 +75,7 @@ use zeroize::Zeroize;
 /// - The `OsRng` fails to initialize or read from its source
 ///
 /// # Security:
-/// To easily generate a secure one-time key, use the `OneTimeKey::generate()`.
+/// - To securely generate a strong one-time key, use the `OneTimeKey::generate()`.
 ///
 /// # Example:
 /// ```
