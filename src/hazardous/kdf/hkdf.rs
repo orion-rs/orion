@@ -42,23 +42,17 @@
 //! - HKDF is not suitable for password storage.
 //!
 //! # Example:
-//! ### Generating derived key:
 //! ```
 //! use orion::hazardous::kdf::hkdf;
 //!
 //! let salt = hkdf::Salt::generate();
 //! let mut okm_out = [0u8; 32];
-//! hkdf::derive_key(&salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
-//! ```
-//! ### Verifying derived key:
-//! ```
-//! use orion::hazardous::kdf::hkdf;
 //!
-//! let salt = hkdf::Salt::generate();
-//! let mut okm_out = [0u8; 32];
-//! hkdf::derive_key(&salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap();
+//! hkdf::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out).unwrap();
+//!
 //! let exp_okm = okm_out;
-//! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), "Info".as_bytes(), &mut okm_out).unwrap());
+//!
+//! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), None, &mut okm_out).unwrap());
 //! ```
 
 use errors::*;
