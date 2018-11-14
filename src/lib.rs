@@ -53,7 +53,7 @@
 #![forbid(unsafe_code)]
 #![deny(overflowing_literals)]
 #![deny(missing_docs)]
-#![deny(warnings)]
+//#![deny(warnings)]
 
 extern crate byteorder;
 #[cfg(feature = "safe_api")]
@@ -63,6 +63,9 @@ extern crate sha2;
 extern crate subtle;
 extern crate tiny_keccak;
 extern crate zeroize;
+
+#[macro_use]
+mod typedefs;
 
 /// Utilities such as constant-time comparison.
 pub mod util;

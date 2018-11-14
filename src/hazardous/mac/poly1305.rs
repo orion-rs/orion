@@ -518,7 +518,8 @@ fn test_poly1305_verify_ok() {
         &tag,
         &OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
         &[0u8; 16],
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 #[test]
@@ -530,7 +531,8 @@ fn test_poly1305_verify_err() {
         &tag,
         &OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
         &[0u8; 16],
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 #[test]

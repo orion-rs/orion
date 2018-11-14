@@ -48,7 +48,8 @@ pub fn hkdf_test_runner(
         ikm,
         Some(&info),
         &mut okm_one_shot_dst,
-    ).unwrap();
+    )
+    .unwrap();
 
     ((okm_out == excp_okm) == (okm_one_shot_dst == excp_okm))
 }

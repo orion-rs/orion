@@ -75,68 +75,8 @@ use hazardous::constants::XCHACHA_NONCESIZE;
 use hazardous::stream::chacha20;
 use hazardous::stream::chacha20::Nonce as IETFNonce;
 pub use hazardous::stream::chacha20::SecretKey;
-#[cfg(feature = "safe_api")]
-use util;
-use zeroize::Zeroize;
 
-#[must_use]
-/// A nonce for XChaCha20.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - `slice` is not 24 bytes
-/// - The `OsRng` fails to initialize or read from its source
-///
-/// # Security:
-///  A `Nonce` for XChaCha20 is big enough to be randomly generated using a CSPRNG. To easily do
-/// this, use `Nonce::generate()`.
-///
-/// # Example:
-/// ```
-/// use orion::hazardous::stream::xchacha20;
-///
-/// let nonce = xchacha20::Nonce::generate();
-/// ```
-pub struct Nonce {
-    value: [u8; XCHACHA_NONCESIZE],
-}
-
-impl Drop for Nonce {
-    fn drop(&mut self) {
-        self.value.as_mut().zeroize();
-    }
-}
-
-impl Nonce {
-    #[must_use]
-    /// Make a `Nonce` from a byte slice.
-    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        if slice.len() != XCHACHA_NONCESIZE {
-            return Err(UnknownCryptoError);
-        }
-
-        let mut xchacha_nonce = [0u8; XCHACHA_NONCESIZE];
-        xchacha_nonce.copy_from_slice(slice);
-
-        Ok(Self {
-            value: xchacha_nonce,
-        })
-    }
-    #[must_use]
-    /// Return `Nonce` as bytes.
-    pub fn as_bytes(&self) -> [u8; XCHACHA_NONCESIZE] {
-        self.value
-    }
-    #[must_use]
-    #[cfg(feature = "safe_api")]
-    /// Randomly generate a `Nonce` using a CSPRNG. Not available in `no_std` context.
-    pub fn generate() -> Self {
-        let mut nonce = [0u8; XCHACHA_NONCESIZE];
-        util::gen_rand_key(&mut nonce).unwrap();
-
-        Self { value: nonce }
-    }
-}
+construct_nonce_with_generator!(Nonce, XCHACHA_NONCESIZE);
 
 #[must_use]
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
@@ -159,7 +99,8 @@ pub fn encrypt(
         initial_counter,
         plaintext,
         dst_out,
-    ).unwrap();
+    )
+    .unwrap();
 
     Ok(())
 }
@@ -188,15 +129,14 @@ fn test_nonce_sizes() {
 fn test_err_on_empty_pt_xchacha() {
     let mut dst = [0u8; 64];
 
-    assert!(
-        encrypt(
-            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-            &Nonce::from_slice(&[0u8; 24]).unwrap(),
-            0,
-            &[0u8; 0],
-            &mut dst
-        ).is_err()
-    );
+    assert!(encrypt(
+        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+        &Nonce::from_slice(&[0u8; 24]).unwrap(),
+        0,
+        &[0u8; 0],
+        &mut dst
+    )
+    .is_err());
 }
 
 #[test]
@@ -210,7 +150,8 @@ fn test_err_on_initial_counter_overflow_xchacha() {
         4294967295,
         &[0u8; 65],
         &mut dst,
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 #[test]
@@ -223,5 +164,6 @@ fn test_pass_on_one_iter_max_initial_counter() {
         4294967295,
         &[0u8; 64],
         &mut dst,
-    ).unwrap();
+    )
+    .unwrap();
 }

@@ -175,7 +175,8 @@ mod test {
 
         let expected_okm = decode(
             "832390086cda71fb47625bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d9f925d7cb",
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(
             verify(&expected_okm, &salt, &ikm, Some(&info), &mut okm_out).unwrap(),
@@ -193,7 +194,8 @@ mod test {
         let expected_okm = decode(
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
              9d201395faa4b61a96c8",
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(verify(&expected_okm, &salt, &ikm, Some(info), &mut okm_out).is_err());
     }
@@ -208,7 +210,8 @@ mod test {
         let expected_okm = decode(
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
              9d201395faa4b61a96c8",
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(verify(&expected_okm, &salt, &ikm, Some(info), &mut okm_out).is_err());
     }
@@ -223,7 +226,8 @@ mod test {
         let expected_okm = decode(
             "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d\
              9d201395faa4b61a96c8",
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(verify(&expected_okm, &salt, &ikm, Some(info), &mut okm_out).is_err());
     }

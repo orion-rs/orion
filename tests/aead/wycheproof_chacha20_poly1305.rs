@@ -45,11 +45,11 @@ mod wycheproof_aead_chacha20_poly1305 {
     }
 
     /*
-
+    
     EXCLUDED: orion does not allow empty input/output with otherwise good paramters.
     All other test cases that have empty input/output are marked by Wycheproof as "invalid"
     and therfor tested here as #[should_panic], so they can be tested correctly by orion too.
-
+    
     #[test]
     fn wycheproof_test_case_2() {
         let key =
@@ -59,12 +59,12 @@ mod wycheproof_aead_chacha20_poly1305 {
         let input = decode("").unwrap();
         let output = decode("").unwrap();
         let tag = decode("76acb342cf3166a5b63c0c0ea1383c8d").unwrap();
-
+    
         // Wycheproof test case comment:
-
+    
         chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
-
+    
     #[test]
     fn wycheproof_test_case_3() {
         let key =
@@ -74,9 +74,9 @@ mod wycheproof_aead_chacha20_poly1305 {
         let input = decode("").unwrap();
         let output = decode("").unwrap();
         let tag = decode("906fa6284b52f87b7359cbaa7563c709").unwrap();
-
+    
         // Wycheproof test case comment:
-
+    
         chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
     }
     */
