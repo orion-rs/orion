@@ -28,8 +28,7 @@ fn bench_hkdf(b: &mut Bencher) {
             &vec![0x01; 64],
             &vec![0x01; 64],
             &mut okm_out,
-        )
-        .unwrap();
+        ).unwrap();
     });
 }
 

@@ -300,8 +300,7 @@ pub fn seal(secret_key: &EncryptionKey, plaintext: &[u8]) -> Result<Vec<u8>, Unk
         plaintext,
         &[0u8; 0],
         &mut dst_out[XCHACHA_NONCESIZE..],
-    )
-    .unwrap();
+    ).unwrap();
 
     Ok(dst_out)
 }
@@ -353,8 +352,7 @@ pub fn open(secret_key: &EncryptionKey, ciphertext: &[u8]) -> Result<Vec<u8>, Un
         &ciphertext[XCHACHA_NONCESIZE..],
         &[0u8; 0],
         &mut dst_out,
-    )
-    .unwrap();
+    ).unwrap();
 
     Ok(dst_out)
 }

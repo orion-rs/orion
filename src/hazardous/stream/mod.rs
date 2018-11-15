@@ -20,7 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
 /// IETF ChaCha20 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439) and
 pub mod chacha20;
 

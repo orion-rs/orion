@@ -99,10 +99,8 @@ fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> OneTimeKey {
             &SecretKey::from_slice(&key).unwrap(),
             &Nonce::from_slice(&nonce).unwrap(),
             0,
-        )
-        .unwrap()[..POLY1305_KEYSIZE],
-    )
-    .unwrap()
+        ).unwrap()[..POLY1305_KEYSIZE],
+    ).unwrap()
 }
 
 #[must_use]
@@ -169,8 +167,7 @@ pub fn seal(
         1,
         plaintext,
         &mut dst_out[..plaintext.len()],
-    )
-    .unwrap();
+    ).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
     process_authentication(&mut poly1305_state, ad, &dst_out, plaintext.len()).unwrap();
@@ -205,8 +202,7 @@ pub fn open(
     util::compare_ct(
         &poly1305_state.finalize().unwrap().unprotected_as_bytes(),
         &ciphertext_with_tag[ciphertext_len..],
-    )
-    .unwrap();
+    ).unwrap();
 
     chacha20::decrypt(
         secret_key,
@@ -214,8 +210,7 @@ pub fn open(
         1,
         &ciphertext_with_tag[..ciphertext_len],
         dst_out,
-    )
-    .unwrap();
+    ).unwrap();
 
     Ok(())
 }
@@ -267,8 +262,7 @@ fn test_modified_tag_error() {
         &[0u8; 64],
         &[0u8; 0],
         &mut dst_out_ct,
-    )
-    .unwrap();
+    ).unwrap();
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
     open(
@@ -277,8 +271,7 @@ fn test_modified_tag_error() {
         &dst_out_ct,
         &[0u8; 0],
         &mut dst_out_pt,
-    )
-    .unwrap();
+    ).unwrap();
 }
 
 #[test]
@@ -289,14 +282,15 @@ fn test_bad_pt_ct_lengths() {
     let mut dst_out_pt_1 = [0u8; 63];
     let mut dst_out_pt_2 = [0u8; 64];
 
-    assert!(seal(
-        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &Nonce::from_slice(&[0u8; 12]).unwrap(),
-        &dst_out_pt_2,
-        &[0u8; 0],
-        &mut dst_out_ct_1,
-    )
-    .is_err());
+    assert!(
+        seal(
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &dst_out_pt_2,
+            &[0u8; 0],
+            &mut dst_out_ct_1,
+        ).is_err()
+    );
 
     seal(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
@@ -304,17 +298,17 @@ fn test_bad_pt_ct_lengths() {
         &dst_out_pt_2,
         &[0u8; 0],
         &mut dst_out_ct_2,
-    )
-    .unwrap();
+    ).unwrap();
 
-    assert!(open(
-        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &Nonce::from_slice(&[0u8; 12]).unwrap(),
-        &dst_out_ct_2,
-        &[0u8; 0],
-        &mut dst_out_pt_1,
-    )
-    .is_err());
+    assert!(
+        open(
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &dst_out_ct_2,
+            &[0u8; 0],
+            &mut dst_out_pt_1,
+        ).is_err()
+    );
 
     open(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
@@ -322,8 +316,7 @@ fn test_bad_pt_ct_lengths() {
         &dst_out_ct_2,
         &[0u8; 0],
         &mut dst_out_pt_2,
-    )
-    .unwrap();
+    ).unwrap();
 }
 
 #[test]
@@ -335,32 +328,35 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
     let mut dst_out_pt_1 = [0u8; 64];
     let mut dst_out_pt_2 = [0u8; 0];
 
-    assert!(open(
-        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &Nonce::from_slice(&[0u8; 12]).unwrap(),
-        &dst_out_ct_1,
-        &[0u8; 0],
-        &mut dst_out_pt_1,
-    )
-    .is_err());
+    assert!(
+        open(
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &dst_out_ct_1,
+            &[0u8; 0],
+            &mut dst_out_pt_1,
+        ).is_err()
+    );
 
-    assert!(open(
-        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &Nonce::from_slice(&[0u8; 12]).unwrap(),
-        &dst_out_ct_2,
-        &[0u8; 0],
-        &mut dst_out_pt_1,
-    )
-    .is_err());
+    assert!(
+        open(
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &dst_out_ct_2,
+            &[0u8; 0],
+            &mut dst_out_pt_1,
+        ).is_err()
+    );
 
-    assert!(open(
-        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &Nonce::from_slice(&[0u8; 12]).unwrap(),
-        &dst_out_ct_3,
-        &[0u8; 0],
-        &mut dst_out_pt_2,
-    )
-    .is_err());
+    assert!(
+        open(
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 12]).unwrap(),
+            &dst_out_ct_3,
+            &[0u8; 0],
+            &mut dst_out_pt_2,
+        ).is_err()
+    );
 }
 
 #[test]

@@ -75,8 +75,7 @@ mod other_aead_xchacha20_poly1305 {
             &plaintext,
             &aad,
             &mut dst_out_ct,
-        )
-        .unwrap();
+        ).unwrap();
 
         assert_eq!(
             dst_out_ct[..plaintext.len()].as_ref(),
@@ -94,8 +93,7 @@ mod other_aead_xchacha20_poly1305 {
             &dst_out_ct,
             &aad,
             &mut dst_out_pt,
-        )
-        .unwrap();
+        ).unwrap();
 
         assert_eq!(dst_out_pt[..].as_ref(), plaintext.as_ref());
     }

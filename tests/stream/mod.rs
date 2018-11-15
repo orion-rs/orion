@@ -50,16 +50,14 @@ pub fn chacha_test_runner(
             init_block_count,
             &original_pt,
             ct,
-        )
-        .unwrap();
+        ).unwrap();
         chacha20::decrypt(
             &SecretKey::from_slice(&key).unwrap(),
             &chacha20::Nonce::from_slice(&nonce).unwrap(),
             init_block_count,
             &original_ct,
             pt,
-        )
-        .unwrap();
+        ).unwrap();
     }
     if nonce.len() == constants::XCHACHA_NONCESIZE {
         xchacha20::encrypt(
@@ -68,16 +66,14 @@ pub fn chacha_test_runner(
             init_block_count,
             &original_pt,
             ct,
-        )
-        .unwrap();
+        ).unwrap();
         xchacha20::decrypt(
             &SecretKey::from_slice(&key).unwrap(),
             &xchacha20::Nonce::from_slice(&nonce).unwrap(),
             init_block_count,
             &original_ct,
             pt,
-        )
-        .unwrap();
+        ).unwrap();
     }
 
     assert!(&original_pt == &pt);
@@ -88,8 +84,7 @@ pub fn hchacha_test_runner(key: &str, nonce: &str, output_expected: &str) {
     let actual: [u8; 32] = chacha20::hchacha20(
         &SecretKey::from_slice(&decode(key).unwrap()).unwrap(),
         &decode(nonce).unwrap(),
-    )
-    .unwrap();
+    ).unwrap();
 
     assert_eq!(&actual, &decode(output_expected).unwrap()[..]);
 }

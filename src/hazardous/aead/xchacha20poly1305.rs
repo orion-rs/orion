@@ -103,8 +103,7 @@ pub fn seal(
         plaintext,
         ad,
         dst_out,
-    )
-    .unwrap();
+    ).unwrap();
 
     Ok(())
 }
@@ -130,8 +129,7 @@ pub fn open(
         ciphertext_with_tag,
         ad,
         dst_out,
-    )
-    .unwrap();
+    ).unwrap();
 
     Ok(())
 }
@@ -148,8 +146,7 @@ fn test_modified_tag_error() {
         &[0u8; 64],
         &[0u8; 0],
         &mut dst_out_ct,
-    )
-    .unwrap();
+    ).unwrap();
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
     open(
@@ -158,6 +155,5 @@ fn test_modified_tag_error() {
         &dst_out_ct,
         &[0u8; 0],
         &mut dst_out_pt,
-    )
-    .unwrap();
+    ).unwrap();
 }
