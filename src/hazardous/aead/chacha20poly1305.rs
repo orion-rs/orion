@@ -23,7 +23,7 @@
 //! # Parameters:
 //! - `secret_key`: The secret key
 //! - `nonce`: The nonce value
-//! - `ad`: Additional data to authenticate (this is not encrypted and can be an empty slice)
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`)
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 128-bit Poly1305 tag
 //! appended to it
 //! - `plaintext`: The data to be encrypted
@@ -75,9 +75,9 @@
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
 //! // Encrypt and place ciphertext + tag in dst_out_ct
-//! aead::chacha20poly1305::seal(&secret_key, &nonce, plaintext, &ad, &mut dst_out_ct).unwrap();
+//! aead::chacha20poly1305::seal(&secret_key, &nonce, plaintext, Some(&ad), &mut dst_out_ct).unwrap();
 //! // Verify tag, if correct then decrypt and place plaintext in dst_out_pt
-//! aead::chacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, &ad, &mut dst_out_pt).unwrap();
+//! aead::chacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt).unwrap();
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
@@ -150,7 +150,7 @@ pub fn seal(
     secret_key: &SecretKey,
     nonce: &Nonce,
     plaintext: &[u8],
-    ad: &[u8],
+    ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     if dst_out.len() < plaintext.len() + POLY1305_BLOCKSIZE {
@@ -159,6 +159,11 @@ pub fn seal(
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
     }
+
+    let optional_ad = match ad {
+        Some(ref n_val) => *n_val,
+        None => &[0u8; 0],
+    };
 
     let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes());
     chacha20::encrypt(
@@ -170,7 +175,7 @@ pub fn seal(
     ).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
 
-    process_authentication(&mut poly1305_state, ad, &dst_out, plaintext.len()).unwrap();
+    process_authentication(&mut poly1305_state, &optional_ad, &dst_out, plaintext.len()).unwrap();
     dst_out[plaintext.len()..]
         .copy_from_slice(&poly1305_state.finalize().unwrap().unprotected_as_bytes());
 
@@ -183,7 +188,7 @@ pub fn open(
     secret_key: &SecretKey,
     nonce: &Nonce,
     ciphertext_with_tag: &[u8],
-    ad: &[u8],
+    ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     if ciphertext_with_tag.len() <= POLY1305_BLOCKSIZE {
@@ -193,11 +198,16 @@ pub fn open(
         return Err(UnknownCryptoError);
     }
 
+    let optional_ad = match ad {
+        Some(ref n_val) => *n_val,
+        None => &[0u8; 0],
+    };
+
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
     let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes());
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
-    process_authentication(&mut poly1305_state, ad, ciphertext_with_tag, ciphertext_len).unwrap();
+    process_authentication(&mut poly1305_state, &optional_ad, ciphertext_with_tag, ciphertext_len).unwrap();
 
     util::compare_ct(
         &poly1305_state.finalize().unwrap().unprotected_as_bytes(),
@@ -260,7 +270,7 @@ fn test_modified_tag_error() {
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &[0u8; 64],
-        &[0u8; 0],
+        None,
         &mut dst_out_ct,
     ).unwrap();
     // Modify the tags first byte
@@ -269,7 +279,7 @@ fn test_modified_tag_error() {
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_ct,
-        &[0u8; 0],
+        None,
         &mut dst_out_pt,
     ).unwrap();
 }
@@ -287,7 +297,7 @@ fn test_bad_pt_ct_lengths() {
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_pt_2,
-            &[0u8; 0],
+            Some(&[0u8; 5]),
             &mut dst_out_ct_1,
         ).is_err()
     );
@@ -296,7 +306,7 @@ fn test_bad_pt_ct_lengths() {
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_pt_2,
-        &[0u8; 0],
+        Some(&[0u8; 5]),
         &mut dst_out_ct_2,
     ).unwrap();
 
@@ -305,7 +315,7 @@ fn test_bad_pt_ct_lengths() {
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_2,
-            &[0u8; 0],
+            Some(&[0u8; 5]),
             &mut dst_out_pt_1,
         ).is_err()
     );
@@ -314,7 +324,7 @@ fn test_bad_pt_ct_lengths() {
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_ct_2,
-        &[0u8; 0],
+        Some(&[0u8; 5]),
         &mut dst_out_pt_2,
     ).unwrap();
 }
@@ -333,7 +343,7 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_1,
-            &[0u8; 0],
+            None,
             &mut dst_out_pt_1,
         ).is_err()
     );
@@ -343,7 +353,7 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_2,
-            &[0u8; 0],
+            None,
             &mut dst_out_pt_1,
         ).is_err()
     );
@@ -353,7 +363,7 @@ fn test_bad_ct_length_and_empty_out_decrypt() {
             &SecretKey::from_slice(&[0u8; 32]).unwrap(),
             &Nonce::from_slice(&[0u8; 12]).unwrap(),
             &dst_out_ct_3,
-            &[0u8; 0],
+            None,
             &mut dst_out_pt_2,
         ).is_err()
     );

@@ -73,7 +73,7 @@ mod other_aead_xchacha20_poly1305 {
             &aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
             &aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &plaintext,
-            &aad,
+            Some(&aad),
             &mut dst_out_ct,
         ).unwrap();
 
@@ -91,7 +91,7 @@ mod other_aead_xchacha20_poly1305 {
             &aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
             &aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &dst_out_ct,
-            &aad,
+            Some(&aad),
             &mut dst_out_pt,
         ).unwrap();
 

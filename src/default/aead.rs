@@ -72,7 +72,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
         secret_key,
         &nonce,
         plaintext,
-        &[0u8; 0],
+        None,
         &mut dst_out[XCHACHA_NONCESIZE..],
     ).unwrap();
 
@@ -123,7 +123,7 @@ pub fn open(secret_key: &SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, Unknow
         secret_key,
         &Nonce::from_slice(&ciphertext[..XCHACHA_NONCESIZE]).unwrap(),
         &ciphertext[XCHACHA_NONCESIZE..],
-        &[0u8; 0],
+        None,
         &mut dst_out,
     ).unwrap();
 

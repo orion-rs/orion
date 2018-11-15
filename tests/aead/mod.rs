@@ -50,14 +50,14 @@ fn aead_test_runner(
             &SecretKey::from_slice(&key).unwrap(),
             &chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             input,
-            aad,
+            Some(aad),
             &mut dst_ct_out,
         ).unwrap();
         aead::chacha20poly1305::open(
             &SecretKey::from_slice(&key).unwrap(),
             &chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &dst_ct_out,
-            aad,
+            Some(aad),
             &mut dst_pt_out,
         ).unwrap();
     }
@@ -67,7 +67,7 @@ fn aead_test_runner(
             &SecretKey::from_slice(&key).unwrap(),
             &xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             input,
-            aad,
+            Some(aad),
             &mut dst_ct_out,
         ).unwrap();
 
@@ -75,7 +75,7 @@ fn aead_test_runner(
             &SecretKey::from_slice(&key).unwrap(),
             &xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &dst_ct_out,
-            aad,
+            Some(aad),
             &mut dst_pt_out,
         ).unwrap();
     }
@@ -105,7 +105,7 @@ fn wycheproof_test_runner(
         &SecretKey::from_slice(&key).unwrap(),
         &chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
         input,
-        aad,
+        Some(aad),
         &mut dst_ct_out,
     ).unwrap();
 
@@ -113,7 +113,7 @@ fn wycheproof_test_runner(
         &SecretKey::from_slice(&key).unwrap(),
         &chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
         &dst_ct_out,
-        aad,
+        Some(aad),
         &mut dst_pt_out,
     ).unwrap();
 

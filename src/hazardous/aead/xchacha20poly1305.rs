@@ -23,7 +23,7 @@
 //! # Parameters:
 //! - `secret_key`: The secret key
 //! - `nonce`: The nonce value
-//! - `ad`: Additional data to authenticate (this is not encrypted and can be an empty slice)
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`)
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 128-bit Poly1305 tag
 //! appended to it
 //! - `plaintext`: The data to be encrypted
@@ -69,9 +69,9 @@
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
 //! // Encrypt and place ciphertext + tag in dst_out_ct
-//! aead::xchacha20poly1305::seal(&secret_key, &nonce, plaintext, &ad, &mut dst_out_ct).unwrap();
+//! aead::xchacha20poly1305::seal(&secret_key, &nonce, plaintext, Some(&ad), &mut dst_out_ct).unwrap();
 //! // Verify tag, if correct then decrypt and place plaintext in dst_out_pt
-//! aead::xchacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, &ad, &mut dst_out_pt).unwrap();
+//! aead::xchacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt).unwrap();
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
@@ -88,7 +88,7 @@ pub fn seal(
     secret_key: &SecretKey,
     nonce: &Nonce,
     plaintext: &[u8],
-    ad: &[u8],
+    ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     let subkey: SecretKey =
@@ -114,7 +114,7 @@ pub fn open(
     secret_key: &SecretKey,
     nonce: &Nonce,
     ciphertext_with_tag: &[u8],
-    ad: &[u8],
+    ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     let subkey: SecretKey =
@@ -144,7 +144,7 @@ fn test_modified_tag_error() {
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 24]).unwrap(),
         &[0u8; 64],
-        &[0u8; 0],
+        None,
         &mut dst_out_ct,
     ).unwrap();
     // Modify the tags first byte
@@ -153,7 +153,7 @@ fn test_modified_tag_error() {
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 24]).unwrap(),
         &dst_out_ct,
-        &[0u8; 0],
+        None,
         &mut dst_out_pt,
     ).unwrap();
 }
