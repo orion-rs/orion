@@ -90,7 +90,7 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     pub fn generate() -> $name {
         use util;
         let mut value = [0u8; $size];
-        util::gen_rand_key(&mut value).unwrap();
+        util::secure_rand_bytes(&mut value).unwrap();
 
         $name { value: value }
     }
@@ -237,7 +237,7 @@ macro_rules! construct_salt (($name:ident, $max_size:expr, $generate_size:expr) 
         pub fn generate() -> $name {
             use util;
             let mut value = [0u8; $max_size];
-            util::gen_rand_key(&mut value[..$generate_size]).unwrap();
+            util::secure_rand_bytes(&mut value[..$generate_size]).unwrap();
 
             $name {
                 len: $generate_size,

@@ -149,7 +149,7 @@ pub fn verify(
 ) -> Result<bool, ValidationCryptoError> {
     derive_key(password, salt, iterations, dk_out).unwrap();
 
-    if util::compare_ct(&dk_out, expected_dk).is_err() {
+    if util::secure_cmp(&dk_out, expected_dk).is_err() {
         Err(ValidationCryptoError)
     } else {
         Ok(true)

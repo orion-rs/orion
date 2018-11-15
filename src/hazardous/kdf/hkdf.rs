@@ -139,7 +139,7 @@ pub fn verify(
 ) -> Result<bool, ValidationCryptoError> {
     expand(&extract(salt, ikm), info, okm_out).unwrap();
 
-    if util::compare_ct(&okm_out, expected_dk).is_err() {
+    if util::secure_cmp(&okm_out, expected_dk).is_err() {
         Err(ValidationCryptoError)
     } else {
         Ok(true)

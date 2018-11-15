@@ -48,9 +48,9 @@ use subtle::ConstantTimeEq;
 ///
 /// let mut salt = [0u8; 16];
 ///
-/// util::gen_rand_key(&mut salt).unwrap();
+/// util::secure_rand_bytes(&mut salt).unwrap();
 /// ```
-pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
+pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
     if dst.is_empty() {
         return Err(errors::UnknownCryptoError);
     }
@@ -62,6 +62,7 @@ pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
 }
 
 #[must_use]
+#[inline(never)]
 /// Compare two equal length slices in constant time.
 ///
 /// # About:
@@ -79,12 +80,12 @@ pub fn gen_rand_key(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
 ///
 /// let mut mac = [0u8; 64];
 ///
-/// assert!(util::compare_ct(&mac, &[0u8; 64]).is_ok());
+/// assert!(util::secure_cmp(&mac, &[0u8; 64]).is_ok());
 ///
-/// util::gen_rand_key(&mut mac).unwrap();
-/// assert!(util::compare_ct(&mac, &[0u8; 64]).is_err());
+/// util::secure_rand_bytes(&mut mac).unwrap();
+/// assert!(util::secure_cmp(&mac, &[0u8; 64]).is_err());
 /// ```
-pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
+pub fn secure_cmp(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
     if a.len() != b.len() {
         return Err(errors::UnknownCryptoError);
     }
@@ -100,17 +101,17 @@ pub fn compare_ct(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError
 #[test]
 fn rand_key_len_ok() {
     let mut dst = [0u8; 64];
-    gen_rand_key(&mut dst).unwrap();
+    secure_rand_bytes(&mut dst).unwrap();
 }
 
 #[cfg(feature = "safe_api")]
 #[test]
 fn rand_key_len_error() {
     let mut dst = [0u8; 0];
-    assert!(gen_rand_key(&mut dst).is_err());
+    assert!(secure_rand_bytes(&mut dst).is_err());
 
     let mut dst = [0u8; 0];
-    let err = gen_rand_key(&mut dst).unwrap_err();
+    let err = secure_rand_bytes(&mut dst).unwrap_err();
     assert_eq!(err, errors::UnknownCryptoError);
 }
 
@@ -120,8 +121,8 @@ fn test_ct_eq_ok() {
     let buf_1 = [0x06; 10];
     let buf_2 = [0x06; 10];
 
-    assert_eq!(compare_ct(&buf_1, &buf_2).unwrap(), true);
-    assert_eq!(compare_ct(&buf_2, &buf_1).unwrap(), true);
+    assert_eq!(secure_cmp(&buf_1, &buf_2).unwrap(), true);
+    assert_eq!(secure_cmp(&buf_2, &buf_1).unwrap(), true);
 }
 
 #[test]
@@ -129,8 +130,8 @@ fn test_ct_eq_diff_len() {
     let buf_1 = [0x06; 10];
     let buf_2 = [0x06; 5];
 
-    assert!(compare_ct(&buf_1, &buf_2).is_err());
-    assert!(compare_ct(&buf_2, &buf_1).is_err());
+    assert!(secure_cmp(&buf_1, &buf_2).is_err());
+    assert!(secure_cmp(&buf_2, &buf_1).is_err());
 }
 
 #[test]
@@ -138,12 +139,12 @@ fn test_ct_ne() {
     let buf_1 = [0x06; 10];
     let buf_2 = [0x76; 10];
 
-    assert!(compare_ct(&buf_1, &buf_2).is_err());
-    assert!(compare_ct(&buf_2, &buf_1).is_err());
+    assert!(secure_cmp(&buf_1, &buf_2).is_err());
+    assert!(secure_cmp(&buf_2, &buf_1).is_err());
 }
 
 #[test]
 fn test_ct_ne_reg() {
-    assert!(compare_ct(&[0], &[0, 1]).is_err());
-    assert!(compare_ct(&[0, 1], &[0]).is_err());
+    assert!(secure_cmp(&[0], &[0, 1]).is_err());
+    assert!(secure_cmp(&[0, 1], &[0]).is_err());
 }

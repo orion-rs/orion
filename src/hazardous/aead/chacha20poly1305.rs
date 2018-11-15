@@ -214,7 +214,7 @@ pub fn open(
         ciphertext_len,
     ).unwrap();
 
-    util::compare_ct(
+    util::secure_cmp(
         &poly1305_state.finalize().unwrap().unprotected_as_bytes(),
         &ciphertext_with_tag[ciphertext_len..],
     ).unwrap();
