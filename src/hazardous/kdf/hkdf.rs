@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `salt`:  Optional salt value
+//! - `salt`: `Salt` value (can be made from an empty slice).
 //! - `ikm`: Input keying material
 //! - `info`: Optional context and application specific information.  If `None` then it's an empty string.
 //! - `okm_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
@@ -33,11 +33,12 @@
 //! - The length of `okm_out` is less than 1
 //! - The length of `okm_out` is greater than 255 * hash_output_size_in_bytes
 //! - The derived key does not match the expected when verifying
+//! - The slice is greater than 128 bytes when calling `Salt::from_slice()`
 //!
 //! # Security:
 //! - Salts should always be generated using a CSPRNG. `Salt::generate()` can be used for this.
-//! It generates a salt of 128 bytes.
-//! - The recommended minimum length for a salt is 64 bytes.
+//! It generates a salt of 64 bytes.
+//! - The recommended length for a salt is 64 bytes.
 //! - Even though a salt value is optional, it is strongly recommended to use one.
 //! - HKDF is not suitable for password storage.
 //!
