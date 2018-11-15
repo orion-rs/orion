@@ -196,32 +196,3 @@ macro_rules! construct_hmac_key (($name:ident, $size:expr) => (
         func_generate!($name, $size);
     }
 ));
-
-macro_rules! construct_hkdf_salt (($name:ident, $size:expr) => (
-    #[must_use]
-    /// A salt type.
-    pub struct $name { value: [u8; $size] }
-
-    impl $name {
-        #[must_use]
-        /// Make an object from a given byte slice.
-        pub fn from_slice(slice: &[u8]) -> $name {
-            use sha2::{Digest, Sha512};
-            use hazardous::constants::HLEN;
-
-            let mut secret_key = [0u8; $size];
-
-            let slice_len = slice.len();
-
-            if slice_len > $size {
-                secret_key[..HLEN].copy_from_slice(&Sha512::digest(slice));
-            } else {
-                secret_key[..slice_len].copy_from_slice(slice);
-            }
-
-            $name { value: secret_key }
-        }
-        func_as_bytes!($name, $size);
-        func_generate!($name, $size);
-    }
-));

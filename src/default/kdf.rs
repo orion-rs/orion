@@ -54,7 +54,7 @@
 
 use errors::UnknownCryptoError;
 use hazardous::kdf::hkdf;
-pub use hazardous::kdf::hkdf::Salt;
+use util;
 
 #[must_use]
 /// Key derivation with HKDF-HMAC-SHA512.
@@ -62,13 +62,14 @@ pub fn hkdf(
     ikm: &[u8],
     info: Option<&[u8]>,
     length: usize,
-) -> Result<(Salt, Vec<u8>), UnknownCryptoError> {
+) -> Result<([u8; 64], Vec<u8>), UnknownCryptoError> {
     if length > 16320 {
         return Err(UnknownCryptoError);
     }
 
     let mut okm = vec![0u8; length];
-    let salt = Salt::generate();
+    let mut salt = [0u8; 64];
+    util::secure_rand_bytes(&mut salt).unwrap();
 
     hkdf::derive_key(&salt, ikm, info, &mut okm).unwrap();
 
