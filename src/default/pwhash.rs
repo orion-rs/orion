@@ -23,7 +23,7 @@
 use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::pbkdf2;
 pub use hazardous::kdf::pbkdf2::Password;
-pub use hazardous::kdf::pbkdf2::Salt;
+use util;
 
 #[must_use]
 /// Hash a password using PBKDF2-HMAC-SHA512.
@@ -57,9 +57,10 @@ pub use hazardous::kdf::pbkdf2::Salt;
 /// ```
 pub fn password_hash(password: &Password) -> Result<[u8; 128], UnknownCryptoError> {
     let mut dk = [0u8; 128];
-    let salt = Salt::generate();
+    let mut salt = [0u8; 64];
+    util::secure_rand_bytes(&mut salt).unwrap();
 
-    dk[..64].copy_from_slice(&salt.as_bytes());
+    dk[..64].copy_from_slice(&salt);
     pbkdf2::derive_key(password, &salt, 512_000, &mut dk[64..]).unwrap();
 
     Ok(dk)
@@ -104,7 +105,7 @@ pub fn password_hash_verify(
     pbkdf2::verify(
         &expected_dk[64..],
         password,
-        &Salt::from_slice(&expected_dk[..64]).unwrap(),
+        &expected_dk[..64],
         512_000,
         &mut dk,
     )
@@ -170,12 +171,3 @@ fn pbkdf2_verify_expected_dk_too_short() {
 
     assert!(password_hash_verify(&pbkdf2_dk[..127], &password).is_err());
 }
-
-/* NOTE: Length check on passwords are no more
-#[test]
-fn pbkdf2_password_too_short() {
-    let password = Password::from_slice(&[0u8; 13]);
-
-    assert!(password_hash(&password).is_err());
-}
-*/

@@ -75,6 +75,7 @@ use seckey::zero;
 use sha2::{Digest, Sha512};
 
 construct_hmac_key!(SecretKey, SHA2_BLOCKSIZE);
+
 construct_tag!(Tag, HLEN);
 
 #[must_use]
