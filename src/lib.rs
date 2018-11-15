@@ -35,18 +35,18 @@
 //! be solved using orion.
 //!
 //! ## Encrypting data
-//! The `default` API's `seal` and `open` functions let you encrypt and authenticate data easily
+//! The `default::aead` API's `seal` and `open` functions let you encrypt and authenticate data easily
 //! using the XChaCha20Poly1305 AEAD construct.
 //!
 //! ## Hashing a password for storage and verifying it
-//! Using the `default` API's `password_hash` you can easily hash a password using PBKDF2, store it
+//! Using the `default::pwhash` API's `password_hash` you can easily hash a password using PBKDF2, store it
 //! in a database and later use `password_hash_verify` to verify the password.
 //!
 //! ## Deriving multiple keys from a single key (key derivation)
-//! Using the `default` API's `hkdf` function, you can easily derive multiple keys from a single starting key.
+//! Using the `default::hkdf` API's `hkdf` function, you can easily derive multiple keys from a single starting key.
 //!
 //! ## Authenticating a message
-//! Using the `default` API's `hmac` function, you can authenitcate a message and use `hmac_verify`
+//! Using the `default::mac` API's `hmac` function, you can authenitcate a message and use `hmac_verify`
 //! to verify such MACs.
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
@@ -62,7 +62,6 @@ extern crate seckey;
 extern crate sha2;
 extern crate subtle;
 extern crate tiny_keccak;
-extern crate zeroize;
 
 #[macro_use]
 mod typedefs;

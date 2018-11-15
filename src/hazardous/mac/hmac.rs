@@ -72,7 +72,7 @@ use self::core::mem;
 use errors::*;
 use hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE};
 use sha2::{Digest, Sha512};
-use zeroize::Zeroize;
+use seckey::zero;
 
 construct_hmac_key!(SecretKey, SHA2_BLOCKSIZE);
 construct_tag!(Tag, HLEN);
@@ -89,7 +89,7 @@ pub struct Hmac {
 
 impl Drop for Hmac {
     fn drop(&mut self) {
-        self.ipad.as_mut().zeroize();
+        zero(&mut self.ipad);
     }
 }
 
@@ -107,7 +107,7 @@ impl Hmac {
 
         self.ipad_hasher.input(self.ipad.as_ref());
         self.opad_hasher.input(opad.as_ref());
-        opad.as_mut().zeroize();
+        zero(&mut opad);
     }
 
     /// Reset to `init()` state.
