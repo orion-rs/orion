@@ -64,7 +64,7 @@ use util;
 
 // An HMAC key as salt type is used because the salt
 // is used as HMAC `SecretKey` in `derive_key` and `extract` so no further padding is needed.
-// The types a explicitly seperated.
+// The types are explicitly seperated.
 construct_hmac_key!(Salt, SHA2_BLOCKSIZE);
 
 #[must_use]

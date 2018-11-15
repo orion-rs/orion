@@ -66,7 +66,7 @@ use util;
 
 // We use an HMAC key as password type because the password
 // is used as HMAC `SecretKey` in `derive_key` so no further padding is needed.
-// The types a explicitly seperated.
+// The types are explicitly seperated.
 construct_hmac_key!(Password, SHA2_BLOCKSIZE);
 
 #[inline(always)]
