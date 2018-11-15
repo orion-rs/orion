@@ -47,7 +47,7 @@
 //! use orion::util;
 //!
 //! let mut salt = [0u8; 64];
-//! util::gen_rand_key(&mut salt).unwrap();
+//! util::secure_rand_bytes(&mut salt).unwrap();
 //! let password = pbkdf2::Password::from_slice("Secret password".as_bytes());
 //! let mut dk_out = [0u8; 64];
 //!
