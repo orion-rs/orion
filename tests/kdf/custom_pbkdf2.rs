@@ -36,7 +36,7 @@ mod custom_test_vectors {
     #[test]
     fn sha512_test_case_1() {
         let password = "password".as_bytes();
-        let salt =  Salt::from_slice("salt".as_bytes()).unwrap();
+        let salt = Salt::from_slice("salt".as_bytes()).unwrap();
         let iter = 1;
         let mut dk_out = [0u8; 20];
 
@@ -49,7 +49,7 @@ mod custom_test_vectors {
     #[test]
     fn sha512_test_case_2() {
         let password = "password".as_bytes();
-        let salt =  Salt::from_slice("salt".as_bytes()).unwrap();
+        let salt = Salt::from_slice("salt".as_bytes()).unwrap();
         let iter = 2;
         let mut dk_out = [0u8; 20];
 
@@ -62,7 +62,7 @@ mod custom_test_vectors {
     #[test]
     fn sha512_test_case_3() {
         let password = "password".as_bytes();
-        let salt =  Salt::from_slice("salt".as_bytes()).unwrap();
+        let salt = Salt::from_slice("salt".as_bytes()).unwrap();
         let iter = 4096;
         let mut dk_out = [0u8; 20];
 
@@ -75,7 +75,7 @@ mod custom_test_vectors {
     #[test]
     fn sha512_test_case_4() {
         let password = "passwordPASSWORDpassword".as_bytes();
-        let salt =  Salt::from_slice("saltSALTsaltSALTsaltSALTsaltSALTsalt".as_bytes()).unwrap();
+        let salt = Salt::from_slice("saltSALTsaltSALTsaltSALTsaltSALTsalt".as_bytes()).unwrap();
         let iter = 4096;
         let mut dk_out = [0u8; 25];
 
@@ -88,7 +88,7 @@ mod custom_test_vectors {
     #[test]
     fn sha512_test_case_5() {
         let password = "pass\0word".as_bytes();
-        let salt =  Salt::from_slice("sa\0lt".as_bytes()).unwrap();
+        let salt = Salt::from_slice("sa\0lt".as_bytes()).unwrap();
         let iter = 4096;
         let mut dk_out = [0u8; 16];
 
@@ -101,7 +101,7 @@ mod custom_test_vectors {
     #[test]
     fn sha512_test_case_6() {
         let password = "passwd".as_bytes();
-        let salt =  Salt::from_slice("salt".as_bytes()).unwrap();
+        let salt = Salt::from_slice("salt".as_bytes()).unwrap();
         let iter = 1;
         let mut dk_out = [0u8; 128];
 
@@ -114,7 +114,7 @@ mod custom_test_vectors {
     #[test]
     fn sha512_test_case_7() {
         let password = "Password".as_bytes();
-        let salt =  Salt::from_slice("NaCl".as_bytes()).unwrap();
+        let salt = Salt::from_slice("NaCl".as_bytes()).unwrap();
         let iter = 80000;
         let mut dk_out = [0u8; 128];
 
