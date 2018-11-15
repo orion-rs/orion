@@ -48,11 +48,11 @@ fn hmac_test_runner(
     };
 
     assert_eq!(
-        res.unsafe_as_bytes()[..len].as_ref(),
+        res.unprotected_as_bytes()[..len].as_ref(),
         expected[..len].as_ref()
     );
     // If the MACs are modified, then they should not be equal to the expected
-    let mut bad_res = res.unsafe_as_bytes()[..len].to_vec();
+    let mut bad_res = res.unprotected_as_bytes()[..len].to_vec();
     bad_res[0] ^= 1;
     assert_ne!(&bad_res[..len], expected);
 
@@ -77,7 +77,7 @@ fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), e
     );
 
     // If the MACs are modified, then they should not be equal to the expected
-    let mut bad_tag = tag_stream.unsafe_as_bytes();
+    let mut bad_tag = tag_stream.unprotected_as_bytes();
     bad_tag[0] ^= 1;
     assert!(Tag::from_slice(&bad_tag).unwrap() != Tag::from_slice(&output).unwrap());
 

@@ -23,11 +23,10 @@
 macro_rules! impl_partialeq_trait (($name:ident) => (
     impl PartialEq for $name {
         fn eq(&self, other: &$name) -> bool {
-            use util;
-            util::compare_ct(
-                &self.unprotected_as_bytes(),
-                &other.unprotected_as_bytes(),
-            ).unwrap()
+            use subtle::ConstantTimeEq;
+             self.unprotected_as_bytes()
+                .ct_eq(&other.unprotected_as_bytes())
+                .unwrap_u8() == 1
         }
     }
 ));
@@ -157,5 +156,93 @@ macro_rules! construct_tag (($name:ident, $size:expr) => (
     impl $name {
         func_from_slice!($name, $size);
         func_unprotected_as_bytes!($name, $size);
+    }
+));
+
+macro_rules! construct_hmac_key (($name:ident, $size:expr) => (
+    #[must_use]
+    /// A secret key type.
+    ///
+    /// # Security:
+    /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+    /// comparisons. However, `unprotected_as_bytes()` lets the user return the secret key
+    /// without such a protection. Avoid using `unprotected_as_bytes()` whenever possible.
+    pub struct $name { value: [u8; $size] }
+
+    impl_debug_trait!($name);
+    impl_drop_trait!($name);
+    impl_partialeq_trait!($name);
+
+    impl $name {
+        #[must_use]
+        /// Make an object from a given byte slice.
+        pub fn from_slice(slice: &[u8]) -> $name {
+            use sha2::{Digest, Sha512};
+            use hazardous::constants::HLEN;
+
+            let mut secret_key = [0u8; $size];
+
+            let slice_len = slice.len();
+
+            if slice_len > $size {
+                secret_key[..HLEN].copy_from_slice(&Sha512::digest(slice));
+            } else {
+                secret_key[..slice_len].copy_from_slice(slice);
+            }
+
+            $name { value: secret_key }
+        }
+        func_unprotected_as_bytes!($name, $size);
+        func_generate!($name, $size);
+    }
+));
+
+/// A macro to constrcut a salt.
+/// `$max_size` reflects the maximum size of a salt, e.g. 128 in PBKDF2.
+/// `$generate_size` reflects the size of the salt the `generate()` will produce, e.g. 64 in PBKDF2.
+/// `len` field of strcut `$name` hold the size of the salt that the current instance is made with.
+macro_rules! construct_salt (($name:ident, $max_size:expr, $generate_size:expr) => (
+    #[must_use]
+    /// A salt type.
+    pub struct $name {
+        len: usize,
+        value: [u8; $max_size],
+    }
+
+    impl $name {
+        #[must_use]
+        /// Make an object from a given byte slice.
+        pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+            if slice.len() > $max_size {
+                return Err(UnknownCryptoError);
+            }
+
+            let mut salt = [0u8; $max_size];
+            let slice_len = slice.len();
+            salt[..slice_len].copy_from_slice(slice);
+
+            Ok($name {
+                len: slice_len,
+                value: salt,
+            })
+        }
+        #[must_use]
+        /// Return the object as byte slice.
+        pub fn as_bytes(&self) -> &[u8] {
+            self.value[..self.len].as_ref()
+        }
+        #[must_use]
+        #[cfg(feature = "safe_api")]
+        /// Randomly generate using a CSPRNG. Not available in `no_std` context.
+        pub fn generate() -> $name {
+            use util;
+            let mut value = [0u8; $max_size];
+            util::gen_rand_key(&mut value[..$generate_size]).unwrap();
+
+            $name {
+                len: $generate_size,
+                value: value,
+            }
+        }
     }
 ));

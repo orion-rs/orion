@@ -72,79 +72,9 @@ use self::core::mem;
 use errors::*;
 use hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE};
 use sha2::{Digest, Sha512};
-use subtle::ConstantTimeEq;
-#[cfg(feature = "safe_api")]
-use util;
 use zeroize::Zeroize;
 
-#[must_use]
-/// A secret key used for HMAC.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The `OsRng` fails to initialize or read from its source
-///
-/// # Security:
-/// To easily generate a secure secret key, use the `SecretKey::generate()`.
-///
-/// # Example:
-/// ```
-/// use orion::hazardous::mac::hmac;
-///
-/// let secret_key = hmac::SecretKey::generate();
-/// ```
-pub struct SecretKey {
-    value: [u8; SHA2_BLOCKSIZE],
-}
-
-impl Drop for SecretKey {
-    fn drop(&mut self) {
-        self.value.as_mut().zeroize();
-    }
-}
-
-impl PartialEq for SecretKey {
-    fn eq(&self, other: &SecretKey) -> bool {
-        self.unsafe_as_bytes()
-            .ct_eq(&other.unsafe_as_bytes())
-            .unwrap_u8()
-            == 1
-    }
-}
-
-impl SecretKey {
-    #[must_use]
-    /// Make a `SecretKey` from a byte slice.
-    pub fn from_slice(slice: &[u8]) -> Self {
-        let mut secret_key = [0u8; SHA2_BLOCKSIZE];
-
-        let slice_len = slice.len();
-
-        if slice_len > SHA2_BLOCKSIZE {
-            secret_key[..HLEN].copy_from_slice(&Sha512::digest(slice));
-        } else {
-            secret_key[..slice_len].copy_from_slice(slice);
-        }
-
-        Self { value: secret_key }
-    }
-    #[must_use]
-    /// Return the S`ecretKey` as byte slice. __**WARNING**__: Should not be used unless strictly
-    /// needed.
-    pub fn unsafe_as_bytes(&self) -> [u8; SHA2_BLOCKSIZE] {
-        self.value
-    }
-    #[must_use]
-    #[cfg(feature = "safe_api")]
-    /// Randomly generate a `SecretKey` of 128 bytes using a CSPRNG. Not available in `no_std` context.
-    pub fn generate() -> Self {
-        let mut secret_key = [0u8; SHA2_BLOCKSIZE];
-        util::gen_rand_key(&mut secret_key).unwrap();
-
-        Self { value: secret_key }
-    }
-}
-
+construct_hmac_key!(SecretKey, SHA2_BLOCKSIZE);
 construct_tag!(Tag, HLEN);
 
 #[must_use]
@@ -170,7 +100,7 @@ impl Hmac {
         let mut opad: BlocksizeArray = [0x5C; SHA2_BLOCKSIZE];
         // `key` has already been padded with zeroes to a length of SHA2_BLOCKSIZE
         // in SecretKey::from_slice
-        for (idx, itm) in key.unsafe_as_bytes().iter().enumerate() {
+        for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {
             self.ipad[idx] ^= itm;
             opad[idx] ^= itm;
         }
@@ -245,7 +175,7 @@ pub fn verify(
     let mut tag = init(secret_key);
     tag.update(message).unwrap();
 
-    if &tag.finalize().unwrap() == expected {
+    if expected == &tag.finalize().unwrap() {
         Ok(true)
     } else {
         Err(ValidationCryptoError)
