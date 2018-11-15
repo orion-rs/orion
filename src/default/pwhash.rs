@@ -113,7 +113,6 @@ pub fn password_hash_verify(
     )
 }
 
-
 #[test]
 fn pbkdf2_verify() {
     let password = [0u8; 64];
@@ -122,7 +121,6 @@ fn pbkdf2_verify() {
 
     assert_eq!(password_hash_verify(&pbkdf2_dk, &password).unwrap(), true);
 }
-
 
 #[test]
 #[should_panic]

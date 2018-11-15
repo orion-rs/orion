@@ -207,7 +207,12 @@ pub fn open(
 
     let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes());
     let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
-    process_authentication(&mut poly1305_state, &optional_ad, ciphertext_with_tag, ciphertext_len).unwrap();
+    process_authentication(
+        &mut poly1305_state,
+        &optional_ad,
+        ciphertext_with_tag,
+        ciphertext_len,
+    ).unwrap();
 
     util::compare_ct(
         &poly1305_state.finalize().unwrap().unprotected_as_bytes(),

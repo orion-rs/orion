@@ -71,8 +71,8 @@ extern crate core;
 use self::core::mem;
 use errors::*;
 use hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE};
-use sha2::{Digest, Sha512};
 use seckey::zero;
+use sha2::{Digest, Sha512};
 
 construct_hmac_key!(SecretKey, SHA2_BLOCKSIZE);
 construct_tag!(Tag, HLEN);
