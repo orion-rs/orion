@@ -22,6 +22,7 @@
 
 use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::pbkdf2;
+pub use hazardous::kdf::pbkdf2::Password;
 pub use hazardous::kdf::pbkdf2::Salt;
 
 #[must_use]
@@ -50,15 +51,11 @@ pub use hazardous::kdf::pbkdf2::Salt;
 /// ```
 /// use orion::default::pwhash;
 ///
-/// let password = "Secret password".as_bytes();
+/// let password = pwhash::Password::from_slice("Secret password".as_bytes());
 ///
-/// let derived_password = pwhash::password_hash(password);
+/// let derived_password = pwhash::password_hash(&password);
 /// ```
-pub fn password_hash(password: &[u8]) -> Result<[u8; 128], UnknownCryptoError> {
-    if password.len() < 14 {
-        return Err(UnknownCryptoError);
-    }
-
+pub fn password_hash(password: &Password) -> Result<[u8; 128], UnknownCryptoError> {
     let mut dk = [0u8; 128];
     let salt = Salt::generate();
 
@@ -89,14 +86,14 @@ pub fn password_hash(password: &[u8]) -> Result<[u8; 128], UnknownCryptoError> {
 /// ```
 /// use orion::default::pwhash;
 ///
-/// let password = "Secret password".as_bytes();
+/// let password = pwhash::Password::from_slice("Secret password".as_bytes());
 ///
-/// let derived_password = pwhash::password_hash(password).unwrap();
-/// assert!(pwhash::password_hash_verify(&derived_password, password).unwrap());
+/// let derived_password = pwhash::password_hash(&password).unwrap();
+/// assert!(pwhash::password_hash_verify(&derived_password, &password).unwrap());
 /// ```
 pub fn password_hash_verify(
     expected_dk: &[u8],
-    password: &[u8],
+    password: &Password,
 ) -> Result<bool, ValidationCryptoError> {
     if expected_dk.len() != 128 {
         return Err(ValidationCryptoError);
@@ -115,7 +112,7 @@ pub fn password_hash_verify(
 
 #[test]
 fn pbkdf2_verify() {
-    let password = [0u8; 64];
+    let password = Password::from_slice(&[0u8; 64]);
 
     let pbkdf2_dk: [u8; 128] = password_hash(&password).unwrap();
 
@@ -125,7 +122,7 @@ fn pbkdf2_verify() {
 #[test]
 #[should_panic]
 fn pbkdf2_verify_err_modified_salt() {
-    let password = [0u8; 64];
+    let password = Password::from_slice(&[0u8; 64]);
 
     let mut pbkdf2_dk = password_hash(&password).unwrap();
     pbkdf2_dk[..10].copy_from_slice(&[0x61; 10]);
@@ -136,7 +133,7 @@ fn pbkdf2_verify_err_modified_salt() {
 #[test]
 #[should_panic]
 fn pbkdf2_verify_err_modified_password() {
-    let password = [0u8; 64];
+    let password = Password::from_slice(&[0u8; 64]);
 
     let mut pbkdf2_dk = password_hash(&password).unwrap();
     pbkdf2_dk[70..80].copy_from_slice(&[0x61; 10]);
@@ -147,7 +144,7 @@ fn pbkdf2_verify_err_modified_password() {
 #[test]
 #[should_panic]
 fn pbkdf2_verify_err_modified_salt_and_password() {
-    let password = [0u8; 64];
+    let password = Password::from_slice(&[0u8; 64]);
 
     let mut pbkdf2_dk = password_hash(&password).unwrap();
     pbkdf2_dk[63..73].copy_from_slice(&[0x61; 10]);
@@ -157,7 +154,7 @@ fn pbkdf2_verify_err_modified_salt_and_password() {
 
 #[test]
 fn pbkdf2_verify_expected_dk_too_long() {
-    let password = [0u8; 64];
+    let password = Password::from_slice(&[0u8; 64]);
 
     let mut pbkdf2_dk = [0u8; 129];
     pbkdf2_dk[..128].copy_from_slice(&password_hash(&password).unwrap());
@@ -167,16 +164,18 @@ fn pbkdf2_verify_expected_dk_too_long() {
 
 #[test]
 fn pbkdf2_verify_expected_dk_too_short() {
-    let password = [0u8; 127];
+    let password = Password::from_slice(&[0u8; 127]);
 
     let pbkdf2_dk = password_hash(&password).unwrap();
 
     assert!(password_hash_verify(&pbkdf2_dk[..127], &password).is_err());
 }
 
+/* NOTE: Length check on passwords are no more
 #[test]
 fn pbkdf2_password_too_short() {
-    let password = [0u8; 13];
+    let password = Password::from_slice(&[0u8; 13]);
 
     assert!(password_hash(&password).is_err());
 }
+*/

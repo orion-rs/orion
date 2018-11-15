@@ -48,20 +48,26 @@
 //! use orion::util;
 //!
 //! let mut salt = pbkdf2::Salt::generate();
+//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes());
 //! let mut dk_out = [0u8; 64];
 //!
-//! pbkdf2::derive_key("Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap();
+//! pbkdf2::derive_key(&password, &salt, 10000, &mut dk_out).unwrap();
 //!
 //! let exp_dk = dk_out;
 //!
-//! assert!(pbkdf2::verify(&exp_dk, "Secret password".as_bytes(), &salt, 10000, &mut dk_out).unwrap());
+//! assert!(pbkdf2::verify(&exp_dk, &password, &salt, 10000, &mut dk_out).unwrap());
 //! ```
 
 use byteorder::{BigEndian, ByteOrder};
 use errors::*;
-use hazardous::constants::{HLenArray, HLEN};
+use hazardous::constants::{HLenArray, HLEN, SHA2_BLOCKSIZE};
 use hazardous::mac::hmac;
 use util;
+
+// We use an HMAC key as password type because the password
+// is used as HMAC `SecretKey` in `derive_key` so no further padding is needed.
+// The types a explicitly seperated.
+construct_hmac_key!(Password, SHA2_BLOCKSIZE);
 
 construct_salt!(Salt, 128, 64);
 
@@ -102,7 +108,7 @@ fn function_f(
 /// PBKDF2-SHA512 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 pub fn derive_key(
-    password: &[u8],
+    password: &Password,
     salt: &Salt,
     iterations: usize,
     dk_out: &mut [u8],
@@ -114,7 +120,9 @@ pub fn derive_key(
         return Err(UnknownCryptoError);
     }
 
-    let mut hmac = hmac::init(&hmac::SecretKey::from_slice(password));
+    let mut hmac = hmac::init(&hmac::SecretKey::from_slice(
+        &password.unprotected_as_bytes(),
+    ));
 
     for (idx, dk_block) in dk_out.chunks_mut(HLEN).enumerate() {
         let block_len = dk_block.len();
@@ -142,7 +150,7 @@ pub fn derive_key(
 /// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
 pub fn verify(
     expected_dk: &[u8],
-    password: &[u8],
+    password: &Password,
     salt: &Salt,
     iterations: usize,
     dk_out: &mut [u8],
@@ -165,27 +173,27 @@ mod test {
 
     #[test]
     fn zero_iterations_err() {
-        let password = "password".as_bytes();
+        let password = Password::from_slice("password".as_bytes());
         let salt = Salt::from_slice("salt".as_bytes()).unwrap();
         let iterations: usize = 0;
         let mut okm_out = [0u8; 15];
 
-        assert!(derive_key(password, &salt, iterations, &mut okm_out).is_err());
+        assert!(derive_key(&password, &salt, iterations, &mut okm_out).is_err());
     }
 
     #[test]
     fn zero_dklen_err() {
-        let password = "password".as_bytes();
+        let password = Password::from_slice("password".as_bytes());
         let salt = Salt::from_slice("salt".as_bytes()).unwrap();
         let iterations: usize = 1;
         let mut okm_out = [0u8; 0];
 
-        assert!(derive_key(password, &salt, iterations, &mut okm_out).is_err());
+        assert!(derive_key(&password, &salt, iterations, &mut okm_out).is_err());
     }
 
     #[test]
     fn verify_true() {
-        let password = "pass\0word".as_bytes();
+        let password = Password::from_slice("pass\0word".as_bytes());
         let salt = Salt::from_slice("sa\0lt".as_bytes()).unwrap();
         let iterations: usize = 4096;
         let mut okm_out = [0u8; 16];
@@ -193,55 +201,55 @@ mod test {
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
         assert_eq!(
-            verify(&expected_dk, password, &salt, iterations, &mut okm_out).unwrap(),
+            verify(&expected_dk, &password, &salt, iterations, &mut okm_out).unwrap(),
             true
         );
     }
 
     #[test]
     fn verify_false_wrong_salt() {
-        let password = "pass\0word".as_bytes();
+        let password = Password::from_slice("pass\0word".as_bytes());
         let salt = Salt::from_slice("".as_bytes()).unwrap();
         let iterations: usize = 4096;
         let mut okm_out = [0u8; 16];
 
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
-        assert!(verify(&expected_dk, password, &salt, iterations, &mut okm_out).is_err());
+        assert!(verify(&expected_dk, &password, &salt, iterations, &mut okm_out).is_err());
     }
     #[test]
     fn verify_false_wrong_password() {
-        let password = "".as_bytes();
+        let password = Password::from_slice("".as_bytes());
         let salt = Salt::from_slice("sa\0lt".as_bytes()).unwrap();
         let iterations: usize = 4096;
         let mut okm_out = [0u8; 16];
 
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
-        assert!(verify(&expected_dk, password, &salt, iterations, &mut okm_out).is_err());
+        assert!(verify(&expected_dk, &password, &salt, iterations, &mut okm_out).is_err());
     }
 
     #[test]
     fn verify_diff_dklen_error() {
-        let password = "pass\0word".as_bytes();
+        let password = Password::from_slice("pass\0word".as_bytes());
         let salt = Salt::from_slice("sa\0lt".as_bytes()).unwrap();
         let iterations: usize = 4096;
         let mut okm_out = [0u8; 32];
 
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
-        assert!(verify(&expected_dk, password, &salt, iterations, &mut okm_out).is_err());
+        assert!(verify(&expected_dk, &password, &salt, iterations, &mut okm_out).is_err());
     }
 
     #[test]
     fn verify_diff_iter_error() {
-        let password = "pass\0word".as_bytes();
+        let password = Password::from_slice("pass\0word".as_bytes());
         let salt = Salt::from_slice("sa\0lt".as_bytes()).unwrap();
         let iterations: usize = 512;
         let mut okm_out = [0u8; 16];
 
         let expected_dk = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
-        assert!(verify(&expected_dk, password, &salt, iterations, &mut okm_out).is_err());
+        assert!(verify(&expected_dk, &password, &salt, iterations, &mut okm_out).is_err());
     }
 }
