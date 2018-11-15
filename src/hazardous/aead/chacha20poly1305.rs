@@ -175,7 +175,7 @@ pub fn seal(
 
     process_authentication(&mut poly1305_state, ad, &dst_out, plaintext.len()).unwrap();
     dst_out[plaintext.len()..]
-        .copy_from_slice(&poly1305_state.finalize().unwrap().unsafe_as_bytes());
+        .copy_from_slice(&poly1305_state.finalize().unwrap().unprotected_as_bytes());
 
     Ok(())
 }
@@ -203,7 +203,7 @@ pub fn open(
     process_authentication(&mut poly1305_state, ad, ciphertext_with_tag, ciphertext_len).unwrap();
 
     util::compare_ct(
-        &poly1305_state.finalize().unwrap().unsafe_as_bytes(),
+        &poly1305_state.finalize().unwrap().unprotected_as_bytes(),
         &ciphertext_with_tag[ciphertext_len..],
     )
     .unwrap();
@@ -376,7 +376,7 @@ fn rfc_8439_test_poly1305_key_gen_1() {
     ];
 
     assert_eq!(
-        poly1305_key_gen(&key, &nonce).unsafe_as_bytes(),
+        poly1305_key_gen(&key, &nonce).unprotected_as_bytes(),
         expected.as_ref()
     );
 }
@@ -398,7 +398,7 @@ fn rfc_8439_test_poly1305_key_gen_2() {
     ];
 
     assert_eq!(
-        poly1305_key_gen(&key, &nonce).unsafe_as_bytes(),
+        poly1305_key_gen(&key, &nonce).unprotected_as_bytes(),
         expected.as_ref()
     );
 }
@@ -420,7 +420,7 @@ fn rfc_8439_test_poly1305_key_gen_3() {
     ];
 
     assert_eq!(
-        poly1305_key_gen(&key, &nonce).unsafe_as_bytes(),
+        poly1305_key_gen(&key, &nonce).unprotected_as_bytes(),
         expected.as_ref()
     );
 }

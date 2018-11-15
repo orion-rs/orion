@@ -91,7 +91,7 @@ pub fn expand(
         None => &[0u8; 0],
     };
 
-    let mut hmac = hmac::init(&hmac::SecretKey::from_slice(&prk.unsafe_as_bytes()));
+    let mut hmac = hmac::init(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes()));
     let okm_len = okm_out.len();
 
     for (idx, hlen_block) in okm_out.chunks_mut(HLEN).enumerate() {
@@ -100,7 +100,7 @@ pub fn expand(
 
         hmac.update(optional_info).unwrap();
         hmac.update(&[idx as u8 + 1_u8]).unwrap();
-        hlen_block.copy_from_slice(&hmac.finalize().unwrap().unsafe_as_bytes()[..block_len]);
+        hlen_block.copy_from_slice(&hmac.finalize().unwrap().unprotected_as_bytes()[..block_len]);
 
         // Check if it's the last iteration, if yes don't process anything
         if block_len < HLEN || (block_len * (idx + 1) == okm_len) {

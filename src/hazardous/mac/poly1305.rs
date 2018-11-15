@@ -61,122 +61,9 @@ use byteorder::{ByteOrder, LittleEndian};
 use errors::*;
 use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use seckey::zero;
-use subtle::ConstantTimeEq;
-#[cfg(feature = "safe_api")]
-use util;
-use zeroize::Zeroize;
 
-#[must_use]
-/// A Poly1305 one-time key.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - `slice` is not 32 bytes
-/// - The `OsRng` fails to initialize or read from its source
-///
-/// # Security:
-/// - To securely generate a strong one-time key, use the `OneTimeKey::generate()`.
-///
-/// # Example:
-/// ```
-/// use orion::hazardous::mac::poly1305;
-///
-/// let one_time_key = poly1305::OneTimeKey::generate();
-/// ```
-pub struct OneTimeKey {
-    value: [u8; POLY1305_KEYSIZE],
-}
-
-impl Drop for OneTimeKey {
-    fn drop(&mut self) {
-        self.value.as_mut().zeroize();
-    }
-}
-
-impl PartialEq for OneTimeKey {
-    fn eq(&self, other: &OneTimeKey) -> bool {
-        self.unsafe_as_bytes()
-            .ct_eq(&other.unsafe_as_bytes())
-            .unwrap_u8()
-            == 1
-    }
-}
-
-impl OneTimeKey {
-    #[must_use]
-    /// Make a `OneTimeKey` from a byte slice.
-    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        if slice.len() != POLY1305_KEYSIZE {
-            return Err(UnknownCryptoError);
-        }
-
-        let mut secret_key = [0u8; POLY1305_KEYSIZE];
-        secret_key.copy_from_slice(slice);
-
-        Ok(Self { value: secret_key })
-    }
-    #[must_use]
-    /// Return the `OneTimeKey` as byte slice. __**WARNING**__: Should not be used unless strictly
-    /// needed.
-    pub fn unsafe_as_bytes(&self) -> [u8; POLY1305_KEYSIZE] {
-        self.value
-    }
-    #[must_use]
-    #[cfg(feature = "safe_api")]
-    /// Randomly generate a `OneTimeKey` using a CSPRNG. Not available in `no_std` context.
-    pub fn generate() -> Self {
-        let mut secret_key = [0u8; POLY1305_KEYSIZE];
-        util::gen_rand_key(&mut secret_key).unwrap();
-
-        Self { value: secret_key }
-    }
-}
-
-#[must_use]
-#[derive(Clone, Copy)]
-/// A Poly1305 tag.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - `slice` is not 16 bytes
-///
-/// # Security:
-/// `Tag` implements `PartialEq` and thus prevents users from accidentally using non constant-time
-/// comparisons. However, `unsafe_as_bytes()` lets the user return the `Tag` without such a protection.
-/// You should avoid ever using `unsafe_as_bytes()`.
-pub struct Tag {
-    value: [u8; POLY1305_BLOCKSIZE],
-}
-
-impl PartialEq for Tag {
-    fn eq(&self, other: &Tag) -> bool {
-        self.unsafe_as_bytes()
-            .ct_eq(&other.unsafe_as_bytes())
-            .unwrap_u8()
-            == 1
-    }
-}
-
-impl Tag {
-    #[must_use]
-    /// Make a `Tag` from a byte slice.
-    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        if slice.len() != POLY1305_BLOCKSIZE {
-            return Err(UnknownCryptoError);
-        }
-
-        let mut tag = [0u8; POLY1305_BLOCKSIZE];
-        tag.copy_from_slice(slice);
-
-        Ok(Self { value: tag })
-    }
-    #[must_use]
-    /// Return the `Tag` as byte slice.  __**WARNING**__: Provides no protection against unsafe
-    /// comparison operations.
-    pub fn unsafe_as_bytes(&self) -> [u8; POLY1305_BLOCKSIZE] {
-        self.value
-    }
-}
+construct_secret_key!(OneTimeKey, POLY1305_KEYSIZE);
+construct_tag!(Tag, POLY1305_BLOCKSIZE);
 
 #[must_use]
 /// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
@@ -205,16 +92,16 @@ impl Poly1305 {
     /// Initialize `Poly1305` struct for a given key.
     fn initialize(&mut self, key: &OneTimeKey) -> Result<(), UnknownCryptoError> {
         // clamp(r)
-        self.r[0] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[0..4])) & 0x3ffffff;
-        self.r[1] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[3..7]) >> 2) & 0x3ffff03;
-        self.r[2] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
-        self.r[3] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[9..13]) >> 6) & 0x3f03fff;
-        self.r[4] = (LittleEndian::read_u32(&key.unsafe_as_bytes()[12..16]) >> 8) & 0x00fffff;
+        self.r[0] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[0..4])) & 0x3ffffff;
+        self.r[1] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[3..7]) >> 2) & 0x3ffff03;
+        self.r[2] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
+        self.r[3] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[9..13]) >> 6) & 0x3f03fff;
+        self.r[4] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[12..16]) >> 8) & 0x00fffff;
 
-        self.s[0] = LittleEndian::read_u32(&key.unsafe_as_bytes()[16..20]);
-        self.s[1] = LittleEndian::read_u32(&key.unsafe_as_bytes()[20..24]);
-        self.s[2] = LittleEndian::read_u32(&key.unsafe_as_bytes()[24..28]);
-        self.s[3] = LittleEndian::read_u32(&key.unsafe_as_bytes()[28..32]);
+        self.s[0] = LittleEndian::read_u32(&key.unprotected_as_bytes()[16..20]);
+        self.s[1] = LittleEndian::read_u32(&key.unprotected_as_bytes()[20..24]);
+        self.s[2] = LittleEndian::read_u32(&key.unprotected_as_bytes()[24..28]);
+        self.s[3] = LittleEndian::read_u32(&key.unprotected_as_bytes()[28..32]);
 
         Ok(())
     }

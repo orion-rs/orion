@@ -79,14 +79,14 @@ fn function_f(
     hmac.update(salt).unwrap();
     hmac.update(&u_step[..4]).unwrap();
 
-    u_step.copy_from_slice(&hmac.finalize().unwrap().unsafe_as_bytes());
+    u_step.copy_from_slice(&hmac.finalize().unwrap().unprotected_as_bytes());
     dk_block.copy_from_slice(&u_step[..block_len]);
 
     if iterations > 1 {
         for _ in 1..iterations {
             hmac.reset();
             hmac.update(&u_step).unwrap();
-            u_step.copy_from_slice(&hmac.finalize().unwrap().unsafe_as_bytes());
+            u_step.copy_from_slice(&hmac.finalize().unwrap().unprotected_as_bytes());
 
             for (idx, val) in u_step[..block_len].iter().enumerate() {
                 dk_block[idx] ^= val;

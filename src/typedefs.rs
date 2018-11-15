@@ -100,6 +100,11 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
 macro_rules! construct_secret_key (($name:ident, $size:expr) => (
     #[must_use]
     /// A secret key type.
+    ///
+    /// # Security:
+    /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+    /// comparisons. However, `unprotected_as_bytes()` lets the user return the secret key
+    /// without such a protection. Avoid using `unprotected_as_bytes()` whenever possible.
     pub struct $name { value: [u8; $size] }
 
     impl_debug_trait!($name);
@@ -113,7 +118,7 @@ macro_rules! construct_secret_key (($name:ident, $size:expr) => (
     }
 ));
 
-macro_rules! construct_nonce_no_generator(($name:ident, $size:expr) => (
+macro_rules! construct_nonce_no_generator (($name:ident, $size:expr) => (
     #[must_use]
     /// A nonce type.
     pub struct $name { value: [u8; $size] }
@@ -124,7 +129,7 @@ macro_rules! construct_nonce_no_generator(($name:ident, $size:expr) => (
     }
 ));
 
-macro_rules! construct_nonce_with_generator(($name:ident, $size:expr) => (
+macro_rules! construct_nonce_with_generator (($name:ident, $size:expr) => (
     #[must_use]
     /// A nonce type.
     pub struct $name { value: [u8; $size] }
@@ -136,9 +141,15 @@ macro_rules! construct_nonce_with_generator(($name:ident, $size:expr) => (
     }
 ));
 
-macro_rules! construct_tag(($name:ident, $size:expr) => (
+macro_rules! construct_tag (($name:ident, $size:expr) => (
     #[must_use]
+    #[derive(Clone, Copy)]
     /// A tag type.
+    ///
+    /// # Security:
+    /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+    /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag without such a protection.
+    /// Avoid using `unprotected_as_bytes()` whenever possible.
     pub struct $name { value: [u8; $size] }
 
     impl_partialeq_trait!($name);

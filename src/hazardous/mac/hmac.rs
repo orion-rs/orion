@@ -145,51 +145,7 @@ impl SecretKey {
     }
 }
 
-#[must_use]
-#[derive(Clone, Copy)]
-/// An HMAC Tag.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - `slice` is not 64 bytes
-///
-/// # Security:
-/// `Tag` implements `PartialEq` and thus prevents users from accidentally using non constant-time
-/// comparisons. However, `unsafe_as_bytes()` lets the user return the `Tag` without such a protection.
-/// You should avoid ever using `unsafe_as_bytes()`.
-pub struct Tag {
-    value: [u8; HLEN],
-}
-
-impl PartialEq for Tag {
-    fn eq(&self, other: &Tag) -> bool {
-        self.unsafe_as_bytes()
-            .ct_eq(&other.unsafe_as_bytes())
-            .unwrap_u8()
-            == 1
-    }
-}
-
-impl Tag {
-    #[must_use]
-    /// Make a `Tag` from a byte slice.
-    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        if slice.len() != HLEN {
-            return Err(UnknownCryptoError);
-        }
-
-        let mut tag = [0u8; HLEN];
-        tag.copy_from_slice(slice);
-
-        Ok(Self { value: tag })
-    }
-    #[must_use]
-    /// Return the `Tag` as byte slice. __**WARNING**__: Provides no protection against unsafe
-    /// comparison operations.
-    pub fn unsafe_as_bytes(&self) -> [u8; HLEN] {
-        self.value
-    }
-}
+construct_tag!(Tag, HLEN);
 
 #[must_use]
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the
