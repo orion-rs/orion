@@ -62,16 +62,13 @@ use hazardous::mac::hmac;
 use hazardous::mac::hmac::SecretKey;
 use util;
 
-// An HMAC key as salt type is used because the salt
-// is used as HMAC `SecretKey` in `derive_key` and `extract` so no further padding is needed.
-// The types are explicitly seperated.
-construct_hmac_key!(Salt, SHA2_BLOCKSIZE);
+construct_hkdf_salt!(Salt, SHA2_BLOCKSIZE);
 
 #[must_use]
 #[inline(always)]
 /// The HKDF extract step.
 pub fn extract(salt: &Salt, ikm: &[u8]) -> hmac::Tag {
-    let mut prk = hmac::init(&SecretKey::from_slice(&salt.unprotected_as_bytes()));
+    let mut prk = hmac::init(&SecretKey::from_slice(&salt.as_bytes()));
     prk.update(ikm).unwrap();
 
     prk.finalize().unwrap()
