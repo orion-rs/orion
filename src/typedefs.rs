@@ -131,6 +131,18 @@ macro_rules! construct_secret_key {
             func_unprotected_as_bytes!($name);
             func_generate!($name, $size);
         }
+
+        #[test]
+        fn test_key_size() {
+            assert!($name::from_slice(&[0u8; $size]).is_ok());
+            assert!($name::from_slice(&[0u8; $size - $size]).is_err());
+            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
+        }
+        #[test]
+        fn test_unprotected_as_bytes_secret_key() {
+            let test = $name::from_slice(&[0u8; $size]).unwrap();
+            assert!(test.unprotected_as_bytes().len() == $size);
+        }
     );
 }
 
@@ -145,6 +157,18 @@ macro_rules! construct_nonce_no_generator {
         impl $name {
             func_from_slice!($name, $size);
             func_as_bytes!($name);
+        }
+
+        #[test]
+        fn test_nonce_size() {
+            assert!($name::from_slice(&[0u8; $size]).is_ok());
+            assert!($name::from_slice(&[0u8; $size - $size]).is_err());
+            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
+        }
+        #[test]
+        fn test_as_bytes_nonce_no_gen() {
+            let test = $name::from_slice(&[0u8; $size]).unwrap();
+            assert!(test.as_bytes().len() == $size);
         }
     );
 }
@@ -161,6 +185,18 @@ macro_rules! construct_nonce_with_generator {
             func_from_slice!($name, $size);
             func_as_bytes!($name);
             func_generate!($name, $size);
+        }
+
+        #[test]
+        fn test_nonce_size() {
+            assert!($name::from_slice(&[0u8; $size]).is_ok());
+            assert!($name::from_slice(&[0u8; $size - $size]).is_err());
+            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
+        }
+        #[test]
+        fn test_as_bytes_nonce_with_gen() {
+            let test = $name::from_slice(&[0u8; $size]).unwrap();
+            assert!(test.as_bytes().len() == $size);
         }
     );
 }
@@ -184,6 +220,18 @@ macro_rules! construct_tag {
         impl $name {
             func_from_slice!($name, $size);
             func_unprotected_as_bytes!($name);
+        }
+
+        #[test]
+        fn test_tag_size() {
+            assert!($name::from_slice(&[0u8; $size]).is_ok());
+            assert!($name::from_slice(&[0u8; $size - $size]).is_err());
+            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
+        }
+        #[test]
+        fn test_unprotected_as_bytes_tag() {
+            let test = $name::from_slice(&[0u8; $size]).unwrap();
+            assert!(test.unprotected_as_bytes().len() == $size);
         }
     );
 }
@@ -228,6 +276,19 @@ macro_rules! construct_hmac_key {
 
             func_unprotected_as_bytes!($name);
             func_generate!($name, $size);
+        }
+
+        #[test]
+        fn test_key_size() {
+            let _ = $name::from_slice(&[0u8; $size]);
+            let _ = $name::from_slice(&[0u8; $size - $size]);
+            let _ = $name::from_slice(&[0u8; $size + 1]);
+            let _ = $name::from_slice(&[0u8; $size + $size]);
+        }
+        #[test]
+        fn test_unprotected_as_bytes_hmac_key() {
+            let test = $name::from_slice(&[0u8; $size]);
+            assert!(test.unprotected_as_bytes().len() == $size);
         }
     );
 }
