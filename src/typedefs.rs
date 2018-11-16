@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/// Macro that implements the `PartialEq` trait on a object called `$name`.
+/// This `PartialEq` will perform eq in constant time.
 macro_rules! impl_partialeq_trait (($name:ident) => (
     impl PartialEq for $name {
         fn eq(&self, other: &$name) -> bool {
@@ -31,6 +33,9 @@ macro_rules! impl_partialeq_trait (($name:ident) => (
     }
 ));
 
+/// Macro that implements the `Debug` trait on a object called `$name`.
+/// This `Debug` will omit any fields of object `$name` to avoid them being
+/// written to logs.
 macro_rules! impl_debug_trait (($name:ident) => (
     impl core::fmt::Debug for $name {
         fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -39,6 +44,8 @@ macro_rules! impl_debug_trait (($name:ident) => (
     }
 ));
 
+/// Macro that implements the `Drop` trait on a object called `$name` which as a field `value`.
+/// This `Drop` will zero out the field `value` when the objects destructor is called.
 macro_rules! impl_drop_trait (($name:ident) => (
     impl Drop for $name {
         fn drop(&mut self) {
@@ -48,6 +55,8 @@ macro_rules! impl_drop_trait (($name:ident) => (
     }
 ));
 
+/// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError` if the slice
+/// is not of length `$size`.
 macro_rules! func_from_slice (($name:ident, $size:expr) => (
     #[must_use]
     /// Make an object from a given byte slice.
@@ -65,6 +74,8 @@ macro_rules! func_from_slice (($name:ident, $size:expr) => (
     }
 ));
 
+/// Macro to implement a `unprotected_as_bytes()` function for objects that implement extra protections.
+/// Typically used on objects that implement `Drop`, `Debug` and/or `PartialEq`.
 macro_rules! func_unprotected_as_bytes (($name:ident) => (
     #[must_use]
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
@@ -74,6 +85,7 @@ macro_rules! func_unprotected_as_bytes (($name:ident) => (
     }
 ));
 
+/// Macro to implement a `as_bytes()` function for objects that don't implement extra protections.
 macro_rules! func_as_bytes (($name:ident) => (
     #[must_use]
     /// Return the object as byte slice.
@@ -82,6 +94,8 @@ macro_rules! func_as_bytes (($name:ident) => (
     }
 ));
 
+/// Macro to implement a `generate()` function for objects that benefit from having a CSPRNG available
+/// to generate data of a recommended length. For exmaple symmetric keys for AEADs.
 macro_rules! func_generate (($name:ident, $size:expr) => (
     #[must_use]
     #[cfg(feature = "safe_api")]
@@ -95,6 +109,7 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     }
 ));
 
+/// Macro to construct a type containing sensitive data.
 macro_rules! construct_secret_key {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
@@ -119,7 +134,7 @@ macro_rules! construct_secret_key {
     );
 }
 
-
+/// Macro to construct a nonce where a random generator is not applicable.
 macro_rules! construct_nonce_no_generator {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
@@ -134,6 +149,7 @@ macro_rules! construct_nonce_no_generator {
     );
 }
 
+/// Macro to construct a nonce where a random generator is applicable.
 macro_rules! construct_nonce_with_generator {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
@@ -149,6 +165,7 @@ macro_rules! construct_nonce_with_generator {
     );
 }
 
+/// Macro to construct a tag type that MACs return.
 macro_rules! construct_tag {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
@@ -171,6 +188,8 @@ macro_rules! construct_tag {
     );
 }
 
+/// Macro to construct a secret key used for HMAC. This pre-pads the given key to the required length
+/// specified by the HMAC specifications.
 macro_rules! construct_hmac_key {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
