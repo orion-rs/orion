@@ -74,9 +74,26 @@ use hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE};
 use seckey::zero;
 use sha2::{Digest, Sha512};
 
-construct_hmac_key!(SecretKey, SHA2_BLOCKSIZE);
+construct_hmac_key!{
+    /// A type to represent the `SecretKey` that HMAC uses for authentication.
+    ///
+    /// # Note:
+    /// `SecretKey` pads the secret key for use with HMAC, when initialized.
+    ///
+    /// # Exceptions:
+    /// An exception will be thrown if:
+    /// - The `OsRng` fails to initialize or read from its source
+    (SecretKey, SHA2_BLOCKSIZE)
+}
 
-construct_tag!(Tag, HLEN);
+construct_tag!{
+    /// A type to represent the `Tag` that HMAC returns.
+    ///
+    /// # Exceptions:
+    /// An exception will be thrown if:
+    /// - `slice` is not 64 bytes
+    (Tag, HLEN)
+}
 
 #[must_use]
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the

@@ -67,9 +67,8 @@ macro_rules! func_from_slice (($name:ident, $size:expr) => (
 
 macro_rules! func_unprotected_as_bytes (($name:ident, $size:expr) => (
     #[must_use]
-    /// Return the object as byte slice. __**WARNING**__: Should not be used unless strictly
-    /// needed. This breaks protections such as protection against insecure comparison methods,
-    /// that can leave an application vulnerable to timing attacks.
+    /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
+    /// needed. This __**breaks protections**__ that the type implements.
     pub fn unprotected_as_bytes(&self) -> [u8; $size] {
         self.value
     }
@@ -96,103 +95,120 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     }
 ));
 
-macro_rules! construct_secret_key (($name:ident, $size:expr) => (
-    #[must_use]
-    /// A secret key type.
-    ///
-    /// # Security:
-    /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
-    /// comparisons. However, `unprotected_as_bytes()` lets the user return the secret key
-    /// without such a protection. Avoid using `unprotected_as_bytes()` whenever possible.
-    pub struct $name { value: [u8; $size] }
-
-    impl_debug_trait!($name);
-    impl_drop_trait!($name);
-    impl_partialeq_trait!($name);
-
-    impl $name {
-        func_from_slice!($name, $size);
-        func_unprotected_as_bytes!($name, $size);
-        func_generate!($name, $size);
-    }
-));
-
-macro_rules! construct_nonce_no_generator (($name:ident, $size:expr) => (
-    #[must_use]
-    /// A nonce type.
-    pub struct $name { value: [u8; $size] }
-
-    impl $name {
-        func_from_slice!($name, $size);
-        func_as_bytes!($name, $size);
-    }
-));
-
-macro_rules! construct_nonce_with_generator (($name:ident, $size:expr) => (
-    #[must_use]
-    /// A nonce type.
-    pub struct $name { value: [u8; $size] }
-
-    impl $name {
-        func_from_slice!($name, $size);
-        func_as_bytes!($name, $size);
-        func_generate!($name, $size);
-    }
-));
-
-macro_rules! construct_tag (($name:ident, $size:expr) => (
-    #[must_use]
-    #[derive(Clone, Copy)]
-    /// A tag type.
-    ///
-    /// # Security:
-    /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
-    /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag without such a protection.
-    /// Avoid using `unprotected_as_bytes()` whenever possible.
-    pub struct $name { value: [u8; $size] }
-
-    impl_partialeq_trait!($name);
-
-    impl $name {
-        func_from_slice!($name, $size);
-        func_unprotected_as_bytes!($name, $size);
-    }
-));
-
-macro_rules! construct_hmac_key (($name:ident, $size:expr) => (
-    #[must_use]
-    /// A secret key type.
-    ///
-    /// # Security:
-    /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
-    /// comparisons. However, `unprotected_as_bytes()` lets the user return the secret key
-    /// without such a protection. Avoid using `unprotected_as_bytes()` whenever possible.
-    pub struct $name { value: [u8; $size] }
-
-    impl_debug_trait!($name);
-    impl_drop_trait!($name);
-    impl_partialeq_trait!($name);
-
-    impl $name {
+macro_rules! construct_secret_key {
+    ($(#[$meta:meta])*
+    ($name:ident, $size:expr)) => (
         #[must_use]
-        /// Make an object from a given byte slice.
-        pub fn from_slice(slice: &[u8]) -> $name {
-            use sha2::{Digest, Sha512};
-            use hazardous::constants::HLEN;
+        $(#[$meta])*
+        ///
+        /// # Security:
+        /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+        /// comparisons. However, `unprotected_as_bytes()` lets the user return the secret key
+        /// without such a protection. Avoid using `unprotected_as_bytes()` whenever possible.
+        pub struct $name { value: [u8; $size] }
 
-            let mut secret_key = [0u8; $size];
+        impl_debug_trait!($name);
+        impl_drop_trait!($name);
+        impl_partialeq_trait!($name);
 
-            let slice_len = slice.len();
+        impl $name {
+            func_from_slice!($name, $size);
+            func_unprotected_as_bytes!($name, $size);
+            func_generate!($name, $size);
+        }
+    );
+}
 
-            if slice_len > $size {
-                secret_key[..HLEN].copy_from_slice(&Sha512::digest(slice));
-            } else {
-                secret_key[..slice_len].copy_from_slice(slice);
+
+macro_rules! construct_nonce_no_generator {
+    ($(#[$meta:meta])*
+    ($name:ident, $size:expr)) => (
+        #[must_use]
+        $(#[$meta])*
+        pub struct $name { value: [u8; $size] }
+
+        impl $name {
+            func_from_slice!($name, $size);
+            func_as_bytes!($name, $size);
+        }
+    );
+}
+
+macro_rules! construct_nonce_with_generator {
+    ($(#[$meta:meta])*
+    ($name:ident, $size:expr)) => (
+        #[must_use]
+        $(#[$meta])*
+        pub struct $name { value: [u8; $size] }
+
+        impl $name {
+            func_from_slice!($name, $size);
+            func_as_bytes!($name, $size);
+            func_generate!($name, $size);
+        }
+    );
+}
+
+macro_rules! construct_tag {
+    ($(#[$meta:meta])*
+    ($name:ident, $size:expr)) => (
+        #[must_use]
+        #[derive(Clone, Copy)]
+        $(#[$meta])*
+        ///
+        /// # Security:
+        /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+        /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag
+        /// __**without such a protection**__. __**Avoid using**__ `unprotected_as_bytes()` whenever possible.
+        pub struct $name { value: [u8; $size] }
+
+        impl_partialeq_trait!($name);
+
+        impl $name {
+            func_from_slice!($name, $size);
+            func_unprotected_as_bytes!($name, $size);
+        }
+    );
+}
+
+macro_rules! construct_hmac_key {
+    ($(#[$meta:meta])*
+    ($name:ident, $size:expr)) => (
+        #[must_use]
+        $(#[$meta])*
+        ///
+        /// # Security:
+        /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+        /// comparisons. However, `unprotected_as_bytes()` lets the user return the secret key
+        /// without such a protection. Avoid using `unprotected_as_bytes()` whenever possible.
+        pub struct $name { value: [u8; $size] }
+
+        impl_debug_trait!($name);
+        impl_drop_trait!($name);
+        impl_partialeq_trait!($name);
+
+        impl $name {
+            #[must_use]
+            /// Make an object from a given byte slice.
+            pub fn from_slice(slice: &[u8]) -> $name {
+                use sha2::{Digest, Sha512};
+                use hazardous::constants::HLEN;
+
+                let mut secret_key = [0u8; $size];
+
+                let slice_len = slice.len();
+
+                if slice_len > $size {
+                    secret_key[..HLEN].copy_from_slice(&Sha512::digest(slice));
+                } else {
+                    secret_key[..slice_len].copy_from_slice(slice);
+                }
+
+                $name { value: secret_key }
             }
 
-            $name { value: secret_key }
+            func_unprotected_as_bytes!($name, $size);
+            func_generate!($name, $size);
         }
-        func_unprotected_as_bytes!($name, $size);
-        func_generate!($name, $size);
-    }
-));
+    );
+}

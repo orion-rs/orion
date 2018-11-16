@@ -95,8 +95,24 @@ use hazardous::constants::{
 };
 use seckey::zero;
 
-construct_secret_key!(SecretKey, CHACHA_KEYSIZE);
-construct_nonce_no_generator!(Nonce, IETF_CHACHA_NONCESIZE);
+construct_secret_key! {
+    /// A type to represent the `SecretKey` that ChaCha20, XChaCha20, ChaCha20Poly1305 and
+    /// XChaCha20Poly1305 use.
+    ///
+    /// # Exceptions:
+    /// An exception will be thrown if:
+    /// - `slice` is not 32 bytes
+    /// - The `OsRng` fails to initialize or read from its source
+    (SecretKey, CHACHA_KEYSIZE)
+}
+construct_nonce_no_generator! {
+    /// A type that represents a `Nonce` that ChaCha20 and ChaCha20Poly1305 use.
+    ///
+    /// # Exceptions:
+    /// An exception will be thrown if:
+    /// - `slice` is not 12 bytes
+    (Nonce, IETF_CHACHA_NONCESIZE)
+}
 
 #[derive(Clone)]
 struct InternalState {

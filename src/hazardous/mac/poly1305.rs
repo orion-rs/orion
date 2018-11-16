@@ -62,8 +62,23 @@ use errors::*;
 use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 use seckey::zero;
 
-construct_secret_key!(OneTimeKey, POLY1305_KEYSIZE);
-construct_tag!(Tag, POLY1305_BLOCKSIZE);
+construct_secret_key!{
+    /// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
+    ///
+    /// # Exceptions:
+    /// An exception will be thrown if:
+    /// - `slice` is not 32 bytes
+    /// - The `OsRng` fails to initialize or read from its source
+    (OneTimeKey, POLY1305_KEYSIZE)
+}
+construct_tag!{
+    /// A type to represent the `Tag` that Poly1305 returns.
+    ///
+    /// # Exceptions:
+    /// An exception will be thrown if:
+    /// - `slice` is not 16 bytes
+    (Tag, POLY1305_BLOCKSIZE)
+}
 
 #[must_use]
 /// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).

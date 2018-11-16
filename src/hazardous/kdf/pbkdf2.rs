@@ -64,10 +64,18 @@ use hazardous::constants::{HLenArray, HLEN, SHA2_BLOCKSIZE};
 use hazardous::mac::hmac;
 use util;
 
-// We use an HMAC key as password type because the password
-// is used as HMAC `SecretKey` in `derive_key` so no further padding is needed.
-// The types are explicitly seperated.
-construct_hmac_key!(Password, SHA2_BLOCKSIZE);
+construct_hmac_key!{
+    /// A type to represent the `Password` that PBKDF2 hashes.
+    ///
+    /// # Note:
+    /// Because `Password` is used as a `SecretKey` for HMAC during hashing, `Password` already
+    /// pads the given password, for use in HMAC, when initialized.
+    ///
+    /// # Exceptions:
+    /// An exception will be thrown if:
+    /// - The `OsRng` fails to initialize or read from its source
+    (Password, SHA2_BLOCKSIZE)
+}
 
 #[inline(always)]
 /// The F function as described in the RFC.

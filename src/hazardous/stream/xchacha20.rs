@@ -76,7 +76,15 @@ use hazardous::stream::chacha20;
 use hazardous::stream::chacha20::Nonce as IETFNonce;
 pub use hazardous::stream::chacha20::SecretKey;
 
-construct_nonce_with_generator!(Nonce, XCHACHA_NONCESIZE);
+construct_nonce_with_generator! {
+    /// A type that represents a `Nonce` that XChaCha20 and XChaCha20Poly1305 use.
+    ///
+    /// # Exceptions:
+    /// An exception will be thrown if:
+    /// - `slice` is not 24 bytes
+    /// - The `OsRng` fails to initialize or read from its source
+    (Nonce, XCHACHA_NONCESIZE)
+}
 
 #[must_use]
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
