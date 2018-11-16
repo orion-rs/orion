@@ -58,7 +58,7 @@ use hazardous::kdf::hkdf;
 use util;
 
 #[must_use]
-/// Key derivation with HKDF-HMAC-SHA512.
+/// Derive a key using HKDF-HMAC-SHA512.
 pub fn derive_key(
     ikm: &[u8],
     info: Option<&[u8]>,

@@ -31,7 +31,7 @@
 //!
 //! The first 64 bytes of the array returned by `pwhash::hash_password` is the salt used to hash the password
 //! and the last 64 bytes is the actual hashed password. When using this function with
-//! `pwhash::verify_password_hash()`, then the seperation of the salt and the password hash are automatically handeled.
+//! `pwhash::hash_password_verify()`, then the seperation of the salt and the password hash are automatically handeled.
 //!
 //! # Parameters:
 //! - `password`: The password to be hashed
@@ -51,7 +51,7 @@
 //! let password = pwhash::Password::from_slice("Secret password".as_bytes());
 //!
 //! let hash = pwhash::hash_password(&password).unwrap();
-//! assert!(pwhash::verify_password_hash(&derived_password, &password).unwrap());
+//! assert!(pwhash::hash_password_verify(&derived_password, &password).unwrap());
 //! ```
 
 use errors::{UnknownCryptoError, ValidationCryptoError};
@@ -73,8 +73,8 @@ pub fn hash_password(password: &Password) -> Result<[u8; 128], UnknownCryptoErro
 }
 
 #[must_use]
-/// Verify a hashed password using PBKDF2-HMAC-SHA512.
-pub fn verify_password_hash(
+/// Hash and verify a password using PBKDF2-HMAC-SHA512.
+pub fn hash_password_verify(
     expected_hash: &[u8],
     password: &Password,
 ) -> Result<bool, ValidationCryptoError> {
@@ -99,7 +99,7 @@ fn pbkdf2_verify() {
 
     let pbkdf2_dk: [u8; 128] = hash_password(&password).unwrap();
 
-    assert_eq!(verify_password_hash(&pbkdf2_dk, &password).unwrap(), true);
+    assert_eq!(hash_password_verify(&pbkdf2_dk, &password).unwrap(), true);
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn pbkdf2_verify_err_modified_salt() {
     let mut pbkdf2_dk = hash_password(&password).unwrap();
     pbkdf2_dk[..10].copy_from_slice(&[0x61; 10]);
 
-    verify_password_hash(&pbkdf2_dk, &password).unwrap();
+    hash_password_verify(&pbkdf2_dk, &password).unwrap();
 }
 
 #[test]
@@ -121,7 +121,7 @@ fn pbkdf2_verify_err_modified_password() {
     let mut pbkdf2_dk = hash_password(&password).unwrap();
     pbkdf2_dk[70..80].copy_from_slice(&[0x61; 10]);
 
-    verify_password_hash(&pbkdf2_dk, &password).unwrap();
+    hash_password_verify(&pbkdf2_dk, &password).unwrap();
 }
 
 #[test]
@@ -132,7 +132,7 @@ fn pbkdf2_verify_err_modified_salt_and_password() {
     let mut pbkdf2_dk = hash_password(&password).unwrap();
     pbkdf2_dk[63..73].copy_from_slice(&[0x61; 10]);
 
-    verify_password_hash(&pbkdf2_dk, &password).unwrap();
+    hash_password_verify(&pbkdf2_dk, &password).unwrap();
 }
 
 #[test]
@@ -142,7 +142,7 @@ fn pbkdf2_verify_expected_dk_too_long() {
     let mut pbkdf2_dk = [0u8; 129];
     pbkdf2_dk[..128].copy_from_slice(&hash_password(&password).unwrap());
 
-    assert!(verify_password_hash(&pbkdf2_dk, &password).is_err());
+    assert!(hash_password_verify(&pbkdf2_dk, &password).is_err());
 }
 
 #[test]
@@ -151,5 +151,5 @@ fn pbkdf2_verify_expected_dk_too_short() {
 
     let pbkdf2_dk = hash_password(&password).unwrap();
 
-    assert!(verify_password_hash(&pbkdf2_dk[..127], &password).is_err());
+    assert!(hash_password_verify(&pbkdf2_dk[..127], &password).is_err());
 }

@@ -21,6 +21,34 @@
 // SOFTWARE.
 
 //! Message authentication.
+//!
+//! # About:
+//! - Uses HMAC-SHA512
+//!
+//! # Parameters:
+//! - `secret_key`: Secret key used to authenticate `data`
+//! - `data`: Data to be authenticated
+//! - `expected_tag`: The expected authentication `Tag`
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//! - The calculated `Tag` does not match the expected
+//!
+//! # Security:
+//! - The secret key should always be generated using a CSPRNG. `SecretKey::generate()` can be used for
+//! this, it will generate a `SecretKey` of 128 bytes
+//! - The recommended minimum length for a `SecretKey` is 64
+//!
+//! # Example:
+//! ```
+//! use orion::auth;
+//!
+//! let key = mac::SecretKey::generate();
+//! let msg = "Some message.".as_bytes();
+//!
+//! let expected_tag = auth::authenticate(&key, msg);
+//! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).unwrap());
+//! ```
 
 use errors::ValidationCryptoError;
 use hazardous::mac::hmac;
@@ -28,28 +56,7 @@ pub use hazardous::mac::hmac::{SecretKey, Tag};
 
 #[must_use]
 /// Authenticate a message using HMAC-SHA512.
-/// # Parameters:
-/// - `secret_key`:  The authentication key
-/// - `data`: Data to be authenticated
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The length of the secret key is less than 64 bytes
-///
-/// # Security:
-/// The secret key should always be generated using a CSPRNG. `SecretKey::generate()` can be used for
-/// this.
-///
-/// # Example:
-/// ```
-/// use orion::default::mac;
-///
-/// let key = mac::SecretKey::generate();
-/// let msg = "Some message.".as_bytes();
-///
-/// let hmac = mac::hmac(&key, msg);
-/// ```
-pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Tag {
+pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Tag {
     let mut tag = hmac::init(secret_key);
     tag.update(data).unwrap();
 
@@ -57,31 +64,9 @@ pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Tag {
 }
 
 #[must_use]
-/// Verify a HMAC-SHA512 MAC in constant time and with Double-HMAC Verification.
-///
-/// # Parameters:
-/// - `expected_hmac`: The expected HMAC
-/// - `secret_key`: The authentication key
-/// - `data`: Data to be authenticated
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - The calculated HMAC does not match the expected
-/// - The `OsRng` fails to initialize or read from its source
-///
-/// # Example:
-///
-/// ```
-/// use orion::default::mac;
-///
-/// let key = mac::SecretKey::generate();
-/// let msg = "Some message.".as_bytes();
-///
-/// let expected_hmac = mac::hmac(&key, msg);
-/// assert!(mac::hmac_verify(&expected_hmac, &key, &msg).unwrap());
-/// ```
-pub fn hmac_verify(
-    expected_hmac: &Tag,
+/// Authenticate and verify a message using HMAC-SHA512.
+pub fn authenticate_verify(
+    expected_tag: &Tag,
     secret_key: &SecretKey,
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
@@ -92,7 +77,7 @@ pub fn hmac_verify(
     let mut nd_round_expected = hmac::init(&rand_key);
 
     nd_round_expected
-        .update(&expected_hmac.unprotected_as_bytes())
+        .update(&expected_tag.unprotected_as_bytes())
         .unwrap();
 
     hmac::verify(
@@ -103,16 +88,16 @@ pub fn hmac_verify(
 }
 
 #[test]
-fn test_hmac_verify() {
+fn test_authenticate_verify() {
     let sec_key_correct = SecretKey::generate();
     let sec_key_false = SecretKey::generate();
     let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-    let hmac_bob = hmac(&sec_key_correct, &msg);
+    let hmac_bob = authenticate(&sec_key_correct, &msg);
 
     assert_eq!(
-        hmac_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
+        authenticate_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
         true
     );
-    assert!(hmac_verify(&hmac_bob, &sec_key_false, &msg).is_err());
+    assert!(authenticate_verify(&hmac_bob, &sec_key_false, &msg).is_err());
 }
