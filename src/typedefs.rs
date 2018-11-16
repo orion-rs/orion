@@ -65,20 +65,20 @@ macro_rules! func_from_slice (($name:ident, $size:expr) => (
     }
 ));
 
-macro_rules! func_unprotected_as_bytes (($name:ident, $size:expr) => (
+macro_rules! func_unprotected_as_bytes (($name:ident) => (
     #[must_use]
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
     /// needed. This __**breaks protections**__ that the type implements.
-    pub fn unprotected_as_bytes(&self) -> [u8; $size] {
-        self.value
+    pub fn unprotected_as_bytes(&self) -> &[u8] {
+        self.value.as_ref()
     }
 ));
 
-macro_rules! func_as_bytes (($name:ident, $size:expr) => (
+macro_rules! func_as_bytes (($name:ident) => (
     #[must_use]
     /// Return the object as byte slice.
-    pub fn as_bytes(&self) -> [u8; $size] {
-        self.value
+    pub fn as_bytes(&self) -> &[u8] {
+        self.value.as_ref()
     }
 ));
 
@@ -113,7 +113,7 @@ macro_rules! construct_secret_key {
 
         impl $name {
             func_from_slice!($name, $size);
-            func_unprotected_as_bytes!($name, $size);
+            func_unprotected_as_bytes!($name);
             func_generate!($name, $size);
         }
     );
@@ -129,7 +129,7 @@ macro_rules! construct_nonce_no_generator {
 
         impl $name {
             func_from_slice!($name, $size);
-            func_as_bytes!($name, $size);
+            func_as_bytes!($name);
         }
     );
 }
@@ -143,7 +143,7 @@ macro_rules! construct_nonce_with_generator {
 
         impl $name {
             func_from_slice!($name, $size);
-            func_as_bytes!($name, $size);
+            func_as_bytes!($name);
             func_generate!($name, $size);
         }
     );
@@ -166,7 +166,7 @@ macro_rules! construct_tag {
 
         impl $name {
             func_from_slice!($name, $size);
-            func_unprotected_as_bytes!($name, $size);
+            func_unprotected_as_bytes!($name);
         }
     );
 }
@@ -207,7 +207,7 @@ macro_rules! construct_hmac_key {
                 $name { value: secret_key }
             }
 
-            func_unprotected_as_bytes!($name, $size);
+            func_unprotected_as_bytes!($name);
             func_generate!($name, $size);
         }
     );
