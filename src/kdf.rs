@@ -23,6 +23,7 @@
 //! Key derivation.
 //!
 //! # About:
+//! - Uses HKDF-HMAC-SHA512
 //! - A salt of `64` bytes is automatically generated
 //! - Returns both the salt used and the derived key as: `(salt, okm)`
 //!
@@ -33,23 +34,23 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - `length` is greater than `16320`
+//! - `length` is greater than 16320
 //! - The `OsRng` fails to initialize or read from its source
 //!
 //! # Security:
-//! HKDF is not suitable for password storage.
+//! - `derive_key` is not suitable for password storage. See `orion::pwhash`.
 //!
 //! # Example:
 //! ```
-//! use orion::default::kdf;
+//! use orion::kdf;
 //!
 //! let secret_key = "Secret key that needs strethcing".as_bytes();
 //!
 //! let info = "Session key".as_bytes();
 //!
-//! let (salt, derived_key) = kdf::hkdf(secret_key, Some(info), 32).unwrap();
+//! let (salt, derived_key) = kdf::derive_key(secret_key, Some(info), 32).unwrap();
 //!
-//! // `derived_key` could now be used as encryption key with `seal`/`open`
+//! // `derived_key` could now be used as encryption key with `orion::aead`
 //! ```
 
 use errors::UnknownCryptoError;
@@ -58,7 +59,7 @@ use util;
 
 #[must_use]
 /// Key derivation with HKDF-HMAC-SHA512.
-pub fn hkdf(
+pub fn derive_key(
     ikm: &[u8],
     info: Option<&[u8]>,
     length: usize,
@@ -77,19 +78,19 @@ pub fn hkdf(
 }
 
 #[test]
-fn hkdf_ok() {
+fn derive_key_ok() {
     let data = "Some data.".as_bytes();
     let info = "Some info.".as_bytes();
 
-    assert!(hkdf(data, Some(info), 32).is_ok());
-    assert!(hkdf(data, None, 32).is_ok());
+    assert!(derive_key(data, Some(info), 32).is_ok());
+    assert!(derive_key(data, None, 32).is_ok());
 }
 
 #[test]
-fn hkdf_okm_length() {
+fn derive_key_okm_length() {
     let data = "Some data.".as_bytes();
     let info = "Some info.".as_bytes();
 
-    assert!(hkdf(data, Some(info), 16321).is_err());
-    assert!(hkdf(data, Some(info), 16320).is_ok());
+    assert!(derive_key(data, Some(info), 16321).is_err());
+    assert!(derive_key(data, Some(info), 16320).is_ok());
 }
