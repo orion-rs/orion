@@ -51,7 +51,7 @@
 //! let password = pwhash::Password::from_slice("Secret password".as_bytes());
 //!
 //! let hash = pwhash::hash_password(&password).unwrap();
-//! assert!(pwhash::hash_password_verify(&derived_password, &password).unwrap());
+//! assert!(pwhash::hash_password_verify(&hash, &password).unwrap());
 //! ```
 
 use errors::{UnknownCryptoError, ValidationCryptoError};

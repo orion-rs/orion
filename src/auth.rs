@@ -43,7 +43,7 @@
 //! ```
 //! use orion::auth;
 //!
-//! let key = mac::SecretKey::generate();
+//! let key = auth::SecretKey::generate();
 //! let msg = "Some message.".as_bytes();
 //!
 //! let expected_tag = auth::authenticate(&key, msg);

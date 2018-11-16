@@ -21,6 +21,44 @@
 // SOFTWARE.
 
 //! Authenticated encryption.
+//!
+//! # About:
+//! - The nonce is automatically generated
+//! - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated
+//! ciphertext with the last 16 bytes being the corresponding Poly1305 tag
+//! - Uses XChaCha20Poly1305 with no `ad`
+//! - When using `seal` and `open` then the seperation of tags, nonces and ciphertext are automatically handeled.
+//!
+//! # Parameters:
+//! - `plaintext`:  The data to be encrypted
+//! - `secret_key`: The secret key used to encrypt the `plaintext`
+//! - `ciphertext`:  The data to be decrypted with the first 24 bytes being the nonce and the last
+//! 16 bytes being the corresponding Poly1305 tag
+//!
+//! # Security:
+//! - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
+//! the security of all data that has been encrypted with that given key is compromised.
+//! - To securely generate a strong key, use `SecretKey::generate()`.
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//! - `plaintext` is empty
+//! - `plaintext` is longer than (2^32)-2
+//! - `ciphertext` is less than 41 bytes
+//! - `ciphertext` is longer than (2^32)-2
+//! - The received tag does not match the calculated tag when calling `aead::open()`
+//! - The `OsRng` fails to initialize or read from its source
+//!
+//! # Example:
+//! ```
+//! use orion::aead;
+//!
+//! let secret_key = aead::SecretKey::generate();
+//!
+//! let ciphertext = aead::seal(&secret_key, "Secret message".as_bytes()).unwrap();
+//!
+//! let decrypted_data = aead::open(&secret_key, &ciphertext).unwrap();
+//! ```
 
 use errors::UnknownCryptoError;
 use hazardous::aead;
@@ -30,36 +68,6 @@ pub use hazardous::stream::xchacha20::Nonce;
 
 #[must_use]
 /// Authenticated encryption using XChaCha20Poly1305.
-/// # About:
-/// - The nonce is automatically generated
-/// - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated
-/// ciphertext with the last 16 bytes being the corresponding Poly1305 tag
-/// - Uses XChaCha20Poly1305 with no `ad`
-///
-/// # Parameters:
-/// - `plaintext`:  The data to be encrypted
-/// - `secret_key`: The secret key used to encrypt the `plaintext`
-///
-/// # Security:
-/// - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
-/// the security of all data that has been encrypted with that given key is compromised.
-/// - To securely generate a strong key, use `SecretKey::generate()`.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - `secret_key` is not 32 bytes
-/// - `plaintext` is empty
-/// - `plaintext` is longer than (2^32)-2
-/// - The `OsRng` fails to initialize or read from its source
-///
-/// # Example:
-/// ```
-/// use orion::default::aead;
-///
-/// let secret_key = aead::SecretKey::generate();
-///
-/// let encrypted_data = aead::seal(&secret_key, "Secret message".as_bytes()).unwrap();
-/// ```
 pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
@@ -83,36 +91,6 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 
 #[must_use]
 /// Authenticated decryption using XChaCha20Poly1305.
-/// # About:
-/// - The ciphertext must be of the same format as the one returned by `default::encrypt()`
-///
-/// # Parameters:
-/// - `ciphertext`:  The data to be decrypted with the first 24 bytes being the nonce and the last
-/// 16 bytes being the corresponding Poly1305 authentication tag
-/// - `secret_key`: The secret key used to decrypt the `ciphertext`
-///
-/// # Security:
-/// - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
-/// the security of all data that has been encrypted with that given key is compromised.
-/// - To securely generate a strong key, use `SecretnKey::generate()`.
-///
-/// # Exceptions:
-/// An exception will be thrown if:
-/// - `secret_key` is not 32 bytes
-/// - `ciphertext` is less than 41 bytes
-/// - `ciphertext` is longer than (2^32)-2
-/// - The received tag does not match the calculated tag
-///
-/// # Example:
-/// ```
-/// use orion::default::aead;
-///
-/// let secret_key = aead::SecretKey::generate();
-///
-/// let ciphertext = aead::seal(&secret_key, "Secret message".as_bytes()).unwrap();
-///
-/// let decrypted_data = aead::open(&secret_key, &ciphertext).unwrap();
-/// ```
 pub fn open(secret_key: &SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     // `+ 1` to avoid empty ciphertexts
     if ciphertext.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
