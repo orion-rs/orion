@@ -15,7 +15,7 @@ fn bench_hmac(b: &mut Bencher) {
     b.iter(|| {
         let mut mac = hmac::init(&hmac::SecretKey::from_slice(&[0x01; 64]));
         mac.update(&[0x01; 64]).unwrap();
-        mac.finalize().unwrap();
+        let _tag = mac.finalize().unwrap();
     });
 }
 
@@ -24,7 +24,7 @@ fn bench_hkdf(b: &mut Bencher) {
     let mut okm_out = [0u8; 64];
     b.iter(|| {
         hkdf::derive_key(
-            &hkdf::Salt::from_slice(&[0x01; 64]).unwrap(),
+            &[0x01; 64],
             &[0x01; 64],
             Some(&[0x01; 64]),
             &mut okm_out,
@@ -37,8 +37,8 @@ fn bench_pbkdf2(b: &mut Bencher) {
     let mut dk_out = [0u8; 64];
     b.iter(|| {
         pbkdf2::derive_key(
+            &pbkdf2::Password::from_slice(&[0x01; 64]),
             &[0x01; 64],
-            &pbkdf2::Salt::from_slice(&[0x01; 64]).unwrap(),
             10000,
             &mut dk_out,
         ).unwrap();
@@ -93,7 +93,7 @@ fn bench_poly1305(b: &mut Bencher) {
         let mut mac =
             poly1305::init(&poly1305::OneTimeKey::from_slice(&[0x01; 32]).unwrap()).unwrap();
         mac.update(&[0x01; 64]).unwrap();
-        mac.finalize().unwrap();
+        let _tag = mac.finalize().unwrap();
     });
 }
 

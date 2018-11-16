@@ -43,12 +43,7 @@ pub fn hkdf_test_runner(
     expand(&actual_prk, Some(&info), okm_out).unwrap();
 
     let mut okm_one_shot_dst = okm_out.to_vec();
-    derive_key(
-        salt,
-        ikm,
-        Some(&info),
-        &mut okm_one_shot_dst,
-    ).unwrap();
+    derive_key(salt, ikm, Some(&info), &mut okm_one_shot_dst).unwrap();
 
     ((okm_out == excp_okm) == (okm_one_shot_dst == excp_okm))
 }
