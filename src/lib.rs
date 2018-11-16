@@ -22,8 +22,8 @@
 
 //! A usable pure-Rust cryptography library.
 //!
-//! ## Encryption
-//! `orion::aead` offers encryption using XChaCha20Poly1305.
+//! ## Authenticated encryption
+//! `orion::aead` offers authenticated encryption using XChaCha20Poly1305.
 //!
 //! ## Password hashing and verification
 //! `orion::pwhash` offers password hashing and verification using PBKDF2.
@@ -34,15 +34,10 @@
 //! ## Message authentication
 //! `orion::auth` offers message authentication and verification using HMAC.
 //!
-//! ### **Caution**:
-//! Usage of the `hazardous` module is __**only intended for advanced users**__. `hazardous` contains
-//! implmentations with a much higher degree of control. It is also much easier to misuse
-//! those implementations. Only use `hazardous` if absolutely necessary.
 //!
-//! ### `no_std`:
-//! When orion is used in a `no_std` context, access to nearly all functionality, except for that in
-//! `hazardous`, is not available. This is because the high-level functionality depends on the `OsRng`
-//! which is not available in `no_std`.
+//! ### A note on `no_std`:
+//! When orion is used in a `no_std` context, access to nearly all functionality outside of `hazardous`,
+//! is not available.
 //!
 //! Unless the program that uses orion, specifically is defined as
 //! `#![no_std]`, this is not relevant.
