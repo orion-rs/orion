@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! Authenticated encryption.
+
 use errors::UnknownCryptoError;
 use hazardous::aead;
 use hazardous::constants::{POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE};

@@ -20,34 +20,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! orion - A usable pure-Rust cryptography library.
+//! A usable pure-Rust cryptography library.
 //!
-//! Most functionality that you would need access to should be available through orion's `default`
-//! API. This API includes authenticated secret-key encryption, password hashing and more.
+//! ## Encryption
+//! `orion::aead` offers encryption using XChaCha20Poly1305.
 //!
-//! Usage of the `hazardous` module is only intended for advanced users.
+//! ## Password hashing and verification
+//! `orion::pwhash` offers password hashing and verification using PBKDF2.
 //!
-//! You can read more about orion in the project [wiki](https://github.com/brycx/orion/wiki).
+//! ## Key derivation
+//! `orion::kdf` offers key derivation using HKDF.
 //!
+//! ## Message authentication
+//! `orion::auth` offers message authentication and verification using HMAC.
 //!
-//! # Common use cases
-//! The following are some common use cases for a cryptography library and how these might
-//! be solved using orion.
+//! ### **Caution**:
+//! Usage of the `hazardous` module is __**only intended for advanced users**__. `hazardous` contains
+//! implmentations with a much higher degree of control. It is also much easier to misuse
+//! those implementations. Only use `hazardous` if absolutely necessary.
 //!
-//! ## Encrypting data
-//! The `default::aead` API's `seal` and `open` functions let you encrypt and authenticate data easily
-//! using the XChaCha20Poly1305 AEAD construct.
+//! ### `no_std`:
+//! When orion is used in a `no_std` context, access to nearly all functionality, except for that in
+//! `hazardous`, is not available. This is because the high-level functionality depends on the `OsRng`
+//! which is not available in `no_std`.
 //!
-//! ## Hashing a password for storage and verifying it
-//! Using the `default::pwhash` API's `password_hash` you can easily hash a password using PBKDF2, store it
-//! in a database and later use `password_hash_verify` to verify the password.
+//! Unless the program that uses orion, specifically is defined as
+//! `#![no_std]`, this is not relevant.
 //!
-//! ## Deriving multiple keys from a single key (key derivation)
-//! Using the `default::hkdf` API's `hkdf` function, you can easily derive multiple keys from a single starting key.
-//!
-//! ## Authenticating a message
-//! Using the `default::mac` API's `hmac` function, you can authenitcate a message and use `hmac_verify`
-//! to verify such MACs.
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
@@ -72,9 +71,17 @@ pub mod util;
 /// Errors for orion's cryptographic operations.
 pub mod errors;
 
-#[cfg(feature = "safe_api")]
-/// High-level API for common use cases. Not available in a `no_std` context.
-pub mod default;
-
-/// Low-level API.
+/// [__**Caution**__] Low-level API.
 pub mod hazardous;
+
+#[cfg(feature = "safe_api")]
+pub mod aead;
+
+#[cfg(feature = "safe_api")]
+pub mod auth;
+
+#[cfg(feature = "safe_api")]
+pub mod pwhash;
+
+#[cfg(feature = "safe_api")]
+pub mod kdf;

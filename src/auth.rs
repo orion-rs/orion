@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! Message authentication.
+
 use errors::ValidationCryptoError;
 use hazardous::mac::hmac;
 pub use hazardous::mac::hmac::{SecretKey, Tag};

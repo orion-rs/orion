@@ -36,9 +36,9 @@ To use orion in a `no_std` context, you need to specify the dependency as such:
 orion = { version = "*", default-features = false }
 ```
 
-Note that this means you will not have access to the `default` API.
-This is because the `default` API depends on the `OsRng`, which in turn depends on `std`.
-
+When orion is used in a `no_std` context, access to nearly all functionality, except for that in
+`hazardous`, is not available. This is because the high-level functionality depends on the `OsRng`
+which is not available in `no_std`.
 
 ### Documentation
 Can be viewed [here](https://docs.rs/orion) or built with:

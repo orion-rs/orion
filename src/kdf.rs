@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! Derive multiple keys from a single key using HKDF-HMAC-SHA512.
+//! Key derivation.
 //!
 //! # About:
 //! - A salt of `64` bytes is automatically generated
