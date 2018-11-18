@@ -24,15 +24,15 @@
 //! - `password`: Password
 //! - `salt`: Salt value
 //! - `iterations`: Iteration count
-//! - `dk_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `dk_out`
+//! - `dst_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `dk_out`
 //! - `expected`: The expected derived key
 //!
 //! See [RFC](https://tools.ietf.org/html/rfc8018#section-5.2) for more information.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of `dk_out` is less than 1
-//! - The length of `dk_out` is greater than (2^32 - 1) * hLen
+//! - The length of `dst_out` is less than 1
+//! - The length of `dst_out` is greater than (2^32 - 1) * hLen
 //! - The specified iteration count is less than 1
 //! - The hashed password does not match the expected when verifying
 //!
@@ -118,12 +118,12 @@ pub fn derive_key(
     password: &Password,
     salt: &[u8],
     iterations: usize,
-    dk_out: &mut [u8],
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     if iterations < 1 {
         return Err(UnknownCryptoError);
     }
-    if dk_out.is_empty() {
+    if dst_out.is_empty() {
         return Err(UnknownCryptoError);
     }
 
@@ -131,7 +131,7 @@ pub fn derive_key(
         &password.unprotected_as_bytes(),
     ));
 
-    for (idx, dk_block) in dk_out.chunks_mut(HLEN).enumerate() {
+    for (idx, dk_block) in dst_out.chunks_mut(HLEN).enumerate() {
         let block_len = dk_block.len();
         let block_idx = (1_u32).checked_add(idx as u32);
 
@@ -160,11 +160,11 @@ pub fn verify(
     password: &Password,
     salt: &[u8],
     iterations: usize,
-    dk_out: &mut [u8],
+    dst_out: &mut [u8],
 ) -> Result<bool, ValidationCryptoError> {
-    derive_key(password, salt, iterations, dk_out).unwrap();
+    derive_key(password, salt, iterations, dst_out).unwrap();
 
-    if util::secure_cmp(&dk_out, expected).is_err() {
+    if util::secure_cmp(&dst_out, expected).is_err() {
         Err(ValidationCryptoError)
     } else {
         Ok(true)

@@ -24,14 +24,15 @@
 //! - `salt`: `Salt` value (can be made from an empty slice).
 //! - `ikm`: Input keying material
 //! - `info`: Optional context and application specific information.  If `None` then it's an empty string.
-//! - `okm_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
+//! - `dst_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
+//! - `expected`: The expected derived key
 //!
 //! See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of `okm_out` is less than 1
-//! - The length of `okm_out` is greater than 255 * hash_output_size_in_bytes
+//! - The length of `dst_out` is less than 1
+//! - The length of `dst_out` is greater than 255 * hash_output_size_in_bytes
 //! - The derived key does not match the expected when verifying
 //! - The slice is greater than 128 bytes when calling `Salt::from_slice()`
 //!
@@ -80,12 +81,12 @@ pub fn extract(salt: &[u8], ikm: &[u8]) -> hmac::Tag {
 pub fn expand(
     prk: &hmac::Tag,
     info: Option<&[u8]>,
-    okm_out: &mut [u8],
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if okm_out.len() > 16320 {
+    if dst_out.len() > 16320 {
         return Err(UnknownCryptoError);
     }
-    if okm_out.is_empty() {
+    if dst_out.is_empty() {
         return Err(UnknownCryptoError);
     }
 
@@ -95,9 +96,9 @@ pub fn expand(
     };
 
     let mut hmac = hmac::init(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes()));
-    let okm_len = okm_out.len();
+    let okm_len = dst_out.len();
 
-    for (idx, hlen_block) in okm_out.chunks_mut(HLEN).enumerate() {
+    for (idx, hlen_block) in dst_out.chunks_mut(HLEN).enumerate() {
         let block_len = hlen_block.len();
         assert!(block_len <= okm_len);
 
@@ -123,23 +124,23 @@ pub fn derive_key(
     salt: &[u8],
     ikm: &[u8],
     info: Option<&[u8]>,
-    okm_out: &mut [u8],
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    expand(&extract(salt, ikm), info, okm_out)
+    expand(&extract(salt, ikm), info, dst_out)
 }
 
 #[must_use]
 /// Verify a derived key in constant time.
 pub fn verify(
-    expected_dk: &[u8],
+    expected: &[u8],
     salt: &[u8],
     ikm: &[u8],
     info: Option<&[u8]>,
-    okm_out: &mut [u8],
+    dst_out: &mut [u8],
 ) -> Result<bool, ValidationCryptoError> {
-    expand(&extract(salt, ikm), info, okm_out).unwrap();
+    expand(&extract(salt, ikm), info, dst_out).unwrap();
 
-    if util::secure_cmp(&okm_out, expected_dk).is_err() {
+    if util::secure_cmp(&dst_out, expected).is_err() {
         Err(ValidationCryptoError)
     } else {
         Ok(true)
