@@ -35,11 +35,6 @@
 //! - `ciphertext_with_tag_and_nonce`:  The data to be decrypted with the first 24 bytes being the nonce and the last
 //! 16 bytes being the corresponding Poly1305 `Tag`.
 //!
-//! # Security:
-//! - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
-//! the security of all data that has been encrypted with that given key is compromised.
-//! - To securely generate a strong key, use `SecretKey::generate()`.
-//!
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - `plaintext` is empty.
@@ -48,6 +43,11 @@
 //! - `ciphertext_with_tag_and_nonce` is longer than (2^32)-2.
 //! - The received tag does not match the calculated tag when calling `aead::open()`.
 //! - The `OsRng` fails to initialize or read from its source.
+//!
+//! # Security:
+//! - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
+//! the security of all data that has been encrypted with that given key is compromised.
+//! - To securely generate a strong key, use `SecretKey::generate()`.
 //!
 //! # Example:
 //! ```
