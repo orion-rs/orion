@@ -40,7 +40,6 @@
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The `OsRng` fails to initialize or read from its source
-//! - The `expected_with_salt` is not 128 bytes
 //! - The `expected_with_salt` is not constructed exactly as in `pwhash::hash_password`
 //! - The password hash does not match `expected_with_salt`
 //!
@@ -78,10 +77,6 @@ pub fn hash_password_verify(
     expected_with_salt: &[u8],
     password: &Password,
 ) -> Result<bool, ValidationCryptoError> {
-    if expected_with_salt.len() != 128 {
-        return Err(ValidationCryptoError);
-    }
-
     let mut dk = [0u8; 64];
 
     pbkdf2::verify(

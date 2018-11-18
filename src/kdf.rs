@@ -36,6 +36,8 @@
 //! An exception will be thrown if:
 //! - `length` is greater than 16320
 //! - The `OsRng` fails to initialize or read from its source
+//! - The derived key does not match `expected`
+//!
 //!
 //! # Security:
 //! - `derive_key` is not suitable for password storage. See `orion::pwhash`.
@@ -51,9 +53,11 @@
 //! let (salt, derived_key) = kdf::derive_key(secret_key, Some(info), 32).unwrap();
 //!
 //! // `derived_key` could now be used as encryption key with `orion::aead`
+//!
+//! assert!(kdf::derive_key_verify(&derived_key, &salt, secret_key, Some(info)).unwrap());
 //! ```
 
-use errors::UnknownCryptoError;
+use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::hkdf;
 use util;
 
@@ -75,6 +79,19 @@ pub fn derive_key(
     hkdf::derive_key(&salt, ikm, info, &mut okm).unwrap();
 
     Ok((salt, okm))
+}
+
+#[must_use]
+/// Derive and verify a key using HKDF-HMAC-SHA512.
+pub fn derive_key_verify(
+    expected: &[u8],
+    salt: &[u8],
+    ikm: &[u8],
+    info: Option<&[u8]>
+) -> Result<bool, ValidationCryptoError> {
+    let mut okm = vec![0u8; expected.len()];
+
+    hkdf::verify(expected, salt, ikm, info, &mut okm)
 }
 
 #[test]
