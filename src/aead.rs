@@ -137,9 +137,44 @@ fn auth_enc_plaintext_empty_err() {
 
 #[test]
 #[should_panic]
-fn auth_enc_ciphertext_less_than_13_err() {
+fn auth_enc_ciphertext_less_than_31_err() {
     let key = SecretKey::generate();
-    let ciphertext = [0u8; 12];
+    let ciphertext = [0u8; 32];
 
     open(&key, &ciphertext).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn test_modified_nonce_err() {
+    let key = SecretKey::generate();
+    let plaintext = "Secret message".as_bytes().to_vec();
+
+    let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
+    // Modify nonce
+    dst_ciphertext[10] ^= 1;
+    let _ = open(&key, &dst_ciphertext).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn test_modified_ciphertext_err() {
+    let key = SecretKey::generate();
+    let plaintext = "Secret message".as_bytes().to_vec();
+
+    let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
+    // Modify ciphertext
+    dst_ciphertext[25] ^= 1;
+    let _ = open(&key, &dst_ciphertext).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn test_diff_secret_key_err() {
+    let key = SecretKey::generate();
+    let plaintext = "Secret message".as_bytes().to_vec();
+
+    let dst_ciphertext = seal(&key, &plaintext).unwrap();
+    let bad_key = SecretKey::generate();
+    let _ = open(&bad_key, &dst_ciphertext).unwrap();
 }
