@@ -25,10 +25,6 @@ Currently supports:
 * **MAC**: HMAC-SHA512, Poly1305
 * **XOF**: cSHAKE256
 
-***Note on cSHAKE***:
-The cSHAKE implementation currently relies on the `tiny-keccak` crate. Currently this crate
-will produce **incorrect results on big-endian based systems**. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
-
 ### Enabling `no_std`
 To use orion in a `no_std` context, you need to specify the dependency as such:
 
