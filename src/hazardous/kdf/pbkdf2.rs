@@ -21,20 +21,18 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `password`: Password
-//! - `salt`: Salt value
-//! - `iterations`: Iteration count
-//! - `dst_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `dk_out`
-//! - `expected`: The expected derived key
-//!
-//! See [RFC](https://tools.ietf.org/html/rfc8018#section-5.2) for more information.
+//! - `password`: Password.
+//! - `salt`: Salt value.
+//! - `iterations`: Iteration count.
+//! - `dst_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `dk_out`.
+//! - `expected`: The expected derived key.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of `dst_out` is less than 1
-//! - The length of `dst_out` is greater than (2^32 - 1) * hLen
-//! - The specified iteration count is less than 1
-//! - The hashed password does not match the expected when verifying
+//! - The length of `dst_out` is less than 1.
+//! - The length of `dst_out` is greater than (2^32 - 1) * hLen.
+//! - The specified iteration count is less than 1.
+//! - The hashed password does not match the expected when verifying.
 //!
 //! # Security:
 //! - Salts should always be generated using a CSPRNG. The `gen_rand_key` function

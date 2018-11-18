@@ -21,10 +21,10 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `data`:  Data to be processed
-//! - `dst_out`: Destination buffer for the digest. The length of the digest is implied by the length of `dst_out`
-//! - `name`: Optional function-name string. If `None` it is set to a zero-length string. It should be `None` in almost all cases
-//! - `custom`: Customization string
+//! - `data`:  Data to be processed.
+//! - `dst_out`: Destination buffer for the digest. The length of the digest is implied by the length of `dst_out`.
+//! - `name`: Optional function-name string. If `None` it is set to a zero-length string. It should be `None` in almost all cases.
+//! - `custom`: Customization string.
 //!
 //! `custom`: "The customization string is intended to avoid a collision between these two cSHAKE values—it
 //! will be very difficult for an attacker to somehow force one computation (the email signature)
@@ -41,12 +41,12 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of `dst_out` is zero
-//! - The length of `dst_out` is greater than 65536
-//! - `finalize()` is called twice in a row without calling `reset()` in between
-//! - `update()` is called after `finalize()` without a `reset()` in between
-//! - Both `name` and `custom` are empty
-//! - If the length of either `name` or `custom` is greater than 65536
+//! - The length of `dst_out` is zero.
+//! - The length of `dst_out` is greater than 65536.
+//! - `finalize()` is called twice in a row without calling `reset()` in between.
+//! - `update()` is called after `finalize()` without a `reset()` in between.
+//! - Both `name` and `custom` are empty.
+//! - If the length of either `name` or `custom` is greater than 65536.
 //!
 //! The reason that `name` and `custom` cannot both be empty is because that would be equivalent to
 //! a SHAKE call.

@@ -23,20 +23,20 @@
 //! Key derivation.
 //!
 //! # About:
-//! - Uses HKDF-HMAC-SHA512
-//! - A salt of `64` bytes is automatically generated
-//! - Returns both the salt used and the derived key as: `(salt, okm)`
+//! - Uses HKDF-HMAC-SHA512.
+//! - A salt of `64` bytes is automatically generated.
+//! - Returns both the salt used and the derived key as: `(salt, okm)`.
 //!
 //! # Parameters:
-//! - `ikm`: Input keying material
+//! - `ikm`: Input keying material.
 //! - `info`: Optional context and application specific information. If `None` then it's an empty string.
-//! - `length`: The desired length of the derived key
+//! - `length`: The desired length of the derived key.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - `length` is greater than 16320
-//! - The `OsRng` fails to initialize or read from its source
-//! - The derived key does not match `expected`
+//! - `length` is greater than 16320.
+//! - The `OsRng` fails to initialize or read from its source.
+//! - The derived key does not match `expected`.
 //!
 //!
 //! # Security:

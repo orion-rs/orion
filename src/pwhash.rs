@@ -24,24 +24,24 @@
 //!
 //! # About:
 //! - Uses PBKDF2-HMAC-SHA512
-//! - A salt of 64 bytes is automatically generated
-//! - The password hash length is set to 64
-//! - 512.000 iterations are used
-//! - An array of 128 bytes is returned
+//! - A salt of 64 bytes is automatically generated.
+//! - The password hash length is set to 64.
+//! - 512.000 iterations are used.
+//! - An array of 128 bytes is returned.
 //!
 //! The first 64 bytes of the array returned by `pwhash::hash_password` is the salt used to hash the password
 //! and the last 64 bytes is the actual hashed password. When using this function with
 //! `pwhash::hash_password_verify()`, then the seperation of the salt and the password hash are automatically handeled.
 //!
 //! # Parameters:
-//! - `password`: The password to be hashed
-//! - `expected_with_salt`: The expected password hash with a salt prepended
+//! - `password`: The password to be hashed.
+//! - `expected_with_salt`: The expected password hash with a salt prepended.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The `OsRng` fails to initialize or read from its source
-//! - The `expected_with_salt` is not constructed exactly as in `pwhash::hash_password`
-//! - The password hash does not match `expected_with_salt`
+//! - The `OsRng` fails to initialize or read from its source.
+//! - The `expected_with_salt` is not constructed exactly as in `pwhash::hash_password`.
+//! - The password hash does not match `expected_with_salt`.
 //!
 //! # Example:
 //! ```

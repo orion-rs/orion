@@ -26,21 +26,21 @@
 //! by Andrew Moon.
 //!
 //! # Parameters:
-//! - `data`: Data to be authenticated
-//! - `one_time_key`: One-time key used to authenticate
-//! - `expected`: The expected tag that needs to be verified
+//! - `data`: Data to be authenticated.
+//! - `one_time_key`: One-time key used to authenticate.
+//! - `expected`: The expected tag that needs to be verified.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - `finalize()` is called twice without a `reset()` in between
-//! - `update()` is called after `finalize()` without a `reset()` in between
-//! - The calculated tag does not match the expected when verifying
+//! - `finalize()` is called twice without a `reset()` in between.
+//! - `update()` is called after `finalize()` without a `reset()` in between.
+//! - The calculated tag does not match the expected when verifying.
 //!
 //! # Security:
-//! The one-time key should be generated using a CSPRNG. `OneTimeKey::generate()` can be used for this.
+//! - The one-time key should be generated using a CSPRNG. `OneTimeKey::generate()` can be used for this.
 //!
 //! # Recommendation:
-//! If you are unsure of wether to use HMAC or Poly1305, it is most often better to just
+//! - If you are unsure of wether to use HMAC or Poly1305, it is most often better to just
 //! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!
 //! # Example:

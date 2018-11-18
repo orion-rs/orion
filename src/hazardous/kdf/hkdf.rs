@@ -22,19 +22,17 @@
 
 //! # Parameters:
 //! - `salt`: `Salt` value (can be made from an empty slice).
-//! - `ikm`: Input keying material
+//! - `ikm`: Input keying material.
 //! - `info`: Optional context and application specific information.  If `None` then it's an empty string.
-//! - `dst_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`
-//! - `expected`: The expected derived key
-//!
-//! See [RFC](https://tools.ietf.org/html/rfc5869#section-2.2) for more information.
+//! - `dst_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`.
+//! - `expected`: The expected derived key.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of `dst_out` is less than 1
-//! - The length of `dst_out` is greater than 255 * hash_output_size_in_bytes
-//! - The derived key does not match the expected when verifying
-//! - The slice is greater than 128 bytes when calling `Salt::from_slice()`
+//! - The length of `dst_out` is less than 1.
+//! - The length of `dst_out` is greater than 255 * hash_output_size_in_bytes.
+//! - The derived key does not match the expected when verifying.
+//! - The slice is greater than 128 bytes when calling `Salt::from_slice()`.
 //!
 //! # Security:
 //! - Salts should always be generated using a CSPRNG. `Salt::generate()` can be used for this.

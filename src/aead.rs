@@ -23,17 +23,17 @@
 //! Authenticated encryption.
 //!
 //! # About:
-//! - The nonce is automatically generated
-//! - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated
-//! ciphertext with the last 16 bytes being the corresponding Poly1305 tag
-//! - Uses XChaCha20Poly1305 with no `ad`
+//! - The nonce is automatically generated.
+//! - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated.
+//! ciphertext with the last 16 bytes being the corresponding Poly1305 tag.
+//! - Uses XChaCha20Poly1305 with no `ad`.
 //! - When using `seal` and `open` then the seperation of tags, nonces and ciphertext are automatically handeled.
 //!
 //! # Parameters:
-//! - `plaintext`:  The data to be encrypted
-//! - `secret_key`: The secret key used to encrypt the `plaintext`
+//! - `plaintext`:  The data to be encrypted.
+//! - `secret_key`: The secret key used to encrypt the `plaintext`.
 //! - `ciphertext_with_tag_and_nonce`:  The data to be decrypted with the first 24 bytes being the nonce and the last
-//! 16 bytes being the corresponding Poly1305 `Tag`
+//! 16 bytes being the corresponding Poly1305 `Tag`.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
@@ -42,12 +42,12 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - `plaintext` is empty
-//! - `plaintext` is longer than (2^32)-2
-//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes
-//! - `ciphertext_with_tag_and_nonce` is longer than (2^32)-2
-//! - The received tag does not match the calculated tag when calling `aead::open()`
-//! - The `OsRng` fails to initialize or read from its source
+//! - `plaintext` is empty.
+//! - `plaintext` is longer than (2^32)-2.
+//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes.
+//! - `ciphertext_with_tag_and_nonce` is longer than (2^32)-2.
+//! - The received tag does not match the calculated tag when calling `aead::open()`.
+//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Example:
 //! ```

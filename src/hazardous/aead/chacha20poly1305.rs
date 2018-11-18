@@ -21,13 +21,13 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `secret_key`: The secret key
-//! - `nonce`: The nonce value
-//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`)
+//! - `secret_key`: The secret key.
+//! - `nonce`: The nonce value.
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`).
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 128-bit Poly1305 tag
-//! appended to it
-//! - `plaintext`: The data to be encrypted
-//! - `dst_out`: Destination array that will hold the `ciphertext_with_tag`/`plaintext` after encryption/decryption
+//! appended to it.
+//! - `plaintext`: The data to be encrypted.
+//! - `dst_out`: Destination array that will hold the `ciphertext_with_tag`/`plaintext` after encryption/decryption.
 //!
 //! `ad`: "A typical use for these data is to authenticate version numbers, timestamps or
 //! monotonically increasing counters in order to discard previous messages and prevent
@@ -42,12 +42,12 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The length of `dst_out` is less than `plaintext + 16` when encrypting
-//! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting
-//! - The length of `ciphertext_with_tag` is not greater than `16`
-//! - `plaintext` or `ciphertext_with_tag` are empty
-//! - `plaintext` or `ciphertext_with_tag - 16` are longer than (2^32)-2
-//! - The received tag does not match the calculated tag when decrypting
+//! - The length of `dst_out` is less than `plaintext + 16` when encrypting.
+//! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when decrypting.
+//! - The length of `ciphertext_with_tag` is not greater than `16`.
+//! - `plaintext` or `ciphertext_with_tag` are empty.
+//! - `plaintext` or `ciphertext_with_tag - 16` are longer than (2^32)-2.
+//! - The received tag does not match the calculated tag when decrypting.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
@@ -56,7 +56,7 @@
 //! - To securely generate a strong key, use `SecretKey::generate()`.
 //!
 //! # Recommendation:
-//! It is recommended to use XChaCha20Poly1305 when possible.
+//! - It is recommended to use XChaCha20Poly1305 when possible.
 //!
 //! # Example:
 //! ```

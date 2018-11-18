@@ -26,18 +26,18 @@
 //! - Uses HMAC-SHA512
 //!
 //! # Parameters:
-//! - `secret_key`: Secret key used to authenticate `data`
-//! - `data`: Data to be authenticated
-//! - `expected`: The expected authentication `Tag`
+//! - `secret_key`: Secret key used to authenticate `data`.
+//! - `data`: Data to be authenticated.
+//! - `expected`: The expected authentication `Tag`.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - The calculated `Tag` does not match the expected
+//! - The calculated `Tag` does not match the expected.
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG. `SecretKey::generate()` can be used for
-//! this, it will generate a `SecretKey` of 128 bytes
-//! - The recommended minimum length for a `SecretKey` is 64
+//! this, it will generate a `SecretKey` of 128 bytes.
+//! - The recommended minimum length for a `SecretKey` is 64.
 //!
 //! # Example:
 //! ```
