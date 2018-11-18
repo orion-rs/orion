@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `input`:  The main input string
+//! - `data`:  Data to be processed
 //! - `dst_out`: Destination buffer for the digest. The length of the digest is implied by the length of `dst_out`
 //! - `name`: Optional function-name string. If `None` it is set to a zero-length string. It should be `None` in almost all cases
 //! - `custom`: Customization string
@@ -120,12 +120,12 @@ impl CShake {
         }
     }
     #[must_use]
-    /// Set `input`. Can be called repeatedly.
-    pub fn update(&mut self, input: &[u8]) -> Result<(), FinalizationCryptoError> {
+    /// Set `data`. Can be called repeatedly.
+    pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
             Err(FinalizationCryptoError)
         } else {
-            self.hasher.update(input);
+            self.hasher.update(data);
             Ok(())
         }
     }
