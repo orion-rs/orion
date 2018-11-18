@@ -160,6 +160,12 @@ macro_rules! construct_nonce_no_generator {
             func_as_bytes!($name);
         }
 
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, "{} {:?}", stringify!($name), &self.value)
+            }
+        }
+
         #[test]
         fn test_nonce_size() {
             // We don't test above $size here in case it's passed as a `max_value()`
@@ -187,6 +193,12 @@ macro_rules! construct_nonce_with_generator {
             func_from_slice!($name, $size);
             func_as_bytes!($name);
             func_generate!($name, $size);
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, "{} {:?}", stringify!($name), &self.value)
+            }
         }
 
         #[test]
@@ -223,6 +235,12 @@ macro_rules! construct_tag {
         impl $name {
             func_from_slice!($name, $size);
             func_unprotected_as_bytes!($name);
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, "{} {:?}", stringify!($name), &self.value[..])
+            }
         }
 
         #[test]
