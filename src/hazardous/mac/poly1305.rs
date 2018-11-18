@@ -26,8 +26,8 @@
 //! by Andrew Moon.
 //!
 //! # Parameters:
-//! - `message`: Message to be authenticated
-//! - `one_time_key`: One-time key used to authenticate a message
+//! - `data`: Data to be authenticated
+//! - `one_time_key`: One-time key used to authenticate
 //! - `expected`: The expected tag that needs to be verified
 //!
 //! # Exceptions:
@@ -285,25 +285,25 @@ impl Poly1305 {
     }
     #[must_use]
     #[inline(always)]
-    /// Update state with a message. This can be called multiple times.
-    pub fn update(&mut self, message: &[u8]) -> Result<(), FinalizationCryptoError> {
+    /// Update state with a `data`. This can be called multiple times.
+    pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
             return Err(FinalizationCryptoError);
         }
 
-        let mut data = message;
+        let mut bytes = data;
 
         if self.leftover != 0 {
             let mut want = POLY1305_BLOCKSIZE - self.leftover;
-            if want > data.len() {
-                want = data.len();
+            if want > bytes.len() {
+                want = bytes.len();
             }
 
-            for (idx, itm) in data.iter().enumerate().take(want) {
+            for (idx, itm) in bytes.iter().enumerate().take(want) {
                 self.buffer[self.leftover + idx] = *itm;
             }
             // Reduce by slice
-            data = &data[want..];
+            bytes = &bytes[want..];
             self.leftover += want;
 
             if self.leftover < POLY1305_BLOCKSIZE {
@@ -315,14 +315,14 @@ impl Poly1305 {
             self.leftover = 0;
         }
 
-        while data.len() >= POLY1305_BLOCKSIZE {
-            self.process_block(&data[0..POLY1305_BLOCKSIZE]).unwrap();
+        while bytes.len() >= POLY1305_BLOCKSIZE {
+            self.process_block(&bytes[0..POLY1305_BLOCKSIZE]).unwrap();
             // Reduce by slice
-            data = &data[POLY1305_BLOCKSIZE..];
+            bytes = &bytes[POLY1305_BLOCKSIZE..];
         }
 
-        self.buffer[..data.len()].copy_from_slice(&data);
-        self.leftover = data.len();
+        self.buffer[..bytes.len()].copy_from_slice(&bytes);
+        self.leftover = bytes.len();
 
         Ok(())
     }
@@ -377,10 +377,10 @@ pub fn init(one_time_key: &OneTimeKey) -> Result<Poly1305, UnknownCryptoError> {
 }
 
 #[must_use]
-/// One-shot function for generating a Poly1305 tag of a message.
-pub fn poly1305(one_time_key: &OneTimeKey, message: &[u8]) -> Result<Tag, UnknownCryptoError> {
+/// One-shot function for generating a Poly1305 tag of `data`.
+pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
     let mut poly_1305_state = init(one_time_key).unwrap();
-    poly_1305_state.update(message).unwrap();
+    poly_1305_state.update(data).unwrap();
 
     Ok(poly_1305_state.finalize().unwrap())
 }
@@ -390,9 +390,9 @@ pub fn poly1305(one_time_key: &OneTimeKey, message: &[u8]) -> Result<Tag, Unknow
 pub fn verify(
     expected: &Tag,
     one_time_key: &OneTimeKey,
-    message: &[u8],
+    data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let tag = poly1305(one_time_key, message).unwrap();
+    let tag = poly1305(one_time_key, data).unwrap();
 
     if &tag == expected {
         Ok(true)
