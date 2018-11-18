@@ -32,8 +32,8 @@
 //! # Parameters:
 //! - `plaintext`:  The data to be encrypted
 //! - `secret_key`: The secret key used to encrypt the `plaintext`
-//! - `ciphertext`:  The data to be decrypted with the first 24 bytes being the nonce and the last
-//! 16 bytes being the corresponding Poly1305 tag
+//! - `ciphertext_with_tag_and_nonce`:  The data to be decrypted with the first 24 bytes being the nonce and the last
+//! 16 bytes being the corresponding Poly1305 `Tag`
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
@@ -44,8 +44,8 @@
 //! An exception will be thrown if:
 //! - `plaintext` is empty
 //! - `plaintext` is longer than (2^32)-2
-//! - `ciphertext` is less than 41 bytes
-//! - `ciphertext` is longer than (2^32)-2
+//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes
+//! - `ciphertext_with_tag_and_nonce` is longer than (2^32)-2
 //! - The received tag does not match the calculated tag when calling `aead::open()`
 //! - The `OsRng` fails to initialize or read from its source
 //!
@@ -91,18 +91,22 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 
 #[must_use]
 /// Authenticated decryption using XChaCha20Poly1305.
-pub fn open(secret_key: &SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+pub fn open(
+    secret_key: &SecretKey,
+    ciphertext_with_tag_and_nonce: &[u8],
+) -> Result<Vec<u8>, UnknownCryptoError> {
     // `+ 1` to avoid empty ciphertexts
-    if ciphertext.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
+    if ciphertext_with_tag_and_nonce.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
         return Err(UnknownCryptoError);
     }
 
-    let mut dst_out = vec![0u8; ciphertext.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
+    let mut dst_out =
+        vec![0u8; ciphertext_with_tag_and_nonce.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
     aead::xchacha20poly1305::open(
         secret_key,
-        &Nonce::from_slice(&ciphertext[..XCHACHA_NONCESIZE]).unwrap(),
-        &ciphertext[XCHACHA_NONCESIZE..],
+        &Nonce::from_slice(&ciphertext_with_tag_and_nonce[..XCHACHA_NONCESIZE]).unwrap(),
+        &ciphertext_with_tag_and_nonce[XCHACHA_NONCESIZE..],
         None,
         &mut dst_out,
     ).unwrap();
