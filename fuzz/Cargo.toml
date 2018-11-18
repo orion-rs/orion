@@ -35,10 +35,6 @@ name = "hkdf"
 path = "fuzz_targets/hkdf.rs"
 
 [[bin]]
-name = "default"
-path = "fuzz_targets/default.rs"
-
-[[bin]]
 name = "ring_compare"
 path = "fuzz_targets/ring_compare.rs"
 

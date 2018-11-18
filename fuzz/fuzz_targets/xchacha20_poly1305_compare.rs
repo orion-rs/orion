@@ -25,14 +25,16 @@ fuzz_target!(|data: &[u8]| {
         &plaintext,
         Some(&aad),
         &mut ciphertext_with_tag_orion,
-    ).unwrap();
+    )
+    .unwrap();
     xchacha20poly1305::open(
         &orion_key,
         &orion_nonce,
         &ciphertext_with_tag_orion,
         Some(&aad),
         &mut plaintext_out_orion,
-    ).unwrap();
+    )
+    .unwrap();
 
     let sodium_key = xchacha20poly1305_ietf::Key::from_slice(&key).unwrap();
     let sodium_nonce = xchacha20poly1305_ietf::Nonce::from_slice(&nonce).unwrap();
@@ -45,21 +47,19 @@ fuzz_target!(|data: &[u8]| {
     assert_eq!(sodium_ct_with_tag, ciphertext_with_tag_orion);
     assert_eq!(plaintext_out_orion, sodium_pt);
     // Then let orion decrypt sodiumoxide ciphertext, and let sodiumoxide decrypt orion ciphertext
-    assert!(
-        xchacha20poly1305_ietf::open(
-            &ciphertext_with_tag_orion,
-            Some(&aad),
-            &sodium_nonce,
-            &sodium_key
-        ).is_ok()
-    );
-    assert!(
-        xchacha20poly1305::open(
-            &orion_key,
-            &orion_nonce,
-            &sodium_ct_with_tag,
-            Some(&aad),
-            &mut plaintext_out_orion,
-        ).is_ok()
-    );
+    assert!(xchacha20poly1305_ietf::open(
+        &ciphertext_with_tag_orion,
+        Some(&aad),
+        &sodium_nonce,
+        &sodium_key
+    )
+    .is_ok());
+    assert!(xchacha20poly1305::open(
+        &orion_key,
+        &orion_nonce,
+        &sodium_ct_with_tag,
+        Some(&aad),
+        &mut plaintext_out_orion,
+    )
+    .is_ok());
 });

@@ -16,7 +16,10 @@ fuzz_target!(|data: &[u8]| {
     let orion_stream_tag = poly1305_state.finalize().unwrap();
     let orion_oneshot_tag = poly1305(&orion_key, &message).unwrap();
 
-    assert_eq!(orion_stream_tag.unprotected_as_bytes(), orion_oneshot_tag.unprotected_as_bytes());
+    assert_eq!(
+        orion_stream_tag.unprotected_as_bytes(),
+        orion_oneshot_tag.unprotected_as_bytes()
+    );
     assert!(verify(&orion_stream_tag, &orion_key, &message).unwrap());
     assert!(verify(&orion_oneshot_tag, &orion_key, &message).unwrap());
 });
