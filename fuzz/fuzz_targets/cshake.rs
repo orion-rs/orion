@@ -16,7 +16,7 @@ fuzz_target!(|data: &[u8]| {
     }
 
     let mut message = vec![0u8; input[0] as usize];
-    apply_from_input_fixed(&mut message, &input, 0);
+    apply_from_input_heap(&mut message, &input, 0);
     let mut name = Vec::new();
     let mut custom = Vec::new();
 

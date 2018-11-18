@@ -47,8 +47,8 @@ name = "cshake"
 path = "fuzz_targets/cshake.rs"
 
 [[bin]]
-name = "sp800_185_compare"
-path = "fuzz_targets/sp800_185_compare.rs"
+name = "cshake_compare"
+path = "fuzz_targets/cshake_compare.rs"
 
 [[bin]]
 name = "chacha20"
