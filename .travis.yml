@@ -42,7 +42,7 @@ matrix:
 
 before_cache: |
   if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
-    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
+    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force cargo-tarpaulin
   fi
 
 install:
