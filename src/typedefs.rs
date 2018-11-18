@@ -134,9 +134,10 @@ macro_rules! construct_secret_key {
 
         #[test]
         fn test_key_size() {
+            // We don't test above $size here in case it's passed as a `max_value()`
             assert!($name::from_slice(&[0u8; $size]).is_ok());
             assert!($name::from_slice(&[0u8; $size - $size]).is_err());
-            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
+            assert!($name::from_slice(&[0u8; $size - 1]).is_err());
         }
         #[test]
         fn test_unprotected_as_bytes_secret_key() {
@@ -161,9 +162,10 @@ macro_rules! construct_nonce_no_generator {
 
         #[test]
         fn test_nonce_size() {
+            // We don't test above $size here in case it's passed as a `max_value()`
             assert!($name::from_slice(&[0u8; $size]).is_ok());
             assert!($name::from_slice(&[0u8; $size - $size]).is_err());
-            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
+            assert!($name::from_slice(&[0u8; $size - 1]).is_err());
         }
         #[test]
         fn test_as_bytes_nonce_no_gen() {
@@ -189,9 +191,10 @@ macro_rules! construct_nonce_with_generator {
 
         #[test]
         fn test_nonce_size() {
+            // We don't test above $size here in case it's passed as a `max_value()`
             assert!($name::from_slice(&[0u8; $size]).is_ok());
             assert!($name::from_slice(&[0u8; $size - $size]).is_err());
-            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
+            assert!($name::from_slice(&[0u8; $size - 1]).is_err());
         }
         #[test]
         fn test_as_bytes_nonce_with_gen() {
@@ -224,9 +227,10 @@ macro_rules! construct_tag {
 
         #[test]
         fn test_tag_size() {
+            // We don't test above $size here in case it's passed as a `max_value()`
             assert!($name::from_slice(&[0u8; $size]).is_ok());
             assert!($name::from_slice(&[0u8; $size - $size]).is_err());
-            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
+            assert!($name::from_slice(&[0u8; $size - 1]).is_err());
         }
         #[test]
         fn test_unprotected_as_bytes_tag() {
@@ -280,10 +284,10 @@ macro_rules! construct_hmac_key {
 
         #[test]
         fn test_key_size() {
+            // We don't test above $size here in case it's passed as a `max_value()`
             let _ = $name::from_slice(&[0u8; $size]);
             let _ = $name::from_slice(&[0u8; $size - $size]);
-            let _ = $name::from_slice(&[0u8; $size + 1]);
-            let _ = $name::from_slice(&[0u8; $size + $size]);
+            let _ = $name::from_slice(&[0u8; $size - 1]);
         }
         #[test]
         fn test_unprotected_as_bytes_hmac_key() {
