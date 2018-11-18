@@ -23,6 +23,7 @@
 //! # Parameters:
 //! - `secret_key`:  The authentication key
 //! - `data`: Data to be authenticated
+//! - `expected`: The expected authentication `Tag`
 //!
 //! See [RFC](https://tools.ietf.org/html/rfc2104#section-2) for more information.
 //!
@@ -138,11 +139,11 @@ impl Hmac {
     }
     #[must_use]
     /// This can be called multiple times.
-    pub fn update(&mut self, message: &[u8]) -> Result<(), FinalizationCryptoError> {
+    pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
             Err(FinalizationCryptoError)
         } else {
-            self.ipad_hasher.input(message);
+            self.ipad_hasher.input(data);
             Ok(())
         }
     }
@@ -188,10 +189,10 @@ pub fn init(secret_key: &SecretKey) -> Hmac {
 pub fn verify(
     expected: &Tag,
     secret_key: &SecretKey,
-    message: &[u8],
+    data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
     let mut tag = init(secret_key);
-    tag.update(message).unwrap();
+    tag.update(data).unwrap();
 
     if expected == &tag.finalize().unwrap() {
         Ok(true)

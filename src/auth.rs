@@ -28,7 +28,7 @@
 //! # Parameters:
 //! - `secret_key`: Secret key used to authenticate `data`
 //! - `data`: Data to be authenticated
-//! - `expected_tag`: The expected authentication `Tag`
+//! - `expected`: The expected authentication `Tag`
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
@@ -66,11 +66,11 @@ pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Tag {
 #[must_use]
 /// Authenticate and verify a message using HMAC-SHA512.
 pub fn authenticate_verify(
-    expected_tag: &Tag,
+    expected: &Tag,
     secret_key: &SecretKey,
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    hmac::verify(&expected_tag, &secret_key, &data)
+    hmac::verify(&expected, &secret_key, &data)
 }
 
 #[test]
