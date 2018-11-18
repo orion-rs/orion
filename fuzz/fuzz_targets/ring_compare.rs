@@ -16,7 +16,8 @@ use ring::pbkdf2 as ring_pbkdf2;
 
 fn ro_hmac(data: &[u8]) {
     let (secret_key, message) = hmac_setup(data);
-    let mut orion_hmac = hmac::init(&secret_key);
+    let orion_key = hmac::SecretKey::from_slice(&secret_key);
+    let mut orion_hmac = hmac::init(&orion_key);
     orion_hmac.update(&message).unwrap();
     let orion_signature = orion_hmac.finalize().unwrap();
 
@@ -24,14 +25,14 @@ fn ro_hmac(data: &[u8]) {
     let ring_signature = ring_hmac::sign(&s_key, &message);
     let v_key = ring_hmac::VerificationKey::new(&digest::SHA512, &secret_key);
 
-    assert!(hmac::verify(ring_signature.as_ref(), &secret_key, &message).unwrap());
-    assert!(ring_hmac::verify(&v_key, &message, orion_signature.as_ref()).is_ok());
+    assert!(hmac::verify(&hmac::Tag::from_slice(&ring_signature.as_ref()).unwrap(), &orion_key, &message).unwrap());
+    assert!(ring_hmac::verify(&v_key, &message, orion_signature.unprotected_as_bytes()).is_ok());
 }
 
 fn ro_hkdf(data: &[u8]) {
     let (ikm, salt, info, mut okm_out_orion) = hkdf_setup(data);
     let mut okm_out_ring = okm_out_orion.clone();
-    hkdf::derive_key(&salt, &ikm, &info, &mut okm_out_orion).unwrap();
+    hkdf::derive_key(&salt, &ikm, Some(&info), &mut okm_out_orion).unwrap();
 
     let s_key = ring_hmac::SigningKey::new(&digest::SHA512, &salt);
     ring_hkdf(&s_key, &ikm, &info, &mut okm_out_ring);
@@ -42,8 +43,9 @@ fn ro_hkdf(data: &[u8]) {
 fn ro_pbkdf2(data: &[u8]) {
     let (password, salt, mut dk_out_orion, iter) = pbkdf2_setup(data);
     let mut dk_out_ring = dk_out_orion.clone();
+    let orion_password = pbkdf2::Password::from_slice(&password);
 
-    pbkdf2::derive_key(&password, &salt, iter, &mut dk_out_orion).unwrap();
+    pbkdf2::derive_key(&orion_password, &salt, iter, &mut dk_out_orion).unwrap();
     ring_pbkdf2::derive(
         &digest::SHA512,
         iter as u32,
@@ -62,7 +64,7 @@ fn ro_pbkdf2(data: &[u8]) {
             &dk_out_orion
         ).is_ok()
     );
-    assert!(pbkdf2::verify(&dk_out_ring, &password, &salt, iter, &mut dk_out_orion).unwrap());
+    assert!(pbkdf2::verify(&dk_out_ring, &orion_password, &salt, iter, &mut dk_out_orion).unwrap());
 }
 
 fuzz_target!(|data: &[u8]| {

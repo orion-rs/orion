@@ -13,17 +13,18 @@ fuzz_target!(|data: &[u8]| {
     sodiumoxide::init().unwrap();
 
     let (key, message) = poly1305_setup(data);
+    let orion_key = OneTimeKey::from_slice(&key).unwrap();
 
-    let mut poly1305_state = init(&key).unwrap();
+    let mut poly1305_state = init(&orion_key).unwrap();
     poly1305_state.update(&message).unwrap();
     let orion_stream_tag = poly1305_state.finalize().unwrap();
 
     let sodium_poly1305_key = sodiumoxide::crypto::onetimeauth::Key::from_slice(&key).unwrap();
     let sodium_tag = poly1305::authenticate(&message, &sodium_poly1305_key);
 
-    assert_eq!(orion_stream_tag, sodium_tag.as_ref());
+    assert_eq!(orion_stream_tag.unprotected_as_bytes(), sodium_tag.as_ref());
     // Let orion verify sodiumoxide tag
-    assert!(verify(&sodium_tag.as_ref(), &key, &message).unwrap());
+    assert!(verify(&Tag::from_slice(sodium_tag.as_ref()).unwrap(), &orion_key, &message).unwrap());
     // Let sodiumoxide verify orion tag
     assert!(poly1305::verify(
         &sodium_tag,

@@ -5,6 +5,7 @@ extern crate orion;
 extern crate ring;
 pub mod util;
 
+use orion::hazardous::aead::chacha20poly1305;
 use util::*;
 
 fuzz_target!(|data: &[u8]| {
@@ -12,18 +13,21 @@ fuzz_target!(|data: &[u8]| {
     let mut ciphertext_with_tag_orion: Vec<u8> = vec![0u8; plaintext.len() + 16];
     let mut plaintext_out_orion = vec![0u8; plaintext.len()];
 
-    orion::hazardous::aead::chacha20poly1305::encrypt(
-        &key,
-        &nonce,
+    let orion_key = chacha20poly1305::SecretKey::from_slice(&key).unwrap();
+    let orion_nonce = chacha20poly1305::Nonce::from_slice(&nonce).unwrap();
+
+    chacha20poly1305::seal(
+        &orion_key,
+        &orion_nonce,
         &plaintext,
-        &aad,
+        Some(&aad),
         &mut ciphertext_with_tag_orion,
     ).unwrap();
-    orion::hazardous::aead::chacha20poly1305::decrypt(
-        &key,
-        &nonce,
+    chacha20poly1305::open(
+        &orion_key,
+        &orion_nonce,
         &ciphertext_with_tag_orion,
-        &aad,
+        Some(&aad),
         &mut plaintext_out_orion,
     ).unwrap();
 

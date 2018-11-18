@@ -9,5 +9,6 @@ use orion::hazardous::stream::chacha20;
 
 fuzz_target!(|data: &[u8]| {
     let (key, nonce) = chacha_key_nonce_setup(16, data);
-    chacha20::hchacha20(&key, &nonce).unwrap();
+    let orion_key = chacha20::SecretKey::from_slice(&key).unwrap();
+    chacha20::hchacha20(&orion_key, &nonce).unwrap();
 });

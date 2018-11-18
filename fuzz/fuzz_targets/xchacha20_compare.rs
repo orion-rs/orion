@@ -15,6 +15,9 @@ fuzz_target!(|data: &[u8]| {
     let mut fixed_nonce = [0u8; 24];
     fixed_nonce.copy_from_slice(&nonce[..]);
 
+    let orion_key = xchacha20::SecretKey::from_slice(&key).unwrap();
+    let orion_nonce = xchacha20::Nonce::from_slice(&nonce).unwrap();
+
     let mut pt = Vec::new();
     apply_from_input_heap(&mut pt, data, key.len() + nonce.len());
 
@@ -34,8 +37,8 @@ fuzz_target!(|data: &[u8]| {
     // chacha crates uses 0 as inital counter
     let mut orion_pt = vec![0u8; pt.len()];
     let mut orion_ct = vec![0u8; pt.len()];
-    xchacha20::encrypt(&key, &nonce, 0, &pt, &mut orion_ct).unwrap();
-    xchacha20::decrypt(&key, &nonce, 0, &orion_ct, &mut orion_pt).unwrap();
+    xchacha20::encrypt(&orion_key, &orion_nonce, 0, &pt, &mut orion_ct).unwrap();
+    xchacha20::decrypt(&orion_key, &orion_nonce, 0, &orion_ct, &mut orion_pt).unwrap();
     assert_eq!(pt, chacha_pt);
     assert_eq!(orion_ct, chacha_ct);
     assert_eq!(orion_pt, chacha_pt);
