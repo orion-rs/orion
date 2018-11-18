@@ -74,7 +74,7 @@ pub fn authenticate_verify(
 }
 
 #[test]
-fn test_authenticate_verify() {
+fn test_authenticate_verify_bad_key() {
     let sec_key_correct = SecretKey::generate();
     let sec_key_false = SecretKey::generate();
     let msg = "what do ya want for nothing?".as_bytes().to_vec();
@@ -86,4 +86,18 @@ fn test_authenticate_verify() {
         true
     );
     assert!(authenticate_verify(&hmac_bob, &sec_key_false, &msg).is_err());
+}
+
+#[test]
+fn test_authenticate_verify_bad_msg() {
+    let sec_key = SecretKey::generate();
+    let msg = "what do ya want for nothing?".as_bytes().to_vec();
+
+    let hmac_bob = authenticate(&sec_key, &msg);
+
+    assert_eq!(
+        authenticate_verify(&hmac_bob, &sec_key, &msg).unwrap(),
+        true
+    );
+    assert!(authenticate_verify(&hmac_bob, &sec_key, b"bad msg").is_err());
 }
