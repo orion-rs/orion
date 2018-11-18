@@ -111,3 +111,21 @@ fn derive_key_okm_length() {
     assert!(derive_key(data, Some(info), 16321).is_err());
     assert!(derive_key(data, Some(info), 16320).is_ok());
 }
+
+#[test]
+fn test_derive_key_verify_bad_params() {
+    let data = "Some data.".as_bytes();
+    let info = "Some info.".as_bytes();
+    let (mut salt1, mut dk1) = derive_key(data, Some(info), 32).unwrap();
+    assert!(derive_key_verify(&dk1, &salt1, data, Some(info)).is_ok());
+    // Test diff salt
+    assert!(derive_key_verify(&dk1, &salt1[..32], data, Some(info)).is_err());
+    // Test wrong info
+    assert!(derive_key_verify(&dk1, &salt1, data, None).is_err());
+    // Test mod dk
+    let dk_orig = dk1.clone();
+    dk1[1] ^= 1;
+    assert!(derive_key_verify(&dk1, &salt1, data, Some(info)).is_err());
+    salt1[1] ^= 1;
+    assert!(derive_key_verify(&dk_orig, &salt1, data, Some(info)).is_err());
+}
