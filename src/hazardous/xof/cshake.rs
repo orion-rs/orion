@@ -83,6 +83,16 @@ pub struct CShake {
     is_finalized: bool,
 }
 
+impl core::fmt::Debug for CShake {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(
+            f,
+            "CShake {{ setup_hasher: Unknown, hasher: Unknown, is_finalized: {:?} }}",
+            self.is_finalized
+        )
+    }
+}
+
 impl CShake {
     /// A function that checks the `dst_out` in `finalize`, so that return errors are seperated.
     fn check_dst_out(&mut self, dst_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
@@ -130,7 +140,7 @@ impl CShake {
         }
     }
     #[must_use]
-    /// Return a cSHAKE hash.
+    /// Return a cSHAKE hash and copy into `dst_out`.
     pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), FinalizationCryptoError> {
         if self.is_finalized {
             return Err(FinalizationCryptoError);

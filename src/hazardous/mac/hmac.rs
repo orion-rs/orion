@@ -112,6 +112,17 @@ impl Drop for Hmac {
     }
 }
 
+impl core::fmt::Debug for Hmac {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(
+            f,
+            "Hmac {{ ipad: [***OMITTED***], opad_hasher: [***OMITTED***],
+            ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
+            self.is_finalized
+        )
+    }
+}
+
 impl Hmac {
     #[inline(always)]
     /// Pad `key` with `ipad` and `opad`.

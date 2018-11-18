@@ -57,6 +57,8 @@
 //! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes()).unwrap());
 //! ```
 
+extern crate core;
+
 use byteorder::{ByteOrder, LittleEndian};
 use errors::*;
 use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
@@ -97,6 +99,17 @@ impl Drop for Poly1305 {
         zero(&mut self.r);
         zero(&mut self.s);
         zero(&mut self.buffer)
+    }
+}
+
+impl core::fmt::Debug for Poly1305 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(
+            f,
+            "Poly1305 {{ a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***],
+            leftover: ***OMITTED***, buffer: [***OMITTED***], is_finalized: {:?} }}",
+            self.is_finalized
+        )
     }
 }
 
