@@ -35,14 +35,14 @@
 //!
 //! # Parameters:
 //! - `password`: The password to be hashed
-//! - `expected_hash`: The expected password hash
+//! - `expected_with_salt`: The expected password hash with a salt prepended
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The `OsRng` fails to initialize or read from its source
-//! - The `expected_hash` is not 128 bytes
-//! - The `expected_hash` is not constructed exactly as in `pwhash::hash_password`
-//! - The password hash does not match `expected_hash`
+//! - The `expected_with_salt` is not 128 bytes
+//! - The `expected_with_salt` is not constructed exactly as in `pwhash::hash_password`
+//! - The password hash does not match `expected_with_salt`
 //!
 //! # Example:
 //! ```
@@ -75,19 +75,19 @@ pub fn hash_password(password: &Password) -> Result<[u8; 128], UnknownCryptoErro
 #[must_use]
 /// Hash and verify a password using PBKDF2-HMAC-SHA512.
 pub fn hash_password_verify(
-    expected_hash: &[u8],
+    expected_with_salt: &[u8],
     password: &Password,
 ) -> Result<bool, ValidationCryptoError> {
-    if expected_hash.len() != 128 {
+    if expected_with_salt.len() != 128 {
         return Err(ValidationCryptoError);
     }
 
     let mut dk = [0u8; 64];
 
     pbkdf2::verify(
-        &expected_hash[64..],
+        &expected_with_salt[64..],
         password,
-        &expected_hash[..64],
+        &expected_with_salt[..64],
         512_000,
         &mut dk,
     )

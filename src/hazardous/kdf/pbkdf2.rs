@@ -25,6 +25,7 @@
 //! - `salt`: Salt value
 //! - `iterations`: Iteration count
 //! - `dk_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `dk_out`
+//! - `expected`: The expected derived key
 //!
 //! See [RFC](https://tools.ietf.org/html/rfc8018#section-5.2) for more information.
 //!
@@ -155,7 +156,7 @@ pub fn derive_key(
 #[must_use]
 /// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
 pub fn verify(
-    expected_dk: &[u8],
+    expected: &[u8],
     password: &Password,
     salt: &[u8],
     iterations: usize,
@@ -163,7 +164,7 @@ pub fn verify(
 ) -> Result<bool, ValidationCryptoError> {
     derive_key(password, salt, iterations, dk_out).unwrap();
 
-    if util::secure_cmp(&dk_out, expected_dk).is_err() {
+    if util::secure_cmp(&dk_out, expected).is_err() {
         Err(ValidationCryptoError)
     } else {
         Ok(true)
