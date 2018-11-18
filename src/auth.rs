@@ -70,21 +70,7 @@ pub fn authenticate_verify(
     secret_key: &SecretKey,
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let mut tag = hmac::init(secret_key);
-    tag.update(data).unwrap();
-
-    let rand_key = hmac::SecretKey::generate();
-    let mut nd_round_expected = hmac::init(&rand_key);
-
-    nd_round_expected
-        .update(&expected_tag.unprotected_as_bytes())
-        .unwrap();
-
-    hmac::verify(
-        &nd_round_expected.finalize().unwrap(),
-        &rand_key,
-        &tag.finalize().unwrap().unprotected_as_bytes(),
-    )
+    hmac::verify(&expected_tag, &secret_key, &data)
 }
 
 #[test]

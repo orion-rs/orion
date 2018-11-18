@@ -2,13 +2,13 @@
 extern crate orion;
 extern crate test;
 
+use orion::hazardous::aead::{chacha20poly1305, xchacha20poly1305};
 use orion::hazardous::kdf::hkdf;
 use orion::hazardous::kdf::pbkdf2;
 use orion::hazardous::mac::hmac;
 use orion::hazardous::mac::poly1305;
 use orion::hazardous::stream::*;
 use orion::hazardous::xof::cshake;
-use orion::hazardous::aead::{chacha20poly1305, xchacha20poly1305};
 use test::Bencher;
 
 #[bench]
@@ -24,12 +24,7 @@ fn bench_hmac(b: &mut Bencher) {
 fn bench_hkdf(b: &mut Bencher) {
     let mut okm_out = [0u8; 64];
     b.iter(|| {
-        hkdf::derive_key(
-            &[0x01; 64],
-            &[0x01; 64],
-            Some(&[0x01; 64]),
-            &mut okm_out,
-        ).unwrap();
+        hkdf::derive_key(&[0x01; 64], &[0x01; 64], Some(&[0x01; 64]), &mut okm_out).unwrap();
     });
 }
 
@@ -132,58 +127,30 @@ fn bench_xchacha20_decrypt(b: &mut Bencher) {
 
 #[bench]
 fn bench_chacha20poly1305_encrypt_decrypt(b: &mut Bencher) {
-
     let mut plaintext = [0u8; 256];
     let mut ciphertext_with_tag = [0u8; 256 + 16];
 
     b.iter(|| {
-
         let key = chacha20poly1305::SecretKey::from_slice(&[0u8; 32]).unwrap();
         let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]).unwrap();
 
-        chacha20poly1305::seal(
-            &key,
-            &nonce,
-            &plaintext,
-            None,
-            &mut ciphertext_with_tag,
-        ).unwrap();
+        chacha20poly1305::seal(&key, &nonce, &plaintext, None, &mut ciphertext_with_tag).unwrap();
 
-        chacha20poly1305::open(
-            &key,
-            &nonce,
-            &ciphertext_with_tag,
-            None,
-            &mut plaintext,
-        ).unwrap();
+        chacha20poly1305::open(&key, &nonce, &ciphertext_with_tag, None, &mut plaintext).unwrap();
     });
 }
 
 #[bench]
 fn bench_xchacha20poly1305_encrypt_decrypt(b: &mut Bencher) {
-
     let mut plaintext = [0u8; 256];
     let mut ciphertext_with_tag = [0u8; 256 + 16];
 
     b.iter(|| {
-
         let key = xchacha20poly1305::SecretKey::from_slice(&[0u8; 32]).unwrap();
         let nonce = xchacha20poly1305::Nonce::from_slice(&[0u8; 24]).unwrap();
 
-        xchacha20poly1305::seal(
-            &key,
-            &nonce,
-            &plaintext,
-            None,
-            &mut ciphertext_with_tag,
-        ).unwrap();
+        xchacha20poly1305::seal(&key, &nonce, &plaintext, None, &mut ciphertext_with_tag).unwrap();
 
-        xchacha20poly1305::open(
-            &key,
-            &nonce,
-            &ciphertext_with_tag,
-            None,
-            &mut plaintext,
-        ).unwrap();
+        xchacha20poly1305::open(&key, &nonce, &ciphertext_with_tag, None, &mut plaintext).unwrap();
     });
 }
