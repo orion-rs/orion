@@ -24,16 +24,16 @@
 //!
 //! # About:
 //! - The nonce is automatically generated.
-//! - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated.
+//! - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated
 //! ciphertext with the last 16 bytes being the corresponding Poly1305 tag.
-//! - Uses XChaCha20Poly1305 with no `ad`.
+//! - Uses XChaCha20Poly1305 with no additional data.
 //! - When using `seal` and `open` then the seperation of tags, nonces and ciphertext are automatically handeled.
 //!
 //! # Parameters:
 //! - `plaintext`:  The data to be encrypted.
 //! - `secret_key`: The secret key used to encrypt the `plaintext`.
 //! - `ciphertext_with_tag_and_nonce`:  The data to be decrypted with the first 24 bytes being the nonce and the last
-//! 16 bytes being the corresponding Poly1305 `Tag`.
+//! 16 bytes being the corresponding Poly1305 tag.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:

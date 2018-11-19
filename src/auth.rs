@@ -33,6 +33,7 @@
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The calculated `Tag` does not match the expected.
+//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG. `SecretKey::generate()` can be used for

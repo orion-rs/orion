@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `salt`: `Salt` value (can be made from an empty slice).
+//! - `salt`: Salt value (can be made from an empty slice).
 //! - `ikm`: Input keying material.
 //! - `info`: Optional context and application specific information.  If `None` then it's an empty string.
 //! - `dst_out`: Destination buffer for the derived key. The length of the derived key is implied by the length of `okm_out`.

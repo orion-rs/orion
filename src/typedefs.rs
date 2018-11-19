@@ -117,9 +117,9 @@ macro_rules! construct_secret_key {
         $(#[$meta])*
         ///
         /// # Security:
-        /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
-        /// comparisons. However, `unprotected_as_bytes()` lets the user return the secret key
-        /// without such a protection. Avoid using `unprotected_as_bytes()` whenever possible.
+        /// - This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+        /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag
+        /// __**without such a protection**__. __**Avoid using**__ `unprotected_as_bytes()` whenever possible.
         pub struct $name { value: [u8; $size] }
 
         impl_debug_trait!($name);
@@ -225,7 +225,7 @@ macro_rules! construct_tag {
         $(#[$meta])*
         ///
         /// # Security:
-        /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+        /// - This implements `PartialEq` and thus prevents users from accidentally using non constant-time
         /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag
         /// __**without such a protection**__. __**Avoid using**__ `unprotected_as_bytes()` whenever possible.
         pub struct $name { value: [u8; $size] }
@@ -267,9 +267,9 @@ macro_rules! construct_hmac_key {
         $(#[$meta])*
         ///
         /// # Security:
-        /// This implements `PartialEq` and thus prevents users from accidentally using non constant-time
-        /// comparisons. However, `unprotected_as_bytes()` lets the user return the secret key
-        /// without such a protection. Avoid using `unprotected_as_bytes()` whenever possible.
+        /// - This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+        /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag
+        /// __**without such a protection**__. __**Avoid using**__ `unprotected_as_bytes()` whenever possible.
         pub struct $name { value: [u8; $size] }
 
         impl_debug_trait!($name);
