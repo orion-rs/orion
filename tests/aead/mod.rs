@@ -52,14 +52,16 @@ fn aead_test_runner(
             input,
             Some(aad),
             &mut dst_ct_out,
-        ).unwrap();
+        )
+        .unwrap();
         aead::chacha20poly1305::open(
             &SecretKey::from_slice(&key).unwrap(),
             &chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
             &dst_ct_out,
             Some(aad),
             &mut dst_pt_out,
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     if nonce.len() == constants::XCHACHA_NONCESIZE {
@@ -69,7 +71,8 @@ fn aead_test_runner(
             input,
             Some(aad),
             &mut dst_ct_out,
-        ).unwrap();
+        )
+        .unwrap();
 
         aead::xchacha20poly1305::open(
             &SecretKey::from_slice(&key).unwrap(),
@@ -77,7 +80,8 @@ fn aead_test_runner(
             &dst_ct_out,
             Some(aad),
             &mut dst_pt_out,
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     assert!(dst_ct_out[..input.len()].as_ref() == output);
@@ -107,7 +111,8 @@ fn wycheproof_test_runner(
         input,
         Some(aad),
         &mut dst_ct_out,
-    ).unwrap();
+    )
+    .unwrap();
 
     aead::chacha20poly1305::open(
         &SecretKey::from_slice(&key).unwrap(),
@@ -115,7 +120,8 @@ fn wycheproof_test_runner(
         &dst_ct_out,
         Some(aad),
         &mut dst_pt_out,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert!(dst_ct_out[..input.len()].as_ref() == output);
     assert!(dst_ct_out[input.len()..].as_ref() == tag);

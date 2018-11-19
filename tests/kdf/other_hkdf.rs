@@ -45,7 +45,8 @@ mod other_hkdf {
 
         let expected_okm = decode(
             "832390086cda71fb47625bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d9f925d7cb",
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(hkdf_test_runner(
             Some(&expected_prk),
@@ -95,7 +96,8 @@ mod other_hkdf {
 
         let expected_okm = decode(
             "f5fa02b18298a72a8c23898a8703472c6eb179dc204c03425c970e3b164bf90fff22d04836d0e2343bac",
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(hkdf_test_runner(
             Some(&expected_prk),
@@ -120,7 +122,8 @@ mod other_hkdf {
 
         let expected_okm = decode(
             "7413e8997e020610fbf6823f2ce14bff01875db1ca55f68cfcf3954dc8aff53559bd5e3028b080f7c068",
-        ).unwrap();
+        )
+        .unwrap();
         assert!(hkdf_test_runner(
             Some(&expected_prk),
             &expected_okm,
@@ -144,7 +147,8 @@ mod other_hkdf {
 
         let expected_okm = decode(
             "1407d46013d98bc6decefcfee55f0f90b0c7f63d68eb1a80eaf07e953cfc0a3a5240a155d6e4daa965bb",
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(hkdf_test_runner(
             Some(&expected_prk),

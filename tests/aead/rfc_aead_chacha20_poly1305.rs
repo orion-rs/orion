@@ -125,7 +125,8 @@ mod rfc_aead_chacha20_poly1305 {
             &ct_plus_tag,
             Some(&aad),
             &mut dst_out_pt,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(dst_out_pt[..].as_ref(), plaintext);
     }

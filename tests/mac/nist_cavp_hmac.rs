@@ -1,4 +1,35 @@
-let test_vectors: [[&str; 4]; 375] = [
+// MIT License
+
+// Copyright (c) 2018 brycx
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+extern crate hex;
+use self::hex::decode;
+use mac::hmac_test_runner;
+
+#[test]
+fn test_nist_cavp() {
+
+    // Test vectors are structured as: [key, data, tag, tag_len]
+
+    let test_vectors: [[&str; 4]; 375] = [
 ["726374c4b8df517510db9159b730f93431e0cd468d4f3821eab0edb93abd0fba46ab4f1ef35d54fec3d85fa89ef72ff3d35f22cf5ab69e205c10afcdf4aaf11338dbb12073474fddb556e60b8ee52f91163ba314303ee0c910e64e87fbf302214edbe3f2", "ac939659dc5f668c9969c0530422e3417a462c8b665e8db25a883a625f7aa59b89c5ad0ece5712ca17442d1798c6dea25d82c5db260cb59c75ae650be56569c1bd2d612cc57e71315917f116bbfa65a0aeb8af7840ee83d3e7101c52cf652d2773531b7a6bdd690b846a741816c860819270522a5b0cdfa1d736c501c583d916", "bd3d2df6f9d284b421a43e5f9cb94bc4ff88a88243f1f0133bad0fb1791f6569", "32"],
 
 ["e245be9a9c8101263830ad3515c1c6cbf285a7e4b362ebc062cb8e7e75ef50ec4f315a9e09d9243d7109962253f26e23f847e1adedf2851405076e26a1f697062f048438f1fc26f80021ffd09068876975e4cda2e78261df82f672a390f534628ba58490", "425315dd8eccd17a84c1aa00ff72763f99ddcbc2c381b8b21567b2f8e263d1a210983d88263ae32fa7986ced9f596f4e7b05e5b71dc8de4930737308b9c4fc3defe783194d3c789ae55ba5b3f75665a7c23e11b69ae8bcfb3bf020955dffd705894acfd72a5bf885e7143f9830f1c010178d37066268b890dee7a1e5f69cccc1", "c5801d80a14391720e77eb7ffb1a0b21a16323641c9a312b05fdc34e90383c85", "32"],
@@ -750,3 +781,13 @@ let test_vectors: [[&str; 4]; 375] = [
 ["f78343071f61ee7d9f791bd53132e6d557928bcfe4b214bebf6f3592e46374c7ab148c3c4d6a1443a4675cf4321298c865b440631947b6b05f2c2a337d1cbb9b3661de974b4604eb41cc77c3659e85470e47e16f22a34619db935d59cbf5e1101ed401c020db069eff1035e9d1bff77bd8b3379e05ac0c20bc0e98aad7d7304dedd3bc5ed4136184649b5e0f7e5b", "d63b50b54e1536e35d5f3c6e29f1e49a78ca43fa22b31232c71f0300bd56517e4cd29ba11ee9f206f1ad31ee8f118c87004d6c6dfe837b70a9a2fa987c8b5b6680720c5dbf8791c1fcd6d59fa16cc20df9bc0fb39f41598a376476e45b9f06add8e34af01b373a9ce6a3d189484cacb6cbe0d3d5ef34d709d72c1dee43dc79da", "086f674d778db491e73b6fbc5126233c6b6e1f066963356d49ea386d9c0868ad25bf6edad0371cde87cea94a18c6dba47535dfce2e40d2246ab17980495d656c", "64"],
 
 ];
+    for test_case in test_vectors.iter() {
+        hmac_test_runner(
+            &decode(test_case[0]).unwrap(),
+            &decode(test_case[1]).unwrap(),
+            &decode(test_case[2]).unwrap(),
+            Some(test_case[3].parse::<usize>().unwrap()),
+        )
+        .unwrap();
+    }
+}

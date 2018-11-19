@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-pub mod nist_hmac;
+pub mod nist_cavp_hmac;
 pub mod other_poly1305;
 pub mod rfc_hmac;
 pub mod rfc_poly1305;
@@ -68,13 +68,12 @@ fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), e
 
     assert!(tag_stream == Tag::from_slice(&output).unwrap());
     assert!(tag_one_shot == Tag::from_slice(&output).unwrap());
-    assert!(
-        poly1305::verify(
-            &Tag::from_slice(&output).unwrap(),
-            &OneTimeKey::from_slice(key).unwrap(),
-            input
-        ).unwrap()
-    );
+    assert!(poly1305::verify(
+        &Tag::from_slice(&output).unwrap(),
+        &OneTimeKey::from_slice(key).unwrap(),
+        input
+    )
+    .unwrap());
 
     // If the MACs are modified, then they should not be equal to the expected
     let mut bad_tag = tag_stream.unprotected_as_bytes().to_vec();

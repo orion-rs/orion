@@ -87,7 +87,7 @@ pub fn derive_key_verify(
     expected: &[u8],
     salt: &[u8],
     ikm: &[u8],
-    info: Option<&[u8]>
+    info: Option<&[u8]>,
 ) -> Result<bool, ValidationCryptoError> {
     let mut okm = vec![0u8; expected.len()];
 

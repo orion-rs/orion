@@ -223,7 +223,8 @@ fn finalize_and_verify_true() {
             &tag.finalize().unwrap(),
             &SecretKey::from_slice("Jefe".as_bytes()),
             data
-        ).unwrap(),
+        )
+        .unwrap(),
         true
     );
 }
@@ -236,13 +237,12 @@ fn veriy_false_wrong_data() {
     let mut tag = init(&secret_key);
     tag.update(data).unwrap();
 
-    assert!(
-        verify(
-            &tag.finalize().unwrap(),
-            &SecretKey::from_slice("Jefe".as_bytes()),
-            "what do ya want for something?".as_bytes()
-        ).is_err()
-    );
+    assert!(verify(
+        &tag.finalize().unwrap(),
+        &SecretKey::from_slice("Jefe".as_bytes()),
+        "what do ya want for something?".as_bytes()
+    )
+    .is_err());
 }
 
 #[test]
@@ -253,13 +253,12 @@ fn veriy_false_wrong_secret_key() {
     let mut tag = init(&secret_key);
     tag.update(data).unwrap();
 
-    assert!(
-        verify(
-            &tag.finalize().unwrap(),
-            &SecretKey::from_slice("Jose".as_bytes()),
-            data
-        ).is_err()
-    );
+    assert!(verify(
+        &tag.finalize().unwrap(),
+        &SecretKey::from_slice("Jose".as_bytes()),
+        data
+    )
+    .is_err());
 }
 
 #[test]

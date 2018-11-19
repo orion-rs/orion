@@ -37,7 +37,8 @@ fn bench_pbkdf2(b: &mut Bencher) {
             &[0x01; 64],
             10000,
             &mut dk_out,
-        ).unwrap();
+        )
+        .unwrap();
     });
 }
 
@@ -63,7 +64,8 @@ fn bench_chacha20_encrypt(b: &mut Bencher) {
             0,
             &plaintext,
             &mut ciphertext,
-        ).unwrap();
+        )
+        .unwrap();
     });
 }
 
@@ -79,7 +81,8 @@ fn bench_chacha20_decrypt(b: &mut Bencher) {
             0,
             &ciphertext,
             &mut plaintext,
-        ).unwrap();
+        )
+        .unwrap();
     });
 }
 
@@ -105,7 +108,8 @@ fn bench_xchacha20_encrypt(b: &mut Bencher) {
             0,
             &plaintext,
             &mut ciphertext,
-        ).unwrap();
+        )
+        .unwrap();
     });
 }
 
@@ -121,7 +125,8 @@ fn bench_xchacha20_decrypt(b: &mut Bencher) {
             0,
             &ciphertext,
             &mut plaintext,
-        ).unwrap();
+        )
+        .unwrap();
     });
 }
 

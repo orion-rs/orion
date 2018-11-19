@@ -44,7 +44,8 @@ mod draft_rfc_xchacha20 {
              736966696564207769746820776f6c7665732c20636f796f7465732c206a6163\
              6b616c732c20616e6420666f78657320696e20746865207461786f6e6f6d6963\
              2066616d696c792043616e696461652e",
-        ).unwrap();
+        )
+        .unwrap();
         let mut expected = decode(
             "4559abba4e48c16102e8bb2c05e6947f50a786de162f9b0b7e592a9b53d0d4e9\
              8d8d6410d540a1a6375b26d80dace4fab52384c731acbf16a5923c0c48d3575d\
@@ -56,7 +57,8 @@ mod draft_rfc_xchacha20 {
              577820d5520a1f3fb62a17ce6a7e68fa7c79111d8860920bc048ef43fe84486c\
              cb87c25f0ae045f0cce1e7989a9aa220a28bdd4827e751a24a6d5c62d790a663\
              93b93111c1a55dd7421a10184974c7c5",
-        ).unwrap();
+        )
+        .unwrap();
 
         chacha_test_runner(&key, &nonce, 0, &mut plaintext, &mut expected);
     }
