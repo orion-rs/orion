@@ -194,6 +194,15 @@ pub fn init(secret_key: &SecretKey) -> Hmac {
 }
 
 #[must_use]
+/// One-shot function for generating an HMAC-SHA512 tag of `data`.
+pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
+    let mut hmac_state = init(secret_key);
+    hmac_state.update(data).unwrap();
+
+    Ok(hmac_state.finalize().unwrap())
+}
+
+#[must_use]
 /// Verify a HMAC-SHA512 Tag in constant time.
 pub fn verify(
     expected: &Tag,

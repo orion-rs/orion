@@ -38,7 +38,8 @@ fn hmac_test_runner(
     expected: &[u8],
     trunc: Option<usize>,
 ) -> Result<(), error::Unspecified> {
-    let mut mac = hmac::init(&hmac::SecretKey::from_slice(secret_key));
+    let key = hmac::SecretKey::from_slice(secret_key);
+    let mut mac = hmac::init(&key);
     mac.update(data).unwrap();
 
     let res = mac.finalize().unwrap();
@@ -47,8 +48,14 @@ fn hmac_test_runner(
         None => 64,
     };
 
+    let one_shot = hmac::hmac(&key, data).unwrap();
+
     assert_eq!(
         res.unprotected_as_bytes()[..len].as_ref(),
+        expected[..len].as_ref()
+    );
+    assert_eq!(
+        one_shot.unprotected_as_bytes()[..len].as_ref(),
         expected[..len].as_ref()
     );
     // If the MACs are modified, then they should not be equal to the expected
