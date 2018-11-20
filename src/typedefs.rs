@@ -97,7 +97,7 @@ macro_rules! func_as_bytes (() => (
 /// Macro to implement a `get_length()` function which will return the objects' length of
 /// field `value`.
 macro_rules! func_get_length (($size:expr) => (
-    /// Return the length of the type. This length is constant.
+    /// Return the length of the object. This length is constant.
     pub fn get_length() -> usize {
         $size
     }
