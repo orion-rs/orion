@@ -94,12 +94,12 @@ macro_rules! func_as_bytes (() => (
     }
 ));
 
-/// Macro to implement a `len()` function which will return the objects' length of
+/// Macro to implement a `get_length()` function which will return the objects' length of
 /// field `value`.
-macro_rules! func_len (() => (
-    /// Return the length of the objects' inner field. This length is constant.
-    pub fn len(&self) -> usize {
-        self.value.len()
+macro_rules! func_get_length (($size:expr) => (
+    /// Return the length of the type. This length is constant.
+    pub fn get_length() -> usize {
+        $size
     }
 ));
 
@@ -139,7 +139,7 @@ macro_rules! construct_secret_key {
             func_from_slice!($name, $size);
             func_unprotected_as_bytes!();
             func_generate!($name, $size);
-            func_len!();
+            func_get_length!($size);
         }
 
         #[test]
@@ -168,7 +168,7 @@ macro_rules! construct_nonce_no_generator {
         impl $name {
             func_from_slice!($name, $size);
             func_as_bytes!();
-            func_len!();
+            func_get_length!($size);
         }
 
         impl core::fmt::Debug for $name {
@@ -204,7 +204,7 @@ macro_rules! construct_nonce_with_generator {
             func_from_slice!($name, $size);
             func_as_bytes!();
             func_generate!($name, $size);
-            func_len!();
+            func_get_length!($size);
         }
 
         impl core::fmt::Debug for $name {
@@ -247,7 +247,7 @@ macro_rules! construct_tag {
         impl $name {
             func_from_slice!($name, $size);
             func_unprotected_as_bytes!();
-            func_len!();
+            func_get_length!($size);
         }
 
         impl core::fmt::Debug for $name {
@@ -311,7 +311,7 @@ macro_rules! construct_hmac_key {
 
             func_unprotected_as_bytes!();
             func_generate!($name, $size);
-            func_len!();
+            func_get_length!($size);
         }
 
         #[test]
