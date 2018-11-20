@@ -22,6 +22,13 @@
 
 //! Password hashing and verification.
 //!
+//! # Use case:
+//! `orion::pwhash` is suitable for securely storing passwords.
+//!
+//! An example of this would be needing to store user passwords (from a sign-up at a webstore) in a server database,
+//! where a potential disclosure of the data in this database should not result in the user's actual passwords being
+//! disclosed as well.
+//!
 //! # About:
 //! - Uses PBKDF2-HMAC-SHA512
 //! - A salt of 64 bytes is automatically generated.

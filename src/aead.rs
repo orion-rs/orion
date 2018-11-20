@@ -22,6 +22,13 @@
 
 //! Authenticated secret-key encryption.
 //!
+//! # Use case:
+//! `orion::auth` can be used to encrypt messages in a way that detects if an encrypted message has been
+//! tampered with before decrypting it.
+//!
+//! An example of this could be sending messages across networks, where confidentiality
+//! of these messages are required.
+//!
 //! # About:
 //! - The nonce is automatically generated.
 //! - Returns a vector where the first 24 bytes are the nonce and the rest is the authenticated

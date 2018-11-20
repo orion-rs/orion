@@ -22,6 +22,15 @@
 
 //! Key derivation.
 //!
+//! # Use case:
+//! A Key Derivation Function (KDF) can be used if some given input key material (`ikm`)
+//! needs to be converted into a specific length, i.e. "stretched", before it's suitable for use as
+//! input to other cryptographic operations.
+//!
+//! An example of this could be deriving multiple keys using `orion::kdf`, with different `info` parameters for each key,
+//! using a single starting key. These derived keys could then later be used
+//! as a secret keys for data encryption with `orion::aead`, password hashing with `orion::pwhash`, etc.
+//!
 //! # About:
 //! - Uses HKDF-HMAC-SHA512.
 //! - A salt of `64` bytes is automatically generated.
