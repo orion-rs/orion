@@ -64,7 +64,7 @@ use errors::UnknownCryptoError;
 use hazardous::aead;
 use hazardous::constants::{POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE};
 pub use hazardous::stream::chacha20::SecretKey;
-pub use hazardous::stream::xchacha20::Nonce;
+use hazardous::stream::xchacha20::Nonce;
 
 #[must_use]
 /// Authenticated encryption using XChaCha20Poly1305.
