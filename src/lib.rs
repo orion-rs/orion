@@ -22,8 +22,8 @@
 
 //! A usable pure-Rust cryptography library.
 //!
-//! ## Authenticated encryption
-//! `orion::aead` offers authenticated encryption using XChaCha20Poly1305.
+//! ## Authenticated secret-key encryption
+//! `orion::aead` offers authenticated secret-key encryption using XChaCha20Poly1305.
 //!
 //! ## Password hashing and verification
 //! `orion::pwhash` offers password hashing and verification using PBKDF2.

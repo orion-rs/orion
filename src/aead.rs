@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! Authenticated encryption.
+//! Authenticated secret-key encryption.
 //!
 //! # About:
 //! - The nonce is automatically generated.
