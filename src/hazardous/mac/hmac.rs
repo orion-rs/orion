@@ -81,7 +81,7 @@ construct_hmac_key!{
     ///
     /// # Exceptions:
     /// An exception will be thrown if:
-    /// - The `OsRng` fails to initialize or read from its source
+    /// - The `OsRng` fails to initialize or read from its source.
     (SecretKey, SHA2_BLOCKSIZE)
 }
 
@@ -90,7 +90,7 @@ construct_tag!{
     ///
     /// # Exceptions:
     /// An exception will be thrown if:
-    /// - `slice` is not 64 bytes
+    /// - `slice` is not 64 bytes.
     (Tag, HLEN)
 }
 

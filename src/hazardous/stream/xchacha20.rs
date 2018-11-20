@@ -81,8 +81,8 @@ construct_nonce_with_generator! {
     ///
     /// # Exceptions:
     /// An exception will be thrown if:
-    /// - `slice` is not 24 bytes
-    /// - The `OsRng` fails to initialize or read from its source
+    /// - `slice` is not 24 bytes.
+    /// - The `OsRng` fails to initialize or read from its source.
     (Nonce, XCHACHA_NONCESIZE)
 }
 

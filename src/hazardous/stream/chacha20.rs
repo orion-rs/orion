@@ -96,13 +96,13 @@ use hazardous::constants::{
 use seckey::zero;
 
 construct_secret_key! {
-    /// A type to represent the `SecretKey` that ChaCha20, XChaCha20, ChaCha20Poly1305 and
-    /// XChaCha20Poly1305 use.
+    /// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and
+    /// `xchacha20poly1305` use.
     ///
     /// # Exceptions:
     /// An exception will be thrown if:
-    /// - `slice` is not 32 bytes
-    /// - The `OsRng` fails to initialize or read from its source
+    /// - `slice` is not 32 bytes.
+    /// - The `OsRng` fails to initialize or read from its source.
     (SecretKey, CHACHA_KEYSIZE)
 }
 construct_nonce_no_generator! {
@@ -110,7 +110,7 @@ construct_nonce_no_generator! {
     ///
     /// # Exceptions:
     /// An exception will be thrown if:
-    /// - `slice` is not 12 bytes
+    /// - `slice` is not 12 bytes.
     (Nonce, IETF_CHACHA_NONCESIZE)
 }
 

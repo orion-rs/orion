@@ -72,7 +72,7 @@ construct_hmac_key!{
     ///
     /// # Exceptions:
     /// An exception will be thrown if:
-    /// - The `OsRng` fails to initialize or read from its source
+    /// - The `OsRng` fails to initialize or read from its source.
     (Password, SHA2_BLOCKSIZE)
 }
 
