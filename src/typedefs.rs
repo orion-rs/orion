@@ -76,7 +76,7 @@ macro_rules! func_from_slice (($name:ident, $size:expr) => (
 
 /// Macro to implement a `unprotected_as_bytes()` function for objects that implement extra protections.
 /// Typically used on objects that implement `Drop`, `Debug` and/or `PartialEq`.
-macro_rules! func_unprotected_as_bytes (($name:ident) => (
+macro_rules! func_unprotected_as_bytes (() => (
     #[must_use]
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
     /// needed. This __**breaks protections**__ that the type implements.
@@ -86,11 +86,20 @@ macro_rules! func_unprotected_as_bytes (($name:ident) => (
 ));
 
 /// Macro to implement a `as_bytes()` function for objects that don't implement extra protections.
-macro_rules! func_as_bytes (($name:ident) => (
+macro_rules! func_as_bytes (() => (
     #[must_use]
     /// Return the object as byte slice.
     pub fn as_bytes(&self) -> &[u8] {
         self.value.as_ref()
+    }
+));
+
+/// Macro to implement a `len()` function which will return the objects' length of
+/// field `value`.
+macro_rules! func_len (() => (
+    /// Return the length of the objects' inner field. This length is constant.
+    pub fn len(&self) -> usize {
+        self.value.len()
     }
 ));
 
@@ -128,8 +137,9 @@ macro_rules! construct_secret_key {
 
         impl $name {
             func_from_slice!($name, $size);
-            func_unprotected_as_bytes!($name);
+            func_unprotected_as_bytes!();
             func_generate!($name, $size);
+            func_len!();
         }
 
         #[test]
@@ -157,7 +167,8 @@ macro_rules! construct_nonce_no_generator {
 
         impl $name {
             func_from_slice!($name, $size);
-            func_as_bytes!($name);
+            func_as_bytes!();
+            func_len!();
         }
 
         impl core::fmt::Debug for $name {
@@ -191,8 +202,9 @@ macro_rules! construct_nonce_with_generator {
 
         impl $name {
             func_from_slice!($name, $size);
-            func_as_bytes!($name);
+            func_as_bytes!();
             func_generate!($name, $size);
+            func_len!();
         }
 
         impl core::fmt::Debug for $name {
@@ -234,7 +246,8 @@ macro_rules! construct_tag {
 
         impl $name {
             func_from_slice!($name, $size);
-            func_unprotected_as_bytes!($name);
+            func_unprotected_as_bytes!();
+            func_len!();
         }
 
         impl core::fmt::Debug for $name {
@@ -296,8 +309,9 @@ macro_rules! construct_hmac_key {
                 $name { value: secret_key }
             }
 
-            func_unprotected_as_bytes!($name);
+            func_unprotected_as_bytes!();
             func_generate!($name, $size);
+            func_len!();
         }
 
         #[test]
