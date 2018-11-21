@@ -6,16 +6,8 @@
   <img src="https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg">
 </p>
 
-### Warning
-This library is not suitable for production code. There are no guarantees for the security of these implementations. Use at your own risk.
-
-
 ### About
 orion is a cryptography library written in pure-Rust which aims to provide easy and usable crypto. 'Usable' meaning exposing high-level API's that are easy to use and hard to misuse. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
-
-
-In case you missed the warning above: **don't use orion for production code or instances where you need absolute confidence in security**. While security is a top priority goal for this library, the author is no
-professional. Look in the Alternatives section if this means orion is not for you.
 
 Currently supports:
 * **AEAD**: ChaCha20Poly1305, XChaCha20Poly1305
@@ -24,6 +16,9 @@ Currently supports:
 * **Password hashing**: PBKDF2-HMAC-SHA512
 * **MAC**: HMAC-SHA512, Poly1305
 * **XOF**: cSHAKE256
+
+### Security
+This library is not suitable for production code and usage is at own risk.
 
 ### Enabling `no_std`
 To use orion in a `no_std` context, you need to specify the dependency as such:
