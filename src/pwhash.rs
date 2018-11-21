@@ -34,9 +34,8 @@
 //! - A salt of 64 bytes is automatically generated.
 //! - The password hash length is set to 64.
 //! - 512.000 iterations are used.
-//! - An array of 128 bytes is returned.
 //!
-//! The first 64 bytes of the array returned by `pwhash::hash_password` is the salt used to hash the password
+//! The first 64 bytes of the `PasswordHash` returned by `pwhash::hash_password` is the salt used to hash the password
 //! and the last 64 bytes is the actual hashed password. When using this function with
 //! `pwhash::hash_password_verify()`, then the seperation of the salt and the password hash are automatically handeled.
 //!
@@ -65,9 +64,21 @@ use hazardous::kdf::pbkdf2;
 pub use hazardous::kdf::pbkdf2::Password;
 use util;
 
+construct_tag! {
+    /// A type to represent the `PasswordHash` that PBKDF2 returns.
+    ///
+    /// A `PasswordHash`'s first 64 bytes are the salt used to hash the password, and the last 64
+    /// bytes are the actual password hash.
+    ///
+    /// # Exceptions:
+    /// An exception will be thrown if:
+    /// - `slice` is not 128 bytes.
+    (PasswordHash, 128)
+}
+
 #[must_use]
 /// Hash a password using PBKDF2-HMAC-SHA512.
-pub fn hash_password(password: &Password) -> Result<[u8; 128], UnknownCryptoError> {
+pub fn hash_password(password: &Password) -> Result<PasswordHash, UnknownCryptoError> {
     let mut dk = [0u8; 128];
     let mut salt = [0u8; 64];
     util::secure_rand_bytes(&mut salt).unwrap();
@@ -75,21 +86,21 @@ pub fn hash_password(password: &Password) -> Result<[u8; 128], UnknownCryptoErro
     dk[..64].copy_from_slice(&salt);
     pbkdf2::derive_key(password, &salt, 512_000, &mut dk[64..]).unwrap();
 
-    Ok(dk)
+    PasswordHash::from_slice(&dk)
 }
 
 #[must_use]
 /// Hash and verify a password using PBKDF2-HMAC-SHA512.
 pub fn hash_password_verify(
-    expected_with_salt: &[u8],
+    expected_with_salt: &PasswordHash,
     password: &Password,
 ) -> Result<bool, ValidationCryptoError> {
     let mut dk = [0u8; 64];
 
     pbkdf2::verify(
-        &expected_with_salt[64..],
+        &expected_with_salt.unprotected_as_bytes()[64..],
         password,
-        &expected_with_salt[..64],
+        &expected_with_salt.unprotected_as_bytes()[..64],
         512_000,
         &mut dk,
     )
@@ -99,7 +110,7 @@ pub fn hash_password_verify(
 fn pbkdf2_verify() {
     let password = Password::from_slice(&[0u8; 64]);
 
-    let pbkdf2_dk: [u8; 128] = hash_password(&password).unwrap();
+    let pbkdf2_dk = hash_password(&password).unwrap();
 
     assert_eq!(hash_password_verify(&pbkdf2_dk, &password).unwrap(), true);
 }
@@ -109,10 +120,12 @@ fn pbkdf2_verify() {
 fn pbkdf2_verify_err_modified_salt() {
     let password = Password::from_slice(&[0u8; 64]);
 
-    let mut pbkdf2_dk = hash_password(&password).unwrap();
-    pbkdf2_dk[..10].copy_from_slice(&[0x61; 10]);
+    let pbkdf2_dk = hash_password(&password).unwrap();
+    let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
+    pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
+    let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-    hash_password_verify(&pbkdf2_dk, &password).unwrap();
+    hash_password_verify(&modified, &password).unwrap();
 }
 
 #[test]
@@ -120,10 +133,12 @@ fn pbkdf2_verify_err_modified_salt() {
 fn pbkdf2_verify_err_modified_password() {
     let password = Password::from_slice(&[0u8; 64]);
 
-    let mut pbkdf2_dk = hash_password(&password).unwrap();
-    pbkdf2_dk[70..80].copy_from_slice(&[0x61; 10]);
+    let pbkdf2_dk = hash_password(&password).unwrap();
+    let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
+    pwd_mod[120..128].copy_from_slice(&[0u8; 8]);
+    let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-    hash_password_verify(&pbkdf2_dk, &password).unwrap();
+    hash_password_verify(&modified, &password).unwrap();
 }
 
 #[test]
@@ -131,27 +146,10 @@ fn pbkdf2_verify_err_modified_password() {
 fn pbkdf2_verify_err_modified_salt_and_password() {
     let password = Password::from_slice(&[0u8; 64]);
 
-    let mut pbkdf2_dk = hash_password(&password).unwrap();
-    pbkdf2_dk[63..73].copy_from_slice(&[0x61; 10]);
-
-    hash_password_verify(&pbkdf2_dk, &password).unwrap();
-}
-
-#[test]
-fn pbkdf2_verify_expected_dk_too_long() {
-    let password = Password::from_slice(&[0u8; 64]);
-
-    let mut pbkdf2_dk = [0u8; 129];
-    pbkdf2_dk[..128].copy_from_slice(&hash_password(&password).unwrap());
-
-    assert!(hash_password_verify(&pbkdf2_dk, &password).is_err());
-}
-
-#[test]
-fn pbkdf2_verify_expected_dk_too_short() {
-    let password = Password::from_slice(&[0u8; 127]);
-
     let pbkdf2_dk = hash_password(&password).unwrap();
+    let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
+    pwd_mod[64..96].copy_from_slice(&[0u8; 32]);
+    let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-    assert!(hash_password_verify(&pbkdf2_dk[..127], &password).is_err());
+    hash_password_verify(&modified, &password).unwrap();
 }
