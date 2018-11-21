@@ -47,9 +47,9 @@
 #![deny(warnings)]
 
 extern crate byteorder;
+extern crate clear_on_drop;
 #[cfg(feature = "safe_api")]
 extern crate rand;
-extern crate seckey;
 extern crate sha2;
 extern crate subtle;
 extern crate tiny_keccak;
@@ -74,3 +74,6 @@ pub mod auth;
 
 #[cfg(feature = "safe_api")]
 pub mod pwhash;
+
+#[cfg(feature = "safe_api")]
+pub mod kdf;

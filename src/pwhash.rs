@@ -70,7 +70,7 @@ pub use hazardous::kdf::pbkdf2::Password;
 use util;
 
 construct_tag! {
-    /// A type to represent the `PasswordHash` that PBKDF2 returns.
+    /// A type to represent the `PasswordHash` that PBKDF2 returns when used for password hashing.
     ///
     /// A `PasswordHash`'s first 64 bytes are the salt used to hash the password, and the last 64
     /// bytes are the actual password hash.

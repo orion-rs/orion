@@ -113,10 +113,10 @@ macro_rules! func_as_bytes (() => (
 
 /// Macro to implement a `get_length()` function which will return the objects' length of
 /// field `value`.
-macro_rules! func_get_length (($size:expr) => (
-    /// Return the length of the object. This length is constant.
-    pub fn get_length() -> usize {
-        $size
+macro_rules! func_get_length (() => (
+    /// Return the length of the object.
+    pub fn get_length(&self) -> usize {
+        self.value.len()
     }
 ));
 
@@ -156,7 +156,7 @@ macro_rules! construct_secret_key {
             func_from_slice!($name, $size);
             func_unprotected_as_bytes!();
             func_generate!($name, $size);
-            func_get_length!($size);
+            func_get_length!();
         }
 
         #[test]
@@ -185,7 +185,7 @@ macro_rules! construct_nonce_no_generator {
         impl $name {
             func_from_slice!($name, $size);
             func_as_bytes!();
-            func_get_length!($size);
+            func_get_length!();
         }
 
         impl core::fmt::Debug for $name {
@@ -221,7 +221,7 @@ macro_rules! construct_nonce_with_generator {
             func_from_slice!($name, $size);
             func_as_bytes!();
             func_generate!($name, $size);
-            func_get_length!($size);
+            func_get_length!();
         }
 
         impl core::fmt::Debug for $name {
@@ -264,7 +264,7 @@ macro_rules! construct_tag {
         impl $name {
             func_from_slice!($name, $size);
             func_unprotected_as_bytes!();
-            func_get_length!($size);
+            func_get_length!();
         }
 
         impl core::fmt::Debug for $name {
@@ -328,7 +328,7 @@ macro_rules! construct_hmac_key {
 
             func_unprotected_as_bytes!();
             func_generate!($name, $size);
-            func_get_length!($size);
+            func_get_length!();
         }
 
         #[test]
@@ -352,6 +352,7 @@ macro_rules! construct_secret_key_variable_size {
     ($(#[$meta:meta])*
     ($name:ident)) => (
         #[must_use]
+        #[cfg(feature = "safe_api")]
         $(#[$meta])*
         ///
         /// # Security:
@@ -365,8 +366,88 @@ macro_rules! construct_secret_key_variable_size {
         impl_partialeq_trait!($name);
 
         impl $name {
+            #[must_use]
+            #[cfg(feature = "safe_api")]
+            /// Make an object from a given byte slice.
+            pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+                if slice.is_empty() {
+                    return Err(UnknownCryptoError);
+                }
+
+                Ok($name { value: Vec::from(slice) })
+            }
+
             func_unprotected_as_bytes!();
+            func_get_length!();
         }
 
+        #[test]
+        fn test_key_size() {
+            let _ = $name::from_slice(&[0u8; 256]).unwrap();
+            let _ = $name::from_slice(&[0u8; 512]).unwrap();
+            assert!($name::from_slice(&[0u8; 0]).is_err());
+        }
+        #[test]
+        fn test_unprotected_as_bytes_derived_key() {
+            let test = $name::from_slice(&[0u8; 256]).unwrap();
+            assert!(test.unprotected_as_bytes().len() == 256);
+        }
+    );
+}
+
+#[cfg(feature = "safe_api")]
+/// Macro to construct a type containing non-sensitive which is stored on the heap.
+macro_rules! construct_salt_variable_size {
+    ($(#[$meta:meta])*
+    ($name:ident)) => (
+        #[must_use]
+        #[cfg(feature = "safe_api")]
+        $(#[$meta])*
+        ///
+        pub struct $name { value: Vec<u8> }
+
+        impl $name {
+            #[must_use]
+            #[cfg(feature = "safe_api")]
+            /// Make an object from a given byte slice.
+            pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+                if slice.is_empty() {
+                    return Err(UnknownCryptoError);
+                }
+
+                Ok($name { value: Vec::from(slice) })
+            }
+
+            func_as_bytes!();
+            func_get_length!();
+            #[must_use]
+            #[cfg(feature = "safe_api")]
+            /// Randomly generate using a CSPRNG. Not available in `no_std` context.
+            pub fn generate() -> $name {
+                use util;
+                let mut value = vec![0u8; 64];
+                util::secure_rand_bytes(&mut value).unwrap();
+
+                $name { value: value }
+            }
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, "{} {:?}", stringify!($name), &self.value[..])
+            }
+        }
+
+        #[test]
+        fn test_salt_size() {
+            let _ = $name::from_slice(&[0u8; 256]).unwrap();
+            let _ = $name::from_slice(&[0u8; 512]).unwrap();
+            assert!($name::from_slice(&[0u8; 0]).is_err());
+        }
+        #[test]
+        fn test_salt_as_bytes() {
+            let test = $name::from_slice(&[0u8; 256]).unwrap();
+            assert!(test.as_bytes().len() == 256);
+        }
     );
 }
