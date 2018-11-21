@@ -46,14 +46,31 @@ macro_rules! impl_debug_trait (($name:ident) => (
 
 /// Macro that implements the `Drop` trait on a object called `$name` which as a field `value`.
 /// This `Drop` will zero out the field `value` when the objects destructor is called.
-macro_rules! impl_drop_trait (($name:ident) => (
+/// NOTE: This requires value to be an array as clear_on_drop will not be called correctly if
+/// this particluar trait is implemented on Vec's.
+macro_rules! impl_drop_stack_trait (($name:ident) => (
     impl Drop for $name {
         fn drop(&mut self) {
-            use seckey::zero;
-            zero(&mut self.value)
+            use clear_on_drop::clear::Clear;
+            self.value.clear();
         }
     }
 ));
+
+/// Macro that implements the `Drop` trait on a object called `$name` which as a field `value`.
+/// This `Drop` will zero out the field `value` when the objects destructor is called.
+/// NOTE: This requires value to be a Vec as clear_on_drop, since calling clear_on_drop this way
+/// on arrays above the length of 32 will fail since they don't implement Default.
+macro_rules! impl_drop_heap_trait (($name:ident) => (
+    #[cfg(feature = "safe_api")]
+    impl Drop for $name {
+        fn drop(&mut self) {
+            use clear_on_drop::clear::Clear;
+            Clear::clear(&mut self.value);
+        }
+    }
+));
+
 
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError` if the slice
 /// is not of length `$size`.
@@ -132,7 +149,7 @@ macro_rules! construct_secret_key {
         pub struct $name { value: [u8; $size] }
 
         impl_debug_trait!($name);
-        impl_drop_trait!($name);
+        impl_drop_stack_trait!($name);
         impl_partialeq_trait!($name);
 
         impl $name {
@@ -286,7 +303,7 @@ macro_rules! construct_hmac_key {
         pub struct $name { value: [u8; $size] }
 
         impl_debug_trait!($name);
-        impl_drop_trait!($name);
+        impl_drop_stack_trait!($name);
         impl_partialeq_trait!($name);
 
         impl $name {
@@ -326,5 +343,29 @@ macro_rules! construct_hmac_key {
             let test = $name::from_slice(&[0u8; $size]);
             assert!(test.unprotected_as_bytes().len() == $size);
         }
+    );
+}
+
+/// Macro to construct a type containing sensitive data which is stored on the heap.
+macro_rules! construct_secret_key_variable_size {
+    ($(#[$meta:meta])*
+    ($name:ident)) => (
+        #[must_use]
+        $(#[$meta])*
+        ///
+        /// # Security:
+        /// - This implements `PartialEq` and thus prevents users from accidentally using non constant-time
+        /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag
+        /// __**without such a protection**__. __**Avoid using**__ `unprotected_as_bytes()` whenever possible.
+        pub struct $name { value: Vec<u8> }
+
+        impl_debug_trait!($name);
+        impl_drop_heap_trait!($name);
+        impl_partialeq_trait!($name);
+
+        impl $name {
+            func_unprotected_as_bytes!();
+        }
+
     );
 }

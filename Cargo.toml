@@ -24,7 +24,7 @@ sha2 = { version = "0.8.0", default-features = false }
 tiny-keccak = "1.4.2"
 byteorder = { version = "1.2.7", default-features = false }
 subtle = { version = "1.0.0", default-features = false }
-seckey = { version = "0.9.1", default-features = false }
+clear_on_drop = "0.2.3"
 
 [features]
 default = [ "safe_api" ]
@@ -32,7 +32,7 @@ safe_api = [ "rand" ]
 
 [dev-dependencies]
 hex = "0.3.2"
-ring = "0.13.2"
+ring = "0.13.5"
 
 [profile.dev]
 opt-level = 1
