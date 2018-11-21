@@ -54,12 +54,12 @@
 //! ```
 //! use orion::kdf;
 //!
-//! let user_password = "User password that needs strethcing".as_bytes();
+//! let user_password = kdf::Password::from_slice(b"User password");
 //! let salt = kdf::Salt::generate();
 //!
-//! let derived_key = kdf::derive_key(user_password, &salt, 100000, 64).unwrap();
+//! let derived_key = kdf::derive_key(&user_password, &salt, 100000, 64).unwrap();
 //!
-//! assert!(kdf::derive_key_verify(&derived_key, &salt, user_password, 100000).unwrap());
+//! assert!(kdf::derive_key_verify(&derived_key, &user_password, &salt, 100000).unwrap());
 //! ```
 
 use clear_on_drop::clear::Clear;
@@ -124,4 +124,17 @@ pub fn derive_key_verify(
     Clear::clear(&mut buffer);
 
     Ok(is_good)
+}
+
+#[test]
+fn derive_key_and_verify() {
+    let password = Password::from_slice(&[0u8; 64]);
+    let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+
+    let dk = derive_key(&password, &salt, 100, 64).unwrap();
+
+    assert_eq!(
+        derive_key_verify(&dk, &password, &salt, 100).unwrap(),
+        true
+    );
 }
