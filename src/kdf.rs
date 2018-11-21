@@ -77,7 +77,7 @@ construct_secret_key_variable_size! {
 }
 
 construct_salt_variable_size! {
-    /// A type to represent the `Salt` that PBKDF2 uses to stretch the key.
+    /// A type to represent the `Salt` that PBKDF2 uses during key derivation.
     ///
     /// # Exceptions:
     /// An exception will be thrown if:
