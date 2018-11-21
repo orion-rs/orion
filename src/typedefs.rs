@@ -72,7 +72,6 @@ macro_rules! impl_drop_heap_trait (($name:ident) => (
     }
 ));
 
-
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError` if the slice
 /// is not of length `$size`.
 macro_rules! func_from_slice (($name:ident, $size:expr) => (

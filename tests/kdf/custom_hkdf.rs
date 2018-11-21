@@ -58,8 +58,7 @@ mod custom_hkdf {
             "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2\
              02122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f40414243444546474849\
              4a4b4c4d4e4f",
-        )
-        .unwrap();
+        ).unwrap();
         let salt = "salt".as_bytes();
         let info = "random InF\0".as_bytes();
         let mut okm = [0u8; 128];
@@ -69,8 +68,7 @@ mod custom_hkdf {
              678c155d510fa536f7d49b1054e85e7751d9745ea02079a78608eec9aacdd82fa9421d6223c158c71\
              b76bcf9008b50e8aac027a73f98643eb3947106b65c0bc9a2983404fd4d0fce0735d639379b193470\
              9c8b2999b5989e",
-        )
-        .unwrap();
+        ).unwrap();
 
         assert!(hkdf_test_runner(
             None,
@@ -89,8 +87,7 @@ mod custom_hkdf {
             "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7\
              f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a\
              8a9aaabacadaeaf",
-        )
-        .unwrap();
+        ).unwrap();
         let info = decode("").unwrap();
         let mut okm = [0u8; 256];
 
@@ -102,8 +99,7 @@ mod custom_hkdf {
              8bc8425b9f265462b59785e7cf7855e6c571353c38907a8d9b0a01c228bb3a1792039e8728ea01c939160\
              1f1626da771f65f2322116ddc4e192d98da81b0402fd664ef89801a4905d9557be5c7f01bf8381fae7d32\
              5c3dc7a5795dc760b9668eb63f8ee",
-        )
-        .unwrap();
+        ).unwrap();
 
         assert!(hkdf_test_runner(
             None,
@@ -130,8 +126,7 @@ mod custom_hkdf {
              d38ddccf59d60a8330000cb04e5aa2d3e16e56dbccd8ca68020abcb3bc097788d38dfd2e241ba7772ba\
              188c29d7f4d010b421875c9e7165ed2ebcf338b81071eca62300c9ca9840b6f1fc9403752536b3eca14\
              7e9fbf127ff88d33b984582ced74fa029b50f441e",
-        )
-        .unwrap();
+        ).unwrap();
         assert!(hkdf_test_runner(
             None,
             &expected_okm,
@@ -170,8 +165,7 @@ mod custom_hkdf {
             "b0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbccc\
              dcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f\
              3f4f5f6f7f8f9fafbfcfdfeff",
-        )
-        .unwrap();
+        ).unwrap();
         let mut okm = [0u8; 16];
 
         let expected_okm = decode("8ae15623215eaaa156bad552f411c4ad").unwrap();

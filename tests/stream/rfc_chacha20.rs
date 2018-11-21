@@ -67,13 +67,11 @@ mod rfc8439_chacha20 {
         let mut plaintext = decode(
             "00000000000000000000000000000000000000000000000000000000000000000000000000000000\
              000000000000000000000000000000000000000000000000",
-        )
-        .unwrap();
+        ).unwrap();
         let mut expected = decode(
             "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7da41597c5157488d\
              7724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586",
-        )
-        .unwrap();
+        ).unwrap();
 
         chacha_test_runner(&key, &nonce, 0, &mut plaintext, &mut expected);
     }
@@ -94,8 +92,7 @@ mod rfc8439_chacha20 {
              656e747320696e20494554462073657373696f6e732c2061732077656c6c206173207772697474656e2061\
              6e6420656c656374726f6e696320636f6d6d756e69636174696f6e73206d61646520617420616e79207469\
              6d65206f7220706c6163652c207768696368206172652061646472657373656420746f",
-        )
-        .unwrap();
+        ).unwrap();
         let mut expected = decode(
             "a3fbf07df3fa2fde4f376ca23e82737041605d9f4f4f57bd8cff2c1d4b7955ec2a97948bd37229\
              15c8f3d337f7d370050e9e96d647b7c39f56e031ca5eb6250d4042e02785ececfa4b4bb5e8ead0440e20b6\
@@ -106,8 +103,7 @@ mod rfc8439_chacha20 {
              4b0bc39c1e876b193bfe5569753f88128cc08aaa9b63d1a16f80ef2554d7189c411f5869ca52c5b83fa36f\
              f216b9c1d30062bebcfd2dc5bce0911934fda79a86f6e698ced759c3ff9b6477338f3da4f9cd8514ea9982\
              ccafb341b2384dd902f3d1ab7ac61dd29c6f21ba5b862f3730e37cfdc4fd806c22f221",
-        )
-        .unwrap();
+        ).unwrap();
 
         chacha_test_runner(&key, &nonce, 1, &mut plaintext, &mut expected);
     }

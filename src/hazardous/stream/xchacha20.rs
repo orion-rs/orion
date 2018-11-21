@@ -107,8 +107,7 @@ pub fn encrypt(
         initial_counter,
         plaintext,
         dst_out,
-    )
-    .unwrap();
+    ).unwrap();
 
     Ok(())
 }
@@ -137,14 +136,15 @@ fn test_nonce_sizes() {
 fn test_err_on_empty_pt_xchacha() {
     let mut dst = [0u8; 64];
 
-    assert!(encrypt(
-        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-        &Nonce::from_slice(&[0u8; 24]).unwrap(),
-        0,
-        &[0u8; 0],
-        &mut dst
-    )
-    .is_err());
+    assert!(
+        encrypt(
+            &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+            &Nonce::from_slice(&[0u8; 24]).unwrap(),
+            0,
+            &[0u8; 0],
+            &mut dst
+        ).is_err()
+    );
 }
 
 #[test]
@@ -158,8 +158,7 @@ fn test_err_on_initial_counter_overflow_xchacha() {
         4294967295,
         &[0u8; 65],
         &mut dst,
-    )
-    .unwrap();
+    ).unwrap();
 }
 
 #[test]
@@ -172,6 +171,5 @@ fn test_pass_on_one_iter_max_initial_counter() {
         4294967295,
         &[0u8; 64],
         &mut dst,
-    )
-    .unwrap();
+    ).unwrap();
 }

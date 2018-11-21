@@ -91,8 +91,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
         plaintext,
         None,
         &mut dst_out[XCHACHA_NONCESIZE..],
-    )
-    .unwrap();
+    ).unwrap();
 
     Ok(dst_out)
 }
@@ -117,8 +116,7 @@ pub fn open(
         &ciphertext_with_tag_and_nonce[XCHACHA_NONCESIZE..],
         None,
         &mut dst_out,
-    )
-    .unwrap();
+    ).unwrap();
 
     Ok(dst_out)
 }
