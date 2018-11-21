@@ -28,6 +28,9 @@
 //! ## Password hashing and verification
 //! `orion::pwhash` offers password hashing and verification using PBKDF2.
 //!
+//! ## Key derivation
+//! `orion::kdf` offers key derivation using PBKDF2.
+//!
 //! ## Message authentication
 //! `orion::auth` offers message authentication and verification using HMAC.
 //!
