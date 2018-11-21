@@ -57,6 +57,7 @@ macro_rules! impl_drop_stack_trait (($name:ident) => (
     }
 ));
 
+#[cfg(feature = "safe_api")]
 /// Macro that implements the `Drop` trait on a object called `$name` which as a field `value`.
 /// This `Drop` will zero out the field `value` when the objects destructor is called.
 /// NOTE: This requires value to be a Vec as clear_on_drop, since calling clear_on_drop this way
@@ -346,6 +347,7 @@ macro_rules! construct_hmac_key {
     );
 }
 
+#[cfg(feature = "safe_api")]
 /// Macro to construct a type containing sensitive data which is stored on the heap.
 macro_rules! construct_secret_key_variable_size {
     ($(#[$meta:meta])*

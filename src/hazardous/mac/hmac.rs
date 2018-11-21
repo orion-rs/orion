@@ -70,7 +70,7 @@ extern crate core;
 use self::core::mem;
 use errors::*;
 use hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE};
-use seckey::zero;
+use clear_on_drop::clear::Clear;
 use sha2::{Digest, Sha512};
 
 construct_hmac_key!{
@@ -106,7 +106,8 @@ pub struct Hmac {
 
 impl Drop for Hmac {
     fn drop(&mut self) {
-        zero(&mut self.ipad);
+        use clear_on_drop::clear::Clear;
+        self.ipad.clear();
     }
 }
 
@@ -135,7 +136,7 @@ impl Hmac {
 
         self.ipad_hasher.input(self.ipad.as_ref());
         self.opad_hasher.input(opad.as_ref());
-        zero(&mut opad);
+        opad.clear();
     }
 
     /// Reset to `init()` state.

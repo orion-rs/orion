@@ -93,7 +93,7 @@ use hazardous::constants::{
     ChaChaState, CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, HCHACHA_OUTSIZE,
     IETF_CHACHA_NONCESIZE,
 };
-use seckey::zero;
+use clear_on_drop::clear::Clear;
 
 construct_secret_key! {
     /// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and
@@ -122,7 +122,8 @@ struct InternalState {
 
 impl Drop for InternalState {
     fn drop(&mut self) {
-        zero(&mut self.state)
+        use clear_on_drop::clear::Clear;
+        self.state.clear();
     }
 }
 
@@ -307,8 +308,8 @@ pub fn encrypt(
         }
     }
 
-    zero(&mut keystream_block);
-    zero(&mut keystream_state);
+    keystream_block.clear();
+    keystream_state.clear();
 
     Ok(())
 }
@@ -347,7 +348,7 @@ pub fn keystream_block(
         .serialize_block(&keystream_state, &mut keystream_block)
         .unwrap();
 
-    zero(&mut keystream_state);
+    keystream_state.clear();
 
     Ok(keystream_block)
 }
@@ -371,7 +372,7 @@ pub fn hchacha20(
         .serialize_block(&keystream_state, &mut keystream_block)
         .unwrap();
 
-    zero(&mut keystream_state);
+    keystream_state.clear();
 
     Ok(keystream_block)
 }

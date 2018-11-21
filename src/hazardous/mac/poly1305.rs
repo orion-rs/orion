@@ -62,7 +62,6 @@ extern crate core;
 use byteorder::{ByteOrder, LittleEndian};
 use errors::*;
 use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
-use seckey::zero;
 
 construct_secret_key!{
     /// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
@@ -95,10 +94,11 @@ pub struct Poly1305 {
 
 impl Drop for Poly1305 {
     fn drop(&mut self) {
-        zero(&mut self.a);
-        zero(&mut self.r);
-        zero(&mut self.s);
-        zero(&mut self.buffer)
+        use clear_on_drop::clear::Clear;
+        self.a.clear();
+        self.r.clear();
+        self.s.clear();
+        self.buffer.clear();
     }
 }
 
