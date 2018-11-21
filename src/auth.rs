@@ -29,7 +29,7 @@
 //! and having the API server verify these signed API requests.
 //!
 //! # About:
-//! - Uses HMAC-SHA512
+//! - Uses HMAC-SHA512.
 //!
 //! # Parameters:
 //! - `secret_key`: Secret key used to authenticate `data`.

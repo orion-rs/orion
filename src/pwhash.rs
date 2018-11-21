@@ -30,7 +30,7 @@
 //! disclosed as well.
 //!
 //! # About:
-//! - Uses PBKDF2-HMAC-SHA512
+//! - Uses PBKDF2-HMAC-SHA512.
 //! - A salt of 64 bytes is automatically generated.
 //! - The password hash length is set to 64.
 //!
