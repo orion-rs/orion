@@ -38,7 +38,7 @@
 //! - Salts should always be generated using a CSPRNG. The `gen_rand_key` function
 //! in `util` can be used for this.
 //! - The recommended length for a salt is 64 bytes.
-//! - The iteration count should be set as high as feasible. The recommended minimum is 10000.
+//! - The iteration count should be set as high as feasible. The recommended minimum is 100000.
 //!
 //! # Example:
 //! ```
