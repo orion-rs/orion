@@ -26,7 +26,6 @@ use mac::hmac_test_runner;
 
 #[test]
 fn test_nist_cavp() {
-
     // Test vectors are structured as: [key, data, tag, tag_len]
 
     let test_vectors: [[&str; 4]; 375] = [

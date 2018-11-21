@@ -82,7 +82,10 @@ construct_tag! {
 
 #[must_use]
 /// Hash a password using PBKDF2-HMAC-SHA512.
-pub fn hash_password(password: &Password, iterations: usize) -> Result<PasswordHash, UnknownCryptoError> {
+pub fn hash_password(
+    password: &Password,
+    iterations: usize,
+) -> Result<PasswordHash, UnknownCryptoError> {
     let mut dk = [0u8; 128];
     let mut salt = [0u8; 64];
     util::secure_rand_bytes(&mut salt).unwrap();
@@ -117,7 +120,10 @@ fn pbkdf2_verify() {
 
     let pbkdf2_dk = hash_password(&password, 100).unwrap();
 
-    assert_eq!(hash_password_verify(&pbkdf2_dk, &password, 100).unwrap(), true);
+    assert_eq!(
+        hash_password_verify(&pbkdf2_dk, &password, 100).unwrap(),
+        true
+    );
 }
 
 #[test]

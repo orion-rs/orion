@@ -10,7 +10,6 @@ fuzz_target!(|data: &[u8]| {
     let mut rand_key = [0u8; 32];
     apply_from_input_fixed(&mut rand_key, data, 32);
 
-
     // orion::aead
     let aead_key = orion::aead::SecretKey::from_slice(&rand_key).unwrap();
     // Plaintext for `seal` cannot be empty
