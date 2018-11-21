@@ -63,6 +63,7 @@
 //! assert!(pwhash::hash_password_verify(&hash, &password, 100000).unwrap());
 //! ```
 
+use clear_on_drop::clear::Clear;
 use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::pbkdf2;
 pub use hazardous::kdf::pbkdf2::Password;
@@ -86,14 +87,17 @@ pub fn hash_password(
     password: &Password,
     iterations: usize,
 ) -> Result<PasswordHash, UnknownCryptoError> {
-    let mut dk = [0u8; 128];
+    let mut buffer = [0u8; 128];
     let mut salt = [0u8; 64];
     util::secure_rand_bytes(&mut salt).unwrap();
 
-    dk[..64].copy_from_slice(&salt);
-    pbkdf2::derive_key(password, &salt, iterations, &mut dk[64..]).unwrap();
+    buffer[..64].copy_from_slice(&salt);
+    pbkdf2::derive_key(password, &salt, iterations, &mut buffer[64..]).unwrap();
 
-    PasswordHash::from_slice(&dk)
+    let dk = PasswordHash::from_slice(&buffer).unwrap();
+    buffer.clear();
+
+    Ok(dk)
 }
 
 #[must_use]
