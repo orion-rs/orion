@@ -9,7 +9,7 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-ring = "0.13.2"
+ring = "0.13.5"
 sp800-185 = "0.2.0"
 chacha = "0.2.0"
 sodiumoxide = { git = "https://github.com/sodiumoxide/sodiumoxide" }
@@ -26,6 +26,7 @@ members = ["."]
 [[bin]]
 name = "pbkdf2"
 path = "fuzz_targets/pbkdf2.rs"
+
 [[bin]]
 name = "hmac"
 path = "fuzz_targets/hmac.rs"
@@ -89,3 +90,7 @@ path = "fuzz_targets/xchacha20_poly1305.rs"
 [[bin]]
 name = "xchacha20_poly1305_compare"
 path = "fuzz_targets/xchacha20_poly1305_compare.rs"
+
+[[bin]]
+name = "high_level_api"
+path = "fuzz_targets/high_level_api.rs"
