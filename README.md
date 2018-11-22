@@ -1,10 +1,6 @@
-<p align="center">
-  <img src="logo/logo.png" alt="orion" height="200px">
-</p>
-<p align="center">
-  <img src="https://travis-ci.org/brycx/orion.svg?branch=master">
-  <img src="https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg">
-</p>
+# orion
+<img src="https://travis-ci.org/brycx/orion.svg?branch=master">
+<img src="https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg">
 
 ### About
 orion is a cryptography library written in pure-Rust which aims to provide easy and usable crypto. 'Usable' meaning exposing high-level API's that are easy to use and hard to misuse. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
@@ -71,10 +67,6 @@ cargo +nightly bench
 ```
 ### Changelog
 Can be found [here](https://github.com/brycx/orion/releases).
-
-### Acknowledgments
-- Thanks to [@defuse](https://github.com/defuse) for a [quick audit](https://github.com/brycx/orion/issues/3) of the code.
-- Thanks to [@ritalinn](https://github.com/ritalinn) for the logo.
 
 ### Alternatives
 - [*ring*](https://crates.io/crates/ring) (HMAC, HKDF, PBKDF2, AEAD ChaCha20Poly1305)
