@@ -48,6 +48,7 @@ matrix:
       rust: stable
       script:
         - cross test --target $TARGET
+  allow_failures:
     - env: TARGET=mips64-unknown-linux-gnuabi64
       rust: stable
       script:
