@@ -25,12 +25,13 @@ fn ro_hmac(data: &[u8]) {
     let ring_signature = ring_hmac::sign(&s_key, &message);
     let v_key = ring_hmac::VerificationKey::new(&digest::SHA512, &secret_key);
 
-    assert!(hmac::verify(
-        &hmac::Tag::from_slice(&ring_signature.as_ref()).unwrap(),
-        &orion_key,
-        &message
-    )
-    .unwrap());
+    assert!(
+        hmac::verify(
+            &hmac::Tag::from_slice(&ring_signature.as_ref()).unwrap(),
+            &orion_key,
+            &message
+        ).unwrap()
+    );
     assert!(ring_hmac::verify(&v_key, &message, orion_signature.unprotected_as_bytes()).is_ok());
 }
 
@@ -60,22 +61,24 @@ fn ro_pbkdf2(data: &[u8]) {
     );
 
     assert_eq!(&dk_out_ring, &dk_out_orion);
-    assert!(ring_pbkdf2::verify(
-        &digest::SHA512,
-        iter as u32,
-        &salt,
-        &password,
-        &dk_out_orion
-    )
-    .is_ok());
-    assert!(pbkdf2::verify(
-        &dk_out_ring,
-        &orion_password,
-        &salt,
-        iter,
-        &mut dk_out_orion
-    )
-    .unwrap());
+    assert!(
+        ring_pbkdf2::verify(
+            &digest::SHA512,
+            iter as u32,
+            &salt,
+            &password,
+            &dk_out_orion
+        ).is_ok()
+    );
+    assert!(
+        pbkdf2::verify(
+            &dk_out_ring,
+            &orion_password,
+            &salt,
+            iter,
+            &mut dk_out_orion
+        ).unwrap()
+    );
 }
 
 fuzz_target!(|data: &[u8]| {

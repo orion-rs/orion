@@ -21,16 +21,14 @@ fuzz_target!(|data: &[u8]| {
         &plaintext,
         Some(&aad),
         &mut ciphertext_with_tag_orion,
-    )
-    .unwrap();
+    ).unwrap();
     chacha20poly1305::open(
         &orion_key,
         &orion_nonce,
         &ciphertext_with_tag_orion,
         Some(&aad),
         &mut plaintext_out_orion,
-    )
-    .unwrap();
+    ).unwrap();
 
     assert_eq!(&plaintext, &plaintext_out_orion);
 });

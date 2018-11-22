@@ -22,16 +22,14 @@ fuzz_target!(|data: &[u8]| {
         &plaintext,
         Some(&aad),
         &mut ciphertext_with_tag_orion,
-    )
-    .unwrap();
+    ).unwrap();
     chacha20poly1305::open(
         &orion_key,
         &orion_nonce,
         &ciphertext_with_tag_orion,
         Some(&aad),
         &mut plaintext_out_orion,
-    )
-    .unwrap();
+    ).unwrap();
 
     let enc_key = ring::aead::SealingKey::new(&ring::aead::CHACHA20_POLY1305, &key).unwrap();
     let dec_key = ring::aead::OpeningKey::new(&ring::aead::CHACHA20_POLY1305, &key).unwrap();

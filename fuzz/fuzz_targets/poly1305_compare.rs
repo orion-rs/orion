@@ -24,12 +24,13 @@ fuzz_target!(|data: &[u8]| {
 
     assert_eq!(orion_stream_tag.unprotected_as_bytes(), sodium_tag.as_ref());
     // Let orion verify sodiumoxide tag
-    assert!(verify(
-        &Tag::from_slice(sodium_tag.as_ref()).unwrap(),
-        &orion_key,
-        &message
-    )
-    .unwrap());
+    assert!(
+        verify(
+            &Tag::from_slice(sodium_tag.as_ref()).unwrap(),
+            &orion_key,
+            &message
+        ).unwrap()
+    );
     // Let sodiumoxide verify orion tag
     assert!(poly1305::verify(
         &sodium_tag,
