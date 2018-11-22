@@ -67,19 +67,8 @@ use clear_on_drop::clear::Clear;
 use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::pbkdf2;
 pub use hazardous::kdf::pbkdf2::Password;
+pub use keys::PasswordHash;
 use util;
-
-construct_tag! {
-    /// A type to represent the `PasswordHash` that PBKDF2 returns when used for password hashing.
-    ///
-    /// A `PasswordHash`'s first 64 bytes are the salt used to hash the password, and the last 64
-    /// bytes are the actual password hash.
-    ///
-    /// # Exceptions:
-    /// An exception will be thrown if:
-    /// - `slice` is not 128 bytes.
-    (PasswordHash, 128)
-}
 
 #[must_use]
 /// Hash a password using PBKDF2-HMAC-SHA512.
