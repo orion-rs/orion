@@ -1,5 +1,5 @@
 # orion
-<img src="https://travis-ci.org/brycx/orion.svg?branch=master"> <img src="https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg">
+<img src="https://travis-ci.org/brycx/orion.svg?branch=master"> <img src="https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg"> [![dependency status](https://deps.rs/repo/github/brycx/orion/status.svg)](https://deps.rs/repo/github/brycx/orion)
 
 ### About
 orion is a cryptography library written in pure-Rust which aims to provide easy and usable crypto. 'Usable' meaning exposing high-level API's that are easy to use and hard to misuse. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
