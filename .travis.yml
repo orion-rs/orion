@@ -22,11 +22,14 @@ matrix:
       script:
         - cargo clean
         - cargo test
-        - cargo test --no-default-features --tests
         - cargo test --no-default-features --features nightly
         - cargo test --no-default-features --features no_std --tests
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo +nightly test --tests --target x86_64-unknown-linux-gnu
+        # First sanitizers with default features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --tests --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test --tests --target x86_64-unknown-linux-gnu
+        # Then with nightly features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
     # Ensure building in no_std is possible
     - env: TARGET=thumbv7em-none-eabihf
       rust: nightly
