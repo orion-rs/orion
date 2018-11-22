@@ -7,13 +7,13 @@ pub mod util;
 use self::util::*;
 
 fuzz_target!(|data: &[u8]| {
-    let mut rand_key = [0u8; 32];
-    let mut rand_salt = vec![0u8; 1];
-    apply_from_input_fixed(&mut rand_key, data, 32);
-    apply_from_input_heap(&mut rand_salt, data, rand_key.len());
+    let mut key = [0u8; 32];
+    let mut salt = vec![0u8; 1];
+    apply_from_input_fixed(&mut key, data, 32);
+    apply_from_input_heap(&mut salt, data, key.len());
 
     // orion::aead
-    let aead_key = orion::aead::SecretKey::from_slice(&rand_key).unwrap();
+    let aead_key = orion::aead::SecretKey::from_slice(&key).unwrap();
     // Plaintext for `seal` cannot be empty
     let mut plaintext = data.to_vec();
     if data.is_empty() {
@@ -24,7 +24,7 @@ fuzz_target!(|data: &[u8]| {
     assert_eq!(&plaintext, &aead_decrypted);
 
     // orion::auth
-    let auth_key = orion::auth::SecretKey::from_slice(data);
+    let auth_key = orion::auth::SecretKey::from_slice(&key).unwrap();
     let tag = orion::auth::authenticate(&auth_key, &data);
     let res = orion::auth::authenticate_verify(&tag, &auth_key, &data).unwrap();
     assert!(res);
@@ -41,7 +41,7 @@ fuzz_target!(|data: &[u8]| {
     assert!(orion::pwhash::hash_password_verify(&password_hash, &pwhash_password, c).unwrap());
 
     // orion::kdf
-    let kdf_salt = orion::kdf::Salt::from_slice(&rand_salt).unwrap();
+    let kdf_salt = orion::kdf::Salt::from_slice(&salt).unwrap();
     // TODO: Only fuzzed against a derived key length of 256
     let derived_key = orion::kdf::derive_key(&pwhash_password, &kdf_salt, c, 256).unwrap();
     assert!(orion::kdf::derive_key_verify(&derived_key, &pwhash_password, &kdf_salt, c).unwrap());
