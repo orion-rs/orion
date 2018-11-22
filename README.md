@@ -18,7 +18,7 @@ Currently supports:
 * **XOF**: cSHAKE256
 
 ### Security
-This library is not suitable for production code and usage is at own risk.
+This library is **not suitable for production code** and **usage is at own risk**.
 
 ### Features
 - By default orion targets stable Rust and in this case, extra dependency specifications are not required.
