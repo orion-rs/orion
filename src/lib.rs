@@ -42,6 +42,8 @@
 //! Unless the program that uses orion, specifically is defined as
 //! `#![no_std]`, this is not relevant.
 //!
+//!
+//! More information about orion is available in the [wiki](https://github.com/brycx/orion/wiki).
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
