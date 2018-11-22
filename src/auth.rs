@@ -60,7 +60,7 @@
 use errors::ValidationCryptoError;
 use hazardous::mac::hmac;
 pub use hazardous::mac::hmac::Tag;
-pub use keys::SecretKey;
+pub use hltypes::SecretKey;
 
 #[must_use]
 /// Authenticate a message using HMAC-SHA512.

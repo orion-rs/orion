@@ -135,6 +135,7 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     }
 ));
 
+#[cfg(feature = "safe_api")]
 /// Macro that implements the `Default` trait, which will make a type, that has a `generate()` function
 /// associated, return itsefl with a default and secure length of random bytes.
 macro_rules! impl_default_trait (($name:ident, $size:expr) => (

@@ -82,4 +82,4 @@ pub mod pwhash;
 pub mod kdf;
 
 #[cfg(feature = "safe_api")]
-mod keys;
+mod hltypes;

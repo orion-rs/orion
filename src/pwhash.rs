@@ -67,7 +67,7 @@ use clear_on_drop::clear::Clear;
 use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::pbkdf2;
 pub use hazardous::kdf::pbkdf2::Password;
-pub use keys::PasswordHash;
+pub use hltypes::PasswordHash;
 use util;
 
 #[must_use]

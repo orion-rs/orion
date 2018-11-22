@@ -50,7 +50,7 @@
 //! # Security:
 //! - The iteration count should be set as high as feasible. The recommended minimum is 100000.
 //! - The salt should always be generated using a CSPRNG. `Salt::default()` can be used for
-//! this, it will generate a `Salt` of 32 bytes.
+//! this, it will generate a `Salt` of 64 bytes.
 //!
 //! # Example:
 //! ```
@@ -68,7 +68,7 @@ use clear_on_drop::clear::Clear;
 use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::pbkdf2;
 pub use hazardous::kdf::pbkdf2::Password;
-pub use keys::{Salt, SecretKey};
+pub use hltypes::{Salt, SecretKey};
 
 #[must_use]
 /// Derive a key using PBKDF2-HMAC-SHA512.

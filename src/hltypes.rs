@@ -39,6 +39,8 @@ construct_secret_key_variable_size! {
 construct_salt_variable_size! {
     /// A type to represent the `Salt` that PBKDF2 uses during key derivation.
     ///
+    /// As default it will randomly generate a `Salt` of 64 bytes.
+    ///
     /// # Exceptions:
     /// An exception will be thrown if:
     /// - `slice` is empty.

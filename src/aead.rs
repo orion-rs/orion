@@ -73,7 +73,7 @@ use hazardous::aead;
 use hazardous::constants::{CHACHA_KEYSIZE, POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE};
 use hazardous::stream::chacha20;
 use hazardous::stream::xchacha20::Nonce;
-pub use keys::SecretKey;
+pub use hltypes::SecretKey;
 
 #[must_use]
 /// Authenticated encryption using XChaCha20Poly1305.
