@@ -23,7 +23,8 @@
 //! Key derivation.
 //!
 //! # Use case:
-//! `orion::kdf` can be used to derive higher-entropy keys from low-entropy keys.
+//! `orion::kdf` can be used to derive higher-entropy keys from low-entropy keys. Also known as key
+//! stretching.
 //!
 //! An example of this could be deriving a key from a user-submitted password and using this derived key
 //! for disk encryption.
@@ -41,6 +42,7 @@
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - `iterations` is 0.
+//! - `length` is 0.
 //! - The `OsRng` fails to initialize or read from its source.
 //! - The `expected` does not match the derived key.
 //!
@@ -76,6 +78,10 @@ pub fn derive_key(
     iterations: usize,
     length: usize,
 ) -> Result<SecretKey, UnknownCryptoError> {
+    if length < 1 {
+        return Err(UnknownCryptoError);
+    }
+
     let mut buffer = vec![0u8; length];
 
     pbkdf2::derive_key(password, &salt.as_bytes(), iterations, &mut buffer).unwrap();

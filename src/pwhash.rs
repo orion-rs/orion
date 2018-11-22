@@ -98,13 +98,17 @@ pub fn hash_password_verify(
 ) -> Result<bool, ValidationCryptoError> {
     let mut dk = [0u8; 64];
 
-    pbkdf2::verify(
+    let is_good = pbkdf2::verify(
         &expected_with_salt.unprotected_as_bytes()[64..],
         password,
         &expected_with_salt.unprotected_as_bytes()[..64],
         iterations,
         &mut dk,
-    )
+    ).unwrap();
+
+    dk.clear();
+
+    Ok(is_good)
 }
 
 #[test]

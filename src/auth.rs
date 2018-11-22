@@ -65,12 +65,12 @@ pub use keys::SecretKey;
 #[must_use]
 /// Authenticate a message using HMAC-SHA512.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Tag {
-    let mut tag = hmac::init(&hmac::SecretKey::from_slice(
+    let mut state = hmac::init(&hmac::SecretKey::from_slice(
         &secret_key.unprotected_as_bytes(),
     ));
-    tag.update(data).unwrap();
+    state.update(data).unwrap();
 
-    tag.finalize().unwrap()
+    state.finalize().unwrap()
 }
 
 #[must_use]
