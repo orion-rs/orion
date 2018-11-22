@@ -80,3 +80,6 @@ pub mod pwhash;
 
 #[cfg(feature = "safe_api")]
 pub mod kdf;
+
+#[cfg(feature = "safe_api")]
+mod keys;

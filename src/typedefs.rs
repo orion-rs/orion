@@ -135,6 +135,23 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     }
 ));
 
+/// Macro that implements the `Default` trait, which will make a type, that has a `generate()` function
+/// associated, return itsefl with a default and secure length of random bytes.
+macro_rules! impl_default_trait (($name:ident, $size:expr) => (
+    impl core::default::Default for $name {
+        #[must_use]
+        #[cfg(feature = "safe_api")]
+        /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
+        fn default() -> $name {
+            use util;
+            let mut value = vec![0u8; $size];
+            util::secure_rand_bytes(&mut value).unwrap();
+
+            $name { value: value }
+        }
+    }
+));
+
 /// Macro to construct a type containing sensitive data.
 macro_rules! construct_secret_key {
     ($(#[$meta:meta])*
@@ -350,7 +367,7 @@ macro_rules! construct_hmac_key {
 /// Macro to construct a type containing sensitive data which is stored on the heap.
 macro_rules! construct_secret_key_variable_size {
     ($(#[$meta:meta])*
-    ($name:ident)) => (
+    ($name:ident, $size:expr)) => (
         #[must_use]
         #[cfg(feature = "safe_api")]
         $(#[$meta])*
@@ -364,6 +381,7 @@ macro_rules! construct_secret_key_variable_size {
         impl_debug_trait!($name);
         impl_drop_heap_trait!($name);
         impl_partialeq_trait!($name);
+        impl_default_trait!($name, $size);
 
         impl $name {
             #[must_use]
@@ -379,6 +397,20 @@ macro_rules! construct_secret_key_variable_size {
 
             func_unprotected_as_bytes!();
             func_get_length!();
+            #[must_use]
+            #[cfg(feature = "safe_api")]
+            /// Randomly generate using a CSPRNG. Not available in `no_std` context.
+            pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
+                use util;
+                if length < 1 {
+                    return Err(UnknownCryptoError);
+                }
+
+                let mut value = vec![0u8; length];
+                util::secure_rand_bytes(&mut value).unwrap();
+
+                Ok($name { value: value })
+            }
         }
 
         #[test]
@@ -399,12 +431,14 @@ macro_rules! construct_secret_key_variable_size {
 /// Macro to construct a type containing non-sensitive which is stored on the heap.
 macro_rules! construct_salt_variable_size {
     ($(#[$meta:meta])*
-    ($name:ident)) => (
+    ($name:ident, $size:expr)) => (
         #[must_use]
         #[cfg(feature = "safe_api")]
         $(#[$meta])*
         ///
         pub struct $name { value: Vec<u8> }
+
+        impl_default_trait!($name, $size);
 
         impl $name {
             #[must_use]
@@ -423,12 +457,16 @@ macro_rules! construct_salt_variable_size {
             #[must_use]
             #[cfg(feature = "safe_api")]
             /// Randomly generate using a CSPRNG. Not available in `no_std` context.
-            pub fn generate() -> $name {
+            pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
                 use util;
-                let mut value = vec![0u8; 64];
+                if length < 1 {
+                    return Err(UnknownCryptoError);
+                }
+
+                let mut value = vec![0u8; length];
                 util::secure_rand_bytes(&mut value).unwrap();
 
-                $name { value: value }
+                Ok($name { value: value })
             }
         }
 

@@ -44,6 +44,7 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
+//! - `secret_key` is not 32 bytes.
 //! - `plaintext` is empty.
 //! - `plaintext` is longer than (2^32)-2.
 //! - `ciphertext_with_tag_and_nonce` is less than 41 bytes.
@@ -54,13 +55,13 @@
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given key. Should this happen,
 //! the security of all data that has been encrypted with that given key is compromised.
-//! - To securely generate a strong key, use `SecretKey::generate()`.
+//! - To securely generate a strong key, use `SecretKey::default()`.
 //!
 //! # Example:
 //! ```
 //! use orion::aead;
 //!
-//! let secret_key = aead::SecretKey::generate();
+//! let secret_key = aead::SecretKey::default();
 //!
 //! let ciphertext = aead::seal(&secret_key, "Secret message".as_bytes()).unwrap();
 //!
@@ -69,14 +70,18 @@
 
 use errors::UnknownCryptoError;
 use hazardous::aead;
-use hazardous::constants::{POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE};
-pub use hazardous::stream::chacha20::SecretKey;
+use hazardous::constants::{CHACHA_KEYSIZE, POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE};
+use hazardous::stream::chacha20;
 use hazardous::stream::xchacha20::Nonce;
+pub use keys::SecretKey;
 
 #[must_use]
 /// Authenticated encryption using XChaCha20Poly1305.
 pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
     if plaintext.is_empty() {
+        return Err(UnknownCryptoError);
+    }
+    if secret_key.get_length() != CHACHA_KEYSIZE {
         return Err(UnknownCryptoError);
     }
 
@@ -86,7 +91,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
     dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes());
 
     aead::xchacha20poly1305::seal(
-        secret_key,
+        &chacha20::SecretKey::from_slice(&secret_key.unprotected_as_bytes()).unwrap(),
         &nonce,
         plaintext,
         None,
@@ -106,12 +111,15 @@ pub fn open(
     if ciphertext_with_tag_and_nonce.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
         return Err(UnknownCryptoError);
     }
+    if secret_key.get_length() != CHACHA_KEYSIZE {
+        return Err(UnknownCryptoError);
+    }
 
     let mut dst_out =
         vec![0u8; ciphertext_with_tag_and_nonce.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
     aead::xchacha20poly1305::open(
-        secret_key,
+        &chacha20::SecretKey::from_slice(&secret_key.unprotected_as_bytes()).unwrap(),
         &Nonce::from_slice(&ciphertext_with_tag_and_nonce[..XCHACHA_NONCESIZE]).unwrap(),
         &ciphertext_with_tag_and_nonce[XCHACHA_NONCESIZE..],
         None,
@@ -123,7 +131,7 @@ pub fn open(
 
 #[test]
 fn auth_enc_encryption_decryption() {
-    let key = SecretKey::generate();
+    let key = SecretKey::default();
     let plaintext = "Secret message".as_bytes().to_vec();
 
     let dst_ciphertext = seal(&key, &plaintext).unwrap();
@@ -136,7 +144,7 @@ fn auth_enc_encryption_decryption() {
 #[test]
 #[should_panic]
 fn auth_enc_plaintext_empty_err() {
-    let key = SecretKey::generate();
+    let key = SecretKey::default();
     let plaintext = "".as_bytes().to_vec();
 
     seal(&key, &plaintext).unwrap();
@@ -145,7 +153,7 @@ fn auth_enc_plaintext_empty_err() {
 #[test]
 #[should_panic]
 fn auth_enc_ciphertext_less_than_31_err() {
-    let key = SecretKey::generate();
+    let key = SecretKey::default();
     let ciphertext = [0u8; 32];
 
     open(&key, &ciphertext).unwrap();
@@ -154,7 +162,7 @@ fn auth_enc_ciphertext_less_than_31_err() {
 #[test]
 #[should_panic]
 fn test_modified_nonce_err() {
-    let key = SecretKey::generate();
+    let key = SecretKey::default();
     let plaintext = "Secret message".as_bytes().to_vec();
 
     let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
@@ -166,7 +174,7 @@ fn test_modified_nonce_err() {
 #[test]
 #[should_panic]
 fn test_modified_ciphertext_err() {
-    let key = SecretKey::generate();
+    let key = SecretKey::default();
     let plaintext = "Secret message".as_bytes().to_vec();
 
     let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
@@ -178,10 +186,10 @@ fn test_modified_ciphertext_err() {
 #[test]
 #[should_panic]
 fn test_diff_secret_key_err() {
-    let key = SecretKey::generate();
+    let key = SecretKey::default();
     let plaintext = "Secret message".as_bytes().to_vec();
 
     let dst_ciphertext = seal(&key, &plaintext).unwrap();
-    let bad_key = SecretKey::generate();
+    let bad_key = SecretKey::default();
     let _ = open(&bad_key, &dst_ciphertext).unwrap();
 }

@@ -42,15 +42,15 @@
 //! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Security:
-//! - The secret key should always be generated using a CSPRNG. `SecretKey::generate()` can be used for
-//! this, it will generate a `SecretKey` of 128 bytes.
-//! - The recommended minimum length for a `SecretKey` is 64.
+//! - The secret key should always be generated using a CSPRNG. `SecretKey::default()` can be used for
+//! this, it will generate a `SecretKey` of 32 bytes.
+//! - The recommended minimum length for a `SecretKey` is 32.
 //!
 //! # Example:
 //! ```
 //! use orion::auth;
 //!
-//! let key = auth::SecretKey::generate();
+//! let key = auth::SecretKey::default();
 //! let msg = "Some message.".as_bytes();
 //!
 //! let expected_tag = auth::authenticate(&key, msg);
@@ -59,12 +59,15 @@
 
 use errors::ValidationCryptoError;
 use hazardous::mac::hmac;
-pub use hazardous::mac::hmac::{SecretKey, Tag};
+pub use hazardous::mac::hmac::Tag;
+pub use keys::SecretKey;
 
 #[must_use]
 /// Authenticate a message using HMAC-SHA512.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Tag {
-    let mut tag = hmac::init(secret_key);
+    let mut tag = hmac::init(&hmac::SecretKey::from_slice(
+        &secret_key.unprotected_as_bytes(),
+    ));
     tag.update(data).unwrap();
 
     tag.finalize().unwrap()
@@ -77,13 +80,15 @@ pub fn authenticate_verify(
     secret_key: &SecretKey,
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    hmac::verify(&expected, &secret_key, &data)
+    let v_key = &hmac::SecretKey::from_slice(&secret_key.unprotected_as_bytes());
+
+    hmac::verify(&expected, &v_key, &data)
 }
 
 #[test]
 fn test_authenticate_verify_bad_key() {
-    let sec_key_correct = SecretKey::generate();
-    let sec_key_false = SecretKey::generate();
+    let sec_key_correct = SecretKey::generate(64).unwrap();
+    let sec_key_false = SecretKey::default();
     let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
     let hmac_bob = authenticate(&sec_key_correct, &msg);
@@ -97,7 +102,7 @@ fn test_authenticate_verify_bad_key() {
 
 #[test]
 fn test_authenticate_verify_bad_msg() {
-    let sec_key = SecretKey::generate();
+    let sec_key = SecretKey::generate(64).unwrap();
     let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
     let hmac_bob = authenticate(&sec_key, &msg);

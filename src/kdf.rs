@@ -47,15 +47,15 @@
 //!
 //! # Security:
 //! - The iteration count should be set as high as feasible. The recommended minimum is 100000.
-//! - The salt should always be generated using a CSPRNG. `Salt::generate()` can be used for
-//! this, it will generate a `Salt` of 64 bytes.
+//! - The salt should always be generated using a CSPRNG. `Salt::default()` can be used for
+//! this, it will generate a `Salt` of 32 bytes.
 //!
 //! # Example:
 //! ```
 //! use orion::kdf;
 //!
 //! let user_password = kdf::Password::from_slice(b"User password");
-//! let salt = kdf::Salt::generate();
+//! let salt = kdf::Salt::default();
 //!
 //! let derived_key = kdf::derive_key(&user_password, &salt, 100000, 64).unwrap();
 //!
@@ -66,24 +66,7 @@ use clear_on_drop::clear::Clear;
 use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::pbkdf2;
 pub use hazardous::kdf::pbkdf2::Password;
-
-construct_secret_key_variable_size! {
-    /// A type to represent the `DerivedKey` that PBKDF2 returns when used in key derivation.
-    ///
-    /// # Exceptions:
-    /// An exception will be thrown if:
-    /// - `slice` is empty.
-    (DerivedKey)
-}
-
-construct_salt_variable_size! {
-    /// A type to represent the `Salt` that PBKDF2 uses during key derivation.
-    ///
-    /// # Exceptions:
-    /// An exception will be thrown if:
-    /// - `slice` is empty.
-    (Salt)
-}
+pub use keys::{Salt, SecretKey};
 
 #[must_use]
 /// Derive a key using PBKDF2-HMAC-SHA512.
@@ -92,12 +75,12 @@ pub fn derive_key(
     salt: &Salt,
     iterations: usize,
     length: usize,
-) -> Result<DerivedKey, UnknownCryptoError> {
+) -> Result<SecretKey, UnknownCryptoError> {
     let mut buffer = vec![0u8; length];
 
     pbkdf2::derive_key(password, &salt.as_bytes(), iterations, &mut buffer).unwrap();
 
-    let dk = DerivedKey::from_slice(&buffer).unwrap();
+    let dk = SecretKey::from_slice(&buffer).unwrap();
     Clear::clear(&mut buffer);
 
     Ok(dk)
@@ -106,7 +89,7 @@ pub fn derive_key(
 #[must_use]
 /// Derive and verify a key using PBKDF2-HMAC-SHA512.
 pub fn derive_key_verify(
-    expected: &DerivedKey,
+    expected: &SecretKey,
     password: &Password,
     salt: &Salt,
     iterations: usize,
@@ -133,8 +116,5 @@ fn derive_key_and_verify() {
 
     let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
-    assert_eq!(
-        derive_key_verify(&dk, &password, &salt, 100).unwrap(),
-        true
-    );
+    assert_eq!(derive_key_verify(&dk, &password, &salt, 100).unwrap(), true);
 }
