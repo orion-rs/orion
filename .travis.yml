@@ -2,7 +2,6 @@ language: rust
 sudo: required
 dist: trusty
 services: docker
-
 addons:
     apt:
         packages:
@@ -23,7 +22,9 @@ matrix:
       script:
         - cargo clean
         - cargo test
-        - cargo test --tests --no-default-features
+        - cargo test --no-default-features --tests
+        - cargo test --no-default-features --features nightly
+        - cargo test --no-default-features --features no_std --tests
         - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo +nightly test --tests --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test --tests --target x86_64-unknown-linux-gnu
     # Ensure building in no_std is possible
@@ -34,7 +35,7 @@ matrix:
         - rustup target install thumbv7em-none-eabihf
         - rustup component add rust-src
       script:
-        - xargo build --no-default-features --verbose --target $TARGET
+        - xargo build --no-default-features --features no_std --verbose --target $TARGET
     - env: TARGET=i686-unknown-linux-gnu
       rust: stable
       script:
@@ -44,16 +45,14 @@ before_cache: |
   if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
     RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force cargo-tarpaulin
   fi
-
 install:
   - cargo install cross || true
 
 after_success: |
   if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
-    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
+    # RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
     # Uncomment the following line for coveralls.io
     # cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
-
     # Uncomment the following two lines create and upload a report for codecov.io
     cargo tarpaulin --out Xml
     bash <(curl -s https://codecov.io/bash)

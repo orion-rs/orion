@@ -20,16 +20,31 @@ Currently supports:
 ### Security
 This library is not suitable for production code and usage is at own risk.
 
-### Enabling `no_std`
-To use orion in a `no_std` context, you need to specify the dependency as such:
+### Features
+- By default orion targets stable Rust and in this case, extra dependency specifications are not required.
 
+- `no_std`: To use orion in a `no_std` context, you need to specify the dependency as such:
 ```
-orion = { version = "*", default-features = false }
+[dependencies.orion]
+version = "*" # Replace * with the most recent version
+default-features = false
+features = ["no_std"]
 ```
+`no_std` requires Rust nightly and benefits from the same inline assembly features as when using the `nightly` feature.
 
-When orion is used in a `no_std` context, access to nearly all functionality, except for that in
+ When orion is used in a `no_std` context, access to nearly all functionality, except for that in
 `hazardous`, is not available. This is because the high-level functionality depends on the `OsRng`
 which is not available in `no_std`.
+
+- `nightly`: The nightly feature enables the use of inline assembly for [memory wiping](https://crates.io/crates/clear_on_drop) and
+[constant-time comparisons](https://crates.io/crates/subtle). Using `nightly` is recommended for security. Specify the dependency as such, to use the `nightly` feature:
+```
+[dependencies.orion]
+version = "*" # Replace * with the most recent version
+default-features = false
+features = ["nightly"]
+```
+`nightly` requires Rust nightly.
 
 ### Documentation
 Can be viewed [here](https://docs.rs/orion) or built with:

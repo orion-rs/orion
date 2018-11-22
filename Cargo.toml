@@ -29,6 +29,8 @@ clear_on_drop = "0.2.3"
 [features]
 default = [ "safe_api" ]
 safe_api = [ "rand" ]
+nightly = [ "clear_on_drop/nightly", "subtle/nightly", "safe_api" ]
+no_std = [ "clear_on_drop/nightly", "subtle/nightly" ]
 
 [dev-dependencies]
 hex = "0.3.2"
