@@ -48,6 +48,10 @@ matrix:
       rust: stable
       script:
         - cross test --target $TARGET
+    - env: TARGET=mips64-unknown-linux-gnuabi64
+      rust: stable
+      script:
+        - cross test --target $TARGET
 
 before_cache: |
   if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
