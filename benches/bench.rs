@@ -87,7 +87,7 @@ fn bench_chacha20_decrypt(b: &mut Bencher) {
 fn bench_poly1305(b: &mut Bencher) {
     b.iter(|| {
         let mut mac =
-            poly1305::init(&poly1305::OneTimeKey::from_slice(&[0x01; 32]).unwrap()).unwrap();
+            poly1305::init(&poly1305::OneTimeKey::from_slice(&[0x01; 32]).unwrap());
         mac.update(&[0x01; 64]).unwrap();
         let _tag = mac.finalize().unwrap();
     });
