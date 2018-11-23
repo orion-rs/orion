@@ -160,9 +160,8 @@ macro_rules! construct_secret_key {
         $(#[$meta])*
         ///
         /// # Security:
-        /// - This implements `PartialEq` and thus prevents users from accidentally using non constant-time
-        /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag
-        /// __**without such a protection**__. __**Avoid using**__ `unprotected_as_bytes()` whenever possible.
+        /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+        /// that the type implements.
         pub struct $name { value: [u8; $size] }
 
         impl_debug_trait!($name);
@@ -271,9 +270,8 @@ macro_rules! construct_tag {
         $(#[$meta])*
         ///
         /// # Security:
-        /// - This implements `PartialEq` and thus prevents users from accidentally using non constant-time
-        /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag
-        /// __**without such a protection**__. __**Avoid using**__ `unprotected_as_bytes()` whenever possible.
+        /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+        /// that the type implements.
         pub struct $name { value: [u8; $size] }
 
         impl_partialeq_trait!($name);
@@ -314,9 +312,8 @@ macro_rules! construct_hmac_key {
         $(#[$meta])*
         ///
         /// # Security:
-        /// - This implements `PartialEq` and thus prevents users from accidentally using non constant-time
-        /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag
-        /// __**without such a protection**__. __**Avoid using**__ `unprotected_as_bytes()` whenever possible.
+        /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+        /// that the type implements.
         pub struct $name { value: [u8; $size] }
 
         impl_debug_trait!($name);
@@ -373,9 +370,8 @@ macro_rules! construct_secret_key_variable_size {
         $(#[$meta])*
         ///
         /// # Security:
-        /// - This implements `PartialEq` and thus prevents users from accidentally using non constant-time
-        /// comparisons. However, `unprotected_as_bytes()` lets the user return the tag
-        /// __**without such a protection**__. __**Avoid using**__ `unprotected_as_bytes()` whenever possible.
+        /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+        /// that the type implements.
         pub struct $name { value: Vec<u8> }
 
         impl_debug_trait!($name);

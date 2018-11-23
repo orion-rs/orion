@@ -23,7 +23,7 @@
 //! Authenticated secret-key encryption.
 //!
 //! # Use case:
-//! `orion::aead` can be used to encrypt data in a way that detects if this encrypted data has been
+//! `orion::aead` can be used to encrypt data in a way that detects if the encrypted data has been
 //! tampered with before decrypting it.
 //!
 //! An example of this could be sending messages across networks, where confidentiality
@@ -62,9 +62,7 @@
 //! use orion::aead;
 //!
 //! let secret_key = aead::SecretKey::default();
-//!
 //! let ciphertext = aead::seal(&secret_key, "Secret message".as_bytes()).unwrap();
-//!
 //! let decrypted_data = aead::open(&secret_key, &ciphertext).unwrap();
 //! ```
 
@@ -192,4 +190,12 @@ fn test_diff_secret_key_err() {
     let dst_ciphertext = seal(&key, &plaintext).unwrap();
     let bad_key = SecretKey::default();
     let _ = open(&bad_key, &dst_ciphertext).unwrap();
+}
+
+#[test]
+fn test_secret_length_err() {
+    let key = SecretKey::generate(31).unwrap();
+    let plaintext = "Secret message".as_bytes().to_vec();
+
+    assert!(seal(&key, &plaintext).is_err());
 }
