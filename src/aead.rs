@@ -152,9 +152,9 @@ fn auth_enc_plaintext_empty_err() {
 
 #[test]
 #[should_panic]
-fn auth_enc_ciphertext_less_than_31_err() {
+fn auth_enc_ciphertext_less_than_41_err() {
     let key = SecretKey::default();
-    let ciphertext = [0u8; 32];
+    let ciphertext = [0u8; 40];
 
     open(&key, &ciphertext).unwrap();
 }
