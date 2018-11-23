@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// These are the different types used by the high-level interface. Meaning, eveything not in `hazardous`.
+/// These are the different types used by the high-level interface. They are not used in `hazardous`.
 use errors::UnknownCryptoError;
 
 construct_secret_key_variable_size! {

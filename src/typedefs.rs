@@ -20,8 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// Macro that implements the `PartialEq` trait on a object called `$name`.
-/// This `PartialEq` will perform eq in constant time.
+#[cfg(feature = "safe_api")]
+/// Macro that implements the `Default` trait, which will make a type, that needs secure default
+/// methods like CSPRNG generation, return itself with a default and secure length of random bytes.
+macro_rules! impl_default_trait (($name:ident, $size:expr) => (
+    impl core::default::Default for $name {
+        #[must_use]
+        #[cfg(feature = "safe_api")]
+        /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
+        fn default() -> $name {
+            use util;
+            let mut value = vec![0u8; $size];
+            util::secure_rand_bytes(&mut value).unwrap();
+
+            $name { value: value }
+        }
+    }
+));
+
+/// Macro that implements the `PartialEq` trait on a object called `$name` that also implements `unprotected_as_bytes()`.
+/// This `PartialEq` will perform in constant time.
 macro_rules! impl_partialeq_trait (($name:ident) => (
     impl PartialEq for $name {
         fn eq(&self, other: &$name) -> bool {
@@ -46,7 +64,7 @@ macro_rules! impl_debug_trait (($name:ident) => (
 
 /// Macro that implements the `Drop` trait on a object called `$name` which as a field `value`.
 /// This `Drop` will zero out the field `value` when the objects destructor is called.
-/// NOTE: This requires value to be an array as clear_on_drop will not be called correctly if
+/// WARNING: This requires value to be an array as clear_on_drop will not be called correctly if
 /// this particluar trait is implemented on Vec's.
 macro_rules! impl_drop_stack_trait (($name:ident) => (
     impl Drop for $name {
@@ -60,7 +78,7 @@ macro_rules! impl_drop_stack_trait (($name:ident) => (
 #[cfg(feature = "safe_api")]
 /// Macro that implements the `Drop` trait on a object called `$name` which as a field `value`.
 /// This `Drop` will zero out the field `value` when the objects destructor is called.
-/// NOTE: This requires value to be a Vec as clear_on_drop, since calling clear_on_drop this way
+/// WARNING: This requires value to be a Vec as clear_on_drop, since calling clear_on_drop this way
 /// on arrays above the length of 32 will fail since they don't implement Default.
 macro_rules! impl_drop_heap_trait (($name:ident) => (
     #[cfg(feature = "safe_api")]
@@ -78,7 +96,6 @@ macro_rules! func_from_slice (($name:ident, $size:expr) => (
     #[must_use]
     /// Make an object from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-
         if slice.len() != $size {
             return Err(UnknownCryptoError);
         }
@@ -121,7 +138,7 @@ macro_rules! func_get_length (() => (
 ));
 
 /// Macro to implement a `generate()` function for objects that benefit from having a CSPRNG available
-/// to generate data of a recommended length. For exmaple symmetric keys for AEADs.
+/// to generate data of a fixed length $size.
 macro_rules! func_generate (($name:ident, $size:expr) => (
     #[must_use]
     #[cfg(feature = "safe_api")]
@@ -135,25 +152,7 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     }
 ));
 
-#[cfg(feature = "safe_api")]
-/// Macro that implements the `Default` trait, which will make a type, that has a `generate()` function
-/// associated, return itsefl with a default and secure length of random bytes.
-macro_rules! impl_default_trait (($name:ident, $size:expr) => (
-    impl core::default::Default for $name {
-        #[must_use]
-        #[cfg(feature = "safe_api")]
-        /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
-        fn default() -> $name {
-            use util;
-            let mut value = vec![0u8; $size];
-            util::secure_rand_bytes(&mut value).unwrap();
-
-            $name { value: value }
-        }
-    }
-));
-
-/// Macro to construct a type containing sensitive data.
+/// Macro to construct a type containing sensitive data, using a fixed-size array.
 macro_rules! construct_secret_key {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
