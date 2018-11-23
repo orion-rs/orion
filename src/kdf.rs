@@ -87,7 +87,7 @@ pub fn derive_key(
 
     let mut buffer = vec![0u8; length];
 
-    pbkdf2::derive_key(password, &salt.as_bytes(), iterations, &mut buffer).unwrap();
+    pbkdf2::derive_key(password, &salt.as_bytes(), iterations, &mut buffer)?;
 
     let dk = SecretKey::from_slice(&buffer).unwrap();
     Clear::clear(&mut buffer);
@@ -111,7 +111,7 @@ pub fn derive_key_verify(
         &salt.as_bytes(),
         iterations,
         &mut buffer,
-    ).unwrap();
+    )?;
 
     Clear::clear(&mut buffer);
 
@@ -125,18 +125,17 @@ fn derive_key_and_verify() {
 
     let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
-    assert_eq!(derive_key_verify(&dk, &password, &salt, 100).unwrap(), true);
+    assert!(derive_key_verify(&dk, &password, &salt, 100).unwrap());
 }
 
 #[test]
-#[should_panic]
 fn derive_key_and_verify_err() {
     let password = Password::from_slice(&[0u8; 64]);
     let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
     let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
-    assert_eq!(derive_key_verify(&dk, &password, &salt, 50).unwrap(), true);
+    assert!(derive_key_verify(&dk, &password, &salt, 50).is_err());
 }
 
 #[test]

@@ -81,7 +81,7 @@ pub fn hash_password(
     util::secure_rand_bytes(&mut salt).unwrap();
 
     buffer[..64].copy_from_slice(&salt);
-    pbkdf2::derive_key(password, &salt, iterations, &mut buffer[64..]).unwrap();
+    pbkdf2::derive_key(password, &salt, iterations, &mut buffer[64..])?;
 
     let dk = PasswordHash::from_slice(&buffer).unwrap();
     buffer.clear();
@@ -104,7 +104,7 @@ pub fn hash_password_verify(
         &expected_with_salt.unprotected_as_bytes()[..64],
         iterations,
         &mut dk,
-    ).unwrap();
+    )?;
 
     dk.clear();
 
@@ -124,7 +124,6 @@ fn pbkdf2_verify() {
 }
 
 #[test]
-#[should_panic]
 fn pbkdf2_verify_err_modified_salt() {
     let password = Password::from_slice(&[0u8; 64]);
 
@@ -133,11 +132,10 @@ fn pbkdf2_verify_err_modified_salt() {
     pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
     let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-    hash_password_verify(&modified, &password, 100).unwrap();
+    assert!(hash_password_verify(&modified, &password, 100).is_err());
 }
 
 #[test]
-#[should_panic]
 fn pbkdf2_verify_err_modified_password() {
     let password = Password::from_slice(&[0u8; 64]);
 
@@ -146,11 +144,10 @@ fn pbkdf2_verify_err_modified_password() {
     pwd_mod[120..128].copy_from_slice(&[0u8; 8]);
     let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-    hash_password_verify(&modified, &password, 100).unwrap();
+    assert!(hash_password_verify(&modified, &password, 100).is_err());
 }
 
 #[test]
-#[should_panic]
 fn pbkdf2_verify_err_modified_salt_and_password() {
     let password = Password::from_slice(&[0u8; 64]);
 
@@ -159,13 +156,12 @@ fn pbkdf2_verify_err_modified_salt_and_password() {
     pwd_mod[64..96].copy_from_slice(&[0u8; 32]);
     let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-    hash_password_verify(&modified, &password, 100).unwrap();
+    assert!(hash_password_verify(&modified, &password, 100).is_err());
 }
 
 #[test]
-#[should_panic]
 fn pbkdf2_zero_iterations() {
     let password = Password::from_slice(&[0u8; 64]);
 
-    let _ = hash_password(&password, 0).unwrap();
+    assert!(hash_password(&password, 0).is_err());
 }

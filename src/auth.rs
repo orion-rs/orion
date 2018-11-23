@@ -82,7 +82,9 @@ pub fn authenticate_verify(
 ) -> Result<bool, ValidationCryptoError> {
     let v_key = &hmac::SecretKey::from_slice(&secret_key.unprotected_as_bytes());
 
-    hmac::verify(&expected, &v_key, &data)
+    hmac::verify(&expected, &v_key, &data)?;
+
+    Ok(true)
 }
 
 #[test]

@@ -94,7 +94,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
         plaintext,
         None,
         &mut dst_out[XCHACHA_NONCESIZE..],
-    ).unwrap();
+    )?;
 
     Ok(dst_out)
 }
@@ -122,7 +122,7 @@ pub fn open(
         &ciphertext_with_tag_and_nonce[XCHACHA_NONCESIZE..],
         None,
         &mut dst_out,
-    ).unwrap();
+    )?;
 
     Ok(dst_out)
 }
@@ -140,25 +140,22 @@ fn auth_enc_encryption_decryption() {
 }
 
 #[test]
-#[should_panic]
 fn auth_enc_plaintext_empty_err() {
     let key = SecretKey::default();
     let plaintext = "".as_bytes().to_vec();
 
-    seal(&key, &plaintext).unwrap();
+    assert!(seal(&key, &plaintext).is_err());
 }
 
 #[test]
-#[should_panic]
 fn auth_enc_ciphertext_less_than_41_err() {
     let key = SecretKey::default();
     let ciphertext = [0u8; 40];
 
-    open(&key, &ciphertext).unwrap();
+    assert!(open(&key, &ciphertext).is_err());
 }
 
 #[test]
-#[should_panic]
 fn test_modified_nonce_err() {
     let key = SecretKey::default();
     let plaintext = "Secret message".as_bytes().to_vec();
@@ -166,11 +163,10 @@ fn test_modified_nonce_err() {
     let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
     // Modify nonce
     dst_ciphertext[10] ^= 1;
-    let _ = open(&key, &dst_ciphertext).unwrap();
+    assert!(open(&key, &dst_ciphertext).is_err());
 }
 
 #[test]
-#[should_panic]
 fn test_modified_ciphertext_err() {
     let key = SecretKey::default();
     let plaintext = "Secret message".as_bytes().to_vec();
@@ -178,18 +174,29 @@ fn test_modified_ciphertext_err() {
     let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
     // Modify ciphertext
     dst_ciphertext[25] ^= 1;
-    let _ = open(&key, &dst_ciphertext).unwrap();
+    assert!(open(&key, &dst_ciphertext).is_err());
 }
 
 #[test]
-#[should_panic]
+fn test_modified_tag_err() {
+    let key = SecretKey::default();
+    let plaintext = "Secret message".as_bytes().to_vec();
+
+    let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
+    let dst_ciphertext_len = dst_ciphertext.len();
+    // Modify tag
+    dst_ciphertext[dst_ciphertext_len - 6] ^= 1;
+    assert!(open(&key, &dst_ciphertext).is_err());
+}
+
+#[test]
 fn test_diff_secret_key_err() {
     let key = SecretKey::default();
     let plaintext = "Secret message".as_bytes().to_vec();
 
     let dst_ciphertext = seal(&key, &plaintext).unwrap();
     let bad_key = SecretKey::default();
-    let _ = open(&bad_key, &dst_ciphertext).unwrap();
+    assert!(open(&bad_key, &dst_ciphertext).is_err());
 }
 
 #[test]
