@@ -277,8 +277,7 @@ pub fn encrypt(
     };
 
     chacha_state
-        .init_state(secret_key, &nonce.as_bytes())
-        .unwrap();
+        .init_state(secret_key, &nonce.as_bytes())?;
 
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
     let mut keystream_state: ChaChaState = [0u32; 16];
@@ -323,7 +322,9 @@ pub fn decrypt(
     ciphertext: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
+    encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)?;
+
+    Ok(())
 }
 
 #[must_use]
@@ -338,8 +339,7 @@ pub fn keystream_block(
         is_ietf: true,
     };
     chacha_state
-        .init_state(secret_key, &nonce.as_bytes())
-        .unwrap();
+        .init_state(secret_key, &nonce.as_bytes())?;
 
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
     let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter)).unwrap();
@@ -364,7 +364,7 @@ pub fn hchacha20(
         state: [0_u32; 16],
         is_ietf: false,
     };
-    chacha_state.init_state(secret_key, nonce).unwrap();
+    chacha_state.init_state(secret_key, nonce)?;
 
     let mut keystream_state = chacha_state.process_block(None).unwrap();
     let mut keystream_block: [u8; HCHACHA_OUTSIZE] = [0u8; HCHACHA_OUTSIZE];

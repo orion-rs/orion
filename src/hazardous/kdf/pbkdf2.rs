@@ -131,7 +131,7 @@ pub fn derive_key(
 
     for (idx, dk_block) in dst_out.chunks_mut(HLEN).enumerate() {
         let block_len = dk_block.len();
-        let block_idx = (1_u32).checked_add(idx as u32);
+        let block_idx = (1u32).checked_add(idx as u32);
 
         if block_idx.is_some() {
             function_f(
@@ -160,7 +160,7 @@ pub fn verify(
     iterations: usize,
     dst_out: &mut [u8],
 ) -> Result<bool, ValidationCryptoError> {
-    derive_key(password, salt, iterations, dst_out).unwrap();
+    derive_key(password, salt, iterations, dst_out)?;
 
     if util::secure_cmp(&dst_out, expected).is_err() {
         Err(ValidationCryptoError)

@@ -50,6 +50,12 @@ impl From<rand::Error> for UnknownCryptoError {
     }
 }
 
+impl From<FinalizationCryptoError> for UnknownCryptoError {
+    fn from(_: FinalizationCryptoError) -> Self {
+        UnknownCryptoError
+    }
+}
+
 /// Error for a failed verification.
 #[derive(PartialEq)]
 pub struct ValidationCryptoError;
@@ -66,6 +72,12 @@ impl fmt::Debug for ValidationCryptoError {
     }
 }
 
+impl From<UnknownCryptoError> for ValidationCryptoError {
+    fn from(_: UnknownCryptoError) -> Self {
+        ValidationCryptoError
+    }
+}
+
 /// Error for calling a finalization method on an object that needs to be reset first.
 pub struct FinalizationCryptoError;
 
@@ -78,5 +90,11 @@ impl fmt::Display for FinalizationCryptoError {
 impl fmt::Debug for FinalizationCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FinalizationCryptoError - Missing reset")
+    }
+}
+
+impl From<UnknownCryptoError> for FinalizationCryptoError {
+    fn from(_: UnknownCryptoError) -> Self {
+        FinalizationCryptoError
     }
 }

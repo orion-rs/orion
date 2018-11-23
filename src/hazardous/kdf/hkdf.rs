@@ -96,7 +96,6 @@ pub fn expand(
 
     for (idx, hlen_block) in dst_out.chunks_mut(HLEN).enumerate() {
         let block_len = hlen_block.len();
-        assert!(block_len <= okm_len);
 
         hmac.update(optional_info).unwrap();
         hmac.update(&[idx as u8 + 1_u8]).unwrap();
@@ -122,7 +121,9 @@ pub fn derive_key(
     info: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    expand(&extract(salt, ikm), info, dst_out)
+    expand(&extract(salt, ikm), info, dst_out)?;
+
+    Ok(())
 }
 
 #[must_use]

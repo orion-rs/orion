@@ -93,14 +93,16 @@ use util;
 
 #[must_use]
 /// Poly1305 key generation using IETF ChaCha20.
-fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> OneTimeKey {
-    OneTimeKey::from_slice(
+fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> Result<OneTimeKey, UnknownCryptoError> {
+    let one_time_key = OneTimeKey::from_slice(
         &chacha20::keystream_block(
-            &SecretKey::from_slice(&key).unwrap(),
-            &Nonce::from_slice(&nonce).unwrap(),
+            &SecretKey::from_slice(&key)?,
+            &Nonce::from_slice(&nonce)?,
             0,
-        ).unwrap()[..POLY1305_KEYSIZE],
-    ).unwrap()
+        )?[..POLY1305_KEYSIZE],
+    )?;
+
+    Ok(one_time_key)
 }
 
 #[must_use]
@@ -165,15 +167,15 @@ pub fn seal(
         None => &[0u8; 0],
     };
 
-    let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes());
+    let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes())?;
     chacha20::encrypt(
         secret_key,
         nonce,
         1,
         plaintext,
         &mut dst_out[..plaintext.len()],
-    ).unwrap();
-    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
+    )?;
+    let mut poly1305_state = poly1305::init(&poly1305_key);
 
     process_authentication(&mut poly1305_state, &optional_ad, &dst_out, plaintext.len()).unwrap();
     dst_out[plaintext.len()..]
@@ -205,19 +207,19 @@ pub fn open(
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
 
-    let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes());
-    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
+    let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes())?;
+    let mut poly1305_state = poly1305::init(&poly1305_key);
     process_authentication(
         &mut poly1305_state,
         &optional_ad,
         ciphertext_with_tag,
         ciphertext_len,
-    ).unwrap();
+    )?;
 
     util::secure_cmp(
         &poly1305_state.finalize().unwrap().unprotected_as_bytes(),
         &ciphertext_with_tag[ciphertext_len..],
-    ).unwrap();
+    )?;
 
     chacha20::decrypt(
         secret_key,
@@ -225,7 +227,7 @@ pub fn open(
         1,
         &ciphertext_with_tag[..ciphertext_len],
         dst_out,
-    ).unwrap();
+    )?;
 
     Ok(())
 }
@@ -242,16 +244,16 @@ fn length_padding_tests() {
 #[test]
 #[should_panic]
 fn test_auth_process_with_above_length_index() {
-    let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
-    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
+    let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]).unwrap();
+    let mut poly1305_state = poly1305::init(&poly1305_key);
 
     process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
 }
 
 #[test]
 fn test_auth_process_ok_index_length() {
-    let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]);
-    let mut poly1305_state = poly1305::init(&poly1305_key).unwrap();
+    let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]).unwrap();
+    let mut poly1305_state = poly1305::init(&poly1305_key);
 
     process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).unwrap();
 
@@ -387,7 +389,7 @@ fn rfc_8439_test_poly1305_key_gen_1() {
     ];
 
     assert_eq!(
-        poly1305_key_gen(&key, &nonce).unprotected_as_bytes(),
+        poly1305_key_gen(&key, &nonce).unwrap().unprotected_as_bytes(),
         expected.as_ref()
     );
 }
@@ -409,7 +411,7 @@ fn rfc_8439_test_poly1305_key_gen_2() {
     ];
 
     assert_eq!(
-        poly1305_key_gen(&key, &nonce).unprotected_as_bytes(),
+        poly1305_key_gen(&key, &nonce).unwrap().unprotected_as_bytes(),
         expected.as_ref()
     );
 }
@@ -431,7 +433,7 @@ fn rfc_8439_test_poly1305_key_gen_3() {
     ];
 
     assert_eq!(
-        poly1305_key_gen(&key, &nonce).unprotected_as_bytes(),
+        poly1305_key_gen(&key, &nonce).unwrap().unprotected_as_bytes(),
         expected.as_ref()
     );
 }

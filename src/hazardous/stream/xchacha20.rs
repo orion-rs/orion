@@ -71,7 +71,7 @@
 //! assert_eq!(dst_out_pt, message);
 //! ```
 use errors::UnknownCryptoError;
-use hazardous::constants::XCHACHA_NONCESIZE;
+use hazardous::constants::{XCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE};
 use hazardous::stream::chacha20;
 use hazardous::stream::chacha20::Nonce as IETFNonce;
 pub use hazardous::stream::chacha20::SecretKey;
@@ -96,10 +96,10 @@ pub fn encrypt(
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     let subkey: SecretKey =
-        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap())
+        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16])?)
             .unwrap();
-    let mut prefixed_nonce = [0u8; 12];
-    prefixed_nonce[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
+    let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
+    prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes()[16..24]);
 
     chacha20::encrypt(
         &subkey,
@@ -107,7 +107,7 @@ pub fn encrypt(
         initial_counter,
         plaintext,
         dst_out,
-    ).unwrap();
+    )?;
 
     Ok(())
 }
@@ -121,7 +121,9 @@ pub fn decrypt(
     ciphertext: &[u8],
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
+    encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)?;
+
+    Ok(())
 }
 
 #[test]
@@ -132,7 +134,6 @@ fn test_nonce_sizes() {
 }
 
 #[test]
-#[should_panic]
 fn test_err_on_empty_pt_xchacha() {
     let mut dst = [0u8; 64];
 

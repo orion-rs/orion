@@ -76,6 +76,7 @@
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
 use errors::UnknownCryptoError;
+use hazardous::constants::IETF_CHACHA_NONCESIZE;
 use hazardous::aead::chacha20poly1305;
 use hazardous::stream::chacha20;
 use hazardous::stream::chacha20::Nonce as IETFNonce;
@@ -92,10 +93,10 @@ pub fn seal(
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     let subkey: SecretKey =
-        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap())
+        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16])?)
             .unwrap();
-    let mut prefixed_nonce = [0u8; 12];
-    prefixed_nonce[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
+    let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
+    prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes()[16..24]);
 
     chacha20poly1305::seal(
         &subkey,
@@ -103,7 +104,7 @@ pub fn seal(
         plaintext,
         ad,
         dst_out,
-    ).unwrap();
+    )?;
 
     Ok(())
 }
@@ -118,7 +119,7 @@ pub fn open(
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     let subkey: SecretKey =
-        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16]).unwrap())
+        SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16])?)
             .unwrap();
     let mut prefixed_nonce = [0u8; 12];
     prefixed_nonce[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
@@ -129,7 +130,7 @@ pub fn open(
         ciphertext_with_tag,
         ad,
         dst_out,
-    ).unwrap();
+    )?;
 
     Ok(())
 }

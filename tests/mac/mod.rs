@@ -48,7 +48,7 @@ fn hmac_test_runner(
         None => 64,
     };
 
-    let one_shot = hmac::hmac(&key, data).unwrap();
+    let one_shot = hmac::hmac(&key, data);
 
     assert_eq!(
         res.unprotected_as_bytes()[..len].as_ref(),
@@ -67,7 +67,7 @@ fn hmac_test_runner(
 }
 
 fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), error::Unspecified> {
-    let mut state = poly1305::init(&OneTimeKey::from_slice(key).unwrap()).unwrap();
+    let mut state = poly1305::init(&OneTimeKey::from_slice(key).unwrap());
     state.update(input).unwrap();
 
     let tag_stream = state.finalize().unwrap();

@@ -147,7 +147,7 @@ impl CShake {
         }
 
         self.is_finalized = true;
-        self.check_dst_out(dst_out).unwrap();
+        self.check_dst_out(dst_out)?;
 
         let mut hasher_new = Keccak::new(136, 0x04);
         mem::swap(&mut self.hasher, &mut hasher_new);
