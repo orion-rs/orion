@@ -39,9 +39,6 @@
 //! When orion is used in a `no_std` context, access to nearly all functionality outside of `hazardous`,
 //! is not available.
 //!
-//! Unless the program that uses orion, specifically is defined as
-//! `#![no_std]`, this is not relevant.
-//!
 //!
 //! More information about orion is available in the [wiki](https://github.com/brycx/orion/wiki).
 
