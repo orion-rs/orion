@@ -114,7 +114,6 @@ impl core::fmt::Debug for Poly1305 {
 }
 
 impl Poly1305 {
-    #[must_use]
     #[inline(always)]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
     /// Initialize `Poly1305` struct for a given key.
