@@ -161,3 +161,11 @@ fn pbkdf2_verify_err_modified_salt_and_password() {
 
     hash_password_verify(&modified, &password, 100).unwrap();
 }
+
+#[test]
+#[should_panic]
+fn pbkdf2_zero_iterations() {
+    let password = Password::from_slice(&[0u8; 64]);
+
+    let _ = hash_password(&password, 0).unwrap();
+}
