@@ -11,7 +11,7 @@ fuzz_target!(|data: &[u8]| {
     let (key, message) = poly1305_setup(data);
     // Test both stream and one-shot
     let orion_key = OneTimeKey::from_slice(&key).unwrap();
-    let mut poly1305_state = init(&orion_key).unwrap();
+    let mut poly1305_state = init(&orion_key);
     poly1305_state.update(&message).unwrap();
     let orion_stream_tag = poly1305_state.finalize().unwrap();
     let orion_oneshot_tag = poly1305(&orion_key, &message).unwrap();
