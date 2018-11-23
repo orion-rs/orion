@@ -127,3 +127,12 @@ fn derive_key_and_verify() {
 
     assert_eq!(derive_key_verify(&dk, &password, &salt, 100).unwrap(), true);
 }
+
+#[test]
+fn derive_key_bad_length() {
+    let password = Password::from_slice(&[0u8; 64]);
+    let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+
+    assert!(derive_key(&password, &salt, 100, 0).is_err());
+    assert!(derive_key(&password, &salt, 100, 1).is_ok());
+}
