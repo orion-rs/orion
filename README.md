@@ -15,9 +15,11 @@ Currently supports:
 ### Security
 This library is **not suitable for production code** and **usage is at own risk**.
 
+More information about security regarding orion is available in the [wiki](https://github.com/brycx/orion/wiki/Security).
+
 
 ### Features
-- By default orion targets stable Rust and in this case, extra dependency specifications are not required.
+- By default orion targets stable Rust and in this case, extra dependency specifications are not required. Using orion with stable Rust does however depend on a C compiler to be available on the system. Features `nightly` and `no_std` do not have this dependency.
 
 - `no_std`: To use orion in a `no_std` context, you need to specify the dependency as such:
 ```
