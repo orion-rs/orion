@@ -47,7 +47,7 @@
 //! ```
 //! use orion::hazardous::mac::poly1305;
 //!
-//! let one_time_key = poly1305::OneTimeKey::generate();
+//! let one_time_key = poly1305::OneTimeKey::generate().unwrap();
 //! let msg = "Some message.";
 //!
 //! let mut poly1305_state = poly1305::init(&one_time_key);

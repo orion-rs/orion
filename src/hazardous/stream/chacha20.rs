@@ -69,7 +69,7 @@
 //! ```
 //! use orion::hazardous::stream::chacha20;
 //!
-//! let secret_key = chacha20::SecretKey::generate();
+//! let secret_key = chacha20::SecretKey::generate().unwrap();
 //!
 //! let nonce = chacha20::Nonce::from_slice(&[
 //!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,

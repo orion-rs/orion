@@ -56,8 +56,8 @@
 //! ```
 //! use orion::hazardous::aead;
 //!
-//! let secret_key = aead::xchacha20poly1305::SecretKey::generate();
-//! let nonce = aead::xchacha20poly1305::Nonce::generate();
+//! let secret_key = aead::xchacha20poly1305::SecretKey::generate().unwrap();
+//! let nonce = aead::xchacha20poly1305::Nonce::generate().unwrap();
 //!
 //! let ad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
 //! let plaintext = b"\

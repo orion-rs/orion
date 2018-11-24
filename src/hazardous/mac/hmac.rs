@@ -45,7 +45,7 @@
 //! ```
 //! use orion::hazardous::mac::hmac;
 //!
-//! let key = hmac::SecretKey::generate();
+//! let key = hmac::SecretKey::generate().unwrap();
 //! let msg = "Some message.";
 //!
 //! let mut tag = hmac::init(&key);
@@ -56,7 +56,7 @@
 //! ```
 //! use orion::hazardous::mac::hmac;
 //!
-//! let key = hmac::SecretKey::generate();
+//! let key = hmac::SecretKey::generate().unwrap();
 //! let msg = "Some message.";
 //!
 //! let mut tag = hmac::init(&key);
