@@ -56,8 +56,8 @@
 //! ```
 //! use orion::hazardous::aead;
 //!
-//! let secret_key = aead::xchacha20poly1305::SecretKey::generate();
-//! let nonce = aead::xchacha20poly1305::Nonce::generate();
+//! let secret_key = aead::xchacha20poly1305::SecretKey::generate().unwrap();
+//! let nonce = aead::xchacha20poly1305::Nonce::generate().unwrap();
 //!
 //! let ad = [ 0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7 ];
 //! let plaintext = b"\
@@ -136,7 +136,6 @@ pub fn open(
 }
 
 #[test]
-#[should_panic]
 fn test_modified_tag_error() {
     let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
     let mut dst_out_pt = [0u8; 64];
@@ -150,11 +149,11 @@ fn test_modified_tag_error() {
     ).unwrap();
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
-    open(
+    assert!(open(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 24]).unwrap(),
         &dst_out_ct,
         None,
         &mut dst_out_pt,
-    ).unwrap();
+    ).is_err());
 }

@@ -69,7 +69,7 @@
 //! ```
 //! use orion::hazardous::stream::chacha20;
 //!
-//! let secret_key = chacha20::SecretKey::generate();
+//! let secret_key = chacha20::SecretKey::generate().unwrap();
 //!
 //! let nonce = chacha20::Nonce::from_slice(&[
 //!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
@@ -546,59 +546,55 @@ fn test_diff_ct_pt_len() {
 }
 
 #[test]
-#[should_panic]
-fn test_err_on_diff_ct_pt_len_xchacha_long() {
+fn test_err_on_diff_ct_pt_len_chacha_long() {
     let mut dst = [0u8; 64];
 
-    encrypt(
+    assert!(encrypt(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         0,
         &[0u8; 128],
         &mut dst,
-    ).unwrap();
+    ).is_err());
 }
 
 #[test]
-#[should_panic]
-fn test_err_on_diff_ct_pt_len_xchacha_short() {
+fn test_err_on_diff_ct_pt_len_chacha_short() {
     let mut dst = [0u8; 64];
 
-    encrypt(
+    assert!(encrypt(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         0,
         &[0u8; 0],
         &mut dst,
-    ).unwrap();
+    ).is_err());
 }
 
 #[test]
-#[should_panic]
 fn test_err_on_empty_pt() {
     let mut dst = [0u8; 64];
 
-    encrypt(
+    assert!(encrypt(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         0,
         &[0u8; 0],
         &mut dst,
-    ).unwrap();
+    ).is_err());
 }
 
 #[test]
-#[should_panic]
 fn test_err_on_initial_counter_overflow() {
     let mut dst = [0u8; 65];
 
-    encrypt(
+    assert!(encrypt(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         4294967295,
         &[0u8; 65],
         &mut dst,
-    ).unwrap();
+    ).is_err());
 }
 
 #[test]

@@ -55,8 +55,8 @@
 //! ```
 //! use orion::hazardous::stream::xchacha20;
 //!
-//! let secret_key = xchacha20::SecretKey::generate();
-//! let nonce = xchacha20::Nonce::generate();
+//! let secret_key = xchacha20::SecretKey::generate().unwrap();
+//! let nonce = xchacha20::Nonce::generate().unwrap();
 //!
 //! // Length of this message is 15
 //! let message = "Data to protect".as_bytes();
@@ -149,17 +149,16 @@ fn test_err_on_empty_pt_xchacha() {
 }
 
 #[test]
-#[should_panic]
 fn test_err_on_initial_counter_overflow_xchacha() {
     let mut dst = [0u8; 65];
 
-    encrypt(
+    assert!(encrypt(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 24]).unwrap(),
         4294967295,
         &[0u8; 65],
         &mut dst,
-    ).unwrap();
+    ).is_err());
 }
 
 #[test]

@@ -68,7 +68,7 @@
 
 use errors::UnknownCryptoError;
 use hazardous::aead;
-use hazardous::constants::{CHACHA_KEYSIZE, POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE};
+use hazardous::constants::{POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE};
 use hazardous::stream::chacha20;
 use hazardous::stream::xchacha20::Nonce;
 pub use hltypes::SecretKey;
@@ -79,17 +79,14 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
     if plaintext.is_empty() {
         return Err(UnknownCryptoError);
     }
-    if secret_key.get_length() != CHACHA_KEYSIZE {
-        return Err(UnknownCryptoError);
-    }
 
-    let nonce = Nonce::generate();
+    let nonce = Nonce::generate()?;
 
     let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
     dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes());
 
     aead::xchacha20poly1305::seal(
-        &chacha20::SecretKey::from_slice(&secret_key.unprotected_as_bytes()).unwrap(),
+        &chacha20::SecretKey::from_slice(&secret_key.unprotected_as_bytes())?,
         &nonce,
         plaintext,
         None,
@@ -109,16 +106,13 @@ pub fn open(
     if ciphertext_with_tag_and_nonce.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
         return Err(UnknownCryptoError);
     }
-    if secret_key.get_length() != CHACHA_KEYSIZE {
-        return Err(UnknownCryptoError);
-    }
 
     let mut dst_out =
         vec![0u8; ciphertext_with_tag_and_nonce.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 
     aead::xchacha20poly1305::open(
-        &chacha20::SecretKey::from_slice(&secret_key.unprotected_as_bytes()).unwrap(),
-        &Nonce::from_slice(&ciphertext_with_tag_and_nonce[..XCHACHA_NONCESIZE]).unwrap(),
+        &chacha20::SecretKey::from_slice(&secret_key.unprotected_as_bytes())?,
+        &Nonce::from_slice(&ciphertext_with_tag_and_nonce[..XCHACHA_NONCESIZE])?,
         &ciphertext_with_tag_and_nonce[XCHACHA_NONCESIZE..],
         None,
         &mut dst_out,
@@ -202,7 +196,8 @@ fn test_diff_secret_key_err() {
 #[test]
 fn test_secret_length_err() {
     let key = SecretKey::generate(31).unwrap();
-    let plaintext = "Secret message".as_bytes().to_vec();
+    let plaintext = "Secret message Secret message Secret message Secret message ".as_bytes().to_vec();
 
     assert!(seal(&key, &plaintext).is_err());
+    assert!(open(&key, &plaintext).is_err());
 }

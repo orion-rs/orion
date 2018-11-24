@@ -104,7 +104,6 @@ macro_rules! func_from_slice (($name:ident, $size:expr) => (
         value.copy_from_slice(slice);
 
         Ok($name { value: value })
-
     }
 ));
 
@@ -143,12 +142,12 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     #[must_use]
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
-    pub fn generate() -> $name {
+    pub fn generate() -> Result<$name, UnknownCryptoError> {
         use util;
         let mut value = [0u8; $size];
-        util::secure_rand_bytes(&mut value).unwrap();
+        util::secure_rand_bytes(&mut value)?;
 
-        $name { value: value }
+        Ok($name { value: value })
     }
 ));
 
@@ -403,7 +402,7 @@ macro_rules! construct_secret_key_variable_size {
                 }
 
                 let mut value = vec![0u8; length];
-                util::secure_rand_bytes(&mut value).unwrap();
+                util::secure_rand_bytes(&mut value)?;
 
                 Ok($name { value: value })
             }
@@ -460,7 +459,7 @@ macro_rules! construct_salt_variable_size {
                 }
 
                 let mut value = vec![0u8; length];
-                util::secure_rand_bytes(&mut value).unwrap();
+                util::secure_rand_bytes(&mut value)?;
 
                 Ok($name { value: value })
             }
