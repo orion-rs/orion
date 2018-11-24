@@ -78,7 +78,7 @@ pub fn hash_password(
 ) -> Result<PasswordHash, UnknownCryptoError> {
     let mut buffer = [0u8; 128];
     let mut salt = [0u8; 64];
-    util::secure_rand_bytes(&mut salt).unwrap();
+    util::secure_rand_bytes(&mut salt)?;
 
     buffer[..64].copy_from_slice(&salt);
     pbkdf2::derive_key(password, &salt, iterations, &mut buffer[64..])?;

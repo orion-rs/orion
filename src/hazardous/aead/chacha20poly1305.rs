@@ -214,7 +214,7 @@ pub fn open(
         &optional_ad,
         ciphertext_with_tag,
         ciphertext_len,
-    )?;
+    ).unwrap();
 
     util::secure_cmp(
         &poly1305_state.finalize().unwrap().unprotected_as_bytes(),
@@ -242,12 +242,11 @@ fn length_padding_tests() {
 }
 
 #[test]
-#[should_panic]
 fn test_auth_process_with_above_length_index() {
     let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]).unwrap();
     let mut poly1305_state = poly1305::init(&poly1305_key);
 
-    process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
+    assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).is_err());
 }
 
 #[test]
@@ -268,7 +267,6 @@ fn test_nonce_sizes() {
 }
 
 #[test]
-#[should_panic]
 fn test_modified_tag_error() {
     let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
     let mut dst_out_pt = [0u8; 64];
@@ -282,13 +280,13 @@ fn test_modified_tag_error() {
     ).unwrap();
     // Modify the tags first byte
     dst_out_ct[65] ^= 1;
-    open(
+    assert!(open(
         &SecretKey::from_slice(&[0u8; 32]).unwrap(),
         &Nonce::from_slice(&[0u8; 12]).unwrap(),
         &dst_out_ct,
         None,
         &mut dst_out_pt,
-    ).unwrap();
+    ).is_err());
 }
 
 #[test]

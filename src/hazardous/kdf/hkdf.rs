@@ -135,7 +135,7 @@ pub fn verify(
     info: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<bool, ValidationCryptoError> {
-    expand(&extract(salt, ikm), info, dst_out).unwrap();
+    expand(&extract(salt, ikm), info, dst_out)?;
 
     if util::secure_cmp(&dst_out, expected).is_err() {
         Err(ValidationCryptoError)

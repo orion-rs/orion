@@ -210,10 +210,10 @@ pub fn verify(
     secret_key: &SecretKey,
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let mut tag = init(secret_key);
-    tag.update(data).unwrap();
+    let mut hmac_state = init(secret_key);
+    hmac_state.update(data).unwrap();
 
-    if expected == &tag.finalize().unwrap() {
+    if expected == &hmac_state.finalize().unwrap() {
         Ok(true)
     } else {
         Err(ValidationCryptoError)
@@ -273,7 +273,6 @@ fn veriy_false_wrong_secret_key() {
 }
 
 #[test]
-#[should_panic]
 fn double_finalize_err() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
@@ -281,7 +280,7 @@ fn double_finalize_err() {
     let mut tag = init(&secret_key);
     tag.update(data).unwrap();
     let _ = tag.finalize().unwrap();
-    let _ = tag.finalize().unwrap();
+    assert!(tag.finalize().is_err());
 }
 
 #[test]
@@ -310,7 +309,6 @@ fn double_finalize_with_reset_no_update_ok() {
 }
 
 #[test]
-#[should_panic]
 fn update_after_finalize_err() {
     let secret_key = SecretKey::from_slice("Jefe".as_bytes());
     let data = "what do ya want for nothing?".as_bytes();
@@ -318,7 +316,7 @@ fn update_after_finalize_err() {
     let mut tag = init(&secret_key);
     tag.update(data).unwrap();
     let _ = tag.finalize().unwrap();
-    tag.update(data).unwrap();
+    assert!(tag.update(data).is_err());
 }
 
 #[test]

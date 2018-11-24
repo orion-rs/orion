@@ -94,14 +94,6 @@ impl core::fmt::Debug for CShake {
 }
 
 impl CShake {
-    /// A function that checks the `dst_out` in `finalize`, so that return errors are seperated.
-    fn check_dst_out(&mut self, dst_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if dst_out.is_empty() || (dst_out.len() > 65536) {
-            Err(UnknownCryptoError)
-        } else {
-            Ok(())
-        }
-    }
     /// Initial setup with encoding of `custom` and `name`.
     fn setup(&mut self, custom: &[u8], name: &[u8]) {
         // Only append the left encoded rate, not the rate itself as with `name` and `custom`
@@ -147,7 +139,10 @@ impl CShake {
         }
 
         self.is_finalized = true;
-        self.check_dst_out(dst_out)?;
+
+        if dst_out.is_empty() || (dst_out.len() > 65536) {
+            return Err(FinalizationCryptoError);
+        }
 
         let mut hasher_new = Keccak::new(136, 0x04);
         mem::swap(&mut self.hasher, &mut hasher_new);
@@ -258,7 +253,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn err_on_zero_length() {
         let input = b"\x00\x01\x02\x03";
         let custom = b"";
@@ -267,11 +261,10 @@ mod test {
 
         let mut hash = init(custom, Some(name)).unwrap();
         hash.update(input).unwrap();
-        hash.finalize(&mut out).unwrap();
+        assert!(hash.finalize(&mut out).is_err());
     }
 
     #[test]
-    #[should_panic]
     fn err_on_above_max_length() {
         let input = b"\x00\x01\x02\x03";
         let custom = b"";
@@ -280,7 +273,7 @@ mod test {
 
         let mut hash = init(custom, Some(name)).unwrap();
         hash.update(input).unwrap();
-        hash.finalize(&mut out).unwrap();
+        assert!(hash.finalize(&mut out).is_err());
     }
 
     #[test]
@@ -366,7 +359,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn double_finalize_err() {
         let input = b"\x00\x01\x02\x03";
         let custom = b"";
@@ -376,7 +368,7 @@ mod test {
         let mut cshake = init(custom, Some(name)).unwrap();
         cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
-        cshake.finalize(&mut out).unwrap();
+        assert!(cshake.finalize(&mut out).is_err());
     }
 
     #[test]
@@ -409,7 +401,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn update_after_finalize_err() {
         let input = b"\x00\x01\x02\x03";
         let custom = b"";
@@ -419,7 +410,7 @@ mod test {
         let mut cshake = init(custom, Some(name)).unwrap();
         cshake.update(input).unwrap();
         cshake.finalize(&mut out).unwrap();
-        cshake.update(input).unwrap();
+        assert!(cshake.update(input).is_err());
     }
 
     #[test]

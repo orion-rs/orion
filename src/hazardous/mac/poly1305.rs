@@ -402,9 +402,7 @@ pub fn verify(
     one_time_key: &OneTimeKey,
     data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    let tag = poly1305(one_time_key, data)?;
-
-    if &tag == expected {
+    if &poly1305(one_time_key, data)? == expected {
         Ok(true)
     } else {
         Err(ValidationCryptoError)
@@ -434,37 +432,33 @@ fn test_poly1305_verify_ok() {
 }
 
 #[test]
-#[should_panic]
 fn test_poly1305_verify_err() {
     let mut tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
     tag.value[0] ^= 1;
-    verify(
+    assert!(verify(
         &tag,
         &OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
         &[0u8; 16],
-    ).unwrap();
+    ).is_err());
 }
 
 #[test]
-#[should_panic]
-fn test_poly1305_oneshot_bad_key_err_less() {
-    let _ = poly1305(&OneTimeKey::from_slice(&[0u8; 31]).unwrap(), &[0u8; 16]).unwrap();
+fn test_bad_key_err_less() {
+    assert!(OneTimeKey::from_slice(&[0u8; 31]).is_err());
 }
 
 #[test]
-#[should_panic]
 fn test_poly1305_oneshot_bad_key_err_greater() {
-    let _ = poly1305(&OneTimeKey::from_slice(&[0u8; 33]).unwrap(), &[0u8; 16]).unwrap();
+    assert!(OneTimeKey::from_slice(&[0u8; 33]).is_err());
 }
 
 #[test]
-#[should_panic]
 fn double_finalize_err() {
     let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
     poly1305_state.update(&[0u8; 16]).unwrap();
     let _ = poly1305_state.finalize().unwrap();
-    let _ = poly1305_state.finalize().unwrap();
+    assert!(poly1305_state.finalize().is_err());
 }
 
 #[test]
@@ -489,13 +483,12 @@ fn double_finalize_with_reset_no_update_ok() {
 }
 
 #[test]
-#[should_panic]
 fn update_after_finalize_err() {
     let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
     poly1305_state.update(&[0u8; 16]).unwrap();
     let _ = poly1305_state.finalize().unwrap();
-    poly1305_state.update(&[0u8; 16]).unwrap();
+    assert!(poly1305_state.update(&[0u8; 16]).is_err());
 }
 
 #[test]
