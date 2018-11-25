@@ -9,8 +9,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -21,8 +21,9 @@
 // SOFTWARE.
 
 #[cfg(feature = "safe_api")]
-/// Macro that implements the `Default` trait, which will make a type, that needs secure default
-/// methods like CSPRNG generation, return itself with a default and secure length of random bytes.
+/// Macro that implements the `Default` trait, which will make a type, that
+/// needs secure default methods like CSPRNG generation, return itself with a
+/// default and secure length of random bytes.
 macro_rules! impl_default_trait (($name:ident, $size:expr) => (
     impl core::default::Default for $name {
         #[must_use]
@@ -38,8 +39,9 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
     }
 ));
 
-/// Macro that implements the `PartialEq` trait on a object called `$name` that also implements `unprotected_as_bytes()`.
-/// This `PartialEq` will perform in constant time.
+/// Macro that implements the `PartialEq` trait on a object called `$name` that
+/// also implements `unprotected_as_bytes()`. This `PartialEq` will perform in
+/// constant time.
 macro_rules! impl_partialeq_trait (($name:ident) => (
     impl PartialEq for $name {
         fn eq(&self, other: &$name) -> bool {
@@ -62,10 +64,11 @@ macro_rules! impl_debug_trait (($name:ident) => (
     }
 ));
 
-/// Macro that implements the `Drop` trait on a object called `$name` which as a field `value`.
-/// This `Drop` will zero out the field `value` when the objects destructor is called.
-/// WARNING: This requires value to be an array as clear_on_drop will not be called correctly if
-/// this particluar trait is implemented on Vec's.
+/// Macro that implements the `Drop` trait on a object called `$name` which as a
+/// field `value`. This `Drop` will zero out the field `value` when the objects
+/// destructor is called. WARNING: This requires value to be an array as
+/// clear_on_drop will not be called correctly if this particluar trait is
+/// implemented on Vec's.
 macro_rules! impl_drop_stack_trait (($name:ident) => (
     impl Drop for $name {
         fn drop(&mut self) {
@@ -76,10 +79,11 @@ macro_rules! impl_drop_stack_trait (($name:ident) => (
 ));
 
 #[cfg(feature = "safe_api")]
-/// Macro that implements the `Drop` trait on a object called `$name` which as a field `value`.
-/// This `Drop` will zero out the field `value` when the objects destructor is called.
-/// WARNING: This requires value to be a Vec as clear_on_drop, since calling clear_on_drop this way
-/// on arrays above the length of 32 will fail since they don't implement Default.
+/// Macro that implements the `Drop` trait on a object called `$name` which as a
+/// field `value`. This `Drop` will zero out the field `value` when the objects
+/// destructor is called. WARNING: This requires value to be a Vec as
+/// clear_on_drop, since calling clear_on_drop this way on arrays above the
+/// length of 32 will fail since they don't implement Default.
 macro_rules! impl_drop_heap_trait (($name:ident) => (
     #[cfg(feature = "safe_api")]
     impl Drop for $name {
@@ -90,8 +94,8 @@ macro_rules! impl_drop_heap_trait (($name:ident) => (
     }
 ));
 
-/// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError` if the slice
-/// is not of length `$size`.
+/// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
+/// if the slice is not of length `$size`.
 macro_rules! func_from_slice (($name:ident, $size:expr) => (
     #[must_use]
     /// Make an object from a given byte slice.
@@ -107,8 +111,9 @@ macro_rules! func_from_slice (($name:ident, $size:expr) => (
     }
 ));
 
-/// Macro to implement a `unprotected_as_bytes()` function for objects that implement extra protections.
-/// Typically used on objects that implement `Drop`, `Debug` and/or `PartialEq`.
+/// Macro to implement a `unprotected_as_bytes()` function for objects that
+/// implement extra protections. Typically used on objects that implement
+/// `Drop`, `Debug` and/or `PartialEq`.
 macro_rules! func_unprotected_as_bytes (() => (
     #[must_use]
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
@@ -118,7 +123,8 @@ macro_rules! func_unprotected_as_bytes (() => (
     }
 ));
 
-/// Macro to implement a `as_bytes()` function for objects that don't implement extra protections.
+/// Macro to implement a `as_bytes()` function for objects that don't implement
+/// extra protections.
 macro_rules! func_as_bytes (() => (
     #[must_use]
     /// Return the object as byte slice.
@@ -127,8 +133,8 @@ macro_rules! func_as_bytes (() => (
     }
 ));
 
-/// Macro to implement a `get_length()` function which will return the objects' length of
-/// field `value`.
+/// Macro to implement a `get_length()` function which will return the objects'
+/// length of field `value`.
 macro_rules! func_get_length (() => (
     /// Return the length of the object.
     pub fn get_length(&self) -> usize {
@@ -136,8 +142,8 @@ macro_rules! func_get_length (() => (
     }
 ));
 
-/// Macro to implement a `generate()` function for objects that benefit from having a CSPRNG available
-/// to generate data of a fixed length $size.
+/// Macro to implement a `generate()` function for objects that benefit from
+/// having a CSPRNG available to generate data of a fixed length $size.
 macro_rules! func_generate (($name:ident, $size:expr) => (
     #[must_use]
     #[cfg(feature = "safe_api")]
@@ -151,7 +157,8 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     }
 ));
 
-/// Macro to construct a type containing sensitive data, using a fixed-size array.
+/// Macro to construct a type containing sensitive data, using a fixed-size
+/// array.
 macro_rules! construct_secret_key {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
@@ -302,8 +309,8 @@ macro_rules! construct_tag {
     );
 }
 
-/// Macro to construct a secret key used for HMAC. This pre-pads the given key to the required length
-/// specified by the HMAC specifications.
+/// Macro to construct a secret key used for HMAC. This pre-pads the given key
+/// to the required length specified by the HMAC specifications.
 macro_rules! construct_hmac_key {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
@@ -360,7 +367,8 @@ macro_rules! construct_hmac_key {
 }
 
 #[cfg(feature = "safe_api")]
-/// Macro to construct a type containing sensitive data which is stored on the heap.
+/// Macro to construct a type containing sensitive data which is stored on the
+/// heap.
 macro_rules! construct_secret_key_variable_size {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
@@ -423,7 +431,8 @@ macro_rules! construct_secret_key_variable_size {
 }
 
 #[cfg(feature = "safe_api")]
-/// Macro to construct a type containing non-sensitive which is stored on the heap.
+/// Macro to construct a type containing non-sensitive which is stored on the
+/// heap.
 macro_rules! construct_salt_variable_size {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (

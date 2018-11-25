@@ -9,8 +9,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -23,13 +23,14 @@
 //! Key derivation.
 //!
 //! # Use case:
-//! `orion::kdf` can be used to derive higher-entropy keys from low-entropy keys. Also known as key
-//! stretching.
+//! `orion::kdf` can be used to derive higher-entropy keys from low-entropy
+//! keys. Also known as key stretching.
 //!
-//! An example of this could be deriving a key from a user-submitted password and using this derived key
-//! in disk encryption. The disk encryption software VeraCrypt, [uses](https://www.veracrypt.fr/en/Header%20Key%20Derivation.html)
-//! PBKDF2-HMAC-SHA512 to derive header keys, which in turn are used to encrypt/decrypt the master keys responsible for encrypting
-//! the data in a VeraCrypt volume.
+//! An example of this could be deriving a key from a user-submitted password
+//! and using this derived key in disk encryption. The disk encryption software VeraCrypt, [uses](https://www.veracrypt.fr/en/Header%20Key%20Derivation.html)
+//! PBKDF2-HMAC-SHA512 to derive header keys, which in turn are used to
+//! encrypt/decrypt the master keys responsible for encrypting the data in a
+//! VeraCrypt volume.
 //!
 //!
 //! # About:
@@ -39,7 +40,8 @@
 //! - `password`: The low-entropy input key to be used in key derivation.
 //! - `expected`: The expected derived key.
 //! - `salt`: The salt used for the key derivation.
-//! - `iterations`: The number of iterations performed by PBKDF2, i.e. the cost parameter.
+//! - `iterations`: The number of iterations performed by PBKDF2, i.e. the cost
+//!   parameter.
 //! - `length`: The desired length of the derived key.
 //!
 //! # Exceptions:
@@ -51,8 +53,10 @@
 //!
 //!
 //! # Security:
-//! - The iteration count should be set as high as feasible. The recommended minimum is 100000.
-//! - The salt should always be generated using a CSPRNG. `Salt::default()` can be used for
+//! - The iteration count should be set as high as feasible. The recommended
+//!   minimum is 100000.
+//! - The salt should always be generated using a CSPRNG. `Salt::default()` can
+//!   be used for
 //! this, it will generate a `Salt` of 64 bytes.
 //!
 //! # Example:
@@ -76,73 +80,73 @@ pub use hltypes::{Salt, SecretKey};
 #[must_use]
 /// Derive a key using PBKDF2-HMAC-SHA512.
 pub fn derive_key(
-    password: &Password,
-    salt: &Salt,
-    iterations: usize,
-    length: usize,
+	password: &Password,
+	salt: &Salt,
+	iterations: usize,
+	length: usize,
 ) -> Result<SecretKey, UnknownCryptoError> {
-    if length < 1 {
-        return Err(UnknownCryptoError);
-    }
+	if length < 1 {
+		return Err(UnknownCryptoError);
+	}
 
-    let mut buffer = vec![0u8; length];
+	let mut buffer = vec![0u8; length];
 
-    pbkdf2::derive_key(password, &salt.as_bytes(), iterations, &mut buffer)?;
+	pbkdf2::derive_key(password, &salt.as_bytes(), iterations, &mut buffer)?;
 
-    let dk = SecretKey::from_slice(&buffer).unwrap();
-    Clear::clear(&mut buffer);
+	let dk = SecretKey::from_slice(&buffer).unwrap();
+	Clear::clear(&mut buffer);
 
-    Ok(dk)
+	Ok(dk)
 }
 
 #[must_use]
 /// Derive and verify a key using PBKDF2-HMAC-SHA512.
 pub fn derive_key_verify(
-    expected: &SecretKey,
-    password: &Password,
-    salt: &Salt,
-    iterations: usize,
+	expected: &SecretKey,
+	password: &Password,
+	salt: &Salt,
+	iterations: usize,
 ) -> Result<bool, ValidationCryptoError> {
-    let mut buffer = vec![0u8; expected.get_length()];
+	let mut buffer = vec![0u8; expected.get_length()];
 
-    let is_good = pbkdf2::verify(
-        &expected.unprotected_as_bytes(),
-        password,
-        &salt.as_bytes(),
-        iterations,
-        &mut buffer,
-    )?;
+	let is_good = pbkdf2::verify(
+		&expected.unprotected_as_bytes(),
+		password,
+		&salt.as_bytes(),
+		iterations,
+		&mut buffer,
+	)?;
 
-    Clear::clear(&mut buffer);
+	Clear::clear(&mut buffer);
 
-    Ok(is_good)
+	Ok(is_good)
 }
 
 #[test]
 fn derive_key_and_verify() {
-    let password = Password::from_slice(&[0u8; 64]);
-    let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+	let password = Password::from_slice(&[0u8; 64]);
+	let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
-    let dk = derive_key(&password, &salt, 100, 64).unwrap();
+	let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
-    assert!(derive_key_verify(&dk, &password, &salt, 100).unwrap());
+	assert!(derive_key_verify(&dk, &password, &salt, 100).unwrap());
 }
 
 #[test]
 fn derive_key_and_verify_err() {
-    let password = Password::from_slice(&[0u8; 64]);
-    let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+	let password = Password::from_slice(&[0u8; 64]);
+	let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
-    let dk = derive_key(&password, &salt, 100, 64).unwrap();
+	let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
-    assert!(derive_key_verify(&dk, &password, &salt, 50).is_err());
+	assert!(derive_key_verify(&dk, &password, &salt, 50).is_err());
 }
 
 #[test]
 fn derive_key_bad_length() {
-    let password = Password::from_slice(&[0u8; 64]);
-    let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+	let password = Password::from_slice(&[0u8; 64]);
+	let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
-    assert!(derive_key(&password, &salt, 100, 0).is_err());
-    assert!(derive_key(&password, &salt, 100, 1).is_ok());
+	assert!(derive_key(&password, &salt, 100, 0).is_err());
+	assert!(derive_key(&password, &salt, 100, 1).is_ok());
 }

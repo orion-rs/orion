@@ -10,8 +10,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -37,10 +37,12 @@
 //! - The calculated tag does not match the expected when verifying.
 //!
 //! # Security:
-//! - The one-time key should be generated using a CSPRNG. `OneTimeKey::generate()` can be used for this.
+//! - The one-time key should be generated using a CSPRNG.
+//!   `OneTimeKey::generate()` can be used for this.
 //!
 //! # Recommendation:
-//! - If you are unsure of wether to use HMAC or Poly1305, it is most often easier to just
+//! - If you are unsure of wether to use HMAC or Poly1305, it is most often
+//!   easier to just
 //! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!
 //! # Example:
@@ -64,73 +66,74 @@ use errors::*;
 use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 
 construct_secret_key!{
-    /// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
-    ///
-    /// # Exceptions:
-    /// An exception will be thrown if:
-    /// - `slice` is not 32 bytes.
-    /// - The `OsRng` fails to initialize or read from its source.
-    (OneTimeKey, POLY1305_KEYSIZE)
+	/// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
+	///
+	/// # Exceptions:
+	/// An exception will be thrown if:
+	/// - `slice` is not 32 bytes.
+	/// - The `OsRng` fails to initialize or read from its source.
+	(OneTimeKey, POLY1305_KEYSIZE)
 }
 construct_tag!{
-    /// A type to represent the `Tag` that Poly1305 returns.
-    ///
-    /// # Exceptions:
-    /// An exception will be thrown if:
-    /// - `slice` is not 16 bytes.
-    (Tag, POLY1305_BLOCKSIZE)
+	/// A type to represent the `Tag` that Poly1305 returns.
+	///
+	/// # Exceptions:
+	/// An exception will be thrown if:
+	/// - `slice` is not 16 bytes.
+	(Tag, POLY1305_BLOCKSIZE)
 }
 
 #[must_use]
 /// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub struct Poly1305 {
-    a: [u32; 5],
-    r: [u32; 5],
-    s: [u32; 4],
-    leftover: usize,
-    buffer: [u8; POLY1305_BLOCKSIZE],
-    is_finalized: bool,
+	a: [u32; 5],
+	r: [u32; 5],
+	s: [u32; 4],
+	leftover: usize,
+	buffer: [u8; POLY1305_BLOCKSIZE],
+	is_finalized: bool,
 }
 
 impl Drop for Poly1305 {
-    fn drop(&mut self) {
-        use clear_on_drop::clear::Clear;
-        self.a.clear();
-        self.r.clear();
-        self.s.clear();
-        self.buffer.clear();
-    }
+	fn drop(&mut self) {
+		use clear_on_drop::clear::Clear;
+		self.a.clear();
+		self.r.clear();
+		self.s.clear();
+		self.buffer.clear();
+	}
 }
 
 impl core::fmt::Debug for Poly1305 {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(
-            f,
-            "Poly1305 {{ a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***],
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		write!(
+			f,
+			"Poly1305 {{ a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***],
             leftover: ***OMITTED***, buffer: [***OMITTED***], is_finalized: {:?} }}",
-            self.is_finalized
-        )
-    }
+			self.is_finalized
+		)
+	}
 }
 
 impl Poly1305 {
-    #[inline(always)]
-    #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
-    /// Initialize `Poly1305` struct for a given key.
-    fn initialize(&mut self, key: &OneTimeKey) {
-        // clamp(r)
-        self.r[0] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[0..4])) & 0x3ffffff;
-        self.r[1] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[3..7]) >> 2) & 0x3ffff03;
-        self.r[2] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
-        self.r[3] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[9..13]) >> 6) & 0x3f03fff;
-        self.r[4] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[12..16]) >> 8) & 0x00fffff;
+	#[inline(always)]
+	#[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
+	/// Initialize `Poly1305` struct for a given key.
+	fn initialize(&mut self, key: &OneTimeKey) {
+		// clamp(r)
+		self.r[0] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[0..4])) & 0x3ffffff;
+		self.r[1] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[3..7]) >> 2) & 0x3ffff03;
+		self.r[2] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
+		self.r[3] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[9..13]) >> 6) & 0x3f03fff;
+		self.r[4] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[12..16]) >> 8) & 0x00fffff;
 
-        self.s[0] = LittleEndian::read_u32(&key.unprotected_as_bytes()[16..20]);
-        self.s[1] = LittleEndian::read_u32(&key.unprotected_as_bytes()[20..24]);
-        self.s[2] = LittleEndian::read_u32(&key.unprotected_as_bytes()[24..28]);
-        self.s[3] = LittleEndian::read_u32(&key.unprotected_as_bytes()[28..32]);
-    }
-    #[must_use]
+		self.s[0] = LittleEndian::read_u32(&key.unprotected_as_bytes()[16..20]);
+		self.s[1] = LittleEndian::read_u32(&key.unprotected_as_bytes()[20..24]);
+		self.s[2] = LittleEndian::read_u32(&key.unprotected_as_bytes()[24..28]);
+		self.s[3] = LittleEndian::read_u32(&key.unprotected_as_bytes()[28..32]);
+	}
+
+	#[must_use]
     #[inline(never)]
     #[rustfmt::skip]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::cast_lossless))]
@@ -222,7 +225,8 @@ impl Poly1305 {
 
         Ok(())
     }
-    #[inline(never)]
+
+	#[inline(never)]
     #[rustfmt::skip]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::cast_lossless))]
     #[cfg_attr(feature = "cargo-clippy", allow(clippy::identity_op))]
@@ -283,231 +287,236 @@ impl Poly1305 {
         self.a[2] = h2;
         self.a[3] = h3;
     }
-    #[inline(always)]
-    /// Reset to `init()` state.
-    pub fn reset(&mut self) {
-        if self.is_finalized {
-            self.a = [0u32; 5];
-            self.leftover = 0;
-            self.is_finalized = false;
-        } else {
-        }
-    }
-    #[must_use]
-    #[inline(always)]
-    /// Update state with a `data`. This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
-        if self.is_finalized {
-            return Err(FinalizationCryptoError);
-        }
 
-        let mut bytes = data;
+	#[inline(always)]
+	/// Reset to `init()` state.
+	pub fn reset(&mut self) {
+		if self.is_finalized {
+			self.a = [0u32; 5];
+			self.leftover = 0;
+			self.is_finalized = false;
+		} else {
+		}
+	}
 
-        if self.leftover != 0 {
-            let mut want = POLY1305_BLOCKSIZE - self.leftover;
-            if want > bytes.len() {
-                want = bytes.len();
-            }
+	#[must_use]
+	#[inline(always)]
+	/// Update state with a `data`. This can be called multiple times.
+	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+		if self.is_finalized {
+			return Err(FinalizationCryptoError);
+		}
 
-            for (idx, itm) in bytes.iter().enumerate().take(want) {
-                self.buffer[self.leftover + idx] = *itm;
-            }
-            // Reduce by slice
-            bytes = &bytes[want..];
-            self.leftover += want;
+		let mut bytes = data;
 
-            if self.leftover < POLY1305_BLOCKSIZE {
-                return Ok(());
-            }
+		if self.leftover != 0 {
+			let mut want = POLY1305_BLOCKSIZE - self.leftover;
+			if want > bytes.len() {
+				want = bytes.len();
+			}
 
-            let tmp = self.buffer;
-            self.process_block(&tmp).unwrap();
-            self.leftover = 0;
-        }
+			for (idx, itm) in bytes.iter().enumerate().take(want) {
+				self.buffer[self.leftover + idx] = *itm;
+			}
+			// Reduce by slice
+			bytes = &bytes[want..];
+			self.leftover += want;
 
-        while bytes.len() >= POLY1305_BLOCKSIZE {
-            self.process_block(&bytes[0..POLY1305_BLOCKSIZE]).unwrap();
-            // Reduce by slice
-            bytes = &bytes[POLY1305_BLOCKSIZE..];
-        }
+			if self.leftover < POLY1305_BLOCKSIZE {
+				return Ok(());
+			}
 
-        self.buffer[..bytes.len()].copy_from_slice(&bytes);
-        self.leftover = bytes.len();
+			let tmp = self.buffer;
+			self.process_block(&tmp).unwrap();
+			self.leftover = 0;
+		}
 
-        Ok(())
-    }
-    #[must_use]
-    #[inline(always)]
-    /// Return a Poly1305 tag.
-    pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
-        if self.is_finalized {
-            return Err(FinalizationCryptoError);
-        }
+		while bytes.len() >= POLY1305_BLOCKSIZE {
+			self.process_block(&bytes[0..POLY1305_BLOCKSIZE]).unwrap();
+			// Reduce by slice
+			bytes = &bytes[POLY1305_BLOCKSIZE..];
+		}
 
-        self.is_finalized = true;
+		self.buffer[..bytes.len()].copy_from_slice(&bytes);
+		self.leftover = bytes.len();
 
-        let mut local_buffer: Poly1305Tag = self.buffer;
+		Ok(())
+	}
 
-        if self.leftover != 0 {
-            local_buffer[self.leftover] = 1;
-            // Pad the last block with zeroes before processing it
-            for buf_itm in local_buffer
-                .iter_mut()
-                .take(POLY1305_BLOCKSIZE)
-                .skip(self.leftover + 1)
-            {
-                *buf_itm = 0u8;
-            }
+	#[must_use]
+	#[inline(always)]
+	/// Return a Poly1305 tag.
+	pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
+		if self.is_finalized {
+			return Err(FinalizationCryptoError);
+		}
 
-            self.process_block(&local_buffer).unwrap();
-        }
-        // Get tag
-        self.process_end_of_stream();
-        LittleEndian::write_u32_into(&self.a[0..4], &mut local_buffer);
+		self.is_finalized = true;
 
-        Ok(Tag::from_slice(&local_buffer).unwrap())
-    }
+		let mut local_buffer: Poly1305Tag = self.buffer;
+
+		if self.leftover != 0 {
+			local_buffer[self.leftover] = 1;
+			// Pad the last block with zeroes before processing it
+			for buf_itm in local_buffer
+				.iter_mut()
+				.take(POLY1305_BLOCKSIZE)
+				.skip(self.leftover + 1)
+			{
+				*buf_itm = 0u8;
+			}
+
+			self.process_block(&local_buffer).unwrap();
+		}
+		// Get tag
+		self.process_end_of_stream();
+		LittleEndian::write_u32_into(&self.a[0..4], &mut local_buffer);
+
+		Ok(Tag::from_slice(&local_buffer).unwrap())
+	}
 }
 
 #[must_use]
 /// Initialize a `Poly1305` struct with a given one-time key.
 pub fn init(one_time_key: &OneTimeKey) -> Poly1305 {
-    let mut poly_1305_state = Poly1305 {
-        a: [0u32; 5],
-        r: [0u32; 5],
-        s: [0u32; 4],
-        leftover: 0,
-        buffer: [0u8; POLY1305_BLOCKSIZE],
-        is_finalized: false,
-    };
+	let mut poly_1305_state = Poly1305 {
+		a: [0u32; 5],
+		r: [0u32; 5],
+		s: [0u32; 4],
+		leftover: 0,
+		buffer: [0u8; POLY1305_BLOCKSIZE],
+		is_finalized: false,
+	};
 
-    poly_1305_state.initialize(one_time_key);
+	poly_1305_state.initialize(one_time_key);
 
-    poly_1305_state
+	poly_1305_state
 }
 
 #[must_use]
 /// One-shot function for generating a Poly1305 tag of `data`.
 pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-    let mut poly_1305_state = init(one_time_key);
-    poly_1305_state.update(data).unwrap();
+	let mut poly_1305_state = init(one_time_key);
+	poly_1305_state.update(data).unwrap();
 
-    Ok(poly_1305_state.finalize().unwrap())
+	Ok(poly_1305_state.finalize().unwrap())
 }
 
 #[must_use]
 /// Verify a Poly1305 tag in constant time.
 pub fn verify(
-    expected: &Tag,
-    one_time_key: &OneTimeKey,
-    data: &[u8],
+	expected: &Tag,
+	one_time_key: &OneTimeKey,
+	data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-    if &poly1305(one_time_key, data)? == expected {
-        Ok(true)
-    } else {
-        Err(ValidationCryptoError)
-    }
+	if &poly1305(one_time_key, data)? == expected {
+		Ok(true)
+	} else {
+		Err(ValidationCryptoError)
+	}
 }
 
 #[test]
 fn test_wrong_key_len() {
-    assert!(OneTimeKey::from_slice(&[0u8; 31]).is_err());
-    assert!(OneTimeKey::from_slice(&[0u8; 33]).is_err());
-    assert!(OneTimeKey::from_slice(&[0u8; 32]).is_ok());
+	assert!(OneTimeKey::from_slice(&[0u8; 31]).is_err());
+	assert!(OneTimeKey::from_slice(&[0u8; 33]).is_err());
+	assert!(OneTimeKey::from_slice(&[0u8; 32]).is_ok());
 }
 
 #[test]
 fn test_poly1305_oneshot_ok() {
-    assert!(poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).is_ok());
+	assert!(poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).is_ok());
 }
 
 #[test]
 fn test_poly1305_verify_ok() {
-    let tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
-    verify(
-        &tag,
-        &OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 16],
-    ).unwrap();
+	let tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
+	verify(
+		&tag,
+		&OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
+		&[0u8; 16],
+	)
+	.unwrap();
 }
 
 #[test]
 fn test_poly1305_verify_err() {
-    let mut tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
-    tag.value[0] ^= 1;
-    assert!(verify(
-        &tag,
-        &OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
-        &[0u8; 16],
-    ).is_err());
+	let mut tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
+	tag.value[0] ^= 1;
+	assert!(verify(
+		&tag,
+		&OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
+		&[0u8; 16],
+	)
+	.is_err());
 }
 
 #[test]
 fn test_bad_key_err_less() {
-    assert!(OneTimeKey::from_slice(&[0u8; 31]).is_err());
+	assert!(OneTimeKey::from_slice(&[0u8; 31]).is_err());
 }
 
 #[test]
 fn test_poly1305_oneshot_bad_key_err_greater() {
-    assert!(OneTimeKey::from_slice(&[0u8; 33]).is_err());
+	assert!(OneTimeKey::from_slice(&[0u8; 33]).is_err());
 }
 
 #[test]
 fn double_finalize_err() {
-    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
+	let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
-    poly1305_state.update(&[0u8; 16]).unwrap();
-    let _ = poly1305_state.finalize().unwrap();
-    assert!(poly1305_state.finalize().is_err());
+	poly1305_state.update(&[0u8; 16]).unwrap();
+	let _ = poly1305_state.finalize().unwrap();
+	assert!(poly1305_state.finalize().is_err());
 }
 
 #[test]
 fn double_finalize_with_reset_ok() {
-    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
+	let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
-    poly1305_state.update(&[0u8; 16]).unwrap();
-    let _ = poly1305_state.finalize().unwrap();
-    poly1305_state.reset();
-    poly1305_state.update(&[0u8; 16]).unwrap();
-    let _ = poly1305_state.finalize().unwrap();
+	poly1305_state.update(&[0u8; 16]).unwrap();
+	let _ = poly1305_state.finalize().unwrap();
+	poly1305_state.reset();
+	poly1305_state.update(&[0u8; 16]).unwrap();
+	let _ = poly1305_state.finalize().unwrap();
 }
 
 #[test]
 fn double_finalize_with_reset_no_update_ok() {
-    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
+	let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
-    poly1305_state.update(&[0u8; 16]).unwrap();
-    let _ = poly1305_state.finalize().unwrap();
-    poly1305_state.reset();
-    let _ = poly1305_state.finalize().unwrap();
+	poly1305_state.update(&[0u8; 16]).unwrap();
+	let _ = poly1305_state.finalize().unwrap();
+	poly1305_state.reset();
+	let _ = poly1305_state.finalize().unwrap();
 }
 
 #[test]
 fn update_after_finalize_err() {
-    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
+	let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
-    poly1305_state.update(&[0u8; 16]).unwrap();
-    let _ = poly1305_state.finalize().unwrap();
-    assert!(poly1305_state.update(&[0u8; 16]).is_err());
+	poly1305_state.update(&[0u8; 16]).unwrap();
+	let _ = poly1305_state.finalize().unwrap();
+	assert!(poly1305_state.update(&[0u8; 16]).is_err());
 }
 
 #[test]
 fn update_after_finalize_with_reset_ok() {
-    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
+	let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
-    poly1305_state.update(&[0u8; 16]).unwrap();
-    let expected = poly1305_state.finalize().unwrap();
-    poly1305_state.reset();
-    poly1305_state.update(&[0u8; 16]).unwrap();
-    assert!(&expected == &poly1305_state.finalize().unwrap());
+	poly1305_state.update(&[0u8; 16]).unwrap();
+	let expected = poly1305_state.finalize().unwrap();
+	poly1305_state.reset();
+	poly1305_state.update(&[0u8; 16]).unwrap();
+	assert!(&expected == &poly1305_state.finalize().unwrap());
 }
 
 #[test]
 fn double_reset_ok() {
-    let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
+	let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
-    poly1305_state.update(&[0u8; 16]).unwrap();
-    let _ = poly1305_state.finalize().unwrap();
-    poly1305_state.reset();
-    poly1305_state.reset();
+	poly1305_state.update(&[0u8; 16]).unwrap();
+	let _ = poly1305_state.finalize().unwrap();
+	poly1305_state.reset();
+	poly1305_state.reset();
 }

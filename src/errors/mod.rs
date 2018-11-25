@@ -9,8 +9,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -31,29 +31,21 @@ use rand;
 pub struct UnknownCryptoError;
 
 impl fmt::Display for UnknownCryptoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "UnknownCryptoError")
-    }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "UnknownCryptoError") }
 }
 
 impl fmt::Debug for UnknownCryptoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "UnknownCryptoError")
-    }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "UnknownCryptoError") }
 }
 
 #[cfg(feature = "safe_api")]
 // Required for rand's generators
 impl From<rand::Error> for UnknownCryptoError {
-    fn from(_: rand::Error) -> Self {
-        UnknownCryptoError
-    }
+	fn from(_: rand::Error) -> Self { UnknownCryptoError }
 }
 
 impl From<FinalizationCryptoError> for UnknownCryptoError {
-    fn from(_: FinalizationCryptoError) -> Self {
-        UnknownCryptoError
-    }
+	fn from(_: FinalizationCryptoError) -> Self { UnknownCryptoError }
 }
 
 /// Error for a failed verification.
@@ -61,40 +53,37 @@ impl From<FinalizationCryptoError> for UnknownCryptoError {
 pub struct ValidationCryptoError;
 
 impl fmt::Display for ValidationCryptoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ValidationCryptoError - Failed verification")
-    }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "ValidationCryptoError - Failed verification")
+	}
 }
 
 impl fmt::Debug for ValidationCryptoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ValidationCryptoError - Failed verification")
-    }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "ValidationCryptoError - Failed verification")
+	}
 }
 
 impl From<UnknownCryptoError> for ValidationCryptoError {
-    fn from(_: UnknownCryptoError) -> Self {
-        ValidationCryptoError
-    }
+	fn from(_: UnknownCryptoError) -> Self { ValidationCryptoError }
 }
 
-/// Error for calling a finalization method on an object that needs to be reset first.
+/// Error for calling a finalization method on an object that needs to be reset
+/// first.
 pub struct FinalizationCryptoError;
 
 impl fmt::Display for FinalizationCryptoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "FinalizationCryptoError - Missing reset")
-    }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "FinalizationCryptoError - Missing reset")
+	}
 }
 
 impl fmt::Debug for FinalizationCryptoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "FinalizationCryptoError - Missing reset")
-    }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "FinalizationCryptoError - Missing reset")
+	}
 }
 
 impl From<UnknownCryptoError> for FinalizationCryptoError {
-    fn from(_: UnknownCryptoError) -> Self {
-        FinalizationCryptoError
-    }
+	fn from(_: UnknownCryptoError) -> Self { FinalizationCryptoError }
 }

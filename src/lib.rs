@@ -9,8 +9,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -23,7 +23,8 @@
 //! A usable pure-Rust cryptography library.
 //!
 //! ## Authenticated secret-key encryption
-//! `orion::aead` offers authenticated secret-key encryption using XChaCha20Poly1305.
+//! `orion::aead` offers authenticated secret-key encryption using
+//! XChaCha20Poly1305.
 //!
 //! ## Password hashing and verification
 //! `orion::pwhash` offers password hashing and verification using PBKDF2.
@@ -36,8 +37,8 @@
 //!
 //!
 //! ### A note on `no_std`:
-//! When orion is used in a `no_std` context, access to nearly all functionality outside of `hazardous`,
-//! is not available.
+//! When orion is used in a `no_std` context, access to nearly all functionality
+//! outside of `hazardous`, is not available.
 //!
 //!
 //! More information about orion is available in the [wiki](https://github.com/brycx/orion/wiki).

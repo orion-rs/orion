@@ -9,8 +9,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -21,9 +21,10 @@
 // SOFTWARE.
 
 //! ### **Caution**:
-//! Usage of the `hazardous` module is __**only intended for advanced users**__. `hazardous` contains
-//! implmentations with a much higher degree of control. It is also much easier to misuse
-//! those implementations. Only use `hazardous` if absolutely necessary.
+//! Usage of the `hazardous` module is __**only intended for advanced users**__.
+//! `hazardous` contains implmentations with a much higher degree of control. It
+//! is also much easier to misuse those implementations. Only use `hazardous` if
+//! absolutely necessary.
 
 /// AEADs (Authenticated Encryption with Associated Data).
 pub mod aead;
@@ -31,7 +32,8 @@ pub mod aead;
 /// MACs (Message Authentication Code).
 pub mod mac;
 
-/// KDFs (Key Derivation Function) and PBKDF (Password-Based Key Derivation Function).
+/// KDFs (Key Derivation Function) and PBKDF (Password-Based Key Derivation
+/// Function).
 pub mod kdf;
 
 /// XOFs (Extendable Output Function).
