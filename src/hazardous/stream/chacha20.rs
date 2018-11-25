@@ -232,9 +232,11 @@ impl InternalState {
 		}
 
 		if self.is_ietf {
-			for idx in 0..16 {
-				working_state.state[idx] = working_state.state[idx].wrapping_add(self.state[idx]);
-			}
+			working_state
+				.state
+				.iter_mut()
+				.zip(self.state.iter())
+				.for_each(|(a, b)| *a = a.wrapping_add(*b));
 		}
 
 		Ok(working_state.state)
