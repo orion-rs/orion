@@ -104,10 +104,10 @@ fn function_f(
 			hmac.reset();
 			hmac.update(&u_step).unwrap();
 			u_step.copy_from_slice(&hmac.finalize().unwrap().unprotected_as_bytes());
-
-			for (idx, val) in u_step[..block_len].iter().enumerate() {
-				dk_block[idx] ^= val;
-			}
+			dk_block
+				.iter_mut()
+				.zip(u_step.iter())
+				.for_each(|(a, b)| *a ^= b);
 		}
 	}
 }
