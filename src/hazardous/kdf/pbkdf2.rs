@@ -67,7 +67,7 @@ use hazardous::{
 };
 use util;
 
-construct_hmac_key!{
+construct_hmac_key! {
 	/// A type to represent the `Password` that PBKDF2 hashes.
 	///
 	/// # Note:

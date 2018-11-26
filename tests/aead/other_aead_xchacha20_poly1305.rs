@@ -21,7 +21,7 @@
 // Sodiumoxide test vector: https://github.com/sodiumoxide/sodiumoxide/blob/master/src/crypto/aead/xchacha20poly1305_ietf.rs
 // Pulled at commit: https://github.com/sodiumoxide/sodiumoxide/commit/0be9734cc2ddb07ac0cd7cc67cf48afd6982cc91
 #[cfg(test)]
-mod other_aead_xchacha20_poly1305 {
+mod sodiumoxide_xchacha20_poly1305 {
 
 	extern crate orion;
 	use self::orion::hazardous::aead;
@@ -77,7 +77,7 @@ mod other_aead_xchacha20_poly1305 {
 			&mut dst_out_ct,
 		)
 		.unwrap();
-
+		// Verify ciphertext
 		assert_eq!(
 			dst_out_ct[..plaintext.len()].as_ref(),
 			expected_ct[..plaintext.len()].as_ref()
@@ -98,5 +98,96 @@ mod other_aead_xchacha20_poly1305 {
 		.unwrap();
 
 		assert_eq!(dst_out_pt[..].as_ref(), plaintext.as_ref());
+	}
+}
+
+// Wireguard test vectors: https://git.zx2c4.com/wireguard-go/tree/xchacha20poly1305/xchacha20_test.go
+// Pulled the 26th November 2018.
+#[cfg(test)]
+mod wireguard_xchacha20_poly1305 {
+
+	extern crate hex;
+	extern crate orion;
+
+	use self::{hex::decode, orion::hazardous::aead};
+
+	fn wireguard_test_runner(key: &[u8], nonce: &[u8], plaintext: &[u8], expected_ct: &[u8]) {
+		// This test vectors ciphertext already includes the tag
+		// So the default test runner can't be used
+		let mut dst_out_ct = vec![0u8; expected_ct.len()];
+		let mut dst_out_pt = vec![0u8; plaintext.len()];
+
+		// These test vectors use empty ad parameter, see source.
+		aead::xchacha20poly1305::seal(
+			&aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
+			&aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+			&plaintext,
+			None,
+			&mut dst_out_ct,
+		)
+		.unwrap();
+		// Verify ciphertext
+		assert_eq!(
+			dst_out_ct[..plaintext.len()].as_ref(),
+			expected_ct[..plaintext.len()].as_ref()
+		);
+		// Verify tags
+		assert_eq!(
+			dst_out_ct[plaintext.len()..].as_ref(),
+			expected_ct[plaintext.len()..].as_ref()
+		);
+
+		aead::xchacha20poly1305::open(
+			&aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
+			&aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+			&dst_out_ct,
+			None,
+			&mut dst_out_pt,
+		)
+		.unwrap();
+
+		assert_eq!(dst_out_pt[..].as_ref(), &plaintext[..]);
+	}
+
+	#[test]
+	fn wireguard_test_0() {
+		let key =
+			decode("0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+		let nonce = decode("000000000000000000000000000000000000000000000000").unwrap();
+		let plaintext = decode(
+            "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        ).unwrap();
+		let expected_ct = decode(
+            "789e9689e5208d7fd9e1f3c5b5341f48ef18a13e418998addadd97a3693a987f8e82ecd5c1433bfed1af49750c0f1ff29c4174a05b119aa3a9e8333812e0c0feb1299c5949d895ee01dbf50f8395dd84",
+        ).unwrap();
+
+		wireguard_test_runner(&key, &nonce, &plaintext, &expected_ct);
+	}
+
+	#[test]
+	fn wireguard_test_1() {
+		let key =
+			decode("0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f").unwrap();
+		let nonce = decode("0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f").unwrap();
+		let plaintext = decode("0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f").unwrap();
+		let expected_ct =
+			decode("e1a046aa7f71e2af8b80b6408b2fd8d3a350278cde79c94d9efaa475e1339b3dd490127b")
+				.unwrap();
+
+		wireguard_test_runner(&key, &nonce, &plaintext, &expected_ct);
+	}
+
+	#[test]
+	fn wireguard_test_2() {
+		let key =
+			decode("979196dbd78526f2f584f7534db3f5824d8ccfa858ca7e09bdd3656ecd36033c").unwrap();
+		let nonce = decode("d9a8213e8a697508805c2c171ad54487ead9e3e02d82d5bc").unwrap();
+		let plaintext =
+			decode("43cc6d624e451bbed952c3e071dc6c03392ce11eb14316a94b2fdc98b22fedea").unwrap();
+		let expected_ct = decode(
+			"53c1e8bef2dbb8f2505ec010a7afe21d5a8e6dd8f987e4ea1a2ed5dfbc844ea400db34496fd2153526c6e87c36694200",
+		).unwrap();
+
+		wireguard_test_runner(&key, &nonce, &plaintext, &expected_ct);
 	}
 }

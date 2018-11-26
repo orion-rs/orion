@@ -76,7 +76,7 @@ use errors::*;
 use hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE};
 use sha2::{Digest, Sha512};
 
-construct_hmac_key!{
+construct_hmac_key! {
 	/// A type to represent the `SecretKey` that HMAC uses for authentication.
 	///
 	/// # Note:
@@ -88,7 +88,7 @@ construct_hmac_key!{
 	(SecretKey, SHA2_BLOCKSIZE)
 }
 
-construct_tag!{
+construct_tag! {
 	/// A type to represent the `Tag` that HMAC returns.
 	///
 	/// # Exceptions:
