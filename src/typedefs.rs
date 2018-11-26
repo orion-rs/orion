@@ -405,7 +405,7 @@ macro_rules! construct_secret_key_variable_size {
             /// Randomly generate using a CSPRNG. Not available in `no_std` context.
             pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
                 use util;
-                if length < 1 {
+                if length < 1 || length > (u32::max_value() as usize) {
                     return Err(UnknownCryptoError);
                 }
 
@@ -426,6 +426,13 @@ macro_rules! construct_secret_key_variable_size {
         fn test_unprotected_as_bytes_derived_key() {
             let test = $name::from_slice(&[0u8; 256]).unwrap();
             assert!(test.unprotected_as_bytes().len() == 256);
+        }
+        #[test]
+        fn test_generate_secet_key() {
+            assert!($name::generate(0).is_err());
+            assert!($name::generate(usize::max_value()).is_err());
+            assert!($name::generate(1).is_ok());
+            assert!($name::generate(64).is_ok());
         }
     );
 }
@@ -463,7 +470,7 @@ macro_rules! construct_salt_variable_size {
             /// Randomly generate using a CSPRNG. Not available in `no_std` context.
             pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
                 use util;
-                if length < 1 {
+                if length < 1 || length > (u32::max_value() as usize) {
                     return Err(UnknownCryptoError);
                 }
 
@@ -490,6 +497,13 @@ macro_rules! construct_salt_variable_size {
         fn test_salt_as_bytes() {
             let test = $name::from_slice(&[0u8; 256]).unwrap();
             assert!(test.as_bytes().len() == 256);
+        }
+        #[test]
+        fn test_generate_salt() {
+            assert!($name::generate(0).is_err());
+            assert!($name::generate(usize::max_value()).is_err());
+            assert!($name::generate(1).is_ok());
+            assert!($name::generate(64).is_ok());
         }
     );
 }
