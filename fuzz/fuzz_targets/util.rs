@@ -52,6 +52,14 @@ pub fn apply_from_input_heap(apply_to: &mut Vec<u8>, input: &[u8], lower_bound: 
     }
 }
 
+/// Replicate of above, but allowing empty output.
+pub fn apply_from_input_heap_allow_empty(apply_to: &mut Vec<u8>, input: &[u8], lower_bound: usize) {
+    if lower_bound < input.len() {
+        apply_to.extend_from_slice(&input[lower_bound..]);
+    } else {
+    }
+}
+
 /// Helper function to setup key and nonce for ChaCha20/XChaCha20/hchacha20.
 pub fn chacha_key_nonce_setup(nonce_len: usize, data: &[u8]) -> ([u8; 32], Vec<u8>) {
     let mut key = [0u8; 32];
@@ -139,7 +147,7 @@ pub fn poly1305_setup(data: &[u8]) -> ([u8; 32], Vec<u8>) {
     let mut key = [0u8; 32];
     apply_from_input_fixed(&mut key, &data, 0);
     let mut message = Vec::new();
-    apply_from_input_heap(&mut message, data, key.len());
+    apply_from_input_heap_allow_empty(&mut message, data, key.len());
 
     (key, message)
 }
