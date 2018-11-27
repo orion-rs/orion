@@ -39,7 +39,7 @@ construct_secret_key_variable_size! {
 	/// - `slice` is empty.
 	/// - The `OsRng` fails to initialize or read from its source.
 	/// - `length` is 0.
-	/// - `length` is above `u32::max_value()`.
+	/// - `length` is not less than `u32::max_value()`.
 	(SecretKey, 32)
 }
 
@@ -58,7 +58,7 @@ construct_salt_variable_size! {
 	/// - `slice` is empty.
 	/// - The `OsRng` fails to initialize or read from its source.
 	/// - `length` is 0.
-	/// - `length` is above `u32::max_value()`.
+	/// - `length` is not less than `u32::max_value()`.
 	(Salt, 64)
 }
 

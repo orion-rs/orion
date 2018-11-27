@@ -405,7 +405,7 @@ macro_rules! construct_secret_key_variable_size {
             /// Randomly generate using a CSPRNG. Not available in `no_std` context.
             pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
                 use util;
-                if length < 1 || length > (u32::max_value() as usize) {
+                if length < 1 || length >= (u32::max_value() as usize) {
                     return Err(UnknownCryptoError);
                 }
 
@@ -470,7 +470,7 @@ macro_rules! construct_salt_variable_size {
             /// Randomly generate using a CSPRNG. Not available in `no_std` context.
             pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
                 use util;
-                if length < 1 || length > (u32::max_value() as usize) {
+                if length < 1 || length >= (u32::max_value() as usize) {
                     return Err(UnknownCryptoError);
                 }
 

@@ -48,7 +48,7 @@
 //! An exception will be thrown if:
 //! - `iterations` is 0.
 //! - `length` is 0.
-//! - `length` is above `u32::max_value()`.
+//! - `length` is not less than `u32::max_value()`.
 //! - The `OsRng` fails to initialize or read from its source.
 //! - The `expected` does not match the derived key.
 //!
@@ -86,7 +86,7 @@ pub fn derive_key(
 	iterations: usize,
 	length: usize,
 ) -> Result<SecretKey, UnknownCryptoError> {
-	if length < 1 || length > (u32::max_value() as usize) {
+	if length < 1 || length >= (u32::max_value() as usize) {
 		return Err(UnknownCryptoError);
 	}
 
