@@ -30,7 +30,8 @@ fuzz_target!(|data: &[u8]| {
     assert!(res);
 
     // orion::pwhash
-    let pwhash_password = orion::pwhash::Password::from_slice(data);
+    // TODO: Don't test pwhash_password with the same value as salt
+    let pwhash_password = orion::pwhash::Password::from_slice(&salt).unwrap();
     let c = if data.is_empty() {
         10000
     } else {
