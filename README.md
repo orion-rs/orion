@@ -5,12 +5,11 @@
 orion is a cryptography library written in pure-Rust which aims to provide easy and usable crypto. 'Usable' meaning exposing high-level API's that are easy to use and hard to misuse. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
 
 Currently supports:
-* **AEAD**: ChaCha20Poly1305, XChaCha20Poly1305
-* **Stream ciphers**: ChaCha20, XChaCha20
-* **KDF**: HKDF-HMAC-SHA512
-* **Password hashing**: PBKDF2-HMAC-SHA512
-* **MAC**: HMAC-SHA512, Poly1305
-* **XOF**: cSHAKE256
+* **AEAD**: (X)ChaCha20Poly1305.
+* **Stream ciphers**: (X)ChaCha20.
+* **KDF**: HKDF-HMAC-SHA512, PBKDF2-HMAC-SHA512.
+* **MAC**: HMAC-SHA512, Poly1305.
+* **XOF**: cSHAKE256.
 
 ### Security
 This library is **not suitable for production code** and **usage is at own risk**.
