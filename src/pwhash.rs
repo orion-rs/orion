@@ -64,7 +64,7 @@
 //! ```
 //! use orion::pwhash;
 //!
-//! let password = pwhash::Password::from_slice("Secret password".as_bytes());
+//! let password = pwhash::Password::from_slice(b"Secret password").unwrap();
 //!
 //! let hash = pwhash::hash_password(&password, 100000).unwrap();
 //! assert!(pwhash::hash_password_verify(&hash, &password, 100000).unwrap());
@@ -73,8 +73,7 @@
 use clear_on_drop::clear::Clear;
 use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::pbkdf2;
-pub use hazardous::kdf::pbkdf2::Password;
-pub use hltypes::PasswordHash;
+pub use hltypes::{Password, PasswordHash};
 use util;
 
 #[must_use]
@@ -88,7 +87,12 @@ pub fn hash_password(
 	util::secure_rand_bytes(&mut salt)?;
 
 	buffer[..64].copy_from_slice(&salt);
-	pbkdf2::derive_key(password, &salt, iterations, &mut buffer[64..])?;
+	pbkdf2::derive_key(
+		&pbkdf2::Password::from_slice(password.unprotected_as_bytes()),
+		&salt,
+		iterations,
+		&mut buffer[64..],
+	)?;
 
 	let dk = PasswordHash::from_slice(&buffer).unwrap();
 	buffer.clear();
@@ -107,7 +111,7 @@ pub fn hash_password_verify(
 
 	let is_good = pbkdf2::verify(
 		&expected_with_salt.unprotected_as_bytes()[64..],
-		password,
+		&pbkdf2::Password::from_slice(password.unprotected_as_bytes()),
 		&expected_with_salt.unprotected_as_bytes()[..64],
 		iterations,
 		&mut dk,
@@ -120,7 +124,7 @@ pub fn hash_password_verify(
 
 #[test]
 fn pbkdf2_verify() {
-	let password = Password::from_slice(&[0u8; 64]);
+	let password = Password::from_slice(&[0u8; 64]).unwrap();
 
 	let pbkdf2_dk = hash_password(&password, 100).unwrap();
 
@@ -132,7 +136,7 @@ fn pbkdf2_verify() {
 
 #[test]
 fn pbkdf2_verify_err_modified_salt() {
-	let password = Password::from_slice(&[0u8; 64]);
+	let password = Password::from_slice(&[0u8; 64]).unwrap();
 
 	let pbkdf2_dk = hash_password(&password, 100).unwrap();
 	let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
@@ -144,7 +148,7 @@ fn pbkdf2_verify_err_modified_salt() {
 
 #[test]
 fn pbkdf2_verify_err_modified_password() {
-	let password = Password::from_slice(&[0u8; 64]);
+	let password = Password::from_slice(&[0u8; 64]).unwrap();
 
 	let pbkdf2_dk = hash_password(&password, 100).unwrap();
 	let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
@@ -156,7 +160,7 @@ fn pbkdf2_verify_err_modified_password() {
 
 #[test]
 fn pbkdf2_verify_err_modified_salt_and_password() {
-	let password = Password::from_slice(&[0u8; 64]);
+	let password = Password::from_slice(&[0u8; 64]).unwrap();
 
 	let pbkdf2_dk = hash_password(&password, 100).unwrap();
 	let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
@@ -168,7 +172,7 @@ fn pbkdf2_verify_err_modified_salt_and_password() {
 
 #[test]
 fn pbkdf2_zero_iterations() {
-	let password = Password::from_slice(&[0u8; 64]);
+	let password = Password::from_slice(&[0u8; 64]).unwrap();
 
 	assert!(hash_password(&password, 0).is_err());
 }

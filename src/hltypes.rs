@@ -73,3 +73,13 @@ construct_tag! {
 	/// - `slice` is not 128 bytes.
 	(PasswordHash, 128)
 }
+
+construct_password_variable_size! {
+	/// A type to represent the `Password` that PBKDF2 hashes and uses for key derivation.
+	///
+	///
+	/// # Exceptions:
+	/// An exception will be thrown if:
+	/// - `slice` is empty.
+	(Password)
+}

@@ -64,7 +64,7 @@
 //! ```
 //! use orion::kdf;
 //!
-//! let user_password = kdf::Password::from_slice(b"User password");
+//! let user_password = kdf::Password::from_slice(b"User password").unwrap();
 //! let salt = kdf::Salt::default();
 //!
 //! let derived_key = kdf::derive_key(&user_password, &salt, 100000, 64).unwrap();
@@ -75,8 +75,7 @@
 use clear_on_drop::clear::Clear;
 use errors::{UnknownCryptoError, ValidationCryptoError};
 use hazardous::kdf::pbkdf2;
-pub use hazardous::kdf::pbkdf2::Password;
-pub use hltypes::{Salt, SecretKey};
+pub use hltypes::{Password, Salt, SecretKey};
 
 #[must_use]
 /// Derive a key using PBKDF2-HMAC-SHA512.
@@ -92,9 +91,14 @@ pub fn derive_key(
 
 	let mut buffer = vec![0u8; length];
 
-	pbkdf2::derive_key(password, &salt.as_bytes(), iterations, &mut buffer)?;
+	pbkdf2::derive_key(
+		&pbkdf2::Password::from_slice(password.unprotected_as_bytes()),
+		&salt.as_bytes(),
+		iterations,
+		&mut buffer,
+	)?;
 
-	let dk = SecretKey::from_slice(&buffer).unwrap();
+	let dk = SecretKey::from_slice(&buffer)?;
 	Clear::clear(&mut buffer);
 
 	Ok(dk)
@@ -112,7 +116,7 @@ pub fn derive_key_verify(
 
 	let is_good = pbkdf2::verify(
 		&expected.unprotected_as_bytes(),
-		password,
+		&pbkdf2::Password::from_slice(password.unprotected_as_bytes()),
 		&salt.as_bytes(),
 		iterations,
 		&mut buffer,
@@ -125,7 +129,7 @@ pub fn derive_key_verify(
 
 #[test]
 fn derive_key_and_verify() {
-	let password = Password::from_slice(&[0u8; 64]);
+	let password = Password::from_slice(&[0u8; 64]).unwrap();
 	let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
 	let dk = derive_key(&password, &salt, 100, 64).unwrap();
@@ -135,7 +139,7 @@ fn derive_key_and_verify() {
 
 #[test]
 fn derive_key_and_verify_err() {
-	let password = Password::from_slice(&[0u8; 64]);
+	let password = Password::from_slice(&[0u8; 64]).unwrap();
 	let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
 	let dk = derive_key(&password, &salt, 100, 64).unwrap();
@@ -145,7 +149,7 @@ fn derive_key_and_verify_err() {
 
 #[test]
 fn derive_key_bad_length() {
-	let password = Password::from_slice(&[0u8; 64]);
+	let password = Password::from_slice(&[0u8; 64]).unwrap();
 	let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
 	assert!(derive_key(&password, &salt, 100, 0).is_err());

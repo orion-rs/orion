@@ -417,7 +417,7 @@ macro_rules! construct_secret_key_variable_size {
         }
 
         #[test]
-        fn test_key_size() {
+        fn test_from_slice_key() {
             let _ = $name::from_slice(&[0u8; 256]).unwrap();
             let _ = $name::from_slice(&[0u8; 512]).unwrap();
             assert!($name::from_slice(&[0u8; 0]).is_err());
@@ -428,7 +428,7 @@ macro_rules! construct_secret_key_variable_size {
             assert!(test.unprotected_as_bytes().len() == 256);
         }
         #[test]
-        fn test_generate_secet_key() {
+        fn test_generate_key() {
             assert!($name::generate(0).is_err());
             assert!($name::generate(usize::max_value()).is_err());
             assert!($name::generate(1).is_ok());
@@ -488,13 +488,13 @@ macro_rules! construct_salt_variable_size {
         }
 
         #[test]
-        fn test_salt_size() {
+        fn test_form_slice_salt() {
             let _ = $name::from_slice(&[0u8; 256]).unwrap();
             let _ = $name::from_slice(&[0u8; 512]).unwrap();
             assert!($name::from_slice(&[0u8; 0]).is_err());
         }
         #[test]
-        fn test_salt_as_bytes() {
+        fn test_as_bytes_salt() {
             let test = $name::from_slice(&[0u8; 256]).unwrap();
             assert!(test.as_bytes().len() == 256);
         }
@@ -504,6 +504,54 @@ macro_rules! construct_salt_variable_size {
             assert!($name::generate(usize::max_value()).is_err());
             assert!($name::generate(1).is_ok());
             assert!($name::generate(64).is_ok());
+        }
+    );
+}
+
+#[cfg(feature = "safe_api")]
+/// Macro to construct a password on the heap.
+macro_rules! construct_password_variable_size {
+    ($(#[$meta:meta])*
+    ($name:ident)) => (
+        #[must_use]
+        #[cfg(feature = "safe_api")]
+        $(#[$meta])*
+        ///
+        /// # Security:
+        /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+        /// that the type implements.
+        pub struct $name { value: Vec<u8> }
+
+        impl_debug_trait!($name);
+        impl_drop_heap_trait!($name);
+        impl_partialeq_trait!($name);
+
+        impl $name {
+            #[must_use]
+            #[cfg(feature = "safe_api")]
+            /// Make an object from a given byte slice.
+            pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+                if slice.is_empty() {
+                    return Err(UnknownCryptoError);
+                }
+
+                Ok($name { value: Vec::from(slice) })
+            }
+
+            func_unprotected_as_bytes!();
+            func_get_length!();
+        }
+
+        #[test]
+        fn test_form_slice_password() {
+            let _ = $name::from_slice(&[0u8; 256]).unwrap();
+            let _ = $name::from_slice(&[0u8; 512]).unwrap();
+            assert!($name::from_slice(&[0u8; 0]).is_err());
+        }
+        #[test]
+        fn test_unprotected_as_bytes_password() {
+            let test = $name::from_slice(&[0u8; 256]).unwrap();
+            assert!(test.unprotected_as_bytes().len() == 256);
         }
     );
 }
