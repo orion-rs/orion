@@ -46,6 +46,22 @@ fn aead_test_runner(
 	let mut dst_ct_out = vec![0u8; input.len() + 16];
 	let mut dst_pt_out = vec![0u8; input.len()];
 
+	// Make sure the boringssl parameters are acceptable
+	if (key.len() != 32) || (tag.len() != 16) {
+		// Should fail if key is of invalid length
+		if key.len() != 32 {
+			assert!(aead::chacha20poly1305::seal(
+				&SecretKey::from_slice(&key).unwrap(),
+				&chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+				input,
+				Some(aad),
+				&mut dst_ct_out,
+			)
+			.is_err());
+		}
+		return Ok(());
+	}
+
 	// Determine variant based on NONCE size
 	if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
 		aead::chacha20poly1305::seal(
@@ -64,9 +80,13 @@ fn aead_test_runner(
 			&mut dst_pt_out,
 		)
 		.unwrap();
-	}
 
-	if nonce.len() == constants::XCHACHA_NONCESIZE {
+		assert!(dst_ct_out[..input.len()].as_ref() == output);
+		assert!(dst_ct_out[input.len()..].as_ref() == tag);
+		assert!(dst_pt_out[..].as_ref() == input);
+
+		Ok(())
+	} else if nonce.len() == constants::XCHACHA_NONCESIZE {
 		aead::xchacha20poly1305::seal(
 			&SecretKey::from_slice(&key).unwrap(),
 			&xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
@@ -84,13 +104,26 @@ fn aead_test_runner(
 			&mut dst_pt_out,
 		)
 		.unwrap();
+
+		assert!(dst_ct_out[..input.len()].as_ref() == output);
+		assert!(dst_ct_out[input.len()..].as_ref() == tag);
+		assert!(dst_pt_out[..].as_ref() == input);
+
+		Ok(())
+
+	// If the nonce is not of valid legnth, check for expected fail
+	} else {
+		assert!(aead::chacha20poly1305::seal(
+			&SecretKey::from_slice(&key).unwrap(),
+			&chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+			input,
+			Some(aad),
+			&mut dst_ct_out,
+		)
+		.is_err());
+
+		Ok(())
 	}
-
-	assert!(dst_ct_out[..input.len()].as_ref() == output);
-	assert!(dst_ct_out[input.len()..].as_ref() == tag);
-	assert!(dst_pt_out[..].as_ref() == input);
-
-	Ok(())
 }
 
 /// Wycheproof only runs against ChaCha20Poly1305. So we don't need to check for
