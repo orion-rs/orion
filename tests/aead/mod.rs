@@ -30,8 +30,10 @@ use self::{
 		chacha20poly1305::{self, SecretKey},
 		xchacha20poly1305,
 	},
-	orion::hazardous::{aead, constants},
-	orion::errors::UnknownCryptoError,
+	orion::{
+		errors::UnknownCryptoError,
+		hazardous::{aead, constants},
+	},
 };
 
 fn aead_test_runner(
