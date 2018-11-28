@@ -16,20 +16,26 @@ matrix:
       script:
         - cargo clean
         - cargo test
+        - cargo test --release
         - cargo test --tests --no-default-features
         - cargo audit
     - rust: nightly
       script:
         - cargo clean
-        - cargo test
-        - cargo test --no-default-features --features nightly
-        - cargo test --no-default-features --features no_std --tests
+        # Debug mode:
         # First sanitizers with default features
         - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --tests --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test --tests --target x86_64-unknown-linux-gnu
         # Then with nightly features
         - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
+        # Release:
+        # First sanitizers with default features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --tests --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test --tests --target x86_64-unknown-linux-gnu
+        # Then with nightly features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
     # Ensure building in no_std is possible
     - env: TARGET=thumbv7em-none-eabihf
       rust: nightly
@@ -43,16 +49,19 @@ matrix:
       rust: stable
       script:
         - cross test --target $TARGET
+        - cross test --release --target $TARGET
     - env: TARGET=x86_64-apple-darwin
       os: osx
       rust: stable
       script:
         - cross test --target $TARGET
+        - cross test --release --target $TARGET
   allow_failures:
     - env: TARGET=mips64-unknown-linux-gnuabi64
       rust: stable
       script:
         - cross test --target $TARGET
+        - cross test --release --target $TARGET
 
 before_cache: |
   if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
