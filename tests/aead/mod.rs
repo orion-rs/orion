@@ -25,14 +25,13 @@ pub mod rfc_aead_chacha20_poly1305;
 pub mod wycheproof_chacha20_poly1305;
 
 extern crate orion;
-extern crate ring;
 use self::{
 	aead::{
 		chacha20poly1305::{self, SecretKey},
 		xchacha20poly1305,
 	},
 	orion::hazardous::{aead, constants},
-	ring::error,
+	orion::errors::UnknownCryptoError,
 };
 
 fn aead_test_runner(
@@ -42,7 +41,7 @@ fn aead_test_runner(
 	tag: &[u8],
 	input: &[u8],
 	output: &[u8],
-) -> Result<(), error::Unspecified> {
+) -> Result<(), UnknownCryptoError> {
 	let mut dst_ct_out = vec![0u8; input.len() + 16];
 	let mut dst_pt_out = vec![0u8; input.len()];
 
@@ -136,7 +135,7 @@ fn wycheproof_test_runner(
 	tag: &[u8],
 	input: &[u8],
 	output: &[u8],
-) -> Result<(), error::Unspecified> {
+) -> Result<(), UnknownCryptoError> {
 	let mut dst_ct_out = vec![0u8; input.len() + 16];
 	let mut dst_pt_out = vec![0u8; input.len()];
 
