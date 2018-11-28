@@ -25,13 +25,13 @@
 # conversion, so this has to be manually updated.
 
 # Furthermore, those test vectors where the parameter is a string and not hex
-# this must be updated in the converted file too. The one test vector with empty 
+# this must be updated in the converted file too. The one test vector with empty
 # input should be commented out.
 
 lines = []
 
-with open('./boringssl_chacha20_poly1305.txt') as infile:
-    outfile = open('./boringssl_chacha20_poly1305_fmt.txt', 'w')
+with open('src/tests/test_data/original/boringssl_chacha20_poly1305.txt') as infile:
+    outfile = open('src/tests/test_data/boringssl_chacha20_poly1305_fmt.txt', 'w')
     test_case_number = 0
 
     for line in infile:
