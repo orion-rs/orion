@@ -350,6 +350,27 @@ mod test {
 	}
 
 	// See: https://github.com/brycx/orion/issues/15
+	// Detecting test-case that if tiny-keccak is fixed then this should panic
+	#[test]
+	#[cfg(target_endian = "big")]
+	fn result_ok_assume_wrong_on_big_endian() {
+		let input = b"\x00\x01\x02\x03";
+		let custom = b"Email Signature";
+		let mut out = [0u8; 64];
+
+		let mut cshake = init(custom, None).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+
+		let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
+						\xE4\xC8\x7B\xFF\x32\xC9\x69\x9D\x5B\x68\x96\xEE\xE0\xED\xD1\x64\x02\
+						\x0E\x2B\xE0\x56\x08\x58\xD9\xC0\x0C\x03\x7E\x34\xA9\x69\x37\xC5\x61\
+						\xA7\x4C\x41\x2B\xB4\xC7\x46\x46\x95\x27\x28\x1C\x8C";
+
+		assert_ne!(out.as_ref(), expected.as_ref());
+	}
+
+	// See: https://github.com/brycx/orion/issues/15
 	#[test]
 	#[cfg(target_endian = "little")]
 	fn verify_err() {
