@@ -26,5 +26,7 @@ pub mod kdf;
 pub mod mac;
 #[cfg(test)]
 pub mod stream;
+// See: https://github.com/brycx/orion/issues/15
 #[cfg(test)]
+#[cfg(target_endian = "little")]
 pub mod xof;

@@ -308,7 +308,9 @@ mod test {
 		assert!(init(&custom, None).is_err());
 	}
 
+	// See: https://github.com/brycx/orion/issues/15
 	#[test]
+	#[cfg(target_endian = "little")]
 	fn non_8_div_len() {
 		let input = b"\x00\x01\x02\x03";
 		let custom = b"Email Signature";
@@ -327,7 +329,9 @@ mod test {
 		assert_eq!(out, &expected[..17]);
 	}
 
+	// See: https://github.com/brycx/orion/issues/15
 	#[test]
+	#[cfg(target_endian = "little")]
 	fn result_ok() {
 		let input = b"\x00\x01\x02\x03";
 		let custom = b"Email Signature";
@@ -345,7 +349,9 @@ mod test {
 		assert_eq!(out.as_ref(), expected.as_ref());
 	}
 
+	// See: https://github.com/brycx/orion/issues/15
 	#[test]
+	#[cfg(target_endian = "little")]
 	fn verify_err() {
 		// `name` and `custom` values have been switched here compared to the previous
 		// one
