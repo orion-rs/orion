@@ -24,12 +24,13 @@ pub mod rfc_hmac;
 pub mod rfc_poly1305;
 
 extern crate orion;
-extern crate ring;
 
 use self::{
-	orion::hazardous::mac::{hmac, poly1305},
+	orion::{
+		errors::UnknownCryptoError,
+		hazardous::mac::{hmac, poly1305},
+	},
 	poly1305::{OneTimeKey, Tag},
-	ring::error,
 };
 
 fn hmac_test_runner(
@@ -37,7 +38,7 @@ fn hmac_test_runner(
 	data: &[u8],
 	expected: &[u8],
 	trunc: Option<usize>,
-) -> Result<(), error::Unspecified> {
+) -> Result<(), UnknownCryptoError> {
 	let key = hmac::SecretKey::from_slice(secret_key);
 	let mut mac = hmac::init(&key);
 	mac.update(data).unwrap();
@@ -66,7 +67,7 @@ fn hmac_test_runner(
 	Ok(())
 }
 
-fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), error::Unspecified> {
+fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), UnknownCryptoError> {
 	let mut state = poly1305::init(&OneTimeKey::from_slice(key).unwrap());
 	state.update(input).unwrap();
 
