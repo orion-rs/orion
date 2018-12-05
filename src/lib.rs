@@ -70,6 +70,9 @@ pub mod errors;
 pub mod hazardous;
 
 #[cfg(feature = "safe_api")]
+pub mod hash;
+
+#[cfg(feature = "safe_api")]
 pub mod aead;
 
 #[cfg(feature = "safe_api")]
