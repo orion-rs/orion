@@ -457,6 +457,15 @@ macro_rules! construct_blake2b_digest {
             digest_size: usize,
         }
 
+        impl PartialEq for $name {
+            fn eq(&self, other: &$name) -> bool {
+                use subtle::ConstantTimeEq;
+                 self.as_bytes()
+                    .ct_eq(&other.as_bytes())
+                    .unwrap_u8() == 1
+            }
+        }
+
         impl $name {
             #[must_use]
             /// Return the object as byte slice.
