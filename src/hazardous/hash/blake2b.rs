@@ -21,14 +21,49 @@
 // SOFTWARE.
 
 //! # Parameters:
+//! - `secret_key`: An optional secret key value.
+//! - `size`: The desired output digest length.
+//! - `data`: The bytes to be hashed.
+//! - `expected`: The expected digest when verifying.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
+//! - `size` is 0.
+//! - `size` is greater than 64.
+//! - Either `finalize()` or `finalize_with_dst()` is called twice without a
+//!   `reset()` in between.
+//! - `update()` is called after `finalize()` without a `reset()` in between.
+//! - `reset()` is called with `Some(secret_key)` but the struct was initialized with `None`.
+//! - `reset()` is called with `None` secret_key but the struct was initialized with `Some()`.
 //!
 //! # Security:
+//! - The secret key should always be generated using a CSPRNG.
+//!   `SecretKey::generate()` can be used
+//! for this. It generates a secret key of 64 bytes.
+//! - The minimum recommended size for a secret key is 64 bytes.
+//! - When using `Blake2b` with a secret key, then the output can be used as a MAC. If this is the
+//! intention, __**avoid using**__ `as_bytes()` to compare such MACs and use instead `verify()`,
+//! which will compare the MAC in constant time.
+//! - The recommended output size for Blake2b is 64.
 //!
 //! # Example:
 //! ```
+//! use orion::hazardous::hash::blake2b;
+//!
+//! // Using the streaming interface without a key.
+//! let mut state = blake2b::init(None, 64).unwrap();
+//! state.update(b"Some data").unwrap();
+//! let digest = state.finalize().unwrap();
+//!
+//! // Using the streaming interface with a key.
+//! let secret_key = blake2b::SecretKey::generate().unwrap();
+//! let mut state_keyed = blake2b::init(Some(&secret_key), 64).unwrap();
+//! state_keyed.update(b"Some data").unwrap();
+//! let mac = state_keyed.finalize().unwrap();
+//! assert!(blake2b::verify(&mac, &secret_key, 64, b"Some data").unwrap());
+//!
+//! // Using the `Hasher` for convenience functions.
+//! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data").unwrap();
 //! ```
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -87,7 +122,7 @@ const SIGMA: [[usize; 16]; 12] = [
 	[14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
 ];
 
-/// Hasher providing convenience functions to common BLAKE2b operations.
+/// Convenience functions to common BLAKE2b operations.
 pub enum Hasher {
 	/// Blake2b with `32` as `size`.
 	Blake2b256,
@@ -404,6 +439,44 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 	}
 
 	Ok(context)
+}
+
+#[must_use]
+/// Verify a Blake2b Digest in constant time.
+pub fn verify(
+	expected: &Digest,
+	secret_key: &SecretKey,
+	size: usize,
+	data: &[u8],
+) -> Result<bool, ValidationCryptoError> {
+	let mut state = init(Some(secret_key), size)?;
+	state.update(data).unwrap();
+
+	if expected == &state.finalize().unwrap() {
+		Ok(true)
+	} else {
+		Err(ValidationCryptoError)
+	}
+}
+
+#[test]
+fn finalize_and_verify_true() {
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
+	let data = "what do ya want for nothing?".as_bytes();
+
+	let mut tag = init(Some(&secret_key), 64).unwrap();
+	tag.update(data).unwrap();
+
+	assert_eq!(
+		verify(
+			&tag.finalize().unwrap(),
+			&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
+			64,
+			data
+		)
+		.unwrap(),
+		true
+	);
 }
 
 #[test]
