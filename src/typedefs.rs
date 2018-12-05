@@ -390,7 +390,7 @@ macro_rules! construct_blake2b_key {
             #[must_use]
             /// Make an object from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-                if slice.len() > 64 {
+                if slice.len() > 64 || slice.is_empty() {
                     return Err(UnknownCryptoError);
                 }
 
@@ -433,7 +433,7 @@ macro_rules! construct_blake2b_key {
         fn test_blake2b_key_size() {
             // We don't test above $size here in case it's passed as a `max_value()`
             let _ = $name::from_slice(&[0u8; 64]).unwrap();
-            let _ = $name::from_slice(&[0u8; 64 - 64]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64 - 63]).unwrap();
             let _ = $name::from_slice(&[0u8; 64 - 1]).unwrap();
         }
         #[test]

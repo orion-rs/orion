@@ -43,6 +43,7 @@ construct_blake2b_key! {
 	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
+	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
 	(SecretKey, BLAKE2B_BLOCKSIZE)
