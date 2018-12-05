@@ -24,8 +24,8 @@ extern crate orion;
 use self::orion::hazardous::hash::blake2b;
 
 fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
-	// Only make SecretKey if test case key value is not empty, otherwise it will be BLOCKSIZE zero
-	// bytes.
+	// Only make SecretKey if test case key value is not empty, otherwise it will be
+	// BLOCKSIZE zero bytes.
 	let mut state = if key.is_empty() {
 		blake2b::init(None, output.len()).unwrap()
 	} else {
@@ -35,7 +35,7 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 
 	state.update(input).unwrap();
 	let digest = state.finalize().unwrap();
-    // All KAT test vectors are 64 bytes in length
+	// All KAT test vectors are 64 bytes in length
 	assert!(digest.as_bytes().len() == output.len());
 	assert!(digest.as_bytes() == &output[..]);
 }

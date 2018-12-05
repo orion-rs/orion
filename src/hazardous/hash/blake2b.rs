@@ -114,8 +114,10 @@ impl core::fmt::Debug for Blake2b {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		write!(
 			f,
-			"Blake2b {{ init_state: [***OMITTED***], internal_state: [***OMITTED***], w_vec: [***OMITTED***],
-            buffer: [***OMITTED***], leftover: {:?}, t: {:?}, f: {:?}, is_finalized: {:?}, is_keyed: {:?} }}",
+			"Blake2b {{ init_state: [***OMITTED***], internal_state: [***OMITTED***], w_vec: \
+			 [***OMITTED***],
+            buffer: [***OMITTED***], leftover: {:?}, t: {:?}, f: {:?}, is_finalized: {:?}, \
+			 is_keyed: {:?} }}",
 			self.leftover, self.t, self.f, self.is_finalized, self.is_keyed
 		)
 	}
@@ -217,7 +219,6 @@ impl Blake2b {
 	///
 	pub fn reset(&mut self, secret_key: Option<&SecretKey>) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-
 			if secret_key.is_some() && (!self.is_keyed) {
 				return Err(UnknownCryptoError);
 			}
@@ -236,13 +237,12 @@ impl Blake2b {
 			self.f = [0u64; 2];
 			self.is_finalized = false;
 
-
 			if secret_key.is_some() && self.is_keyed {
-				self.update(secret_key.unwrap().unprotected_as_bytes()).unwrap();
+				self.update(secret_key.unwrap().unprotected_as_bytes())
+					.unwrap();
 			}
 
 			Ok(())
-
 		} else {
 			Ok(())
 		}
@@ -380,12 +380,10 @@ pub enum Hash {
 	Blake2b512,
 }
 
-
 impl Hash {
 	#[must_use]
 	/// Return a digest selected by the given Blake2b variant.
 	pub fn digest(&self, data: &[u8]) -> Result<Digest, UnknownCryptoError> {
-
 		let size: usize = match *self {
 			Hash::Blake2b256 => 32,
 			Hash::Blake2b384 => 48,

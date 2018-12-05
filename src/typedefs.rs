@@ -366,8 +366,9 @@ macro_rules! construct_hmac_key {
     );
 }
 
-/// Macro to construct a secret key used for BLAKE2b. It is padded aginst a BLOCKSIZE value,
-/// but can at most be half that when generated or constructed from a slice.
+/// Macro to construct a secret key used for BLAKE2b. It is padded aginst a
+/// BLOCKSIZE value, but can at most be half that when generated or constructed
+/// from a slice.
 macro_rules! construct_blake2b_key {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
