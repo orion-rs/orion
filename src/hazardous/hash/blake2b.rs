@@ -203,8 +203,17 @@ impl Blake2b {
 	#[must_use]
 	#[inline(always)]
 	///
-	pub fn reset(&mut self, secret_key: Option<&SecretKey>) {
+	pub fn reset(&mut self, secret_key: Option<&SecretKey>) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
+
+			if secret_key.is_some() && (!self.is_keyed) {
+				return Err(UnknownCryptoError);
+			}
+
+			if !secret_key.is_some() && (self.is_keyed) {
+				return Err(UnknownCryptoError);
+			}
+
 			self.internal_state.copy_from_slice(&self.init_state);
 
 			self.w_vec[..8].copy_from_slice(&self.internal_state);
@@ -215,10 +224,15 @@ impl Blake2b {
 			self.f = [0u64; 2];
 			self.is_finalized = false;
 
+
 			if secret_key.is_some() && self.is_keyed {
 				self.update(secret_key.unwrap().unprotected_as_bytes()).unwrap();
 			}
+
+			Ok(())
+
 		} else {
+			Ok(())
 		}
 	}
 
@@ -361,7 +375,7 @@ fn double_finalize_with_reset_ok_not_keyed() {
 	let mut state = init(None, 64).unwrap();
 	state.update(data).unwrap();
 	let one = state.finalize().unwrap();
-	state.reset(None);
+	state.reset(None).unwrap();
 	state.update(data).unwrap();
 	let two = state.finalize().unwrap();
 	assert_eq!(one[..], two[..]);
@@ -375,7 +389,7 @@ fn double_finalize_with_reset_ok_keyed() {
 	let mut state = init(Some(&secret_key), 64).unwrap();
 	state.update(data).unwrap();
 	let one = state.finalize().unwrap();
-	state.reset(Some(&secret_key));
+	state.reset(Some(&secret_key)).unwrap();
 	state.update(data).unwrap();
 	let two = state.finalize().unwrap();
 	assert_eq!(one[..], two[..]);
@@ -388,7 +402,7 @@ fn double_finalize_with_reset_no_update_ok() {
 	let mut state = init(None, 64).unwrap();
 	state.update(data).unwrap();
 	let _ = state.finalize().unwrap();
-	state.reset(None);
+	state.reset(None).unwrap();
 	let _ = state.finalize().unwrap();
 }
 
@@ -409,7 +423,7 @@ fn update_after_finalize_with_reset_ok() {
 	let mut state = init(None, 64).unwrap();
 	state.update(data).unwrap();
 	let _ = state.finalize().unwrap();
-	state.reset(None);
+	state.reset(None).unwrap();
 	state.update(data).unwrap();
 }
 
@@ -420,6 +434,22 @@ fn double_reset_ok() {
 	let mut state = init(None, 64).unwrap();
 	state.update(data).unwrap();
 	let _ = state.finalize().unwrap();
-	state.reset(None);
-	state.reset(None);
+	state.reset(None).unwrap();
+	state.reset(None).unwrap();
+}
+
+#[test]
+fn err_on_keyed_switch_on_reset() {
+	let secret_key = SecretKey::from_slice(b"Testing").unwrap();
+	let data = "what do ya want for nothing?".as_bytes();
+
+	let mut state = init(Some(&secret_key), 64).unwrap();
+	state.update(data).unwrap();
+	let _ = state.finalize().unwrap();
+	assert!(state.reset(None).is_err());
+
+	let mut state_second = init(None, 64).unwrap();
+	state_second.update(data).unwrap();
+	let _ = state_second.finalize().unwrap();
+	assert!(state_second.reset(Some(&secret_key)).is_err());
 }
