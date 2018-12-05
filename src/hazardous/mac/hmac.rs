@@ -152,7 +152,7 @@ impl Hmac {
 	}
 
 	#[must_use]
-	/// This can be called multiple times.
+	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
 		if self.is_finalized {
 			Err(FinalizationCryptoError)

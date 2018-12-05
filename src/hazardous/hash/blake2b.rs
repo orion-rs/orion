@@ -59,6 +59,7 @@ construct_blake2b_digest! {
 	(Digest, 64)
 }
 
+/// The BLAKE2b initialization vector (IV) as defined in the RFC.
 const IV: [u64; 8] = [
 	0x6a09e667f3bcc908,
 	0xbb67ae8584caa73b,
@@ -70,6 +71,7 @@ const IV: [u64; 8] = [
 	0x5be0cd19137e2179,
 ];
 
+/// The BLAKE2b SGIMA message schedule as defined in the RFC.
 const SIGMA: [[usize; 16]; 12] = [
 	[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
 	[14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
@@ -84,6 +86,43 @@ const SIGMA: [[usize; 16]; 12] = [
 	[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
 	[14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
 ];
+
+/// Hasher providing convenience functions to common BLAKE2b operations.
+pub enum Hasher {
+	/// Blake2b with `32` as `size`.
+	Blake2b256,
+	/// Blake2b with `48` as `size`.
+	Blake2b384,
+	/// Blake2b with `64` as `size`.
+	Blake2b512,
+}
+
+impl Hasher {
+	#[must_use]
+	/// Return a digest selected by the given Blake2b variant.
+	pub fn digest(&self, data: &[u8]) -> Result<Digest, UnknownCryptoError> {
+		let size: usize = match *self {
+			Hasher::Blake2b256 => 32,
+			Hasher::Blake2b384 => 48,
+			Hasher::Blake2b512 => 64,
+		};
+
+		let mut state = init(None, size)?;
+		state.update(data)?;
+
+		Ok(state.finalize()?)
+	}
+
+	#[must_use]
+	/// Return a `Blake2b` struct selected by the given Blake2b variant.
+	pub fn init(&self) -> Result<Blake2b, UnknownCryptoError> {
+		match *self {
+			Hasher::Blake2b256 => Ok(init(None, 32)?),
+			Hasher::Blake2b384 => Ok(init(None, 48)?),
+			Hasher::Blake2b512 => Ok(init(None, 64)?),
+		}
+	}
+}
 
 #[must_use]
 /// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
@@ -125,7 +164,7 @@ impl core::fmt::Debug for Blake2b {
 
 impl Blake2b {
 	#[inline(always)]
-	///
+	/// Increment the internal states offset value `t`.
 	fn increment_offset(&mut self, value: u64) {
 		self.t[0] = self.t[0].checked_add(value).expect("FUME");
 		if self.t[0] < value {
@@ -134,7 +173,7 @@ impl Blake2b {
 	}
 
 	#[inline(always)]
-	///
+	/// The primitive mixing function G as defined in the RFC.
 	fn prim_mix_g(&mut self, x: u64, y: u64, a: usize, b: usize, c: usize, d: usize) {
 		let mut word_a = self.w_vec[a];
 		let mut word_b = self.w_vec[b];
@@ -162,7 +201,7 @@ impl Blake2b {
 
 	#[inline(always)]
 	#[cfg_attr(feature = "cargo-clippy", allow(clippy::needless_range_loop))]
-	/// The compression function f.
+	/// The compression function f as defined in the RFC.
 	fn compress_f(&mut self) {
 		let mut m_vec = [0u64; 16];
 		LittleEndian::read_u64_into(&self.buffer, &mut m_vec);
@@ -216,7 +255,7 @@ impl Blake2b {
 
 	#[must_use]
 	#[inline(always)]
-	///
+	/// Reset to `init()` state.
 	pub fn reset(&mut self, secret_key: Option<&SecretKey>) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
 			if secret_key.is_some() && (!self.is_keyed) {
@@ -250,18 +289,17 @@ impl Blake2b {
 
 	#[must_use]
 	#[inline(always)]
-	///
+	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
 		if self.is_finalized {
 			return Err(FinalizationCryptoError);
 		}
-
 		if data.is_empty() {
 			return Ok(());
 		}
 
 		let mut bytes = data;
-		// First fill up if there is leftover space
+
 		if self.leftover > 0 {
 			let fill = BLAKE2B_BLOCKSIZE - self.leftover;
 
@@ -272,7 +310,6 @@ impl Blake2b {
 			}
 
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
-			// Process data
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f();
 			// Remve the amount of blocks we just prossed
@@ -282,7 +319,6 @@ impl Blake2b {
 		}
 
 		while bytes.len() > BLAKE2B_BLOCKSIZE {
-			// Process data
 			self.buffer.copy_from_slice(&bytes[..BLAKE2B_BLOCKSIZE]);
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f();
@@ -300,7 +336,7 @@ impl Blake2b {
 
 	#[must_use]
 	#[inline(always)]
-	///
+	/// Return a BLAKE2b digest.
 	pub fn finalize(&mut self) -> Result<Digest, FinalizationCryptoError> {
 		if self.is_finalized {
 			return Err(FinalizationCryptoError);
@@ -370,41 +406,25 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 	Ok(context)
 }
 
-/// Hasher for different Blake2b variants.
-pub enum Hash {
-	///
-	Blake2b256,
-	///
-	Blake2b384,
-	///
-	Blake2b512,
+
+#[test]
+fn test_init_bad_sizes() {
+	assert!(init(None, 0).is_err());
+	assert!(init(None, 65).is_err());
+	assert!(init(None, 64).is_ok());
+	assert!(init(None, 1).is_ok());
 }
 
-impl Hash {
-	#[must_use]
-	/// Return a digest selected by the given Blake2b variant.
-	pub fn digest(&self, data: &[u8]) -> Result<Digest, UnknownCryptoError> {
-		let size: usize = match *self {
-			Hash::Blake2b256 => 32,
-			Hash::Blake2b384 => 48,
-			Hash::Blake2b512 => 64,
-		};
+#[test]
+fn test_hasher_interface() {
 
-		let mut state = init(None, size)?;
-		state.update(data)?;
+	let _digest_256 = Hasher::Blake2b256.digest(b"Test").unwrap();
+	let _digest_384 = Hasher::Blake2b384.digest(b"Test").unwrap();
+	let _digest_512 = Hasher::Blake2b512.digest(b"Test").unwrap();
 
-		Ok(state.finalize()?)
-	}
-
-	#[must_use]
-	/// Return a digest selected by the given Blake2b variant.
-	pub fn init(&self) -> Result<Blake2b, UnknownCryptoError> {
-		match *self {
-			Hash::Blake2b256 => Ok(init(None, 32)?),
-			Hash::Blake2b384 => Ok(init(None, 48)?),
-			Hash::Blake2b512 => Ok(init(None, 64)?),
-		}
-	}
+	let _state_256 = Hasher::Blake2b256.init().unwrap();
+	let _state_384 = Hasher::Blake2b384.init().unwrap();
+	let _state_512 = Hasher::Blake2b512.init().unwrap();
 }
 
 #[test]
