@@ -444,6 +444,64 @@ macro_rules! construct_blake2b_key {
     );
 }
 
+/// Macro to construct a digest returned by BLAKE2b.
+macro_rules! construct_blake2b_digest {
+    ($(#[$meta:meta])*
+    ($name:ident, $size:expr)) => (
+        #[must_use]
+        #[derive(Clone, Copy)]
+        $(#[$meta])*
+        ///
+        pub struct $name {
+            value: [u8; $size],
+            digest_size: usize,
+        }
+
+        impl $name {
+            #[must_use]
+            /// Return the object as byte slice.
+            pub fn as_bytes(&self) -> &[u8] {
+                self.value[..self.digest_size].as_ref()
+            }
+
+            #[must_use]
+            /// Make an object from a given byte slice.
+            pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+                if slice.is_empty() || slice.len() > $size {
+                    return Err(UnknownCryptoError);
+                }
+
+                let mut value = [0u8; $size];
+                value[..slice.len()].copy_from_slice(slice);
+
+                Ok($name {
+                    value: value,
+                    digest_size: slice.len(),
+                })
+            }
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, "{} value: {:?}, digest_size: {:?}", stringify!($name), &self.value[..], &self.digest_size)
+            }
+        }
+
+        #[test]
+        fn test_blake2b_mac_size() {
+            // We don't test above $size here in case it's passed as a `max_value()`
+            let _ = $name::from_slice(&[0u8; 64]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64 - 63]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64 - 1]).unwrap();
+        }
+        #[test]
+        fn test_unprotected_as_bytes_blake2b_mac() {
+            let test = $name::from_slice(&[0u8; 64]).unwrap();
+            assert!(test.as_bytes().len() == 64);
+        }
+    );
+}
+
 #[cfg(feature = "safe_api")]
 /// Macro to construct a type containing sensitive data which is stored on the
 /// heap.

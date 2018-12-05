@@ -49,6 +49,16 @@ construct_blake2b_key! {
 	(SecretKey, BLAKE2B_BLOCKSIZE)
 }
 
+construct_blake2b_digest! {
+	/// A type to represent the `Digest` that BLAKE2b returns.
+	///
+	/// # Exceptions:
+	/// An exception will be thrown if:
+	/// - `slice` is empty.
+	/// - `slice` is greater than 64 bytes.
+	(Digest, 64)
+}
+
 const IV: [u64; 8] = [
 	0x6a09e667f3bcc908,
 	0xbb67ae8584caa73b,
@@ -87,6 +97,7 @@ pub struct Blake2b {
 	f: [u64; 2],
 	is_finalized: bool,
 	is_keyed: bool,
+	size: usize,
 }
 
 impl Drop for Blake2b {
@@ -290,7 +301,7 @@ impl Blake2b {
 	#[must_use]
 	#[inline(always)]
 	///
-	pub fn finalize(&mut self) -> Result<[u8; 64], FinalizationCryptoError> {
+	pub fn finalize(&mut self) -> Result<Digest, FinalizationCryptoError> {
 		if self.is_finalized {
 			return Err(FinalizationCryptoError);
 		}
@@ -311,7 +322,7 @@ impl Blake2b {
 
 		LittleEndian::write_u64_into(&self.internal_state, &mut digest);
 
-		Ok(digest)
+		Ok(Digest::from_slice(&digest[..self.size])?)
 	}
 }
 
@@ -333,6 +344,7 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		f: [0u64; 2],
 		is_finalized: false,
 		is_keyed: false,
+		size: size,
 	};
 
 	if secret_key.is_some() {
@@ -379,7 +391,7 @@ fn double_finalize_with_reset_ok_not_keyed() {
 	state.reset(None).unwrap();
 	state.update(data).unwrap();
 	let two = state.finalize().unwrap();
-	assert_eq!(one[..], two[..]);
+	assert_eq!(one.as_bytes(), two.as_bytes());
 }
 
 #[test]
@@ -393,7 +405,7 @@ fn double_finalize_with_reset_ok_keyed() {
 	state.reset(Some(&secret_key)).unwrap();
 	state.update(data).unwrap();
 	let two = state.finalize().unwrap();
-	assert_eq!(one[..], two[..]);
+	assert_eq!(one.as_bytes(), two.as_bytes());
 }
 
 #[test]

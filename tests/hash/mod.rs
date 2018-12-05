@@ -36,6 +36,6 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 	state.update(input).unwrap();
 	let digest = state.finalize().unwrap();
     // All KAT test vectors are 64 bytes in length
-	assert!(digest.len() == output.len());
-	assert!(digest[..] == output[..]);
+	assert!(digest.as_bytes().len() == output.len());
+	assert!(digest.as_bytes() == &output[..]);
 }
