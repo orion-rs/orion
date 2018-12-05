@@ -104,8 +104,8 @@ impl core::fmt::Debug for Blake2b {
 		write!(
 			f,
 			"Blake2b {{ init_state: [***OMITTED***], internal_state: [***OMITTED***], w_vec: [***OMITTED***],
-            buffer: [***OMITTED***], leftover: {:?}, t: {:?}, f: {:?}, is_finalized: {:?} }}",
-			self.leftover, self.t, self.f, self.is_finalized
+            buffer: [***OMITTED***], leftover: {:?}, t: {:?}, f: {:?}, is_finalized: {:?}, is_keyed: {:?} }}",
+			self.leftover, self.t, self.f, self.is_finalized, self.is_keyed
 		)
 	}
 }
