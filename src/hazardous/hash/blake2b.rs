@@ -328,7 +328,7 @@ impl Blake2b {
 
 #[must_use]
 #[inline(always)]
-///
+/// Initialize a `Blake2b` struct with a given size and an optional key.
 pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, UnknownCryptoError> {
 	if size < 1 || size > BLAKE2B_OUTSIZE {
 		return Err(UnknownCryptoError);
@@ -370,6 +370,44 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 	Ok(context)
 }
 
+/// Hasher for different Blake2b variants.
+pub enum Hash {
+	///
+	Blake2b256,
+	///
+	Blake2b384,
+	///
+	Blake2b512,
+}
+
+
+impl Hash {
+	#[must_use]
+	/// Return a digest selected by the given Blake2b variant.
+	pub fn digest(&self, data: &[u8]) -> Result<Digest, UnknownCryptoError> {
+
+		let size: usize = match *self {
+			Hash::Blake2b256 => 32,
+			Hash::Blake2b384 => 48,
+			Hash::Blake2b512 => 64,
+		};
+
+		let mut state = init(None, size)?;
+		state.update(data)?;
+
+		Ok(state.finalize()?)
+	}
+
+	#[must_use]
+	/// Return a digest selected by the given Blake2b variant.
+	pub fn init(&self) -> Result<Blake2b, UnknownCryptoError> {
+		match *self {
+			Hash::Blake2b256 => Ok(init(None, 32)?),
+			Hash::Blake2b384 => Ok(init(None, 48)?),
+			Hash::Blake2b512 => Ok(init(None, 64)?),
+		}
+	}
+}
 
 #[test]
 fn double_finalize_err() {
