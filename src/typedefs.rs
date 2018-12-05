@@ -366,6 +366,82 @@ macro_rules! construct_hmac_key {
     );
 }
 
+/// Macro to construct a secret key used for BLAKE2b.
+macro_rules! construct_blake2b_key {
+    ($(#[$meta:meta])*
+    ($name:ident, $size:expr)) => (
+        #[must_use]
+        $(#[$meta])*
+        ///
+        /// # Security:
+        /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+        /// that the type implements.
+        pub struct $name {
+            value: [u8; $size],
+            original_size: usize,
+        }
+
+        impl_debug_trait!($name);
+        impl_drop_stack_trait!($name);
+        impl_partialeq_trait!($name);
+
+        impl $name {
+            #[must_use]
+            /// Make an object from a given byte slice.
+            pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+                if slice.len() > $size {
+                    return Err(UnknownCryptoError);
+                }
+
+                let mut secret_key = [0u8; $size];
+                let slice_len = slice.len();
+                secret_key[..slice_len].copy_from_slice(slice);
+
+                Ok($name {
+                    value: secret_key,
+                    original_size: slice_len,
+                })
+            }
+
+            #[must_use]
+            /// Get the original size of the key, before padding.
+            pub fn get_original_length(&self) -> usize {
+                self.original_size
+            }
+
+            #[must_use]
+            #[cfg(feature = "safe_api")]
+            /// Randomly generate using a CSPRNG. Not available in `no_std` context.
+            pub fn generate() -> Result<$name, UnknownCryptoError> {
+                use util;
+                let mut value = [0u8; $size];
+                util::secure_rand_bytes(&mut value)?;
+
+                Ok($name {
+                    value: value,
+                    original_size: $size,
+                })
+            }
+
+            func_unprotected_as_bytes!();
+            func_get_length!();
+        }
+
+        #[test]
+        fn test_blake2b_key_size() {
+            // We don't test above $size here in case it's passed as a `max_value()`
+            let _ = $name::from_slice(&[0u8; $size]).unwrap();
+            let _ = $name::from_slice(&[0u8; $size - $size]).unwrap();
+            let _ = $name::from_slice(&[0u8; $size - 1]).unwrap();
+        }
+        #[test]
+        fn test_unprotected_as_bytes_blake2b_key() {
+            let test = $name::from_slice(&[0u8; $size]).unwrap();
+            assert!(test.unprotected_as_bytes().len() == $size);
+        }
+    );
+}
+
 #[cfg(feature = "safe_api")]
 /// Macro to construct a type containing sensitive data which is stored on the
 /// heap.

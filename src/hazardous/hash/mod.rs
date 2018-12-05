@@ -20,30 +20,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! ### **Caution**:
-//! Usage of the `hazardous` module is __**only intended for advanced users**__.
-//! `hazardous` contains implmentations with a much higher degree of control. It
-//! is also much easier to misuse those implementations. Only use `hazardous` if
-//! absolutely necessary.
-
-/// AEADs (Authenticated Encryption with Associated Data).
-pub mod aead;
-
-/// Cryptographic hash functions.
-pub mod hash;
-
-/// MACs (Message Authentication Code).
-pub mod mac;
-
-/// KDFs (Key Derivation Function) and PBKDF (Password-Based Key Derivation
-/// Function).
-pub mod kdf;
-
-/// XOFs (Extendable Output Function).
-pub mod xof;
-
-/// Constant values and types.
-pub mod constants;
-
-/// Stream ciphers.
-pub mod stream;
+/// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
+pub mod blake2b;
