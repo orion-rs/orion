@@ -13,6 +13,7 @@ ring = "0.13.5"
 sp800-185 = "0.2.0"
 chacha = "0.2.0"
 sodiumoxide = { git = "https://github.com/sodiumoxide/sodiumoxide" }
+blake2-rfc = "0.2.18"
 
 [dependencies.orion]
 path = ".."
@@ -94,3 +95,11 @@ path = "fuzz_targets/xchacha20_poly1305_compare.rs"
 [[bin]]
 name = "high_level_api"
 path = "fuzz_targets/high_level_api.rs"
+
+[[bin]]
+name = "blake2b"
+path = "fuzz_targets/blake2b.rs"
+
+[[bin]]
+name = "blake2b_compare"
+path = "fuzz_targets/blake2b_compare.rs"

@@ -406,7 +406,6 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 	Ok(context)
 }
 
-
 #[test]
 fn test_init_bad_sizes() {
 	assert!(init(None, 0).is_err());
@@ -417,7 +416,6 @@ fn test_init_bad_sizes() {
 
 #[test]
 fn test_hasher_interface() {
-
 	let _digest_256 = Hasher::Blake2b256.digest(b"Test").unwrap();
 	let _digest_384 = Hasher::Blake2b384.digest(b"Test").unwrap();
 	let _digest_512 = Hasher::Blake2b512.digest(b"Test").unwrap();
