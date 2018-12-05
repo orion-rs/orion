@@ -475,10 +475,11 @@ fn double_finalize_with_reset_ok() {
 	let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
 	poly1305_state.update(&[0u8; 16]).unwrap();
-	let _ = poly1305_state.finalize().unwrap();
+	let one = poly1305_state.finalize().unwrap();
 	poly1305_state.reset();
 	poly1305_state.update(&[0u8; 16]).unwrap();
-	let _ = poly1305_state.finalize().unwrap();
+	let two = poly1305_state.finalize().unwrap();
+	assert_eq!(one.unprotected_as_bytes(), two.unprotected_as_bytes());
 }
 
 #[test]
