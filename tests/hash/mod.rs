@@ -18,17 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[cfg(test)]
-pub mod aead;
-#[cfg(test)]
-pub mod kdf;
-#[cfg(test)]
-pub mod mac;
-#[cfg(test)]
-pub mod stream;
-// See: https://github.com/brycx/orion/issues/15
-#[cfg(test)]
-pub mod hash;
-#[cfg(test)]
-#[cfg(target_endian = "little")]
-pub mod xof;
+pub mod blake2b_kat;
+
+extern crate orion;
+use self::orion::hazardous::hash::blake2b;
+
+fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
+	let secret_key = blake2b::SecretKey::from_slice(key).unwrap();
+
+	let mut state = blake2b::init(Some(&secret_key), output.len()).unwrap();
+	state.update(input).unwrap();
+	let digest = state.finalize().unwrap();
+    // All KAT test vectors are 64 bytes in length
+	assert!(digest.len() == output.len());
+	assert!(digest[..] == output[..]);
+}

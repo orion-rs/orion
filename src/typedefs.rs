@@ -366,7 +366,8 @@ macro_rules! construct_hmac_key {
     );
 }
 
-/// Macro to construct a secret key used for BLAKE2b.
+/// Macro to construct a secret key used for BLAKE2b. It is padded aginst a BLOCKSIZE value,
+/// but can at most be half that when generated or constructed from a slice.
 macro_rules! construct_blake2b_key {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
@@ -389,7 +390,7 @@ macro_rules! construct_blake2b_key {
             #[must_use]
             /// Make an object from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-                if slice.len() > $size {
+                if slice.len() > 64 {
                     return Err(UnknownCryptoError);
                 }
 
@@ -415,11 +416,12 @@ macro_rules! construct_blake2b_key {
             pub fn generate() -> Result<$name, UnknownCryptoError> {
                 use util;
                 let mut value = [0u8; $size];
-                util::secure_rand_bytes(&mut value)?;
+                // BLAKE2b key can be at max 64 bytes
+                util::secure_rand_bytes(&mut value[..64])?;
 
                 Ok($name {
                     value: value,
-                    original_size: $size,
+                    original_size: 64,
                 })
             }
 
@@ -430,13 +432,13 @@ macro_rules! construct_blake2b_key {
         #[test]
         fn test_blake2b_key_size() {
             // We don't test above $size here in case it's passed as a `max_value()`
-            let _ = $name::from_slice(&[0u8; $size]).unwrap();
-            let _ = $name::from_slice(&[0u8; $size - $size]).unwrap();
-            let _ = $name::from_slice(&[0u8; $size - 1]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64 - 64]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64 - 1]).unwrap();
         }
         #[test]
         fn test_unprotected_as_bytes_blake2b_key() {
-            let test = $name::from_slice(&[0u8; $size]).unwrap();
+            let test = $name::from_slice(&[0u8; 64]).unwrap();
             assert!(test.unprotected_as_bytes().len() == $size);
         }
     );
