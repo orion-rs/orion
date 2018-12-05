@@ -77,6 +77,7 @@ const SIGMA: [[usize; 16]; 12] = [
 #[must_use]
 /// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
 pub struct Blake2b {
+	init_state: [u64; 8],
 	internal_state: [u64; 8],
 	w_vec: [u64; 16],
 	buffer: [u8; BLAKE2B_BLOCKSIZE],
@@ -84,11 +85,13 @@ pub struct Blake2b {
 	t: [u64; 2],
 	f: [u64; 2],
 	is_finalized: bool,
+	is_keyed: bool,
 }
 
 impl Drop for Blake2b {
 	fn drop(&mut self) {
 		use clear_on_drop::clear::Clear;
+		self.init_state.clear();
 		self.internal_state.clear();
 		self.w_vec.clear();
 		self.buffer.clear();
@@ -99,7 +102,7 @@ impl core::fmt::Debug for Blake2b {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		write!(
 			f,
-			"Blake2b {{ internal_state: [***OMITTED***], w_vec: [***OMITTED***],
+			"Blake2b {{ init_state: [***OMITTED***], internal_state: [***OMITTED***], w_vec: [***OMITTED***],
             buffer: [***OMITTED***], leftover: {:?}, t: {:?}, f: {:?}, is_finalized: {:?} }}",
 			self.leftover, self.t, self.f, self.is_finalized
 		)
@@ -200,6 +203,28 @@ impl Blake2b {
 	#[must_use]
 	#[inline(always)]
 	///
+	pub fn reset(&mut self, secret_key: Option<&SecretKey>) {
+		if self.is_finalized {
+			self.internal_state.copy_from_slice(&self.init_state);
+
+			self.w_vec[..8].copy_from_slice(&self.internal_state);
+			self.w_vec[8..12].copy_from_slice(&IV[0..4]);
+			self.buffer = [0u8; BLAKE2B_BLOCKSIZE];
+			self.leftover = 0;
+			self.t = [0u64; 2];
+			self.f = [0u64; 2];
+			self.is_finalized = false;
+
+			if secret_key.is_some() && self.is_keyed {
+				self.update(secret_key.unwrap().unprotected_as_bytes()).unwrap();
+			}
+		} else {
+		}
+	}
+
+	#[must_use]
+	#[inline(always)]
+	///
 	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
 		if self.is_finalized {
 			return Err(FinalizationCryptoError);
@@ -284,6 +309,7 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 	}
 
 	let mut context = Blake2b {
+		init_state: [0u64; 8],
 		internal_state: IV,
 		w_vec: [0u64; 16],
 		buffer: [0u8; BLAKE2B_BLOCKSIZE],
@@ -291,12 +317,15 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		t: [0u64; 2],
 		f: [0u64; 2],
 		is_finalized: false,
+		is_keyed: false,
 	};
 
 	if secret_key.is_some() {
+		context.is_keyed = true;
 		let key = secret_key.unwrap();
 		let klen = key.get_original_length();
 		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
+		context.init_state.copy_from_slice(&context.internal_state);
 		// Prepad the working vector with the state
 		context.w_vec[..8].copy_from_slice(&context.internal_state);
 		// Prepoad the working vector with the IV
@@ -304,6 +333,7 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		context.update(key.unprotected_as_bytes())?;
 	} else {
 		context.internal_state[0] ^= 0x01010000 ^ ((0u64) << 8) ^ (size as u64);
+		context.init_state.copy_from_slice(&context.internal_state);
 		// Prepad the working vector with the state
 		context.w_vec[..8].copy_from_slice(&context.internal_state);
 		// Prepoad the working vector with the IV
@@ -311,4 +341,85 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 	}
 
 	Ok(context)
+}
+
+
+#[test]
+fn double_finalize_err() {
+	let data = "what do ya want for nothing?".as_bytes();
+
+	let mut state = init(None, 64).unwrap();
+	state.update(data).unwrap();
+	let _ = state.finalize().unwrap();
+	assert!(state.finalize().is_err());
+}
+
+#[test]
+fn double_finalize_with_reset_ok_not_keyed() {
+	let data = "what do ya want for nothing?".as_bytes();
+
+	let mut state = init(None, 64).unwrap();
+	state.update(data).unwrap();
+	let one = state.finalize().unwrap();
+	state.reset(None);
+	state.update(data).unwrap();
+	let two = state.finalize().unwrap();
+	assert_eq!(one[..], two[..]);
+}
+
+#[test]
+fn double_finalize_with_reset_ok_keyed() {
+	let secret_key = SecretKey::from_slice(b"Testing").unwrap();
+	let data = "what do ya want for nothing?".as_bytes();
+
+	let mut state = init(Some(&secret_key), 64).unwrap();
+	state.update(data).unwrap();
+	let one = state.finalize().unwrap();
+	state.reset(Some(&secret_key));
+	state.update(data).unwrap();
+	let two = state.finalize().unwrap();
+	assert_eq!(one[..], two[..]);
+}
+
+#[test]
+fn double_finalize_with_reset_no_update_ok() {
+	let data = "what do ya want for nothing?".as_bytes();
+
+	let mut state = init(None, 64).unwrap();
+	state.update(data).unwrap();
+	let _ = state.finalize().unwrap();
+	state.reset(None);
+	let _ = state.finalize().unwrap();
+}
+
+#[test]
+fn update_after_finalize_err() {
+	let data = "what do ya want for nothing?".as_bytes();
+
+	let mut state = init(None, 64).unwrap();
+	state.update(data).unwrap();
+	let _ = state.finalize().unwrap();
+	assert!(state.update(data).is_err());
+}
+
+#[test]
+fn update_after_finalize_with_reset_ok() {
+	let data = "what do ya want for nothing?".as_bytes();
+
+	let mut state = init(None, 64).unwrap();
+	state.update(data).unwrap();
+	let _ = state.finalize().unwrap();
+	state.reset(None);
+	state.update(data).unwrap();
+}
+
+#[test]
+fn double_reset_ok() {
+	let data = "what do ya want for nothing?".as_bytes();
+
+	let mut state = init(None, 64).unwrap();
+	state.update(data).unwrap();
+	let _ = state.finalize().unwrap();
+	state.reset(None);
+	state.reset(None);
 }
