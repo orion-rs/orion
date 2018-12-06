@@ -33,18 +33,21 @@
 //! - Either `finalize()` or `finalize_with_dst()` is called twice without a
 //!   `reset()` in between.
 //! - `update()` is called after `finalize()` without a `reset()` in between.
-//! - `reset()` is called with `Some(secret_key)` but the struct was initialized with `None`.
-//! - `reset()` is called with `None` secret_key but the struct was initialized with `Some()`.
+//! - `reset()` is called with `Some(secret_key)` but the struct was initialized
+//!   with `None`.
+//! - `reset()` is called with `None` secret_key but the struct was initialized
+//!   with `Some()`.
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
 //!   `SecretKey::generate()` can be used
 //! for this. It generates a secret key of 64 bytes.
 //! - The minimum recommended size for a secret key is 64 bytes.
-//! - When using `Blake2b` with a secret key, then the output can be used as a MAC. If this is the
-//! intention, __**avoid using**__ `as_bytes()` to compare such MACs and use instead `verify()`,
-//! which will compare the MAC in constant time.
-//! - The recommended output size for Blake2b is 64.
+//! - When using `Blake2b` with a secret key, then the output can be used as a
+//!   MAC. If this is the
+//! intention, __**avoid using**__ `as_bytes()` to compare such MACs and use
+//! instead `verify()`, which will compare the MAC in constant time.
+//! - The recommended minimum output size is 32.
 //!
 //! # Example:
 //! ```

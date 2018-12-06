@@ -25,11 +25,12 @@
 //! # Use case:
 //! `orion::hash` can be used to hash some given data.
 //!
-//! An example of this could be using hashes of files to ensure integrity. Meaning, checking
-//! if a file has been modified since the time the hash was recorded.
+//! An example of this could be using hashes of files to ensure integrity.
+//! Meaning, checking if a file has been modified since the time the hash was
+//! recorded.
 //!
 //! # About:
-//! - Uses BLAKE2b with an output size of 64 bytes (i.e BLAKE2b-512).
+//! - Uses BLAKE2b with an output size of 32 bytes (i.e BLAKE2b-256).
 //!
 //! # Parameters:
 //! - `data`:  The data to be hashed.
@@ -38,7 +39,8 @@
 //! An exception will be thrown if:
 //!
 //! # Security:
-//! - This interface does not support supplying BLAKE2b with a secret key, and the hashes retrived
+//! - This interface does not support supplying BLAKE2b with a secret key, and
+//!   the hashes retrived
 //! from using `orion::hash` are therefore not suitable as MACs.
 //! - BLAKE2b is not suitable for password hashing. See `orion::pwhash` instead.
 //!
@@ -54,12 +56,7 @@ pub use hazardous::hash::blake2b::Digest;
 
 #[must_use]
 /// Hashing using BLAKE2b-512.
-pub fn digest(data: &[u8]) -> Digest {
-
-    blake2b::Hasher::Blake2b512.digest(data).unwrap()
-}
+pub fn digest(data: &[u8]) -> Digest { blake2b::Hasher::Blake2b256.digest(data).unwrap() }
 
 #[test]
-fn basic_test() {
-	let _digest = digest(b"Some data");
-}
+fn basic_test() { let _digest = digest(b"Some data"); }
