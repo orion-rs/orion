@@ -167,7 +167,6 @@ impl Hasher {
 pub struct Blake2b {
 	init_state: [u64; 8],
 	internal_state: [u64; 8],
-	w_vec: [u64; 16],
 	buffer: [u8; BLAKE2B_BLOCKSIZE],
 	leftover: usize,
 	t: [u64; 2],
@@ -182,7 +181,6 @@ impl Drop for Blake2b {
 		use clear_on_drop::clear::Clear;
 		self.init_state.clear();
 		self.internal_state.clear();
-		self.w_vec.clear();
 		self.buffer.clear();
 	}
 }
@@ -191,10 +189,9 @@ impl core::fmt::Debug for Blake2b {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		write!(
 			f,
-			"Blake2b {{ init_state: [***OMITTED***], internal_state: [***OMITTED***], w_vec: \
-			 [***OMITTED***],
-            buffer: [***OMITTED***], leftover: {:?}, t: {:?}, f: {:?}, is_finalized: {:?}, \
-			 is_keyed: {:?} }}",
+			"Blake2b {{ init_state: [***OMITTED***], internal_state: [***OMITTED***], buffer: \
+			 [***OMITTED***], leftover: {:?}, t: {:?}, f: {:?}, is_finalized: {:?}, is_keyed: \
+			 {:?} }}",
 			self.leftover, self.t, self.f, self.is_finalized, self.is_keyed
 		)
 	}
@@ -203,38 +200,57 @@ impl core::fmt::Debug for Blake2b {
 impl Blake2b {
 	#[inline(always)]
 	/// Increment the internal states offset value `t`.
-	fn increment_offset(&mut self, value: u64) {
-		self.t[0] = self.t[0].checked_add(value).expect("FUME");
+	fn increment_offset(&mut self, value: u64) -> Result<(), UnknownCryptoError> {
+		// Check for overflow
+		if self.t[0].checked_add(value).is_none() {
+			return Err(UnknownCryptoError);
+		}
+
+		self.t[0] = self.t[0].checked_add(value).unwrap();
 		if self.t[0] < value {
 			self.t[1] += 1;
 		}
+
+		Ok(())
 	}
 
 	#[inline(always)]
 	/// The primitive mixing function G as defined in the RFC.
-	fn prim_mix_g(&mut self, x: u64, y: u64, a: usize, b: usize, c: usize, d: usize) {
-		let mut word_a = self.w_vec[a];
-		let mut word_b = self.w_vec[b];
-		let mut word_c = self.w_vec[c];
-		let mut word_d = self.w_vec[d];
+	fn prim_mix_g(
+		&mut self,
+		x: u64,
+		y: u64,
+		a: usize,
+		b: usize,
+		c: usize,
+		d: usize,
+		w: &mut [u64],
+	) {
+		w[a] = w[a].wrapping_add(w[b]).wrapping_add(x);
+		w[d] ^= w[a];
+		w[d] = (w[d]).rotate_right(32u32);
+		w[c] = w[c].wrapping_add(w[d]);
+		w[b] ^= w[c];
+		w[b] = (w[b]).rotate_right(24u32);
+		w[a] = w[a].wrapping_add(w[b]).wrapping_add(y);
+		w[d] ^= w[a];
+		w[d] = (w[d]).rotate_right(16u32);
+		w[c] = w[c].wrapping_add(w[d]);
+		w[b] ^= w[c];
+		w[b] = (w[b]).rotate_right(63u32);
+	}
 
-		word_a = word_a.wrapping_add(word_b).wrapping_add(x);
-		word_d ^= word_a;
-		word_d = (word_d).rotate_right(32u32);
-		word_c = word_c.wrapping_add(word_d);
-		word_b ^= word_c;
-		word_b = (word_b).rotate_right(24u32);
-		word_a = word_a.wrapping_add(word_b).wrapping_add(y);;
-		word_d ^= word_a;
-		word_d = (word_d).rotate_right(16u32);
-		word_c = word_c.wrapping_add(word_d);
-		word_b ^= word_c;
-		word_b = (word_b).rotate_right(63u32);
-
-		self.w_vec[a] = word_a;
-		self.w_vec[b] = word_b;
-		self.w_vec[c] = word_c;
-		self.w_vec[d] = word_d;
+	#[inline(always)]
+	/// Perform a single round based on a message schedule selection.
+	fn round(&mut self, ri: usize, m: &mut [u64], w: &mut [u64]) {
+		self.prim_mix_g(m[SIGMA[ri][0]], m[SIGMA[ri][1]], 0, 4, 8, 12, w);
+		self.prim_mix_g(m[SIGMA[ri][2]], m[SIGMA[ri][3]], 1, 5, 9, 13, w);
+		self.prim_mix_g(m[SIGMA[ri][4]], m[SIGMA[ri][5]], 2, 6, 10, 14, w);
+		self.prim_mix_g(m[SIGMA[ri][6]], m[SIGMA[ri][7]], 3, 7, 11, 15, w);
+		self.prim_mix_g(m[SIGMA[ri][8]], m[SIGMA[ri][9]], 0, 5, 10, 15, w);
+		self.prim_mix_g(m[SIGMA[ri][10]], m[SIGMA[ri][11]], 1, 6, 11, 12, w);
+		self.prim_mix_g(m[SIGMA[ri][12]], m[SIGMA[ri][13]], 2, 7, 8, 13, w);
+		self.prim_mix_g(m[SIGMA[ri][14]], m[SIGMA[ri][15]], 3, 4, 9, 14, w);
 	}
 
 	#[inline(always)]
@@ -243,52 +259,47 @@ impl Blake2b {
 	fn compress_f(&mut self) {
 		let mut m_vec = [0u64; 16];
 		LittleEndian::read_u64_into(&self.buffer, &mut m_vec);
+		let mut w_vec = [
+			self.internal_state[0],
+			self.internal_state[1],
+			self.internal_state[2],
+			self.internal_state[3],
+			self.internal_state[4],
+			self.internal_state[5],
+			self.internal_state[6],
+			self.internal_state[7],
+			IV[0],
+			IV[1],
+			IV[2],
+			IV[3],
+			self.t[0] ^ IV[4],
+			self.t[1] ^ IV[5],
+			self.f[0] ^ IV[6],
+			self.f[1] ^ IV[7],
+		];
 
-		// Setup with IV constants
-		self.w_vec[12] = self.t[0] ^ IV[4];
-		self.w_vec[13] = self.t[1] ^ IV[5];
-		self.w_vec[14] = self.f[0] ^ IV[6];
-		self.w_vec[15] = self.f[1] ^ IV[7];
-
-		for round_number in 0..12 {
-			// Select message schedule based on round number
-			let ms = SIGMA[round_number];
-
-			self.prim_mix_g(m_vec[ms[0]], m_vec[ms[1]], 0, 4, 8, 12);
-			self.prim_mix_g(m_vec[ms[2]], m_vec[ms[3]], 1, 5, 9, 13);
-			self.prim_mix_g(m_vec[ms[4]], m_vec[ms[5]], 2, 6, 10, 14);
-			self.prim_mix_g(m_vec[ms[6]], m_vec[ms[7]], 3, 7, 11, 15);
-			self.prim_mix_g(m_vec[ms[8]], m_vec[ms[9]], 0, 5, 10, 15);
-			self.prim_mix_g(m_vec[ms[10]], m_vec[ms[11]], 1, 6, 11, 12);
-			self.prim_mix_g(m_vec[ms[12]], m_vec[ms[13]], 2, 7, 8, 13);
-			self.prim_mix_g(m_vec[ms[14]], m_vec[ms[15]], 3, 4, 9, 14);
-		}
+		self.round(0, &mut m_vec, &mut w_vec);
+		self.round(1, &mut m_vec, &mut w_vec);
+		self.round(2, &mut m_vec, &mut w_vec);
+		self.round(3, &mut m_vec, &mut w_vec);
+		self.round(4, &mut m_vec, &mut w_vec);
+		self.round(5, &mut m_vec, &mut w_vec);
+		self.round(6, &mut m_vec, &mut w_vec);
+		self.round(7, &mut m_vec, &mut w_vec);
+		self.round(8, &mut m_vec, &mut w_vec);
+		self.round(9, &mut m_vec, &mut w_vec);
+		self.round(10, &mut m_vec, &mut w_vec);
+		self.round(11, &mut m_vec, &mut w_vec);
 
 		// XOR the two halves together and into the state
-		self.internal_state[0] ^= self.w_vec[0] ^ self.w_vec[8];
-		self.internal_state[1] ^= self.w_vec[1] ^ self.w_vec[9];
-		self.internal_state[2] ^= self.w_vec[2] ^ self.w_vec[10];
-		self.internal_state[3] ^= self.w_vec[3] ^ self.w_vec[11];
-		self.internal_state[4] ^= self.w_vec[4] ^ self.w_vec[12];
-		self.internal_state[5] ^= self.w_vec[5] ^ self.w_vec[13];
-		self.internal_state[6] ^= self.w_vec[6] ^ self.w_vec[14];
-		self.internal_state[7] ^= self.w_vec[7] ^ self.w_vec[15];
-
-		// Update working vector
-		self.w_vec[0] = self.internal_state[0];
-		self.w_vec[1] = self.internal_state[1];
-		self.w_vec[2] = self.internal_state[2];
-		self.w_vec[3] = self.internal_state[3];
-		self.w_vec[4] = self.internal_state[4];
-		self.w_vec[5] = self.internal_state[5];
-		self.w_vec[6] = self.internal_state[6];
-		self.w_vec[7] = self.internal_state[7];
-
-		// Re-insert the IV into working vector
-		self.w_vec[8] = IV[0];
-		self.w_vec[9] = IV[1];
-		self.w_vec[10] = IV[2];
-		self.w_vec[11] = IV[3];
+		self.internal_state[0] ^= w_vec[0] ^ w_vec[8];
+		self.internal_state[1] ^= w_vec[1] ^ w_vec[9];
+		self.internal_state[2] ^= w_vec[2] ^ w_vec[10];
+		self.internal_state[3] ^= w_vec[3] ^ w_vec[11];
+		self.internal_state[4] ^= w_vec[4] ^ w_vec[12];
+		self.internal_state[5] ^= w_vec[5] ^ w_vec[13];
+		self.internal_state[6] ^= w_vec[6] ^ w_vec[14];
+		self.internal_state[7] ^= w_vec[7] ^ w_vec[15];
 	}
 
 	#[must_use]
@@ -305,9 +316,6 @@ impl Blake2b {
 			}
 
 			self.internal_state.copy_from_slice(&self.init_state);
-
-			self.w_vec[..8].copy_from_slice(&self.internal_state);
-			self.w_vec[8..12].copy_from_slice(&IV[0..4]);
 			self.buffer = [0u8; BLAKE2B_BLOCKSIZE];
 			self.leftover = 0;
 			self.t = [0u64; 2];
@@ -348,7 +356,7 @@ impl Blake2b {
 			}
 
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
-			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
+			self.increment_offset(BLAKE2B_BLOCKSIZE as u64).unwrap();
 			self.compress_f();
 			// Remve the amount of blocks we just prossed
 			self.leftover = 0;
@@ -358,7 +366,7 @@ impl Blake2b {
 
 		while bytes.len() > BLAKE2B_BLOCKSIZE {
 			self.buffer.copy_from_slice(&bytes[..BLAKE2B_BLOCKSIZE]);
-			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
+			self.increment_offset(BLAKE2B_BLOCKSIZE as u64).unwrap();
 			self.compress_f();
 			// Reduce by slice
 			bytes = &bytes[BLAKE2B_BLOCKSIZE..];
@@ -385,7 +393,7 @@ impl Blake2b {
 		let mut digest = [0u8; 64];
 
 		let in_buffer_len = self.leftover;
-		self.increment_offset(in_buffer_len as u64);
+		self.increment_offset(in_buffer_len as u64).unwrap();
 		// Mark that it is the last block of data to be processed
 		self.f[0] = !0;
 
@@ -411,7 +419,6 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 	let mut context = Blake2b {
 		init_state: [0u64; 8],
 		internal_state: IV,
-		w_vec: [0u64; 16],
 		buffer: [0u8; BLAKE2B_BLOCKSIZE],
 		leftover: 0,
 		t: [0u64; 2],
@@ -427,18 +434,10 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		let klen = key.get_original_length();
 		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
-		// Prepad the working vector with the state
-		context.w_vec[..8].copy_from_slice(&context.internal_state);
-		// Prepoad the working vector with the IV
-		context.w_vec[8..12].copy_from_slice(&IV[0..4]);
 		context.update(key.unprotected_as_bytes())?;
 	} else {
 		context.internal_state[0] ^= 0x01010000 ^ ((0u64) << 8) ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
-		// Prepad the working vector with the state
-		context.w_vec[..8].copy_from_slice(&context.internal_state);
-		// Prepoad the working vector with the IV
-		context.w_vec[8..12].copy_from_slice(&IV[0..4]);
 	}
 
 	Ok(context)

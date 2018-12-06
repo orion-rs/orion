@@ -4,11 +4,11 @@ extern crate test;
 
 use orion::hazardous::{
 	aead::{chacha20poly1305, xchacha20poly1305},
+	hash::*,
 	kdf::{hkdf, pbkdf2},
 	mac::{hmac, poly1305},
 	stream::*,
 	xof::cshake,
-	hash::*,
 };
 use test::Bencher;
 
@@ -162,7 +162,7 @@ fn bench_xchacha20poly1305_encrypt_decrypt(b: &mut Bencher) {
 
 #[bench]
 fn bench_blake2b_4096(b: &mut Bencher) {
-    b.iter(|| {
-        let _digest_256 = blake2b::Hasher::Blake2b256.digest(&[0u8; 4096]).unwrap();
-    });
+	b.iter(|| {
+		let _digest_256 = blake2b::Hasher::Blake2b256.digest(&[0u8; 4096]).unwrap();
+	});
 }
