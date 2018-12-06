@@ -55,7 +55,7 @@ use hazardous::hash::blake2b;
 pub use hazardous::hash::blake2b::Digest;
 
 #[must_use]
-/// Hashing using BLAKE2b-512.
+/// Hashing using BLAKE2b-256.
 pub fn digest(data: &[u8]) -> Digest { blake2b::Hasher::Blake2b256.digest(data).unwrap() }
 
 #[test]
