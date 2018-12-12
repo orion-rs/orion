@@ -117,7 +117,7 @@ impl core::fmt::Debug for Poly1305 {
 
 impl Poly1305 {
 	#[inline(always)]
-	#[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
+	#[allow(clippy::unreadable_literal)]
 	/// Initialize `Poly1305` struct for a given key.
 	fn initialize(&mut self, key: &OneTimeKey) {
 		// clamp(r)
@@ -136,10 +136,10 @@ impl Poly1305 {
 	#[must_use]
     #[inline(never)]
     #[rustfmt::skip]
-    #[cfg_attr(feature = "cargo-clippy", allow(clippy::cast_lossless))]
-    #[cfg_attr(feature = "cargo-clippy", allow(clippy::identity_op))]
-    #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
-    #[cfg_attr(feature = "cargo-clippy", allow(clippy::assign_op_pattern))]
+    #[allow(clippy::cast_lossless)]
+    #[allow(clippy::identity_op)]
+    #[allow(clippy::unreadable_literal)]
+    #[allow(clippy::assign_op_pattern)]
     /// Process a datablock of `POLY1305_BLOCKSIZE` length.
     fn process_block(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if data.len() != POLY1305_BLOCKSIZE {
@@ -228,10 +228,10 @@ impl Poly1305 {
 
 	#[inline(never)]
     #[rustfmt::skip]
-    #[cfg_attr(feature = "cargo-clippy", allow(clippy::cast_lossless))]
-    #[cfg_attr(feature = "cargo-clippy", allow(clippy::identity_op))]
-    #[cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
-    #[cfg_attr(feature = "cargo-clippy", allow(clippy::assign_op_pattern))]
+    #[allow(clippy::cast_lossless)]
+    #[allow(clippy::identity_op)]
+    #[allow(clippy::unreadable_literal)]
+    #[allow(clippy::assign_op_pattern)]
     /// Remaining processing after all data blocks have been processed.
     fn process_end_of_stream(&mut self) {
         // full carry h
