@@ -97,7 +97,8 @@ construct_blake2b_digest! {
 	(Digest, 64)
 }
 
-/// The BLAKE2b initialization vector (IV) as defined in the RFC.
+#[allow(clippy::unreadable_literal)]
+/// The BLAKE2b initialization vector (IV) as defined in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
 const IV: [u64; 8] = [
 	0x6a09e667f3bcc908,
 	0xbb67ae8584caa73b,
@@ -109,7 +110,7 @@ const IV: [u64; 8] = [
 	0x5be0cd19137e2179,
 ];
 
-/// The BLAKE2b SGIMA message schedule as defined in the RFC.
+/// BLAKE2b SGIMA as defined in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
 const SIGMA: [[usize; 16]; 12] = [
 	[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
 	[14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
@@ -125,7 +126,7 @@ const SIGMA: [[usize; 16]; 12] = [
 	[14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
 ];
 
-/// Convenience functions to common BLAKE2b operations.
+/// Convenience functions for common BLAKE2b operations.
 pub enum Hasher {
 	/// Blake2b with `32` as `size`.
 	Blake2b256,
@@ -152,7 +153,7 @@ impl Hasher {
 	}
 
 	#[must_use]
-	/// Return a `Blake2b` struct selected by the given Blake2b variant.
+	/// Return a `Blake2b` state selected by the given Blake2b variant.
 	pub fn init(&self) -> Result<Blake2b, UnknownCryptoError> {
 		match *self {
 			Hasher::Blake2b256 => Ok(init(None, 32)?),
@@ -191,8 +192,8 @@ impl core::fmt::Debug for Blake2b {
 			f,
 			"Blake2b {{ init_state: [***OMITTED***], internal_state: [***OMITTED***], buffer: \
 			 [***OMITTED***], leftover: {:?}, t: {:?}, f: {:?}, is_finalized: {:?}, is_keyed: \
-			 {:?} }}",
-			self.leftover, self.t, self.f, self.is_finalized, self.is_keyed
+			 {:?}, size: {:?} }}",
+			self.leftover, self.t, self.f, self.is_finalized, self.is_keyed, self.size
 		)
 	}
 }
@@ -215,6 +216,8 @@ impl Blake2b {
 	}
 
 	#[inline(always)]
+	#[allow(clippy::many_single_char_names)]
+	#[allow(clippy::too_many_arguments)]
 	/// The primitive mixing function G as defined in the RFC.
 	fn prim_mix_g(
 		&mut self,
@@ -254,7 +257,7 @@ impl Blake2b {
 	}
 
 	#[inline(always)]
-	#[cfg_attr(feature = "cargo-clippy", allow(clippy::needless_range_loop))]
+	#[allow(clippy::needless_range_loop)]
 	/// The compression function f as defined in the RFC.
 	fn compress_f(&mut self) {
 		let mut m_vec = [0u64; 16];
@@ -311,7 +314,7 @@ impl Blake2b {
 				return Err(UnknownCryptoError);
 			}
 
-			if !secret_key.is_some() && (self.is_keyed) {
+			if secret_key.is_none() && self.is_keyed {
 				return Err(UnknownCryptoError);
 			}
 
@@ -410,6 +413,7 @@ impl Blake2b {
 
 #[must_use]
 #[inline(always)]
+#[allow(clippy::unreadable_literal)]
 /// Initialize a `Blake2b` struct with a given size and an optional key.
 pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, UnknownCryptoError> {
 	if size < 1 || size > BLAKE2B_OUTSIZE {
@@ -425,7 +429,7 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		f: [0u64; 2],
 		is_finalized: false,
 		is_keyed: false,
-		size: size,
+		size,
 	};
 
 	if secret_key.is_some() {
@@ -436,7 +440,7 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		context.init_state.copy_from_slice(&context.internal_state);
 		context.update(key.unprotected_as_bytes())?;
 	} else {
-		context.internal_state[0] ^= 0x01010000 ^ ((0u64) << 8) ^ (size as u64);
+		context.internal_state[0] ^= 0x01010000 ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
 	}
 
