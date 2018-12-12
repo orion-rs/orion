@@ -87,3 +87,7 @@ impl fmt::Debug for FinalizationCryptoError {
 impl From<UnknownCryptoError> for FinalizationCryptoError {
 	fn from(_: UnknownCryptoError) -> Self { FinalizationCryptoError }
 }
+
+impl From<FinalizationCryptoError> for ValidationCryptoError {
+	fn from(_: FinalizationCryptoError) -> Self { ValidationCryptoError }
+}

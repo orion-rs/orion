@@ -326,8 +326,7 @@ impl Blake2b {
 			self.is_finalized = false;
 
 			if secret_key.is_some() && self.is_keyed {
-				self.update(secret_key.unwrap().unprotected_as_bytes())
-					.unwrap();
+				self.update(secret_key.unwrap().unprotected_as_bytes())?;
 			}
 
 			Ok(())
@@ -359,7 +358,7 @@ impl Blake2b {
 			}
 
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
-			self.increment_offset(BLAKE2B_BLOCKSIZE as u64).unwrap();
+			self.increment_offset(BLAKE2B_BLOCKSIZE as u64)?;
 			self.compress_f();
 			// Remve the amount of blocks we just prossed
 			self.leftover = 0;
@@ -369,7 +368,7 @@ impl Blake2b {
 
 		while bytes.len() > BLAKE2B_BLOCKSIZE {
 			self.buffer.copy_from_slice(&bytes[..BLAKE2B_BLOCKSIZE]);
-			self.increment_offset(BLAKE2B_BLOCKSIZE as u64).unwrap();
+			self.increment_offset(BLAKE2B_BLOCKSIZE as u64)?;
 			self.compress_f();
 			// Reduce by slice
 			bytes = &bytes[BLAKE2B_BLOCKSIZE..];
@@ -396,7 +395,7 @@ impl Blake2b {
 		let mut digest = [0u8; 64];
 
 		let in_buffer_len = self.leftover;
-		self.increment_offset(in_buffer_len as u64).unwrap();
+		self.increment_offset(in_buffer_len as u64)?;
 		// Mark that it is the last block of data to be processed
 		self.f[0] = !0;
 
@@ -456,9 +455,9 @@ pub fn verify(
 	data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
 	let mut state = init(Some(secret_key), size)?;
-	state.update(data).unwrap();
+	state.update(data)?;
 
-	if expected == &state.finalize().unwrap() {
+	if expected == &state.finalize()? {
 		Ok(true)
 	} else {
 		Err(ValidationCryptoError)
