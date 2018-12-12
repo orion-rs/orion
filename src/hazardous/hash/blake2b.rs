@@ -349,11 +349,13 @@ impl Blake2b {
 		let mut bytes = data;
 
 		if self.leftover > 0 {
-			let fill = BLAKE2B_BLOCKSIZE - self.leftover;
+			// Using .unwrap() since overflow should not happen in practice
+			let fill = BLAKE2B_BLOCKSIZE.checked_sub(self.leftover).unwrap();
 
 			if bytes.len() <= fill {
 				self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
-				self.leftover += bytes.len();
+				// Using .unwrap() since overflow should not happen in practice
+				self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
 				return Ok(());
 			}
 
@@ -376,7 +378,8 @@ impl Blake2b {
 
 		if !bytes.is_empty() {
 			self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
-			self.leftover += bytes.len();
+			// Using .unwrap() since overflow should not happen in practice
+			self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
 		}
 
 		Ok(())
