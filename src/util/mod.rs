@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use errors;
+use crate::errors;
 #[cfg(feature = "safe_api")]
 use rand::{rngs::OsRng, RngCore};
 use subtle::ConstantTimeEq;

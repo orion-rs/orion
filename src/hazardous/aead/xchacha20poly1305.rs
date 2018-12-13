@@ -87,12 +87,14 @@
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
-use errors::UnknownCryptoError;
-pub use hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
-use hazardous::{
-	aead::chacha20poly1305,
-	constants::IETF_CHACHA_NONCESIZE,
-	stream::chacha20::{self, Nonce as IETFNonce},
+pub use crate::hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
+use crate::{
+	errors::UnknownCryptoError,
+	hazardous::{
+		aead::chacha20poly1305,
+		constants::IETF_CHACHA_NONCESIZE,
+		stream::chacha20::{self, Nonce as IETFNonce},
+	},
 };
 
 #[must_use]

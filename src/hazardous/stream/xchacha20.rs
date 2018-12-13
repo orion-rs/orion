@@ -75,11 +75,13 @@
 //!
 //! assert_eq!(dst_out_pt, message);
 //! ```
-use errors::UnknownCryptoError;
-pub use hazardous::stream::chacha20::SecretKey;
-use hazardous::{
-	constants::{IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE},
-	stream::chacha20::{self, Nonce as IETFNonce},
+pub use crate::hazardous::stream::chacha20::SecretKey;
+use crate::{
+	errors::UnknownCryptoError,
+	hazardous::{
+		constants::{IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE},
+		stream::chacha20::{self, Nonce as IETFNonce},
+	},
 };
 
 construct_nonce_with_generator! {

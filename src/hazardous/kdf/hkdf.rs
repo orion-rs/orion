@@ -58,12 +58,14 @@
 //! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), None, &mut okm_out).unwrap());
 //! ```
 
-use errors::*;
-use hazardous::{
-	constants::HLEN,
-	mac::hmac::{self, SecretKey},
+use crate::{
+	errors::*,
+	hazardous::{
+		constants::HLEN,
+		mac::hmac::{self, SecretKey},
+	},
+	util,
 };
-use util;
 
 #[must_use]
 #[inline(always)]
@@ -152,7 +154,7 @@ pub fn verify(
 mod test {
 	extern crate hex;
 	use self::hex::decode;
-	use hazardous::kdf::hkdf::*;
+	use crate::hazardous::kdf::hkdf::*;
 
 	#[test]
 	fn hkdf_maximum_length_512() {

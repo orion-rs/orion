@@ -74,8 +74,8 @@
 extern crate core;
 
 use self::core::mem;
+use crate::errors::*;
 use byteorder::{BigEndian, ByteOrder};
-use errors::*;
 use tiny_keccak::Keccak;
 
 #[must_use]
@@ -215,7 +215,7 @@ fn left_encode(x: u64) -> ([u8; 9], usize) {
 #[cfg(test)]
 mod test {
 
-	use hazardous::xof::cshake::*;
+	use crate::hazardous::xof::cshake::*;
 
 	#[test]
 	fn test_left_encode() {

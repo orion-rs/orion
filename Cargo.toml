@@ -5,6 +5,7 @@ authors = ["brycx <brycx@protonmail.com>"]
 description = "Easy and usable rust crypto"
 keywords = [ "cryptography", "hmac", "hkdf", "xchacha20_poly1305", "chacha20_poly1305" ]
 categories = [ "cryptography", "no-std" ]
+edition = "2018"
 readme = "README.md"
 repository = "https://github.com/brycx/orion"
 documentation = "https://docs.rs/orion"

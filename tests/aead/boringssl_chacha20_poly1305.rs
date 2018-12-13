@@ -23,7 +23,7 @@ mod boringssl_aead_chacha20_poly1305 {
 
 	extern crate hex;
 	use self::hex::decode;
-	use aead::aead_test_runner as chacha20_poly1305_test_runner;
+	use crate::aead::aead_test_runner as chacha20_poly1305_test_runner;
 
 	// Testing against BoringSSL test vector from [boringssl](https://boringssl.googlesource.com/boringssl/+/master/crypto/poly1305/poly1305_tests.txt).
 	// Pulled at commit (master): 0f5ecd3a854546d943104e1f7421e489b7f4d5aa

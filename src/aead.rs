@@ -72,13 +72,15 @@
 //! let decrypted_data = aead::open(&secret_key, &ciphertext).unwrap();
 //! ```
 
-use errors::UnknownCryptoError;
-use hazardous::{
-	aead,
-	constants::{POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE},
-	stream::{chacha20, xchacha20::Nonce},
+pub use crate::hltypes::SecretKey;
+use crate::{
+	errors::UnknownCryptoError,
+	hazardous::{
+		aead,
+		constants::{POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE},
+		stream::{chacha20, xchacha20::Nonce},
+	},
 };
-pub use hltypes::SecretKey;
 
 #[must_use]
 /// Authenticated encryption using XChaCha20Poly1305.

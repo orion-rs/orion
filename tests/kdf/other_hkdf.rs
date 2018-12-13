@@ -30,7 +30,7 @@ mod other_hkdf {
 
 	use self::hex::decode;
 
-	use kdf::hkdf_test_runner;
+	use crate::kdf::hkdf_test_runner;
 
 	#[test]
 	fn test_case_1() {

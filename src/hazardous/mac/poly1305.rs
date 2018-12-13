@@ -61,9 +61,11 @@
 
 extern crate core;
 
+use crate::{
+	errors::*,
+	hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE},
+};
 use byteorder::{ByteOrder, LittleEndian};
-use errors::*;
-use hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE};
 
 construct_secret_key! {
 	/// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.

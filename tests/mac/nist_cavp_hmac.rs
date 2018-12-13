@@ -22,7 +22,7 @@
 
 extern crate hex;
 use self::hex::decode;
-use mac::hmac_test_runner;
+use crate::mac::hmac_test_runner;
 
 #[test]
 fn test_nist_cavp() {

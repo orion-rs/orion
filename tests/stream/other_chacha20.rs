@@ -22,7 +22,7 @@
 #[cfg(test)]
 mod boringssl {
 
-	use stream::chacha_test_runner;
+	use crate::stream::chacha_test_runner;
 
 	#[test]
 	fn chacha20_encryption_test_1() {

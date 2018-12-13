@@ -96,15 +96,17 @@
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! ```
-use byteorder::{ByteOrder, LittleEndian};
-use errors::UnknownCryptoError;
-pub use hazardous::stream::chacha20::{Nonce, SecretKey};
-use hazardous::{
-	constants::{POLY1305_BLOCKSIZE, POLY1305_KEYSIZE},
-	mac::poly1305::{self, OneTimeKey},
-	stream::chacha20,
+pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
+use crate::{
+	errors::UnknownCryptoError,
+	hazardous::{
+		constants::{POLY1305_BLOCKSIZE, POLY1305_KEYSIZE},
+		mac::poly1305::{self, OneTimeKey},
+		stream::chacha20,
+	},
+	util,
 };
-use util;
+use byteorder::{ByteOrder, LittleEndian};
 
 #[must_use]
 /// Poly1305 key generation using IETF ChaCha20.
