@@ -201,18 +201,11 @@ impl core::fmt::Debug for Blake2b {
 impl Blake2b {
 	#[inline(always)]
 	/// Increment the internal states offset value `t`.
-	fn increment_offset(&mut self, value: u64) -> Result<(), UnknownCryptoError> {
-		// Check for overflow
-		if self.t[0].checked_add(value).is_none() {
-			return Err(UnknownCryptoError);
-		}
-
-		self.t[0] = self.t[0].checked_add(value).unwrap();
+	fn increment_offset(&mut self, value: u64) {
+		self.t[0] += value;
 		if self.t[0] < value {
 			self.t[1] += 1;
 		}
-
-		Ok(())
 	}
 
 	#[inline(always)]
@@ -360,7 +353,7 @@ impl Blake2b {
 			}
 
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
-			self.increment_offset(BLAKE2B_BLOCKSIZE as u64)?;
+			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f();
 			// Remve the amount of blocks we just prossed
 			self.leftover = 0;
@@ -370,7 +363,7 @@ impl Blake2b {
 
 		while bytes.len() > BLAKE2B_BLOCKSIZE {
 			self.buffer.copy_from_slice(&bytes[..BLAKE2B_BLOCKSIZE]);
-			self.increment_offset(BLAKE2B_BLOCKSIZE as u64)?;
+			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f();
 			// Reduce by slice
 			bytes = &bytes[BLAKE2B_BLOCKSIZE..];
@@ -398,7 +391,7 @@ impl Blake2b {
 		let mut digest = [0u8; 64];
 
 		let in_buffer_len = self.leftover;
-		self.increment_offset(in_buffer_len as u64)?;
+		self.increment_offset(in_buffer_len as u64);
 		// Mark that it is the last block of data to be processed
 		self.f[0] = !0;
 
