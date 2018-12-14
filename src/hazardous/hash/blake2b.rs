@@ -355,7 +355,6 @@ impl Blake2b {
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f();
-			// Remve the amount of blocks we just prossed
 			self.leftover = 0;
 			// Reduce by slice
 			bytes = &bytes[fill..];
