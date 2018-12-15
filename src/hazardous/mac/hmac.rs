@@ -154,7 +154,7 @@ impl Hmac {
 	}
 
 	#[must_use]
-	/// This can be called multiple times.
+	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
 		if self.is_finalized {
 			Err(FinalizationCryptoError)
@@ -296,10 +296,11 @@ fn double_finalize_with_reset_ok() {
 
 	let mut tag = init(&secret_key);
 	tag.update(data).unwrap();
-	let _ = tag.finalize().unwrap();
+	let one = tag.finalize().unwrap();
 	tag.reset();
-	tag.update("Test".as_bytes()).unwrap();
-	let _ = tag.finalize().unwrap();
+	tag.update(data).unwrap();
+	let two = tag.finalize().unwrap();
+	assert_eq!(one.unprotected_as_bytes(), two.unprotected_as_bytes());
 }
 
 #[test]

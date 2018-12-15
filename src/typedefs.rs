@@ -366,6 +366,152 @@ macro_rules! construct_hmac_key {
     );
 }
 
+/// Macro to construct a secret key used for BLAKE2b. It is padded aginst a
+/// BLOCKSIZE value, but can at most be half that when generated or constructed
+/// from a slice.
+macro_rules! construct_blake2b_key {
+    ($(#[$meta:meta])*
+    ($name:ident, $size:expr)) => (
+        #[must_use]
+        $(#[$meta])*
+        ///
+        /// # Security:
+        /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+        /// that the type implements.
+        pub struct $name {
+            value: [u8; $size],
+            original_size: usize,
+        }
+
+        impl_debug_trait!($name);
+        impl_drop_stack_trait!($name);
+        impl_partialeq_trait!($name);
+
+        impl $name {
+            #[must_use]
+            /// Make an object from a given byte slice.
+            pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+                if slice.len() > 64 || slice.is_empty() {
+                    return Err(UnknownCryptoError);
+                }
+
+                let mut secret_key = [0u8; $size];
+                let slice_len = slice.len();
+                secret_key[..slice_len].copy_from_slice(slice);
+
+                Ok($name {
+                    value: secret_key,
+                    original_size: slice_len,
+                })
+            }
+
+            #[must_use]
+            /// Get the original size of the key, before padding.
+            pub fn get_original_length(&self) -> usize {
+                self.original_size
+            }
+
+            #[must_use]
+            #[cfg(feature = "safe_api")]
+            /// Randomly generate using a CSPRNG. Not available in `no_std` context.
+            pub fn generate() -> Result<$name, UnknownCryptoError> {
+                use util;
+                let mut value = [0u8; $size];
+                // BLAKE2b key can be at max 64 bytes
+                util::secure_rand_bytes(&mut value[..64])?;
+
+                Ok($name {
+                    value: value,
+                    original_size: 64,
+                })
+            }
+
+            func_unprotected_as_bytes!();
+            func_get_length!();
+        }
+
+        #[test]
+        fn test_blake2b_key_size() {
+            // We don't test above $size here in case it's passed as a `max_value()`
+            let _ = $name::from_slice(&[0u8; 64]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64 - 63]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64 - 1]).unwrap();
+        }
+        #[test]
+        fn test_unprotected_as_bytes_blake2b_key() {
+            let test = $name::from_slice(&[0u8; 64]).unwrap();
+            assert!(test.unprotected_as_bytes().len() == $size);
+        }
+    );
+}
+
+/// Macro to construct a digest returned by BLAKE2b.
+macro_rules! construct_blake2b_digest {
+    ($(#[$meta:meta])*
+    ($name:ident, $size:expr)) => (
+        #[must_use]
+        #[derive(Clone, Copy)]
+        $(#[$meta])*
+        ///
+        pub struct $name {
+            value: [u8; $size],
+            digest_size: usize,
+        }
+
+        impl PartialEq for $name {
+            fn eq(&self, other: &$name) -> bool {
+                use subtle::ConstantTimeEq;
+                 self.as_bytes()
+                    .ct_eq(&other.as_bytes())
+                    .unwrap_u8() == 1
+            }
+        }
+
+        impl $name {
+            #[must_use]
+            /// Return the object as byte slice.
+            pub fn as_bytes(&self) -> &[u8] {
+                self.value[..self.digest_size].as_ref()
+            }
+
+            #[must_use]
+            /// Make an object from a given byte slice.
+            pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+                if slice.is_empty() || slice.len() > $size {
+                    return Err(UnknownCryptoError);
+                }
+
+                let mut value = [0u8; $size];
+                value[..slice.len()].copy_from_slice(slice);
+
+                Ok($name {
+                    value: value,
+                    digest_size: slice.len(),
+                })
+            }
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, "{} value: {:?}, digest_size: {:?}", stringify!($name), &self.value[..], &self.digest_size)
+            }
+        }
+
+        #[test]
+        fn test_blake2b_mac_size() {
+            // We don't test above $size here in case it's passed as a `max_value()`
+            let _ = $name::from_slice(&[0u8; 64]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64 - 63]).unwrap();
+            let _ = $name::from_slice(&[0u8; 64 - 1]).unwrap();
+        }
+        #[test]
+        fn test_unprotected_as_bytes_blake2b_mac() {
+            let test = $name::from_slice(&[0u8; 64]).unwrap();
+            assert!(test.as_bytes().len() == 64);
+        }
+    );
+}
+
 #[cfg(feature = "safe_api")]
 /// Macro to construct a type containing sensitive data which is stored on the
 /// heap.

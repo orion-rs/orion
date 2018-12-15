@@ -8,27 +8,29 @@ use orion::hazardous::aead::xchacha20poly1305;
 use util::*;
 
 fuzz_target!(|data: &[u8]| {
-    let (key, nonce, aad, plaintext) = aead_setup_with_nonce_len(24, data);
-    let mut ciphertext_with_tag_orion: Vec<u8> = vec![0u8; plaintext.len() + 16];
-    let mut plaintext_out_orion = vec![0u8; plaintext.len()];
+	let (key, nonce, aad, plaintext) = aead_setup_with_nonce_len(24, data);
+	let mut ciphertext_with_tag_orion: Vec<u8> = vec![0u8; plaintext.len() + 16];
+	let mut plaintext_out_orion = vec![0u8; plaintext.len()];
 
-    let orion_key = xchacha20poly1305::SecretKey::from_slice(&key).unwrap();
-    let orion_nonce = xchacha20poly1305::Nonce::from_slice(&nonce).unwrap();
+	let orion_key = xchacha20poly1305::SecretKey::from_slice(&key).unwrap();
+	let orion_nonce = xchacha20poly1305::Nonce::from_slice(&nonce).unwrap();
 
-    xchacha20poly1305::seal(
-        &orion_key,
-        &orion_nonce,
-        &plaintext,
-        Some(&aad),
-        &mut ciphertext_with_tag_orion,
-    ).unwrap();
-    xchacha20poly1305::open(
-        &orion_key,
-        &orion_nonce,
-        &ciphertext_with_tag_orion,
-        Some(&aad),
-        &mut plaintext_out_orion,
-    ).unwrap();
+	xchacha20poly1305::seal(
+		&orion_key,
+		&orion_nonce,
+		&plaintext,
+		Some(&aad),
+		&mut ciphertext_with_tag_orion,
+	)
+	.unwrap();
+	xchacha20poly1305::open(
+		&orion_key,
+		&orion_nonce,
+		&ciphertext_with_tag_orion,
+		Some(&aad),
+		&mut plaintext_out_orion,
+	)
+	.unwrap();
 
-    assert_eq!(&plaintext, &plaintext_out_orion);
+	assert_eq!(&plaintext, &plaintext_out_orion);
 });

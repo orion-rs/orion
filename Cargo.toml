@@ -3,7 +3,7 @@ name = "orion"
 version = "0.11.0"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Easy and usable rust crypto"
-keywords = [ "cryptography", "hmac", "hkdf", "xchacha20_poly1305", "chacha20_poly1305" ]
+keywords = [ "cryptography", "blake2", "aead", "xchacha20_poly1305", "chacha20_poly1305" ]
 categories = [ "cryptography", "no-std" ]
 edition = "2018"
 readme = "README.md"
@@ -23,7 +23,7 @@ rand = { version = "0.6.1", optional = true }
 sha2 = { version = "0.8.0", default-features = false }
 tiny-keccak = "1.4.2"
 byteorder = { version = "1.2.7", default-features = false }
-subtle = { version = "1.0.0", default-features = false }
+subtle = { version = "2", default-features = false }
 clear_on_drop = "=0.2.3"
 
 [features]

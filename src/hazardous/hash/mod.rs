@@ -1,3 +1,5 @@
+// MIT License
+
 // Copyright (c) 2018 brycx
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,17 +20,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[cfg(test)]
-pub mod aead;
-#[cfg(test)]
-pub mod kdf;
-#[cfg(test)]
-pub mod mac;
-#[cfg(test)]
-pub mod stream;
-// See: https://github.com/brycx/orion/issues/15
-#[cfg(test)]
-pub mod hash;
-#[cfg(test)]
-#[cfg(target_endian = "little")]
-pub mod xof;
+/// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
+pub mod blake2b;
