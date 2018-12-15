@@ -40,6 +40,12 @@ pub const XCHACHA_NONCESIZE: usize = 24;
 pub const POLY1305_BLOCKSIZE: usize = 16;
 /// The key size for Poly1305.
 pub const POLY1305_KEYSIZE: usize = 32;
+/// The blocksize for the hash function BLAKE2b.
+pub const BLAKE2B_BLOCKSIZE: usize = 128;
+/// The key size for the hash function BLAKE2b when used in keyed mode.
+pub const BLAKE2B_KEYSIZE: usize = 64;
+/// The output size for the hash function BLAKE2b.
+pub const BLAKE2B_OUTSIZE: usize = 64;
 
 /// Type for an array of length `SHA2_BLOCKSIZE`.
 pub type BlocksizeArray = [u8; SHA2_BLOCKSIZE];

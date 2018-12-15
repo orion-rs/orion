@@ -20,30 +20,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! ### **Caution**:
-//! Usage of the `hazardous` module is __**only intended for advanced users**__.
-//! `hazardous` contains implmentations with a much higher degree of control. It
-//! is also much easier to misuse those implementations. Only use `hazardous` if
-//! absolutely necessary.
+//! Hashing.
+//!
+//! # Use case:
+//! `orion::hash` can be used to hash some given data.
+//!
+//! An example of this could be using hashes of files to ensure integrity.
+//! Meaning, checking if a file has been modified since the time the hash was
+//! recorded.
+//!
+//! # About:
+//! - Uses BLAKE2b with an output size of 32 bytes (i.e BLAKE2b-256).
+//!
+//! # Parameters:
+//! - `data`:  The data to be hashed.
+//!
+//! # Exceptions:
+//! An exception will be thrown if:
+//!
+//! # Security:
+//! - This interface does not support supplying BLAKE2b with a secret key, and
+//!   the hashes retrived
+//! from using `orion::hash` are therefore not suitable as MACs.
+//! - BLAKE2b is not suitable for password hashing. See `orion::pwhash` instead.
+//!
+//! # Example:
+//! ```
+//! use orion::hash::*;
+//!
+//! let hash: Digest = digest(b"Some data");
+//! ```
 
-/// AEADs (Authenticated Encryption with Associated Data).
-pub mod aead;
+use hazardous::hash::blake2b;
+pub use hazardous::hash::blake2b::Digest;
 
-/// Cryptographic hash functions.
-pub mod hash;
+#[must_use]
+/// Hashing using BLAKE2b-256.
+pub fn digest(data: &[u8]) -> Digest { blake2b::Hasher::Blake2b256.digest(data).unwrap() }
 
-/// MACs (Message Authentication Code).
-pub mod mac;
-
-/// KDFs (Key Derivation Function) and PBKDF (Password-Based Key Derivation
-/// Function).
-pub mod kdf;
-
-/// XOFs (Extendable Output Function).
-pub mod xof;
-
-/// Constant values and types.
-pub mod constants;
-
-/// Stream ciphers.
-pub mod stream;
+#[test]
+fn basic_test() { let _digest = digest(b"Some data"); }
