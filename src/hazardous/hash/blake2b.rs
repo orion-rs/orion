@@ -69,9 +69,11 @@
 //! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data").unwrap();
 //! ```
 
+use crate::{
+	errors::*,
+	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE},
+};
 use byteorder::{ByteOrder, LittleEndian};
-use crate::errors::*;
-use crate::hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE};
 
 construct_blake2b_key! {
 	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.
