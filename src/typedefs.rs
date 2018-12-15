@@ -415,7 +415,7 @@ macro_rules! construct_blake2b_key {
             #[cfg(feature = "safe_api")]
             /// Randomly generate using a CSPRNG. Not available in `no_std` context.
             pub fn generate() -> Result<$name, UnknownCryptoError> {
-                use util;
+                use crate::util;
                 let mut value = [0u8; $size];
                 // BLAKE2b key can be at max 64 bytes
                 util::secure_rand_bytes(&mut value[..64])?;
