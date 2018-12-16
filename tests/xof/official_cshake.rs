@@ -25,7 +25,7 @@
 #[cfg(test)]
 mod kcp_test_vectors {
 
-	use xof::cshake_test_runner;
+	use crate::xof::cshake_test_runner;
 
 	#[test]
 	fn cshake_256_test_case_1() {

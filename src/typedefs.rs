@@ -30,7 +30,7 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
         #[cfg(feature = "safe_api")]
         /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
         fn default() -> $name {
-            use util;
+            use crate::util;
             let mut value = vec![0u8; $size];
             util::secure_rand_bytes(&mut value).unwrap();
 
@@ -149,7 +149,7 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> Result<$name, UnknownCryptoError> {
-        use util;
+        use crate::util;
         let mut value = [0u8; $size];
         util::secure_rand_bytes(&mut value)?;
 
@@ -331,7 +331,7 @@ macro_rules! construct_hmac_key {
             /// Make an object from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> $name {
                 use sha2::{Digest, Sha512};
-                use hazardous::constants::HLEN;
+                use crate::hazardous::constants::HLEN;
 
                 let mut secret_key = [0u8; $size];
 
@@ -415,7 +415,7 @@ macro_rules! construct_blake2b_key {
             #[cfg(feature = "safe_api")]
             /// Randomly generate using a CSPRNG. Not available in `no_std` context.
             pub fn generate() -> Result<$name, UnknownCryptoError> {
-                use util;
+                use crate::util;
                 let mut value = [0u8; $size];
                 // BLAKE2b key can be at max 64 bytes
                 util::secure_rand_bytes(&mut value[..64])?;
@@ -550,7 +550,7 @@ macro_rules! construct_secret_key_variable_size {
             #[cfg(feature = "safe_api")]
             /// Randomly generate using a CSPRNG. Not available in `no_std` context.
             pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
-                use util;
+                use crate::util;
                 if length < 1 || length >= (u32::max_value() as usize) {
                     return Err(UnknownCryptoError);
                 }
@@ -615,7 +615,7 @@ macro_rules! construct_salt_variable_size {
             #[cfg(feature = "safe_api")]
             /// Randomly generate using a CSPRNG. Not available in `no_std` context.
             pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
-                use util;
+                use crate::util;
                 if length < 1 || length >= (u32::max_value() as usize) {
                     return Err(UnknownCryptoError);
                 }

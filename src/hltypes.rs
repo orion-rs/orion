@@ -22,7 +22,7 @@
 
 /// These are the different types used by the high-level interface. They are not
 /// used in `hazardous`.
-use errors::UnknownCryptoError;
+use crate::errors::UnknownCryptoError;
 
 construct_secret_key_variable_size! {
 	/// A type to represent a secret key.

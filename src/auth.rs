@@ -60,10 +60,8 @@
 //! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).unwrap());
 //! ```
 
-use errors::ValidationCryptoError;
-use hazardous::mac::hmac;
-pub use hazardous::mac::hmac::Tag;
-pub use hltypes::SecretKey;
+use crate::{errors::ValidationCryptoError, hazardous::mac::hmac};
+pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};
 
 #[must_use]
 /// Authenticate a message using HMAC-SHA512.

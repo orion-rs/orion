@@ -22,7 +22,7 @@
 #[cfg(test)]
 mod rfc8439_poly1305 {
 
-	use mac::poly1305_test_runner;
+	use crate::mac::poly1305_test_runner;
 
 	#[test]
 	fn test_case_0() {

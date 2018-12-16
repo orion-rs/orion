@@ -27,7 +27,7 @@ mod wycheproof_aead_chacha20_poly1305 {
 	extern crate orion;
 
 	use self::hex::decode;
-	use aead::wycheproof_test_runner as chacha20_poly1305_test_runner;
+	use crate::aead::wycheproof_test_runner as chacha20_poly1305_test_runner;
 
 	#[test]
 	fn wycheproof_test_case_1() {

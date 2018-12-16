@@ -24,7 +24,7 @@
 #[cfg(test)]
 mod monocypher_hchacha20 {
 
-	use stream::hchacha_test_runner as test_runner;
+	use crate::stream::hchacha_test_runner as test_runner;
 
 	#[test]
 	fn test_case_0() {

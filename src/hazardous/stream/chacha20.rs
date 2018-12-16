@@ -95,17 +95,19 @@
 //!
 //! assert_eq!(dst_out_pt, message);
 //! ```
+use crate::{
+	errors::UnknownCryptoError,
+	hazardous::constants::{
+		ChaChaState,
+		CHACHA_BLOCKSIZE,
+		CHACHA_KEYSIZE,
+		HCHACHA_NONCESIZE,
+		HCHACHA_OUTSIZE,
+		IETF_CHACHA_NONCESIZE,
+	},
+};
 use byteorder::{ByteOrder, LittleEndian};
 use clear_on_drop::clear::Clear;
-use errors::UnknownCryptoError;
-use hazardous::constants::{
-	ChaChaState,
-	CHACHA_BLOCKSIZE,
-	CHACHA_KEYSIZE,
-	HCHACHA_NONCESIZE,
-	HCHACHA_OUTSIZE,
-	IETF_CHACHA_NONCESIZE,
-};
 
 construct_secret_key! {
 	/// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and

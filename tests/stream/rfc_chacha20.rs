@@ -25,7 +25,7 @@ mod rfc8439_chacha20 {
 	extern crate hex;
 
 	use self::hex::decode;
-	use stream::chacha_test_runner;
+	use crate::stream::chacha_test_runner;
 
 	#[test]
 	fn chacha20_encryption_test_0() {

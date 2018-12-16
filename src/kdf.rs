@@ -72,10 +72,12 @@
 //! assert!(kdf::derive_key_verify(&derived_key, &user_password, &salt, 100000).unwrap());
 //! ```
 
+pub use crate::hltypes::{Password, Salt, SecretKey};
+use crate::{
+	errors::{UnknownCryptoError, ValidationCryptoError},
+	hazardous::kdf::pbkdf2,
+};
 use clear_on_drop::clear::Clear;
-use errors::{UnknownCryptoError, ValidationCryptoError};
-use hazardous::kdf::pbkdf2;
-pub use hltypes::{Password, Salt, SecretKey};
 
 #[must_use]
 /// Derive a key using PBKDF2-HMAC-SHA512.

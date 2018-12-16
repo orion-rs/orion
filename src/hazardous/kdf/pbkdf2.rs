@@ -59,13 +59,15 @@
 //! assert!(pbkdf2::verify(&exp_dk, &password, &salt, 10000, &mut dk_out).unwrap());
 //! ```
 
-use byteorder::{BigEndian, ByteOrder};
-use errors::*;
-use hazardous::{
-	constants::{HLenArray, HLEN, SHA2_BLOCKSIZE},
-	mac::hmac,
+use crate::{
+	errors::*,
+	hazardous::{
+		constants::{HLenArray, HLEN, SHA2_BLOCKSIZE},
+		mac::hmac,
+	},
+	util,
 };
-use util;
+use byteorder::{BigEndian, ByteOrder};
 
 construct_hmac_key! {
 	/// A type to represent the `Password` that PBKDF2 hashes.
@@ -178,7 +180,7 @@ mod test {
 
 	extern crate hex;
 	use self::hex::decode;
-	use hazardous::kdf::pbkdf2::*;
+	use crate::hazardous::kdf::pbkdf2::*;
 
 	#[test]
 	fn zero_iterations_err() {

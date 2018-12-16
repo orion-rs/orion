@@ -51,8 +51,8 @@
 //! let hash: Digest = digest(b"Some data");
 //! ```
 
-use hazardous::hash::blake2b;
-pub use hazardous::hash::blake2b::Digest;
+use crate::hazardous::hash::blake2b;
+pub use crate::hazardous::hash::blake2b::Digest;
 
 #[must_use]
 /// Hashing using BLAKE2b-256.

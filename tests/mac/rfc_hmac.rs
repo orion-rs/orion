@@ -27,7 +27,7 @@ mod rfc4231 {
 	extern crate hex;
 
 	use self::hex::decode;
-	use mac::hmac_test_runner;
+	use crate::mac::hmac_test_runner;
 
 	#[test]
 	fn test_case_1() {

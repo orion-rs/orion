@@ -24,7 +24,7 @@ mod other_poly1305 {
 	extern crate hex;
 
 	use self::hex::decode;
-	use mac::poly1305_test_runner;
+	use crate::mac::poly1305_test_runner;
 
 	// Testing against BoringSSL test vector from [boringssl](https://boringssl.googlesource.com/boringssl/+/master/crypto/poly1305/poly1305_tests.txt).
 	// Pulled at commit (master): 0f5ecd3a854546d943104e1f7421e489b7f4d5aa

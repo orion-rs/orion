@@ -24,7 +24,7 @@ mod rfc_aead_chacha20_poly1305 {
 
 	extern crate orion;
 	use self::orion::hazardous::aead;
-	use aead::aead_test_runner as chacha20_poly1305_test_runner;
+	use crate::aead::aead_test_runner as chacha20_poly1305_test_runner;
 
 	#[test]
 	fn test_case_0() {

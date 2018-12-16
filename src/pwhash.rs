@@ -70,11 +70,13 @@
 //! assert!(pwhash::hash_password_verify(&hash, &password, 100000).unwrap());
 //! ```
 
+pub use crate::hltypes::{Password, PasswordHash};
+use crate::{
+	errors::{UnknownCryptoError, ValidationCryptoError},
+	hazardous::kdf::pbkdf2,
+	util,
+};
 use clear_on_drop::clear::Clear;
-use errors::{UnknownCryptoError, ValidationCryptoError};
-use hazardous::kdf::pbkdf2;
-pub use hltypes::{Password, PasswordHash};
-use util;
 
 #[must_use]
 /// Hash a password using PBKDF2-HMAC-SHA512.
