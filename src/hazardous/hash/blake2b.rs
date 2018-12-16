@@ -166,6 +166,7 @@ impl Hasher {
 }
 
 #[must_use]
+#[derive(Clone)]
 /// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
 pub struct Blake2b {
 	init_state: [u64; 8],
