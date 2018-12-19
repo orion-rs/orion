@@ -127,9 +127,6 @@ fn aead_test_runner(
 	}
 }
 
-/// Wycheproof only runs against ChaCha20Poly1305. So we don't need to check for
-/// variants and we must be able to detect the test cases that have been marked
-/// #[should_panic] in the Wycheproof test module.
 fn wycheproof_test_runner(
 	key: &[u8],
 	nonce: &[u8],
@@ -137,31 +134,86 @@ fn wycheproof_test_runner(
 	tag: &[u8],
 	input: &[u8],
 	output: &[u8],
+	result: bool,
+	tcid: u64,
 ) -> Result<(), UnknownCryptoError> {
+	// Leave test vectors out that have empty input/output and are otherwise valid
+	// since orion does not accept this. This will be test cases with "tcId" = 2, 3.
+	if result {
+		if input.is_empty() && output.is_empty() {
+			return Ok(());
+		}
+	}
+
 	let mut dst_ct_out = vec![0u8; input.len() + 16];
 	let mut dst_pt_out = vec![0u8; input.len()];
 
-	aead::chacha20poly1305::seal(
-		&SecretKey::from_slice(&key).unwrap(),
-		&chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
-		input,
-		Some(aad),
-		&mut dst_ct_out,
-	)
-	.unwrap();
+	if result {
+		aead::chacha20poly1305::seal(
+			&SecretKey::from_slice(&key)?,
+			&chacha20poly1305::Nonce::from_slice(&nonce)?,
+			input,
+			Some(aad),
+			&mut dst_ct_out,
+		)?;
 
-	aead::chacha20poly1305::open(
-		&SecretKey::from_slice(&key).unwrap(),
-		&chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
-		&dst_ct_out,
-		Some(aad),
-		&mut dst_pt_out,
-	)
-	.unwrap();
+		aead::chacha20poly1305::open(
+			&SecretKey::from_slice(&key)?,
+			&chacha20poly1305::Nonce::from_slice(&nonce)?,
+			&dst_ct_out,
+			Some(aad),
+			&mut dst_pt_out,
+		)?;
 
-	assert!(dst_ct_out[..input.len()].as_ref() == output);
-	assert!(dst_ct_out[input.len()..].as_ref() == tag);
-	assert!(dst_pt_out[..].as_ref() == input);
+		assert!(dst_ct_out[..input.len()].as_ref() == output);
+		assert!(dst_ct_out[input.len()..].as_ref() == tag);
+		assert!(dst_pt_out[..].as_ref() == input);
+	} else {
+		let new_key = SecretKey::from_slice(&key);
+		let new_nonce = chacha20poly1305::Nonce::from_slice(&nonce);
+
+		// Detecting cases where there is invalid size of nonce and/or key
+		if new_key.is_err() || new_nonce.is_err() {
+			return Ok(());
+		}
+
+		let encryption = aead::chacha20poly1305::seal(
+			&new_key.unwrap(),
+			&new_nonce.unwrap(),
+			input,
+			Some(aad),
+			&mut dst_ct_out,
+		);
+		// Because of the early return, there is no need to check for invalid size of
+		// nonce and/or key
+		let decryption = aead::chacha20poly1305::open(
+			&SecretKey::from_slice(&key)?,
+			&chacha20poly1305::Nonce::from_slice(&nonce)?,
+			&dst_ct_out,
+			Some(aad),
+			&mut dst_pt_out,
+		);
+
+		// Test case results may be invalid, but this does not mean both seal() and
+		// open() fails. We use a match arm to allow failure combinations, with
+		// possible successfull calls, but never a combination of two successfull
+		// calls where the output matches the expected values.
+		match (encryption, decryption) {
+			(Ok(_), Err(_)) => (),
+			(Err(_), Ok(_)) => (),
+			(Err(_), Err(_)) => (),
+			(Ok(_), Ok(_)) => {
+				let is_ct_same = dst_ct_out[..input.len()].as_ref() == output;
+				let is_tag_same = dst_ct_out[input.len()..].as_ref() == tag;
+				let is_decrypted_same = dst_pt_out[..].as_ref() == input;
+				// In this case a test vector reported as invalid by Wycheproof would be
+				// accepted by orion.
+				if is_ct_same && is_decrypted_same && is_tag_same {
+					panic!("Unallowed test result! {:?}", tcid);
+				}
+			}
+		}
+	}
 
 	Ok(())
 }
