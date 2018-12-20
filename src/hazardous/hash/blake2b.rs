@@ -30,8 +30,7 @@
 //! An exception will be thrown if:
 //! - `size` is 0.
 //! - `size` is greater than 64.
-//! - Either `finalize()` or `finalize_with_dst()` is called twice without a
-//!   `reset()` in between.
+//! - `finalize()` is called twice without a `reset()` in between.
 //! - `update()` is called after `finalize()` without a `reset()` in between.
 //! - `reset()` is called with `Some(secret_key)` but the struct was initialized
 //!   with `None`.

@@ -27,8 +27,7 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - Either `finalize()` or `finalize_with_dst()` is called twice without a
-//!   `reset()` in between.
+//! - `finalize()` is called twice without a `reset()` in between.
 //! - `update()` is called after `finalize()` without a `reset()` in between.
 //! - The HMAC does not match the expected when verifying.
 //!

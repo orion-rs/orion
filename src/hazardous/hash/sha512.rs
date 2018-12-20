@@ -21,17 +21,32 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! -
+//! - `data`: The data to be hashed.
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! -
+//! - `finalize()` is called twice without a `reset()` in between.
+//! - `update()` is called after `finalize()` without a `reset()` in between.
 //!
 //! # Security:
-//! -
+//! - SHA512 is vulnerable to length extension attacks.
+//! 
+//! # Recommendation:
+//! - It is recommended to use BLAKE2b when possible.
 //!
 //! # Example:
 //! ```
+//! use orion::hazardous::hash::sha512;
+//! 
+//! // Using the streaming interface 
+//! let mut state = sha512::init();
+//! state.update(b"Hello world").unwrap();
+//! let hash = state.finalize().unwrap();
+//! 
+//! // Using the one-shot function
+//! let hash_one_shot = sha512::digest(b"Hello world").unwrap();
+//! 
+//! assert_eq!(hash, hash_one_shot);
 //! ```
 
 use crate::{errors::*, hazardous::constants::SHA2_BLOCKSIZE};
@@ -343,7 +358,7 @@ pub fn init() -> Sha512 {
 }
 
 #[must_use]
-/// Retrive a SHA512 digest of some `data`.
+/// Calculate a SHA512 digest of some `data`.
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 	let mut state = init();
 	state.update(data)?;
