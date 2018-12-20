@@ -446,7 +446,7 @@ macro_rules! construct_blake2b_key {
 }
 
 /// Macro to construct a digest returned by BLAKE2b.
-macro_rules! construct_blake2b_digest {
+macro_rules! construct_digest {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
         #[must_use]

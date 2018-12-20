@@ -89,7 +89,7 @@ construct_blake2b_key! {
 	(SecretKey, BLAKE2B_BLOCKSIZE)
 }
 
-construct_blake2b_digest! {
+construct_digest! {
 	/// A type to represent the `Digest` that BLAKE2b returns.
 	///
 	/// # Exceptions:
