@@ -30,22 +30,22 @@
 //!
 //! # Security:
 //! - SHA512 is vulnerable to length extension attacks.
-//! 
+//!
 //! # Recommendation:
 //! - It is recommended to use BLAKE2b when possible.
 //!
 //! # Example:
 //! ```
 //! use orion::hazardous::hash::sha512;
-//! 
-//! // Using the streaming interface 
+//!
+//! // Using the streaming interface
 //! let mut state = sha512::init();
 //! state.update(b"Hello world").unwrap();
 //! let hash = state.finalize().unwrap();
-//! 
+//!
 //! // Using the one-shot function
 //! let hash_one_shot = sha512::digest(b"Hello world").unwrap();
-//! 
+//!
 //! assert_eq!(hash, hash_one_shot);
 //! ```
 

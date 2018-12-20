@@ -72,8 +72,10 @@ extern crate core;
 use self::core::mem;
 use crate::{
 	errors::*,
-	hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE},
-	hazardous::hash::sha512,
+	hazardous::{
+		constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE},
+		hash::sha512,
+	},
 };
 use clear_on_drop::clear::Clear;
 
