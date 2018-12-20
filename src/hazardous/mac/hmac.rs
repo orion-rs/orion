@@ -147,11 +147,8 @@ impl Hmac {
 
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
-		if self.is_finalized {
-			self.ipad_hasher.input(self.ipad.as_ref());
-			self.is_finalized = false;
-		} else {
-		}
+		self.ipad_hasher.input(self.ipad.as_ref());
+		self.is_finalized = false;
 	}
 
 	#[must_use]
@@ -349,4 +346,18 @@ fn double_reset_ok() {
 	let _ = tag.finalize().unwrap();
 	tag.reset();
 	tag.reset();
+}
+
+#[test]
+fn reset_after_update_correct_resets() {
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+
+	let state_1 = init(&secret_key);
+
+	let mut state_2 = init(&secret_key);
+	state_2.update(b"Tests").unwrap();
+	state_2.reset();
+
+	assert_eq!(state_1.ipad[..], state_2.ipad[..]);
+	assert_eq!(state_1.is_finalized, state_2.is_finalized);
 }
