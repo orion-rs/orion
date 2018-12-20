@@ -81,6 +81,7 @@ const H0: [u64; 8] = [
     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179,
 ];
 
+#[derive(Clone)]
 /// SHA512 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
 pub struct Sha512 {
 	working_state: [u64; 8],
@@ -390,4 +391,19 @@ fn double_reset_ok() {
 	let _ = state.finalize().unwrap();
 	state.reset();
 	state.reset();
+}
+
+#[test]
+fn reset_after_update_correct_resets() {
+	let state_1 = init();
+
+	let mut state_2 = init();
+	state_2.update(b"Tests").unwrap();
+	state_2.reset();
+
+	assert_eq!(state_1.working_state, state_2.working_state);
+	assert_eq!(state_1.buffer[..], state_2.buffer[..]);
+	assert_eq!(state_1.leftover, state_2.leftover);
+	assert_eq!(state_1.message_len, state_2.message_len);
+	assert_eq!(state_1.is_finalized, state_2.is_finalized);
 }
