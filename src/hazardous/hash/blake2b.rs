@@ -305,30 +305,26 @@ impl Blake2b {
 	#[inline(always)]
 	/// Reset to `init()` state.
 	pub fn reset(&mut self, secret_key: Option<&SecretKey>) -> Result<(), UnknownCryptoError> {
-		if self.is_finalized {
-			if secret_key.is_some() && (!self.is_keyed) {
-				return Err(UnknownCryptoError);
-			}
-
-			if secret_key.is_none() && self.is_keyed {
-				return Err(UnknownCryptoError);
-			}
-
-			self.internal_state.copy_from_slice(&self.init_state);
-			self.buffer = [0u8; BLAKE2B_BLOCKSIZE];
-			self.leftover = 0;
-			self.t = [0u64; 2];
-			self.f = [0u64; 2];
-			self.is_finalized = false;
-
-			if secret_key.is_some() && self.is_keyed {
-				self.update(secret_key.unwrap().unprotected_as_bytes())?;
-			}
-
-			Ok(())
-		} else {
-			Ok(())
+		if secret_key.is_some() && (!self.is_keyed) {
+			return Err(UnknownCryptoError);
 		}
+
+		if secret_key.is_none() && self.is_keyed {
+			return Err(UnknownCryptoError);
+		}
+
+		self.internal_state.copy_from_slice(&self.init_state);
+		self.buffer = [0u8; BLAKE2B_BLOCKSIZE];
+		self.leftover = 0;
+		self.t = [0u64; 2];
+		self.f = [0u64; 2];
+		self.is_finalized = false;
+
+		if secret_key.is_some() && self.is_keyed {
+			self.update(secret_key.unwrap().unprotected_as_bytes())?;
+		}
+
+		Ok(())
 	}
 
 	#[must_use]
@@ -595,4 +591,23 @@ fn err_on_keyed_switch_on_reset() {
 	state_second.update(data).unwrap();
 	let _ = state_second.finalize().unwrap();
 	assert!(state_second.reset(Some(&secret_key)).is_err());
+}
+
+#[test]
+fn reset_after_update_correct_resets() {
+	let state_1 = init(None, 64).unwrap();
+
+	let mut state_2 = init(None, 64).unwrap();
+	state_2.update(b"Tests").unwrap();
+	state_2.reset(None).unwrap();
+
+	assert_eq!(state_1.init_state, state_2.init_state);
+	assert_eq!(state_1.internal_state, state_2.internal_state);
+	assert_eq!(state_1.buffer[..], state_2.buffer[..]);
+	assert_eq!(state_1.leftover, state_2.leftover);
+	assert_eq!(state_1.t, state_2.t);
+	assert_eq!(state_1.f, state_2.f);
+	assert_eq!(state_1.is_finalized, state_2.is_finalized);
+	assert_eq!(state_1.is_keyed, state_2.is_keyed);
+	assert_eq!(state_1.size, state_2.size);
 }

@@ -294,12 +294,10 @@ impl Poly1305 {
 	#[inline(always)]
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
-		if self.is_finalized {
-			self.a = [0u32; 5];
-			self.leftover = 0;
-			self.is_finalized = false;
-		} else {
-		}
+		self.a = [0u32; 5];
+		self.leftover = 0;
+		self.is_finalized = false;
+		self.buffer = [0u8; POLY1305_BLOCKSIZE];
 	}
 
 	#[must_use]
@@ -523,4 +521,22 @@ fn double_reset_ok() {
 	let _ = poly1305_state.finalize().unwrap();
 	poly1305_state.reset();
 	poly1305_state.reset();
+}
+
+#[test]
+fn reset_after_update_correct_resets() {
+	let secret_key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+
+	let state_1 = init(&secret_key);
+
+	let mut state_2 = init(&secret_key);
+	state_2.update(b"Tests").unwrap();
+	state_2.reset();
+
+	assert_eq!(state_1.a, state_2.a);
+	assert_eq!(state_1.r, state_2.r);
+	assert_eq!(state_1.s, state_2.s);
+	assert_eq!(state_1.leftover, state_2.leftover);
+	assert_eq!(state_1.buffer[..], state_2.buffer[..]);
+	assert_eq!(state_1.is_finalized, state_2.is_finalized);
 }

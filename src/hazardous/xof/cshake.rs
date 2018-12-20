@@ -121,11 +121,8 @@ impl CShake {
 
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
-		if self.is_finalized {
-			self.hasher = self.setup_hasher.clone();
-			self.is_finalized = false;
-		} else {
-		}
+		self.hasher = self.setup_hasher.clone();
+		self.is_finalized = false;
 	}
 
 	#[must_use]
@@ -479,5 +476,26 @@ mod test {
 		cshake.finalize(&mut out).unwrap();
 		cshake.reset();
 		cshake.reset();
+	}
+
+	#[test]
+	fn reset_after_update_correct_resets() {
+		let input = b"\x00\x01\x02\x03";
+		let custom = b"";
+		let name = b"Email Signature";
+		let mut out = [0u8; 64];
+		let mut out2 = [0u8; 64];
+
+		let mut cshake = init(custom, Some(name)).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+
+		let mut cshake2 = init(custom, Some(name)).unwrap();
+		cshake2.update(input).unwrap();
+		cshake2.reset();
+		cshake2.update(input).unwrap();
+		cshake2.finalize(&mut out2).unwrap();
+
+		assert!(out[..] == out2[..]);
 	}
 }
