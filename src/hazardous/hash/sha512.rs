@@ -146,24 +146,24 @@ impl Sha512 {
 	/// Message compression adopted from [mbed TLS](https://tls.mbed.org/sha-512-source-code).
 	fn compress(
 		&self,
-		a: &mut u64,
-		b: &mut u64,
-		c: &mut u64,
+		a: u64,
+		b: u64,
+		c: u64,
 		d: &mut u64,
-		e: &mut u64,
-		f: &mut u64,
-		g: &mut u64,
+		e: u64,
+		f: u64,
+		g: u64,
 		h: &mut u64,
-		x: &mut u64,
-		ki: &mut u64,
+		x: u64,
+		ki: u64,
 	) {
 		let temp1 = h
-			.wrapping_add(self.big_sigma_1(*e))
-			.wrapping_add(self.ch(*e, *f, *g))
-			.wrapping_add(*ki)
-			.wrapping_add(*x);
+			.wrapping_add(self.big_sigma_1(e))
+			.wrapping_add(self.ch(e, f, g))
+			.wrapping_add(ki)
+			.wrapping_add(x);
 
-		let temp2 = self.big_sigma_0(*a).wrapping_add(self.maj(*a, *b, *c));
+		let temp2 = self.big_sigma_0(a).wrapping_add(self.maj(a, b, c));
 
 		*d = d.wrapping_add(temp1);
 		*h = temp1.wrapping_add(temp2);
@@ -197,14 +197,14 @@ impl Sha512 {
 
 		let mut t = 0;
 		while t < 80 {
-			self.compress(&mut a, &mut b, &mut c, &mut d, &mut e, &mut f, &mut g, &mut h, &mut w[t], &mut K[t]); t += 1;
-			self.compress(&mut h, &mut a, &mut b, &mut c, &mut d, &mut e, &mut f, &mut g, &mut w[t], &mut K[t]); t += 1;
-			self.compress(&mut g, &mut h, &mut a, &mut b, &mut c, &mut d, &mut e, &mut f, &mut w[t], &mut K[t]); t += 1;
-			self.compress(&mut f, &mut g, &mut h, &mut a, &mut b, &mut c, &mut d, &mut e, &mut w[t], &mut K[t]); t += 1;
-			self.compress(&mut e, &mut f, &mut g, &mut h, &mut a, &mut b, &mut c, &mut d, &mut w[t], &mut K[t]); t += 1;
-			self.compress(&mut d, &mut e, &mut f, &mut g, &mut h, &mut a, &mut b, &mut c, &mut w[t], &mut K[t]); t += 1;
-			self.compress(&mut c, &mut d, &mut e, &mut f, &mut g, &mut h, &mut a, &mut b, &mut w[t], &mut K[t]); t += 1;
-			self.compress(&mut b, &mut c, &mut d, &mut e, &mut f, &mut g, &mut h, &mut a, &mut w[t], &mut K[t]); t += 1;
+			self.compress(a, b, c, &mut d, e, f, g, &mut h, w[t], K[t]); t += 1;
+			self.compress(h, a, b, &mut c, d, e, f, &mut g, w[t], K[t]); t += 1;
+			self.compress(g, h, a, &mut b, c, d, e, &mut f, w[t], K[t]); t += 1;
+			self.compress(f, g, h, &mut a, b, c, d, &mut e, w[t], K[t]); t += 1;
+			self.compress(e, f, g, &mut h, a, b, c, &mut d, w[t], K[t]); t += 1;
+			self.compress(d, e, f, &mut g, h, a, b, &mut c, w[t], K[t]); t += 1;
+			self.compress(c, d, e, &mut f, g, h, a, &mut b, w[t], K[t]); t += 1;
+			self.compress(b, c, d, &mut e, f, g, h, &mut a, w[t], K[t]); t += 1;
 		}
 
 		self.working_state[0] = self.working_state[0].wrapping_add(a);
