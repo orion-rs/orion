@@ -114,11 +114,11 @@ impl core::fmt::Debug for Sha512 {
 impl Sha512 {
 	#[inline(always)]
 	/// The Ch function as specified in FIPS 180-4 section 4.1.3.
-	fn ch(&self, x: u64, y: u64, z: u64) -> u64 { (x & y) ^ (!x & z) }
+	fn ch(&self, x: u64, y: u64, z: u64) -> u64 { z ^ (x & (y ^ z)) }
 
 	#[inline(always)]
 	/// The Maj function as specified in FIPS 180-4 section 4.1.3.
-	fn maj(&self, x: u64, y: u64, z: u64) -> u64 { (x & y) ^ (x & z) ^ (y & z) }
+	fn maj(&self, x: u64, y: u64, z: u64) -> u64 { (x & y) | (z & (x | y)) }
 
 	#[inline(always)]
 	/// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
@@ -134,19 +134,45 @@ impl Sha512 {
 
 	#[inline(always)]
 	/// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-	fn small_sigma_0(&self, x: u64) -> u64 {
-		((x.rotate_right(1)) ^ x.rotate_right(8)) ^ x.checked_shr(7).unwrap()
-	}
+	fn small_sigma_0(&self, x: u64) -> u64 { (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7) }
 
 	#[inline(always)]
 	/// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-	fn small_sigma_1(&self, x: u64) -> u64 {
-		(x.rotate_right(19) ^ x.rotate_right(61)) ^ x.checked_shr(6).unwrap()
-	}
+	fn small_sigma_1(&self, x: u64) -> u64 { (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6) }
 
 	#[inline(always)]
 	#[allow(clippy::many_single_char_names)]
-	///
+	#[allow(clippy::too_many_arguments)]
+	/// Message compression adopted from [mbed TLS](https://tls.mbed.org/sha-512-source-code).
+	fn compress(
+		&self,
+		a: &mut u64,
+		b: &mut u64,
+		c: &mut u64,
+		d: &mut u64,
+		e: &mut u64,
+		f: &mut u64,
+		g: &mut u64,
+		h: &mut u64,
+		x: &mut u64,
+		ki: &mut u64,
+	) {
+		let temp1 = h
+			.wrapping_add(self.big_sigma_1(*e))
+			.wrapping_add(self.ch(*e, *f, *g))
+			.wrapping_add(*ki)
+			.wrapping_add(*x);
+
+		let temp2 = self.big_sigma_0(*a).wrapping_add(self.maj(*a, *b, *c));
+
+		*d = d.wrapping_add(temp1);
+		*h = temp1.wrapping_add(temp2);
+	}
+
+	#[inline(always)]
+	#[rustfmt::skip]
+	#[allow(clippy::many_single_char_names)]
+	/// Process data in `self.buffer`.
 	fn process(&mut self) {
 		let mut w = [0u64; 80];
 		BigEndian::read_u64_into(&self.buffer, &mut w[..16]);
@@ -169,23 +195,16 @@ impl Sha512 {
 		let mut g = self.working_state[6];
 		let mut h = self.working_state[7];
 
-		for t in 0..80 {
-			let temp1 = h
-				.wrapping_add(self.big_sigma_1(e))
-				.wrapping_add(self.ch(e, f, g))
-				.wrapping_add(K[t])
-				.wrapping_add(w[t]);
-
-			let temp2 = self.big_sigma_0(a).wrapping_add(self.maj(a, b, c));
-
-			h = g;
-			g = f;
-			f = e;
-			e = d.wrapping_add(temp1);
-			d = c;
-			c = b;
-			b = a;
-			a = temp1.wrapping_add(temp2);
+		let mut t = 0;
+		while t < 80 {
+			self.compress(&mut a, &mut b, &mut c, &mut d, &mut e, &mut f, &mut g, &mut h, &mut w[t], &mut K[t]); t += 1;
+			self.compress(&mut h, &mut a, &mut b, &mut c, &mut d, &mut e, &mut f, &mut g, &mut w[t], &mut K[t]); t += 1;
+			self.compress(&mut g, &mut h, &mut a, &mut b, &mut c, &mut d, &mut e, &mut f, &mut w[t], &mut K[t]); t += 1;
+			self.compress(&mut f, &mut g, &mut h, &mut a, &mut b, &mut c, &mut d, &mut e, &mut w[t], &mut K[t]); t += 1;
+			self.compress(&mut e, &mut f, &mut g, &mut h, &mut a, &mut b, &mut c, &mut d, &mut w[t], &mut K[t]); t += 1;
+			self.compress(&mut d, &mut e, &mut f, &mut g, &mut h, &mut a, &mut b, &mut c, &mut w[t], &mut K[t]); t += 1;
+			self.compress(&mut c, &mut d, &mut e, &mut f, &mut g, &mut h, &mut a, &mut b, &mut w[t], &mut K[t]); t += 1;
+			self.compress(&mut b, &mut c, &mut d, &mut e, &mut f, &mut g, &mut h, &mut a, &mut w[t], &mut K[t]); t += 1;
 		}
 
 		self.working_state[0] = self.working_state[0].wrapping_add(a);
@@ -208,9 +227,9 @@ impl Sha512 {
 	}
 
 	#[inline(always)]
-	///
+	/// Increment the message length during processing of data.
 	fn increment_mlen(&mut self, length: u64) {
-		// left-shift to get bit-sized representation on length
+		// left-shift to get bit-sized representation of length
 		let len = length << 3;
 		self.message_len[1] += len;
 
@@ -273,9 +292,6 @@ impl Sha512 {
 		}
 
 		self.is_finalized = true;
-
-		assert!(self.leftover < SHA2_BLOCKSIZE);
-
 		self.buffer[self.leftover] = 0x80;
 		self.leftover += 1;
 
@@ -283,6 +299,7 @@ impl Sha512 {
 			*itm = 0;
 		}
 
+		// Check for available space for length encoding
 		if (SHA2_BLOCKSIZE - self.leftover) < 16 {
 			self.process();
 			for itm in self.buffer.iter_mut().take(self.leftover) {
