@@ -74,9 +74,9 @@ use self::core::mem;
 use crate::{
 	errors::*,
 	hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE},
+	hazardous::hash::sha512,
 };
 use clear_on_drop::clear::Clear;
-use sha2::{Digest, Sha512};
 
 construct_hmac_key! {
 	/// A type to represent the `SecretKey` that HMAC uses for authentication.
@@ -105,8 +105,8 @@ construct_tag! {
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub struct Hmac {
 	ipad: BlocksizeArray,
-	opad_hasher: Sha512,
-	ipad_hasher: Sha512,
+	opad_hasher: sha512::Sha512,
+	ipad_hasher: sha512::Sha512,
 	is_finalized: bool,
 }
 
@@ -140,14 +140,15 @@ impl Hmac {
 			opad[idx] ^= itm;
 		}
 
-		self.ipad_hasher.input(self.ipad.as_ref());
-		self.opad_hasher.input(opad.as_ref());
+		self.ipad_hasher.update(self.ipad.as_ref()).unwrap();
+		self.opad_hasher.update(opad.as_ref()).unwrap();
 		opad.clear();
 	}
 
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
-		self.ipad_hasher.input(self.ipad.as_ref());
+		self.ipad_hasher.reset();
+		self.ipad_hasher.update(self.ipad.as_ref()).unwrap();
 		self.is_finalized = false;
 	}
 
@@ -157,7 +158,7 @@ impl Hmac {
 		if self.is_finalized {
 			Err(FinalizationCryptoError)
 		} else {
-			self.ipad_hasher.input(data);
+			self.ipad_hasher.update(data)?;
 			Ok(())
 		}
 	}
@@ -172,13 +173,13 @@ impl Hmac {
 
 		self.is_finalized = true;
 
-		let mut hash_ires = Sha512::default();
+		let mut hash_ires = sha512::init();
 		mem::swap(&mut self.ipad_hasher, &mut hash_ires);
 
 		let mut o_hash = self.opad_hasher.clone();
-		o_hash.input(&hash_ires.result());
+		o_hash.update(&hash_ires.finalize()?.as_bytes())?;
 
-		let tag = Tag::from_slice(&o_hash.result()).unwrap();
+		let tag = Tag::from_slice(&o_hash.finalize()?.as_bytes()).unwrap();
 
 		Ok(tag)
 	}
@@ -190,8 +191,8 @@ impl Hmac {
 pub fn init(secret_key: &SecretKey) -> Hmac {
 	let mut state = Hmac {
 		ipad: [0x36; SHA2_BLOCKSIZE],
-		opad_hasher: Sha512::default(),
-		ipad_hasher: Sha512::default(),
+		opad_hasher: sha512::init(),
+		ipad_hasher: sha512::init(),
 		is_finalized: false,
 	};
 

@@ -53,7 +53,6 @@ extern crate byteorder;
 extern crate clear_on_drop;
 #[cfg(feature = "safe_api")]
 extern crate rand;
-extern crate sha2;
 extern crate subtle;
 extern crate tiny_keccak;
 

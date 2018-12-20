@@ -330,7 +330,7 @@ macro_rules! construct_hmac_key {
             #[must_use]
             /// Make an object from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> $name {
-                use sha2::{Digest, Sha512};
+                use crate::hazardous::hash::sha512;
                 use crate::hazardous::constants::HLEN;
 
                 let mut secret_key = [0u8; $size];
@@ -338,7 +338,7 @@ macro_rules! construct_hmac_key {
                 let slice_len = slice.len();
 
                 if slice_len > $size {
-                    secret_key[..HLEN].copy_from_slice(&Sha512::digest(slice));
+                    secret_key[..HLEN].copy_from_slice(&sha512::digest(slice).unwrap().as_bytes());
                 } else {
                     secret_key[..slice_len].copy_from_slice(slice);
                 }
