@@ -283,90 +283,91 @@ impl Poly1305 {
         self.a[2] = h2;
         self.a[3] = h3;
     }
-    #[inline(always)]
-    /// Reset to `init()` state.
-    pub fn reset(&mut self) {
-        if self.is_finalized {
-            self.a = [0u32; 5];
-            self.leftover = 0;
-            self.is_finalized = false;
-        } else {
-        }
-    }
-    #[must_use]
-    #[inline(always)]
-    /// Update state with a `data`. This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
-        if self.is_finalized {
-            return Err(FinalizationCryptoError);
-        }
 
-        let mut bytes = data;
+	#[inline(always)]
+	/// Reset to `init()` state.
+	pub fn reset(&mut self) {
+		self.a = [0u32; 5];
+		self.leftover = 0;
+		self.is_finalized = false;
+		self.buffer = [0u8; POLY1305_BLOCKSIZE];
+	}
 
-        if self.leftover != 0 {
-            let mut want = POLY1305_BLOCKSIZE - self.leftover;
-            if want > bytes.len() {
-                want = bytes.len();
-            }
+	#[must_use]
+	#[inline(always)]
+	/// Update state with a `data`. This can be called multiple times.
+	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+		if self.is_finalized {
+			return Err(FinalizationCryptoError);
+		}
 
-            for (idx, itm) in bytes.iter().enumerate().take(want) {
-                self.buffer[self.leftover + idx] = *itm;
-            }
-            // Reduce by slice
-            bytes = &bytes[want..];
-            self.leftover += want;
+		let mut bytes = data;
 
-            if self.leftover < POLY1305_BLOCKSIZE {
-                return Ok(());
-            }
+		if self.leftover != 0 {
+			let mut want = POLY1305_BLOCKSIZE - self.leftover;
+			if want > bytes.len() {
+				want = bytes.len();
+			}
 
-            let tmp = self.buffer;
-            self.process_block(&tmp).unwrap();
-            self.leftover = 0;
-        }
+			for (idx, itm) in bytes.iter().enumerate().take(want) {
+				self.buffer[self.leftover + idx] = *itm;
+			}
+			// Reduce by slice
+			bytes = &bytes[want..];
+			self.leftover += want;
 
-        while bytes.len() >= POLY1305_BLOCKSIZE {
-            self.process_block(&bytes[0..POLY1305_BLOCKSIZE]).unwrap();
-            // Reduce by slice
-            bytes = &bytes[POLY1305_BLOCKSIZE..];
-        }
+			if self.leftover < POLY1305_BLOCKSIZE {
+				return Ok(());
+			}
 
-        self.buffer[..bytes.len()].copy_from_slice(&bytes);
-        self.leftover = bytes.len();
+			let tmp = self.buffer;
+			self.process_block(&tmp).unwrap();
+			self.leftover = 0;
+		}
 
-        Ok(())
-    }
-    #[must_use]
-    #[inline(always)]
-    /// Return a Poly1305 tag.
-    pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
-        if self.is_finalized {
-            return Err(FinalizationCryptoError);
-        }
+		while bytes.len() >= POLY1305_BLOCKSIZE {
+			self.process_block(&bytes[0..POLY1305_BLOCKSIZE]).unwrap();
+			// Reduce by slice
+			bytes = &bytes[POLY1305_BLOCKSIZE..];
+		}
 
-        self.is_finalized = true;
+		self.buffer[..bytes.len()].copy_from_slice(&bytes);
+		self.leftover = bytes.len();
 
-        let mut local_buffer: Poly1305Tag = self.buffer;
+		Ok(())
+	}
 
-        if self.leftover != 0 {
-            local_buffer[self.leftover] = 1;
-            // Pad the last block with zeroes before processing it
-            for buf_itm in local_buffer
-                .iter_mut()
-                .take(POLY1305_BLOCKSIZE)
-                .skip(self.leftover + 1)
-            {
-                *buf_itm = 0u8;
-            }
+	#[must_use]
+	#[inline(always)]
+	/// Return a Poly1305 tag.
+	pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
+		if self.is_finalized {
+			return Err(FinalizationCryptoError);
+		}
 
-            self.process_block(&local_buffer).unwrap();
-        }
-        // Get tag
-        self.process_end_of_stream();
-        LittleEndian::write_u32_into(&self.a[0..4], &mut local_buffer);
+		self.is_finalized = true;
 
-        Ok(Tag::from_slice(&local_buffer).unwrap())
-    }
+		let mut local_buffer: Poly1305Tag = self.buffer;
+
+		if self.leftover != 0 {
+			local_buffer[self.leftover] = 1;
+			// Pad the last block with zeroes before processing it
+			for buf_itm in local_buffer
+				.iter_mut()
+				.take(POLY1305_BLOCKSIZE)
+				.skip(self.leftover + 1)
+			{
+				*buf_itm = 0u8;
+			}
+
+			self.process_block(&local_buffer).unwrap();
+		}
+		// Get tag
+		self.process_end_of_stream();
+		LittleEndian::write_u32_into(&self.a[0..4], &mut local_buffer);
+
+		Ok(Tag::from_slice(&local_buffer).unwrap())
+	}
 }
 
 #[must_use]
@@ -510,4 +511,22 @@ fn double_reset_ok() {
     let _ = poly1305_state.finalize().unwrap();
     poly1305_state.reset();
     poly1305_state.reset();
+}
+
+#[test]
+fn reset_after_update_correct_resets() {
+	let secret_key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+
+	let state_1 = init(&secret_key);
+
+	let mut state_2 = init(&secret_key);
+	state_2.update(b"Tests").unwrap();
+	state_2.reset();
+
+	assert_eq!(state_1.a, state_2.a);
+	assert_eq!(state_1.r, state_2.r);
+	assert_eq!(state_1.s, state_2.s);
+	assert_eq!(state_1.leftover, state_2.leftover);
+	assert_eq!(state_1.buffer[..], state_2.buffer[..]);
+	assert_eq!(state_1.is_finalized, state_2.is_finalized);
 }

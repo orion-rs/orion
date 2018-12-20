@@ -123,60 +123,59 @@ impl core::fmt::Debug for Hmac {
 }
 
 impl Hmac {
-    #[inline(always)]
-    /// Pad `key` with `ipad` and `opad`.
-    fn pad_key_io(&mut self, key: &SecretKey) {
-        let mut opad: BlocksizeArray = [0x5C; SHA2_BLOCKSIZE];
-        // `key` has already been padded with zeroes to a length of SHA2_BLOCKSIZE
-        // in SecretKey::from_slice
-        for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {
-            self.ipad[idx] ^= itm;
-            opad[idx] ^= itm;
-        }
+	#[inline(always)]
+	/// Pad `key` with `ipad` and `opad`.
+	fn pad_key_io(&mut self, key: &SecretKey) {
+		let mut opad: BlocksizeArray = [0x5C; SHA2_BLOCKSIZE];
+		// `key` has already been padded with zeroes to a length of SHA2_BLOCKSIZE
+		// in SecretKey::from_slice
+		for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {
+			self.ipad[idx] ^= itm;
+			opad[idx] ^= itm;
+		}
 
-        self.ipad_hasher.input(self.ipad.as_ref());
-        self.opad_hasher.input(opad.as_ref());
-        opad.clear();
-    }
+		self.ipad_hasher.input(self.ipad.as_ref());
+		self.opad_hasher.input(opad.as_ref());
+		opad.clear();
+	}
 
-    /// Reset to `init()` state.
-    pub fn reset(&mut self) {
-        if self.is_finalized {
-            self.ipad_hasher.input(self.ipad.as_ref());
-            self.is_finalized = false;
-        } else {
-        }
-    }
-    #[must_use]
-    /// This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
-        if self.is_finalized {
-            Err(FinalizationCryptoError)
-        } else {
-            self.ipad_hasher.input(data);
-            Ok(())
-        }
-    }
-    #[must_use]
-    #[inline(always)]
-    /// Return a `Tag`.
-    pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
-        if self.is_finalized {
-            return Err(FinalizationCryptoError);
-        }
+	/// Reset to `init()` state.
+	pub fn reset(&mut self) {
+		self.ipad_hasher.input(self.ipad.as_ref());
+		self.is_finalized = false;
+	}
 
-        self.is_finalized = true;
+	#[must_use]
+	/// Update state with a `data`. This can be called multiple times.
+	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+		if self.is_finalized {
+			Err(FinalizationCryptoError)
+		} else {
+			self.ipad_hasher.input(data);
+			Ok(())
+		}
+	}
 
-        let mut hash_ires = Sha512::default();
-        mem::swap(&mut self.ipad_hasher, &mut hash_ires);
+	#[must_use]
+	#[inline(always)]
+	/// Return a `Tag`.
+	pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
+		if self.is_finalized {
+			return Err(FinalizationCryptoError);
+		}
 
-        let mut o_hash = self.opad_hasher.clone();
-        o_hash.input(&hash_ires.result());
+		self.is_finalized = true;
 
-        let tag = Tag::from_slice(&o_hash.result()).unwrap();
+		let mut hash_ires = Sha512::default();
+		mem::swap(&mut self.ipad_hasher, &mut hash_ires);
 
-        Ok(tag)
-    }
+		let mut o_hash = self.opad_hasher.clone();
+		o_hash.input(&hash_ires.result());
+
+		let tag = Tag::from_slice(&o_hash.result()).unwrap();
+
+		Ok(tag)
+	}
 }
 
 #[must_use]
@@ -341,4 +340,18 @@ fn double_reset_ok() {
     let _ = tag.finalize().unwrap();
     tag.reset();
     tag.reset();
+}
+
+#[test]
+fn reset_after_update_correct_resets() {
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+
+	let state_1 = init(&secret_key);
+
+	let mut state_2 = init(&secret_key);
+	state_2.update(b"Tests").unwrap();
+	state_2.reset();
+
+	assert_eq!(state_1.ipad[..], state_2.ipad[..]);
+	assert_eq!(state_1.is_finalized, state_2.is_finalized);
 }

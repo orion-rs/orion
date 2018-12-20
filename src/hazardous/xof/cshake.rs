@@ -94,63 +94,64 @@ impl core::fmt::Debug for CShake {
 }
 
 impl CShake {
-    /// Initial setup with encoding of `custom` and `name`.
-    fn setup(&mut self, custom: &[u8], name: &[u8]) {
-        // Only append the left encoded rate, not the rate itself as with `name` and `custom`
-        let (encoded, offset) = left_encode(136_u64);
-        self.hasher.update(&encoded[(offset - 1)..]);
+	/// Initial setup with encoding of `custom` and `name`.
+	fn setup(&mut self, custom: &[u8], name: &[u8]) {
+		// Only append the left encoded rate, not the rate itself as with `name` and
+		// `custom`
+		let (encoded, offset) = left_encode(136_u64);
+		self.hasher.update(&encoded[(offset - 1)..]);
 
-        // The below two calls are equivalent to encode_string() from the spec
-        let (encoded, offset) = left_encode(name.len() as u64 * 8);
-        self.hasher.update(&encoded[(offset - 1)..]);
-        self.hasher.update(&name);
+		// The below two calls are equivalent to encode_string() from the spec
+		let (encoded, offset) = left_encode(name.len() as u64 * 8);
+		self.hasher.update(&encoded[(offset - 1)..]);
+		self.hasher.update(&name);
 
-        let (encoded, offset) = left_encode(custom.len() as u64 * 8);
-        self.hasher.update(&encoded[(offset - 1)..]);
-        self.hasher.update(custom);
+		let (encoded, offset) = left_encode(custom.len() as u64 * 8);
+		self.hasher.update(&encoded[(offset - 1)..]);
+		self.hasher.update(custom);
 
-        // Pad with zeroes before calling pad() in finalize()
-        self.hasher.fill_block();
-        self.setup_hasher = self.hasher.clone();
-    }
-    /// Reset to `init()` state.
-    pub fn reset(&mut self) {
-        if self.is_finalized {
-            self.hasher = self.setup_hasher.clone();
-            self.is_finalized = false;
-        } else {
-        }
-    }
-    #[must_use]
-    /// Set `data`. Can be called repeatedly.
-    pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
-        if self.is_finalized {
-            Err(FinalizationCryptoError)
-        } else {
-            self.hasher.update(data);
-            Ok(())
-        }
-    }
-    #[must_use]
-    /// Return a cSHAKE hash and copy into `dst_out`.
-    pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), FinalizationCryptoError> {
-        if self.is_finalized {
-            return Err(FinalizationCryptoError);
-        }
+		// Pad with zeroes before calling pad() in finalize()
+		self.hasher.fill_block();
+		self.setup_hasher = self.hasher.clone();
+	}
 
-        self.is_finalized = true;
+	/// Reset to `init()` state.
+	pub fn reset(&mut self) {
+		self.hasher = self.setup_hasher.clone();
+		self.is_finalized = false;
+	}
 
-        if dst_out.is_empty() || (dst_out.len() > 65536) {
-            return Err(FinalizationCryptoError);
-        }
+	#[must_use]
+	/// Set `data`. Can be called repeatedly.
+	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+		if self.is_finalized {
+			Err(FinalizationCryptoError)
+		} else {
+			self.hasher.update(data);
+			Ok(())
+		}
+	}
 
-        let mut hasher_new = Keccak::new(136, 0x04);
-        mem::swap(&mut self.hasher, &mut hasher_new);
+	#[must_use]
+	/// Return a cSHAKE hash and copy into `dst_out`.
+	pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), FinalizationCryptoError> {
+		if self.is_finalized {
+			return Err(FinalizationCryptoError);
+		}
 
-        hasher_new.finalize(dst_out);
+		self.is_finalized = true;
 
-        Ok(())
-    }
+		if dst_out.is_empty() || (dst_out.len() > 65536) {
+			return Err(FinalizationCryptoError);
+		}
+
+		let mut hasher_new = Keccak::new(136, 0x04);
+		mem::swap(&mut self.hasher, &mut hasher_new);
+
+		hasher_new.finalize(dst_out);
+
+		Ok(())
+	}
 }
 
 #[must_use]
@@ -355,93 +356,114 @@ mod test {
                         \x0E\x2B\xE0\x56\x08\x58\xD9\xC0\x0C\x03\x7E\x34\xA9\x69\x37\xC5\x61\
                         \xA7\x4C\x41\x2B\xB4\xC7\x46\x46\x95\x27\x28\x1C\x8C";
 
-        assert_ne!(out.as_ref(), expected.as_ref());
-    }
+		assert_ne!(out.as_ref(), expected.as_ref());
+	}
 
-    #[test]
-    fn double_finalize_err() {
-        let input = b"\x00\x01\x02\x03";
-        let custom = b"";
-        let name = b"Email Signature";
-        let mut out = [0u8; 64];
+	#[test]
+	fn double_finalize_err() {
+		let input = b"\x00\x01\x02\x03";
+		let custom = b"";
+		let name = b"Email Signature";
+		let mut out = [0u8; 64];
 
-        let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out).unwrap();
-        assert!(cshake.finalize(&mut out).is_err());
-    }
+		let mut cshake = init(custom, Some(name)).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+		assert!(cshake.finalize(&mut out).is_err());
+	}
 
-    #[test]
-    fn double_finalize_with_reset_ok() {
-        let input = b"\x00\x01\x02\x03";
-        let custom = b"";
-        let name = b"Email Signature";
-        let mut out = [0u8; 64];
+	#[test]
+	fn double_finalize_with_reset_ok() {
+		let input = b"\x00\x01\x02\x03";
+		let custom = b"";
+		let name = b"Email Signature";
+		let mut out = [0u8; 64];
 
-        let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out).unwrap();
-        cshake.reset();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out).unwrap();
-    }
+		let mut cshake = init(custom, Some(name)).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+		cshake.reset();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+	}
 
-    #[test]
-    fn double_finalize_with_reset_no_update_ok() {
-        let input = b"\x00\x01\x02\x03";
-        let custom = b"";
-        let name = b"Email Signature";
-        let mut out = [0u8; 64];
+	#[test]
+	fn double_finalize_with_reset_no_update_ok() {
+		let input = b"\x00\x01\x02\x03";
+		let custom = b"";
+		let name = b"Email Signature";
+		let mut out = [0u8; 64];
 
-        let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out).unwrap();
-        cshake.reset();
-        cshake.finalize(&mut out).unwrap();
-    }
+		let mut cshake = init(custom, Some(name)).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+		cshake.reset();
+		cshake.finalize(&mut out).unwrap();
+	}
 
-    #[test]
-    fn update_after_finalize_err() {
-        let input = b"\x00\x01\x02\x03";
-        let custom = b"";
-        let name = b"Email Signature";
-        let mut out = [0u8; 64];
+	#[test]
+	fn update_after_finalize_err() {
+		let input = b"\x00\x01\x02\x03";
+		let custom = b"";
+		let name = b"Email Signature";
+		let mut out = [0u8; 64];
 
-        let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out).unwrap();
-        assert!(cshake.update(input).is_err());
-    }
+		let mut cshake = init(custom, Some(name)).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+		assert!(cshake.update(input).is_err());
+	}
 
-    #[test]
-    fn update_after_finalize_with_reset_ok() {
-        let input = b"\x00\x01\x02\x03";
-        let custom = b"";
-        let name = b"Email Signature";
-        let mut out = [0u8; 64];
-        let mut out_check = [0u8; 64];
+	#[test]
+	fn update_after_finalize_with_reset_ok() {
+		let input = b"\x00\x01\x02\x03";
+		let custom = b"";
+		let name = b"Email Signature";
+		let mut out = [0u8; 64];
+		let mut out_check = [0u8; 64];
 
-        let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out).unwrap();
-        cshake.reset();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out_check).unwrap();
+		let mut cshake = init(custom, Some(name)).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+		cshake.reset();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out_check).unwrap();
 
-        assert_eq!(out.as_ref(), out_check.as_ref());
-    }
+		assert_eq!(out.as_ref(), out_check.as_ref());
+	}
 
-    #[test]
-    fn double_reset_ok() {
-        let input = b"\x00\x01\x02\x03";
-        let custom = b"";
-        let name = b"Email Signature";
-        let mut out = [0u8; 64];
+	#[test]
+	fn double_reset_ok() {
+		let input = b"\x00\x01\x02\x03";
+		let custom = b"";
+		let name = b"Email Signature";
+		let mut out = [0u8; 64];
 
-        let mut cshake = init(custom, Some(name)).unwrap();
-        cshake.update(input).unwrap();
-        cshake.finalize(&mut out).unwrap();
-        cshake.reset();
-        cshake.reset();
-    }
+		let mut cshake = init(custom, Some(name)).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+		cshake.reset();
+		cshake.reset();
+	}
+
+	#[test]
+	fn reset_after_update_correct_resets() {
+		let input = b"\x00\x01\x02\x03";
+		let custom = b"";
+		let name = b"Email Signature";
+		let mut out = [0u8; 64];
+		let mut out2 = [0u8; 64];
+
+		let mut cshake = init(custom, Some(name)).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+
+		let mut cshake2 = init(custom, Some(name)).unwrap();
+		cshake2.update(input).unwrap();
+		cshake2.reset();
+		cshake2.update(input).unwrap();
+		cshake2.finalize(&mut out2).unwrap();
+
+		assert!(out[..] == out2[..]);
+	}
 }
