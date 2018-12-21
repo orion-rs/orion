@@ -347,15 +347,17 @@ fn test_nist_cavp_long_msg() {
 fn test_nist_cavp_short_msg() {
 	// Test vectors are structured as: [data, digest]
 
-	let test_vectors: [[&str; 2]; 126] = [
-// The following three test vectors have been left out because the length when decoding
-// does not match the length reported by NIST
-
+	let test_vectors: [[&str; 2]; 129] = [
+// The following test vector has been modified, since when taking the original it will not result in an input length of 0. Which is what NIST requires.
+// The original:
 //["00", "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"],
 
-//["21", "3831a6a6155e509dee59a7f451eb35324d8f8f2df6e3708894740f98fdee23889f4de5adb0c5010dfb555cda77c8ab5dc902094c52de3278f35a75ebc25f093a"],
+// Modified, so as to have an actual length of 0 when decoding it:
+["", "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"],
 
-//["9083", "55586ebba48768aeb323655ab6f4298fc9f670964fc2e5f2731e34dfa4b0c09e6e1e12e3d7286b3145c61c2047fb1a2a1297f36da64160b31fa4c8c2cddd2fb4"],
+["21", "3831a6a6155e509dee59a7f451eb35324d8f8f2df6e3708894740f98fdee23889f4de5adb0c5010dfb555cda77c8ab5dc902094c52de3278f35a75ebc25f093a"],
+
+["9083", "55586ebba48768aeb323655ab6f4298fc9f670964fc2e5f2731e34dfa4b0c09e6e1e12e3d7286b3145c61c2047fb1a2a1297f36da64160b31fa4c8c2cddd2fb4"],
 
 ["0a55db", "7952585e5330cb247d72bae696fc8a6b0f7d0804577e347d99bc1b11e52f384985a428449382306a89261ae143c2f3fb613804ab20b42dc097e5bf4a96ef919b"],
 
