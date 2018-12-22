@@ -530,3 +530,20 @@ fn reset_after_update_correct_resets() {
 	assert_eq!(state_1.buffer[..], state_2.buffer[..]);
 	assert_eq!(state_1.is_finalized, state_2.is_finalized);
 }
+
+#[test]
+fn reset_after_update_correct_resets_and_verify() {
+	let secret_key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+
+	let mut state_1 = init(&secret_key);
+	state_1.update(b"Tests").unwrap();
+	let d1 = state_1.finalize().unwrap();
+
+	let mut state_2 = init(&secret_key);
+	state_2.update(b"Tests").unwrap();
+	state_2.reset();
+	state_2.update(b"Tests").unwrap();
+	let d2 = state_2.finalize().unwrap();
+
+	assert_eq!(d1, d2);
+}
