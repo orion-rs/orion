@@ -611,3 +611,18 @@ fn reset_after_update_correct_resets() {
 	assert_eq!(state_1.is_keyed, state_2.is_keyed);
 	assert_eq!(state_1.size, state_2.size);
 }
+
+#[test]
+fn reset_after_update_correct_resets_and_verify() {
+	let mut state_1 = init(None, 64).unwrap();
+	state_1.update(b"Tests").unwrap();
+	let d1 = state_1.finalize().unwrap();
+
+	let mut state_2 = init(None, 64).unwrap();
+	state_2.update(b"Tests").unwrap();
+	state_2.reset(None).unwrap();
+	state_2.update(b"Tests").unwrap();
+	let d2 = state_2.finalize().unwrap();
+
+	assert_eq!(d1, d2);
+}
