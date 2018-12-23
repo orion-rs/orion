@@ -259,6 +259,9 @@ impl Sha512 {
 		if self.is_finalized {
 			return Err(FinalizationCryptoError);
 		}
+		if data.is_empty() {
+			return Ok(());
+		}
 
 		let mut bytes = data;
 		// First fill up if there is leftover space
@@ -266,23 +269,23 @@ impl Sha512 {
 			// Using .unwrap() since overflow should not happen in practice
 			let fill = SHA2_BLOCKSIZE.checked_sub(self.leftover).unwrap();
 
-			if bytes.len() <= fill {
+			if bytes.len() < fill {
 				self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
 				// Using .unwrap() since overflow should not happen in practice
 				self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
 				self.increment_mlen(bytes.len() as u64);
 				return Ok(());
 			}
-
+			
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
 			// Process data
 			self.process();
-			self.increment_mlen(SHA2_BLOCKSIZE as u64);
+			self.increment_mlen(bytes[..fill].len() as u64);
 			self.leftover = 0;
 			// Reduce by slice
 			bytes = &bytes[fill..];
 		}
-
+	
 		while bytes.len() >= SHA2_BLOCKSIZE {
 			// Process data
 			self.buffer.copy_from_slice(&bytes[..SHA2_BLOCKSIZE]);
@@ -291,7 +294,7 @@ impl Sha512 {
 			// Reduce by slice
 			bytes = &bytes[SHA2_BLOCKSIZE..];
 		}
-
+		
 		if !bytes.is_empty() {
 			self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
 			// Using .unwrap() since overflow should not happen in practice
@@ -309,10 +312,11 @@ impl Sha512 {
 			return Err(FinalizationCryptoError);
 		}
 
-		// self.leftover should not be grater than SHA2_BLCOKSIZE
-		// as that would have been processed in the update call
-		assert!(self.leftover <= SHA2_BLOCKSIZE);
 		self.is_finalized = true;
+
+		// self.leftover should not be greater than SHA2_BLCOKSIZE
+		// as that would have been processed in the update call
+		assert!(self.leftover < SHA2_BLOCKSIZE);
 		self.buffer[self.leftover] = 0x80;
 		// Using .unwrap() since overflow should not happen in practice
 		self.leftover = self.leftover.checked_add(1).unwrap();
@@ -321,7 +325,7 @@ impl Sha512 {
 			*itm = 0;
 		}
 
-		// Check for available space for length encoding
+		// Check for available space for length padding
 		if (SHA2_BLOCKSIZE - self.leftover) < 16 {
 			self.process();
 			for itm in self.buffer.iter_mut().take(self.leftover) {
@@ -329,7 +333,7 @@ impl Sha512 {
 			}
 		}
 
-		// Pad with legnth
+		// Pad with length
 		BigEndian::write_u64(
 			&mut self.buffer[SHA2_BLOCKSIZE - 16..SHA2_BLOCKSIZE - 8],
 			self.message_len[0],
@@ -446,3 +450,19 @@ fn reset_after_update_correct_resets() {
 	assert_eq!(state_1.message_len, state_2.message_len);
 	assert_eq!(state_1.is_finalized, state_2.is_finalized);
 }
+
+#[test]
+fn reset_after_update_correct_resets_and_verify() {
+	let mut state_1 = init();
+	state_1.update(b"Tests").unwrap();
+	let d1 = state_1.finalize().unwrap();
+
+	let mut state_2 = init();
+	state_2.update(b"Tests").unwrap();
+	state_2.reset();
+	state_2.update(b"Tests").unwrap();
+	let d2 = state_2.finalize().unwrap();
+
+	assert_eq!(d1, d2);
+}
+
