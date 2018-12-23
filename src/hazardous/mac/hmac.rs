@@ -148,8 +148,11 @@ impl Hmac {
 
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
-		self.ipad_hasher = Sha512::default();
-		self.ipad_hasher.input(self.ipad.as_ref());
+		self.ipad_hasher = sha512::init();
+		// Using unwrap() as this should not panic,
+		// since the state has just been initialized and therefore
+		// cannot already be finalized.
+		self.ipad_hasher.update(self.ipad.as_ref()).unwrap();
 		self.is_finalized = false;
 	}
 
