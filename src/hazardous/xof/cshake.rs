@@ -481,16 +481,43 @@ mod test {
 	#[test]
 	fn reset_after_update_correct_resets() {
 		let input = b"\x00\x01\x02\x03";
-		let custom = b"";
+		let custom = b"Hello world";
 		let name = b"Email Signature";
 		let mut out = [0u8; 64];
 		let mut out2 = [0u8; 64];
 
+		// With optional name paramter and non-empty custom
 		let mut cshake = init(custom, Some(name)).unwrap();
 		cshake.update(input).unwrap();
 		cshake.finalize(&mut out).unwrap();
 
 		let mut cshake2 = init(custom, Some(name)).unwrap();
+		cshake2.update(input).unwrap();
+		cshake2.reset();
+		cshake2.update(input).unwrap();
+		cshake2.finalize(&mut out2).unwrap();
+
+		assert!(out[..] == out2[..]);
+
+		// With optional name paramter and empty custom
+		let mut cshake = init(b"", Some(name)).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+
+		let mut cshake2 = init(b"", Some(name)).unwrap();
+		cshake2.update(input).unwrap();
+		cshake2.reset();
+		cshake2.update(input).unwrap();
+		cshake2.finalize(&mut out2).unwrap();
+
+		assert!(out[..] == out2[..]);
+
+		// Without optional name parameter
+		let mut cshake = init(custom, None).unwrap();
+		cshake.update(input).unwrap();
+		cshake.finalize(&mut out).unwrap();
+
+		let mut cshake2 = init(custom, None).unwrap();
 		cshake2.update(input).unwrap();
 		cshake2.reset();
 		cshake2.update(input).unwrap();
