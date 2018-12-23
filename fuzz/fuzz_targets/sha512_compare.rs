@@ -28,6 +28,8 @@ fuzz_target!(|data: &[u8]| {
 	}
     
     let digest_other = digest::digest(&digest::SHA512, &other_data);
+	let orion_one_shot = sha512::digest(&other_data).unwrap();
 
+	assert!(orion_one_shot.as_bytes() == digest_other.as_ref());
     assert!(state.finalize().unwrap().as_bytes() == digest_other.as_ref());
 });
