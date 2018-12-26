@@ -475,6 +475,7 @@ fn reset_after_update_correct_resets_and_verify() {
 }
 
 #[test]
+#[cfg(feature = "safe_api")]
 // Test for issues when incrementally processing data
 // with leftover
 fn test_streaming_consistency() {
