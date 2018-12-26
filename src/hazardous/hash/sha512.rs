@@ -475,6 +475,8 @@ fn reset_after_update_correct_resets_and_verify() {
 }
 
 #[test]
+// Test for issues when incrementally processing data
+// with leftover
 fn test_streaming_consistency() {
 	for len in 0..SHA2_BLOCKSIZE * 4 {
 		

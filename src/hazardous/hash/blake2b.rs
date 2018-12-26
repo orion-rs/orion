@@ -640,3 +640,35 @@ fn reset_after_update_correct_resets_and_verify() {
 
 	assert_eq!(d1, d2);
 }
+
+#[test]
+// Test for issues when incrementally processing data
+// with leftover
+fn test_streaming_consistency() {
+	for len in 0..BLAKE2B_BLOCKSIZE * 4 {
+		
+		let data = vec![0u8; len];
+		let mut state = init(None, 64).unwrap();
+		let mut other_data: Vec<u8> = Vec::new();
+
+		other_data.extend_from_slice(&data);
+		state.update(&data).unwrap();
+
+		if data.len() > BLAKE2B_BLOCKSIZE {
+			other_data.extend_from_slice(b"");
+			state.update(b"").unwrap();
+		}
+		if data.len() > BLAKE2B_BLOCKSIZE * 2 {
+			other_data.extend_from_slice(b"Extra");
+			state.update(b"Extra").unwrap();
+		}
+		if data.len() > BLAKE2B_BLOCKSIZE * 3 {
+			other_data.extend_from_slice(&[0u8; 256]);
+			state.update(&[0u8; 256]).unwrap();
+		}
+
+		let digest_one_shot = Hasher::Blake2b512.digest(&other_data).unwrap();
+
+		assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
+	}
+}
