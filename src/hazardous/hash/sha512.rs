@@ -129,11 +129,15 @@ impl core::fmt::Debug for Sha512 {
 impl Sha512 {
 	#[inline(always)]
 	/// The Ch function as specified in FIPS 180-4 section 4.1.3.
-	fn ch(&self, x: u64, y: u64, z: u64) -> u64 { z ^ (x & (y ^ z)) }
+	fn ch(&self, x: u64, y: u64, z: u64) -> u64 {
+		z ^ (x & (y ^ z))
+	}
 
 	#[inline(always)]
 	/// The Maj function as specified in FIPS 180-4 section 4.1.3.
-	fn maj(&self, x: u64, y: u64, z: u64) -> u64 { (x & y) | (z & (x | y)) }
+	fn maj(&self, x: u64, y: u64, z: u64) -> u64 {
+		(x & y) | (z & (x | y))
+	}
 
 	#[inline(always)]
 	/// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
@@ -149,11 +153,15 @@ impl Sha512 {
 
 	#[inline(always)]
 	/// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-	fn small_sigma_0(&self, x: u64) -> u64 { (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7) }
+	fn small_sigma_0(&self, x: u64) -> u64 {
+		(x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7)
+	}
 
 	#[inline(always)]
 	/// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-	fn small_sigma_1(&self, x: u64) -> u64 { (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6) }
+	fn small_sigma_1(&self, x: u64) -> u64 {
+		(x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6)
+	}
 
 	#[inline(always)]
 	#[allow(clippy::many_single_char_names)]
@@ -254,7 +262,7 @@ impl Sha512 {
 	}
 
 	#[must_use]
-	/// Update state with a `data`. This can be called multiple times.
+	/// Update state with `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
 		if self.is_finalized {
 			return Err(FinalizationCryptoError);
@@ -276,16 +284,16 @@ impl Sha512 {
 				self.increment_mlen(bytes.len() as u64);
 				return Ok(());
 			}
-			
+
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
 			// Process data
 			self.process();
-			self.increment_mlen(bytes[..fill].len() as u64);
+			self.increment_mlen(fill as u64);
 			self.leftover = 0;
 			// Reduce by slice
 			bytes = &bytes[fill..];
 		}
-	
+
 		while bytes.len() >= SHA2_BLOCKSIZE {
 			// Process data
 			self.buffer.copy_from_slice(&bytes[..SHA2_BLOCKSIZE]);
@@ -294,7 +302,7 @@ impl Sha512 {
 			// Reduce by slice
 			bytes = &bytes[SHA2_BLOCKSIZE..];
 		}
-		
+
 		if !bytes.is_empty() {
 			self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
 			// Using .unwrap() since overflow should not happen in practice
@@ -466,3 +474,32 @@ fn reset_after_update_correct_resets_and_verify() {
 	assert_eq!(d1, d2);
 }
 
+#[test]
+fn test_streaming_consistency() {
+	for len in 0..SHA2_BLOCKSIZE * 4 {
+		
+		let data = vec![0u8; len];
+		let mut state = init();
+		let mut other_data: Vec<u8> = Vec::new();
+
+		other_data.extend_from_slice(&data);
+		state.update(&data).unwrap();
+
+		if data.len() > SHA2_BLOCKSIZE {
+			other_data.extend_from_slice(b"");
+			state.update(b"").unwrap();
+		}
+		if data.len() > SHA2_BLOCKSIZE * 2 {
+			other_data.extend_from_slice(b"Extra");
+			state.update(b"Extra").unwrap();
+		}
+		if data.len() > SHA2_BLOCKSIZE * 3 {
+			other_data.extend_from_slice(&[0u8; 256]);
+			state.update(&[0u8; 256]).unwrap();
+		}
+
+		let digest_one_shot = digest(&other_data).unwrap();
+
+		assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
+	}
+}
