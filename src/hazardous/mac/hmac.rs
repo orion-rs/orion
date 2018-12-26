@@ -140,7 +140,8 @@ impl Hmac {
 			self.ipad[idx] ^= itm;
 			opad[idx] ^= itm;
 		}
-
+		// Due to opad_hasher and ipad_hasher being initialized in init()
+		// using .unwrap() here should not be able to panic
 		self.ipad_hasher.update(self.ipad.as_ref()).unwrap();
 		self.opad_hasher.update(opad.as_ref()).unwrap();
 		opad.clear();
