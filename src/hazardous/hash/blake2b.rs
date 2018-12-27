@@ -647,7 +647,6 @@ fn reset_after_update_correct_resets_and_verify() {
 // with leftover
 fn test_streaming_consistency() {
 	for len in 0..BLAKE2B_BLOCKSIZE * 4 {
-		
 		let data = vec![0u8; len];
 		let mut state = init(None, 64).unwrap();
 		let mut other_data: Vec<u8> = Vec::new();

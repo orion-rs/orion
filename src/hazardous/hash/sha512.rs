@@ -129,15 +129,11 @@ impl core::fmt::Debug for Sha512 {
 impl Sha512 {
 	#[inline(always)]
 	/// The Ch function as specified in FIPS 180-4 section 4.1.3.
-	fn ch(&self, x: u64, y: u64, z: u64) -> u64 {
-		z ^ (x & (y ^ z))
-	}
+	fn ch(&self, x: u64, y: u64, z: u64) -> u64 { z ^ (x & (y ^ z)) }
 
 	#[inline(always)]
 	/// The Maj function as specified in FIPS 180-4 section 4.1.3.
-	fn maj(&self, x: u64, y: u64, z: u64) -> u64 {
-		(x & y) | (z & (x | y))
-	}
+	fn maj(&self, x: u64, y: u64, z: u64) -> u64 { (x & y) | (z & (x | y)) }
 
 	#[inline(always)]
 	/// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
@@ -153,15 +149,11 @@ impl Sha512 {
 
 	#[inline(always)]
 	/// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-	fn small_sigma_0(&self, x: u64) -> u64 {
-		(x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7)
-	}
+	fn small_sigma_0(&self, x: u64) -> u64 { (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7) }
 
 	#[inline(always)]
 	/// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-	fn small_sigma_1(&self, x: u64) -> u64 {
-		(x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6)
-	}
+	fn small_sigma_1(&self, x: u64) -> u64 { (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6) }
 
 	#[inline(always)]
 	#[allow(clippy::many_single_char_names)]
@@ -480,7 +472,6 @@ fn reset_after_update_correct_resets_and_verify() {
 // with leftover
 fn test_streaming_consistency() {
 	for len in 0..SHA2_BLOCKSIZE * 4 {
-		
 		let data = vec![0u8; len];
 		let mut state = init();
 		let mut other_data: Vec<u8> = Vec::new();

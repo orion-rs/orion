@@ -563,11 +563,9 @@ fn reset_after_update_correct_resets_and_verify() {
 // Test for issues when incrementally processing data
 // with leftover
 fn test_streaming_consistency() {
-
 	let key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 
 	for len in 0..POLY1305_BLOCKSIZE * 4 {
-		
 		let data = vec![0u8; len];
 		let mut state = init(&key);
 		let mut other_data: Vec<u8> = Vec::new();
