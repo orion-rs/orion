@@ -25,7 +25,7 @@ fuzz_target!(|data: &[u8]| {
 
 	// orion::auth
 	let auth_key = orion::auth::SecretKey::from_slice(&key).unwrap();
-	let tag = orion::auth::authenticate(&auth_key, &data);
+	let tag = orion::auth::authenticate(&auth_key, &data).unwrap();
 	let res = orion::auth::authenticate_verify(&tag, &auth_key, &data).unwrap();
 	assert!(res);
 

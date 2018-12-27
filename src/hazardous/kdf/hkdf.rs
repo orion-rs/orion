@@ -59,7 +59,7 @@
 //! ```
 
 use crate::{
-	errors::*,
+	errors::{ValidationCryptoError, UnknownCryptoError},
 	hazardous::{
 		constants::HLEN,
 		mac::hmac::{self, SecretKey},
@@ -70,11 +70,11 @@ use crate::{
 #[must_use]
 #[inline(always)]
 /// The HKDF extract step.
-pub fn extract(salt: &[u8], ikm: &[u8]) -> hmac::Tag {
-	let mut prk = hmac::init(&SecretKey::from_slice(salt));
-	prk.update(ikm).unwrap();
+pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError> {
+	let mut prk = hmac::init(&SecretKey::from_slice(salt)?);
+	prk.update(ikm)?;
 
-	prk.finalize().unwrap()
+	Ok(prk.finalize()?)
 }
 
 #[must_use]
@@ -97,7 +97,7 @@ pub fn expand(
 		None => &[0u8; 0],
 	};
 
-	let mut hmac = hmac::init(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes()));
+	let mut hmac = hmac::init(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
 	let okm_len = dst_out.len();
 
 	for (idx, hlen_block) in dst_out.chunks_mut(HLEN).enumerate() {
@@ -127,7 +127,7 @@ pub fn derive_key(
 	info: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	expand(&extract(salt, ikm), info, dst_out)?;
+	expand(&extract(salt, ikm)?, info, dst_out)?;
 
 	Ok(())
 }
@@ -141,7 +141,7 @@ pub fn verify(
 	info: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<bool, ValidationCryptoError> {
-	expand(&extract(salt, ikm), info, dst_out)?;
+	expand(&extract(salt, ikm)?, info, dst_out)?;
 
 	if util::secure_cmp(&dst_out, expected).is_err() {
 		Err(ValidationCryptoError)
@@ -160,7 +160,7 @@ mod test {
 	fn hkdf_maximum_length_512() {
 		// Max allowed length here is 16320
 		let mut okm_out = [0u8; 17000];
-		let prk = extract("".as_bytes(), "".as_bytes());
+		let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
 
 		assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
 	}
@@ -168,7 +168,7 @@ mod test {
 	#[test]
 	fn hkdf_zero_length() {
 		let mut okm_out = [0u8; 0];
-		let prk = extract("".as_bytes(), "".as_bytes());
+		let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
 
 		assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
 	}

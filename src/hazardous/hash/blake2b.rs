@@ -320,6 +320,7 @@ impl Blake2b {
 		self.is_finalized = false;
 
 		if secret_key.is_some() && self.is_keyed {
+			// .unwrap() cannot panic since secret_key.is_some() == true
 			self.update(secret_key.unwrap().unprotected_as_bytes())?;
 		}
 
@@ -426,6 +427,7 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 
 	if secret_key.is_some() {
 		context.is_keyed = true;
+		// .unwrap() cannot panic since secret_key.is_some() == true
 		let key = secret_key.unwrap();
 		let klen = key.get_original_length();
 		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);

@@ -51,12 +51,15 @@
 //! let hash: Digest = digest(b"Some data");
 //! ```
 
+use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2b;
 pub use crate::hazardous::hash::blake2b::Digest;
 
 #[must_use]
 /// Hashing using BLAKE2b-256.
-pub fn digest(data: &[u8]) -> Digest { blake2b::Hasher::Blake2b256.digest(data).unwrap() }
+pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> { 
+    Ok(blake2b::Hasher::Blake2b256.digest(data)?) 
+}
 
 #[test]
-fn basic_test() { let _digest = digest(b"Some data"); }
+fn basic_test() { let _digest = digest(b"Some data").unwrap(); }
