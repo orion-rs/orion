@@ -59,7 +59,7 @@
 //! ```
 
 use crate::{
-	errors::{ValidationCryptoError, UnknownCryptoError},
+	errors::{UnknownCryptoError, ValidationCryptoError},
 	hazardous::{
 		constants::HLEN,
 		mac::hmac::{self, SecretKey},

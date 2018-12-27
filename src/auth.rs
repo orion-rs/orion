@@ -56,11 +56,14 @@
 //! let key = auth::SecretKey::default();
 //! let msg = "Some message.".as_bytes();
 //!
-//! let expected_tag = auth::authenticate(&key, msg);
+//! let expected_tag = auth::authenticate(&key, msg).unwrap();
 //! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).unwrap());
 //! ```
 
-use crate::{errors::{ValidationCryptoError, UnknownCryptoError}, hazardous::mac::hmac};
+use crate::{
+	errors::{UnknownCryptoError, ValidationCryptoError},
+	hazardous::mac::hmac,
+};
 pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};
 
 #[must_use]

@@ -48,17 +48,16 @@
 //! ```
 //! use orion::hash::*;
 //!
-//! let hash: Digest = digest(b"Some data");
+//! let hash: Digest = digest(b"Some data").unwrap();
 //! ```
 
-use crate::errors::UnknownCryptoError;
-use crate::hazardous::hash::blake2b;
 pub use crate::hazardous::hash::blake2b::Digest;
+use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 
 #[must_use]
 /// Hashing using BLAKE2b-256.
-pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> { 
-    Ok(blake2b::Hasher::Blake2b256.digest(data)?) 
+pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
+	Ok(blake2b::Hasher::Blake2b256.digest(data)?)
 }
 
 #[test]

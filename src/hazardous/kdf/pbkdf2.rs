@@ -49,7 +49,7 @@
 //!
 //! let mut salt = [0u8; 64];
 //! util::secure_rand_bytes(&mut salt).unwrap();
-//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes());
+//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes()).unwrap();
 //! let mut dk_out = [0u8; 64];
 //!
 //! pbkdf2::derive_key(&password, &salt, 10000, &mut dk_out).unwrap();
