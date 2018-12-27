@@ -30,8 +30,7 @@
 //! An exception will be thrown if:
 //! - `size` is 0.
 //! - `size` is greater than 64.
-//! - Either `finalize()` or `finalize_with_dst()` is called twice without a
-//!   `reset()` in between.
+//! - `finalize()` is called twice without a `reset()` in between.
 //! - `update()` is called after `finalize()` without a `reset()` in between.
 //! - `reset()` is called with `Some(secret_key)` but the struct was initialized
 //!   with `None`.
@@ -89,7 +88,7 @@ construct_blake2b_key! {
 	(SecretKey, BLAKE2B_BLOCKSIZE)
 }
 
-construct_blake2b_digest! {
+construct_digest! {
 	/// A type to represent the `Digest` that BLAKE2b returns.
 	///
 	/// # Exceptions:
@@ -321,6 +320,7 @@ impl Blake2b {
 		self.is_finalized = false;
 
 		if secret_key.is_some() && self.is_keyed {
+			// .unwrap() cannot panic since secret_key.is_some() == true
 			self.update(secret_key.unwrap().unprotected_as_bytes())?;
 		}
 
@@ -427,6 +427,7 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 
 	if secret_key.is_some() {
 		context.is_keyed = true;
+		// .unwrap() cannot panic since secret_key.is_some() == true
 		let key = secret_key.unwrap();
 		let klen = key.get_original_length();
 		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
@@ -640,4 +641,36 @@ fn reset_after_update_correct_resets_and_verify() {
 	let d2 = state_2.finalize().unwrap();
 
 	assert_eq!(d1, d2);
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+// Test for issues when incrementally processing data
+// with leftover
+fn test_streaming_consistency() {
+	for len in 0..BLAKE2B_BLOCKSIZE * 4 {
+		let data = vec![0u8; len];
+		let mut state = init(None, 64).unwrap();
+		let mut other_data: Vec<u8> = Vec::new();
+
+		other_data.extend_from_slice(&data);
+		state.update(&data).unwrap();
+
+		if data.len() > BLAKE2B_BLOCKSIZE {
+			other_data.extend_from_slice(b"");
+			state.update(b"").unwrap();
+		}
+		if data.len() > BLAKE2B_BLOCKSIZE * 2 {
+			other_data.extend_from_slice(b"Extra");
+			state.update(b"Extra").unwrap();
+		}
+		if data.len() > BLAKE2B_BLOCKSIZE * 3 {
+			other_data.extend_from_slice(&[0u8; 256]);
+			state.update(&[0u8; 256]).unwrap();
+		}
+
+		let digest_one_shot = Hasher::Blake2b512.digest(&other_data).unwrap();
+
+		assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
+	}
 }

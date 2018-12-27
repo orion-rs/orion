@@ -19,7 +19,7 @@ use ring::{
 
 fn ro_hmac(data: &[u8]) {
 	let (secret_key, message) = hmac_setup(data);
-	let orion_key = hmac::SecretKey::from_slice(&secret_key);
+	let orion_key = hmac::SecretKey::from_slice(&secret_key).unwrap();
 	let mut orion_hmac = hmac::init(&orion_key);
 	orion_hmac.update(&message).unwrap();
 	let orion_signature = orion_hmac.finalize().unwrap();
@@ -51,7 +51,7 @@ fn ro_hkdf(data: &[u8]) {
 fn ro_pbkdf2(data: &[u8]) {
 	let (password, salt, mut dk_out_orion, iter) = pbkdf2_setup(data);
 	let mut dk_out_ring = dk_out_orion.clone();
-	let orion_password = pbkdf2::Password::from_slice(&password);
+	let orion_password = pbkdf2::Password::from_slice(&password).unwrap();
 
 	pbkdf2::derive_key(&orion_password, &salt, iter, &mut dk_out_orion).unwrap();
 	ring_pbkdf2::derive(

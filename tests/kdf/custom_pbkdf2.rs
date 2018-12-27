@@ -34,7 +34,7 @@ mod custom_test_vectors {
 
 	#[test]
 	fn sha512_test_case_1() {
-		let password = Password::from_slice("password".as_bytes());
+		let password = Password::from_slice("password".as_bytes()).unwrap();
 		let salt = "salt".as_bytes();
 		let iter = 1;
 		let mut dk_out = [0u8; 20];
@@ -47,7 +47,7 @@ mod custom_test_vectors {
 
 	#[test]
 	fn sha512_test_case_2() {
-		let password = Password::from_slice("password".as_bytes());
+		let password = Password::from_slice("password".as_bytes()).unwrap();
 		let salt = "salt".as_bytes();
 		let iter = 2;
 		let mut dk_out = [0u8; 20];
@@ -60,7 +60,7 @@ mod custom_test_vectors {
 
 	#[test]
 	fn sha512_test_case_3() {
-		let password = Password::from_slice("password".as_bytes());
+		let password = Password::from_slice("password".as_bytes()).unwrap();
 		let salt = "salt".as_bytes();
 		let iter = 4096;
 		let mut dk_out = [0u8; 20];
@@ -73,7 +73,7 @@ mod custom_test_vectors {
 
 	#[test]
 	fn sha512_test_case_4() {
-		let password = Password::from_slice("passwordPASSWORDpassword".as_bytes());
+		let password = Password::from_slice("passwordPASSWORDpassword".as_bytes()).unwrap();
 		let salt = "saltSALTsaltSALTsaltSALTsaltSALTsalt".as_bytes();
 		let iter = 4096;
 		let mut dk_out = [0u8; 25];
@@ -86,7 +86,7 @@ mod custom_test_vectors {
 
 	#[test]
 	fn sha512_test_case_5() {
-		let password = Password::from_slice("pass\0word".as_bytes());
+		let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
 		let salt = "sa\0lt".as_bytes();
 		let iter = 4096;
 		let mut dk_out = [0u8; 16];
@@ -99,7 +99,7 @@ mod custom_test_vectors {
 
 	#[test]
 	fn sha512_test_case_6() {
-		let password = Password::from_slice("passwd".as_bytes());
+		let password = Password::from_slice("passwd".as_bytes()).unwrap();
 		let salt = "salt".as_bytes();
 		let iter = 1;
 		let mut dk_out = [0u8; 128];
@@ -112,7 +112,7 @@ mod custom_test_vectors {
 
 	#[test]
 	fn sha512_test_case_7() {
-		let password = Password::from_slice("Password".as_bytes());
+		let password = Password::from_slice("Password".as_bytes()).unwrap();
 		let salt = "NaCl".as_bytes();
 		let iter = 80000;
 		let mut dk_out = [0u8; 128];

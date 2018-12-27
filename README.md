@@ -2,7 +2,7 @@
 <img src="https://travis-ci.org/brycx/orion.svg?branch=master"> <img src="https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg"> [![dependency status](https://deps.rs/repo/github/brycx/orion/status.svg)](https://deps.rs/repo/github/brycx/orion)
 
 ### About
-orion is a cryptography library written in pure-Rust which aims to provide easy and usable crypto. 'Usable' meaning exposing high-level API's that are easy to use and hard to misuse. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
+orion is a cryptography library written in pure Rust. It aims to provide easy and usable crypto, while trying to minimize the use of unsafe code. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
 
 Currently supports:
 * **AEAD**: (X)ChaCha20Poly1305.
@@ -10,7 +10,7 @@ Currently supports:
 * **KDF**: HKDF-HMAC-SHA512, PBKDF2-HMAC-SHA512.
 * **MAC**: HMAC-SHA512, Poly1305.
 * **XOF**: cSHAKE256.
-* **Hashing**: BLAKE2b.
+* **Hashing**: BLAKE2b, SHA512.
 
 ### Security
 This library is **not suitable for production code** and **usage is at own risk**.
@@ -69,14 +69,6 @@ cargo +nightly bench
 ```
 ### Changelog
 Can be found [here](https://github.com/brycx/orion/releases).
-
-### Alternatives
-- [*ring*](https://crates.io/crates/ring) (HMAC, HKDF, PBKDF2, AEAD ChaCha20Poly1305)
-- [RustCrypto HMAC](https://crates.io/crates/hmac)
-- [RustCrypto HKDF](https://crates.io/crates/hkdf)
-- [RustCrypto PBKDF2](https://crates.io/crates/pbkdf2)
-- [sp800-185](https://crates.io/crates/sp800-185) (cSHAKE)
-- [chacha](https://crates.io/crates/chacha) (ChaCha20, XChaCha20)
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.

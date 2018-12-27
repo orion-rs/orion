@@ -39,7 +39,7 @@ fn hmac_test_runner(
 	expected: &[u8],
 	trunc: Option<usize>,
 ) -> Result<(), UnknownCryptoError> {
-	let key = hmac::SecretKey::from_slice(secret_key);
+	let key = hmac::SecretKey::from_slice(secret_key).unwrap();
 	let mut mac = hmac::init(&key);
 	mac.update(data).unwrap();
 
@@ -49,7 +49,7 @@ fn hmac_test_runner(
 		None => 64,
 	};
 
-	let one_shot = hmac::hmac(&key, data);
+	let one_shot = hmac::hmac(&key, data).unwrap();
 
 	assert_eq!(
 		res.unprotected_as_bytes()[..len].as_ref(),

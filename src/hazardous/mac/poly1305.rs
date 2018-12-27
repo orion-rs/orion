@@ -557,3 +557,37 @@ fn reset_after_update_correct_resets_and_verify() {
 
 	assert_eq!(d1, d2);
 }
+
+#[test]
+#[cfg(feature = "safe_api")]
+// Test for issues when incrementally processing data
+// with leftover
+fn test_streaming_consistency() {
+	let key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+
+	for len in 0..POLY1305_BLOCKSIZE * 4 {
+		let data = vec![0u8; len];
+		let mut state = init(&key);
+		let mut other_data: Vec<u8> = Vec::new();
+
+		other_data.extend_from_slice(&data);
+		state.update(&data).unwrap();
+
+		if data.len() > POLY1305_BLOCKSIZE {
+			other_data.extend_from_slice(b"");
+			state.update(b"").unwrap();
+		}
+		if data.len() > POLY1305_BLOCKSIZE * 2 {
+			other_data.extend_from_slice(b"Extra");
+			state.update(b"Extra").unwrap();
+		}
+		if data.len() > POLY1305_BLOCKSIZE * 3 {
+			other_data.extend_from_slice(&[0u8; 256]);
+			state.update(&[0u8; 256]).unwrap();
+		}
+
+		let digest_one_shot = poly1305(&key, &other_data).unwrap();
+
+		assert!(state.finalize().unwrap() == digest_one_shot);
+	}
+}

@@ -19,7 +19,6 @@
 // SOFTWARE.
 
 extern crate hex;
-extern crate serde;
 extern crate serde_json;
 
 use self::hex::decode;

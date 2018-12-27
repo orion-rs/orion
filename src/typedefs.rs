@@ -329,8 +329,8 @@ macro_rules! construct_hmac_key {
         impl $name {
             #[must_use]
             /// Make an object from a given byte slice.
-            pub fn from_slice(slice: &[u8]) -> $name {
-                use sha2::{Digest, Sha512};
+            pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+                use crate::hazardous::hash::sha512;
                 use crate::hazardous::constants::HLEN;
 
                 let mut secret_key = [0u8; $size];
@@ -338,12 +338,12 @@ macro_rules! construct_hmac_key {
                 let slice_len = slice.len();
 
                 if slice_len > $size {
-                    secret_key[..HLEN].copy_from_slice(&Sha512::digest(slice));
+                    secret_key[..HLEN].copy_from_slice(&sha512::digest(slice)?.as_bytes());
                 } else {
                     secret_key[..slice_len].copy_from_slice(slice);
                 }
 
-                $name { value: secret_key }
+                Ok($name { value: secret_key })
             }
 
             func_unprotected_as_bytes!();
@@ -354,13 +354,13 @@ macro_rules! construct_hmac_key {
         #[test]
         fn test_key_size() {
             // We don't test above $size here in case it's passed as a `max_value()`
-            let _ = $name::from_slice(&[0u8; $size]);
-            let _ = $name::from_slice(&[0u8; $size - $size]);
-            let _ = $name::from_slice(&[0u8; $size - 1]);
+            let _ = $name::from_slice(&[0u8; $size]).unwrap();
+            let _ = $name::from_slice(&[0u8; $size - $size]).unwrap();
+            let _ = $name::from_slice(&[0u8; $size - 1]).unwrap();
         }
         #[test]
         fn test_unprotected_as_bytes_hmac_key() {
-            let test = $name::from_slice(&[0u8; $size]);
+            let test = $name::from_slice(&[0u8; $size]).unwrap();
             assert!(test.unprotected_as_bytes().len() == $size);
         }
     );
@@ -446,7 +446,7 @@ macro_rules! construct_blake2b_key {
 }
 
 /// Macro to construct a digest returned by BLAKE2b.
-macro_rules! construct_blake2b_digest {
+macro_rules! construct_digest {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
         #[must_use]

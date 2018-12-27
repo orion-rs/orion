@@ -27,8 +27,7 @@
 //!
 //! # Exceptions:
 //! An exception will be thrown if:
-//! - Either `finalize()` or `finalize_with_dst()` is called twice without a
-//!   `reset()` in between.
+//! - `finalize()` is called twice without a `reset()` in between.
 //! - `update()` is called after `finalize()` without a `reset()` in between.
 //! - The HMAC does not match the expected when verifying.
 //!
@@ -73,10 +72,12 @@ extern crate core;
 use self::core::mem;
 use crate::{
 	errors::*,
-	hazardous::constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE},
+	hazardous::{
+		constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE},
+		hash::sha512,
+	},
 };
 use clear_on_drop::clear::Clear;
-use sha2::{Digest, Sha512};
 
 construct_hmac_key! {
 	/// A type to represent the `SecretKey` that HMAC uses for authentication.
@@ -105,8 +106,8 @@ construct_tag! {
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub struct Hmac {
 	ipad: BlocksizeArray,
-	opad_hasher: Sha512,
-	ipad_hasher: Sha512,
+	opad_hasher: sha512::Sha512,
+	ipad_hasher: sha512::Sha512,
 	is_finalized: bool,
 }
 
@@ -139,16 +140,20 @@ impl Hmac {
 			self.ipad[idx] ^= itm;
 			opad[idx] ^= itm;
 		}
-
-		self.ipad_hasher.input(self.ipad.as_ref());
-		self.opad_hasher.input(opad.as_ref());
+		// Due to opad_hasher and ipad_hasher being initialized in init()
+		// using .unwrap() here should not be able to panic
+		self.ipad_hasher.update(self.ipad.as_ref()).unwrap();
+		self.opad_hasher.update(opad.as_ref()).unwrap();
 		opad.clear();
 	}
 
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
-		self.ipad_hasher = Sha512::default();
-		self.ipad_hasher.input(self.ipad.as_ref());
+		self.ipad_hasher = sha512::init();
+		// Using unwrap() as this should not panic,
+		// since the state has just been initialized and therefore
+		// cannot already be finalized.
+		self.ipad_hasher.update(self.ipad.as_ref()).unwrap();
 		self.is_finalized = false;
 	}
 
@@ -158,7 +163,7 @@ impl Hmac {
 		if self.is_finalized {
 			Err(FinalizationCryptoError)
 		} else {
-			self.ipad_hasher.input(data);
+			self.ipad_hasher.update(data)?;
 			Ok(())
 		}
 	}
@@ -173,13 +178,12 @@ impl Hmac {
 
 		self.is_finalized = true;
 
-		let mut hash_ires = Sha512::default();
+		let mut hash_ires = sha512::init();
 		mem::swap(&mut self.ipad_hasher, &mut hash_ires);
 
 		let mut o_hash = self.opad_hasher.clone();
-		o_hash.input(&hash_ires.result());
-
-		let tag = Tag::from_slice(&o_hash.result()).unwrap();
+		o_hash.update(&hash_ires.finalize()?.as_bytes())?;
+		let tag = Tag::from_slice(&o_hash.finalize()?.as_bytes())?;
 
 		Ok(tag)
 	}
@@ -191,8 +195,8 @@ impl Hmac {
 pub fn init(secret_key: &SecretKey) -> Hmac {
 	let mut state = Hmac {
 		ipad: [0x36; SHA2_BLOCKSIZE],
-		opad_hasher: Sha512::default(),
-		ipad_hasher: Sha512::default(),
+		opad_hasher: sha512::init(),
+		ipad_hasher: sha512::init(),
 		is_finalized: false,
 	};
 
@@ -202,11 +206,11 @@ pub fn init(secret_key: &SecretKey) -> Hmac {
 
 #[must_use]
 /// One-shot function for generating an HMAC-SHA512 tag of `data`.
-pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Tag {
+pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let mut hmac_state = init(secret_key);
-	hmac_state.update(data).unwrap();
+	hmac_state.update(data)?;
 
-	hmac_state.finalize().unwrap()
+	Ok(hmac_state.finalize()?)
 }
 
 #[must_use]
@@ -217,9 +221,9 @@ pub fn verify(
 	data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
 	let mut hmac_state = init(secret_key);
-	hmac_state.update(data).unwrap();
+	hmac_state.update(data)?;
 
-	if expected == &hmac_state.finalize().unwrap() {
+	if expected == &hmac_state.finalize()? {
 		Ok(true)
 	} else {
 		Err(ValidationCryptoError)
@@ -228,7 +232,7 @@ pub fn verify(
 
 #[test]
 fn finalize_and_verify_true() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
 
 	let mut tag = init(&secret_key);
@@ -237,7 +241,7 @@ fn finalize_and_verify_true() {
 	assert_eq!(
 		verify(
 			&tag.finalize().unwrap(),
-			&SecretKey::from_slice("Jefe".as_bytes()),
+			&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
 			data
 		)
 		.unwrap(),
@@ -247,7 +251,7 @@ fn finalize_and_verify_true() {
 
 #[test]
 fn veriy_false_wrong_data() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
 
 	let mut tag = init(&secret_key);
@@ -255,7 +259,7 @@ fn veriy_false_wrong_data() {
 
 	assert!(verify(
 		&tag.finalize().unwrap(),
-		&SecretKey::from_slice("Jefe".as_bytes()),
+		&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
 		"what do ya want for something?".as_bytes()
 	)
 	.is_err());
@@ -263,7 +267,7 @@ fn veriy_false_wrong_data() {
 
 #[test]
 fn veriy_false_wrong_secret_key() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
 
 	let mut tag = init(&secret_key);
@@ -271,7 +275,7 @@ fn veriy_false_wrong_secret_key() {
 
 	assert!(verify(
 		&tag.finalize().unwrap(),
-		&SecretKey::from_slice("Jose".as_bytes()),
+		&SecretKey::from_slice("Jose".as_bytes()).unwrap(),
 		data
 	)
 	.is_err());
@@ -279,7 +283,7 @@ fn veriy_false_wrong_secret_key() {
 
 #[test]
 fn double_finalize_err() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
 
 	let mut tag = init(&secret_key);
@@ -290,7 +294,7 @@ fn double_finalize_err() {
 
 #[test]
 fn double_finalize_with_reset_ok() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
 
 	let mut tag = init(&secret_key);
@@ -304,7 +308,7 @@ fn double_finalize_with_reset_ok() {
 
 #[test]
 fn double_finalize_with_reset_no_update_ok() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
 
 	let mut tag = init(&secret_key);
@@ -316,7 +320,7 @@ fn double_finalize_with_reset_no_update_ok() {
 
 #[test]
 fn update_after_finalize_err() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
 
 	let mut tag = init(&secret_key);
@@ -327,7 +331,7 @@ fn update_after_finalize_err() {
 
 #[test]
 fn update_after_finalize_with_reset_ok() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
 
 	let mut tag = init(&secret_key);
@@ -339,7 +343,7 @@ fn update_after_finalize_with_reset_ok() {
 
 #[test]
 fn double_reset_ok() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
 
 	let mut tag = init(&secret_key);
@@ -351,7 +355,7 @@ fn double_reset_ok() {
 
 #[test]
 fn reset_after_update_correct_resets() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 
 	let state_1 = init(&secret_key);
 
@@ -365,7 +369,7 @@ fn reset_after_update_correct_resets() {
 
 #[test]
 fn reset_after_update_correct_resets_and_verify() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes());
+	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 
 	let mut state_1 = init(&secret_key);
 	state_1.update(b"Tests").unwrap();

@@ -56,22 +56,25 @@
 //! let key = auth::SecretKey::default();
 //! let msg = "Some message.".as_bytes();
 //!
-//! let expected_tag = auth::authenticate(&key, msg);
+//! let expected_tag = auth::authenticate(&key, msg).unwrap();
 //! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).unwrap());
 //! ```
 
-use crate::{errors::ValidationCryptoError, hazardous::mac::hmac};
+use crate::{
+	errors::{UnknownCryptoError, ValidationCryptoError},
+	hazardous::mac::hmac,
+};
 pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};
 
 #[must_use]
 /// Authenticate a message using HMAC-SHA512.
-pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Tag {
+pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let mut state = hmac::init(&hmac::SecretKey::from_slice(
 		&secret_key.unprotected_as_bytes(),
-	));
-	state.update(data).unwrap();
+	)?);
+	state.update(data)?;
 
-	state.finalize().unwrap()
+	Ok(state.finalize()?)
 }
 
 #[must_use]
@@ -81,7 +84,7 @@ pub fn authenticate_verify(
 	secret_key: &SecretKey,
 	data: &[u8],
 ) -> Result<bool, ValidationCryptoError> {
-	let v_key = &hmac::SecretKey::from_slice(&secret_key.unprotected_as_bytes());
+	let v_key = &hmac::SecretKey::from_slice(&secret_key.unprotected_as_bytes())?;
 
 	hmac::verify(&expected, &v_key, &data)?;
 
@@ -94,7 +97,7 @@ fn test_authenticate_verify_bad_key() {
 	let sec_key_false = SecretKey::default();
 	let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-	let hmac_bob = authenticate(&sec_key_correct, &msg);
+	let hmac_bob = authenticate(&sec_key_correct, &msg).unwrap();
 
 	assert_eq!(
 		authenticate_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
@@ -108,7 +111,7 @@ fn test_authenticate_verify_bad_msg() {
 	let sec_key = SecretKey::generate(64).unwrap();
 	let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-	let hmac_bob = authenticate(&sec_key, &msg);
+	let hmac_bob = authenticate(&sec_key, &msg).unwrap();
 
 	assert_eq!(
 		authenticate_verify(&hmac_bob, &sec_key, &msg).unwrap(),

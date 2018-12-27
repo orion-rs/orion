@@ -60,7 +60,7 @@ fn hmac(data: &[u8], key: &hmac::SecretKey) {
 
 #[bench]
 fn bench_hmac_512(b: &mut Bencher) {
-	let key = hmac::SecretKey::from_slice(&[0x01; 64]);
+	let key = hmac::SecretKey::from_slice(&[0x01; 64]).unwrap();
 
 	b.iter(|| {
 		hmac(&[0u8; 512], &key);
@@ -69,7 +69,7 @@ fn bench_hmac_512(b: &mut Bencher) {
 
 #[bench]
 fn bench_hmac_1024(b: &mut Bencher) {
-	let key = hmac::SecretKey::from_slice(&[0x01; 64]);
+	let key = hmac::SecretKey::from_slice(&[0x01; 64]).unwrap();
 
 	b.iter(|| {
 		hmac(&[0u8; 1024], &key);
@@ -78,7 +78,7 @@ fn bench_hmac_1024(b: &mut Bencher) {
 
 #[bench]
 fn bench_hmac_2048(b: &mut Bencher) {
-	let key = hmac::SecretKey::from_slice(&[0x01; 64]);
+	let key = hmac::SecretKey::from_slice(&[0x01; 64]).unwrap();
 
 	b.iter(|| {
 		hmac(&[0u8; 2048], &key);
@@ -87,7 +87,7 @@ fn bench_hmac_2048(b: &mut Bencher) {
 
 #[bench]
 fn bench_hmac_4096(b: &mut Bencher) {
-	let key = hmac::SecretKey::from_slice(&[0x01; 64]);
+	let key = hmac::SecretKey::from_slice(&[0x01; 64]).unwrap();
 
 	b.iter(|| {
 		hmac(&[0u8; 4096], &key);
@@ -129,7 +129,7 @@ fn bench_hkdf_4096(b: &mut Bencher) {
 #[bench]
 fn bench_pbkdf2_iter_1000(b: &mut Bencher) {
 	let mut dk_out = [0u8; 64];
-	let password = pbkdf2::Password::from_slice(&[0x01; 64]);
+	let password = pbkdf2::Password::from_slice(&[0x01; 64]).unwrap();
 
 	b.iter(|| {
 		pbkdf2::derive_key(&password, &[0x01; 64], 1000, &mut dk_out).unwrap();
@@ -139,7 +139,7 @@ fn bench_pbkdf2_iter_1000(b: &mut Bencher) {
 #[bench]
 fn bench_pbkdf2_iter_10000(b: &mut Bencher) {
 	let mut dk_out = [0u8; 64];
-	let password = pbkdf2::Password::from_slice(&[0x01; 64]);
+	let password = pbkdf2::Password::from_slice(&[0x01; 64]).unwrap();
 
 	b.iter(|| {
 		pbkdf2::derive_key(&password, &[0x01; 64], 10000, &mut dk_out).unwrap();
@@ -149,7 +149,7 @@ fn bench_pbkdf2_iter_10000(b: &mut Bencher) {
 #[bench]
 fn bench_pbkdf2_iter_100000(b: &mut Bencher) {
 	let mut dk_out = [0u8; 64];
-	let password = pbkdf2::Password::from_slice(&[0x01; 64]);
+	let password = pbkdf2::Password::from_slice(&[0x01; 64]).unwrap();
 
 	b.iter(|| {
 		pbkdf2::derive_key(&password, &[0x01; 64], 100000, &mut dk_out).unwrap();
@@ -401,29 +401,113 @@ fn bench_xchacha20poly1305_encrypt_decrypt_4096(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_blake2b_512(b: &mut Bencher) {
+fn bench_blake2b256_512(b: &mut Bencher) {
 	b.iter(|| {
-		let _digest_256 = blake2b::Hasher::Blake2b256.digest(&[0u8; 512]).unwrap();
+		let _digest = blake2b::Hasher::Blake2b256.digest(&[0u8; 512]).unwrap();
 	});
 }
 
 #[bench]
-fn bench_blake2b_1024(b: &mut Bencher) {
+fn bench_blake2b256_1024(b: &mut Bencher) {
 	b.iter(|| {
-		let _digest_256 = blake2b::Hasher::Blake2b256.digest(&[0u8; 1024]).unwrap();
+		let _digest = blake2b::Hasher::Blake2b256.digest(&[0u8; 1024]).unwrap();
 	});
 }
 
 #[bench]
-fn bench_blake2b_2048(b: &mut Bencher) {
+fn bench_blake2b256_2048(b: &mut Bencher) {
 	b.iter(|| {
-		let _digest_256 = blake2b::Hasher::Blake2b256.digest(&[0u8; 2048]).unwrap();
+		let _digest = blake2b::Hasher::Blake2b256.digest(&[0u8; 2048]).unwrap();
 	});
 }
 
 #[bench]
-fn bench_blake2b_4096(b: &mut Bencher) {
+fn bench_blake2b256_4096(b: &mut Bencher) {
 	b.iter(|| {
-		let _digest_256 = blake2b::Hasher::Blake2b256.digest(&[0u8; 4096]).unwrap();
+		let _digest = blake2b::Hasher::Blake2b256.digest(&[0u8; 4096]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_blake2b384_512(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = blake2b::Hasher::Blake2b384.digest(&[0u8; 512]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_blake2b384_1024(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = blake2b::Hasher::Blake2b384.digest(&[0u8; 1024]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_blake2b384_2048(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = blake2b::Hasher::Blake2b384.digest(&[0u8; 2048]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_blake2b384_4096(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = blake2b::Hasher::Blake2b384.digest(&[0u8; 4096]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_blake2b512_512(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = blake2b::Hasher::Blake2b512.digest(&[0u8; 512]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_blake2b512_1024(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = blake2b::Hasher::Blake2b512.digest(&[0u8; 1024]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_blake2b512_2048(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = blake2b::Hasher::Blake2b512.digest(&[0u8; 2048]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_blake2b512_4096(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = blake2b::Hasher::Blake2b512.digest(&[0u8; 4096]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_sha512_512(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = sha512::digest(&[0u8; 512]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_sha512_1024(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = sha512::digest(&[0u8; 1024]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_sha512_2048(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = sha512::digest(&[0u8; 2048]).unwrap();
+	});
+}
+
+#[bench]
+fn bench_sha512_4096(b: &mut Bencher) {
+	b.iter(|| {
+		let _digest = sha512::digest(&[0u8; 4096]).unwrap();
 	});
 }

@@ -22,3 +22,6 @@
 
 /// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
 pub mod blake2b;
+
+/// SHA512 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+pub mod sha512;

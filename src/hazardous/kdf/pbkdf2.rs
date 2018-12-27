@@ -49,7 +49,7 @@
 //!
 //! let mut salt = [0u8; 64];
 //! util::secure_rand_bytes(&mut salt).unwrap();
-//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes());
+//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes()).unwrap();
 //! let mut dk_out = [0u8; 64];
 //!
 //! pbkdf2::derive_key(&password, &salt, 10000, &mut dk_out).unwrap();
@@ -133,7 +133,7 @@ pub fn derive_key(
 
 	let mut hmac = hmac::init(&hmac::SecretKey::from_slice(
 		&password.unprotected_as_bytes(),
-	));
+	)?);
 
 	for (idx, dk_block) in dst_out.chunks_mut(HLEN).enumerate() {
 		let block_len = dk_block.len();
@@ -184,7 +184,7 @@ mod test {
 
 	#[test]
 	fn zero_iterations_err() {
-		let password = Password::from_slice("password".as_bytes());
+		let password = Password::from_slice("password".as_bytes()).unwrap();
 		let salt = "salt".as_bytes();
 		let iterations: usize = 0;
 		let mut okm_out = [0u8; 15];
@@ -194,7 +194,7 @@ mod test {
 
 	#[test]
 	fn zero_dklen_err() {
-		let password = Password::from_slice("password".as_bytes());
+		let password = Password::from_slice("password".as_bytes()).unwrap();
 		let salt = "salt".as_bytes();
 		let iterations: usize = 1;
 		let mut okm_out = [0u8; 0];
@@ -204,7 +204,7 @@ mod test {
 
 	#[test]
 	fn verify_true() {
-		let password = Password::from_slice("pass\0word".as_bytes());
+		let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
 		let salt = "sa\0lt".as_bytes();
 		let iterations: usize = 4096;
 		let mut okm_out = [0u8; 16];
@@ -219,7 +219,7 @@ mod test {
 
 	#[test]
 	fn verify_false_wrong_salt() {
-		let password = Password::from_slice("pass\0word".as_bytes());
+		let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
 		let salt = "".as_bytes();
 		let iterations: usize = 4096;
 		let mut okm_out = [0u8; 16];
@@ -230,7 +230,7 @@ mod test {
 	}
 	#[test]
 	fn verify_false_wrong_password() {
-		let password = Password::from_slice("".as_bytes());
+		let password = Password::from_slice("".as_bytes()).unwrap();
 		let salt = "sa\0lt".as_bytes();
 		let iterations: usize = 4096;
 		let mut okm_out = [0u8; 16];
@@ -242,7 +242,7 @@ mod test {
 
 	#[test]
 	fn verify_diff_dklen_error() {
-		let password = Password::from_slice("pass\0word".as_bytes());
+		let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
 		let salt = "sa\0lt".as_bytes();
 		let iterations: usize = 4096;
 		let mut okm_out = [0u8; 32];
@@ -254,7 +254,7 @@ mod test {
 
 	#[test]
 	fn verify_diff_iter_error() {
-		let password = Password::from_slice("pass\0word".as_bytes());
+		let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
 		let salt = "sa\0lt".as_bytes();
 		let iterations: usize = 512;
 		let mut okm_out = [0u8; 16];

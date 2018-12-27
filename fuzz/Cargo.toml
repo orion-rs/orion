@@ -103,3 +103,11 @@ path = "fuzz_targets/blake2b.rs"
 [[bin]]
 name = "blake2b_compare"
 path = "fuzz_targets/blake2b_compare.rs"
+
+[[bin]]
+name = "sha512"
+path = "fuzz_targets/sha512.rs"
+
+[[bin]]
+name = "sha512_compare"
+path = "fuzz_targets/sha512_compare.rs"

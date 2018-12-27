@@ -33,7 +33,7 @@ pub fn hkdf_test_runner(
 	info: &[u8],
 	okm_out: &mut [u8],
 ) -> bool {
-	let actual_prk = extract(salt, &ikm);
+	let actual_prk = extract(salt, &ikm).unwrap();
 
 	if excp_prk.is_some() {
 		assert!(actual_prk == hmac::Tag::from_slice(excp_prk.unwrap()).unwrap());

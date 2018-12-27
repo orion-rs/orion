@@ -90,13 +90,13 @@ pub fn hash_password(
 
 	buffer[..64].copy_from_slice(&salt);
 	pbkdf2::derive_key(
-		&pbkdf2::Password::from_slice(password.unprotected_as_bytes()),
+		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
 		&salt,
 		iterations,
 		&mut buffer[64..],
 	)?;
 
-	let dk = PasswordHash::from_slice(&buffer).unwrap();
+	let dk = PasswordHash::from_slice(&buffer)?;
 	buffer.clear();
 
 	Ok(dk)
@@ -113,7 +113,7 @@ pub fn hash_password_verify(
 
 	let is_good = pbkdf2::verify(
 		&expected_with_salt.unprotected_as_bytes()[64..],
-		&pbkdf2::Password::from_slice(password.unprotected_as_bytes()),
+		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
 		&expected_with_salt.unprotected_as_bytes()[..64],
 		iterations,
 		&mut dk,
