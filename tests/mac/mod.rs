@@ -49,7 +49,7 @@ fn hmac_test_runner(
 		None => 64,
 	};
 
-	let one_shot = hmac::hmac(&key, data);
+	let one_shot = hmac::hmac(&key, data).unwrap();
 
 	assert_eq!(
 		res.unprotected_as_bytes()[..len].as_ref(),
