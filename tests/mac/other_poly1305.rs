@@ -361,9 +361,48 @@ mod other_poly1305 {
 		poly1305_test_runner(&key, &input, &tag).unwrap();
 	}
 
-	// Only test vectors from Monocypher where the input is not empty are tested
-	// as orion does not allow empty input on .update()
 	// https://github.com/LoupVaillant/Monocypher/blob/master/tests/vectors/poly1305
+
+	#[test]
+	fn monocypher_test_1() {
+		let key =
+			decode("0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+		let message = decode("").unwrap();
+		let expected = decode("00000000000000000000000000000000").unwrap();
+
+		poly1305_test_runner(&key[..32], &message[..], &expected[..16]).unwrap();
+	}
+
+	#[test]
+	fn monocypher_test_2() {
+		let key =
+			decode("36e5f6b5c5e06070f0efca96227a863e00000000000000000000000000000000").unwrap();
+		let message = decode("").unwrap();
+		let expected = decode("00000000000000000000000000000000").unwrap();
+
+		poly1305_test_runner(&key[..32], &message[..], &expected[..16]).unwrap();
+	}
+
+	#[test]
+	fn monocypher_test_3() {
+		let key =
+			decode("0000000000000000000000000000000036e5f6b5c5e06070f0efca96227a863e").unwrap();
+		let message = decode("").unwrap();
+		let expected = decode("36e5f6b5c5e06070f0efca96227a863e").unwrap();
+
+		poly1305_test_runner(&key[..32], &message[..], &expected[..16]).unwrap();
+	}
+
+	#[test]
+	fn monocypher_test_4() {
+		let key =
+			decode("79207375626d697373696f6e20746f2036e5f6b5c5e06070f0efca96227a863e").unwrap();
+		let message = decode("").unwrap();
+		let expected = decode("36e5f6b5c5e06070f0efca96227a863e").unwrap();
+
+		poly1305_test_runner(&key[..32], &message[..], &expected[..16]).unwrap();
+	}
+
 	#[test]
 	fn monocypher_test_5() {
 		let key =
