@@ -210,10 +210,7 @@ fn left_encode(x: u64) -> ([u8; 9], usize) {
 	(input, offset)
 }
 
-#[cfg(test)]
-mod test {
 
-	use crate::hazardous::xof::cshake::*;
 
 	#[test]
 	fn test_left_encode() {
@@ -525,4 +522,3 @@ mod test {
 
 		assert!(out[..] == out2[..]);
 	}
-}
