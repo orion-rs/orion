@@ -62,7 +62,7 @@
 extern crate core;
 
 use crate::{
-	errors::*,
+	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE},
 };
 use byteorder::{ByteOrder, LittleEndian};

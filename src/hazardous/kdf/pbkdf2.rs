@@ -60,7 +60,7 @@
 //! ```
 
 use crate::{
-	errors::*,
+	errors::{UnknownCryptoError, ValidationCryptoError},
 	hazardous::{
 		constants::{HLenArray, HLEN, SHA2_BLOCKSIZE},
 		mac::hmac,

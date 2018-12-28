@@ -71,7 +71,7 @@ extern crate core;
 
 use self::core::mem;
 use crate::{
-	errors::*,
+	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::{
 		constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE},
 		hash::sha512,

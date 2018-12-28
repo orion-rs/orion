@@ -69,7 +69,7 @@
 //! ```
 
 use crate::{
-	errors::*,
+	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE},
 };
 use byteorder::{ByteOrder, LittleEndian};

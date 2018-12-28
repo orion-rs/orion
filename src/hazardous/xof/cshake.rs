@@ -74,7 +74,7 @@
 extern crate core;
 
 use self::core::mem;
-use crate::errors::*;
+use crate::errors::{FinalizationCryptoError, UnknownCryptoError};
 use byteorder::{BigEndian, ByteOrder};
 use tiny_keccak::Keccak;
 

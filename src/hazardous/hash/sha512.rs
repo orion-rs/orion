@@ -49,7 +49,10 @@
 //! assert_eq!(hash, hash_one_shot);
 //! ```
 
-use crate::{errors::*, hazardous::constants::SHA2_BLOCKSIZE};
+use crate::{
+	errors::{FinalizationCryptoError, UnknownCryptoError},
+	hazardous::constants::SHA2_BLOCKSIZE,
+};
 use byteorder::{BigEndian, ByteOrder};
 
 construct_digest! {
