@@ -46,4 +46,7 @@ fuzz_target!(|data: &[u8]| {
 	// TODO: Only fuzzed against a derived key length of 256
 	let derived_key = orion::kdf::derive_key(&pwhash_password, &kdf_salt, c, 256).unwrap();
 	assert!(orion::kdf::derive_key_verify(&derived_key, &pwhash_password, &kdf_salt, c).unwrap());
+
+	// orion::hash
+	let _hash = orion::hash::digest(&data).unwrap();
 });
