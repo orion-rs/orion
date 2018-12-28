@@ -46,7 +46,7 @@
 //!
 //! # Example:
 //! ```
-//! use orion::hash::{Digest, digest};
+//! use orion::hash::{digest, Digest};
 //!
 //! let hash: Digest = digest(b"Some data").unwrap();
 //! ```
