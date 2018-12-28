@@ -248,7 +248,8 @@ impl Sha512 {
 	/// Increment the message length during processing of data.
 	fn increment_mlen(&mut self, length: u64) {
 		// left-shift to get bit-sized representation of length
-		let len = length << 3;
+		// using .unwrap() because it should not panic in practice
+		let len = length.checked_shl(3).unwrap();
 		self.message_len[1] += len;
 
 		if self.message_len[1] < len {
