@@ -73,6 +73,7 @@ use crate::{
 	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE},
 };
 use byteorder::{ByteOrder, LittleEndian};
+use clear_on_drop::clear::Clear;
 
 construct_blake2b_key! {
 	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.
@@ -348,6 +349,7 @@ impl Blake2b {
 				self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
 				// Using .unwrap() since overflow should not happen in practice
 				self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
+				bytes.clear();
 				return Ok(());
 			}
 
@@ -372,6 +374,8 @@ impl Blake2b {
 			// Using .unwrap() since overflow should not happen in practice
 			self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
 		}
+
+		bytes.clear();
 
 		Ok(())
 	}
