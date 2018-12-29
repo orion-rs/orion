@@ -34,8 +34,8 @@
 //! - `update()` is called after `finalize()` without a `reset()` in between.
 //! - `reset()` is called with `Some(secret_key)` but the struct was initialized
 //!   with `None`.
-//! - `reset()` is called with `None` as `secret_key` but the struct was initialized
-//!   with `Some(secret_key)`.
+//! - `reset()` is called with `None` as `secret_key` but the struct was
+//!   initialized with `Some(secret_key)`.
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.

@@ -148,19 +148,17 @@ fn process_authentication(
 
 	let mut padding_max = [0u8; 16];
 
-	poly1305_state.update(ad).unwrap();
-	poly1305_state.update(&padding_max[..padding(ad)]).unwrap();
-	poly1305_state.update(&buf[..buf_in_len]).unwrap();
-	poly1305_state
-		.update(&padding_max[..padding(&buf[..buf_in_len])])
-		.unwrap();
+	poly1305_state.update(ad)?;
+	poly1305_state.update(&padding_max[..padding(ad)])?;
+	poly1305_state.update(&buf[..buf_in_len])?;
+	poly1305_state.update(&padding_max[..padding(&buf[..buf_in_len])])?;
 
 	// Using the 16 bytes from padding template to store length information
 	LittleEndian::write_u64(&mut padding_max[..8], ad.len() as u64);
 	LittleEndian::write_u64(&mut padding_max[8..16], buf_in_len as u64);
 
-	poly1305_state.update(&padding_max[..8]).unwrap();
-	poly1305_state.update(&padding_max[8..16]).unwrap();
+	poly1305_state.update(&padding_max[..8])?;
+	poly1305_state.update(&padding_max[8..16])?;
 
 	Ok(())
 }
@@ -196,9 +194,8 @@ pub fn seal(
 	)?;
 	let mut poly1305_state = poly1305::init(&poly1305_key);
 
-	process_authentication(&mut poly1305_state, &optional_ad, &dst_out, plaintext.len()).unwrap();
-	dst_out[plaintext.len()..]
-		.copy_from_slice(&poly1305_state.finalize().unwrap().unprotected_as_bytes());
+	process_authentication(&mut poly1305_state, &optional_ad, &dst_out, plaintext.len())?;
+	dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize()?.unprotected_as_bytes());
 
 	Ok(())
 }
@@ -233,11 +230,10 @@ pub fn open(
 		&optional_ad,
 		ciphertext_with_tag,
 		ciphertext_len,
-	)
-	.unwrap();
+	)?;
 
 	util::secure_cmp(
-		&poly1305_state.finalize().unwrap().unprotected_as_bytes(),
+		&poly1305_state.finalize()?.unprotected_as_bytes(),
 		&ciphertext_with_tag[ciphertext_len..],
 	)?;
 

@@ -224,6 +224,9 @@ impl InternalState {
 
 		// Only set block counter if not HChaCha
 		if self.is_ietf {
+			// .unwrap() cannot panic here since the above two
+			// checks make sure block_count.is_some() == true
+			// if this branch it hit
 			self.state[12] = block_count.unwrap();
 		}
 
@@ -315,15 +318,13 @@ pub fn encrypt(
 		let block_counter = initial_counter.checked_add(counter as u32);
 		if block_counter.is_some() {
 			keystream_state = chacha_state
-				.process_block(Some(block_counter.unwrap()))
-				.unwrap();
+				// .unwrap() cannot panic here since block_counter.is_some() == true
+				.process_block(Some(block_counter.unwrap()))?;
 		} else {
 			return Err(UnknownCryptoError);
 		}
 
-		chacha_state
-			.serialize_block(&keystream_state, &mut keystream_block)
-			.unwrap();
+		chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
 
 		for (idx, itm) in plaintext_block.iter().enumerate() {
 			// `ciphertext_block` and `plaintext_block` have the same length
@@ -366,11 +367,9 @@ pub fn keystream_block(
 	chacha_state.init_state(secret_key, &nonce.as_bytes())?;
 
 	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
-	let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter)).unwrap();
+	let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter))?;
 
-	chacha_state
-		.serialize_block(&keystream_state, &mut keystream_block)
-		.unwrap();
+	chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
 
 	keystream_state.clear();
 
@@ -390,11 +389,9 @@ pub fn hchacha20(
 	};
 	chacha_state.init_state(secret_key, nonce)?;
 
-	let mut keystream_state = chacha_state.process_block(None).unwrap();
+	let mut keystream_state = chacha_state.process_block(None)?;
 	let mut keystream_block: [u8; HCHACHA_OUTSIZE] = [0u8; HCHACHA_OUTSIZE];
-	chacha_state
-		.serialize_block(&keystream_state, &mut keystream_block)
-		.unwrap();
+	chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
 
 	keystream_state.clear();
 

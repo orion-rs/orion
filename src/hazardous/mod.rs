@@ -22,9 +22,9 @@
 
 //! ### **Caution**:
 //! Usage of the `hazardous` module is __**only intended for advanced users**__.
-//! `hazardous` contains implementations with a much higher degree of control. It
-//! is also much easier to misuse those implementations. Only use `hazardous` if
-//! absolutely necessary.
+//! `hazardous` contains implementations with a much higher degree of control.
+//! It is also much easier to misuse those implementations. Only use `hazardous`
+//! if absolutely necessary.
 
 /// AEADs (Authenticated Encryption with Associated Data).
 pub mod aead;

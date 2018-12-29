@@ -104,13 +104,13 @@ pub fn encrypt(
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
 	let subkey: SecretKey =
-		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16])?).unwrap();
+		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16])?)?;
 	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
 	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes()[16..24]);
 
 	chacha20::encrypt(
 		&subkey,
-		&IETFNonce::from_slice(&prefixed_nonce).unwrap(),
+		&IETFNonce::from_slice(&prefixed_nonce)?,
 		initial_counter,
 		plaintext,
 		dst_out,

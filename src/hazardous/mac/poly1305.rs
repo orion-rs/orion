@@ -328,12 +328,12 @@ impl Poly1305 {
 			}
 
 			let tmp = self.buffer;
-			self.process_block(&tmp).unwrap();
+			self.process_block(&tmp)?;
 			self.leftover = 0;
 		}
 
 		while bytes.len() >= POLY1305_BLOCKSIZE {
-			self.process_block(&bytes[0..POLY1305_BLOCKSIZE]).unwrap();
+			self.process_block(&bytes[0..POLY1305_BLOCKSIZE])?;
 			// Reduce by slice
 			bytes = &bytes[POLY1305_BLOCKSIZE..];
 		}
@@ -367,13 +367,13 @@ impl Poly1305 {
 				*buf_itm = 0u8;
 			}
 
-			self.process_block(&local_buffer).unwrap();
+			self.process_block(&local_buffer)?;
 		}
 		// Get tag
 		self.process_end_of_stream();
 		LittleEndian::write_u32_into(&self.a[0..4], &mut local_buffer);
 
-		Ok(Tag::from_slice(&local_buffer).unwrap())
+		Ok(Tag::from_slice(&local_buffer)?)
 	}
 }
 
@@ -398,9 +398,9 @@ pub fn init(one_time_key: &OneTimeKey) -> Poly1305 {
 /// One-shot function for generating a Poly1305 tag of `data`.
 pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let mut poly_1305_state = init(one_time_key);
-	poly_1305_state.update(data).unwrap();
+	poly_1305_state.update(data)?;
 
-	Ok(poly_1305_state.finalize().unwrap())
+	Ok(poly_1305_state.finalize()?)
 }
 
 #[must_use]

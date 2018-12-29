@@ -91,27 +91,29 @@ fn function_f(
 	dk_block: &mut [u8],
 	block_len: usize,
 	hmac: &mut hmac::Hmac,
-) {
+) -> Result<(), UnknownCryptoError> {
 	let mut u_step: HLenArray = [0u8; 64];
 	// First 4 bytes used for index BE conversion
 	BigEndian::write_u32(&mut u_step[..4], index);
-	hmac.update(salt).unwrap();
-	hmac.update(&u_step[..4]).unwrap();
+	hmac.update(salt)?;
+	hmac.update(&u_step[..4])?;
 
-	u_step.copy_from_slice(&hmac.finalize().unwrap().unprotected_as_bytes());
+	u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
 	dk_block.copy_from_slice(&u_step[..block_len]);
 
 	if iterations > 1 {
 		for _ in 1..iterations {
 			hmac.reset();
-			hmac.update(&u_step).unwrap();
-			u_step.copy_from_slice(&hmac.finalize().unwrap().unprotected_as_bytes());
+			hmac.update(&u_step)?;
+			u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
 			dk_block
 				.iter_mut()
 				.zip(u_step.iter())
 				.for_each(|(a, b)| *a ^= b);
 		}
 	}
+
+	Ok(())
 }
 
 #[must_use]
@@ -143,11 +145,12 @@ pub fn derive_key(
 			function_f(
 				salt,
 				iterations,
+				// .unwrap() cannot panic since block_idx.is_some() == true
 				block_idx.unwrap(),
 				dk_block,
 				block_len,
 				&mut hmac,
-			);
+			)?;
 			hmac.reset();
 		} else {
 			return Err(UnknownCryptoError);

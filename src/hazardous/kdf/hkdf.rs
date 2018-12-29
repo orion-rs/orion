@@ -103,16 +103,16 @@ pub fn expand(
 	for (idx, hlen_block) in dst_out.chunks_mut(HLEN).enumerate() {
 		let block_len = hlen_block.len();
 
-		hmac.update(optional_info).unwrap();
-		hmac.update(&[idx as u8 + 1_u8]).unwrap();
-		hlen_block.copy_from_slice(&hmac.finalize().unwrap().unprotected_as_bytes()[..block_len]);
+		hmac.update(optional_info)?;
+		hmac.update(&[idx as u8 + 1_u8])?;
+		hlen_block.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes()[..block_len]);
 
 		// Check if it's the last iteration, if yes don't process anything
 		if block_len < HLEN || (block_len * (idx + 1) == okm_len) {
 			break;
 		} else {
 			hmac.reset();
-			hmac.update(&hlen_block).unwrap();
+			hmac.update(&hlen_block)?;
 		}
 	}
 
