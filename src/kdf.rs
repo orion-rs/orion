@@ -27,7 +27,7 @@
 //! keys. Also known as key stretching.
 //!
 //! An example of this could be deriving a key from a user-submitted password
-//! and using this derived key in disk encryption. The disk encryption software VeraCrypt, [uses](https://www.veracrypt.fr/en/Header%20Key%20Derivation.html)
+//! and using this derived key in disk encryption. The disk encryption software VeraCrypt [uses](https://www.veracrypt.fr/en/Header%20Key%20Derivation.html)
 //! PBKDF2-HMAC-SHA512 to derive header keys, which in turn are used to
 //! encrypt/decrypt the master keys responsible for encrypting the data in a
 //! VeraCrypt volume.

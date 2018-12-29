@@ -23,7 +23,7 @@
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
-//! - `initial_counter`: The initial counter value. In most cases this is `0`.
+//! - `initial_counter`: The initial counter value. In most cases, this is `0`.
 //! - `ciphertext`: The encrypted data.
 //! - `plaintext`: The data to be encrypted.
 //! - `dst_out`: Destination array that will hold the ciphertext/plaintext after

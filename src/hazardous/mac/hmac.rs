@@ -38,7 +38,7 @@
 //! - The minimum recommended size for a secret key is 64 bytes.
 //!
 //! # Recommendation:
-//! - If you are unsure of wether to use HMAC or Poly1305, it is most often
+//! - If you are unsure of whether to use HMAC or Poly1305, it is most often
 //!   easier to just
 //! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!

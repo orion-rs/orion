@@ -23,7 +23,7 @@
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
-//! - `initial_counter`: The initial counter value. In most cases this is `0`.
+//! - `initial_counter`: The initial counter value. In most cases, this is `0`.
 //! - `ciphertext`: The encrypted data.
 //! - `plaintext`: The data to be encrypted.
 //! - `dst_out`: Destination array that will hold the ciphertext/plaintext after
@@ -32,8 +32,8 @@
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
-//! - `plaintext` or `ciphertext` are empty.
-//! - `plaintext` or `ciphertext` are longer than (2^32)-2.
+//! - `plaintext` or `ciphertext` is empty.
+//! - `plaintext` or `ciphertext` is longer than (2^32)-2.
 //! - The `initial_counter` is high enough to cause a potential overflow.
 //!
 //! Even though `dst_out` is allowed to be of greater length than `plaintext`,

@@ -39,7 +39,7 @@
 //!
 //! ### Note:
 //! The cSHAKE256 implementation currently relies on the `tiny-keccak` crate.
-//! Currently this crate will produce ***incorrect results on big-endian based systems***. See [issue here](https://github.com/debris/tiny-keccak/issues/15).
+//! Currently, this crate will produce ***incorrect results on big-endian based systems***. See the [issue here](https://github.com/debris/tiny-keccak/issues/15).
 //!
 //! # Exceptions:
 //! An exception will be thrown if:

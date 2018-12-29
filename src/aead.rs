@@ -35,8 +35,8 @@
 //!   the authenticated
 //! ciphertext with the last 16 bytes being the corresponding Poly1305 tag.
 //! - Uses XChaCha20Poly1305 with no additional data.
-//! - When using `seal` and `open` then the seperation of tags, nonces and
-//!   ciphertext are automatically handeled.
+//! - When using `seal` and `open` then the separation of tags, nonces and
+//!   ciphertext are automatically handled.
 //!
 //! # Parameters:
 //! - `plaintext`:  The data to be encrypted.

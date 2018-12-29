@@ -38,8 +38,8 @@
 //! The first 64 bytes of the `PasswordHash` returned by `pwhash::hash_password`
 //! is the salt used to hash the password and the last 64 bytes is the actual
 //! hashed password. When using this function with
-//! `pwhash::hash_password_verify()`, then the seperation of the salt and the
-//! password hash are automatically handeled.
+//! `pwhash::hash_password_verify()`, then the separation of the salt and the
+//! password hash is automatically handled.
 //!
 //! # Parameters:
 //! - `password`: The password to be hashed.

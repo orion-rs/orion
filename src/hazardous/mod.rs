@@ -22,7 +22,7 @@
 
 //! ### **Caution**:
 //! Usage of the `hazardous` module is __**only intended for advanced users**__.
-//! `hazardous` contains implmentations with a much higher degree of control. It
+//! `hazardous` contains implementations with a much higher degree of control. It
 //! is also much easier to misuse those implementations. Only use `hazardous` if
 //! absolutely necessary.
 

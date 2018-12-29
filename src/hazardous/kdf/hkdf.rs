@@ -23,7 +23,7 @@
 //! # Parameters:
 //! - `salt`: Salt value.
 //! - `ikm`: Input keying material.
-//! - `info`: Optional context and application specific information.  If `None`
+//! - `info`: Optional context and application-specific information.  If `None`
 //!   then it's an empty string.
 //! - `dst_out`: Destination buffer for the derived key. The length of the
 //!   derived key is implied by the length of `okm_out`.
