@@ -21,9 +21,9 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `secret_key`: An optional secret key value.
-//! - `size`: The desired output digest length.
-//! - `data`: The bytes to be hashed.
+//! - `secret_key`: An optional secret key.
+//! - `size`: The desired output length for the digest.
+//! - `data`: The data to be hashed.
 //! - `expected`: The expected digest when verifying.
 //!
 //! # Exceptions:
@@ -34,14 +34,14 @@
 //! - `update()` is called after `finalize()` without a `reset()` in between.
 //! - `reset()` is called with `Some(secret_key)` but the struct was initialized
 //!   with `None`.
-//! - `reset()` is called with `None` secret_key but the struct was initialized
-//!   with `Some()`.
+//! - `reset()` is called with `None` as `secret_key` but the struct was initialized
+//!   with `Some(secret_key)`.
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
 //!   `SecretKey::generate()` can be used
 //! for this. It generates a secret key of 64 bytes.
-//! - The minimum recommended size for a secret key is 64 bytes.
+//! - The minimum recommended size for a secret key is 32 bytes.
 //! - When using `Blake2b` with a secret key, then the output can be used as a
 //!   MAC. If this is the
 //! intention, __**avoid using**__ `as_bytes()` to compare such MACs and use
