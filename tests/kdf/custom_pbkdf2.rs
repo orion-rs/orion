@@ -72,7 +72,7 @@ mod custom_test_vectors {
 	}
 
 	#[test]
-	fn sha512_test_case_4() {
+	fn sha512_test_case_5() {
 		let password = Password::from_slice("passwordPASSWORDpassword".as_bytes()).unwrap();
 		let salt = "saltSALTsaltSALTsaltSALTsaltSALTsalt".as_bytes();
 		let iter = 4096;
@@ -85,7 +85,7 @@ mod custom_test_vectors {
 	}
 
 	#[test]
-	fn sha512_test_case_5() {
+	fn sha512_test_case_6() {
 		let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
 		let salt = "sa\0lt".as_bytes();
 		let iter = 4096;
@@ -98,7 +98,7 @@ mod custom_test_vectors {
 	}
 
 	#[test]
-	fn sha512_test_case_6() {
+	fn sha512_test_case_7() {
 		let password = Password::from_slice("passwd".as_bytes()).unwrap();
 		let salt = "salt".as_bytes();
 		let iter = 1;
@@ -111,13 +111,26 @@ mod custom_test_vectors {
 	}
 
 	#[test]
-	fn sha512_test_case_7() {
+	fn sha512_test_case_8() {
 		let password = Password::from_slice("Password".as_bytes()).unwrap();
 		let salt = "NaCl".as_bytes();
 		let iter = 80000;
 		let mut dk_out = [0u8; 128];
 
 		let expected_dk = decode("e6337d6fbeb645c794d4a9b5b75b7b30dac9ac50376a91df1f4460f6060d5addb2c1fd1f84409abacc67de7eb4056e6bb06c2d82c3ef4ccd1bded0f675ed97c65c33d39f81248454327aa6d03fd049fc5cbb2b5e6dac08e8ace996cdc960b1bd4530b7e754773d75f67a733fdb99baf6470e42ffcb753c15c352d4800fb6f9d6").unwrap();
+
+		// verify() also runs derive_key()
+		assert!(verify(&expected_dk, &password, &salt, iter, &mut dk_out).unwrap());
+	}
+
+	#[test]
+	fn sha512_test_case_9() {
+		let password = Password::from_slice("Password".as_bytes()).unwrap();
+		let salt = "sa\0lt".as_bytes();
+		let iter = 4096;
+		let mut dk_out = [0u8; 256];
+
+		let expected_dk = decode("10176fb32cb98cd7bb31e2bb5c8f6e425c103333a2e496058e3fd2bd88f657485c89ef92daa0668316bc23ebd1ef88f6dd14157b2320b5d54b5f26377c5dc279b1dcdec044bd6f91b166917c80e1e99ef861b1d2c7bce1b961178125fb86867f6db489a2eae0022e7bc9cf421f044319fac765d70cb89b45c214590e2ffb2c2b565ab3b9d07571fde0027b1dc57f8fd25afa842c1056dd459af4074d7510a0c020b914a5e202445d4d3f151070589dd6a2554fc506018c4f001df6239643dc86771286ae4910769d8385531bba57544d63c3640b90c98f1445ebdd129475e02086b600f0beb5b05cc6ca9b3633b452b7dad634e9336f56ec4c3ac0b4fe54ced8").unwrap();
 
 		// verify() also runs derive_key()
 		assert!(verify(&expected_dk, &password, &salt, iter, &mut dk_out).unwrap());
