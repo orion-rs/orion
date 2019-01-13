@@ -19,7 +19,7 @@ exclude = [
 ]
 
 [dependencies]
-rand = { version = "0.6.1", optional = true }
+rand_os = { version = "0.1.1", optional = true }
 tiny-keccak = "1.4.2"
 byteorder = { version = "1.2.7", default-features = false }
 subtle = { version = "2", default-features = false }
@@ -27,7 +27,7 @@ clear_on_drop = "=0.2.3"
 
 [features]
 default = [ "safe_api" ]
-safe_api = [ "rand" ]
+safe_api = [ "rand_os" ]
 nightly = [ "clear_on_drop/nightly", "subtle/nightly", "safe_api" ]
 no_std = [ "clear_on_drop/nightly", "subtle/nightly" ]
 

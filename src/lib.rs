@@ -52,7 +52,7 @@
 extern crate byteorder;
 extern crate clear_on_drop;
 #[cfg(feature = "safe_api")]
-extern crate rand;
+extern crate rand_os;
 extern crate subtle;
 extern crate tiny_keccak;
 
