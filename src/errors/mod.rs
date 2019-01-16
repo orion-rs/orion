@@ -24,7 +24,7 @@ extern crate core;
 
 use self::core::fmt;
 #[cfg(feature = "safe_api")]
-use rand;
+use rand_os::rand_core;
 
 /// Opaque error.
 #[derive(PartialEq)]
@@ -40,8 +40,8 @@ impl fmt::Debug for UnknownCryptoError {
 
 #[cfg(feature = "safe_api")]
 // Required for rand's generators
-impl From<rand::Error> for UnknownCryptoError {
-	fn from(_: rand::Error) -> Self { UnknownCryptoError }
+impl From<rand_core::Error> for UnknownCryptoError {
+	fn from(_: rand_core::Error) -> Self { UnknownCryptoError }
 }
 
 impl From<FinalizationCryptoError> for UnknownCryptoError {

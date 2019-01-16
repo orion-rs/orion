@@ -22,7 +22,9 @@
 
 use crate::errors;
 #[cfg(feature = "safe_api")]
-use rand::{rngs::OsRng, RngCore};
+use rand_os::rand_core::RngCore;
+#[cfg(feature = "safe_api")]
+use rand_os::OsRng;
 use subtle::ConstantTimeEq;
 
 #[must_use]
