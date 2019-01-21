@@ -39,7 +39,7 @@ matrix:
         - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --test mod --release --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
     # Ensure building in no_std is possible
-    - env: TARGET=thumbv7em-none-eabihf
+    - env: TARGET=thumbv7em-none-eabi
       rust: nightly
       install:
         - cargo install xargo || true
