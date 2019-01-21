@@ -26,17 +26,17 @@ matrix:
         - cargo fmt --all -- --check
         # Debug mode:
         # First sanitizers with default features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --tests --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --test mod --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test --tests --target x86_64-unknown-linux-gnu
         # Then with nightly features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --test mod --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
         # Release:
         # First sanitizers with default features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --tests --target x86_64-unknown-linux-gnu
-        - RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test --tests --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --test mod --release --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test --tests --release --target x86_64-unknown-linux-gnu
         # Then with nightly features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --test mod --release --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
     # Ensure building in no_std is possible
     - env: TARGET=thumbv7em-none-eabihf
