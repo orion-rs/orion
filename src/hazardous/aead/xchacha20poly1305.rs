@@ -174,10 +174,9 @@ fn test_modified_tag_error() {
 
 #[test]
 fn regression_detect_bigger_than_slice_bug() {
-    
-    let pt = [0x5B; 79];
-    
-    let mut dst_out_ct = vec![0u8; pt.len() + (16 * 2)];
+	let pt = [0x5B; 79];
+
+	let mut dst_out_ct = [0u8; 79 + (16 * 2)];
 
 	seal(
 		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
@@ -185,19 +184,21 @@ fn regression_detect_bigger_than_slice_bug() {
 		&pt[..],
 		None,
 		&mut dst_out_ct,
-	).unwrap();
+	)
+	.unwrap();
 
 	// Verify that using a slice that is bigger than produces the exact same
 	// output as using a slice that is the exact required length
-    let mut dst_out_ct_2 = vec![0u8; pt.len() + 16];
+	let mut dst_out_ct_2 = [0u8; 79 + 16];
 
-    seal(
+	seal(
 		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 		&Nonce::from_slice(&[0u8; 24]).unwrap(),
 		&pt[..],
 		None,
 		&mut dst_out_ct_2,
-	).unwrap();
+	)
+	.unwrap();
 
-    assert!(dst_out_ct[..dst_out_ct_2.len()] == dst_out_ct_2[..]);
+	assert!(dst_out_ct[..dst_out_ct_2.len()] == dst_out_ct_2[..]);
 }
