@@ -195,7 +195,7 @@ pub fn seal(
 	let mut poly1305_state = poly1305::init(&poly1305_key);
 
 	process_authentication(&mut poly1305_state, &optional_ad, &dst_out, plaintext.len())?;
-	dst_out[plaintext.len()..].copy_from_slice(&poly1305_state.finalize()?.unprotected_as_bytes());
+	dst_out[plaintext.len()..(plaintext.len() + POLY1305_BLOCKSIZE)].copy_from_slice(&poly1305_state.finalize()?.unprotected_as_bytes());
 
 	Ok(())
 }
@@ -455,4 +455,34 @@ fn rfc_8439_test_poly1305_key_gen_3() {
 			.unprotected_as_bytes(),
 		expected.as_ref()
 	);
+}
+
+#[test]
+fn regression_detect_bigger_than_slice_bug() {
+    
+    let pt = [0x5B; 79];
+    
+    let mut dst_out_ct = vec![0u8; pt.len() + (POLY1305_BLOCKSIZE * 2)];
+
+	seal(
+		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+		&Nonce::from_slice(&[0u8; 12]).unwrap(),
+		&pt[..],
+		None,
+		&mut dst_out_ct,
+	).unwrap();
+
+	// Verify that using a slice that is bigger than produces the exact same
+	// output as using a slice that is the exact required length
+    let mut dst_out_ct_2 = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+
+    seal(
+		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+		&Nonce::from_slice(&[0u8; 12]).unwrap(),
+		&pt[..],
+		None,
+		&mut dst_out_ct_2,
+	).unwrap();
+
+    assert!(dst_out_ct[..dst_out_ct_2.len()] == dst_out_ct_2[..]);
 }
