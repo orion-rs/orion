@@ -149,7 +149,7 @@ pub fn open(
 
 //
 // The tests below are the same tests as the ones in `chacha20poly1305`
-// but with a bigger nonce. It's debatable whether this is needed, but right 
+// but with a bigger nonce. It's debatable whether this is needed, but right
 // now I'm keeping them as they don't seem to bring any disadvantages.
 //
 
