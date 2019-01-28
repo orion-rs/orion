@@ -56,6 +56,10 @@ extern crate rand_os;
 extern crate subtle;
 extern crate tiny_keccak;
 
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
+
 #[macro_use]
 mod typedefs;
 
