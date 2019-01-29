@@ -398,136 +398,6 @@ pub fn hchacha20(
 	Ok(keystream_block)
 }
 
-#[test]
-fn test_process_block_wrong_combination_of_variant_and_nonce() {
-	let mut chacha_state_ietf = InternalState {
-		state: [0_u32; 16],
-		is_ietf: true,
-	};
-	chacha_state_ietf
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
-		.unwrap();
-
-	let mut chacha_state_hchacha = InternalState {
-		state: [0_u32; 16],
-		is_ietf: false,
-	};
-
-	chacha_state_hchacha
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
-		.unwrap();
-
-	assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
-	assert!(chacha_state_ietf.process_block(None).is_err());
-	assert!(chacha_state_hchacha.process_block(None).is_ok());
-	assert!(chacha_state_ietf.process_block(Some(1)).is_ok());
-}
-
-#[test]
-fn test_serialize_block_wrong_combination_of_variant_and_dst() {
-	let mut chacha_state_ietf = InternalState {
-		state: [0_u32; 16],
-		is_ietf: true,
-	};
-
-	chacha_state_ietf
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
-		.unwrap();
-
-	let mut chacha_state_hchacha = InternalState {
-		state: [0_u32; 16],
-		is_ietf: false,
-	};
-
-	let mut hchacha_out = [0u8; HCHACHA_OUTSIZE];
-	let mut ietf_out = [0u8; CHACHA_BLOCKSIZE];
-
-	chacha_state_hchacha
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
-		.unwrap();
-
-	let ietf_src = chacha_state_ietf.process_block(Some(1)).unwrap();
-	let hchacha_src = chacha_state_hchacha.process_block(None).unwrap();
-
-	assert!(chacha_state_hchacha
-		.serialize_block(&hchacha_src, &mut ietf_out)
-		.is_err());
-	assert!(chacha_state_ietf
-		.serialize_block(&ietf_src, &mut hchacha_out)
-		.is_err());
-	assert!(chacha_state_hchacha
-		.serialize_block(&hchacha_src, &mut hchacha_out)
-		.is_ok());
-	assert!(chacha_state_ietf
-		.serialize_block(&ietf_src, &mut ietf_out)
-		.is_ok());
-}
-
-#[test]
-fn test_bad_key_nonce_size_init() {
-	let mut chacha_state = InternalState {
-		state: [0_u32; 16],
-		is_ietf: true,
-	};
-
-	assert!(chacha_state
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15])
-		.is_err());
-	assert!(chacha_state
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 10])
-		.is_err());
-	assert!(chacha_state
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
-		.is_ok());
-
-	let mut hchacha_state = InternalState {
-		state: [0_u32; 16],
-		is_ietf: false,
-	};
-
-	assert!(hchacha_state
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15])
-		.is_err());
-	assert!(hchacha_state
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 17])
-		.is_err());
-	assert!(hchacha_state
-		.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
-		.is_ok());
-}
-
-#[test]
-fn test_nonce_sizes() {
-	assert!(&Nonce::from_slice(&[0u8; 10]).is_err());
-	assert!(&Nonce::from_slice(&[0u8; 13]).is_err());
-	assert!(&Nonce::from_slice(&[0u8; 12]).is_ok());
-}
-
-#[test]
-fn test_key_sizes() {
-	assert!(SecretKey::from_slice(&[0u8; 0]).is_err());
-	assert!(SecretKey::from_slice(&[0u8; 1]).is_err());
-	assert!(SecretKey::from_slice(&[0u8; 31]).is_err());
-	assert!(SecretKey::from_slice(&[0u8; 64]).is_err());
-	assert!(SecretKey::from_slice(&[0u8; 33]).is_err());
-	assert!(SecretKey::from_slice(&[0u8; 32]).is_ok());
-}
-
-#[cfg(test)]
-// Convenience function for testing.
-fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
-	let mut chacha_state = InternalState {
-		state: [0_u32; 16],
-		is_ietf: true,
-	};
-
-	chacha_state
-		.init_state(&SecretKey::from_slice(key).unwrap(), nonce)
-		.unwrap();
-
-	Ok(chacha_state)
-}
-
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -830,19 +700,21 @@ mod public {
 			.is_ok());
 		}
 
-				#[test]
+		#[test]
 		fn test_diff_keys_diff_output() {
 			let keystream1 = keystream_block(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 12]).unwrap(),
 				0,
-			).unwrap();
+			)
+			.unwrap();
 
 			let keystream2 = keystream_block(
 				&SecretKey::from_slice(&[1u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 12]).unwrap(),
 				0,
-			).unwrap();
+			)
+			.unwrap();
 
 			assert!(keystream1[..] != keystream2[..]);
 		}
@@ -853,13 +725,15 @@ mod public {
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 12]).unwrap(),
 				0,
-			).unwrap();
+			)
+			.unwrap();
 
 			let keystream2 = keystream_block(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[1u8; 12]).unwrap(),
 				0,
-			).unwrap();
+			)
+			.unwrap();
 
 			assert!(keystream1[..] != keystream2[..]);
 		}
@@ -870,13 +744,15 @@ mod public {
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 12]).unwrap(),
 				0,
-			).unwrap();
+			)
+			.unwrap();
 
 			let keystream2 = keystream_block(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 12]).unwrap(),
 				1,
-			).unwrap();
+			)
+			.unwrap();
 
 			assert!(keystream1[..] != keystream2[..]);
 		}
@@ -885,7 +761,7 @@ mod public {
 		#[cfg(not(feature = "no_std"))]
 		mod proptest {
 			use super::*;
-			
+
 			quickcheck! {
 				fn prop_same_params_same_output(counter: u32) -> bool {
 					let keystream1 = keystream_block(
@@ -911,53 +787,33 @@ mod public {
 
 		#[test]
 		fn test_nonce_length() {
-			assert!(hchacha20(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-			).is_ok());
+			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16],).is_ok());
 
-			assert!(hchacha20(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 17],
-			).is_err());
+			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 17],).is_err());
 
-			assert!(hchacha20(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 15],
-			).is_err());
+			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15],).is_err());
 
-			assert!(hchacha20(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 0],
-			).is_err());
+			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 0],).is_err());
 		}
 
 		#[test]
 		fn test_diff_keys_diff_output() {
-			let keystream1 = hchacha20(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-			).unwrap();
+			let keystream1 =
+				hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
 
-			let keystream2 = hchacha20(
-				&SecretKey::from_slice(&[1u8; 32]).unwrap(),
-				&[0u8; 16],
-			).unwrap();
+			let keystream2 =
+				hchacha20(&SecretKey::from_slice(&[1u8; 32]).unwrap(), &[0u8; 16]).unwrap();
 
 			assert!(keystream1 != keystream2);
 		}
 
 		#[test]
 		fn test_diff_nonce_diff_output() {
-			let keystream1 = hchacha20(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-			).unwrap();
+			let keystream1 =
+				hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
 
-			let keystream2 = hchacha20(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[1u8; 16],
-			).unwrap();
+			let keystream2 =
+				hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[1u8; 16]).unwrap();
 
 			assert!(keystream1 != keystream2);
 		}
@@ -967,19 +823,209 @@ mod public {
 // Testing private functions in the module.
 #[cfg(test)]
 mod private {
+	use super::*;
 	// One function tested per submodule.
 
-	mod test_init_state {}
+	mod test_init_state {
+		use super::*;
 
-	mod test_process_block {}
+		#[test]
+		fn test_nonce_length() {
+			let mut chacha_state = InternalState {
+				state: [0_u32; 16],
+				is_ietf: true,
+			};
 
-	mod test_serialize_block {}
+			assert!(chacha_state
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15])
+				.is_err());
+			assert!(chacha_state
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 10])
+				.is_err());
+			assert!(chacha_state
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
+				.is_ok());
+
+			let mut hchacha_state = InternalState {
+				state: [0_u32; 16],
+				is_ietf: false,
+			};
+
+			assert!(hchacha_state
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15])
+				.is_err());
+			assert!(hchacha_state
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 17])
+				.is_err());
+			assert!(hchacha_state
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
+				.is_ok());
+		}
+
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				// Always fail to intialize state while the nonce is not
+				// the correct length. If it is correct length, never panic.
+				fn prop_test_nonce_length_ietf(nonce: Vec<u8>) -> bool {
+					let mut chacha_state_ietf = InternalState {
+						state: [0_u32; 16],
+						is_ietf: true,
+					};
+
+					let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
+
+					if nonce.len() != IETF_CHACHA_NONCESIZE {
+						let res = if chacha_state_ietf
+							.init_state(&sk, &nonce[..]).is_err() {
+							true
+						} else {
+							false
+						};
+
+						return res;
+					} else {
+						let res = if chacha_state_ietf
+							.init_state(&sk, &nonce[..]).is_ok() {
+							true
+						} else {
+							false
+						};
+
+						return res;
+					}
+				}
+			}
+
+			quickcheck! {
+				// Always fail to intialize state while the nonce is not
+				// the correct length. If it is correct length, never panic.
+				fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
+					let mut chacha_state_hchacha = InternalState {
+						state: [0_u32; 16],
+						is_ietf: false,
+					};
+
+					let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
+
+					if nonce.len() != HCHACHA_NONCESIZE {
+						let res = if chacha_state_hchacha
+							.init_state(&sk, &nonce[..]).is_err() {
+							true
+						} else {
+							false
+						};
+
+						return res;
+					} else {
+						let res = if chacha_state_hchacha
+							.init_state(&sk, &nonce[..]).is_ok() {
+							true
+						} else {
+							false
+						};
+
+						return res;
+					}
+				}
+			}
+		}
+	}
+
+	mod test_process_block {
+		use super::*;
+		#[test]
+		fn test_process_block_wrong_combination_of_variant_and_nonce() {
+			let mut chacha_state_ietf = InternalState {
+				state: [0_u32; 16],
+				is_ietf: true,
+			};
+			chacha_state_ietf
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
+				.unwrap();
+
+			let mut chacha_state_hchacha = InternalState {
+				state: [0_u32; 16],
+				is_ietf: false,
+			};
+
+			chacha_state_hchacha
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
+				.unwrap();
+
+			assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
+			assert!(chacha_state_ietf.process_block(None).is_err());
+			assert!(chacha_state_hchacha.process_block(None).is_ok());
+			assert!(chacha_state_ietf.process_block(Some(1)).is_ok());
+		}
+	}
+
+	mod test_serialize_block {
+		use super::*;
+
+		#[test]
+		fn test_wrong_combination_of_variant_and_dst_out() {
+			let mut chacha_state_ietf = InternalState {
+				state: [0_u32; 16],
+				is_ietf: true,
+			};
+
+			chacha_state_ietf
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
+				.unwrap();
+
+			let mut chacha_state_hchacha = InternalState {
+				state: [0_u32; 16],
+				is_ietf: false,
+			};
+
+			chacha_state_hchacha
+				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
+				.unwrap();
+
+			let mut hchacha_out = [0u8; HCHACHA_OUTSIZE];
+			let mut ietf_out = [0u8; CHACHA_BLOCKSIZE];
+
+			let ietf_src = chacha_state_ietf.process_block(Some(1)).unwrap();
+			let hchacha_src = chacha_state_hchacha.process_block(None).unwrap();
+
+			assert!(chacha_state_hchacha
+				.serialize_block(&hchacha_src, &mut ietf_out)
+				.is_err());
+			assert!(chacha_state_ietf
+				.serialize_block(&ietf_src, &mut hchacha_out)
+				.is_err());
+			assert!(chacha_state_hchacha
+				.serialize_block(&hchacha_src, &mut hchacha_out)
+				.is_ok());
+			assert!(chacha_state_ietf
+				.serialize_block(&ietf_src, &mut ietf_out)
+				.is_ok());
+		}
+	}
 }
 
 // Testing any test vectors that aren't put into library's /tests folder.
 #[cfg(test)]
 mod test_vectors {
 	use super::*;
+
+	// Convenience function for testing.
+	fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
+		let mut chacha_state = InternalState {
+			state: [0_u32; 16],
+			is_ietf: true,
+		};
+
+		chacha_state
+			.init_state(&SecretKey::from_slice(key).unwrap(), nonce)
+			.unwrap();
+
+		Ok(chacha_state)
+	}
 
 	#[test]
 	fn rfc8439_quarter_round_results() {
