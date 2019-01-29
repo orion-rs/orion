@@ -209,7 +209,7 @@ impl Blake2b {
 		self.t[0] = res;
 		if was_overflow {
 			// If this panics size limit is reached.
-		    self.t[1] = self.t[1].checked_add(1).unwrap();
+			self.t[1] = self.t[1].checked_add(1).unwrap();
 		}
 	}
 
@@ -485,231 +485,378 @@ fn finalize_and_verify_true() {
 	);
 }
 
-#[test]
-fn test_init_bad_sizes() {
-	assert!(init(None, 0).is_err());
-	assert!(init(None, 65).is_err());
-	assert!(init(None, 64).is_ok());
-	assert!(init(None, 1).is_ok());
-}
-
-#[test]
-fn test_hasher_interface() {
-	let _digest_256 = Hasher::Blake2b256.digest(b"Test").unwrap();
-	let _digest_384 = Hasher::Blake2b384.digest(b"Test").unwrap();
-	let _digest_512 = Hasher::Blake2b512.digest(b"Test").unwrap();
-
-	let _state_256 = Hasher::Blake2b256.init().unwrap();
-	let _state_384 = Hasher::Blake2b384.init().unwrap();
-	let _state_512 = Hasher::Blake2b512.init().unwrap();
-}
-
-#[test]
-fn double_finalize_err() {
-	let data = "what do ya want for nothing?".as_bytes();
-
-	let mut state = init(None, 64).unwrap();
-	state.update(data).unwrap();
-	let _ = state.finalize().unwrap();
-	assert!(state.finalize().is_err());
-}
-
-#[test]
-fn double_finalize_with_reset_ok_not_keyed() {
-	let data = "what do ya want for nothing?".as_bytes();
-
-	let mut state = init(None, 64).unwrap();
-	state.update(data).unwrap();
-	let one = state.finalize().unwrap();
-	state.reset(None).unwrap();
-	state.update(data).unwrap();
-	let two = state.finalize().unwrap();
-	assert_eq!(one.as_bytes(), two.as_bytes());
-}
-
-#[test]
-fn double_finalize_with_reset_ok_keyed() {
-	let secret_key = SecretKey::from_slice(b"Testing").unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
-
-	let mut state = init(Some(&secret_key), 64).unwrap();
-	state.update(data).unwrap();
-	let one = state.finalize().unwrap();
-	state.reset(Some(&secret_key)).unwrap();
-	state.update(data).unwrap();
-	let two = state.finalize().unwrap();
-	assert_eq!(one.as_bytes(), two.as_bytes());
-}
-
-#[test]
-fn double_finalize_with_reset_no_update_ok() {
-	let data = "what do ya want for nothing?".as_bytes();
-
-	let mut state = init(None, 64).unwrap();
-	state.update(data).unwrap();
-	let _ = state.finalize().unwrap();
-	state.reset(None).unwrap();
-	let _ = state.finalize().unwrap();
-}
-
-#[test]
-/// Related bug: https://github.com/brycx/orion/issues/28
-fn update_after_finalize_err() {
-	let data = "what do ya want for nothing?".as_bytes();
-
-	let mut state = init(None, 64).unwrap();
-	state.update(data).unwrap();
-	let _ = state.finalize().unwrap();
-	assert!(state.update(data).is_err());
-}
-
-#[test]
-fn update_after_finalize_with_reset_ok() {
-	let data = "what do ya want for nothing?".as_bytes();
-
-	let mut state = init(None, 64).unwrap();
-	state.update(data).unwrap();
-	let _ = state.finalize().unwrap();
-	state.reset(None).unwrap();
-	state.update(data).unwrap();
-}
-
-#[test]
-fn double_reset_ok() {
-	let data = "what do ya want for nothing?".as_bytes();
-
-	let mut state = init(None, 64).unwrap();
-	state.update(data).unwrap();
-	let _ = state.finalize().unwrap();
-	state.reset(None).unwrap();
-	state.reset(None).unwrap();
-}
-
-#[test]
-fn err_on_keyed_switch_on_reset() {
-	let secret_key = SecretKey::from_slice(b"Testing").unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
-
-	let mut state = init(Some(&secret_key), 64).unwrap();
-	state.update(data).unwrap();
-	let _ = state.finalize().unwrap();
-	assert!(state.reset(None).is_err());
-
-	let mut state_second = init(None, 64).unwrap();
-	state_second.update(data).unwrap();
-	let _ = state_second.finalize().unwrap();
-	assert!(state_second.reset(Some(&secret_key)).is_err());
-}
-
-#[test]
-/// Related bug: https://github.com/brycx/orion/issues/46
-fn reset_after_update_correct_resets() {
-	let state_1 = init(None, 64).unwrap();
-
-	let mut state_2 = init(None, 64).unwrap();
-	state_2.update(b"Tests").unwrap();
-	state_2.reset(None).unwrap();
-
-	assert_eq!(state_1.init_state, state_2.init_state);
-	assert_eq!(state_1.internal_state, state_2.internal_state);
-	assert_eq!(state_1.buffer[..], state_2.buffer[..]);
-	assert_eq!(state_1.leftover, state_2.leftover);
-	assert_eq!(state_1.t, state_2.t);
-	assert_eq!(state_1.f, state_2.f);
-	assert_eq!(state_1.is_finalized, state_2.is_finalized);
-	assert_eq!(state_1.is_keyed, state_2.is_keyed);
-	assert_eq!(state_1.size, state_2.size);
-}
-
-#[test]
-/// Related bug: https://github.com/brycx/orion/issues/46
-fn reset_after_update_correct_resets_and_verify() {
-	// In non-keyed mode
-	let mut state_1 = init(None, 64).unwrap();
-	state_1.update(b"Tests").unwrap();
-	let d1 = state_1.finalize().unwrap();
-
-	let mut state_2 = init(None, 64).unwrap();
-	state_2.update(b"Tests").unwrap();
-	state_2.reset(None).unwrap();
-	state_2.update(b"Tests").unwrap();
-	let d2 = state_2.finalize().unwrap();
-
-	assert_eq!(d1, d2);
-
-	// In keyed mode
-	let key = SecretKey::from_slice(&[0u8; 64]).unwrap();
-	let mut state_1 = init(Some(&key), 64).unwrap();
-	state_1.update(b"Tests").unwrap();
-	let d1 = state_1.finalize().unwrap();
-
-	let mut state_2 = init(Some(&key), 64).unwrap();
-	state_2.update(b"Tests").unwrap();
-	state_2.reset(Some(&key)).unwrap();
-	state_2.update(b"Tests").unwrap();
-	let d2 = state_2.finalize().unwrap();
-
-	assert_eq!(d1, d2);
-}
-
-#[test]
-#[cfg(feature = "safe_api")]
-// Test for issues when incrementally processing data
-// with leftover
-fn test_streaming_consistency() {
-	for len in 0..BLAKE2B_BLOCKSIZE * 4 {
-		let data = vec![0u8; len];
-		let mut state = init(None, 64).unwrap();
-		let mut other_data: Vec<u8> = Vec::new();
-
-		other_data.extend_from_slice(&data);
-		state.update(&data).unwrap();
-
-		if data.len() > BLAKE2B_BLOCKSIZE {
-			other_data.extend_from_slice(b"");
-			state.update(b"").unwrap();
-		}
-		if data.len() > BLAKE2B_BLOCKSIZE * 2 {
-			other_data.extend_from_slice(b"Extra");
-			state.update(b"Extra").unwrap();
-		}
-		if data.len() > BLAKE2B_BLOCKSIZE * 3 {
-			other_data.extend_from_slice(&[0u8; 256]);
-			state.update(&[0u8; 256]).unwrap();
-		}
-
-		let digest_one_shot = Hasher::Blake2b512.digest(&other_data).unwrap();
-
-		assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
-	}
-}
-
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
+	use super::*;
 
 	// One function tested per submodule.
 
-	mod function_0 {
+	mod test_init {
+		use super::*;
+
 		#[test]
-		fn test_() {
-			assert!(1 + 1 == 2);
+		fn test_init_size() {
+			assert!(init(None, 0).is_err());
+			assert!(init(None, 65).is_err());
+			assert!(init(None, 64).is_ok());
+			assert!(init(None, 1).is_ok());
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(not(feature = "no_std"))]
-		mod proptest {}
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				/// Given a valid size parameter, init should always pass. If size
+				/// is invalid, then init should always fail.
+				fn prop_init_size_no_key(size: usize) -> bool {
+
+					if size >= 1 && size <= BLAKE2B_OUTSIZE {
+						let res = if init(None, size).is_ok() {
+							true
+						} else {
+							false
+						};
+
+						return res;
+					} else {
+						let res = if init(None, size).is_err() {
+							true
+						} else {
+							false
+						};
+
+						return res;
+					}
+				}
+			}
+		}
 	}
 
-	mod function_1 {
+	mod test_hasher {
+		use super::*;
+
 		#[test]
-		fn test_() {
-			assert!(2 + 2 == 4);
+		fn test_hasher_interface_no_panic_and_same_result() {
+			let digest_256 = Hasher::Blake2b256.digest(b"Test").unwrap();
+			let digest_384 = Hasher::Blake2b384.digest(b"Test").unwrap();
+			let digest_512 = Hasher::Blake2b512.digest(b"Test").unwrap();
+
+			assert_eq!(digest_256, Hasher::Blake2b256.digest(b"Test").unwrap(),);
+
+			assert_eq!(digest_384, Hasher::Blake2b384.digest(b"Test").unwrap(),);
+
+			assert_eq!(digest_512, Hasher::Blake2b512.digest(b"Test").unwrap(),);
+
+			let _state_256 = Hasher::Blake2b256.init().unwrap();
+			let _state_384 = Hasher::Blake2b384.init().unwrap();
+			let _state_512 = Hasher::Blake2b512.init().unwrap();
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(not(feature = "no_std"))]
-		mod proptest {}
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				/// Given some data, .digest() should never fail in practice and should
+				/// produce the same output on a second call.
+				/// Only if data is unreasonably large.
+				fn prop_hasher_digest_no_panic_and_same_result(data: Vec<u8>) -> bool {
+					let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
+					let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
+					let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
+
+					let d256_re = Hasher::Blake2b256.digest(&data[..]).unwrap();
+					let d384_re = Hasher::Blake2b384.digest(&data[..]).unwrap();
+					let d512_re = Hasher::Blake2b512.digest(&data[..]).unwrap();
+
+					(d256 == d256_re) && (d384 == d384_re) && (d512 == d512_re)
+				}
+			}
+
+			quickcheck! {
+				/// .init() should never fail.
+				fn prop_hasher_init_no_panic() -> bool {
+					let _d256 = Hasher::Blake2b256.init().unwrap();
+					let _d384 = Hasher::Blake2b384.init().unwrap();
+					let _d512 = Hasher::Blake2b512.init().unwrap();
+
+					true
+				}
+			}
+		}
+	}
+
+	mod test_streaming_interface {
+		use super::*;
+
+		#[test]
+		fn double_finalize_err() {
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(None, 64).unwrap();
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			assert!(state.finalize().is_err());
+		}
+
+		#[test]
+		fn double_finalize_with_reset_ok_not_keyed() {
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(None, 64).unwrap();
+			state.update(data).unwrap();
+			let one = state.finalize().unwrap();
+			state.reset(None).unwrap();
+			state.update(data).unwrap();
+			let two = state.finalize().unwrap();
+			assert_eq!(one.as_bytes(), two.as_bytes());
+		}
+
+		#[test]
+		fn double_finalize_with_reset_ok_keyed() {
+			let secret_key = SecretKey::from_slice(b"Testing").unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(Some(&secret_key), 64).unwrap();
+			state.update(data).unwrap();
+			let one = state.finalize().unwrap();
+			state.reset(Some(&secret_key)).unwrap();
+			state.update(data).unwrap();
+			let two = state.finalize().unwrap();
+			assert_eq!(one.as_bytes(), two.as_bytes());
+		}
+
+		#[test]
+		fn double_finalize_with_reset_no_update_ok() {
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(None, 64).unwrap();
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			state.reset(None).unwrap();
+			let _ = state.finalize().unwrap();
+		}
+
+		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/28
+		fn update_after_finalize_err() {
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(None, 64).unwrap();
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			assert!(state.update(data).is_err());
+		}
+
+		#[test]
+		fn update_after_finalize_with_reset_ok() {
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(None, 64).unwrap();
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			state.reset(None).unwrap();
+			state.update(data).unwrap();
+		}
+
+		#[test]
+		fn double_reset_ok() {
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(None, 64).unwrap();
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			state.reset(None).unwrap();
+			state.reset(None).unwrap();
+		}
+
+		#[test]
+		fn err_on_keyed_switch_on_reset() {
+			let secret_key = SecretKey::from_slice(b"Testing").unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(Some(&secret_key), 64).unwrap();
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			assert!(state.reset(None).is_err());
+
+			let mut state_second = init(None, 64).unwrap();
+			state_second.update(data).unwrap();
+			let _ = state_second.finalize().unwrap();
+			assert!(state_second.reset(Some(&secret_key)).is_err());
+		}
+
+		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/46
+		fn reset_after_update_correct_resets() {
+			let state_1 = init(None, 64).unwrap();
+
+			let mut state_2 = init(None, 64).unwrap();
+			state_2.update(b"Tests").unwrap();
+			state_2.reset(None).unwrap();
+
+			assert_eq!(state_1.init_state, state_2.init_state);
+			assert_eq!(state_1.internal_state, state_2.internal_state);
+			assert_eq!(state_1.buffer[..], state_2.buffer[..]);
+			assert_eq!(state_1.leftover, state_2.leftover);
+			assert_eq!(state_1.t, state_2.t);
+			assert_eq!(state_1.f, state_2.f);
+			assert_eq!(state_1.is_finalized, state_2.is_finalized);
+			assert_eq!(state_1.is_keyed, state_2.is_keyed);
+			assert_eq!(state_1.size, state_2.size);
+		}
+
+		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/46
+		fn reset_after_update_correct_resets_and_verify() {
+			// In non-keyed mode
+			let mut state_1 = init(None, 64).unwrap();
+			state_1.update(b"Tests").unwrap();
+			let d1 = state_1.finalize().unwrap();
+
+			let mut state_2 = init(None, 64).unwrap();
+			state_2.update(b"Tests").unwrap();
+			state_2.reset(None).unwrap();
+			state_2.update(b"Tests").unwrap();
+			let d2 = state_2.finalize().unwrap();
+
+			assert_eq!(d1, d2);
+
+			// In keyed mode
+			let key = SecretKey::from_slice(&[0u8; 64]).unwrap();
+			let mut state_1 = init(Some(&key), 64).unwrap();
+			state_1.update(b"Tests").unwrap();
+			let d1 = state_1.finalize().unwrap();
+
+			let mut state_2 = init(Some(&key), 64).unwrap();
+			state_2.update(b"Tests").unwrap();
+			state_2.reset(Some(&key)).unwrap();
+			state_2.update(b"Tests").unwrap();
+			let d2 = state_2.finalize().unwrap();
+
+			assert_eq!(d1, d2);
+		}
+
+		#[test]
+		#[cfg(feature = "safe_api")]
+		// Test for issues when incrementally processing data
+		// with leftover
+		fn test_streaming_consistency() {
+			for len in 0..BLAKE2B_BLOCKSIZE * 4 {
+				let data = vec![0u8; len];
+				let mut state = init(None, 64).unwrap();
+				let mut other_data: Vec<u8> = Vec::new();
+
+				other_data.extend_from_slice(&data);
+				state.update(&data).unwrap();
+
+				if data.len() > BLAKE2B_BLOCKSIZE {
+					other_data.extend_from_slice(b"");
+					state.update(b"").unwrap();
+				}
+				if data.len() > BLAKE2B_BLOCKSIZE * 2 {
+					other_data.extend_from_slice(b"Extra");
+					state.update(b"Extra").unwrap();
+				}
+				if data.len() > BLAKE2B_BLOCKSIZE * 3 {
+					other_data.extend_from_slice(&[0u8; 256]);
+					state.update(&[0u8; 256]).unwrap();
+				}
+
+				let digest_one_shot = Hasher::Blake2b512.digest(&other_data).unwrap();
+
+				assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
+			}
+		}
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				/// Never panic when calling update() on an object that is not finalized.
+				fn prop_update_no_panic(data: Vec<u8>) -> bool {
+					let mut state = init(None, 64).unwrap();
+					state.update(&data[..]).unwrap();
+
+					true
+				}
+			}
+
+			quickcheck! {
+				/// Never panic when calling reset() with correct secret key option.
+				fn prop_reset_no_panic(data: Vec<u8>) -> bool {
+					/*
+					// In non-keyed mode
+					let mut state = init(None, 64).unwrap();
+					state.reset(None).unwrap();
+					state.update(&data[..]).unwrap();
+					state.reset(None).unwrap();
+					let _ = state.finalize().unwrap();
+					state.reset(None).unwrap();
+					state.update(&data[..]).unwrap();
+					let _ = state.finalize().unwrap();
+					state.reset(None).unwrap();
+					state.reset(None).unwrap();
+					*/
+					
+					
+					// In keyed mode
+					let key = SecretKey::from_slice(&[0u8; 64]).unwrap();
+					let mut state2 = init(Some(&key), 64).unwrap();
+					state2.reset(Some(&key)).unwrap();
+					state2.update(&data[..]).unwrap();
+					state2.reset(Some(&key)).unwrap();
+					let _ = state2.finalize().unwrap();
+					state2.reset(Some(&key)).unwrap();
+					state2.update(&data[..]).unwrap();
+					let _ = state2.finalize().unwrap();
+					state2.reset(Some(&key)).unwrap();
+					state2.reset(Some(&key)).unwrap();
+					
+					true
+				}
+			}
+
+			quickcheck! {
+				// Never panic when calling finalize() on an object that is not finalized.
+				fn prop_finalize_no_panic(_data: Vec<u8>) -> bool {
+					/*
+					// In non-keyed mode
+					let mut state = init(None, 64).unwrap();
+					state.reset(None).unwrap();
+					state.update(&data[..]).unwrap();
+					state.reset(None).unwrap();
+					let _ = state.finalize().unwrap();
+					state.reset(None).unwrap();
+					state.update(&data[..]).unwrap();
+					let _ = state.finalize().unwrap();
+					state.reset(None).unwrap();
+					state.reset(None).unwrap();
+					*/
+					/*
+					// In keyed mode
+					let key = SecretKey::from_slice(&[0u8; 64]).unwrap();
+					let mut state = init(Some(&key), 64).unwrap();
+					state.reset(Some(&key)).unwrap();
+					state.update(&data[..]).unwrap();
+					state.reset(Some(&key)).unwrap();
+					let _ = state.finalize().unwrap();
+					state.reset(Some(&key)).unwrap();
+					state.update(&data[..]).unwrap();
+					let _ = state.finalize().unwrap();
+					state.reset(Some(&key)).unwrap();
+					state.reset(Some(&key)).unwrap();
+					*/
+					true
+				}
+			}
+
+		}
 	}
 }
 
@@ -719,11 +866,11 @@ mod private {
 	use super::*;
 	// One function tested per submodule.
 
-	mod increment_counter {
+	mod test_increment_offset {
 		use super::*;
 
 		#[test]
-		fn test_counter_increase_values() {			
+		fn test_offset_increase_values() {
 			let mut context = Blake2b {
 				init_state: [0u64; 8],
 				internal_state: IV,
