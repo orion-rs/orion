@@ -202,7 +202,7 @@ impl core::fmt::Debug for Blake2b {
 }
 
 impl Blake2b {
-	#[inline]
+	#[inline(always)]
 	/// Increment the internal states offset value `t`.
 	fn increment_offset(&mut self, value: u64) {
 		self.t[0] += value;
@@ -211,7 +211,7 @@ impl Blake2b {
 		}
 	}
 
-	#[inline]
+	#[inline(always)]
 	#[allow(clippy::many_single_char_names)]
 	#[allow(clippy::too_many_arguments)]
 	/// The primitive mixing function G as defined in the RFC.
@@ -239,7 +239,7 @@ impl Blake2b {
 		w[b] = (w[b]).rotate_right(63u32);
 	}
 
-	#[inline]
+	#[inline(always)]
 	/// Perform a single round based on a message schedule selection.
 	fn round(&mut self, ri: usize, m: &mut [u64], w: &mut [u64]) {
 		self.prim_mix_g(m[SIGMA[ri][0]], m[SIGMA[ri][1]], 0, 4, 8, 12, w);
