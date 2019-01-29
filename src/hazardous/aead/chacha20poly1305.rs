@@ -281,7 +281,7 @@ mod public {
 				&mut dst_out_ct,
 			)
 			.is_ok());
-			
+
 			// Related bug: #52
 			assert!(seal(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),

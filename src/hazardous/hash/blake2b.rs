@@ -205,9 +205,11 @@ impl Blake2b {
 	#[inline(always)]
 	/// Increment the internal states offset value `t`.
 	fn increment_offset(&mut self, value: u64) {
-		self.t[0] += value;
-		if self.t[0] < value {
-			self.t[1] += 1;
+		let (res, was_overflow) = self.t[0].overflowing_add(value);
+		self.t[0] = res;
+		if was_overflow {
+			// If this panics size limit is reached.
+		    self.t[1] = self.t[1].checked_add(1).unwrap();
 		}
 	}
 
@@ -685,71 +687,105 @@ fn test_streaming_consistency() {
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
-        
-    // One function tested per submodule.
-    
+
+	// One function tested per submodule.
+
 	mod function_0 {
-        #[test]
-        fn test_() {
-            assert!(1+1 == 2);
-        }
-        
+		#[test]
+		fn test_() {
+			assert!(1 + 1 == 2);
+		}
+
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(not(feature = "no_std"))]
-		mod proptest {
+		mod proptest {}
+	}
+
+	mod function_1 {
+		#[test]
+		fn test_() {
+			assert!(2 + 2 == 4);
 		}
-    }
-    
-    mod function_1 {
-        #[test]
-        fn test_() {
-            assert!(2+2 == 4);
-        }
-        
+
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(not(feature = "no_std"))]
-		mod proptest {
-		}
-    }
+		mod proptest {}
+	}
 }
 
 // Testing private functions in the module.
 #[cfg(test)]
 mod private {
-        
-    // One function tested per submodule.
-    
-	mod function_0 {
-        #[test]
-        fn test_() {
-            assert!(1+1 == 2);
-        }
-        
+	use super::*;
+	// One function tested per submodule.
+
+	mod increment_counter {
+		use super::*;
+
+		#[test]
+		fn test_counter_increase_values() {			
+			let mut context = Blake2b {
+				init_state: [0u64; 8],
+				internal_state: IV,
+				buffer: [0u8; BLAKE2B_BLOCKSIZE],
+				leftover: 0,
+				t: [0u64; 2],
+				f: [0u64; 2],
+				is_finalized: false,
+				is_keyed: false,
+				size: 1,
+			};
+
+			context.increment_offset(1);
+			assert!(context.t == [1u64, 0u64]);
+			context.increment_offset(17);
+			assert!(context.t == [18u64, 0u64]);
+			context.increment_offset(12);
+			assert!(context.t == [30u64, 0u64]);
+			// Overflow
+			context.increment_offset(u64::max_value());
+			assert!(context.t == [29u64, 1u64]);
+		}
+
+		#[test]
+		#[should_panic]
+		fn test_panic_on_second_overflow() {
+			let mut context = Blake2b {
+				init_state: [0u64; 8],
+				internal_state: IV,
+				buffer: [0u8; BLAKE2B_BLOCKSIZE],
+				leftover: 0,
+				t: [1u64, u64::max_value()],
+				f: [0u64; 2],
+				is_finalized: false,
+				is_keyed: false,
+				size: 1,
+			};
+
+			context.increment_offset(u64::max_value());
+		}
+
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(not(feature = "no_std"))]
-		mod proptest {
+		mod proptest {}
+	}
+
+	mod function_1 {
+		#[test]
+		fn test_() {
+			assert!(2 + 2 == 4);
 		}
-    }
-    
-    mod function_1 {
-        #[test]
-        fn test_() {
-            assert!(2+2 == 4);
-        }
-        
+
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(not(feature = "no_std"))]
-		mod proptest {
-		}
-    }
+		mod proptest {}
+	}
 }
 
 // Testing any test vectors that aren't put into library's /tests folder.
 #[cfg(test)]
 mod test_vectors {
-        
-    #[test]
-    fn rfc8769_test_case_0() {
-        
-    }
+
+	#[test]
+	fn rfc8769_test_case_0() {}
 }
