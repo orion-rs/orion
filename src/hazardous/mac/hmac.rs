@@ -319,6 +319,7 @@ fn double_finalize_with_reset_no_update_ok() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/28
 fn update_after_finalize_err() {
 	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 	let data = "what do ya want for nothing?".as_bytes();
@@ -354,6 +355,7 @@ fn double_reset_ok() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/46
 fn reset_after_update_correct_resets() {
 	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 
@@ -368,6 +370,7 @@ fn reset_after_update_correct_resets() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/46
 fn reset_after_update_correct_resets_and_verify() {
 	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 

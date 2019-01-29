@@ -164,6 +164,7 @@ mod public {
 		use super::*;
 
 		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/52
 		fn test_dst_out_length() {
 			let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
 			let mut dst_out_ct_less = [0u8; 79]; // 64 + Poly1305TagLen - 1
@@ -179,6 +180,7 @@ mod public {
 			)
 			.is_ok());
 
+			// Related bug: #52
 			assert!(seal(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 24]).unwrap(),
@@ -188,6 +190,7 @@ mod public {
 			)
 			.is_ok());
 
+			// Related bug: #52
 			assert!(seal(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 24]).unwrap(),

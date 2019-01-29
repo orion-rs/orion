@@ -551,6 +551,7 @@ fn double_finalize_with_reset_no_update_ok() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/28
 fn update_after_finalize_err() {
 	let data = "what do ya want for nothing?".as_bytes();
 
@@ -599,6 +600,7 @@ fn err_on_keyed_switch_on_reset() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/46
 fn reset_after_update_correct_resets() {
 	let state_1 = init(None, 64).unwrap();
 
@@ -618,6 +620,7 @@ fn reset_after_update_correct_resets() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/46
 fn reset_after_update_correct_resets_and_verify() {
 	// In non-keyed mode
 	let mut state_1 = init(None, 64).unwrap();
@@ -677,4 +680,76 @@ fn test_streaming_consistency() {
 
 		assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
 	}
+}
+
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+        
+    // One function tested per submodule.
+    
+	mod function_0 {
+        #[test]
+        fn test_() {
+            assert!(1+1 == 2);
+        }
+        
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+		}
+    }
+    
+    mod function_1 {
+        #[test]
+        fn test_() {
+            assert!(2+2 == 4);
+        }
+        
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+		}
+    }
+}
+
+// Testing private functions in the module.
+#[cfg(test)]
+mod private {
+        
+    // One function tested per submodule.
+    
+	mod function_0 {
+        #[test]
+        fn test_() {
+            assert!(1+1 == 2);
+        }
+        
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+		}
+    }
+    
+    mod function_1 {
+        #[test]
+        fn test_() {
+            assert!(2+2 == 4);
+        }
+        
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+		}
+    }
+}
+
+// Testing any test vectors that aren't put into library's /tests folder.
+#[cfg(test)]
+mod test_vectors {
+        
+    #[test]
+    fn rfc8769_test_case_0() {
+        
+    }
 }

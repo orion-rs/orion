@@ -409,6 +409,7 @@ fn double_finalize_with_reset_no_update_ok() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/28
 fn update_after_finalize_err() {
 	let data = "what do ya want for nothing?".as_bytes();
 
@@ -441,6 +442,7 @@ fn double_reset_ok() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/46
 fn reset_after_update_correct_resets() {
 	let state_1 = init();
 
@@ -456,6 +458,7 @@ fn reset_after_update_correct_resets() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/46
 fn reset_after_update_correct_resets_and_verify() {
 	let mut state_1 = init();
 	state_1.update(b"Tests").unwrap();

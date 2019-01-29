@@ -429,6 +429,7 @@ fn double_finalize_with_reset_no_update_ok() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/28
 fn update_after_finalize_err() {
 	let input = b"\x00\x01\x02\x03";
 	let custom = b"";
@@ -474,6 +475,7 @@ fn double_reset_ok() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/46
 fn reset_after_update_correct_resets() {
 	let input = b"\x00\x01\x02\x03";
 	let custom = b"Hello world";

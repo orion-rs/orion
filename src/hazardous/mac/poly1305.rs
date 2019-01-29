@@ -494,6 +494,7 @@ fn double_finalize_with_reset_no_update_ok() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/28
 fn update_after_finalize_err() {
 	let mut poly1305_state = init(&OneTimeKey::from_slice(&[0u8; 32]).unwrap());
 
@@ -524,6 +525,7 @@ fn double_reset_ok() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/46
 fn reset_after_update_correct_resets() {
 	let secret_key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 
@@ -542,6 +544,7 @@ fn reset_after_update_correct_resets() {
 }
 
 #[test]
+/// Related bug: https://github.com/brycx/orion/issues/46
 fn reset_after_update_correct_resets_and_verify() {
 	let secret_key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 
