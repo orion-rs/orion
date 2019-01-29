@@ -460,26 +460,6 @@ pub fn verify(
 	}
 }
 
-#[test]
-fn finalize_and_verify_true() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
-
-	let mut tag = init(Some(&secret_key), 64).unwrap();
-	tag.update(data).unwrap();
-
-	assert_eq!(
-		verify(
-			&tag.finalize().unwrap(),
-			&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
-			64,
-			data
-		)
-		.unwrap(),
-		true
-	);
-}
-
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -525,6 +505,51 @@ mod public {
 
 						return res;
 					}
+				}
+			}
+		}
+	}
+
+	mod test_verify {
+		use super::*;
+
+		#[test]
+		fn finalize_and_verify_true() {
+			let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut tag = init(Some(&secret_key), 64).unwrap();
+			tag.update(data).unwrap();
+
+			assert_eq!(
+				verify(
+					&tag.finalize().unwrap(),
+					&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
+					64,
+					data
+				)
+				.unwrap(),
+				true
+			);
+		}
+
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+			use super::*;
+			
+			quickcheck! {
+				/// When using the same parameters verify() should always yeild true.
+				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
+					let sk = SecretKey::generate().unwrap();
+
+					let mut state = init(Some(&sk), 64).unwrap();
+					state.update(&data[..]).unwrap();
+					let tag = state.finalize().unwrap();
+					// Failed verification on Err so res is not needed.
+					let _res = verify(&tag, &sk, 64, &data[..]).unwrap();
+
+					true
 				}
 			}
 		}
@@ -781,76 +806,6 @@ mod public {
 					true
 				}
 			}
-
-			quickcheck! {
-				/// Never panic when calling reset() with correct secret key option.
-				fn prop_reset_no_panic(data: Vec<u8>) -> bool {
-					/*
-					// In non-keyed mode
-					let mut state = init(None, 64).unwrap();
-					state.reset(None).unwrap();
-					state.update(&data[..]).unwrap();
-					state.reset(None).unwrap();
-					let _ = state.finalize().unwrap();
-					state.reset(None).unwrap();
-					state.update(&data[..]).unwrap();
-					let _ = state.finalize().unwrap();
-					state.reset(None).unwrap();
-					state.reset(None).unwrap();
-					*/
-					
-					
-					// In keyed mode
-					let key = SecretKey::from_slice(&[0u8; 64]).unwrap();
-					let mut state2 = init(Some(&key), 64).unwrap();
-					state2.reset(Some(&key)).unwrap();
-					state2.update(&data[..]).unwrap();
-					state2.reset(Some(&key)).unwrap();
-					let _ = state2.finalize().unwrap();
-					state2.reset(Some(&key)).unwrap();
-					state2.update(&data[..]).unwrap();
-					let _ = state2.finalize().unwrap();
-					state2.reset(Some(&key)).unwrap();
-					state2.reset(Some(&key)).unwrap();
-					
-					true
-				}
-			}
-
-			quickcheck! {
-				// Never panic when calling finalize() on an object that is not finalized.
-				fn prop_finalize_no_panic(_data: Vec<u8>) -> bool {
-					/*
-					// In non-keyed mode
-					let mut state = init(None, 64).unwrap();
-					state.reset(None).unwrap();
-					state.update(&data[..]).unwrap();
-					state.reset(None).unwrap();
-					let _ = state.finalize().unwrap();
-					state.reset(None).unwrap();
-					state.update(&data[..]).unwrap();
-					let _ = state.finalize().unwrap();
-					state.reset(None).unwrap();
-					state.reset(None).unwrap();
-					*/
-					/*
-					// In keyed mode
-					let key = SecretKey::from_slice(&[0u8; 64]).unwrap();
-					let mut state = init(Some(&key), 64).unwrap();
-					state.reset(Some(&key)).unwrap();
-					state.update(&data[..]).unwrap();
-					state.reset(Some(&key)).unwrap();
-					let _ = state.finalize().unwrap();
-					state.reset(Some(&key)).unwrap();
-					state.update(&data[..]).unwrap();
-					let _ = state.finalize().unwrap();
-					state.reset(Some(&key)).unwrap();
-					state.reset(Some(&key)).unwrap();
-					*/
-					true
-				}
-			}
-
 		}
 	}
 }
