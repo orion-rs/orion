@@ -829,13 +829,139 @@ mod public {
 			)
 			.is_ok());
 		}
+
+				#[test]
+		fn test_diff_keys_diff_output() {
+			let keystream1 = keystream_block(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				0,
+			).unwrap();
+
+			let keystream2 = keystream_block(
+				&SecretKey::from_slice(&[1u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				0,
+			).unwrap();
+
+			assert!(keystream1[..] != keystream2[..]);
+		}
+
+		#[test]
+		fn test_diff_nonce_diff_output() {
+			let keystream1 = keystream_block(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				0,
+			).unwrap();
+
+			let keystream2 = keystream_block(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[1u8; 12]).unwrap(),
+				0,
+			).unwrap();
+
+			assert!(keystream1[..] != keystream2[..]);
+		}
+
+		#[test]
+		fn test_diff_initial_counter_diff_output() {
+			let keystream1 = keystream_block(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				0,
+			).unwrap();
+
+			let keystream2 = keystream_block(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				1,
+			).unwrap();
+
+			assert!(keystream1[..] != keystream2[..]);
+		}
+
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+			use super::*;
+			
+			quickcheck! {
+				fn prop_same_params_same_output(counter: u32) -> bool {
+					let keystream1 = keystream_block(
+						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+						&Nonce::from_slice(&[0u8; 12]).unwrap(),
+						counter,
+					).unwrap();
+
+					let keystream2 = keystream_block(
+						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+						&Nonce::from_slice(&[0u8; 12]).unwrap(),
+						counter,
+					).unwrap();
+
+					(keystream1[..] == keystream2[..])
+				}
+			}
+		}
 	}
 
-	mod test_hchacha20 {}
+	mod test_hchacha20 {
+		use super::*;
 
-	// Proptests. Only exectued when NOT testing no_std.
-	#[cfg(not(feature = "no_std"))]
-	mod proptest {}
+		#[test]
+		fn test_nonce_length() {
+			assert!(hchacha20(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 16],
+			).is_ok());
+
+			assert!(hchacha20(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 17],
+			).is_err());
+
+			assert!(hchacha20(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 15],
+			).is_err());
+
+			assert!(hchacha20(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 0],
+			).is_err());
+		}
+
+		#[test]
+		fn test_diff_keys_diff_output() {
+			let keystream1 = hchacha20(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 16],
+			).unwrap();
+
+			let keystream2 = hchacha20(
+				&SecretKey::from_slice(&[1u8; 32]).unwrap(),
+				&[0u8; 16],
+			).unwrap();
+
+			assert!(keystream1 != keystream2);
+		}
+
+		#[test]
+		fn test_diff_nonce_diff_output() {
+			let keystream1 = hchacha20(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 16],
+			).unwrap();
+
+			let keystream2 = hchacha20(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[1u8; 16],
+			).unwrap();
+
+			assert!(keystream1 != keystream2);
+		}
+	}
 }
 
 // Testing private functions in the module.
