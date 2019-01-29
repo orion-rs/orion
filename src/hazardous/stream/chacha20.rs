@@ -513,114 +513,6 @@ fn test_key_sizes() {
 	assert!(SecretKey::from_slice(&[0u8; 32]).is_ok());
 }
 
-#[test]
-fn test_diff_ct_pt_len() {
-	let mut dst = [0u8; 64];
-
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		0,
-		&[0u8; 65],
-		&mut dst
-	)
-	.is_err());
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		0,
-		&[0u8; 63],
-		&mut dst
-	)
-	.is_ok());
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		0,
-		&[0u8; 64],
-		&mut dst
-	)
-	.is_ok());
-}
-
-#[test]
-fn test_err_on_diff_ct_pt_len_chacha_long() {
-	let mut dst = [0u8; 64];
-
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		0,
-		&[0u8; 128],
-		&mut dst,
-	)
-	.is_err());
-}
-
-#[test]
-fn test_err_on_diff_ct_pt_len_chacha_short() {
-	let mut dst = [0u8; 64];
-
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		0,
-		&[0u8; 0],
-		&mut dst,
-	)
-	.is_err());
-}
-
-#[test]
-fn test_err_on_empty_pt() {
-	let mut dst = [0u8; 64];
-
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		0,
-		&[0u8; 0],
-		&mut dst,
-	)
-	.is_err());
-}
-
-#[test]
-fn test_err_on_initial_counter_overflow() {
-	let mut dst = [0u8; 65];
-
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		4294967295,
-		&[0u8; 65],
-		&mut dst,
-	)
-	.is_err());
-}
-
-#[test]
-fn test_pass_on_one_iter_max_initial_counter() {
-	let mut dst = [0u8; 64];
-	// Should pass because only one iteration is completed, so block_counter will
-	// not increase
-	encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		4294967295,
-		&[0u8; 64],
-		&mut dst,
-	)
-	.unwrap();
-	// keystream_block never increases the provided counter
-	keystream_block(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		4294967295,
-	)
-	.unwrap();
-}
-
 #[cfg(test)]
 // Convenience function for testing.
 fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
@@ -639,13 +531,305 @@ fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
+	use super::*;
 	// One function tested per submodule.
 
-	mod test_encrypt {}
+	// encrypt()/decrypt() are tested together here
+	// since decrypt() is just a wrapper around encrypt()
+	// and so only the decrypt() function is called
+	mod test_encrypt_decrypt {
+		use super::*;
+		#[test]
+		fn test_fail_on_initial_counter_overflow() {
+			let mut dst = [0u8; 65];
 
-	mod test_decrypt {}
+			assert!(decrypt(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				u32::max_value(),
+				&[0u8; 65],
+				&mut dst,
+			)
+			.is_err());
+		}
 
-	mod test_keystream_block {}
+		#[test]
+		fn test_pass_on_one_iter_max_initial_counter() {
+			let mut dst = [0u8; 64];
+			// Should pass because only one iteration is completed, so block_counter will
+			// not increase
+			assert!(decrypt(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				u32::max_value(),
+				&[0u8; 64],
+				&mut dst,
+			)
+			.is_ok());
+		}
+
+		#[test]
+		fn test_fail_on_empty_plaintext() {
+			let mut dst = [0u8; 64];
+
+			assert!(decrypt(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				0,
+				&[0u8; 0],
+				&mut dst,
+			)
+			.is_err());
+		}
+
+		#[test]
+		fn test_dst_out_length() {
+			let mut dst_small = [0u8; 64];
+
+			assert!(decrypt(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				0,
+				&[0u8; 128],
+				&mut dst_small,
+			)
+			.is_err());
+
+			let mut dst = [0u8; 64];
+
+			assert!(decrypt(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				0,
+				&[0u8; 64],
+				&mut dst,
+			)
+			.is_ok());
+
+			let mut dst_big = [0u8; 64];
+
+			assert!(decrypt(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				0,
+				&[0u8; 32],
+				&mut dst_big,
+			)
+			.is_ok());
+		}
+
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+			use super::*;
+
+			/// Given a input length `a` find out how many times
+			/// the initial counter on encrypt()/decrypt() would
+			/// increase.
+			fn counter_increase_times(a: f32) -> u32 {
+				// Otherwise a overvlowing subtration would happen
+				if a <= 64f32 {
+					return 0;
+				}
+
+				let check_with_floor = (a / 64f32).floor();
+				let actual = a / 64f32;
+
+				assert!(actual >= check_with_floor);
+				// Subtract one because the first 64 in length
+				// the counter does not increase
+				if actual > check_with_floor {
+					(actual.ceil() as u32) - 1
+				} else {
+					(actual as u32) - 1
+				}
+			}
+
+			quickcheck! {
+				// Encrypting input, and then decrypting should always yield the same input.
+				fn prop_encrypt_decrypt_same_input(input: Vec<u8>, block_counter: u32) -> bool {
+					let pt = if input.is_empty() {
+						vec![1u8; 10]
+					} else {
+						input
+					};
+
+					let mut dst_out_ct = vec![0u8; pt.len()];
+					let mut dst_out_pt = vec![0u8; pt.len()];
+
+					// If `block_counter` is high enough check if it would overflow
+					if counter_increase_times(pt.len() as f32).checked_add(block_counter).is_none() {
+						// Overflow will occur and the operation should fail
+						let res = if encrypt(
+							&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+							&Nonce::from_slice(&[0u8; 12]).unwrap(),
+							block_counter,
+							&pt[..],
+							&mut dst_out_ct,
+						).is_err() { true } else { false };
+
+						return res;
+					} else {
+
+						encrypt(
+							&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+							&Nonce::from_slice(&[0u8; 12]).unwrap(),
+							block_counter,
+							&pt[..],
+							&mut dst_out_ct,
+						).unwrap();
+
+						decrypt(
+							&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+							&Nonce::from_slice(&[0u8; 12]).unwrap(),
+							block_counter,
+							&dst_out_ct[..],
+							&mut dst_out_pt,
+						).unwrap();
+
+						return dst_out_pt == pt;
+					}
+				}
+			}
+
+			quickcheck! {
+				// Encrypting and decrypting using two different secret keys and the same nonce
+				// should never yield the same input.
+				fn prop_encrypt_decrypt_diff_keys_diff_input(input: Vec<u8>) -> bool {
+					let pt = if input.is_empty() {
+						vec![1u8; 10]
+					} else {
+						input
+					};
+
+					let sk1 = SecretKey::from_slice(&[0u8; 32]).unwrap();
+					let sk2 = SecretKey::from_slice(&[1u8; 32]).unwrap();
+
+					let mut dst_out_ct = vec![0u8; pt.len()];
+					let mut dst_out_pt = vec![0u8; pt.len()];
+
+					encrypt(
+						&sk1,
+						&Nonce::from_slice(&[0u8; 12]).unwrap(),
+						0,
+						&pt[..],
+						&mut dst_out_ct,
+					).unwrap();
+
+					decrypt(
+						&sk2,
+						&Nonce::from_slice(&[0u8; 12]).unwrap(),
+						0,
+						&dst_out_ct[..],
+						&mut dst_out_pt,
+					).unwrap();
+
+					(dst_out_pt != pt)
+				}
+			}
+
+			quickcheck! {
+				// Encrypting and decrypting using two different nonces and the same secret key
+				// should never yield the same input.
+				fn prop_encrypt_decrypt_diff_nonces_diff_input(input: Vec<u8>) -> bool {
+					let pt = if input.is_empty() {
+						vec![1u8; 10]
+					} else {
+						input
+					};
+
+					let n1 = Nonce::from_slice(&[0u8; 12]).unwrap();
+					let n2 = Nonce::from_slice(&[1u8; 12]).unwrap();
+
+					let mut dst_out_ct = vec![0u8; pt.len()];
+					let mut dst_out_pt = vec![0u8; pt.len()];
+
+					encrypt(
+						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+						&n1,
+						0,
+						&pt[..],
+						&mut dst_out_ct,
+					).unwrap();
+
+					decrypt(
+						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+						&n2,
+						0,
+						&dst_out_ct[..],
+						&mut dst_out_pt,
+					).unwrap();
+
+					(dst_out_pt != pt)
+				}
+			}
+
+			quickcheck! {
+				// Encrypting and decrypting using two different initial counters
+				// should never yield the same input.
+				fn prop_encrypt_decrypt_diff_init_counter_diff_input(input: Vec<u8>) -> bool {
+					let pt = if input.is_empty() {
+						vec![1u8; 10]
+					} else {
+						input
+					};
+
+					let init_counter1 = 32;
+					let init_counter2 = 64;
+
+					let mut dst_out_ct = vec![0u8; pt.len()];
+					let mut dst_out_pt = vec![0u8; pt.len()];
+
+					encrypt(
+						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+						&Nonce::from_slice(&[0u8; 12]).unwrap(),
+						init_counter1,
+						&pt[..],
+						&mut dst_out_ct,
+					).unwrap();
+
+					decrypt(
+						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+						&Nonce::from_slice(&[0u8; 12]).unwrap(),
+						init_counter2,
+						&dst_out_ct[..],
+						&mut dst_out_pt,
+					).unwrap();
+
+					(dst_out_pt != pt)
+				}
+			}
+		}
+	}
+
+	mod test_keystream_block {
+		use super::*;
+
+		#[test]
+		fn test_counter() {
+			// keystream_block never increases the provided counter
+			assert!(keystream_block(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				u32::max_value(),
+			)
+			.is_ok());
+
+			assert!(keystream_block(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				0,
+			)
+			.is_ok());
+
+			assert!(keystream_block(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				64,
+			)
+			.is_ok());
+		}
+	}
 
 	mod test_hchacha20 {}
 
