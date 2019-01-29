@@ -252,7 +252,6 @@ impl Blake2b {
 		self.prim_mix_g(m[SIGMA[ri][14]], m[SIGMA[ri][15]], 3, 4, 9, 14, w);
 	}
 
-	#[inline(always)]
 	#[allow(clippy::needless_range_loop)]
 	/// The compression function f as defined in the RFC.
 	fn compress_f(&mut self) {
@@ -302,7 +301,6 @@ impl Blake2b {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	/// Reset to `init()` state.
 	pub fn reset(&mut self, secret_key: Option<&SecretKey>) -> Result<(), UnknownCryptoError> {
 		if secret_key.is_some() && (!self.is_keyed) {
@@ -329,7 +327,6 @@ impl Blake2b {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
 		if self.is_finalized {
@@ -381,7 +378,6 @@ impl Blake2b {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	/// Return a BLAKE2b digest.
 	pub fn finalize(&mut self) -> Result<Digest, FinalizationCryptoError> {
 		if self.is_finalized {
@@ -409,7 +405,6 @@ impl Blake2b {
 }
 
 #[must_use]
-#[inline(always)]
 #[allow(clippy::unreadable_literal)]
 /// Initialize a `Blake2b` struct with a given size and an optional key.
 pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, UnknownCryptoError> {

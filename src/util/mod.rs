@@ -28,7 +28,6 @@ use rand_os::OsRng;
 use subtle::ConstantTimeEq;
 
 #[must_use]
-#[inline(never)]
 #[cfg(feature = "safe_api")]
 /// Generate random bytes using a CSPRNG. Not available in `no_std` context.
 ///
@@ -70,7 +69,6 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 }
 
 #[must_use]
-#[inline(never)]
 /// Compare two equal length slices in constant time.
 ///
 /// # About:

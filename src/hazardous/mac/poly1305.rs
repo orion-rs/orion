@@ -119,7 +119,7 @@ impl core::fmt::Debug for Poly1305 {
 }
 
 impl Poly1305 {
-	#[inline(always)]
+	#[inline]
 	#[allow(clippy::unreadable_literal)]
 	/// Initialize `Poly1305` struct for a given key.
 	fn initialize(&mut self, key: &OneTimeKey) {
@@ -137,7 +137,6 @@ impl Poly1305 {
 	}
 
 	#[must_use]
-    #[inline(never)]
     #[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
@@ -229,8 +228,7 @@ impl Poly1305 {
         Ok(())
     }
 
-	#[inline(never)]
-    #[rustfmt::skip]
+	#[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
     #[allow(clippy::unreadable_literal)]
@@ -291,7 +289,6 @@ impl Poly1305 {
         self.a[3] = h3;
     }
 
-	#[inline(always)]
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
 		self.a = [0u32; 5];
@@ -301,7 +298,6 @@ impl Poly1305 {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
 		if self.is_finalized {
@@ -345,7 +341,6 @@ impl Poly1305 {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	/// Return a Poly1305 tag.
 	pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
 		if self.is_finalized {
