@@ -228,7 +228,7 @@ impl Poly1305 {
         Ok(())
     }
 
-    #[rustfmt::skip]
+	#[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
     #[allow(clippy::unreadable_literal)]
