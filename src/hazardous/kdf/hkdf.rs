@@ -68,7 +68,6 @@ use crate::{
 };
 
 #[must_use]
-#[inline(always)]
 /// The HKDF extract step.
 pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError> {
 	let mut prk = hmac::init(&SecretKey::from_slice(salt)?);
@@ -78,7 +77,6 @@ pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError>
 }
 
 #[must_use]
-#[inline(always)]
 /// The HKDF expand step.
 pub fn expand(
 	prk: &hmac::Tag,

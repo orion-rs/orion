@@ -109,7 +109,7 @@ use crate::{
 use byteorder::{ByteOrder, LittleEndian};
 
 #[must_use]
-#[inline(always)]
+#[inline]
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> Result<OneTimeKey, UnknownCryptoError> {
 	let one_time_key = OneTimeKey::from_slice(
@@ -124,7 +124,7 @@ fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> Result<OneTimeKey, UnknownCrypt
 }
 
 #[must_use]
-#[inline(always)]
+#[inline]
 /// Padding size that gives the needed bytes to pad `input` to an integral
 /// multiple of 16.
 fn padding(input: &[u8]) -> usize {
@@ -136,7 +136,7 @@ fn padding(input: &[u8]) -> usize {
 }
 
 #[must_use]
-#[inline(always)]
+#[inline]
 /// Process data to be authenticated using a `Poly1305` struct initialized with
 /// a one-time-key. Up to `buf_in_len` data in `buf` get's authenticated. The
 /// indexing is needed because authentication happens on different input lenghts

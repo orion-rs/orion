@@ -82,7 +82,7 @@ construct_hmac_key! {
 	(Password, SHA2_BLOCKSIZE)
 }
 
-#[inline(always)]
+#[inline]
 /// The F function as described in the RFC.
 fn function_f(
 	salt: &[u8],
@@ -117,7 +117,6 @@ fn function_f(
 }
 
 #[must_use]
-#[inline(always)]
 /// PBKDF2-SHA512 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 pub fn derive_key(

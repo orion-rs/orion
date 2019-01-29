@@ -130,7 +130,7 @@ impl core::fmt::Debug for Hmac {
 }
 
 impl Hmac {
-	#[inline(always)]
+	#[inline]
 	/// Pad `key` with `ipad` and `opad`.
 	fn pad_key_io(&mut self, key: &SecretKey) {
 		let mut opad: BlocksizeArray = [0x5C; SHA2_BLOCKSIZE];
@@ -169,7 +169,6 @@ impl Hmac {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	/// Return a `Tag`.
 	pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
 		if self.is_finalized {
@@ -190,7 +189,6 @@ impl Hmac {
 }
 
 #[must_use]
-#[inline(always)]
 /// Initialize `Hmac` struct with a given key.
 pub fn init(secret_key: &SecretKey) -> Hmac {
 	let mut state = Hmac {
