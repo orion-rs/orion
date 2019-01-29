@@ -764,28 +764,5 @@ mod private {
 
 			context.increment_offset(u64::max_value());
 		}
-
-		// Proptests. Only exectued when NOT testing no_std.
-		#[cfg(not(feature = "no_std"))]
-		mod proptest {}
 	}
-
-	mod function_1 {
-		#[test]
-		fn test_() {
-			assert!(2 + 2 == 4);
-		}
-
-		// Proptests. Only exectued when NOT testing no_std.
-		#[cfg(not(feature = "no_std"))]
-		mod proptest {}
-	}
-}
-
-// Testing any test vectors that aren't put into library's /tests folder.
-#[cfg(test)]
-mod test_vectors {
-
-	#[test]
-	fn rfc8769_test_case_0() {}
 }
