@@ -202,7 +202,7 @@ impl core::fmt::Debug for Blake2b {
 }
 
 impl Blake2b {
-	#[inline(always)]
+	#[inline]
 	/// Increment the internal states offset value `t`.
 	fn increment_offset(&mut self, value: u64) {
 		self.t[0] += value;
@@ -211,7 +211,7 @@ impl Blake2b {
 		}
 	}
 
-	#[inline(always)]
+	#[inline]
 	#[allow(clippy::many_single_char_names)]
 	#[allow(clippy::too_many_arguments)]
 	/// The primitive mixing function G as defined in the RFC.
@@ -239,7 +239,7 @@ impl Blake2b {
 		w[b] = (w[b]).rotate_right(63u32);
 	}
 
-	#[inline(always)]
+	#[inline]
 	/// Perform a single round based on a message schedule selection.
 	fn round(&mut self, ri: usize, m: &mut [u64], w: &mut [u64]) {
 		self.prim_mix_g(m[SIGMA[ri][0]], m[SIGMA[ri][1]], 0, 4, 8, 12, w);
@@ -252,7 +252,6 @@ impl Blake2b {
 		self.prim_mix_g(m[SIGMA[ri][14]], m[SIGMA[ri][15]], 3, 4, 9, 14, w);
 	}
 
-	#[inline(always)]
 	#[allow(clippy::needless_range_loop)]
 	/// The compression function f as defined in the RFC.
 	fn compress_f(&mut self) {
@@ -302,7 +301,6 @@ impl Blake2b {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	/// Reset to `init()` state.
 	pub fn reset(&mut self, secret_key: Option<&SecretKey>) -> Result<(), UnknownCryptoError> {
 		if secret_key.is_some() && (!self.is_keyed) {
@@ -329,7 +327,6 @@ impl Blake2b {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
 		if self.is_finalized {
@@ -381,7 +378,6 @@ impl Blake2b {
 	}
 
 	#[must_use]
-	#[inline(always)]
 	/// Return a BLAKE2b digest.
 	pub fn finalize(&mut self) -> Result<Digest, FinalizationCryptoError> {
 		if self.is_finalized {
@@ -409,7 +405,6 @@ impl Blake2b {
 }
 
 #[must_use]
-#[inline(always)]
 #[allow(clippy::unreadable_literal)]
 /// Initialize a `Blake2b` struct with a given size and an optional key.
 pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, UnknownCryptoError> {

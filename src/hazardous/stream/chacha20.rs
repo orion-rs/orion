@@ -142,7 +142,7 @@ impl Drop for InternalState {
 }
 
 impl InternalState {
-	#[inline(always)]
+	#[inline]
 	/// Perform a single round on index `x`, `y` and `z` with an
 	/// `n_bit_rotation` left-rotation.
 	fn round(&mut self, x: usize, y: usize, z: usize, n_bit_rotation: u32) {
@@ -151,7 +151,7 @@ impl InternalState {
 		self.state[y] = self.state[y].rotate_left(n_bit_rotation);
 	}
 
-	#[inline(always)]
+	#[inline]
 	/// ChaCha quarter round on a `InternalState`. Indexed by four `usize`s.
 	fn quarter_round(&mut self, x: usize, y: usize, z: usize, w: usize) {
 		self.round(x, w, y, 16);
@@ -160,7 +160,7 @@ impl InternalState {
 		self.round(z, y, w, 7);
 	}
 
-	#[inline(always)]
+	#[inline]
 	/// Performs 8 `quarter_round` function calls to process a inner block.
 	fn process_inner_block(&mut self) {
 		// Perform column rounds
@@ -176,7 +176,7 @@ impl InternalState {
 	}
 
 	#[must_use]
-	#[inline(always)]
+	#[inline]
 	/// Initialize either a ChaCha or HChaCha state with a `secret_key` and
 	/// `nonce`.
 	fn init_state(
@@ -209,7 +209,7 @@ impl InternalState {
 	}
 
 	#[must_use]
-	#[inline(always)]
+	#[inline]
 	/// Process either a ChaCha20 or HChaCha20 block.
 	fn process_block(
 		&mut self,
@@ -248,7 +248,7 @@ impl InternalState {
 	}
 
 	#[must_use]
-	#[inline(always)]
+	#[inline]
 	/// Serialize a keystream block of 16 u32's, into a little-endian byte
 	/// array.
 	fn serialize_block(
