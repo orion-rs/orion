@@ -268,6 +268,13 @@ macro_rules! construct_secret_key {
             // A random generated one should always be $size in length.
             assert!(test_rand.get_length() == $size);
         }
+
+        #[test]
+        fn test_omitted_debug_secret_key() {
+            let secret = format!("{:?}", [0u8; $size].as_ref());
+            let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
+            assert_eq!(test_debug_contents.contains(&secret), false);
+        }
     );
 }
 
@@ -402,6 +409,13 @@ macro_rules! construct_tag {
             assert!(test.unprotected_as_bytes().len() == test.get_length());
             assert!($size == test.get_length());
         }
+        
+        #[test]
+        fn test_omitted_debug_tag() {
+            let secret = format!("{:?}", [0u8; $size].as_ref());
+            let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
+            assert_eq!(test_debug_contents.contains(&secret), false);
+        }
     );
 }
 
@@ -477,6 +491,13 @@ macro_rules! construct_hmac_key {
             assert!(test_zero != test_rand);
             // A random generated one should always be $size in length.
             assert!(test_rand.get_length() == $size);
+        }
+
+        #[test]
+        fn test_omitted_debug_hmac_key() {
+            let secret = format!("{:?}", [0u8; $size].as_ref());
+            let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
+            assert_eq!(test_debug_contents.contains(&secret), false);
         }
     );
 }
@@ -597,6 +618,13 @@ macro_rules! construct_blake2b_key {
             );
             // A random generated one should always be 64 in length for Blake2b.
             assert!(test_rand.get_original_length() == 64);
+        }
+
+        #[test]
+        fn test_omitted_debug_blake2b_key() {
+            let secret = format!("{:?}", [0u8; 64].as_ref());
+            let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; 64]).unwrap());
+            assert_eq!(test_debug_contents.contains(&secret), false);
         }
     );
 }
@@ -740,6 +768,13 @@ macro_rules! construct_secret_key_variable_size {
             // A random generated one should always be $size in length.
             assert!(test_rand.get_length() == 128);
         }
+
+        #[test]
+        fn test_omitted_debug_secret_key() {
+            let secret = format!("{:?}", [0u8; $size].as_ref());
+            let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
+            assert_eq!(test_debug_contents.contains(&secret), false);
+        }
     );
 }
 
@@ -852,6 +887,13 @@ macro_rules! construct_password_variable_size {
             assert!(test_zero != test_rand);
             // A random generated one should always be $size in length.
             assert!(test_rand.get_length() == 128);
+        }
+
+        #[test]
+        fn test_omitted_debug_password() {
+            let secret = format!("{:?}", [0u8; 64].as_ref());
+            let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; 64]).unwrap());
+            assert_eq!(test_debug_contents.contains(&secret), false);
         }
     );
 }
