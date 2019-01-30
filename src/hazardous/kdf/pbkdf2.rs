@@ -92,10 +92,8 @@ fn function_f(
 	hmac: &mut hmac::Hmac,
 ) -> Result<(), UnknownCryptoError> {
 	let mut u_step: HLenArray = [0u8; 64];
-	// First 4 bytes used for index BE conversion
-	u_step[..4].copy_from_slice(&index.to_be_bytes());
 	hmac.update(salt)?;
-	hmac.update(&u_step[..4])?;
+	hmac.update(&index.to_be_bytes())?;
 
 	u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
 	dk_block.copy_from_slice(&u_step[..block_len]);
