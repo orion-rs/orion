@@ -133,6 +133,7 @@ macro_rules! func_from_slice (($name:ident, $size:expr) => (
     }
 ));
 
+#[cfg(feature = "safe_api")]
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
 /// if the slice is not of length `$size`.
 macro_rules! func_from_slice_variable_size (($name:ident) => (
@@ -194,6 +195,7 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     }
 ));
 
+#[cfg(feature = "safe_api")]
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a variable length.
 macro_rules! func_generate_variable_size (($name:ident) => (
