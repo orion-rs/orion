@@ -684,7 +684,10 @@ macro_rules! construct_digest {
                 })
             }
 
-            func_get_length!();
+            /// Return the length of the object.
+            pub fn get_length(&self) -> usize {
+                self.digest_size
+            }
         }
 
         impl core::fmt::Debug for $name {
@@ -714,9 +717,9 @@ macro_rules! construct_digest {
 
         #[test]
         fn test_get_length_blake2b_digest() {
-            let test = $name::from_slice(&[0u8; 64]).unwrap();
+            let test = $name::from_slice(&[0u8; 32]).unwrap();
             assert!(test.as_bytes().len() == test.get_length());
-            assert!($size == test.get_length());
+            assert!(32 == test.get_length());
         }
     );
 }
