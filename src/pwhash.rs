@@ -124,57 +124,114 @@ pub fn hash_password_verify(
 	Ok(is_good)
 }
 
-#[test]
-fn pbkdf2_verify() {
-	let password = Password::from_slice(&[0u8; 64]).unwrap();
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+	use super::*;
 
-	let pbkdf2_dk = hash_password(&password, 100).unwrap();
+	mod test_pwhash_and_verify {
+		use super::*;
 
-	assert_eq!(
-		hash_password_verify(&pbkdf2_dk, &password, 100).unwrap(),
-		true
-	);
-}
+		#[test]
+		fn test_pbkdf2_verify() {
+			let password = Password::from_slice(&[0u8; 64]).unwrap();
 
-#[test]
-fn pbkdf2_verify_err_modified_salt() {
-	let password = Password::from_slice(&[0u8; 64]).unwrap();
+			let pbkdf2_dk = hash_password(&password, 100).unwrap();
 
-	let pbkdf2_dk = hash_password(&password, 100).unwrap();
-	let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
-	pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
-	let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
+			assert_eq!(
+				hash_password_verify(&pbkdf2_dk, &password, 100).unwrap(),
+				true
+			);
+		}
 
-	assert!(hash_password_verify(&modified, &password, 100).is_err());
-}
+		#[test]
+		fn test_pbkdf2_verify_err_modified_salt() {
+			let password = Password::from_slice(&[0u8; 64]).unwrap();
 
-#[test]
-fn pbkdf2_verify_err_modified_password() {
-	let password = Password::from_slice(&[0u8; 64]).unwrap();
+			let pbkdf2_dk = hash_password(&password, 100).unwrap();
+			let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
+			pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
+			let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-	let pbkdf2_dk = hash_password(&password, 100).unwrap();
-	let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
-	pwd_mod[120..128].copy_from_slice(&[0u8; 8]);
-	let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
+			assert!(hash_password_verify(&modified, &password, 100).is_err());
+		}
 
-	assert!(hash_password_verify(&modified, &password, 100).is_err());
-}
+		#[test]
+		fn test_pbkdf2_verify_err_modified_password() {
+			let password = Password::from_slice(&[0u8; 64]).unwrap();
 
-#[test]
-fn pbkdf2_verify_err_modified_salt_and_password() {
-	let password = Password::from_slice(&[0u8; 64]).unwrap();
+			let pbkdf2_dk = hash_password(&password, 100).unwrap();
+			let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
+			pwd_mod[120..128].copy_from_slice(&[0u8; 8]);
+			let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-	let pbkdf2_dk = hash_password(&password, 100).unwrap();
-	let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
-	pwd_mod[64..96].copy_from_slice(&[0u8; 32]);
-	let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
+			assert!(hash_password_verify(&modified, &password, 100).is_err());
+		}
 
-	assert!(hash_password_verify(&modified, &password, 100).is_err());
-}
+		#[test]
+		fn test_pbkdf2_verify_err_modified_salt_and_password() {
+			let password = Password::from_slice(&[0u8; 64]).unwrap();
 
-#[test]
-fn pbkdf2_zero_iterations() {
-	let password = Password::from_slice(&[0u8; 64]).unwrap();
+			let pbkdf2_dk = hash_password(&password, 100).unwrap();
+			let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
+			pwd_mod[64..96].copy_from_slice(&[0u8; 32]);
+			let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-	assert!(hash_password(&password, 0).is_err());
+			assert!(hash_password_verify(&modified, &password, 100).is_err());
+		}
+
+		#[test]
+		fn test_pbkdf2_zero_iterations() {
+			let password = Password::from_slice(&[0u8; 64]).unwrap();
+
+			assert!(hash_password(&password, 0).is_err());
+		}
+	}
+
+	// Proptests. Only exectued when NOT testing no_std.
+	#[cfg(not(feature = "no_std"))]
+	mod proptest {
+		use super::*;
+
+		quickcheck! {
+			/// Hashing and verifying the same password should always be true.
+			fn prop_pwhash_verify(input: Vec<u8>) -> bool {
+				let passin = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let pass = Password::from_slice(&passin[..]).unwrap();
+				let pass_hash = hash_password(&pass, 100).unwrap();
+
+				if hash_password_verify(&pass_hash, &pass, 100).is_ok() {
+					true
+				} else {
+					false
+				}
+			}
+		}
+
+		quickcheck! {
+			/// Hashing and verifying different passwords should always be false.
+			fn prop_pwhash_verify_false(input: Vec<u8>) -> bool {
+				let passin = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let pass = Password::from_slice(&passin[..]).unwrap();
+				let pass_hash = hash_password(&pass, 100).unwrap();
+				let bad_pass = Password::generate(32).unwrap();
+
+				if hash_password_verify(&pass_hash, &bad_pass, 100).is_err() {
+					true
+				} else {
+					false
+				}
+			}
+		}
+	}
 }

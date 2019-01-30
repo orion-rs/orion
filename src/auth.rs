@@ -96,7 +96,7 @@ pub fn authenticate_verify(
 mod public {
 	use super::*;
 
-	mod test_auth_auth_verify {
+	mod test_auth_and_verify {
 		use super::*;
 		#[test]
 		fn test_authenticate_verify_bad_key() {
