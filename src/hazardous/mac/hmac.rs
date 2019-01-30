@@ -316,7 +316,7 @@ mod public {
 
 		#[test]
 		fn test_double_reset_ok() {
-			let sk = SecretKey::generate().unwrap();
+			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init(&sk);
@@ -332,7 +332,7 @@ mod public {
 
 		#[test]
 		fn test_update_after_finalize_with_reset_ok() {
-			let sk = SecretKey::generate().unwrap();
+			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init(&sk);
@@ -345,7 +345,7 @@ mod public {
 		#[test]
 		/// Related bug: https://github.com/brycx/orion/issues/28
 		fn test_update_after_finalize_err() {
-			let sk = SecretKey::generate().unwrap();
+			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init(&sk);
@@ -360,7 +360,7 @@ mod public {
 
 		#[test]
 		fn test_double_finalize_with_reset_no_update_ok() {
-			let sk = SecretKey::generate().unwrap();
+			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init(&sk);
@@ -372,7 +372,7 @@ mod public {
 
 		#[test]
 		fn test_double_finalize_with_reset_ok() {
-			let sk = SecretKey::generate().unwrap();
+			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init(&sk);
@@ -386,7 +386,7 @@ mod public {
 
 		#[test]
 		fn test_double_finalize_err() {
-			let sk = SecretKey::generate().unwrap();
+			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init(&sk);
@@ -465,14 +465,14 @@ mod public {
 		#[test]
 		/// Related bug: https://github.com/brycx/orion/issues/46
 		fn test_produce_same_state() {
-			let sk = SecretKey::generate().unwrap();
+			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			produces_same_state(&sk, b"Tests");
 		}
 
 		#[test]
 		/// Related bug: https://github.com/brycx/orion/issues/46
 		fn test_produce_same_hash() {
-			let sk = SecretKey::generate().unwrap();
+			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			produces_same_hash(&sk, b"Tests");
 		}
 
@@ -481,7 +481,7 @@ mod public {
 		// Test for issues when incrementally processing data.
 		fn test_streaming_consistency() {
 			for len in 0..SHA2_BLOCKSIZE * 4 {
-				let sk = SecretKey::generate().unwrap();
+				let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 				let data = vec![0u8; len];
 				let mut state = init(&sk);
 				let mut other_data: Vec<u8> = Vec::new();
