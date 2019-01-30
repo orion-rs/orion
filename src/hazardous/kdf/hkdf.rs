@@ -172,16 +172,13 @@ mod public {
 
 			assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
 		}
-		// Proptests. Only exectued when NOT testing no_std.
-		#[cfg(not(feature = "no_std"))]
-		mod proptest {}
 	}
 
 	mod test_derive_key {
 		use super::*;
 
 		// Proptests. Only exectued when NOT testing no_std.
-		#[cfg(not(feature = "no_std"))]
+		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
 

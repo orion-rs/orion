@@ -514,7 +514,7 @@ mod public {
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
-		#[cfg(not(feature = "no_std"))]
+		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
 
@@ -561,7 +561,7 @@ mod public {
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
-		#[cfg(not(feature = "no_std"))]
+		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
 
@@ -625,7 +625,7 @@ mod public {
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
-		#[cfg(not(feature = "no_std"))]
+		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
 
@@ -923,7 +923,7 @@ mod public {
 			}
 		}
 		// Proptests. Only exectued when NOT testing no_std.
-		#[cfg(not(feature = "no_std"))]
+		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
 
