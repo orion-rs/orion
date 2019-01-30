@@ -9,9 +9,9 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-ring = "0.13.5"
+ring = "0.14.3"
 sp800-185 = "0.2.0"
-chacha = "0.2.0"
+chacha = "0.3.0"
 sodiumoxide = { git = "https://github.com/sodiumoxide/sodiumoxide" }
 blake2-rfc = "0.2.18"
 

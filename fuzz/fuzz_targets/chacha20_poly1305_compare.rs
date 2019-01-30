@@ -35,6 +35,12 @@ fuzz_target!(|data: &[u8]| {
 
 	let enc_key = ring::aead::SealingKey::new(&ring::aead::CHACHA20_POLY1305, &key).unwrap();
 	let dec_key = ring::aead::OpeningKey::new(&ring::aead::CHACHA20_POLY1305, &key).unwrap();
+	
+	let ring_nonce_enc = ring::aead::Nonce::try_assume_unique_for_key(&nonce).unwrap();
+	let ring_aad_enc = ring::aead::Aad::from(&aad);
+	
+	let ring_nonce_dec = ring::aead::Nonce::try_assume_unique_for_key(&nonce).unwrap();
+	let ring_aad_dec = ring::aead::Aad::from(&aad);
 
 	let mut ciphertext_with_tag_ring: Vec<u8> = vec![0u8; plaintext.len() + 16];
 	let mut plaintext_out_ring = Vec::new();
@@ -42,7 +48,7 @@ fuzz_target!(|data: &[u8]| {
 	ciphertext_with_tag_ring[..plaintext.len()].copy_from_slice(&plaintext);
 
 	let index =
-		ring::aead::seal_in_place(&enc_key, &nonce, &aad, &mut ciphertext_with_tag_ring, 16)
+		ring::aead::seal_in_place(&enc_key, ring_nonce_enc, ring_aad_enc, &mut ciphertext_with_tag_ring, 16)
 			.unwrap();
 	assert_eq!(
 		&ciphertext_with_tag_ring[..index].as_ref(),
@@ -53,7 +59,7 @@ fuzz_target!(|data: &[u8]| {
 		&ciphertext_with_tag_ring[index - 16..index].as_ref(),
 		&ciphertext_with_tag_orion[plaintext.len()..].as_ref()
 	);
-	ring::aead::open_in_place(&dec_key, &nonce, &aad, 0, &mut ciphertext_with_tag_ring).unwrap();
+	ring::aead::open_in_place(&dec_key, ring_nonce_dec, ring_aad_dec, 0, &mut ciphertext_with_tag_ring).unwrap();
 	plaintext_out_ring.extend_from_slice(&ciphertext_with_tag_ring);
 	assert_eq!(
 		&ciphertext_with_tag_ring[..plaintext.len()].as_ref(),

@@ -56,7 +56,7 @@ fn ro_pbkdf2(data: &[u8]) {
 	pbkdf2::derive_key(&orion_password, &salt, iter, &mut dk_out_orion).unwrap();
 	ring_pbkdf2::derive(
 		&digest::SHA512,
-		iter as u32,
+		std::num::NonZeroU32::new(iter as u32).unwrap(),
 		&salt,
 		&password,
 		&mut dk_out_ring,
@@ -65,7 +65,7 @@ fn ro_pbkdf2(data: &[u8]) {
 	assert_eq!(&dk_out_ring, &dk_out_orion);
 	assert!(ring_pbkdf2::verify(
 		&digest::SHA512,
-		iter as u32,
+		std::num::NonZeroU32::new(iter as u32).unwrap(),
 		&salt,
 		&password,
 		&dk_out_orion
