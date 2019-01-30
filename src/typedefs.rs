@@ -168,6 +168,25 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
     }
 ));
 
+/// Macro to implement a `generate()` function for objects that benefit from
+/// having a CSPRNG available to generate data of a variable length.
+macro_rules! func_generate_variable_size (($name:ident) => (
+    #[must_use]
+    #[cfg(feature = "safe_api")]
+    /// Randomly generate using a CSPRNG. Not available in `no_std` context.
+    pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
+        use crate::util;
+        if length < 1 || length >= (u32::max_value() as usize) {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut value = vec![0u8; length];
+        util::secure_rand_bytes(&mut value)?;
+
+        Ok($name { value: value })
+    }
+));
+
 /// Macro to construct a type containing sensitive data, using a fixed-size
 /// array.
 macro_rules! construct_secret_key {
@@ -563,20 +582,7 @@ macro_rules! construct_secret_key_variable_size {
 
             func_unprotected_as_bytes!();
             func_get_length!();
-            #[must_use]
-            #[cfg(feature = "safe_api")]
-            /// Randomly generate using a CSPRNG. Not available in `no_std` context.
-            pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
-                use crate::util;
-                if length < 1 || length >= (u32::max_value() as usize) {
-                    return Err(UnknownCryptoError);
-                }
-
-                let mut value = vec![0u8; length];
-                util::secure_rand_bytes(&mut value)?;
-
-                Ok($name { value: value })
-            }
+            func_generate_variable_size!($name);
         }
 
         #[test]
@@ -629,20 +635,7 @@ macro_rules! construct_salt_variable_size {
 
             func_as_bytes!();
             func_get_length!();
-            #[must_use]
-            #[cfg(feature = "safe_api")]
-            /// Randomly generate using a CSPRNG. Not available in `no_std` context.
-            pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
-                use crate::util;
-                if length < 1 || length >= (u32::max_value() as usize) {
-                    return Err(UnknownCryptoError);
-                }
-
-                let mut value = vec![0u8; length];
-                util::secure_rand_bytes(&mut value)?;
-
-                Ok($name { value: value })
-            }
+            func_generate_variable_size!($name);
         }
 
         #[test]
