@@ -252,11 +252,10 @@ impl Sha512 {
 		let len = length.checked_shl(3).unwrap();
 		let (res, was_overflow) = self.message_len[1].overflowing_add(len);
 		self.message_len[1] = res;
-		
+
 		if was_overflow {
 			// If this panics size limit is reached.
 			self.message_len[0] = self.message_len[0].checked_add(1).unwrap();
-			
 		}
 	}
 
@@ -377,23 +376,23 @@ pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 	Ok(state.finalize()?)
 }
 
+#[cfg(test)]
+/// Compare two Sha512 state objects to check if their fields
+/// are the same.
+pub fn compare_sha512_states(state_1: &Sha512, state_2: &Sha512) {
+	assert_eq!(state_1.working_state, state_2.working_state);
+	assert_eq!(state_1.buffer[..], state_2.buffer[..]);
+	assert_eq!(state_1.leftover, state_2.leftover);
+	assert_eq!(state_1.message_len, state_2.message_len);
+	assert_eq!(state_1.is_finalized, state_2.is_finalized);
+}
+
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
 	use super::*;
 
 	// One function tested per submodule.
-
-	/// Compare two Sha512 state objects to check if their fields
-	/// are the same.
-	fn compare_sha512_states(state_1: &Sha512, state_2: &Sha512) {
-		assert_eq!(state_1.working_state, state_2.working_state);
-		assert_eq!(state_1.buffer[..], state_2.buffer[..]);
-		assert_eq!(state_1.leftover, state_2.leftover);
-		assert_eq!(state_1.message_len, state_2.message_len);
-		assert_eq!(state_1.is_finalized, state_2.is_finalized);
-	}
-
 	mod test_reset {
 		use super::*;
 

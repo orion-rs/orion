@@ -228,159 +228,327 @@ pub fn verify(
 	}
 }
 
-#[test]
-fn finalize_and_verify_true() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+	use super::*;
 
-	let mut tag = init(&secret_key);
-	tag.update(data).unwrap();
+	use crate::hazardous::hash::sha512::compare_sha512_states;
 
-	assert_eq!(
-		verify(
-			&tag.finalize().unwrap(),
-			&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
-			data
-		)
-		.unwrap(),
-		true
-	);
-}
+	// One function tested per submodule.
 
-#[test]
-fn veriy_false_wrong_data() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
+	/// Compare two Sha512 state objects to check if their fields
+	/// are the same.
+	fn compare_hmac_states(state_1: &Hmac, state_2: &Hmac) {
+		compare_sha512_states(&state_1.opad_hasher, &state_1.opad_hasher);
+		compare_sha512_states(&state_1.ipad_hasher, &state_1.ipad_hasher);
 
-	let mut tag = init(&secret_key);
-	tag.update(data).unwrap();
+		assert_eq!(state_1.ipad[..], state_2.ipad[..]);
+		assert_eq!(state_1.is_finalized, state_2.is_finalized);
+	}
 
-	assert!(verify(
-		&tag.finalize().unwrap(),
-		&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
-		"what do ya want for something?".as_bytes()
-	)
-	.is_err());
-}
+	mod test_verify {
+		use super::*;
 
-#[test]
-fn veriy_false_wrong_secret_key() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
+		#[test]
+		fn finalize_and_verify_true() {
+			let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
 
-	let mut tag = init(&secret_key);
-	tag.update(data).unwrap();
+			let mut tag = init(&secret_key);
+			tag.update(data).unwrap();
 
-	assert!(verify(
-		&tag.finalize().unwrap(),
-		&SecretKey::from_slice("Jose".as_bytes()).unwrap(),
-		data
-	)
-	.is_err());
-}
+			assert_eq!(
+				verify(
+					&tag.finalize().unwrap(),
+					&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
+					data
+				)
+				.unwrap(),
+				true
+			);
+		}
 
-#[test]
-fn double_finalize_err() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+			use super::*;
 
-	let mut tag = init(&secret_key);
-	tag.update(data).unwrap();
-	let _ = tag.finalize().unwrap();
-	assert!(tag.finalize().is_err());
-}
+			quickcheck! {
+				/// When using the same parameters verify() should always yeild true.
+				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
+					let sk = SecretKey::generate().unwrap();
 
-#[test]
-fn double_finalize_with_reset_ok() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
+					let mut state = init(&sk);
+					state.update(&data[..]).unwrap();
+					let tag = state.finalize().unwrap();
+					// Failed verification on Err so res is not needed.
+					let _res = verify(&tag, &sk, &data[..]).unwrap();
 
-	let mut tag = init(&secret_key);
-	tag.update(data).unwrap();
-	let one = tag.finalize().unwrap();
-	tag.reset();
-	tag.update(data).unwrap();
-	let two = tag.finalize().unwrap();
-	assert_eq!(one.unprotected_as_bytes(), two.unprotected_as_bytes());
-}
+					true
+				}
+			}
 
-#[test]
-fn double_finalize_with_reset_no_update_ok() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
+			quickcheck! {
+				/// When using the same parameters verify() should always yeild true.
+				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
+					let sk = SecretKey::generate().unwrap();
+					let mut state = init(&sk);
+					state.update(&data[..]).unwrap();
+					let tag = state.finalize().unwrap();
 
-	let mut tag = init(&secret_key);
-	tag.update(data).unwrap();
-	let _ = tag.finalize().unwrap();
-	tag.reset();
-	let _ = tag.finalize().unwrap();
-}
+					let bad_sk = SecretKey::generate().unwrap();
 
-#[test]
-/// Related bug: https://github.com/brycx/orion/issues/28
-fn update_after_finalize_err() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
+					let res = if verify(&tag, &bad_sk, &data[..]).is_err() {
+						true
+					} else {
+						false
+					};
 
-	let mut tag = init(&secret_key);
-	tag.update(data).unwrap();
-	let _ = tag.finalize().unwrap();
-	assert!(tag.update(data).is_err());
-}
+					res
+				}
+			}
+		}
+	}
 
-#[test]
-fn update_after_finalize_with_reset_ok() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
+	mod test_reset {
+		use super::*;
 
-	let mut tag = init(&secret_key);
-	tag.update(data).unwrap();
-	let _ = tag.finalize().unwrap();
-	tag.reset();
-	tag.update(data).unwrap();
-}
+		#[test]
+		fn test_double_reset_ok() {
+			let sk = SecretKey::generate().unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
 
-#[test]
-fn double_reset_ok() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-	let data = "what do ya want for nothing?".as_bytes();
+			let mut state = init(&sk);
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			state.reset();
+			state.reset();
+		}
+	}
 
-	let mut tag = init(&secret_key);
-	tag.update(data).unwrap();
-	let _ = tag.finalize().unwrap();
-	tag.reset();
-	tag.reset();
-}
+	mod test_update {
+		use super::*;
 
-#[test]
-/// Related bug: https://github.com/brycx/orion/issues/46
-fn reset_after_update_correct_resets() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
+		#[test]
+		fn test_update_after_finalize_with_reset_ok() {
+			let sk = SecretKey::generate().unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
 
-	let state_1 = init(&secret_key);
+			let mut state = init(&sk);
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			state.reset();
+			state.update(data).unwrap();
+		}
 
-	let mut state_2 = init(&secret_key);
-	state_2.update(b"Tests").unwrap();
-	state_2.reset();
+		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/28
+		fn test_update_after_finalize_err() {
+			let sk = SecretKey::generate().unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
 
-	assert_eq!(state_1.ipad[..], state_2.ipad[..]);
-	assert_eq!(state_1.is_finalized, state_2.is_finalized);
-}
+			let mut state = init(&sk);
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			assert!(state.update(data).is_err());
+		}
+	}
 
-#[test]
-/// Related bug: https://github.com/brycx/orion/issues/46
-fn reset_after_update_correct_resets_and_verify() {
-	let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
+	mod test_finalize {
+		use super::*;
 
-	let mut state_1 = init(&secret_key);
-	state_1.update(b"Tests").unwrap();
-	let d1 = state_1.finalize().unwrap();
+		#[test]
+		fn test_double_finalize_with_reset_no_update_ok() {
+			let sk = SecretKey::generate().unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
 
-	let mut state_2 = init(&secret_key);
-	state_2.update(b"Tests").unwrap();
-	state_2.reset();
-	state_2.update(b"Tests").unwrap();
-	let d2 = state_2.finalize().unwrap();
+			let mut state = init(&sk);
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			state.reset();
+			let _ = state.finalize().unwrap();
+		}
 
-	assert_eq!(d1, d2);
+		#[test]
+		fn test_double_finalize_with_reset_ok() {
+			let sk = SecretKey::generate().unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(&sk);
+			state.update(data).unwrap();
+			let one = state.finalize().unwrap();
+			state.reset();
+			state.update(data).unwrap();
+			let two = state.finalize().unwrap();
+			assert_eq!(one, two);
+		}
+
+		#[test]
+		fn test_double_finalize_err() {
+			let sk = SecretKey::generate().unwrap();
+			let data = "what do ya want for nothing?".as_bytes();
+
+			let mut state = init(&sk);
+			state.update(data).unwrap();
+			let _ = state.finalize().unwrap();
+			assert!(state.finalize().is_err());
+		}
+
+	}
+
+	mod test_streaming_interface {
+		use super::*;
+
+		/// Related bug: https://github.com/brycx/orion/issues/46
+		/// Testing different usage combinations of init(), update(),
+		/// finalize() and reset() produce the same Digest.
+		fn produces_same_hash(sk: &SecretKey, data: &[u8]) {
+			// init(), update(), finalize()
+			let mut state_1 = init(&sk);
+			state_1.update(data).unwrap();
+			let res_1 = state_1.finalize().unwrap();
+
+			// init(), reset(), update(), finalize()
+			let mut state_2 = init(&sk);
+			state_2.reset();
+			state_2.update(data).unwrap();
+			let res_2 = state_2.finalize().unwrap();
+
+			// init(), update(), reset(), update(), finalize()
+			let mut state_3 = init(&sk);
+			state_3.update(data).unwrap();
+			state_3.reset();
+			state_3.update(data).unwrap();
+			let res_3 = state_3.finalize().unwrap();
+
+			// init(), update(), finalize(), reset(), update(), finalize()
+			let mut state_4 = init(&sk);
+			state_4.update(data).unwrap();
+			let _ = state_4.finalize().unwrap();
+			state_4.reset();
+			state_4.update(data).unwrap();
+			let res_4 = state_4.finalize().unwrap();
+
+			assert_eq!(res_1, res_2);
+			assert_eq!(res_2, res_3);
+			assert_eq!(res_3, res_4);
+		}
+
+		/// Related bug: https://github.com/brycx/orion/issues/46
+		/// Testing different usage combinations of init(), update(),
+		/// finalize() and reset() produce the same Digest.
+		fn produces_same_state(sk: &SecretKey, data: &[u8]) {
+			// init()
+			let state_1 = init(&sk);
+
+			// init(), reset()
+			let mut state_2 = init(&sk);
+			state_2.reset();
+
+			// init(), update(), reset()
+			let mut state_3 = init(&sk);
+			state_3.update(data).unwrap();
+			state_3.reset();
+
+			// init(), update(), finalize(), reset()
+			let mut state_4 = init(&sk);
+			state_4.update(data).unwrap();
+			let _ = state_4.finalize().unwrap();
+			state_4.reset();
+
+			compare_hmac_states(&state_1, &state_2);
+			compare_hmac_states(&state_2, &state_3);
+			compare_hmac_states(&state_3, &state_4);
+		}
+
+		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/46
+		fn test_produce_same_state() {
+			let sk = SecretKey::generate().unwrap();
+			produces_same_state(&sk, b"Tests");
+		}
+
+		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/46
+		fn test_produce_same_hash() {
+			let sk = SecretKey::generate().unwrap();
+			produces_same_hash(&sk, b"Tests");
+		}
+
+		#[test]
+		#[cfg(feature = "safe_api")]
+		// Test for issues when incrementally processing data.
+		fn test_streaming_consistency() {
+			for len in 0..SHA2_BLOCKSIZE * 4 {
+				let sk = SecretKey::generate().unwrap();
+				let data = vec![0u8; len];
+				let mut state = init(&sk);
+				let mut other_data: Vec<u8> = Vec::new();
+
+				other_data.extend_from_slice(&data);
+				state.update(&data).unwrap();
+
+				if data.len() > SHA2_BLOCKSIZE {
+					other_data.extend_from_slice(b"");
+					state.update(b"").unwrap();
+				}
+				if data.len() > SHA2_BLOCKSIZE * 2 {
+					other_data.extend_from_slice(b"Extra");
+					state.update(b"Extra").unwrap();
+				}
+				if data.len() > SHA2_BLOCKSIZE * 3 {
+					other_data.extend_from_slice(&[0u8; 256]);
+					state.update(&[0u8; 256]).unwrap();
+				}
+
+				let digest_one_shot = hmac(&sk, &other_data).unwrap();
+
+				assert!(state.finalize().unwrap() == digest_one_shot);
+			}
+		}
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				/// Related bug: https://github.com/brycx/orion/issues/46
+				/// Test different streaming state usage patterns.
+				fn prop_same_hash_different_usage(data: Vec<u8>) -> bool {
+					let sk = SecretKey::generate().unwrap();
+					// Will panic on incorrect results.
+					produces_same_hash(&sk, &data[..]);
+
+					true
+				}
+			}
+
+			quickcheck! {
+				/// Related bug: https://github.com/brycx/orion/issues/46
+				/// Test different streaming state usage patterns.
+				fn prop_same_state_different_usage(data: Vec<u8>) -> bool {
+					let sk = SecretKey::generate().unwrap();
+					// Will panic on incorrect results.
+					produces_same_state(&sk, &data[..]);
+
+					true
+				}
+			}
+
+			quickcheck! {
+				/// Using the one-shot function should always produce the
+				/// same result as when using the streaming interface.
+				fn prop_hmac_same_as_streaming(data: Vec<u8>) -> bool {
+					let sk = SecretKey::generate().unwrap();
+					let mut state = init(&sk);
+					state.update(&data[..]).unwrap();
+					let stream = state.finalize().unwrap();
+					let one_shot = hmac(&sk, &data[..]).unwrap();
+
+					(one_shot == stream)
+				}
+			}
+		}
+	}
 }
