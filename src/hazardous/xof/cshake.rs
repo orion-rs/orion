@@ -75,7 +75,6 @@ extern crate core;
 
 use self::core::mem;
 use crate::errors::{FinalizationCryptoError, UnknownCryptoError};
-use byteorder::{BigEndian, ByteOrder};
 use tiny_keccak::Keccak;
 
 #[must_use]
@@ -198,7 +197,7 @@ fn left_encode(x: u64) -> ([u8; 9], usize) {
 		8
 	} else {
 		let mut tmp: usize = 0;
-		BigEndian::write_u64(&mut input[1..], x);
+		input[1..].copy_from_slice(&x.to_be_bytes());
 		for idx in &input {
 			if *idx != 0 {
 				break;
