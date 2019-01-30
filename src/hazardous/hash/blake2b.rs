@@ -467,6 +467,20 @@ mod public {
 
 	// One function tested per submodule.
 
+	/// Compare two Blake2b state objects to check if their fields
+	/// are the same.
+	fn compare_blake2b_states(state_1: &Blake2b, state_2: &Blake2b) {
+		assert_eq!(state_1.init_state, state_2.init_state);
+		assert_eq!(state_1.internal_state, state_2.internal_state);
+		assert_eq!(state_1.buffer[..], state_2.buffer[..]);
+		assert_eq!(state_1.leftover, state_2.leftover);
+		assert_eq!(state_1.t, state_2.t);
+		assert_eq!(state_1.f, state_2.f);
+		assert_eq!(state_1.is_finalized, state_2.is_finalized);
+		assert_eq!(state_1.is_keyed, state_2.is_keyed);
+		assert_eq!(state_1.size, state_2.size);
+	}
+
 	mod test_init {
 		use super::*;
 
@@ -665,187 +679,177 @@ mod public {
 		use super::*;
 
 		#[test]
+		fn test_double_reset_ok() {
+			let mut state = init(None, 64).unwrap();
+			state.update(b"Tests").unwrap();
+			let _ = state.finalize().unwrap();
+			state.reset(None).unwrap();
+			state.reset(None).unwrap();
+		}
+
+		#[test]
 		fn test_switching_keyed_modes_fails() {
 			let secret_key = SecretKey::from_slice(b"Testing").unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init(Some(&secret_key), 64).unwrap();
-			state.update(data).unwrap();
+			state.update(b"Tests").unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.reset(None).is_err());
 			assert!(state.reset(Some(&secret_key)).is_ok());
 
 			let mut state_second = init(None, 64).unwrap();
-			state_second.update(data).unwrap();
+			state_second.update(b"Tests").unwrap();
 			let _ = state_second.finalize().unwrap();
 			assert!(state_second.reset(Some(&secret_key)).is_err());
 			assert!(state_second.reset(None).is_ok());
 		}
 	}
 
-	mod test_streaming_interface {
+	mod test_update {
 		use super::*;
 
-		/// Compare two Blake2b state objects to check if their fields
-		/// are the same.
-		fn compare_blake2b_states(state_1: Blake2b, state_2: Blake2b) {
-			assert_eq!(state_1.init_state, state_2.init_state);
-			assert_eq!(state_1.internal_state, state_2.internal_state);
-			assert_eq!(state_1.buffer[..], state_2.buffer[..]);
-			assert_eq!(state_1.leftover, state_2.leftover);
-			assert_eq!(state_1.t, state_2.t);
-			assert_eq!(state_1.f, state_2.f);
-			assert_eq!(state_1.is_finalized, state_2.is_finalized);
-			assert_eq!(state_1.is_keyed, state_2.is_keyed);
-			assert_eq!(state_1.size, state_2.size);
+		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/28
+		fn test_update_after_finalize_fail() {
+			let mut state = init(None, 64).unwrap();
+			state.update(b"Test").unwrap();
+			let _ = state.finalize().unwrap();
+			assert!(state.update(b"Test").is_err());
 		}
 
 		#[test]
-		fn test_double_finalize_err() {
-			let data = "what do ya want for nothing?".as_bytes();
-
+		fn test_update_after_finalize_with_reset() {
 			let mut state = init(None, 64).unwrap();
-			state.update(data).unwrap();
+			state.update(b"Test").unwrap();
+			let _ = state.finalize().unwrap();
+			state.reset(None).unwrap();
+			assert!(state.update(b"Test").is_ok());
+		}
+	}
+
+	mod test_finalize {
+		use super::*;
+
+		#[test]
+		fn test_double_finalize_fail() {
+			let mut state = init(None, 64).unwrap();
+			state.update(b"Test").unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.finalize().is_err());
 		}
 
 		#[test]
-		fn test_double_finalize_with_reset_no_key() {
-			let data = "what do ya want for nothing?".as_bytes();
-
+		fn test_finalize_after_reset() {
 			let mut state = init(None, 64).unwrap();
-			state.update(data).unwrap();
-			let one = state.finalize().unwrap();
+			state.update(b"Test").unwrap();
+			let _ = state.finalize().unwrap();
 			state.reset(None).unwrap();
-			state.update(data).unwrap();
-			let two = state.finalize().unwrap();
-			assert_eq!(one.as_bytes(), two.as_bytes());
-		}
-
-		#[test]
-		fn test_double_finalize_with_reset_with_key() {
-			let secret_key = SecretKey::from_slice(b"Testing").unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init(Some(&secret_key), 64).unwrap();
-			state.update(data).unwrap();
-			let one = state.finalize().unwrap();
-			state.reset(Some(&secret_key)).unwrap();
-			state.update(data).unwrap();
-			let two = state.finalize().unwrap();
-			assert_eq!(one.as_bytes(), two.as_bytes());
+			assert!(state.finalize().is_ok());
 		}
 
 		#[test]
 		fn test_double_finalize_with_reset_no_update() {
-			let data = "what do ya want for nothing?".as_bytes();
-
 			let mut state = init(None, 64).unwrap();
-			state.update(data).unwrap();
+			state.update(b"Test").unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset(None).unwrap();
 			let _ = state.finalize().unwrap();
 		}
+	}
 
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/28
-		fn test_update_after_finalize_err() {
-			let data = "what do ya want for nothing?".as_bytes();
+	mod test_streaming_interface {
+		use super::*;
 
-			let mut state = init(None, 64).unwrap();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.update(data).is_err());
+		/// Related bug: https://github.com/brycx/orion/issues/46
+		/// Testing different usage combinations of init(), update(),
+		/// finalize() and reset() produce the same Digest/Tag.
+		fn produces_same_hash(sk: Option<&SecretKey>, size: usize, data: &[u8]) {
+			// init(), update(), finalize()
+			let mut state_1 = init(sk, size).unwrap();
+			state_1.update(data).unwrap();
+			let res_1 = state_1.finalize().unwrap();
+
+			// init(), reset(), update(), finalize()
+			let mut state_2 = init(sk, size).unwrap();
+			state_2.reset(sk).unwrap();
+			state_2.update(data).unwrap();
+			let res_2 = state_2.finalize().unwrap();
+
+			// init(), update(), reset(), update(), finalize()
+			let mut state_3 = init(sk, size).unwrap();
+			state_3.update(data).unwrap();
+			state_3.reset(sk).unwrap();
+			state_3.update(data).unwrap();
+			let res_3 = state_3.finalize().unwrap();
+
+			// init(), update(), finalize(), reset(), update(), finalize()
+			let mut state_4 = init(sk, size).unwrap();
+			state_4.update(data).unwrap();
+			let _ = state_4.finalize().unwrap();
+			state_4.reset(sk).unwrap();
+			state_4.update(data).unwrap();
+			let res_4 = state_4.finalize().unwrap();
+
+			assert_eq!(res_1, res_2);
+			assert_eq!(res_2, res_3);
+			assert_eq!(res_3, res_4);
 		}
 
-		#[test]
-		fn test_double_reset_ok() {
-			let data = "what do ya want for nothing?".as_bytes();
+		/// Related bug: https://github.com/brycx/orion/issues/46
+		/// Testing different usage combinations of init(), update(),
+		/// finalize() and reset() produce the same Digest/Tag.
+		fn produces_same_state(sk: Option<&SecretKey>, size: usize, data: &[u8]) {
+			// init()
+			let state_1 = init(sk, size).unwrap();
 
-			let mut state = init(None, 64).unwrap();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset(None).unwrap();
-			state.reset(None).unwrap();
+			// init(), reset()
+			let mut state_2 = init(sk, size).unwrap();
+			state_2.reset(sk).unwrap();
+
+			// init(), update(), reset()
+			let mut state_3 = init(sk, size).unwrap();
+			state_3.update(data).unwrap();
+			state_3.reset(sk).unwrap();
+
+			// init(), update(), finalize(), reset()
+			let mut state_4 = init(sk, size).unwrap();
+			state_4.update(data).unwrap();
+			let _ = state_4.finalize().unwrap();
+			state_4.reset(sk).unwrap();
+
+			compare_blake2b_states(&state_1, &state_2);
+			compare_blake2b_states(&state_2, &state_3);
+			compare_blake2b_states(&state_3, &state_4);
 		}
 
 		#[test]
 		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_reset_after_update_correct_resets() {
-			// No key
-			let state_1 = init(None, 64).unwrap();
+		fn test_produce_same_state() {
+			produces_same_state(None, 1, b"Tests");
+			produces_same_state(None, 32, b"Tests");
+			produces_same_state(None, 64, b"Tests");
+			produces_same_state(None, 28, b"Tests");
 
-			let mut state_2 = init(None, 64).unwrap();
-			state_2.update(b"Tests").unwrap();
-			state_2.reset(None).unwrap();
-
-			compare_blake2b_states(state_1, state_2);
-
-			// Keyed
-			let sk = SecretKey::from_slice(b"Testing").unwrap();
-			let state_1 = init(Some(&sk), 64).unwrap();
-
-			let mut state_2 = init(Some(&sk), 64).unwrap();
-			state_2.update(b"Tests").unwrap();
-			state_2.reset(Some(&sk)).unwrap();
-
-			compare_blake2b_states(state_1, state_2);
-		}
-
-		#[test]
-		fn test_reset_after_finalize_correct_resets() {
-			// No key
-			let state_1 = init(None, 64).unwrap();
-
-			let mut state_2 = init(None, 64).unwrap();
-			state_2.update(b"Tests").unwrap();
-			let _ = state_2.finalize().unwrap();
-			state_2.reset(None).unwrap();
-
-			compare_blake2b_states(state_1, state_2);
-
-			// Keyed
-			let sk = SecretKey::from_slice(b"Testing").unwrap();
-			let state_1 = init(Some(&sk), 64).unwrap();
-
-			let mut state_2 = init(Some(&sk), 64).unwrap();
-			state_2.update(b"Tests").unwrap();
-			let _ = state_2.finalize().unwrap();
-			state_2.reset(Some(&sk)).unwrap();
-
-			compare_blake2b_states(state_1, state_2);
+			let sk = SecretKey::generate().unwrap();
+			produces_same_state(Some(&sk), 1, b"Tests");
+			produces_same_state(Some(&sk), 32, b"Tests");
+			produces_same_state(Some(&sk), 64, b"Tests");
+			produces_same_state(Some(&sk), 28, b"Tests");
 		}
 
 		#[test]
 		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_reset_after_update_correct_resets_and_verify() {
-			// In non-keyed mode
-			let mut state_1 = init(None, 64).unwrap();
-			state_1.update(b"Tests").unwrap();
-			let d1 = state_1.finalize().unwrap();
+		fn test_produce_same_hash() {
+			produces_same_hash(None, 1, b"Tests");
+			produces_same_hash(None, 32, b"Tests");
+			produces_same_hash(None, 64, b"Tests");
+			produces_same_hash(None, 28, b"Tests");
 
-			let mut state_2 = init(None, 64).unwrap();
-			state_2.update(b"Tests").unwrap();
-			state_2.reset(None).unwrap();
-			state_2.update(b"Tests").unwrap();
-			let d2 = state_2.finalize().unwrap();
-
-			assert_eq!(d1, d2);
-
-			// In keyed mode
-			let key = SecretKey::from_slice(&[0u8; 64]).unwrap();
-			let mut state_1 = init(Some(&key), 64).unwrap();
-			state_1.update(b"Tests").unwrap();
-			let d1 = state_1.finalize().unwrap();
-
-			let mut state_2 = init(Some(&key), 64).unwrap();
-			state_2.update(b"Tests").unwrap();
-			state_2.reset(Some(&key)).unwrap();
-			state_2.update(b"Tests").unwrap();
-			let d2 = state_2.finalize().unwrap();
-
-			assert_eq!(d1, d2);
+			let sk = SecretKey::generate().unwrap();
+			produces_same_hash(Some(&sk), 1, b"Tests");
+			produces_same_hash(Some(&sk), 32, b"Tests");
+			produces_same_hash(Some(&sk), 64, b"Tests");
+			produces_same_hash(Some(&sk), 28, b"Tests");
 		}
 
 		#[test]
@@ -885,10 +889,30 @@ mod public {
 			use super::*;
 
 			quickcheck! {
-				/// Never panic when calling update() on an object that is not finalized.
-				fn prop_update_no_panic(data: Vec<u8>) -> bool {
-					let mut state = init(None, 64).unwrap();
-					state.update(&data[..]).unwrap();
+				/// Related bug: https://github.com/brycx/orion/issues/46
+				/// Test different streaming state usage patterns.
+				fn prop_same_hash_different_usage(data: Vec<u8>, size: usize) -> bool {
+					if size >= 1 && size <= BLAKE2B_OUTSIZE {
+						// Will panic on incorrect results.
+						produces_same_hash(None, size, &data[..]);
+						let sk = SecretKey::generate().unwrap();
+						produces_same_hash(Some(&sk), size, &data[..]);
+					}
+
+					true
+				}
+			}
+
+			quickcheck! {
+				/// Related bug: https://github.com/brycx/orion/issues/46
+				/// Test different streaming state usage patterns.
+				fn prop_same_state_different_usage(data: Vec<u8>, size: usize) -> bool {
+					if size >= 1 && size <= BLAKE2B_OUTSIZE {
+						// Will panic on incorrect results.
+						produces_same_state(None, size, &data[..]);
+						let sk = SecretKey::generate().unwrap();
+						produces_same_state(Some(&sk), size, &data[..]);
+					}
 
 					true
 				}
