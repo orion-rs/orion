@@ -56,10 +56,21 @@ macro_rules! impl_partialeq_trait (($name:ident) => (
 /// Macro that implements the `Debug` trait on a object called `$name`.
 /// This `Debug` will omit any fields of object `$name` to avoid them being
 /// written to logs.
-macro_rules! impl_debug_trait (($name:ident) => (
+macro_rules! impl_omitted_debug_trait (($name:ident) => (
     impl core::fmt::Debug for $name {
         fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
             write!(f, "{} {{***OMITTED***}}", stringify!($name))
+        }
+    }
+));
+
+/// Macro that implements the `Debug` trait on a object called `$name`.
+/// This `Debug` will omit any fields of object `$name` to avoid them being
+/// written to logs.
+macro_rules! impl_normal_debug_trait (($name:ident) => (
+    impl core::fmt::Debug for $name {
+        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+            write!(f, "{} {:?}", stringify!($name), &self.value[..])
         }
     }
 ));
@@ -170,7 +181,7 @@ macro_rules! construct_secret_key {
         /// that the type implements.
         pub struct $name { value: [u8; $size] }
 
-        impl_debug_trait!($name);
+        impl_omitted_debug_trait!($name);
         impl_drop_stack_trait!($name);
         impl_partialeq_trait!($name);
 
@@ -183,15 +194,34 @@ macro_rules! construct_secret_key {
 
         #[test]
         fn test_key_size() {
-            // We don't test above $size here in case it's passed as a `max_value()`
             assert!($name::from_slice(&[0u8; $size]).is_ok());
-            assert!($name::from_slice(&[0u8; $size - $size]).is_err());
+            assert!($name::from_slice(&[0u8; 0]).is_err());
             assert!($name::from_slice(&[0u8; $size - 1]).is_err());
+            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
         }
         #[test]
         fn test_unprotected_as_bytes_secret_key() {
             let test = $name::from_slice(&[0u8; $size]).unwrap();
+            assert!(test.unprotected_as_bytes() == &[0u8; $size]);
             assert!(test.unprotected_as_bytes().len() == $size);
+        }
+
+        #[test]
+        fn test_get_length_secret_key() {
+            let test = $name::from_slice(&[0u8; $size]).unwrap();
+            assert!(test.unprotected_as_bytes().len() == test.get_length());
+            assert!($size == test.get_length());
+        }
+
+        #[test]
+        #[cfg(feature = "safe_api")]
+        fn test_generate() {
+            let test_zero = $name::from_slice(&[0u8; $size]).unwrap();
+            // A random one should never be all 0's.
+            let test_rand = $name::generate().unwrap();
+            assert!(test_zero != test_rand);
+            // A random generated one should always be $size in length.
+            assert!(test_rand.get_length() == $size);
         }
     );
 }
@@ -204,16 +234,12 @@ macro_rules! construct_nonce_no_generator {
         $(#[$meta])*
         pub struct $name { value: [u8; $size] }
 
+        impl_normal_debug_trait!($name);
+
         impl $name {
             func_from_slice!($name, $size);
             func_as_bytes!();
             func_get_length!();
-        }
-
-        impl core::fmt::Debug for $name {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                write!(f, "{} {:?}", stringify!($name), &self.value)
-            }
         }
 
         #[test]
@@ -239,17 +265,13 @@ macro_rules! construct_nonce_with_generator {
         $(#[$meta])*
         pub struct $name { value: [u8; $size] }
 
+        impl_normal_debug_trait!($name);
+
         impl $name {
             func_from_slice!($name, $size);
             func_as_bytes!();
             func_generate!($name, $size);
             func_get_length!();
-        }
-
-        impl core::fmt::Debug for $name {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                write!(f, "{} {:?}", stringify!($name), &self.value)
-            }
         }
 
         #[test]
@@ -280,18 +302,13 @@ macro_rules! construct_tag {
         /// that the type implements.
         pub struct $name { value: [u8; $size] }
 
+        impl_normal_debug_trait!($name);
         impl_partialeq_trait!($name);
 
         impl $name {
             func_from_slice!($name, $size);
             func_unprotected_as_bytes!();
             func_get_length!();
-        }
-
-        impl core::fmt::Debug for $name {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                write!(f, "{} {:?}", stringify!($name), &self.value[..])
-            }
         }
 
         #[test]
@@ -322,7 +339,7 @@ macro_rules! construct_hmac_key {
         /// that the type implements.
         pub struct $name { value: [u8; $size] }
 
-        impl_debug_trait!($name);
+        impl_omitted_debug_trait!($name);
         impl_drop_stack_trait!($name);
         impl_partialeq_trait!($name);
 
@@ -383,7 +400,7 @@ macro_rules! construct_blake2b_key {
             original_size: usize,
         }
 
-        impl_debug_trait!($name);
+        impl_omitted_debug_trait!($name);
         impl_drop_stack_trait!($name);
         impl_partialeq_trait!($name);
 
@@ -527,7 +544,7 @@ macro_rules! construct_secret_key_variable_size {
         /// that the type implements.
         pub struct $name { value: Vec<u8> }
 
-        impl_debug_trait!($name);
+        impl_omitted_debug_trait!($name);
         impl_drop_heap_trait!($name);
         impl_partialeq_trait!($name);
         impl_default_trait!($name, $size);
@@ -595,6 +612,7 @@ macro_rules! construct_salt_variable_size {
         ///
         pub struct $name { value: Vec<u8> }
 
+        impl_normal_debug_trait!($name);
         impl_default_trait!($name, $size);
 
         impl $name {
@@ -624,12 +642,6 @@ macro_rules! construct_salt_variable_size {
                 util::secure_rand_bytes(&mut value)?;
 
                 Ok($name { value: value })
-            }
-        }
-
-        impl core::fmt::Debug for $name {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                write!(f, "{} {:?}", stringify!($name), &self.value[..])
             }
         }
 
@@ -668,7 +680,7 @@ macro_rules! construct_password_variable_size {
         /// that the type implements.
         pub struct $name { value: Vec<u8> }
 
-        impl_debug_trait!($name);
+        impl_omitted_debug_trait!($name);
         impl_drop_heap_trait!($name);
         impl_partialeq_trait!($name);
 
