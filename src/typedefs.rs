@@ -272,6 +272,8 @@ macro_rules! construct_secret_key {
         }
 
         #[test]
+        #[cfg(feature = "safe_api")]
+        // format! is only available with std
         fn test_omitted_debug_secret_key() {
             let secret = format!("{:?}", [0u8; $size].as_ref());
             let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
@@ -413,6 +415,8 @@ macro_rules! construct_tag {
         }
 
         #[test]
+        #[cfg(feature = "safe_api")]
+        // format! is only available with std
         fn test_omitted_debug_tag() {
             let secret = format!("{:?}", [0u8; $size].as_ref());
             let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
@@ -496,6 +500,8 @@ macro_rules! construct_hmac_key {
         }
 
         #[test]
+        #[cfg(feature = "safe_api")]
+        // format! is only available with std
         fn test_omitted_debug_hmac_key() {
             let secret = format!("{:?}", [0u8; $size].as_ref());
             let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
@@ -623,6 +629,8 @@ macro_rules! construct_blake2b_key {
         }
 
         #[test]
+        #[cfg(feature = "safe_api")]
+        // format! is only available with std
         fn test_omitted_debug_blake2b_key() {
             let secret = format!("{:?}", [0u8; 64].as_ref());
             let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; 64]).unwrap());
@@ -772,6 +780,8 @@ macro_rules! construct_secret_key_variable_size {
         }
 
         #[test]
+        #[cfg(feature = "safe_api")]
+        // format! is only available with std
         fn test_omitted_debug_secret_key() {
             let secret = format!("{:?}", [0u8; $size].as_ref());
             let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
@@ -892,6 +902,8 @@ macro_rules! construct_password_variable_size {
         }
 
         #[test]
+        #[cfg(feature = "safe_api")]
+        // format! is only available with std
         fn test_omitted_debug_password() {
             let secret = format!("{:?}", [0u8; 64].as_ref());
             let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; 64]).unwrap());
