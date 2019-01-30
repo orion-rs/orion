@@ -222,8 +222,7 @@ mod public {
 
 			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-			assert!(
-				verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_ok());
+			assert!(verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_ok());
 		}
 
 		#[test]
@@ -236,8 +235,7 @@ mod public {
 
 			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-			assert!(
-				verify(&okm_out, b"", ikm, Some(info), &mut okm_out_verify).is_err());
+			assert!(verify(&okm_out, b"", ikm, Some(info), &mut okm_out_verify).is_err());
 		}
 
 		#[test]
@@ -250,8 +248,7 @@ mod public {
 
 			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-			assert!(
-				verify(&okm_out, salt, b"", Some(info), &mut okm_out_verify).is_err());
+			assert!(verify(&okm_out, salt, b"", Some(info), &mut okm_out_verify).is_err());
 		}
 
 		#[test]
@@ -264,8 +261,7 @@ mod public {
 
 			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-			assert!(
-				verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_err());
+			assert!(verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_err());
 		}
 	}
 }
