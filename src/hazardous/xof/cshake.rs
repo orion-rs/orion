@@ -103,7 +103,7 @@ impl CShake {
 		if (name.is_empty()) && (custom.is_empty()) {
 			return Err(UnknownCryptoError);
 		}
-		
+
 		if name.len() > 65536 || custom.len() > 65536 {
 			return Err(UnknownCryptoError);
 		}
