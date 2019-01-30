@@ -42,13 +42,24 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
 /// Macro that implements the `PartialEq` trait on a object called `$name` that
 /// also implements `unprotected_as_bytes()`. This `PartialEq` will perform in
 /// constant time.
-macro_rules! impl_partialeq_trait (($name:ident) => (
+macro_rules! impl_ct_partialeq_trait (($name:ident) => (
     impl PartialEq for $name {
         fn eq(&self, other: &$name) -> bool {
             use subtle::ConstantTimeEq;
              self.unprotected_as_bytes()
                 .ct_eq(&other.unprotected_as_bytes())
                 .unwrap_u8() == 1
+        }
+    }
+));
+
+/// Macro that implements the `PartialEq` trait on a object called `$name` that
+/// also implements `as_bytes()`. This `PartialEq` will NOT perform in
+/// constant time.
+macro_rules! impl_normal_partialeq_trait (($name:ident) => (
+    impl PartialEq for $name {
+        fn eq(&self, other: &$name) -> bool {
+            (&self.as_bytes() == &other.as_bytes())
         }
     }
 ));
@@ -202,7 +213,7 @@ macro_rules! construct_secret_key {
 
         impl_omitted_debug_trait!($name);
         impl_drop_stack_trait!($name);
-        impl_partialeq_trait!($name);
+        impl_ct_partialeq_trait!($name);
 
         impl $name {
             func_from_slice!($name, $size);
@@ -254,6 +265,7 @@ macro_rules! construct_nonce_no_generator {
         pub struct $name { value: [u8; $size] }
 
         impl_normal_debug_trait!($name);
+        impl_normal_partialeq_trait!($name);
 
         impl $name {
             func_from_slice!($name, $size);
@@ -285,6 +297,7 @@ macro_rules! construct_nonce_with_generator {
         pub struct $name { value: [u8; $size] }
 
         impl_normal_debug_trait!($name);
+        impl_normal_partialeq_trait!($name);
 
         impl $name {
             func_from_slice!($name, $size);
@@ -305,6 +318,17 @@ macro_rules! construct_nonce_with_generator {
             let test = $name::from_slice(&[0u8; $size]).unwrap();
             assert!(test.as_bytes().len() == $size);
         }
+
+        #[test]
+        #[cfg(feature = "safe_api")]
+        fn test_generate() {
+            let test_zero = $name::from_slice(&[0u8; $size]).unwrap();
+            // A random one should never be all 0's.
+            let test_rand = $name::generate().unwrap();
+            assert!(test_zero != test_rand);
+            // A random generated one should always be $size in length.
+            assert!(test_rand.get_length() == $size);
+        }
     );
 }
 
@@ -322,7 +346,7 @@ macro_rules! construct_tag {
         pub struct $name { value: [u8; $size] }
 
         impl_normal_debug_trait!($name);
-        impl_partialeq_trait!($name);
+        impl_ct_partialeq_trait!($name);
 
         impl $name {
             func_from_slice!($name, $size);
@@ -360,7 +384,7 @@ macro_rules! construct_hmac_key {
 
         impl_omitted_debug_trait!($name);
         impl_drop_stack_trait!($name);
-        impl_partialeq_trait!($name);
+        impl_ct_partialeq_trait!($name);
 
         impl $name {
             #[must_use]
@@ -421,7 +445,7 @@ macro_rules! construct_blake2b_key {
 
         impl_omitted_debug_trait!($name);
         impl_drop_stack_trait!($name);
-        impl_partialeq_trait!($name);
+        impl_ct_partialeq_trait!($name);
 
         impl $name {
             #[must_use]
@@ -565,7 +589,7 @@ macro_rules! construct_secret_key_variable_size {
 
         impl_omitted_debug_trait!($name);
         impl_drop_heap_trait!($name);
-        impl_partialeq_trait!($name);
+        impl_ct_partialeq_trait!($name);
         impl_default_trait!($name, $size);
 
         impl $name {
@@ -620,6 +644,7 @@ macro_rules! construct_salt_variable_size {
 
         impl_normal_debug_trait!($name);
         impl_default_trait!($name, $size);
+        impl_normal_partialeq_trait!($name);
 
         impl $name {
             #[must_use]
@@ -675,7 +700,7 @@ macro_rules! construct_password_variable_size {
 
         impl_omitted_debug_trait!($name);
         impl_drop_heap_trait!($name);
-        impl_partialeq_trait!($name);
+        impl_ct_partialeq_trait!($name);
 
         impl $name {
             #[must_use]
