@@ -250,10 +250,13 @@ impl Sha512 {
 		// left-shift to get bit-sized representation of length
 		// using .unwrap() because it should not panic in practice
 		let len = length.checked_shl(3).unwrap();
-		self.message_len[1] += len;
-
-		if self.message_len[1] < len {
-			self.message_len[0] += 1;
+		let (res, was_overflow) = self.message_len[1].overflowing_add(len);
+		self.message_len[1] = res;
+		
+		if was_overflow {
+			// If this panics size limit is reached.
+			self.message_len[0] = self.message_len[0].checked_add(1).unwrap();
+			
 		}
 	}
 
@@ -655,11 +658,13 @@ mod private {
 				working_state: H0,
 				buffer: [0u8; SHA2_BLOCKSIZE],
 				leftover: 0,
-				message_len: [u64::max_value(), 1u64],
+				message_len: [u64::max_value(), u64::max_value() - 7],
 				is_finalized: false,
 			};
+			// u64::max_value() - 7, to leave so that the length represented
+			// in bites should overflow by exactly one.
 
-			context.increment_mlen(u64::max_value());
+			context.increment_mlen(1);
 		}
 	}
 }
