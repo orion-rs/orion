@@ -57,6 +57,7 @@ extern crate subtle;
 extern crate tiny_keccak;
 
 #[cfg(test)]
+#[cfg(feature = "safe_api")]
 #[macro_use]
 extern crate quickcheck;
 

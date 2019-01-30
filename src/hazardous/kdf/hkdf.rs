@@ -174,6 +174,8 @@ mod public {
 		}
 	}
 
+	#[cfg(feature = "safe_api")]
+	// Mark safe_api because currently it only contains proptests.
 	mod test_derive_key {
 		use super::*;
 
