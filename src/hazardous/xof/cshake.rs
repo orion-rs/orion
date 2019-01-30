@@ -485,8 +485,8 @@ mod public {
 	}
 
 	#[cfg(feature = "safe_api")]
-	// Mark safe_api because currently it only contains proptests and tests that need
-	// vec![].
+	// Mark safe_api because currently it only contains proptests and tests that
+	// need vec![].
 	mod test_streaming_interface {
 		use super::*;
 
