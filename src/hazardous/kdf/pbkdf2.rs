@@ -67,7 +67,6 @@ use crate::{
 	},
 	util,
 };
-use byteorder::{BigEndian, ByteOrder};
 
 construct_hmac_key! {
 	/// A type to represent the `Password` that PBKDF2 hashes.
@@ -94,7 +93,7 @@ fn function_f(
 ) -> Result<(), UnknownCryptoError> {
 	let mut u_step: HLenArray = [0u8; 64];
 	// First 4 bytes used for index BE conversion
-	BigEndian::write_u32(&mut u_step[..4], index);
+	u_step[..4].copy_from_slice(&index.to_be_bytes());
 	hmac.update(salt)?;
 	hmac.update(&u_step[..4])?;
 
