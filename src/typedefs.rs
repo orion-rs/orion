@@ -409,7 +409,7 @@ macro_rules! construct_tag {
             assert!(test.unprotected_as_bytes().len() == test.get_length());
             assert!($size == test.get_length());
         }
-        
+
         #[test]
         fn test_omitted_debug_tag() {
             let secret = format!("{:?}", [0u8; $size].as_ref());

@@ -91,31 +91,88 @@ pub fn authenticate_verify(
 	Ok(true)
 }
 
-#[test]
-fn test_authenticate_verify_bad_key() {
-	let sec_key_correct = SecretKey::generate(64).unwrap();
-	let sec_key_false = SecretKey::default();
-	let msg = "what do ya want for nothing?".as_bytes().to_vec();
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+	use super::*;
 
-	let hmac_bob = authenticate(&sec_key_correct, &msg).unwrap();
+	mod test_auth_auth_verify {
+		use super::*;
+		#[test]
+		fn test_authenticate_verify_bad_key() {
+			let sec_key_correct = SecretKey::generate(64).unwrap();
+			let sec_key_false = SecretKey::default();
+			let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-	assert_eq!(
-		authenticate_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
-		true
-	);
-	assert!(authenticate_verify(&hmac_bob, &sec_key_false, &msg).is_err());
-}
+			let hmac_bob = authenticate(&sec_key_correct, &msg).unwrap();
 
-#[test]
-fn test_authenticate_verify_bad_msg() {
-	let sec_key = SecretKey::generate(64).unwrap();
-	let msg = "what do ya want for nothing?".as_bytes().to_vec();
+			assert_eq!(
+				authenticate_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
+				true
+			);
+			assert!(authenticate_verify(&hmac_bob, &sec_key_false, &msg).is_err());
+		}
 
-	let hmac_bob = authenticate(&sec_key, &msg).unwrap();
+		#[test]
+		fn test_authenticate_verify_bad_msg() {
+			let sec_key = SecretKey::generate(64).unwrap();
+			let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-	assert_eq!(
-		authenticate_verify(&hmac_bob, &sec_key, &msg).unwrap(),
-		true
-	);
-	assert!(authenticate_verify(&hmac_bob, &sec_key, b"bad msg").is_err());
+			let hmac_bob = authenticate(&sec_key, &msg).unwrap();
+
+			assert_eq!(
+				authenticate_verify(&hmac_bob, &sec_key, &msg).unwrap(),
+				true
+			);
+			assert!(authenticate_verify(&hmac_bob, &sec_key, b"bad msg").is_err());
+		}
+	}
+
+	// Proptests. Only exectued when NOT testing no_std.
+	#[cfg(not(feature = "no_std"))]
+	mod proptest {
+		use super::*;
+
+		quickcheck! {
+			/// Authentication and verifing that authentication with the same parameters
+			/// should always be true.
+			fn prop_authenticate_verify(input: Vec<u8>) -> bool {
+				let sk = SecretKey::default();
+
+				let tag = authenticate(&sk, &input[..]).unwrap();
+				authenticate_verify(&tag, &sk, &input[..]).unwrap()
+			}
+		}
+
+		quickcheck! {
+			/// Authentication and verifing that authentication with a different key should
+			/// never be true.
+			fn prop_verify_fail_diff_key(input: Vec<u8>) -> bool {
+				let sk = SecretKey::default();
+				let sk2 = SecretKey::default();
+
+				let tag = authenticate(&sk, &input[..]).unwrap();
+				if authenticate_verify(&tag, &sk2, &input[..]).is_err() {
+					true
+				} else {
+					false
+				}
+			}
+		}
+
+		quickcheck! {
+			/// Authentication and verifing that authentication with different input should
+			/// never be true.
+			fn prop_verify_fail_diff_input(input: Vec<u8>) -> bool {
+				let sk = SecretKey::default();
+
+				let tag = authenticate(&sk, &input[..]).unwrap();
+				if authenticate_verify(&tag, &sk, b"Completely wrong input").is_err() {
+					true
+				} else {
+					false
+				}
+			}
+		}
+	}
 }
