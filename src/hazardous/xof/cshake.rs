@@ -99,7 +99,15 @@ impl core::fmt::Debug for CShake {
 
 impl CShake {
 	/// Initial setup with encoding of `custom` and `name`.
-	fn setup(&mut self, custom: &[u8], name: &[u8]) {
+	fn setup(&mut self, custom: &[u8], name: &[u8]) -> Result<(), UnknownCryptoError> {
+		if (name.is_empty()) && (custom.is_empty()) {
+			return Err(UnknownCryptoError);
+		}
+		
+		if name.len() > 65536 || custom.len() > 65536 {
+			return Err(UnknownCryptoError);
+		}
+
 		// Only append the left encoded rate, not the rate itself as with `name` and
 		// `custom`
 		let (encoded, offset) = left_encode(136_u64);
@@ -117,6 +125,8 @@ impl CShake {
 		// Pad with zeroes before calling pad() in finalize()
 		self.hasher.fill_block();
 		self.setup_hasher = self.hasher.clone();
+
+		Ok(())
 	}
 
 	/// Reset to `init()` state.
@@ -167,12 +177,6 @@ pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoE
 		Some(ref n_val) => *n_val,
 		None => &[0u8; 0],
 	};
-	if (name_val.is_empty()) && (custom.is_empty()) {
-		return Err(UnknownCryptoError);
-	}
-	if name_val.len() > 65536 || custom.len() > 65536 {
-		return Err(UnknownCryptoError);
-	}
 
 	// 136 is the rate of Keccak512
 	let mut hash = CShake {
@@ -181,7 +185,7 @@ pub fn init(custom: &[u8], name: Option<&[u8]>) -> Result<CShake, UnknownCryptoE
 		is_finalized: false,
 	};
 
-	hash.setup(custom, name_val);
+	hash.setup(custom, name_val)?;
 
 	Ok(hash)
 }
@@ -210,315 +214,416 @@ fn left_encode(x: u64) -> ([u8; 9], usize) {
 	(input, offset)
 }
 
-#[test]
-fn test_left_encode() {
-	let (test_1, offset_1) = left_encode(32);
-	let (test_2, offset_2) = left_encode(255);
-	let (test_3, offset_3) = left_encode(0);
-	let (test_4, offset_4) = left_encode(64);
-	let (test_5, offset_5) = left_encode(u64::max_value());
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+	use super::*;
 
-	assert_eq!(&test_1[(offset_1 - 1)..], &[1, 32]);
-	assert_eq!(&test_2[(offset_2 - 1)..], &[1, 255]);
-	assert_eq!(&test_3[(offset_3 - 1)..], &[1, 0]);
-	assert_eq!(&test_4[(offset_4 - 1)..], &[1, 64]);
-	assert_eq!(
-		&test_5[(offset_5 - 1)..],
-		&[8, 255, 255, 255, 255, 255, 255, 255, 255]
-	);
-}
+	mod test_endianness_issue {
+		use super::*;
+		// See: https://github.com/brycx/orion/issues/15
+		#[test]
+		#[cfg(target_endian = "little")]
+		fn non_8_div_len() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"Email Signature";
+			let mut out = [0u8; 17];
 
-#[test]
-fn err_on_empty_name_custom() {
-	let custom = b"";
-	let name = b"";
+			let mut cshake = init(custom, None).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
 
-	assert!(init(custom, Some(name)).is_err());
-}
-
-#[test]
-fn empty_custom_ok() {
-	let custom = b"";
-	let name = b"Email signature";
-
-	assert!(init(custom, Some(name)).is_ok());
-}
-
-#[test]
-fn empty_input_ok() {
-	let custom = b"Custom String";
-	let name = b"Email signature";
-
-	assert!(init(custom, Some(name)).is_ok());
-}
-
-#[test]
-fn err_on_zero_length() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"";
-	let name = b"Email signature";
-	let mut out = [0u8; 0];
-
-	let mut hash = init(custom, Some(name)).unwrap();
-	hash.update(input).unwrap();
-	assert!(hash.finalize(&mut out).is_err());
-}
-
-#[test]
-fn err_on_above_max_length() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"";
-	let name = b"Email signature";
-	let mut out = [0u8; 65537];
-
-	let mut hash = init(custom, Some(name)).unwrap();
-	hash.update(input).unwrap();
-	assert!(hash.finalize(&mut out).is_err());
-}
-
-#[test]
-fn err_on_name_max_length() {
-	let custom = b"";
-	let name = [0u8; 65537];
-
-	assert!(init(custom, Some(&name)).is_err());
-}
-
-#[test]
-fn err_on_n_c_max_length() {
-	let custom = [0u8; 65537];
-	let name = [0u8; 65537];
-
-	assert!(init(&custom, Some(&name)).is_err());
-}
-
-#[test]
-fn err_on_custom_max_length() {
-	let custom = [0u8; 65537];
-	let name = [0u8; 0];
-
-	assert!(init(&custom, Some(&name)).is_err());
-	assert!(init(&custom, None).is_err());
-}
-
-// See: https://github.com/brycx/orion/issues/15
-#[test]
-#[cfg(target_endian = "little")]
-fn non_8_div_len() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"Email Signature";
-	let mut out = [0u8; 17];
-
-	let mut cshake = init(custom, None).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-
-	let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
+			let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
                         \xE4\xC8\x7B\xFF\x32\xC9\x69\x9D\x5B\x68\x96\xEE\xE0\xED\xD1\x64\x02\
                         \x0E\x2B\xE0\x56\x08\x58\xD9\xC0\x0C\x03\x7E\x34\xA9\x69\x37\xC5\x61\
                         \xA7\x4C\x41\x2B\xB4\xC7\x46\x46\x95\x27\x28\x1C\x8C";
 
-	assert_eq!(expected[..17].len(), out.len());
-	assert_eq!(out, &expected[..17]);
-}
+			assert_eq!(expected[..17].len(), out.len());
+			assert_eq!(out, &expected[..17]);
+		}
 
-// See: https://github.com/brycx/orion/issues/15
-#[test]
-#[cfg(target_endian = "little")]
-fn result_ok() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"Email Signature";
-	let mut out = [0u8; 64];
+		// See: https://github.com/brycx/orion/issues/15
+		#[test]
+		#[cfg(target_endian = "little")]
+		fn result_ok() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"Email Signature";
+			let mut out = [0u8; 64];
 
-	let mut cshake = init(custom, None).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
+			let mut cshake = init(custom, None).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
 
-	let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
+			let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
                         \xE4\xC8\x7B\xFF\x32\xC9\x69\x9D\x5B\x68\x96\xEE\xE0\xED\xD1\x64\x02\
                         \x0E\x2B\xE0\x56\x08\x58\xD9\xC0\x0C\x03\x7E\x34\xA9\x69\x37\xC5\x61\
                         \xA7\x4C\x41\x2B\xB4\xC7\x46\x46\x95\x27\x28\x1C\x8C";
 
-	assert_eq!(out.as_ref(), expected.as_ref());
-}
+			assert_eq!(out.as_ref(), expected.as_ref());
+		}
 
-// See: https://github.com/brycx/orion/issues/15
-// Detecting test-case that if tiny-keccak is fixed then this should panic
-#[test]
-#[cfg(target_endian = "big")]
-fn result_ok_assume_wrong_on_big_endian() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"Email Signature";
-	let mut out = [0u8; 64];
+		// See: https://github.com/brycx/orion/issues/15
+		// Detecting test-case that if tiny-keccak is fixed then this should panic
+		#[test]
+		#[cfg(target_endian = "big")]
+		fn result_ok_assume_wrong_on_big_endian() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"Email Signature";
+			let mut out = [0u8; 64];
 
-	let mut cshake = init(custom, None).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
+			let mut cshake = init(custom, None).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
 
-	let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
+			let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
 						\xE4\xC8\x7B\xFF\x32\xC9\x69\x9D\x5B\x68\x96\xEE\xE0\xED\xD1\x64\x02\
 						\x0E\x2B\xE0\x56\x08\x58\xD9\xC0\x0C\x03\x7E\x34\xA9\x69\x37\xC5\x61\
 						\xA7\x4C\x41\x2B\xB4\xC7\x46\x46\x95\x27\x28\x1C\x8C";
 
-	assert_ne!(out.as_ref(), expected.as_ref());
-}
+			assert_ne!(out.as_ref(), expected.as_ref());
+		}
 
-// See: https://github.com/brycx/orion/issues/15
-#[test]
-#[cfg(target_endian = "little")]
-fn verify_err() {
-	// `name` and `custom` values have been switched here compared to the previous
-	// one
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"";
-	let name = b"Email Signature";
-	let mut out = [0u8; 64];
+		// See: https://github.com/brycx/orion/issues/15
+		#[test]
+		#[cfg(target_endian = "little")]
+		fn verify_err() {
+			// `name` and `custom` values have been switched here compared to the previous
+			// one
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"";
+			let name = b"Email Signature";
+			let mut out = [0u8; 64];
 
-	let mut cshake = init(custom, Some(name)).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
+			let mut cshake = init(custom, Some(name)).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
 
-	let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
+			let expected = b"\xD0\x08\x82\x8E\x2B\x80\xAC\x9D\x22\x18\xFF\xEE\x1D\x07\x0C\x48\xB8\
                         \xE4\xC8\x7B\xFF\x32\xC9\x69\x9D\x5B\x68\x96\xEE\xE0\xED\xD1\x64\x02\
                         \x0E\x2B\xE0\x56\x08\x58\xD9\xC0\x0C\x03\x7E\x34\xA9\x69\x37\xC5\x61\
                         \xA7\x4C\x41\x2B\xB4\xC7\x46\x46\x95\x27\x28\x1C\x8C";
 
-	assert_ne!(out.as_ref(), expected.as_ref());
+			assert_ne!(out.as_ref(), expected.as_ref());
+		}
+	}
+
+	mod test_init {
+		use super::*;
+
+		#[test]
+		fn err_on_empty_name_custom() {
+			let custom = b"";
+			let name = b"";
+
+			assert!(init(custom, Some(name)).is_err());
+		}
+
+		#[test]
+		fn empty_custom_ok() {
+			let custom = b"";
+			let name = b"Email signature";
+
+			assert!(init(custom, Some(name)).is_ok());
+		}
+
+		#[test]
+		fn empty_input_ok() {
+			let custom = b"Custom String";
+			let name = b"Email signature";
+
+			assert!(init(custom, Some(name)).is_ok());
+		}
+
+		#[test]
+		fn err_on_name_max_length() {
+			let custom = b"";
+			let name = [0u8; 65537];
+
+			assert!(init(custom, Some(&name)).is_err());
+		}
+
+		#[test]
+		fn err_on_n_c_max_length() {
+			let custom = [0u8; 65537];
+			let name = [0u8; 65537];
+
+			assert!(init(&custom, Some(&name)).is_err());
+		}
+
+		#[test]
+		fn err_on_custom_max_length() {
+			let custom = [0u8; 65537];
+			let name = [0u8; 0];
+
+			assert!(init(&custom, Some(&name)).is_err());
+			assert!(init(&custom, None).is_err());
+		}
+	}
+
+	mod test_reset {
+		use super::*;
+
+		#[test]
+		fn double_reset_ok() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"";
+			let name = b"Email Signature";
+			let mut out = [0u8; 64];
+
+			let mut cshake = init(custom, Some(name)).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
+			cshake.reset();
+			cshake.reset();
+		}
+	}
+
+	mod test_update {
+		use super::*;
+
+		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/28
+		fn update_after_finalize_err() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"";
+			let name = b"Email Signature";
+			let mut out = [0u8; 64];
+
+			let mut cshake = init(custom, Some(name)).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
+			assert!(cshake.update(input).is_err());
+		}
+
+		#[test]
+		fn update_after_finalize_with_reset_ok() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"";
+			let name = b"Email Signature";
+			let mut out = [0u8; 64];
+			let mut out_check = [0u8; 64];
+
+			let mut cshake = init(custom, Some(name)).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
+			cshake.reset();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out_check).unwrap();
+
+			assert_eq!(out.as_ref(), out_check.as_ref());
+		}
+	}
+
+	mod test_finalize {
+		use super::*;
+
+		#[test]
+		fn err_on_zero_length() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"";
+			let name = b"Email signature";
+			let mut out = [0u8; 0];
+
+			let mut hash = init(custom, Some(name)).unwrap();
+			hash.update(input).unwrap();
+			assert!(hash.finalize(&mut out).is_err());
+		}
+
+		#[test]
+		fn err_on_above_max_length() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"";
+			let name = b"Email signature";
+			let mut out = [0u8; 65537];
+
+			let mut hash = init(custom, Some(name)).unwrap();
+			hash.update(input).unwrap();
+			assert!(hash.finalize(&mut out).is_err());
+		}
+
+		#[test]
+		fn double_finalize_err() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"";
+			let name = b"Email Signature";
+			let mut out = [0u8; 64];
+
+			let mut cshake = init(custom, Some(name)).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
+			assert!(cshake.finalize(&mut out).is_err());
+		}
+
+		#[test]
+		fn double_finalize_with_reset_ok() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"";
+			let name = b"Email Signature";
+			let mut out = [0u8; 64];
+
+			let mut cshake = init(custom, Some(name)).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
+			cshake.reset();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
+		}
+
+		#[test]
+		fn double_finalize_with_reset_no_update_ok() {
+			let input = b"\x00\x01\x02\x03";
+			let custom = b"";
+			let name = b"Email Signature";
+			let mut out = [0u8; 64];
+
+			let mut cshake = init(custom, Some(name)).unwrap();
+			cshake.update(input).unwrap();
+			cshake.finalize(&mut out).unwrap();
+			cshake.reset();
+			cshake.finalize(&mut out).unwrap();
+		}
+
+	}
+
+	mod test_streaming_interface {
+		use super::*;
+
+		#[cfg(feature = "safe_api")]
+		/// Related bug: https://github.com/brycx/orion/issues/46
+		/// Testing different usage combinations of init(), update(),
+		/// finalize() and reset() produce the same output.
+		/// Cannot be on no_std due to use of Vec.
+		fn produces_same_out(input: &[u8], custom: &[u8], name: &[u8], outsize: usize) {
+			let custom_checked = if custom.is_empty() && name.is_empty() {
+				b"Hello world"
+			} else {
+				custom
+			};
+
+			let outsize_checked = if outsize == 0 || outsize > 65536 {
+				64
+			} else {
+				outsize
+			};
+
+			// init(), update(), finalize()
+			let mut state_1 = init(custom_checked, Some(name)).unwrap();
+			state_1.update(input).unwrap();
+			let mut res_1 = vec![0u8; outsize_checked];
+			state_1.finalize(&mut res_1).unwrap();
+
+			// init(), reset(), update(), finalize()
+			let mut state_2 = init(custom_checked, Some(name)).unwrap();
+			state_2.reset();
+			state_2.update(input).unwrap();
+			let mut res_2 = vec![0u8; outsize_checked];
+			state_2.finalize(&mut res_2).unwrap();
+
+			// init(), update(), reset(), update(), finalize()
+			let mut state_3 = init(custom_checked, Some(name)).unwrap();
+			state_3.update(input).unwrap();
+			state_3.reset();
+			state_3.update(input).unwrap();
+			let mut res_3 = vec![0u8; outsize_checked];
+			state_3.finalize(&mut res_3).unwrap();
+
+			// init(), update(), finalize(), reset(), update(), finalize()
+			let mut state_4 = init(custom_checked, Some(name)).unwrap();
+			state_4.update(input).unwrap();
+			let mut res_4 = vec![0u8; outsize_checked];
+			state_4.finalize(&mut res_4).unwrap();
+			state_4.reset();
+			state_4.update(input).unwrap();
+			state_4.finalize(&mut res_4).unwrap();
+
+			assert_eq!(res_1, res_2);
+			assert_eq!(res_2, res_3);
+			assert_eq!(res_3, res_4);
+		}
+
+		#[test]
+		#[cfg(feature = "safe_api")]
+		// Test for issues when incrementally processing data.
+		fn test_streaming_consistency() {
+			for len in 0..128 * 4 {
+				let input = vec![0u8; len];
+				let custom = b"Email Signature";
+				let mut out = vec![0u8; len + 1];
+
+				let mut state = init(custom, None).unwrap();
+				let mut other_data: Vec<u8> = Vec::new();
+
+				other_data.extend_from_slice(&input);
+				state.update(&input).unwrap();
+
+				if input.len() > 128 {
+					other_data.extend_from_slice(b"");
+					state.update(b"").unwrap();
+				}
+				if input.len() > 128 * 2 {
+					other_data.extend_from_slice(b"Extra");
+					state.update(b"Extra").unwrap();
+				}
+				if input.len() > 128 * 3 {
+					other_data.extend_from_slice(&[0u8; 256]);
+					state.update(&[0u8; 256]).unwrap();
+				}
+
+				state.finalize(&mut out).unwrap();
+
+				let mut non_incremental = init(custom, None).unwrap();
+				non_incremental.update(&other_data[..]).unwrap();
+				let mut out_non_incremental = vec![0u8; len + 1];
+				non_incremental.finalize(&mut out_non_incremental).unwrap();
+
+				assert_eq!(out, out_non_incremental);
+			}
+		}
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(not(feature = "no_std"))]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				/// Related bug: https://github.com/brycx/orion/issues/46
+				/// Test different streaming state usage patterns.
+				fn prop_same_result_different_usage(input: Vec<u8>, custom: Vec<u8>, name: Vec<u8>, outsize: usize) -> bool {
+					// Will panic on incorrect results.
+					produces_same_out(&input[..], &custom[..], &name[..], outsize);
+
+					true
+				}
+			}
+		}
+	}
 }
 
-#[test]
-fn double_finalize_err() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"";
-	let name = b"Email Signature";
-	let mut out = [0u8; 64];
+// Testing private functions in the module.
+#[cfg(test)]
+mod private {
+	use super::*;
 
-	let mut cshake = init(custom, Some(name)).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-	assert!(cshake.finalize(&mut out).is_err());
-}
+	// One function tested per submodule.
 
-#[test]
-fn double_finalize_with_reset_ok() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"";
-	let name = b"Email Signature";
-	let mut out = [0u8; 64];
+	mod test_left_encode {
+		use super::*;
 
-	let mut cshake = init(custom, Some(name)).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-	cshake.reset();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-}
+		#[test]
+		fn test_left_encode() {
+			let (test_1, offset_1) = left_encode(32);
+			let (test_2, offset_2) = left_encode(255);
+			let (test_3, offset_3) = left_encode(0);
+			let (test_4, offset_4) = left_encode(64);
+			let (test_5, offset_5) = left_encode(u64::max_value());
 
-#[test]
-fn double_finalize_with_reset_no_update_ok() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"";
-	let name = b"Email Signature";
-	let mut out = [0u8; 64];
-
-	let mut cshake = init(custom, Some(name)).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-	cshake.reset();
-	cshake.finalize(&mut out).unwrap();
-}
-
-#[test]
-/// Related bug: https://github.com/brycx/orion/issues/28
-fn update_after_finalize_err() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"";
-	let name = b"Email Signature";
-	let mut out = [0u8; 64];
-
-	let mut cshake = init(custom, Some(name)).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-	assert!(cshake.update(input).is_err());
-}
-
-#[test]
-fn update_after_finalize_with_reset_ok() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"";
-	let name = b"Email Signature";
-	let mut out = [0u8; 64];
-	let mut out_check = [0u8; 64];
-
-	let mut cshake = init(custom, Some(name)).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-	cshake.reset();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out_check).unwrap();
-
-	assert_eq!(out.as_ref(), out_check.as_ref());
-}
-
-#[test]
-fn double_reset_ok() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"";
-	let name = b"Email Signature";
-	let mut out = [0u8; 64];
-
-	let mut cshake = init(custom, Some(name)).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-	cshake.reset();
-	cshake.reset();
-}
-
-#[test]
-/// Related bug: https://github.com/brycx/orion/issues/46
-fn reset_after_update_correct_resets() {
-	let input = b"\x00\x01\x02\x03";
-	let custom = b"Hello world";
-	let name = b"Email Signature";
-	let mut out = [0u8; 64];
-	let mut out2 = [0u8; 64];
-
-	// With optional name paramter and non-empty custom
-	let mut cshake = init(custom, Some(name)).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-
-	let mut cshake2 = init(custom, Some(name)).unwrap();
-	cshake2.update(input).unwrap();
-	cshake2.reset();
-	cshake2.update(input).unwrap();
-	cshake2.finalize(&mut out2).unwrap();
-
-	assert!(out[..] == out2[..]);
-
-	// With optional name paramter and empty custom
-	let mut cshake = init(b"", Some(name)).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-
-	let mut cshake2 = init(b"", Some(name)).unwrap();
-	cshake2.update(input).unwrap();
-	cshake2.reset();
-	cshake2.update(input).unwrap();
-	cshake2.finalize(&mut out2).unwrap();
-
-	assert!(out[..] == out2[..]);
-
-	// Without optional name parameter
-	let mut cshake = init(custom, None).unwrap();
-	cshake.update(input).unwrap();
-	cshake.finalize(&mut out).unwrap();
-
-	let mut cshake2 = init(custom, None).unwrap();
-	cshake2.update(input).unwrap();
-	cshake2.reset();
-	cshake2.update(input).unwrap();
-	cshake2.finalize(&mut out2).unwrap();
-
-	assert!(out[..] == out2[..]);
+			assert_eq!(&test_1[(offset_1 - 1)..], &[1, 32]);
+			assert_eq!(&test_2[(offset_2 - 1)..], &[1, 255]);
+			assert_eq!(&test_3[(offset_3 - 1)..], &[1, 0]);
+			assert_eq!(&test_4[(offset_4 - 1)..], &[1, 64]);
+			assert_eq!(
+				&test_5[(offset_5 - 1)..],
+				&[8, 255, 255, 255, 255, 255, 255, 255, 255]
+			);
+		}
+	}
 }

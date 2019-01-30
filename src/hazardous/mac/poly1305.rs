@@ -765,15 +765,15 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-        
-    // One function tested per submodule.
-    
+
+	// One function tested per submodule.
+
 	mod test_process_block {
 		use super::*;
 
-        #[test]
-        fn test_process_block_len() {
-            let block_0 = [0u8; 0];
+		#[test]
+		fn test_process_block_len() {
+			let block_0 = [0u8; 0];
 			let block_1 = [0u8; 15];
 			let block_2 = [0u8; 17];
 			let block_3 = [0u8; 16];
@@ -785,16 +785,15 @@ mod private {
 			assert!(state.process_block(&block_1).is_err());
 			assert!(state.process_block(&block_2).is_err());
 			assert!(state.process_block(&block_3).is_ok());
-			
-        }
-    }
+		}
+	}
 
 	mod test_process_end_of_stream {
 		use super::*;
 
-        #[test]
-        fn test_process_no_panic() {
-            let block = [0u8; 16];
+		#[test]
+		fn test_process_no_panic() {
+			let block = [0u8; 16];
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 			let mut state = init(&sk);
 			// Should not panic
@@ -808,6 +807,6 @@ mod private {
 			state.process_end_of_stream();
 			state.reset();
 			state.process_end_of_stream();
-        }
-    }
+		}
+	}
 }
