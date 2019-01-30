@@ -60,5 +60,34 @@ pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 	Ok(blake2b::Hasher::Blake2b256.digest(data)?)
 }
 
-#[test]
-fn basic_test() { let _digest = digest(b"Some data").unwrap(); }
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+	use super::*;
+
+	mod test_digest {
+		use super::*;
+		#[test]
+		fn basic_test() { let _digest = digest(b"Some data").unwrap(); }
+
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(feature = "safe_api")]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				/// Hashing twice with same input should always produce same output.
+				fn prop_digest_same_result(input: Vec<u8>) -> bool {
+					(digest(&input[..]).unwrap() ==  digest(&input[..]).unwrap())
+				}
+			}
+
+			quickcheck! {
+				/// Hashing twice with different input should never produce same output.
+				fn prop_digest_diff_result(input: Vec<u8>) -> bool {
+					(digest(&input[..]).unwrap() !=  digest(b"Completely wrong input").unwrap())
+				}
+			}
+		}
+	}
+}

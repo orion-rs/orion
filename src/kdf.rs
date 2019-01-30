@@ -129,32 +129,130 @@ pub fn derive_key_verify(
 	Ok(is_good)
 }
 
-#[test]
-fn derive_key_and_verify() {
-	let password = Password::from_slice(&[0u8; 64]).unwrap();
-	let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+	use super::*;
 
-	let dk = derive_key(&password, &salt, 100, 64).unwrap();
+	mod test_derive_key_and_verify {
+		use super::*;
+		#[test]
+		fn test_derive_key_and_verify() {
+			let password = Password::from_slice(&[0u8; 64]).unwrap();
+			let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
-	assert!(derive_key_verify(&dk, &password, &salt, 100).unwrap());
-}
+			let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
-#[test]
-fn derive_key_and_verify_err() {
-	let password = Password::from_slice(&[0u8; 64]).unwrap();
-	let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+			assert!(derive_key_verify(&dk, &password, &salt, 100).unwrap());
+		}
 
-	let dk = derive_key(&password, &salt, 100, 64).unwrap();
+		#[test]
+		fn test_derive_key_and_verify_err() {
+			let password = Password::from_slice(&[0u8; 64]).unwrap();
+			let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
-	assert!(derive_key_verify(&dk, &password, &salt, 50).is_err());
-}
+			let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
-#[test]
-fn derive_key_bad_length() {
-	let password = Password::from_slice(&[0u8; 64]).unwrap();
-	let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+			assert!(derive_key_verify(&dk, &password, &salt, 50).is_err());
+		}
 
-	assert!(derive_key(&password, &salt, 100, 0).is_err());
-	assert!(derive_key(&password, &salt, 100, 1).is_ok());
-	assert!(derive_key(&password, &salt, 100, usize::max_value()).is_err());
+		#[test]
+		fn test_derive_key_bad_length() {
+			let password = Password::from_slice(&[0u8; 64]).unwrap();
+			let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+
+			assert!(derive_key(&password, &salt, 100, 0).is_err());
+			assert!(derive_key(&password, &salt, 100, 1).is_ok());
+			assert!(derive_key(&password, &salt, 100, usize::max_value()).is_err());
+		}
+	}
+
+	// Proptests. Only exectued when NOT testing no_std.
+	#[cfg(feature = "safe_api")]
+	mod proptest {
+		use super::*;
+
+		quickcheck! {
+			/// Deriving a key and verifying with the same parameters should always be true.
+			fn prop_derive_key_verify(input: Vec<u8>, size: usize) -> bool {
+				let passin = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let size_checked = if size == 0 {
+					32
+				} else {
+					size
+				};
+
+				let pass = Password::from_slice(&passin[..]).unwrap();
+				let salt = Salt::default();
+				let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
+
+				if derive_key_verify(&derived_key, &pass, &salt, 100).is_ok() {
+					true
+				} else {
+					false
+				}
+			}
+		}
+
+		quickcheck! {
+			/// Deriving a key and verifying with a different password should always be false.
+			fn prop_derive_key_verify_false_bad_password(input: Vec<u8>, size: usize) -> bool {
+				let passin = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let size_checked = if size == 0 {
+					32
+				} else {
+					size
+				};
+
+				let pass = Password::from_slice(&passin[..]).unwrap();
+				let salt = Salt::default();
+				let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
+				let bad_pass = Password::generate(32).unwrap();
+
+				if derive_key_verify(&derived_key, &bad_pass, &salt, 100).is_err() {
+					true
+				} else {
+					false
+				}
+			}
+		}
+
+		quickcheck! {
+			/// Deriving a key and verifying with a different salt should always be false.
+			fn prop_derive_key_verify_false_bad_salt(input: Vec<u8>, size: usize) -> bool {
+				let passin = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let size_checked = if size == 0 {
+					32
+				} else {
+					size
+				};
+
+				let pass = Password::from_slice(&passin[..]).unwrap();
+				let salt = Salt::default();
+				let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
+				let bad_salt = Salt::default();
+
+				if derive_key_verify(&derived_key, &pass, &bad_salt, 100).is_err() {
+					true
+				} else {
+					false
+				}
+			}
+		}
+	}
 }

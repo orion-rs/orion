@@ -130,85 +130,140 @@ pub fn open(
 	Ok(dst_out)
 }
 
-#[test]
-fn auth_enc_encryption_decryption() {
-	let key = SecretKey::default();
-	let plaintext = "Secret message".as_bytes().to_vec();
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+	use super::*;
 
-	let dst_ciphertext = seal(&key, &plaintext).unwrap();
-	assert!(dst_ciphertext.len() == plaintext.len() + (24 + 16));
-	let dst_plaintext = open(&key, &dst_ciphertext).unwrap();
-	assert!(dst_plaintext.len() == plaintext.len());
-	assert_eq!(plaintext, dst_plaintext);
-}
+	mod test_seal_open {
+		use super::*;
+		#[test]
+		fn test_auth_enc_encryption_decryption() {
+			let key = SecretKey::default();
+			let plaintext = "Secret message".as_bytes().to_vec();
 
-#[test]
-fn auth_enc_plaintext_empty_err() {
-	let key = SecretKey::default();
-	let plaintext = "".as_bytes().to_vec();
+			let dst_ciphertext = seal(&key, &plaintext).unwrap();
+			assert!(dst_ciphertext.len() == plaintext.len() + (24 + 16));
+			let dst_plaintext = open(&key, &dst_ciphertext).unwrap();
+			assert!(dst_plaintext.len() == plaintext.len());
+			assert_eq!(plaintext, dst_plaintext);
+		}
 
-	assert!(seal(&key, &plaintext).is_err());
-}
+		#[test]
+		fn test_auth_enc_plaintext_empty_err() {
+			let key = SecretKey::default();
+			let plaintext = "".as_bytes().to_vec();
 
-#[test]
-fn auth_enc_ciphertext_less_than_41_err() {
-	let key = SecretKey::default();
-	let ciphertext = [0u8; 40];
+			assert!(seal(&key, &plaintext).is_err());
+		}
 
-	assert!(open(&key, &ciphertext).is_err());
-}
+		#[test]
+		fn test_auth_enc_ciphertext_less_than_41_err() {
+			let key = SecretKey::default();
+			let ciphertext = [0u8; 40];
 
-#[test]
-fn test_modified_nonce_err() {
-	let key = SecretKey::default();
-	let plaintext = "Secret message".as_bytes().to_vec();
+			assert!(open(&key, &ciphertext).is_err());
+		}
 
-	let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
-	// Modify nonce
-	dst_ciphertext[10] ^= 1;
-	assert!(open(&key, &dst_ciphertext).is_err());
-}
+		#[test]
+		fn test_modified_nonce_err() {
+			let key = SecretKey::default();
+			let plaintext = "Secret message".as_bytes().to_vec();
 
-#[test]
-fn test_modified_ciphertext_err() {
-	let key = SecretKey::default();
-	let plaintext = "Secret message".as_bytes().to_vec();
+			let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
+			// Modify nonce
+			dst_ciphertext[10] ^= 1;
+			assert!(open(&key, &dst_ciphertext).is_err());
+		}
 
-	let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
-	// Modify ciphertext
-	dst_ciphertext[25] ^= 1;
-	assert!(open(&key, &dst_ciphertext).is_err());
-}
+		#[test]
+		fn test_modified_ciphertext_err() {
+			let key = SecretKey::default();
+			let plaintext = "Secret message".as_bytes().to_vec();
 
-#[test]
-fn test_modified_tag_err() {
-	let key = SecretKey::default();
-	let plaintext = "Secret message".as_bytes().to_vec();
+			let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
+			// Modify ciphertext
+			dst_ciphertext[25] ^= 1;
+			assert!(open(&key, &dst_ciphertext).is_err());
+		}
 
-	let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
-	let dst_ciphertext_len = dst_ciphertext.len();
-	// Modify tag
-	dst_ciphertext[dst_ciphertext_len - 6] ^= 1;
-	assert!(open(&key, &dst_ciphertext).is_err());
-}
+		#[test]
+		fn test_modified_tag_err() {
+			let key = SecretKey::default();
+			let plaintext = "Secret message".as_bytes().to_vec();
 
-#[test]
-fn test_diff_secret_key_err() {
-	let key = SecretKey::default();
-	let plaintext = "Secret message".as_bytes().to_vec();
+			let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
+			let dst_ciphertext_len = dst_ciphertext.len();
+			// Modify tag
+			dst_ciphertext[dst_ciphertext_len - 6] ^= 1;
+			assert!(open(&key, &dst_ciphertext).is_err());
+		}
 
-	let dst_ciphertext = seal(&key, &plaintext).unwrap();
-	let bad_key = SecretKey::default();
-	assert!(open(&bad_key, &dst_ciphertext).is_err());
-}
+		#[test]
+		fn test_diff_secret_key_err() {
+			let key = SecretKey::default();
+			let plaintext = "Secret message".as_bytes().to_vec();
 
-#[test]
-fn test_secret_length_err() {
-	let key = SecretKey::generate(31).unwrap();
-	let plaintext = "Secret message Secret message Secret message Secret message "
-		.as_bytes()
-		.to_vec();
+			let dst_ciphertext = seal(&key, &plaintext).unwrap();
+			let bad_key = SecretKey::default();
+			assert!(open(&bad_key, &dst_ciphertext).is_err());
+		}
 
-	assert!(seal(&key, &plaintext).is_err());
-	assert!(open(&key, &plaintext).is_err());
+		#[test]
+		fn test_secret_length_err() {
+			let key = SecretKey::generate(31).unwrap();
+			let plaintext = "Secret message Secret message Secret message Secret message "
+				.as_bytes()
+				.to_vec();
+
+			assert!(seal(&key, &plaintext).is_err());
+			assert!(open(&key, &plaintext).is_err());
+		}
+	}
+
+	// Proptests. Only exectued when NOT testing no_std.
+	#[cfg(feature = "safe_api")]
+	mod proptest {
+		use super::*;
+
+		quickcheck! {
+			// Sealing input, and then opening should always yield the same input.
+			fn prop_seal_open_same_input(input: Vec<u8>) -> bool {
+				let pt = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let sk = SecretKey::default();
+
+				let ct = seal(&sk, &pt).unwrap();
+				let pt_decrypted = open(&sk, &ct).unwrap();
+
+				(pt == pt_decrypted)
+			}
+		}
+
+		quickcheck! {
+			// Sealing input, modifying the tag and then opening should
+			// always fail due to authentication.
+			fn prop_fail_on_diff_key(input: Vec<u8>) -> bool {
+				let pt = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let sk = SecretKey::default();
+				let sk2 = SecretKey::default();
+
+				let ct = seal(&sk, &pt).unwrap();
+				if open(&sk2, &ct).is_err() {
+					true
+				} else {
+					false
+				}
+			}
+		}
+	}
 }

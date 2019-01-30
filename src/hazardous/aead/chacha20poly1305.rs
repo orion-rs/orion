@@ -138,16 +138,20 @@ fn padding(input: &[u8]) -> usize {
 #[must_use]
 #[inline]
 /// Process data to be authenticated using a `Poly1305` struct initialized with
-/// a one-time-key.
+/// a one-time-key. Up to `buf_in_len` data in `buf` get's authenticated. The
+/// indexing is needed because authentication happens on different input lenghts
+/// in seal()/open().
 fn process_authentication(
 	poly1305_state: &mut poly1305::Poly1305,
 	ad: &[u8],
 	buf: &[u8],
 	buf_in_len: usize,
 ) -> Result<(), UnknownCryptoError> {
-	if buf_in_len > buf.len() {
-		return Err(UnknownCryptoError);
-	}
+	// If buf_in_len is 0, then NO ciphertext gets authenticated.
+	// Because of this, buf may never be empty either.
+	assert!(!buf.is_empty());
+	assert!(buf_in_len > 0);
+	assert!(buf_in_len <= buf.len());
 
 	let mut padding_max = [0u8; 16];
 
@@ -252,242 +256,608 @@ pub fn open(
 	Ok(())
 }
 
-#[test]
-fn length_padding_tests() {
-	// Integral multiple of 16
-	assert_eq!(padding(&[0u8; 16]), 0);
-	assert_eq!(padding(&[0u8; 15]), 1);
-	assert_eq!(padding(&[0u8; 32]), 0);
-	assert_eq!(padding(&[0u8; 30]), 2);
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+	use super::*;
+	// One function tested per submodule.
+
+	mod test_seal {
+		use super::*;
+
+		#[test]
+		/// Related bug: https://github.com/brycx/orion/issues/52
+		fn test_dst_out_length() {
+			let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
+			let mut dst_out_ct_less = [0u8; 79]; // 64 + Poly1305TagLen - 1
+			let mut dst_out_ct_more = [0u8; 81]; // 64 + Poly1305TagLen + 1
+			let mut dst_out_ct_more_2 = [0u8; 64 + (POLY1305_BLOCKSIZE * 2)];
+
+			assert!(seal(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; 64],
+				None,
+				&mut dst_out_ct,
+			)
+			.is_ok());
+
+			// Related bug: #52
+			assert!(seal(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; 64],
+				None,
+				&mut dst_out_ct_more,
+			)
+			.is_ok());
+
+			// Related bug: #52
+			assert!(seal(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; 64],
+				None,
+				&mut dst_out_ct_more_2,
+			)
+			.is_ok());
+
+			assert!(seal(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; 64],
+				None,
+				&mut dst_out_ct_less,
+			)
+			.is_err());
+		}
+
+		#[test]
+		fn test_plaintext_length() {
+			let mut dst_out_ct_0 = [0u8; 16]; // 0 + Poly1305TagLen
+			let mut dst_out_ct_1 = [0u8; 17]; // 1 + Poly1305TagLen
+			let mut dst_out_ct_128 = [0u8; 144]; // 128 + Poly1305TagLen
+
+			assert!(seal(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; 0],
+				None,
+				&mut dst_out_ct_0,
+			)
+			.is_err());
+
+			assert!(seal(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; 1],
+				None,
+				&mut dst_out_ct_1,
+			)
+			.is_ok());
+
+			assert!(seal(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; 128],
+				None,
+				&mut dst_out_ct_128,
+			)
+			.is_ok());
+		}
+	}
+
+	mod test_open {
+		use super::*;
+
+		#[test]
+		fn test_ciphertext_with_tag_length() {
+			let mut dst_out_pt = [0u8; 64];
+
+			assert!(open(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; 0],
+				None,
+				&mut dst_out_pt,
+			)
+			.is_err());
+
+			assert!(open(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; POLY1305_BLOCKSIZE],
+				None,
+				&mut dst_out_pt,
+			)
+			.is_err());
+
+			assert!(open(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; POLY1305_BLOCKSIZE - 1],
+				None,
+				&mut dst_out_pt,
+			)
+			.is_err());
+
+			let mut dst_out_ct = [0u8; 64 + 16];
+			seal(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; POLY1305_BLOCKSIZE + 1],
+				None,
+				&mut dst_out_ct,
+			)
+			.unwrap();
+
+			assert!(open(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&dst_out_ct[..(POLY1305_BLOCKSIZE + 1) + 16],
+				None,
+				&mut dst_out_pt,
+			)
+			.is_ok());
+		}
+
+		#[test]
+		fn test_dst_out_length() {
+			let mut dst_out_ct = [0u8; 64 + 16];
+			seal(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&[0u8; 64],
+				None,
+				&mut dst_out_ct,
+			)
+			.unwrap();
+
+			let mut dst_out_pt = [0u8; 64];
+			let mut dst_out_pt_0 = [0u8; 0];
+			let mut dst_out_pt_less = [0u8; 63];
+			let mut dst_out_pt_more = [0u8; 65];
+
+			assert!(open(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&dst_out_ct,
+				None,
+				&mut dst_out_pt,
+			)
+			.is_ok());
+
+			assert!(open(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&dst_out_ct,
+				None,
+				&mut dst_out_pt_0,
+			)
+			.is_err());
+
+			assert!(open(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&dst_out_ct,
+				None,
+				&mut dst_out_pt_less,
+			)
+			.is_err());
+
+			assert!(open(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&Nonce::from_slice(&[0u8; 12]).unwrap(),
+				&dst_out_ct,
+				None,
+				&mut dst_out_pt_more,
+			)
+			.is_ok());
+		}
+	}
+
+	// Proptests. Only exectued when NOT testing no_std.
+	#[cfg(feature = "safe_api")]
+	mod proptest {
+		use super::*;
+
+		// Only return true if both a and b are true.
+		fn check_all_true(a: bool, b: bool) -> bool { (a == true) && (b == true) }
+
+		quickcheck! {
+			// Sealing input, and then opening should always yield the same input.
+			fn prop_seal_open_same_input(input: Vec<u8>, ad: Vec<u8>) -> bool {
+				let pt = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
+
+				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
+
+				seal(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&pt[..],
+					None,
+					&mut dst_out_ct_no_ad,
+				).unwrap();
+
+				open(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&dst_out_ct_no_ad[..],
+					None,
+					&mut dst_out_pt_no_ad,
+				).unwrap();
+
+				seal(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&pt[..],
+					Some(&ad[..]),
+					&mut dst_out_ct_with_ad,
+				).unwrap();
+
+				open(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&dst_out_ct_with_ad[..],
+					Some(&ad[..]),
+					&mut dst_out_pt_with_ad,
+				).unwrap();
+
+				check_all_true(dst_out_pt_no_ad == pt, dst_out_pt_with_ad == pt)
+			}
+		}
+
+		quickcheck! {
+			// Sealing input, modifying the tag and then opening should
+			// always fail due to authentication.
+			fn prop_fail_on_bad_auth_tag(input: Vec<u8>, ad: Vec<u8>) -> bool {
+				let pt = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
+
+				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
+
+				seal(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&pt[..],
+					None,
+					&mut dst_out_ct_no_ad,
+				).unwrap();
+
+				// Modify tags first byte
+				dst_out_ct_no_ad[pt.len() + 1] ^= 1;
+
+				let res0 = if open(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&dst_out_ct_no_ad[..],
+					None,
+					&mut dst_out_pt_no_ad,
+				).is_err() {
+					true
+				} else {
+					false
+				};
+
+				seal(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&pt[..],
+					Some(&ad[..]),
+					&mut dst_out_ct_with_ad,
+				).unwrap();
+
+				// Modify tags first byte
+				dst_out_ct_with_ad[pt.len() + 1] ^= 1;
+
+				let res1 = if open(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&dst_out_ct_with_ad[..],
+					Some(&ad[..]),
+					&mut dst_out_pt_with_ad,
+				).is_err() {
+					true
+				} else {
+					false
+				};
+
+				check_all_true(res0, res1)
+			}
+		}
+
+		quickcheck! {
+			// Sealing input, modifying the ciphertext and then opening should
+			// always fail due to authentication.
+			fn prop_fail_on_bad_ciphertext(input: Vec<u8>, ad: Vec<u8>) -> bool {
+				let pt = if input.is_empty() {
+					vec![1u8; 10]
+				} else {
+					input
+				};
+
+				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
+
+				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
+
+				seal(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&pt[..],
+					None,
+					&mut dst_out_ct_no_ad,
+				).unwrap();
+
+				// Modify ciphertexts first byte
+				dst_out_ct_no_ad[0] ^= 1;
+
+				let res0 = if open(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&dst_out_ct_no_ad[..],
+					None,
+					&mut dst_out_pt_no_ad,
+				).is_err() {
+					true
+				} else {
+					false
+				};
+
+				seal(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&pt[..],
+					Some(&ad[..]),
+					&mut dst_out_ct_with_ad,
+				).unwrap();
+
+				// Modify tags first byte
+				dst_out_ct_with_ad[0] ^= 1;
+
+				let res1 = if open(
+					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+					&Nonce::from_slice(&[0u8; 12]).unwrap(),
+					&dst_out_ct_with_ad[..],
+					Some(&ad[..]),
+					&mut dst_out_pt_with_ad,
+				).is_err() {
+					true
+				} else {
+					false
+				};
+
+				check_all_true(res0, res1)
+			}
+		}
+	}
 }
 
-#[test]
-fn test_auth_process_with_above_length_index() {
-	let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]).unwrap();
-	let mut poly1305_state = poly1305::init(&poly1305_key);
+// Testing private functions in the module.
+#[cfg(test)]
+mod private {
+	use super::*;
+	// One function tested per submodule.
 
-	assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).is_err());
+	mod test_poly1305_key_gen {
+		use super::*;
+		use crate::hazardous::constants::{CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE};
+
+		#[test]
+		fn test_key_lengths() {
+			assert!(
+				poly1305_key_gen(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE]).is_ok()
+			);
+			assert!(
+				poly1305_key_gen(&[0u8; CHACHA_KEYSIZE - 1], &[0u8; IETF_CHACHA_NONCESIZE])
+					.is_err()
+			);
+			assert!(
+				poly1305_key_gen(&[0u8; CHACHA_KEYSIZE + 1], &[0u8; IETF_CHACHA_NONCESIZE])
+					.is_err()
+			);
+			assert!(poly1305_key_gen(&[0u8; 0], &[0u8; IETF_CHACHA_NONCESIZE]).is_err());
+		}
+
+		#[test]
+		fn test_nonce_lengths() {
+			assert!(
+				poly1305_key_gen(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE]).is_ok()
+			);
+			assert!(
+				poly1305_key_gen(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE - 1])
+					.is_err()
+			);
+			assert!(
+				poly1305_key_gen(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE + 1])
+					.is_err()
+			);
+			assert!(poly1305_key_gen(&[0u8; CHACHA_KEYSIZE], &[0u8; 0]).is_err());
+		}
+	}
+
+	mod test_padding {
+		use super::*;
+		#[test]
+		fn test_length_padding() {
+			assert_eq!(padding(&[0u8; 0]), 0);
+			assert_eq!(padding(&[0u8; 1]), 15);
+			assert_eq!(padding(&[0u8; 2]), 14);
+			assert_eq!(padding(&[0u8; 3]), 13);
+			assert_eq!(padding(&[0u8; 4]), 12);
+			assert_eq!(padding(&[0u8; 5]), 11);
+			assert_eq!(padding(&[0u8; 6]), 10);
+			assert_eq!(padding(&[0u8; 7]), 9);
+			assert_eq!(padding(&[0u8; 8]), 8);
+			assert_eq!(padding(&[0u8; 9]), 7);
+			assert_eq!(padding(&[0u8; 10]), 6);
+			assert_eq!(padding(&[0u8; 11]), 5);
+			assert_eq!(padding(&[0u8; 12]), 4);
+			assert_eq!(padding(&[0u8; 13]), 3);
+			assert_eq!(padding(&[0u8; 14]), 2);
+			assert_eq!(padding(&[0u8; 15]), 1);
+			assert_eq!(padding(&[0u8; 16]), 0);
+		}
+
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(feature = "safe_api")]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				// The usize that padding() returns should always
+				// be what remains to make input a multiple of 16 in length.
+				fn prop_padding_result(input: Vec<u8>) -> bool {
+					let rem = padding(&input[..]);
+
+					(((input.len() + rem) % 16) == 0)
+				}
+			}
+
+			quickcheck! {
+				// padding() should never return a usize above 15.
+				// The usize must always be in range of 0..=15.
+				fn prop_result_never_above_15(input: Vec<u8>) -> bool {
+					let rem: usize = padding(&input[..]);
+
+					(rem < 16)
+				}
+			}
+		}
+	}
+
+	mod test_process_authentication {
+		use super::*;
+
+		#[test]
+		#[should_panic]
+		fn test_panic_index_0() {
+			let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]).unwrap();
+			let mut poly1305_state = poly1305::init(&poly1305_key);
+
+			process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 0).unwrap();
+		}
+
+		#[test]
+		#[should_panic]
+		fn test_panic_empty_buf() {
+			let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]).unwrap();
+			let mut poly1305_state = poly1305::init(&poly1305_key);
+
+			process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 0], 64).unwrap();
+		}
+
+		#[test]
+		#[should_panic]
+		fn test_panic_above_length_index() {
+			let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]).unwrap();
+			let mut poly1305_state = poly1305::init(&poly1305_key);
+
+			process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
+		}
+
+		#[test]
+		fn test_length_index() {
+			let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]).unwrap();
+			let mut poly1305_state = poly1305::init(&poly1305_key);
+
+			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).is_ok());
+
+			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 63).is_ok());
+
+			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 1).is_ok());
+
+			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 1], 1).is_ok());
+		}
+	}
 }
 
-#[test]
-fn test_auth_process_ok_index_length() {
-	let poly1305_key = poly1305_key_gen(&[0u8; 32], &[0u8; 12]).unwrap();
-	let mut poly1305_state = poly1305::init(&poly1305_key);
+// Testing any test vectors that aren't put into library's /tests folder.
+#[cfg(test)]
+mod test_vectors {
+	use super::*;
 
-	process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).unwrap();
+	#[test]
+	fn rfc8439_poly1305_key_gen_1() {
+		let key = [0u8; 32];
+		let nonce = [
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		];
+		let expected = [
+			0x76, 0xb8, 0xe0, 0xad, 0xa0, 0xf1, 0x3d, 0x90, 0x40, 0x5d, 0x6a, 0xe5, 0x53, 0x86,
+			0xbd, 0x28, 0xbd, 0xd2, 0x19, 0xb8, 0xa0, 0x8d, 0xed, 0x1a, 0xa8, 0x36, 0xef, 0xcc,
+			0x8b, 0x77, 0x0d, 0xc7,
+		];
 
-	process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 0).unwrap();
-}
+		assert_eq!(
+			poly1305_key_gen(&key, &nonce)
+				.unwrap()
+				.unprotected_as_bytes(),
+			expected.as_ref()
+		);
+	}
 
-#[test]
-fn test_nonce_sizes() {
-	assert!(Nonce::from_slice(&[0u8; 11]).is_err());
-	assert!(Nonce::from_slice(&[0u8; 13]).is_err());
-	assert!(Nonce::from_slice(&[0u8; 12]).is_ok());
-}
+	#[test]
+	fn rfc8439_poly1305_key_gen_2() {
+		let key = [
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x01,
+		];
+		let nonce = [
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+		];
+		let expected = [
+			0xec, 0xfa, 0x25, 0x4f, 0x84, 0x5f, 0x64, 0x74, 0x73, 0xd3, 0xcb, 0x14, 0x0d, 0xa9,
+			0xe8, 0x76, 0x06, 0xcb, 0x33, 0x06, 0x6c, 0x44, 0x7b, 0x87, 0xbc, 0x26, 0x66, 0xdd,
+			0xe3, 0xfb, 0xb7, 0x39,
+		];
 
-#[test]
-fn test_modified_tag_error() {
-	let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
-	let mut dst_out_pt = [0u8; 64];
+		assert_eq!(
+			poly1305_key_gen(&key, &nonce)
+				.unwrap()
+				.unprotected_as_bytes(),
+			expected.as_ref()
+		);
+	}
 
-	seal(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&[0u8; 64],
-		None,
-		&mut dst_out_ct,
-	)
-	.unwrap();
-	// Modify the tags first byte
-	dst_out_ct[65] ^= 1;
-	assert!(open(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&dst_out_ct,
-		None,
-		&mut dst_out_pt,
-	)
-	.is_err());
-}
+	#[test]
+	fn rfc8439_poly1305_key_gen_3() {
+		let key = [
+			0x1c, 0x92, 0x40, 0xa5, 0xeb, 0x55, 0xd3, 0x8a, 0xf3, 0x33, 0x88, 0x86, 0x04, 0xf6,
+			0xb5, 0xf0, 0x47, 0x39, 0x17, 0xc1, 0x40, 0x2b, 0x80, 0x09, 0x9d, 0xca, 0x5c, 0xbc,
+			0x20, 0x70, 0x75, 0xc0,
+		];
+		let nonce = [
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+		];
+		let expected = [
+			0x96, 0x5e, 0x3b, 0xc6, 0xf9, 0xec, 0x7e, 0xd9, 0x56, 0x08, 0x08, 0xf4, 0xd2, 0x29,
+			0xf9, 0x4b, 0x13, 0x7f, 0xf2, 0x75, 0xca, 0x9b, 0x3f, 0xcb, 0xdd, 0x59, 0xde, 0xaa,
+			0xd2, 0x33, 0x10, 0xae,
+		];
 
-#[test]
-fn test_bad_pt_ct_lengths() {
-	let mut dst_out_ct_1 = [0u8; 79]; // 64 + Poly1305TagLen = 80
-	let mut dst_out_ct_2 = [0u8; 80]; // 64 + Poly1305TagLen = 80
-
-	let mut dst_out_pt_1 = [0u8; 63];
-	let mut dst_out_pt_2 = [0u8; 64];
-
-	assert!(seal(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&dst_out_pt_2,
-		Some(&[0u8; 5]),
-		&mut dst_out_ct_1,
-	)
-	.is_err());
-
-	seal(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&dst_out_pt_2,
-		Some(&[0u8; 5]),
-		&mut dst_out_ct_2,
-	)
-	.unwrap();
-
-	assert!(open(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&dst_out_ct_2,
-		Some(&[0u8; 5]),
-		&mut dst_out_pt_1,
-	)
-	.is_err());
-
-	open(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&dst_out_ct_2,
-		Some(&[0u8; 5]),
-		&mut dst_out_pt_2,
-	)
-	.unwrap();
-}
-
-#[test]
-fn test_bad_ct_length_and_empty_out_decrypt() {
-	let dst_out_ct_1 = [0u8; POLY1305_BLOCKSIZE];
-	let dst_out_ct_2 = [0u8; POLY1305_BLOCKSIZE - 1];
-	let dst_out_ct_3 = [0u8; POLY1305_BLOCKSIZE + 1];
-
-	let mut dst_out_pt_1 = [0u8; 64];
-	let mut dst_out_pt_2 = [0u8; 0];
-
-	assert!(open(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&dst_out_ct_1,
-		None,
-		&mut dst_out_pt_1,
-	)
-	.is_err());
-
-	assert!(open(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&dst_out_ct_2,
-		None,
-		&mut dst_out_pt_1,
-	)
-	.is_err());
-
-	assert!(open(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&dst_out_ct_3,
-		None,
-		&mut dst_out_pt_2,
-	)
-	.is_err());
-}
-
-#[test]
-fn rfc_8439_test_poly1305_key_gen_1() {
-	let key = [0u8; 32];
-	let nonce = [
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	];
-	let expected = [
-		0x76, 0xb8, 0xe0, 0xad, 0xa0, 0xf1, 0x3d, 0x90, 0x40, 0x5d, 0x6a, 0xe5, 0x53, 0x86, 0xbd,
-		0x28, 0xbd, 0xd2, 0x19, 0xb8, 0xa0, 0x8d, 0xed, 0x1a, 0xa8, 0x36, 0xef, 0xcc, 0x8b, 0x77,
-		0x0d, 0xc7,
-	];
-
-	assert_eq!(
-		poly1305_key_gen(&key, &nonce)
-			.unwrap()
-			.unprotected_as_bytes(),
-		expected.as_ref()
-	);
-}
-
-#[test]
-fn rfc_8439_test_poly1305_key_gen_2() {
-	let key = [
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01,
-	];
-	let nonce = [
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-	];
-	let expected = [
-		0xec, 0xfa, 0x25, 0x4f, 0x84, 0x5f, 0x64, 0x74, 0x73, 0xd3, 0xcb, 0x14, 0x0d, 0xa9, 0xe8,
-		0x76, 0x06, 0xcb, 0x33, 0x06, 0x6c, 0x44, 0x7b, 0x87, 0xbc, 0x26, 0x66, 0xdd, 0xe3, 0xfb,
-		0xb7, 0x39,
-	];
-
-	assert_eq!(
-		poly1305_key_gen(&key, &nonce)
-			.unwrap()
-			.unprotected_as_bytes(),
-		expected.as_ref()
-	);
-}
-
-#[test]
-fn rfc_8439_test_poly1305_key_gen_3() {
-	let key = [
-		0x1c, 0x92, 0x40, 0xa5, 0xeb, 0x55, 0xd3, 0x8a, 0xf3, 0x33, 0x88, 0x86, 0x04, 0xf6, 0xb5,
-		0xf0, 0x47, 0x39, 0x17, 0xc1, 0x40, 0x2b, 0x80, 0x09, 0x9d, 0xca, 0x5c, 0xbc, 0x20, 0x70,
-		0x75, 0xc0,
-	];
-	let nonce = [
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-	];
-	let expected = [
-		0x96, 0x5e, 0x3b, 0xc6, 0xf9, 0xec, 0x7e, 0xd9, 0x56, 0x08, 0x08, 0xf4, 0xd2, 0x29, 0xf9,
-		0x4b, 0x13, 0x7f, 0xf2, 0x75, 0xca, 0x9b, 0x3f, 0xcb, 0xdd, 0x59, 0xde, 0xaa, 0xd2, 0x33,
-		0x10, 0xae,
-	];
-
-	assert_eq!(
-		poly1305_key_gen(&key, &nonce)
-			.unwrap()
-			.unprotected_as_bytes(),
-		expected.as_ref()
-	);
-}
-
-#[test]
-fn regression_detect_bigger_than_slice_bug() {
-	let pt = [0x5B; 79];
-
-	let mut dst_out_ct = [0u8; 79 + (POLY1305_BLOCKSIZE * 2)];
-
-	seal(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&pt[..],
-		None,
-		&mut dst_out_ct,
-	)
-	.unwrap();
-
-	// Verify that using a slice that is bigger than produces the exact same
-	// output as using a slice that is the exact required length
-	let mut dst_out_ct_2 = [0u8; 79 + POLY1305_BLOCKSIZE];
-
-	seal(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 12]).unwrap(),
-		&pt[..],
-		None,
-		&mut dst_out_ct_2,
-	)
-	.unwrap();
-
-	assert!(dst_out_ct[..dst_out_ct_2.len()] == dst_out_ct_2[..]);
+		assert_eq!(
+			poly1305_key_gen(&key, &nonce)
+				.unwrap()
+				.unprotected_as_bytes(),
+			expected.as_ref()
+		);
+	}
 }

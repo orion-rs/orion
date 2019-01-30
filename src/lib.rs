@@ -56,6 +56,11 @@ extern crate rand_os;
 extern crate subtle;
 extern crate tiny_keccak;
 
+#[cfg(test)]
+#[cfg(feature = "safe_api")]
+#[macro_use]
+extern crate quickcheck;
+
 #[macro_use]
 mod typedefs;
 

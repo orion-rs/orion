@@ -148,89 +148,119 @@ pub fn verify(
 	}
 }
 
+// Testing public functions in the module.
 #[cfg(test)]
-mod test {
-	extern crate hex;
-	use self::hex::decode;
-	use crate::hazardous::kdf::hkdf::*;
+mod public {
+	use super::*;
 
-	#[test]
-	fn hkdf_maximum_length_512() {
-		// Max allowed length here is 16320
-		let mut okm_out = [0u8; 17000];
-		let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+	mod test_expand {
+		use super::*;
 
-		assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
+		#[test]
+		fn hkdf_maximum_length() {
+			// Max allowed length here is 16320
+			let mut okm_out = [0u8; 17000];
+			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+
+			assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
+		}
+
+		#[test]
+		fn hkdf_zero_length() {
+			let mut okm_out = [0u8; 0];
+			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+
+			assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
+		}
 	}
 
-	#[test]
-	fn hkdf_zero_length() {
-		let mut okm_out = [0u8; 0];
-		let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+	#[cfg(feature = "safe_api")]
+	// Mark safe_api because currently it only contains proptests.
+	mod test_derive_key {
+		use super::*;
 
-		assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(feature = "safe_api")]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				/// Using derive_key() should always yield the same result
+				/// as using extract and expand seperately.
+				fn prop_test_derive_key_same_seperate(salt: Vec<u8>, ikm: Vec<u8>, info: Vec<u8>, outsize: usize) -> bool {
+
+					let outsize_checked = if outsize == 0 || outsize > 16320 {
+						64
+					} else {
+						outsize
+					};
+
+					let prk = extract(&salt[..], &ikm[..]).unwrap();
+					let mut out = vec![0u8; outsize_checked];
+					expand(&prk, Some(&info[..]), &mut out).unwrap();
+
+					let mut out_one_shot = vec![0u8; outsize_checked];
+					derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
+
+					(out == out_one_shot)
+				}
+			}
+		}
 	}
 
-	#[test]
-	fn hkdf_verify_true() {
-		let ikm = decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap();
-		let salt = decode("000102030405060708090a0b0c").unwrap();
-		let info = decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
-		let mut okm_out = [0u8; 42];
+	mod test_verify {
+		use super::*;
 
-		let expected_okm = decode(
-			"832390086cda71fb47625bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d9f925d7cb",
-		)
-		.unwrap();
+		#[test]
+		fn hkdf_verify_true() {
+			let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+			let salt = b"000102030405060708090a0b0c";
+			let info = b"f0f1f2f3f4f5f6f7f8f9";
+			let mut okm_out = [0u8; 42];
+			let mut okm_out_verify = [0u8; 42];
 
-		assert_eq!(
-			verify(&expected_okm, &salt, &ikm, Some(&info), &mut okm_out).unwrap(),
-			true
-		);
-	}
+			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-	#[test]
-	fn hkdf_verify_wrong_salt() {
-		let salt = "salt".as_bytes();
-		let ikm = decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap();
-		let info = "".as_bytes();
-		let mut okm_out = [0u8; 42];
+			assert!(verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_ok());
+		}
 
-		let expected_okm = decode(
-			"8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d9d201395faa4b61a96c8",
-		)
-		.unwrap();
+		#[test]
+		fn hkdf_verify_wrong_salt() {
+			let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+			let salt = b"000102030405060708090a0b0c";
+			let info = b"f0f1f2f3f4f5f6f7f8f9";
+			let mut okm_out = [0u8; 42];
+			let mut okm_out_verify = [0u8; 42];
 
-		assert!(verify(&expected_okm, &salt, &ikm, Some(info), &mut okm_out).is_err());
-	}
+			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-	#[test]
-	fn hkdf_verify_wrong_ikm() {
-		let salt = "".as_bytes();
-		let ikm = decode("0b").unwrap();
-		let info = "".as_bytes();
-		let mut okm_out = [0u8; 42];
+			assert!(verify(&okm_out, b"", ikm, Some(info), &mut okm_out_verify).is_err());
+		}
 
-		let expected_okm = decode(
-			"8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d9d201395faa4b61a96c8",
-		)
-		.unwrap();
+		#[test]
+		fn hkdf_verify_wrong_ikm() {
+			let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+			let salt = b"000102030405060708090a0b0c";
+			let info = b"f0f1f2f3f4f5f6f7f8f9";
+			let mut okm_out = [0u8; 42];
+			let mut okm_out_verify = [0u8; 42];
 
-		assert!(verify(&expected_okm, &salt, &ikm, Some(info), &mut okm_out).is_err());
-	}
+			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-	#[test]
-	fn verify_diff_length() {
-		let salt = "".as_bytes();
-		let ikm = decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap();
-		let info = "".as_bytes();
-		let mut okm_out = [0u8; 72];
+			assert!(verify(&okm_out, salt, b"", Some(info), &mut okm_out_verify).is_err());
+		}
 
-		let expected_okm = decode(
-			"8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d9d201395faa4b61a96c8",
-		)
-		.unwrap();
+		#[test]
+		fn verify_diff_length() {
+			let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+			let salt = b"000102030405060708090a0b0c";
+			let info = b"f0f1f2f3f4f5f6f7f8f9";
+			let mut okm_out = [0u8; 42];
+			let mut okm_out_verify = [0u8; 43];
 
-		assert!(verify(&expected_okm, &salt, &ikm, Some(info), &mut okm_out).is_err());
+			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+
+			assert!(verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_err());
+		}
 	}
 }

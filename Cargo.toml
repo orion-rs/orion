@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.12.3"
+version = "0.12.4"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Easy and usable rust crypto"
 keywords = [ "cryptography", "blake2", "aead", "sha2", "xchacha20_poly1305" ]
@@ -34,7 +34,7 @@ no_std = [ "clear_on_drop/nightly", "subtle/nightly" ]
 [dev-dependencies]
 hex = "0.3.2"
 serde_json = "1.0.37"
-
+quickcheck = "0.8.0"
 
 [profile.dev]
 opt-level = 1
