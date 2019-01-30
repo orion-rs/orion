@@ -398,7 +398,7 @@ mod public {
 		use super::*;
 
 		#[test]
-		fn double_reset_ok() {
+		fn test_double_reset_ok() {
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init();
@@ -413,7 +413,7 @@ mod public {
 		use super::*;
 
 		#[test]
-		fn update_after_finalize_with_reset_ok() {
+		fn test_update_after_finalize_with_reset_ok() {
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init();
@@ -425,7 +425,7 @@ mod public {
 
 		#[test]
 		/// Related bug: https://github.com/brycx/orion/issues/28
-		fn update_after_finalize_err() {
+		fn test_update_after_finalize_err() {
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init();
@@ -439,7 +439,7 @@ mod public {
 		use super::*;
 
 		#[test]
-		fn double_finalize_with_reset_no_update_ok() {
+		fn test_double_finalize_with_reset_no_update_ok() {
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init();
@@ -450,7 +450,7 @@ mod public {
 		}
 
 		#[test]
-		fn double_finalize_with_reset_ok() {
+		fn test_double_finalize_with_reset_ok() {
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init();
@@ -463,7 +463,7 @@ mod public {
 		}
 
 		#[test]
-		fn double_finalize_err() {
+		fn test_double_finalize_err() {
 			let data = "what do ya want for nothing?".as_bytes();
 
 			let mut state = init();
