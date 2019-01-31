@@ -77,9 +77,9 @@ impl_load!(
 	///
 	/// let mut dst = [0u32; 16];
 	///
-	/// endianness::load_u32_into_le(&[125u8; 64], &mut dst);
+	/// endianness::load_u32_le(&[125u8; 64], &mut dst);
 	/// ```
-	(u32, u32, from_le_bytes, load_u32_into_le)
+	(u32, u32, from_le_bytes, load_u32_le)
 );
 
 #[rustfmt::skip]
@@ -100,9 +100,9 @@ impl_load!(
 	///
 	/// let mut dst = [0u64; 8];
 	///
-	/// endianness::load_u64_into_le(&[125u8; 64], &mut dst);
+	/// endianness::load_u64_le(&[125u8; 64], &mut dst);
 	/// ```
-	(u64, u64, from_le_bytes, load_u64_into_le)
+	(u64, u64, from_le_bytes, load_u64_le)
 );
 
 #[rustfmt::skip]
@@ -123,9 +123,9 @@ impl_load!(
     ///
     /// let mut dst = [0u32; 16];
     ///
-    /// endianness::load_u32_into_be(&[125u8; 64], &mut dst);
+    /// endianness::load_u32_be(&[125u8; 64], &mut dst);
     /// ```
-    (u32, u32, from_be_bytes, load_u32_into_be)
+    (u32, u32, from_be_bytes, load_u32_be)
 );
 
 #[rustfmt::skip]
@@ -146,9 +146,9 @@ impl_load!(
     ///
     /// let mut dst = [0u64; 8];
     ///
-    /// endianness::load_u64_into_be(&[125u8; 64], &mut dst);
+    /// endianness::load_u64_be(&[125u8; 64], &mut dst);
     /// ```
-    (u64, u64, from_be_bytes, load_u64_into_be)
+    (u64, u64, from_be_bytes, load_u64_be)
 );
 
 #[rustfmt::skip]
@@ -169,9 +169,9 @@ impl_store!(
     ///
     /// let mut dst = [0u8; 64];
     ///
-    /// endianness::store_u32_into_le(&[5u32; 16], &mut dst);
+    /// endianness::store_u32_le(&[5u32; 16], &mut dst);
     /// ```
-    (u32, to_le_bytes, store_u32_into_le)
+    (u32, to_le_bytes, store_u32_le)
 );
 
 #[rustfmt::skip]
@@ -192,9 +192,9 @@ impl_store!(
 	///
 	/// let mut dst = [0u8; 64];
 	///
-	/// endianness::store_u64_into_le(&[5u64; 8], &mut dst);
+	/// endianness::store_u64_le(&[5u64; 8], &mut dst);
 	/// ```
-	(u64, to_le_bytes, store_u64_into_le)
+	(u64, to_le_bytes, store_u64_le)
 );
 
 #[rustfmt::skip]
@@ -215,9 +215,9 @@ impl_store!(
 	///
 	/// let mut dst = [0u8; 64];
 	///
-	/// endianness::store_u32_into_be(&[5u32; 16], &mut dst);
+	/// endianness::store_u32_be(&[5u32; 16], &mut dst);
 	/// ```
-	(u32, to_be_bytes, store_u32_into_be)
+	(u32, to_be_bytes, store_u32_be)
 );
 
 #[rustfmt::skip]
@@ -238,9 +238,9 @@ impl_store!(
 	///
 	/// let mut dst = [0u8; 64];
 	///
-	/// endianness::store_u64_into_be(&[5u64; 8], &mut dst);
+	/// endianness::store_u64_be(&[5u64; 8], &mut dst);
 	/// ```
-	(u64, to_be_bytes, store_u64_into_be)
+	(u64, to_be_bytes, store_u64_be)
 );
 
 // Testing public functions in the module.
@@ -280,46 +280,46 @@ mod public {
 		};
 	}
 
-	test_empty_src_panic! {test_panic_empty_load_u32_into_le, &[0u8; 0], [0u32; 4], load_u32_into_le}
-	test_empty_src_panic! {test_panic_empty_load_u32_into_be, &[0u8; 0], [0u32; 4], load_u32_into_be}
-	test_empty_src_panic! {test_panic_empty_load_u64_into_le, &[0u8; 0], [0u64; 4], load_u64_into_le}
-	test_empty_src_panic! {test_panic_empty_load_u64_into_be, &[0u8; 0], [0u64; 4], load_u64_into_be}
+	test_empty_src_panic! {test_panic_empty_load_u32_le, &[0u8; 0], [0u32; 4], load_u32_le}
+	test_empty_src_panic! {test_panic_empty_load_u32_be, &[0u8; 0], [0u32; 4], load_u32_be}
+	test_empty_src_panic! {test_panic_empty_load_u64_le, &[0u8; 0], [0u64; 4], load_u64_le}
+	test_empty_src_panic! {test_panic_empty_load_u64_be, &[0u8; 0], [0u64; 4], load_u64_be}
 
-	test_empty_src_panic! {test_panic_empty_store_u32_into_le, &[0u32; 0], [0u8; 24], store_u32_into_le}
-	test_empty_src_panic! {test_panic_empty_store_u32_into_be, &[0u32; 0], [0u8; 24], store_u32_into_be}
-	test_empty_src_panic! {test_panic_empty_store_u64_into_le, &[0u64; 0], [0u8; 24], store_u64_into_le}
-	test_empty_src_panic! {test_panic_empty_store_u64_into_be, &[0u64; 0], [0u8; 24], store_u64_into_be}
+	test_empty_src_panic! {test_panic_empty_store_u32_le, &[0u32; 0], [0u8; 24], store_u32_le}
+	test_empty_src_panic! {test_panic_empty_store_u32_be, &[0u32; 0], [0u8; 24], store_u32_be}
+	test_empty_src_panic! {test_panic_empty_store_u64_le, &[0u64; 0], [0u8; 24], store_u64_le}
+	test_empty_src_panic! {test_panic_empty_store_u64_be, &[0u64; 0], [0u8; 24], store_u64_be}
 
 	// -1 too low
-	test_dst_length_panic! {test_dst_length_load_u32_into_le_low, &[0u8; 64], [0u32; 15], load_u32_into_le}
-	test_dst_length_panic! {test_dst_length_load_u32_into_be_low, &[0u8; 64], [0u32; 15], load_u32_into_be}
-	test_dst_length_panic! {test_dst_length_load_u64_into_le_low, &[0u8; 64], [0u64; 7], load_u64_into_le}
-	test_dst_length_panic! {test_dst_length_load_u64_into_be_low, &[0u8; 64], [0u64; 7], load_u64_into_be}
+	test_dst_length_panic! {test_dst_length_load_u32_le_low, &[0u8; 64], [0u32; 15], load_u32_le}
+	test_dst_length_panic! {test_dst_length_load_u32_be_low, &[0u8; 64], [0u32; 15], load_u32_be}
+	test_dst_length_panic! {test_dst_length_load_u64_le_low, &[0u8; 64], [0u64; 7], load_u64_le}
+	test_dst_length_panic! {test_dst_length_load_u64_be_low, &[0u8; 64], [0u64; 7], load_u64_be}
 
-	test_dst_length_panic! {test_dst_length_store_u32_into_le_low, &[0u32; 15], [0u8; 64], store_u32_into_le}
-	test_dst_length_panic! {test_dst_length_store_u32_into_be_low, &[0u32; 15], [0u8; 64], store_u32_into_be}
-	test_dst_length_panic! {test_dst_length_store_u64_into_le_low, &[0u64; 7], [0u8; 64], store_u64_into_le}
-	test_dst_length_panic! {test_dst_length_store_u64_into_be_low, &[0u64; 7], [0u8; 64], store_u64_into_be}
+	test_dst_length_panic! {test_dst_length_store_u32_le_low, &[0u32; 15], [0u8; 64], store_u32_le}
+	test_dst_length_panic! {test_dst_length_store_u32_be_low, &[0u32; 15], [0u8; 64], store_u32_be}
+	test_dst_length_panic! {test_dst_length_store_u64_le_low, &[0u64; 7], [0u8; 64], store_u64_le}
+	test_dst_length_panic! {test_dst_length_store_u64_be_low, &[0u64; 7], [0u8; 64], store_u64_be}
 	// +1 too high
-	test_dst_length_panic! {test_dst_length_load_u32_into_le_high, &[0u8; 64], [0u32; 17], load_u32_into_le}
-	test_dst_length_panic! {test_dst_length_load_u32_into_be_high, &[0u8; 64], [0u32; 17], load_u32_into_be}
-	test_dst_length_panic! {test_dst_length_load_u64_into_le_high, &[0u8; 64], [0u64; 9], load_u64_into_le}
-	test_dst_length_panic! {test_dst_length_load_u64_into_be_high, &[0u8; 64], [0u64; 9], load_u64_into_be}
+	test_dst_length_panic! {test_dst_length_load_u32_le_high, &[0u8; 64], [0u32; 17], load_u32_le}
+	test_dst_length_panic! {test_dst_length_load_u32_be_high, &[0u8; 64], [0u32; 17], load_u32_be}
+	test_dst_length_panic! {test_dst_length_load_u64_le_high, &[0u8; 64], [0u64; 9], load_u64_le}
+	test_dst_length_panic! {test_dst_length_load_u64_be_high, &[0u8; 64], [0u64; 9], load_u64_be}
 
-	test_dst_length_panic! {test_dst_length_store_u32_into_le_high, &[0u32; 17], [0u8; 64], store_u32_into_le}
-	test_dst_length_panic! {test_dst_length_store_u32_into_be_high, &[0u32; 17], [0u8; 64], store_u32_into_be}
-	test_dst_length_panic! {test_dst_length_store_u64_into_le_high, &[0u64; 9], [0u8; 64], store_u64_into_le}
-	test_dst_length_panic! {test_dst_length_store_u64_into_be_high, &[0u64; 9], [0u8; 64], store_u64_into_be}
+	test_dst_length_panic! {test_dst_length_store_u32_le_high, &[0u32; 17], [0u8; 64], store_u32_le}
+	test_dst_length_panic! {test_dst_length_store_u32_be_high, &[0u32; 17], [0u8; 64], store_u32_be}
+	test_dst_length_panic! {test_dst_length_store_u64_le_high, &[0u64; 9], [0u8; 64], store_u64_le}
+	test_dst_length_panic! {test_dst_length_store_u64_be_high, &[0u64; 9], [0u8; 64], store_u64_be}
 	// Ok
-	test_dst_length_ok! {test_dst_length_load_u32_into_le_ok, &[0u8; 64], [0u32; 16], load_u32_into_le}
-	test_dst_length_ok! {test_dst_length_load_u32_into_be_ok, &[0u8; 64], [0u32; 16], load_u32_into_be}
-	test_dst_length_ok! {test_dst_length_load_u64_into_le_ok, &[0u8; 64], [0u64; 8], load_u64_into_le}
-	test_dst_length_ok! {test_dst_length_load_u64_into_be_ok, &[0u8; 64], [0u64; 8], load_u64_into_be}
+	test_dst_length_ok! {test_dst_length_load_u32_le_ok, &[0u8; 64], [0u32; 16], load_u32_le}
+	test_dst_length_ok! {test_dst_length_load_u32_be_ok, &[0u8; 64], [0u32; 16], load_u32_be}
+	test_dst_length_ok! {test_dst_length_load_u64_le_ok, &[0u8; 64], [0u64; 8], load_u64_le}
+	test_dst_length_ok! {test_dst_length_load_u64_be_ok, &[0u8; 64], [0u64; 8], load_u64_be}
 
-	test_dst_length_ok! {test_dst_length_store_u32_into_le_ok, &[0u32; 16], [0u8; 64], store_u32_into_le}
-	test_dst_length_ok! {test_dst_length_store_u32_into_be_ok, &[0u32; 16], [0u8; 64], store_u32_into_be}
-	test_dst_length_ok! {test_dst_length_store_u64_into_le_ok, &[0u64; 8], [0u8; 64], store_u64_into_le}
-	test_dst_length_ok! {test_dst_length_store_u64_into_be_ok, &[0u64; 8], [0u8; 64], store_u64_into_be}
+	test_dst_length_ok! {test_dst_length_store_u32_le_ok, &[0u32; 16], [0u8; 64], store_u32_le}
+	test_dst_length_ok! {test_dst_length_store_u32_be_ok, &[0u32; 16], [0u8; 64], store_u32_be}
+	test_dst_length_ok! {test_dst_length_store_u64_le_ok, &[0u64; 8], [0u8; 64], store_u64_le}
+	test_dst_length_ok! {test_dst_length_store_u64_be_ok, &[0u64; 8], [0u8; 64], store_u64_be}
 
 	// Proptests. Only exectued when NOT testing no_std.
 	#[cfg(feature = "safe_api")]
@@ -331,9 +331,9 @@ mod public {
 			fn prop_load_store_u32_le(src: Vec<u8>) -> bool {
 				if !src.is_empty() && src.len() % 4 == 0 {
 					let mut dst_load = vec![0u32; src.len() / 4];
-					load_u32_into_le(&src[..], &mut dst_load);
+					load_u32_le(&src[..], &mut dst_load);
 					let mut dst_store = src.clone();
-					store_u32_into_le(&dst_load[..], &mut dst_store);
+					store_u32_le(&dst_load[..], &mut dst_store);
 
 					(dst_store == src)
 				} else {
@@ -348,9 +348,9 @@ mod public {
 			fn prop_load_store_u32_be(src: Vec<u8>) -> bool {
 				if !src.is_empty() && src.len() % 4 == 0 {
 					let mut dst_load = vec![0u32; src.len() / 4];
-					load_u32_into_be(&src[..], &mut dst_load);
+					load_u32_be(&src[..], &mut dst_load);
 					let mut dst_store = src.clone();
-					store_u32_into_be(&dst_load[..], &mut dst_store);
+					store_u32_be(&dst_load[..], &mut dst_store);
 
 					(dst_store == src)
 				} else {
@@ -365,9 +365,9 @@ mod public {
 			fn prop_load_store_u64_le(src: Vec<u8>) -> bool {
 				if !src.is_empty() && src.len() % 8 == 0 {
 					let mut dst_load = vec![0u64; src.len() / 8];
-					load_u64_into_le(&src[..], &mut dst_load);
+					load_u64_le(&src[..], &mut dst_load);
 					let mut dst_store = src.clone();
-					store_u64_into_le(&dst_load[..], &mut dst_store);
+					store_u64_le(&dst_load[..], &mut dst_store);
 
 					(dst_store == src)
 				} else {
@@ -382,9 +382,9 @@ mod public {
 			fn prop_load_store_u64_be(src: Vec<u8>) -> bool {
 				if !src.is_empty() && src.len() % 8 == 0 {
 					let mut dst_load = vec![0u64; src.len() / 8];
-					load_u64_into_be(&src[..], &mut dst_load);
+					load_u64_be(&src[..], &mut dst_load);
 					let mut dst_store = src.clone();
-					store_u64_into_be(&dst_load[..], &mut dst_store);
+					store_u64_be(&dst_load[..], &mut dst_store);
 
 					(dst_store == src)
 				} else {
@@ -399,9 +399,9 @@ mod public {
 			fn prop_store_load_u32_le(src: Vec<u32>) -> bool {
 
 				let mut dst_store = vec![0u8; src.len() * 4];
-				store_u32_into_le(&src[..], &mut dst_store);
+				store_u32_le(&src[..], &mut dst_store);
 				let mut dst_load = src.clone();
-				load_u32_into_le(&dst_store[..], &mut dst_load);
+				load_u32_le(&dst_store[..], &mut dst_load);
 
 				(dst_load == src)
 			}
@@ -412,9 +412,9 @@ mod public {
 			fn prop_store_load_u32_be(src: Vec<u32>) -> bool {
 
 				let mut dst_store = vec![0u8; src.len() * 4];
-				store_u32_into_be(&src[..], &mut dst_store);
+				store_u32_be(&src[..], &mut dst_store);
 				let mut dst_load = src.clone();
-				load_u32_into_be(&dst_store[..], &mut dst_load);
+				load_u32_be(&dst_store[..], &mut dst_load);
 
 				(dst_load == src)
 			}
@@ -425,9 +425,9 @@ mod public {
 			fn prop_store_load_u64_le(src: Vec<u64>) -> bool {
 
 				let mut dst_store = vec![0u8; src.len() * 8];
-				store_u64_into_le(&src[..], &mut dst_store);
+				store_u64_le(&src[..], &mut dst_store);
 				let mut dst_load = src.clone();
-				load_u64_into_le(&dst_store[..], &mut dst_load);
+				load_u64_le(&dst_store[..], &mut dst_load);
 
 				(dst_load == src)
 			}
@@ -438,9 +438,9 @@ mod public {
 			fn prop_store_load_u64_be(src: Vec<u64>) -> bool {
 
 				let mut dst_store = vec![0u8; src.len() * 8];
-				store_u64_into_be(&src[..], &mut dst_store);
+				store_u64_be(&src[..], &mut dst_store);
 				let mut dst_load = src.clone();
-				load_u64_into_be(&dst_store[..], &mut dst_load);
+				load_u64_be(&dst_store[..], &mut dst_load);
 
 				(dst_load == src)
 			}
