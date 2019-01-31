@@ -340,11 +340,9 @@ impl Sha512 {
 		}
 
 		// Pad with length
-		BigEndian::write_u64(
-			&mut self.buffer[SHA2_BLOCKSIZE - 16..SHA2_BLOCKSIZE - 8],
-			self.message_len[0],
-		);
-		BigEndian::write_u64(&mut self.buffer[SHA2_BLOCKSIZE - 8..], self.message_len[1]);
+		self.buffer[SHA2_BLOCKSIZE - 16..SHA2_BLOCKSIZE - 8].copy_from_slice(&self.message_len[0].to_be_bytes());
+		self.buffer[SHA2_BLOCKSIZE - 8..SHA2_BLOCKSIZE].copy_from_slice(&self.message_len[1].to_be_bytes());
+
 
 		self.process();
 
