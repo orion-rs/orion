@@ -248,6 +248,79 @@ impl_store!(
 mod public {
 	use super::*;
 
+	macro_rules! test_empty_src_panic {
+		($test_name:ident, $src_val:expr, $dst_val:expr, $func_to_test:expr) => {
+			#[test]
+			#[should_panic]
+			fn $test_name() {
+				let mut dst_load = $dst_val;
+				$func_to_test($src_val, &mut dst_load);
+			}
+		};
+	}
+
+	macro_rules! test_dst_length_panic {
+		($test_name:ident, $src_val:expr, $dst_val:expr, $func_to_test:expr) => {
+			#[test]
+			#[should_panic]
+			fn $test_name() {
+				let mut dst_load = $dst_val;
+				$func_to_test($src_val, &mut dst_load);
+			}
+		};
+	}
+
+	macro_rules! test_dst_length_ok {
+		($test_name:ident, $src_val:expr, $dst_val:expr, $func_to_test:expr) => {
+			#[test]
+			fn $test_name() {
+				let mut dst_load = $dst_val;
+				$func_to_test($src_val, &mut dst_load);
+			}
+		};
+	}
+
+	test_empty_src_panic! {test_panic_empty_load_u32_into_le, &[0u8; 0], [0u32; 4], load_u32_into_le}
+	test_empty_src_panic! {test_panic_empty_load_u32_into_be, &[0u8; 0], [0u32; 4], load_u32_into_be}
+	test_empty_src_panic! {test_panic_empty_load_u64_into_le, &[0u8; 0], [0u64; 4], load_u64_into_le}
+	test_empty_src_panic! {test_panic_empty_load_u64_into_be, &[0u8; 0], [0u64; 4], load_u64_into_be}
+
+	test_empty_src_panic! {test_panic_empty_store_u32_into_le, &[0u32; 0], [0u8; 24], store_u32_into_le}
+	test_empty_src_panic! {test_panic_empty_store_u32_into_be, &[0u32; 0], [0u8; 24], store_u32_into_be}
+	test_empty_src_panic! {test_panic_empty_store_u64_into_le, &[0u64; 0], [0u8; 24], store_u64_into_le}
+	test_empty_src_panic! {test_panic_empty_store_u64_into_be, &[0u64; 0], [0u8; 24], store_u64_into_be}
+
+	// -1 too low
+	test_dst_length_panic! {test_dst_length_load_u32_into_le_low, &[0u8; 64], [0u32; 15], load_u32_into_le}
+	test_dst_length_panic! {test_dst_length_load_u32_into_be_low, &[0u8; 64], [0u32; 15], load_u32_into_be}
+	test_dst_length_panic! {test_dst_length_load_u64_into_le_low, &[0u8; 64], [0u64; 7], load_u64_into_le}
+	test_dst_length_panic! {test_dst_length_load_u64_into_be_low, &[0u8; 64], [0u64; 7], load_u64_into_be}
+
+	test_dst_length_panic! {test_dst_length_store_u32_into_le_low, &[0u32; 15], [0u8; 64], store_u32_into_le}
+	test_dst_length_panic! {test_dst_length_store_u32_into_be_low, &[0u32; 15], [0u8; 64], store_u32_into_be}
+	test_dst_length_panic! {test_dst_length_store_u64_into_le_low, &[0u64; 7], [0u8; 64], store_u64_into_le}
+	test_dst_length_panic! {test_dst_length_store_u64_into_be_low, &[0u64; 7], [0u8; 64], store_u64_into_be}
+	// +1 too high
+	test_dst_length_panic! {test_dst_length_load_u32_into_le_high, &[0u8; 64], [0u32; 17], load_u32_into_le}
+	test_dst_length_panic! {test_dst_length_load_u32_into_be_high, &[0u8; 64], [0u32; 17], load_u32_into_be}
+	test_dst_length_panic! {test_dst_length_load_u64_into_le_high, &[0u8; 64], [0u64; 9], load_u64_into_le}
+	test_dst_length_panic! {test_dst_length_load_u64_into_be_high, &[0u8; 64], [0u64; 9], load_u64_into_be}
+
+	test_dst_length_panic! {test_dst_length_store_u32_into_le_high, &[0u32; 17], [0u8; 64], store_u32_into_le}
+	test_dst_length_panic! {test_dst_length_store_u32_into_be_high, &[0u32; 17], [0u8; 64], store_u32_into_be}
+	test_dst_length_panic! {test_dst_length_store_u64_into_le_high, &[0u64; 9], [0u8; 64], store_u64_into_le}
+	test_dst_length_panic! {test_dst_length_store_u64_into_be_high, &[0u64; 9], [0u8; 64], store_u64_into_be}
+	// Ok
+	test_dst_length_ok! {test_dst_length_load_u32_into_le_ok, &[0u8; 64], [0u32; 16], load_u32_into_le}
+	test_dst_length_ok! {test_dst_length_load_u32_into_be_ok, &[0u8; 64], [0u32; 16], load_u32_into_be}
+	test_dst_length_ok! {test_dst_length_load_u64_into_le_ok, &[0u8; 64], [0u64; 8], load_u64_into_le}
+	test_dst_length_ok! {test_dst_length_load_u64_into_be_ok, &[0u8; 64], [0u64; 8], load_u64_into_be}
+
+	test_dst_length_ok! {test_dst_length_store_u32_into_le_ok, &[0u32; 16], [0u8; 64], store_u32_into_le}
+	test_dst_length_ok! {test_dst_length_store_u32_into_be_ok, &[0u32; 16], [0u8; 64], store_u32_into_be}
+	test_dst_length_ok! {test_dst_length_store_u64_into_le_ok, &[0u64; 8], [0u8; 64], store_u64_into_le}
+	test_dst_length_ok! {test_dst_length_store_u64_into_be_ok, &[0u64; 8], [0u8; 64], store_u64_into_be}
+
 	// Proptests. Only exectued when NOT testing no_std.
 	#[cfg(feature = "safe_api")]
 	mod proptest {
@@ -258,7 +331,6 @@ mod public {
 			fn prop_load_store_u32_le(src: Vec<u8>) -> bool {
 				if !src.is_empty() && src.len() % 4 == 0 {
 					let mut dst_load = vec![0u32; src.len() / 4];
-                    assert!(dst_load.len() * 4 == src.len());
 					load_u32_into_le(&src[..], &mut dst_load);
 					let mut dst_store = src.clone();
 					store_u32_into_le(&dst_load[..], &mut dst_store);
