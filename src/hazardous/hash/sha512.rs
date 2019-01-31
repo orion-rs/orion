@@ -52,8 +52,8 @@
 use crate::{
 	errors::{FinalizationCryptoError, UnknownCryptoError},
 	hazardous::constants::SHA2_BLOCKSIZE,
+	util::endianness::{load_u64_be, store_u64_be},
 };
-use byteorder::{BigEndian, ByteOrder};
 
 construct_digest! {
 	/// A type to represent the `Digest` that SHA512 returns.
@@ -193,7 +193,7 @@ impl Sha512 {
 	/// Process data in `self.buffer`.
 	fn process(&mut self) {
 		let mut w = [0u64; 80];
-		BigEndian::read_u64_into(&self.buffer, &mut w[..16]);
+		load_u64_be(&self.buffer, &mut w[..16]);
 
 		for t in 16..80 {
 			w[t] = self
@@ -348,7 +348,7 @@ impl Sha512 {
 		self.process();
 
 		let mut digest = [0u8; 64];
-		BigEndian::write_u64_into(&self.working_state, &mut digest);
+		store_u64_be(&self.working_state, &mut digest);
 
 		Ok(Digest::from_slice(&digest)?)
 	}

@@ -59,6 +59,46 @@ macro_rules! impl_load {
     );
 }
 
+macro_rules! impl_load_single {
+    ($(#[$meta:meta])*
+    ($type_alias: ty, $type_alias_expr: ident, $conv_function: ident, $func_name: ident)) => (
+        #[inline]
+        $(#[$meta])*
+		///
+        pub fn $func_name(src: &[u8]) -> $type_alias {
+            let type_alias_len = mem::size_of::<$type_alias>();
+            assert!(type_alias_len == src.len());
+
+            let mut tmp = [0u8; mem::size_of::<$type_alias>()];
+            tmp.copy_from_slice(src);
+
+            $type_alias_expr::$conv_function(tmp)
+        }
+    );
+}
+
+#[rustfmt::skip]
+impl_load_single!(
+	/// Load bytes in `src` as a `u32` in little-endian byte order.
+	///
+	/// # Parameters:
+	/// - `src`: Source buffer.
+	///
+	/// # Exceptions:
+	/// An exception will be thrown if:
+	/// - `src.len() != 4`
+	///
+	/// # Example:
+	/// ```
+	/// use orion::util::endianness;
+	///
+	///
+	/// endianness::load_single_u32_le(&[125u8; 4]);
+	/// ```
+	(u32, u32, from_le_bytes, load_single_u32_le)
+);
+
+
 #[rustfmt::skip]
 impl_load!(
 	/// Load bytes in `src` into `dst` in little-endian byte order.
@@ -321,6 +361,23 @@ mod public {
 	test_dst_length_ok! {test_dst_length_store_u64_le_ok, &[0u64; 8], [0u8; 64], store_u64_le}
 	test_dst_length_ok! {test_dst_length_store_u64_be_ok, &[0u64; 8], [0u8; 64], store_u64_be}
 
+    #[test]
+    #[should_panic]
+    fn test_load_single_src_high() {
+        load_single_u32_le(&[0u8; 5]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_load_single_src_low() {
+        load_single_u32_le(&[0u8; 3]);
+    }
+
+    #[test]
+    fn test_load_single_src_ok() {
+        load_single_u32_le(&[0u8; 4]);
+    }
+
 	// Proptests. Only exectued when NOT testing no_std.
 	#[cfg(feature = "safe_api")]
 	mod proptest {
@@ -332,7 +389,9 @@ mod public {
 				if !src.is_empty() && src.len() % 4 == 0 {
 					let mut dst_load = vec![0u32; src.len() / 4];
 					load_u32_le(&src[..], &mut dst_load);
-					let mut dst_store = src.clone();
+					// Test that single_ also is working correctly
+                    dst_load[0] = load_single_u32_le(&src[..4]);
+                    let mut dst_store = src.clone();
 					store_u32_le(&dst_load[..], &mut dst_store);
 
 					(dst_store == src)
@@ -402,6 +461,10 @@ mod public {
 				store_u32_le(&src[..], &mut dst_store);
 				let mut dst_load = src.clone();
 				load_u32_le(&dst_store[..], &mut dst_load);
+                if dst_store.len() >= 4 {
+                    // Test that single_ also is working correctly
+                    dst_load[0] = load_single_u32_le(&dst_store[..4]);
+                }
 
 				(dst_load == src)
 			}
@@ -445,5 +508,5 @@ mod public {
 				(dst_load == src)
 			}
 		}
-	}
+    }
 }

@@ -71,8 +71,8 @@
 use crate::{
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE},
+	util::endianness::{load_u64_le, store_u64_le},
 };
-use byteorder::{ByteOrder, LittleEndian};
 use clear_on_drop::clear::Clear;
 
 construct_blake2b_key! {
@@ -258,7 +258,7 @@ impl Blake2b {
 	/// The compression function f as defined in the RFC.
 	fn compress_f(&mut self) {
 		let mut m_vec = [0u64; 16];
-		LittleEndian::read_u64_into(&self.buffer, &mut m_vec);
+		load_u64_le(&self.buffer, &mut m_vec);
 		let mut w_vec = [
 			self.internal_state[0],
 			self.internal_state[1],
@@ -400,7 +400,7 @@ impl Blake2b {
 		}
 		self.compress_f();
 
-		LittleEndian::write_u64_into(&self.internal_state, &mut digest);
+		store_u64_le(&self.internal_state, &mut digest);
 
 		Ok(Digest::from_slice(&digest[..self.size])?)
 	}
