@@ -105,7 +105,7 @@ use crate::{
 		HCHACHA_OUTSIZE,
 		IETF_CHACHA_NONCESIZE,
 	},
-	util::endianness::{load_u32_le, store_u32_le},
+	endianness::{load_u32_le, store_u32_le},
 };
 use clear_on_drop::clear::Clear;
 

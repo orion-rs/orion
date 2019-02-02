@@ -27,9 +27,6 @@ use rand_os::rand_core::RngCore;
 use rand_os::OsRng;
 use subtle::ConstantTimeEq;
 
-/// Utilities for endianness conversion.
-pub mod endianness;
-
 #[must_use]
 #[cfg(feature = "safe_api")]
 /// Generate random bytes using a CSPRNG. Not available in `no_std` context.

@@ -79,160 +79,36 @@ macro_rules! impl_load_single {
 
 #[rustfmt::skip]
 impl_load_single!(
-	/// Load bytes in `src` as a `u32` in little-endian byte order.
-	///
-	/// # Parameters:
-	/// - `src`: Source buffer.
-	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
-	/// - `src.len() != 4`
-	///
-	/// # Example:
-	/// ```
-	/// use orion::util::endianness;
-	///
-	///
-	/// endianness::load_single_u32_le(&[125u8; 4]);
-	/// ```
 	(u32, u32, from_le_bytes, load_single_u32_le)
 );
 
 #[rustfmt::skip]
 impl_load!(
-	/// Load bytes in `src` into `dst` in little-endian byte order.
-	///
-	/// # Parameters:
-	/// - `dst`: Destination buffer.
-	/// - `src`: Source buffer.
-	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
-	/// - `dst.len() != src.len() / 4`
-	///
-	/// # Example:
-	/// ```
-	/// use orion::util::endianness;
-	///
-	/// let mut dst = [0u32; 16];
-	///
-	/// endianness::load_u32_le(&[125u8; 64], &mut dst);
-	/// ```
 	(u32, u32, from_le_bytes, load_u32_le)
 );
 
 #[rustfmt::skip]
 impl_load!(
-	/// Load bytes in `src` into `dst` in little-endian byte order.
-	///
-	/// # Parameters:
-	/// - `dst`: Destination buffer.
-	/// - `src`: Source buffer.
-	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
-	/// - `dst.len() != src.len() / 8`
-	///
-	/// # Example:
-	/// ```
-	/// use orion::util::endianness;
-	///
-	/// let mut dst = [0u64; 8];
-	///
-	/// endianness::load_u64_le(&[125u8; 64], &mut dst);
-	/// ```
 	(u64, u64, from_le_bytes, load_u64_le)
 );
 
 #[rustfmt::skip]
 impl_load!(
-    /// Load bytes in `src` into `dst` in big-endian byte order.
-    ///
-    /// # Parameters:
-    /// - `dst`: Destination buffer.
-    /// - `src`: Source buffer. 
-    ///
-    /// # Exceptions:
-    /// An exception will be thrown if:
-    /// - `dst.len() != src.len() / 8`
-    ///
-    /// # Example:
-    /// ```
-    /// use orion::util::endianness;
-    ///
-    /// let mut dst = [0u64; 8];
-    ///
-    /// endianness::load_u64_be(&[125u8; 64], &mut dst);
-    /// ```
     (u64, u64, from_be_bytes, load_u64_be)
 );
 
 #[rustfmt::skip]
 impl_store!(
-    /// Store bytes `src` in `dst` in little-endian byte order.
-    ///
-    /// # Parameters:
-    /// - `dst`: Destination buffer.
-    /// - `src`: Source buffer.
-    ///
-    /// # Exceptions:
-    /// An exception will be thrown if:
-    /// - `dst.len() != src.len() * 4`
-    ///
-    /// # Example:
-    /// ```
-    /// use orion::util::endianness;
-    ///
-    /// let mut dst = [0u8; 64];
-    ///
-    /// endianness::store_u32_le(&[5u32; 16], &mut dst);
-    /// ```
     (u32, to_le_bytes, store_u32_le)
 );
 
 #[rustfmt::skip]
 impl_store!(
-	/// Store bytes in `src` into `dst` in little-endian byte order.
-	///
-	/// # Parameters:
-	/// - `dst`: Destination buffer.
-	/// - `src`: Source buffer.
-	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
-	/// - `dst.len() != src.len() * 8`
-	///
-	/// # Example:
-	/// ```
-	/// use orion::util::endianness;
-	///
-	/// let mut dst = [0u8; 64];
-	///
-	/// endianness::store_u64_le(&[5u64; 8], &mut dst);
-	/// ```
 	(u64, to_le_bytes, store_u64_le)
 );
 
 #[rustfmt::skip]
 impl_store!(
-	/// Store bytes in `src` into `dst` in big-endian byte order.
-	///
-	/// # Parameters:
-	/// - `dst`: Destination buffer.
-	/// - `src`: Source buffer.
-	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
-	/// - `dst.len() != src.len() * 8`
-	///
-	/// # Example:
-	/// ```
-	/// use orion::util::endianness;
-	///
-	/// let mut dst = [0u8; 64];
-	///
-	/// endianness::store_u64_be(&[5u64; 8], &mut dst);
-	/// ```
 	(u64, to_be_bytes, store_u64_be)
 );
 

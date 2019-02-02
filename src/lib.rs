@@ -63,6 +63,9 @@ extern crate quickcheck;
 #[macro_use]
 mod typedefs;
 
+/// Endianness conversion functions.
+mod endianness;
+
 /// Utilities such as constant-time comparison.
 pub mod util;
 

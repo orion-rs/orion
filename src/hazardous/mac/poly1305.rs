@@ -64,7 +64,7 @@ extern crate core;
 use crate::{
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE},
-	util::endianness::{load_single_u32_le, store_u32_le},
+	endianness::{load_single_u32_le, store_u32_le},
 };
 
 construct_secret_key! {

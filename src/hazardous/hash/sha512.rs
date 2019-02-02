@@ -52,7 +52,7 @@
 use crate::{
 	errors::{FinalizationCryptoError, UnknownCryptoError},
 	hazardous::constants::SHA2_BLOCKSIZE,
-	util::endianness::{load_u64_be, store_u64_be},
+	endianness::{load_u64_be, store_u64_be},
 };
 
 construct_digest! {
