@@ -229,6 +229,8 @@ mod public {
 	fn compare_hmac_states(state_1: &Hmac, state_2: &Hmac) {
 		compare_sha512_states(&state_1.opad_hasher, &state_2.opad_hasher);
 		compare_sha512_states(&state_1.ipad_hasher, &state_2.ipad_hasher);
+		compare_sha512_states(&state_1.working_hasher, &state_2.working_hasher);
+		
 		assert_eq!(state_1.is_finalized, state_2.is_finalized);
 	}
 
