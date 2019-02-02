@@ -105,7 +105,7 @@ use crate::{
 		HCHACHA_OUTSIZE,
 		IETF_CHACHA_NONCESIZE,
 	},
-	endianness::{load_u32_le, store_u32_le},
+	endianness::{load_u32_into_le, store_u32_into_le},
 };
 use clear_on_drop::clear::Clear;
 
@@ -197,12 +197,12 @@ impl InternalState {
 		self.state[2] = 0x7962_2d32_u32;
 		self.state[3] = 0x6b20_6574_u32;
 
-		load_u32_le(&secret_key.unprotected_as_bytes(), &mut self.state[4..12]);
+		load_u32_into_le(&secret_key.unprotected_as_bytes(), &mut self.state[4..12]);
 
 		if self.is_ietf {
-			load_u32_le(nonce, &mut self.state[13..16]);
+			load_u32_into_le(nonce, &mut self.state[13..16]);
 		} else {
-			load_u32_le(nonce, &mut self.state[12..16]);
+			load_u32_into_le(nonce, &mut self.state[12..16]);
 		}
 
 		Ok(())
@@ -264,10 +264,10 @@ impl InternalState {
 		}
 
 		if self.is_ietf {
-			store_u32_le(src_block, dst_block);
+			store_u32_into_le(src_block, dst_block);
 		} else {
-			store_u32_le(&src_block[0..4], &mut dst_block[0..16]);
-			store_u32_le(&src_block[12..16], &mut dst_block[16..32]);
+			store_u32_into_le(&src_block[0..4], &mut dst_block[0..16]);
+			store_u32_into_le(&src_block[12..16], &mut dst_block[16..32]);
 		}
 
 		Ok(())
