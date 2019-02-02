@@ -150,29 +150,6 @@ impl_load!(
     ///
     /// # Parameters:
     /// - `dst`: Destination buffer.
-    /// - `src`: Source buffer.
-    ///
-    /// # Exceptions:
-    /// An exception will be thrown if:
-    /// - `dst.len() != src.len() / 4`
-    ///
-    /// # Example:
-    /// ```
-    /// use orion::util::endianness;
-    ///
-    /// let mut dst = [0u32; 16];
-    ///
-    /// endianness::load_u32_be(&[125u8; 64], &mut dst);
-    /// ```
-    (u32, u32, from_be_bytes, load_u32_be)
-);
-
-#[rustfmt::skip]
-impl_load!(
-    /// Load bytes in `src` into `dst` in big-endian byte order.
-    ///
-    /// # Parameters:
-    /// - `dst`: Destination buffer.
     /// - `src`: Source buffer. 
     ///
     /// # Exceptions:
@@ -246,29 +223,6 @@ impl_store!(
 	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
-	/// - `dst.len() != src.len() * 4`
-	///
-	/// # Example:
-	/// ```
-	/// use orion::util::endianness;
-	///
-	/// let mut dst = [0u8; 64];
-	///
-	/// endianness::store_u32_be(&[5u32; 16], &mut dst);
-	/// ```
-	(u32, to_be_bytes, store_u32_be)
-);
-
-#[rustfmt::skip]
-impl_store!(
-	/// Store bytes in `src` into `dst` in big-endian byte order.
-	///
-	/// # Parameters:
-	/// - `dst`: Destination buffer.
-	/// - `src`: Source buffer.
-	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
 	/// - `dst.len() != src.len() * 8`
 	///
 	/// # Example:
@@ -320,43 +274,35 @@ mod public {
 	}
 
 	test_empty_src_panic! {test_panic_empty_load_u32_le, &[0u8; 0], [0u32; 4], load_u32_le}
-	test_empty_src_panic! {test_panic_empty_load_u32_be, &[0u8; 0], [0u32; 4], load_u32_be}
 	test_empty_src_panic! {test_panic_empty_load_u64_le, &[0u8; 0], [0u64; 4], load_u64_le}
 	test_empty_src_panic! {test_panic_empty_load_u64_be, &[0u8; 0], [0u64; 4], load_u64_be}
 
 	test_empty_src_panic! {test_panic_empty_store_u32_le, &[0u32; 0], [0u8; 24], store_u32_le}
-	test_empty_src_panic! {test_panic_empty_store_u32_be, &[0u32; 0], [0u8; 24], store_u32_be}
 	test_empty_src_panic! {test_panic_empty_store_u64_le, &[0u64; 0], [0u8; 24], store_u64_le}
 	test_empty_src_panic! {test_panic_empty_store_u64_be, &[0u64; 0], [0u8; 24], store_u64_be}
 
 	// -1 too low
 	test_dst_length_panic! {test_dst_length_load_u32_le_low, &[0u8; 64], [0u32; 15], load_u32_le}
-	test_dst_length_panic! {test_dst_length_load_u32_be_low, &[0u8; 64], [0u32; 15], load_u32_be}
 	test_dst_length_panic! {test_dst_length_load_u64_le_low, &[0u8; 64], [0u64; 7], load_u64_le}
 	test_dst_length_panic! {test_dst_length_load_u64_be_low, &[0u8; 64], [0u64; 7], load_u64_be}
 
 	test_dst_length_panic! {test_dst_length_store_u32_le_low, &[0u32; 15], [0u8; 64], store_u32_le}
-	test_dst_length_panic! {test_dst_length_store_u32_be_low, &[0u32; 15], [0u8; 64], store_u32_be}
 	test_dst_length_panic! {test_dst_length_store_u64_le_low, &[0u64; 7], [0u8; 64], store_u64_le}
 	test_dst_length_panic! {test_dst_length_store_u64_be_low, &[0u64; 7], [0u8; 64], store_u64_be}
 	// +1 too high
 	test_dst_length_panic! {test_dst_length_load_u32_le_high, &[0u8; 64], [0u32; 17], load_u32_le}
-	test_dst_length_panic! {test_dst_length_load_u32_be_high, &[0u8; 64], [0u32; 17], load_u32_be}
 	test_dst_length_panic! {test_dst_length_load_u64_le_high, &[0u8; 64], [0u64; 9], load_u64_le}
 	test_dst_length_panic! {test_dst_length_load_u64_be_high, &[0u8; 64], [0u64; 9], load_u64_be}
 
 	test_dst_length_panic! {test_dst_length_store_u32_le_high, &[0u32; 17], [0u8; 64], store_u32_le}
-	test_dst_length_panic! {test_dst_length_store_u32_be_high, &[0u32; 17], [0u8; 64], store_u32_be}
 	test_dst_length_panic! {test_dst_length_store_u64_le_high, &[0u64; 9], [0u8; 64], store_u64_le}
 	test_dst_length_panic! {test_dst_length_store_u64_be_high, &[0u64; 9], [0u8; 64], store_u64_be}
 	// Ok
 	test_dst_length_ok! {test_dst_length_load_u32_le_ok, &[0u8; 64], [0u32; 16], load_u32_le}
-	test_dst_length_ok! {test_dst_length_load_u32_be_ok, &[0u8; 64], [0u32; 16], load_u32_be}
 	test_dst_length_ok! {test_dst_length_load_u64_le_ok, &[0u8; 64], [0u64; 8], load_u64_le}
 	test_dst_length_ok! {test_dst_length_load_u64_be_ok, &[0u8; 64], [0u64; 8], load_u64_be}
 
 	test_dst_length_ok! {test_dst_length_store_u32_le_ok, &[0u32; 16], [0u8; 64], store_u32_le}
-	test_dst_length_ok! {test_dst_length_store_u32_be_ok, &[0u32; 16], [0u8; 64], store_u32_be}
 	test_dst_length_ok! {test_dst_length_store_u64_le_ok, &[0u64; 8], [0u8; 64], store_u64_le}
 	test_dst_length_ok! {test_dst_length_store_u64_be_ok, &[0u64; 8], [0u8; 64], store_u64_be}
 
@@ -386,23 +332,6 @@ mod public {
 					dst_load[0] = load_single_u32_le(&src[..4]);
 					let mut dst_store = src.clone();
 					store_u32_le(&dst_load[..], &mut dst_store);
-
-					(dst_store == src)
-				} else {
-					// if not, it panics
-					true
-				}
-			}
-		}
-
-		quickcheck! {
-			/// Load and store should not change the result.
-			fn prop_load_store_u32_be(src: Vec<u8>) -> bool {
-				if !src.is_empty() && src.len() % 4 == 0 {
-					let mut dst_load = vec![0u32; src.len() / 4];
-					load_u32_be(&src[..], &mut dst_load);
-					let mut dst_store = src.clone();
-					store_u32_be(&dst_load[..], &mut dst_store);
 
 					(dst_store == src)
 				} else {
@@ -458,19 +387,6 @@ mod public {
 					// Test that single_ also is working correctly
 					dst_load[0] = load_single_u32_le(&dst_store[..4]);
 				}
-
-				(dst_load == src)
-			}
-		}
-
-		quickcheck! {
-			 /// Store and load should not change the result.
-			fn prop_store_load_u32_be(src: Vec<u32>) -> bool {
-
-				let mut dst_store = vec![0u8; src.len() * 4];
-				store_u32_be(&src[..], &mut dst_store);
-				let mut dst_load = src.clone();
-				load_u32_be(&dst_store[..], &mut dst_load);
 
 				(dst_load == src)
 			}
