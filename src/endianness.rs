@@ -176,7 +176,7 @@ mod public {
 				if !src.is_empty() && src.len() % 4 == 0 {
 					let mut dst_load = vec![0u32; src.len() / 4];
 					load_u32_into_le(&src[..], &mut dst_load);
-					// Test that single_ also is working correctly
+					// Test that loading a single also is working correctly
 					dst_load[0] = load_u32_le(&src[..4]);
 					let mut dst_store = src.clone();
 					store_u32_into_le(&dst_load[..], &mut dst_store);
@@ -232,7 +232,7 @@ mod public {
 				let mut dst_load = src.clone();
 				load_u32_into_le(&dst_store[..], &mut dst_load);
 				if dst_store.len() >= 4 {
-					// Test that single_ also is working correctly
+					// Test that loading a single also is working correctly
 					dst_load[0] = load_u32_le(&dst_store[..4]);
 				}
 
