@@ -69,9 +69,9 @@
 //! ```
 
 use crate::{
+	endianness::{load_u64_into_le, store_u64_into_le},
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE},
-	endianness::{load_u64_into_le, store_u64_into_le},
 };
 use clear_on_drop::clear::Clear;
 

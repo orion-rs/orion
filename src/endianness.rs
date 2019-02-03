@@ -23,94 +23,67 @@
 use core::mem;
 
 macro_rules! impl_store_into {
-    ($(#[$meta:meta])*
-    ($type_alias: ty, $conv_function: ident, $func_name: ident)) => (
-        #[inline]
-        $(#[$meta])*
-		///
-        pub fn $func_name(src: &[$type_alias], dst: &mut [u8]) {
-            let type_alias_len = mem::size_of::<$type_alias>();
-            assert!((type_alias_len * src.len()) == dst.len());
+	($type_alias:ty, $conv_function:ident, $func_name:ident) => {
+		#[inline]
+		/// Store bytes in `src` in `dst`.
+		pub fn $func_name(src: &[$type_alias], dst: &mut [u8]) {
+			let type_alias_len = mem::size_of::<$type_alias>();
+			assert!((type_alias_len * src.len()) == dst.len());
 
-            for (src_elem, dst_chunk) in src.iter().zip(dst.chunks_exact_mut(type_alias_len)) {
-                dst_chunk.copy_from_slice(&src_elem.$conv_function());
-            }
-        }
-	);
+			for (src_elem, dst_chunk) in src.iter().zip(dst.chunks_exact_mut(type_alias_len)) {
+				dst_chunk.copy_from_slice(&src_elem.$conv_function());
+			}
+		}
+	};
 }
 
 macro_rules! impl_load_into {
-    ($(#[$meta:meta])*
-    ($type_alias: ty, $type_alias_expr: ident, $conv_function: ident, $func_name: ident)) => (
-        #[inline]
-        $(#[$meta])*
-		///
-        pub fn $func_name(src: &[u8], dst: &mut [$type_alias]) {
-            let type_alias_len = mem::size_of::<$type_alias>();
-            assert!((dst.len() * type_alias_len) == src.len());
+	($type_alias:ty, $type_alias_expr:ident, $conv_function:ident, $func_name:ident) => {
+		#[inline]
+		/// Load bytes in `src` into `dst`.
+		pub fn $func_name(src: &[u8], dst: &mut [$type_alias]) {
+			let type_alias_len = mem::size_of::<$type_alias>();
+			assert!((dst.len() * type_alias_len) == src.len());
 
-            let mut tmp = [0u8; mem::size_of::<$type_alias>()];
+			let mut tmp = [0u8; mem::size_of::<$type_alias>()];
 
-            for (src_chunk, dst_elem) in src.chunks_exact(type_alias_len).zip(dst.iter_mut()) {
-                tmp.copy_from_slice(src_chunk);
-                *dst_elem = $type_alias_expr::$conv_function(tmp);
-            }
-        }
-    );
+			for (src_chunk, dst_elem) in src.chunks_exact(type_alias_len).zip(dst.iter_mut()) {
+				tmp.copy_from_slice(src_chunk);
+				*dst_elem = $type_alias_expr::$conv_function(tmp);
+			}
+		}
+	};
 }
 
 macro_rules! impl_load {
-    ($(#[$meta:meta])*
-    ($type_alias: ty, $type_alias_expr: ident, $conv_function: ident, $func_name: ident)) => (
-        #[inline]
-        $(#[$meta])*
-		///
-        pub fn $func_name(src: &[u8]) -> $type_alias {
-            let type_alias_len = mem::size_of::<$type_alias>();
-            assert!(type_alias_len == src.len());
+	($type_alias:ty, $type_alias_expr:ident, $conv_function:ident, $func_name:ident) => {
+		#[inline]
+		/// Convert bytes in `src` to a given primitive.
+		pub fn $func_name(src: &[u8]) -> $type_alias {
+			let type_alias_len = mem::size_of::<$type_alias>();
+			assert!(type_alias_len == src.len());
 
-            let mut tmp = [0u8; mem::size_of::<$type_alias>()];
-            tmp.copy_from_slice(src);
+			let mut tmp = [0u8; mem::size_of::<$type_alias>()];
+			tmp.copy_from_slice(src);
 
-            $type_alias_expr::$conv_function(tmp)
-        }
-    );
+			$type_alias_expr::$conv_function(tmp)
+		}
+	};
 }
 
-#[rustfmt::skip]
-impl_load!(
-	(u32, u32, from_le_bytes, load_u32_le)
-);
+impl_load!(u32, u32, from_le_bytes, load_u32_le);
 
-#[rustfmt::skip]
-impl_load_into!(
-	(u32, u32, from_le_bytes, load_u32_into_le)
-);
+impl_load_into!(u32, u32, from_le_bytes, load_u32_into_le);
 
-#[rustfmt::skip]
-impl_load_into!(
-	(u64, u64, from_le_bytes, load_u64_into_le)
-);
+impl_load_into!(u64, u64, from_le_bytes, load_u64_into_le);
 
-#[rustfmt::skip]
-impl_load_into!(
-    (u64, u64, from_be_bytes, load_u64_into_be)
-);
+impl_load_into!(u64, u64, from_be_bytes, load_u64_into_be);
 
-#[rustfmt::skip]
-impl_store_into!(
-    (u32, to_le_bytes, store_u32_into_le)
-);
+impl_store_into!(u32, to_le_bytes, store_u32_into_le);
 
-#[rustfmt::skip]
-impl_store_into!(
-	(u64, to_le_bytes, store_u64_into_le)
-);
+impl_store_into!(u64, to_le_bytes, store_u64_into_le);
 
-#[rustfmt::skip]
-impl_store_into!(
-	(u64, to_be_bytes, store_u64_into_be)
-);
+impl_store_into!(u64, to_be_bytes, store_u64_into_be);
 
 // Testing public functions in the module.
 #[cfg(test)]

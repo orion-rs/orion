@@ -96,6 +96,7 @@
 //! assert_eq!(dst_out_pt, message);
 //! ```
 use crate::{
+	endianness::{load_u32_into_le, store_u32_into_le},
 	errors::UnknownCryptoError,
 	hazardous::constants::{
 		ChaChaState,
@@ -105,7 +106,6 @@ use crate::{
 		HCHACHA_OUTSIZE,
 		IETF_CHACHA_NONCESIZE,
 	},
-	endianness::{load_u32_into_le, store_u32_into_le},
 };
 use clear_on_drop::clear::Clear;
 

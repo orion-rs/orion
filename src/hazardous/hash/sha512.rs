@@ -50,9 +50,9 @@
 //! ```
 
 use crate::{
+	endianness::{load_u64_into_be, store_u64_into_be},
 	errors::{FinalizationCryptoError, UnknownCryptoError},
 	hazardous::constants::SHA2_BLOCKSIZE,
-	endianness::{load_u64_into_be, store_u64_into_be},
 };
 
 construct_digest! {
