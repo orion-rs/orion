@@ -112,7 +112,7 @@ impl core::fmt::Debug for Hmac {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		write!(
 			f,
-			"Hmac {{ ipad: [***OMITTED***], opad_hasher: [***OMITTED***],
+			"Hmac {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***],
             ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
 			self.is_finalized
 		)
@@ -230,7 +230,7 @@ mod public {
 		compare_sha512_states(&state_1.opad_hasher, &state_2.opad_hasher);
 		compare_sha512_states(&state_1.ipad_hasher, &state_2.ipad_hasher);
 		compare_sha512_states(&state_1.working_hasher, &state_2.working_hasher);
-		
+
 		assert_eq!(state_1.is_finalized, state_2.is_finalized);
 	}
 
