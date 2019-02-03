@@ -60,8 +60,7 @@ macro_rules! impl_load {
 		#[inline]
 		/// Convert bytes in `src` to a given primitive.
 		pub fn $func_name(src: &[u8]) -> $type_alias {
-			let type_alias_len = mem::size_of::<$type_alias>();
-			assert!(type_alias_len == src.len());
+			assert!(mem::size_of::<$type_alias>() == src.len());
 
 			let mut tmp = [0u8; mem::size_of::<$type_alias>()];
 			tmp.copy_from_slice(src);
