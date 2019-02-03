@@ -49,7 +49,6 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-extern crate byteorder;
 extern crate clear_on_drop;
 #[cfg(feature = "safe_api")]
 extern crate rand_os;
@@ -63,6 +62,9 @@ extern crate quickcheck;
 
 #[macro_use]
 mod typedefs;
+
+/// Endianness conversion functions.
+mod endianness;
 
 /// Utilities such as constant-time comparison.
 pub mod util;

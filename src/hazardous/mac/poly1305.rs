@@ -62,10 +62,10 @@
 extern crate core;
 
 use crate::{
+	endianness::{load_u32_le, store_u32_into_le},
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE},
 };
-use byteorder::{ByteOrder, LittleEndian};
 
 construct_secret_key! {
 	/// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
@@ -124,16 +124,16 @@ impl Poly1305 {
 	/// Initialize `Poly1305` struct for a given key.
 	fn initialize(&mut self, key: &OneTimeKey) {
 		// clamp(r)
-		self.r[0] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[0..4])) & 0x3ffffff;
-		self.r[1] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[3..7]) >> 2) & 0x3ffff03;
-		self.r[2] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
-		self.r[3] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[9..13]) >> 6) & 0x3f03fff;
-		self.r[4] = (LittleEndian::read_u32(&key.unprotected_as_bytes()[12..16]) >> 8) & 0x00fffff;
+		self.r[0] = (load_u32_le(&key.unprotected_as_bytes()[0..4])) & 0x3ffffff;
+		self.r[1] = (load_u32_le(&key.unprotected_as_bytes()[3..7]) >> 2) & 0x3ffff03;
+		self.r[2] = (load_u32_le(&key.unprotected_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
+		self.r[3] = (load_u32_le(&key.unprotected_as_bytes()[9..13]) >> 6) & 0x3f03fff;
+		self.r[4] = (load_u32_le(&key.unprotected_as_bytes()[12..16]) >> 8) & 0x00fffff;
 
-		self.s[0] = LittleEndian::read_u32(&key.unprotected_as_bytes()[16..20]);
-		self.s[1] = LittleEndian::read_u32(&key.unprotected_as_bytes()[20..24]);
-		self.s[2] = LittleEndian::read_u32(&key.unprotected_as_bytes()[24..28]);
-		self.s[3] = LittleEndian::read_u32(&key.unprotected_as_bytes()[28..32]);
+		self.s[0] = load_u32_le(&key.unprotected_as_bytes()[16..20]);
+		self.s[1] = load_u32_le(&key.unprotected_as_bytes()[20..24]);
+		self.s[2] = load_u32_le(&key.unprotected_as_bytes()[24..28]);
+		self.s[3] = load_u32_le(&key.unprotected_as_bytes()[28..32]);
 	}
 
 	#[must_use]
@@ -172,11 +172,11 @@ impl Poly1305 {
         let mut h4: u32 = self.a[4];
 
         // h += m[i]
-        h0 += (LittleEndian::read_u32(&data[0..4])) & 0x3ffffff;
-        h1 += (LittleEndian::read_u32(&data[3..7]) >> 2) & 0x3ffffff;
-        h2 += (LittleEndian::read_u32(&data[6..10]) >> 4) & 0x3ffffff;
-        h3 += (LittleEndian::read_u32(&data[9..13]) >> 6) & 0x3ffffff;
-        h4 += (LittleEndian::read_u32(&data[12..16]) >> 8) | hibit;
+        h0 += (load_u32_le(&data[0..4])) & 0x3ffffff;
+        h1 += (load_u32_le(&data[3..7]) >> 2) & 0x3ffffff;
+        h2 += (load_u32_le(&data[6..10]) >> 4) & 0x3ffffff;
+        h3 += (load_u32_le(&data[9..13]) >> 6) & 0x3ffffff;
+        h4 += (load_u32_le(&data[12..16]) >> 8) | hibit;
 
         // h *= r
         let d0: u64 =
@@ -366,7 +366,7 @@ impl Poly1305 {
 		}
 		// Get tag
 		self.process_end_of_stream();
-		LittleEndian::write_u32_into(&self.a[0..4], &mut local_buffer);
+		store_u32_into_le(&self.a[0..4], &mut local_buffer);
 
 		Ok(Tag::from_slice(&local_buffer)?)
 	}

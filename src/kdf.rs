@@ -188,7 +188,9 @@ mod public {
 				};
 
 				let pass = Password::from_slice(&passin[..]).unwrap();
-				let salt = Salt::default();
+				let salt = Salt::from_slice(&[192, 251, 70, 48, 200, 151, 170, 100, 177, 86, 7, 16, 143, 23, 38, 197, 108,
+					242, 204, 54, 98, 204, 77, 28, 249, 83, 164, 183, 255, 33, 151, 109, 103, 17, 226, 74, 163, 26, 120, 151,
+					103, 53, 255, 135, 17, 7, 62, 11, 12, 190, 214, 194, 57, 27, 168, 82, 50, 23, 49, 80, 80, 84, 212, 191]).unwrap();
 				let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
 
 				if derive_key_verify(&derived_key, &pass, &salt, 100).is_ok() {
@@ -215,9 +217,12 @@ mod public {
 				};
 
 				let pass = Password::from_slice(&passin[..]).unwrap();
-				let salt = Salt::default();
+				let salt = Salt::from_slice(&[192, 251, 70, 48, 200, 151, 170, 100, 177, 86, 7, 16, 143, 23, 38, 197, 108,
+					242, 204, 54, 98, 204, 77, 28, 249, 83, 164, 183, 255, 33, 151, 109, 103, 17, 226, 74, 163, 26, 120, 151,
+					103, 53, 255, 135, 17, 7, 62, 11, 12, 190, 214, 194, 57, 27, 168, 82, 50, 23, 49, 80, 80, 84, 212, 191]).unwrap();
 				let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
-				let bad_pass = Password::generate(32).unwrap();
+				let bad_pass = Password::from_slice(&[119, 56, 92, 141, 149, 150, 233, 171, 16, 88, 129, 93, 114, 154, 91,
+					118, 227, 98, 170, 53, 229, 140, 132, 83, 80, 192, 71, 208, 186, 34, 87, 112]).unwrap();
 
 				if derive_key_verify(&derived_key, &bad_pass, &salt, 100).is_err() {
 					true
@@ -243,9 +248,13 @@ mod public {
 				};
 
 				let pass = Password::from_slice(&passin[..]).unwrap();
-				let salt = Salt::default();
+				let salt = Salt::from_slice(&[192, 251, 70, 48, 200, 151, 170, 100, 177, 86, 7, 16, 143, 23, 38, 197, 108, 242,
+					204, 54, 98, 204, 77, 28, 249, 83, 164, 183, 255, 33, 151, 109, 103, 17, 226, 74, 163, 26, 120, 151, 103, 53,
+					255, 135, 17, 7, 62, 11, 12, 190, 214, 194, 57, 27, 168, 82, 50, 23, 49, 80, 80, 84, 212, 191]).unwrap();
 				let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
-				let bad_salt = Salt::default();
+				let bad_salt = Salt::from_slice(&[169, 110, 7, 6, 17, 74, 70, 22, 26, 1, 37, 22, 44, 7, 141, 67, 246, 208, 151,
+					232, 6, 105, 153, 83, 191, 31, 65, 164, 237, 40, 114, 70, 210, 20, 168, 59, 151, 101, 245, 141, 144, 49, 126,
+					68, 157, 82, 149, 142, 126, 48, 238, 36, 178, 172, 108, 75, 114, 215, 242, 107, 231, 115, 193, 51]).unwrap();
 
 				if derive_key_verify(&derived_key, &pass, &bad_salt, 100).is_err() {
 					true

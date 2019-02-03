@@ -106,7 +106,6 @@ use crate::{
 	},
 	util,
 };
-use byteorder::{ByteOrder, LittleEndian};
 
 #[must_use]
 #[inline]
@@ -161,8 +160,8 @@ fn process_authentication(
 	poly1305_state.update(&padding_max[..padding(&buf[..buf_in_len])])?;
 
 	// Using the 16 bytes from padding template to store length information
-	LittleEndian::write_u64(&mut padding_max[..8], ad.len() as u64);
-	LittleEndian::write_u64(&mut padding_max[8..16], buf_in_len as u64);
+	padding_max[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
+	padding_max[8..16].copy_from_slice(&(buf_in_len as u64).to_le_bytes());
 
 	poly1305_state.update(&padding_max[..8])?;
 	poly1305_state.update(&padding_max[8..16])?;
