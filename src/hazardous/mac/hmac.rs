@@ -67,9 +67,6 @@
 //! assert!(hmac::verify(&tag.finalize().unwrap(), &key, msg.as_bytes()).unwrap());
 //! ```
 
-extern crate core;
-
-use self::core::mem;
 use crate::{
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::{
@@ -105,24 +102,17 @@ construct_tag! {
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the
 /// [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub struct Hmac {
-	ipad: BlocksizeArray,
+	working_hasher: sha512::Sha512,
 	opad_hasher: sha512::Sha512,
 	ipad_hasher: sha512::Sha512,
 	is_finalized: bool,
-}
-
-impl Drop for Hmac {
-	fn drop(&mut self) {
-		use clear_on_drop::clear::Clear;
-		self.ipad.clear();
-	}
 }
 
 impl core::fmt::Debug for Hmac {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		write!(
 			f,
-			"Hmac {{ ipad: [***OMITTED***], opad_hasher: [***OMITTED***],
+			"Hmac {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***],
             ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
 			self.is_finalized
 		)
@@ -133,27 +123,29 @@ impl Hmac {
 	#[inline]
 	/// Pad `key` with `ipad` and `opad`.
 	fn pad_key_io(&mut self, key: &SecretKey) {
+		let mut ipad: BlocksizeArray = [0x36; SHA2_BLOCKSIZE];
 		let mut opad: BlocksizeArray = [0x5C; SHA2_BLOCKSIZE];
 		// `key` has already been padded with zeroes to a length of SHA2_BLOCKSIZE
 		// in SecretKey::from_slice
+		assert_eq!(key.unprotected_as_bytes().len(), SHA2_BLOCKSIZE);
 		for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {
-			self.ipad[idx] ^= itm;
 			opad[idx] ^= itm;
+			ipad[idx] ^= itm;
 		}
+
 		// Due to opad_hasher and ipad_hasher being initialized in init()
-		// using .unwrap() here should not be able to panic
-		self.ipad_hasher.update(self.ipad.as_ref()).unwrap();
+		// and the size of input to update() is known to be acceptable size,
+		// .unwrap() here should not be able to panic
+		self.ipad_hasher.update(ipad.as_ref()).unwrap();
 		self.opad_hasher.update(opad.as_ref()).unwrap();
+		self.working_hasher = self.ipad_hasher.clone();
+		ipad.clear();
 		opad.clear();
 	}
 
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
-		self.ipad_hasher = sha512::init();
-		// Using unwrap() as this should not panic,
-		// since the state has just been initialized and therefore
-		// cannot already be finalized.
-		self.ipad_hasher.update(self.ipad.as_ref()).unwrap();
+		self.working_hasher = self.ipad_hasher.clone();
 		self.is_finalized = false;
 	}
 
@@ -163,7 +155,7 @@ impl Hmac {
 		if self.is_finalized {
 			Err(FinalizationCryptoError)
 		} else {
-			self.ipad_hasher.update(data)?;
+			self.working_hasher.update(data)?;
 			Ok(())
 		}
 	}
@@ -176,13 +168,9 @@ impl Hmac {
 		}
 
 		self.is_finalized = true;
-
-		let mut hash_ires = sha512::init();
-		mem::swap(&mut self.ipad_hasher, &mut hash_ires);
-
-		let mut o_hash = self.opad_hasher.clone();
-		o_hash.update(&hash_ires.finalize()?.as_bytes())?;
-		let tag = Tag::from_slice(&o_hash.finalize()?.as_bytes())?;
+		let mut outer_hasher = self.opad_hasher.clone();
+		outer_hasher.update(self.working_hasher.finalize()?.as_bytes())?;
+		let tag = Tag::from_slice(outer_hasher.finalize()?.as_bytes())?;
 
 		Ok(tag)
 	}
@@ -192,7 +180,7 @@ impl Hmac {
 /// Initialize `Hmac` struct with a given key.
 pub fn init(secret_key: &SecretKey) -> Hmac {
 	let mut state = Hmac {
-		ipad: [0x36; SHA2_BLOCKSIZE],
+		working_hasher: sha512::init(),
 		opad_hasher: sha512::init(),
 		ipad_hasher: sha512::init(),
 		is_finalized: false,
@@ -242,8 +230,8 @@ mod public {
 	fn compare_hmac_states(state_1: &Hmac, state_2: &Hmac) {
 		compare_sha512_states(&state_1.opad_hasher, &state_2.opad_hasher);
 		compare_sha512_states(&state_1.ipad_hasher, &state_2.ipad_hasher);
+		compare_sha512_states(&state_1.working_hasher, &state_2.working_hasher);
 
-		assert_eq!(state_1.ipad[..], state_2.ipad[..]);
 		assert_eq!(state_1.is_finalized, state_2.is_finalized);
 	}
 
