@@ -91,3 +91,67 @@ impl From<UnknownCryptoError> for FinalizationCryptoError {
 impl From<FinalizationCryptoError> for ValidationCryptoError {
 	fn from(_: FinalizationCryptoError) -> Self { ValidationCryptoError }
 }
+
+#[test]
+#[cfg(feature = "safe_api")]
+// format! is only available with std
+fn test_finalization_crypto_error_debug_display() {
+	// Tests Debug impl though "{:?}"
+	let err = format!("{:?}", FinalizationCryptoError);
+    assert_eq!(err, "FinalizationCryptoError - Missing reset");
+	// Tests Display impl though "{:?}"
+	let err = format!("{}", FinalizationCryptoError);
+    assert_eq!(err, "FinalizationCryptoError - Missing reset");
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+// format! is only available with std
+fn test_finalization_crypto_error_from() {
+	let err = format!("{:?}", FinalizationCryptoError::from(UnknownCryptoError));
+    assert_eq!(err, "FinalizationCryptoError - Missing reset");
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+// format! is only available with std
+fn test_validation_crypto_error_debug_display() {
+	// Tests Debug impl though "{:?}"
+	let err = format!("{:?}", ValidationCryptoError);
+    assert_eq!(err, "ValidationCryptoError - Failed verification");
+	// Tests Display impl though "{:?}"
+	let err = format!("{}", ValidationCryptoError);
+    assert_eq!(err, "ValidationCryptoError - Failed verification");
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+// format! is only available with std
+fn test_validation_crypto_error_from() {
+	let err = format!("{:?}", ValidationCryptoError::from(FinalizationCryptoError));
+    assert_eq!(err, "ValidationCryptoError - Failed verification");
+	let err = format!("{:?}", ValidationCryptoError::from(UnknownCryptoError));
+    assert_eq!(err, "ValidationCryptoError - Failed verification");
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+// format! is only available with std
+fn test_unknown_crypto_error_debug_display() {
+	// Tests Debug impl though "{:?}"
+	let err = format!("{:?}", UnknownCryptoError);
+    assert_eq!(err, "UnknownCryptoError");
+	// Tests Display impl though "{:?}"
+	let err = format!("{}", UnknownCryptoError);
+    assert_eq!(err, "UnknownCryptoError");
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+// format! is only available with std
+fn test_unknown_crypto_error_from() {
+	let err = format!("{:?}", UnknownCryptoError::from(rand_core::Error::new(rand_core::ErrorKind::NotReady, "CSPRNG not ready")));
+    assert_eq!(err, "UnknownCryptoError");
+	let err = format!("{:?}", UnknownCryptoError::from(FinalizationCryptoError));
+    assert_eq!(err, "UnknownCryptoError");
+}
