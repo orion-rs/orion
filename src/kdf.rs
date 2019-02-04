@@ -181,7 +181,7 @@ mod public {
 					input
 				};
 
-				let size_checked = if size == 0 {
+				let size_checked = if size < 5 {
 					32
 				} else {
 					size
@@ -210,7 +210,7 @@ mod public {
 					input
 				};
 
-				let size_checked = if size == 0 {
+				let size_checked = if size < 5 {
 					32
 				} else {
 					size
@@ -241,7 +241,7 @@ mod public {
 					input
 				};
 
-				let size_checked = if size == 0 {
+				let size_checked = if size < 5 {
 					32
 				} else {
 					size
