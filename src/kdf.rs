@@ -77,7 +77,7 @@ use crate::{
 	errors::{UnknownCryptoError, ValidationCryptoError},
 	hazardous::kdf::pbkdf2,
 };
-use clear_on_drop::clear::Clear;
+use zeroize::Zeroize;
 
 #[must_use]
 /// Derive a key using PBKDF2-HMAC-SHA512.
@@ -101,7 +101,7 @@ pub fn derive_key(
 	)?;
 
 	let dk = SecretKey::from_slice(&buffer)?;
-	Clear::clear(&mut buffer);
+	buffer.zeroize();
 
 	Ok(dk)
 }
@@ -124,7 +124,7 @@ pub fn derive_key_verify(
 		&mut buffer,
 	)?;
 
-	Clear::clear(&mut buffer);
+	buffer.zeroize();
 
 	Ok(is_good)
 }

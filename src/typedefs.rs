@@ -91,27 +91,11 @@ macro_rules! impl_normal_debug_trait (($name:ident) => (
 /// destructor is called. WARNING: This requires value to be an array as
 /// clear_on_drop will not be called correctly if this particluar trait is
 /// implemented on Vec's.
-macro_rules! impl_drop_stack_trait (($name:ident) => (
+macro_rules! impl_drop_trait (($name:ident) => (
     impl Drop for $name {
         fn drop(&mut self) {
-            use clear_on_drop::clear::Clear;
-            self.value.clear();
-        }
-    }
-));
-
-#[cfg(feature = "safe_api")]
-/// Macro that implements the `Drop` trait on a object called `$name` which as a
-/// field `value`. This `Drop` will zero out the field `value` when the objects
-/// destructor is called. WARNING: This requires value to be a Vec as
-/// clear_on_drop, since calling clear_on_drop this way on arrays above the
-/// length of 32 will fail since they don't implement Default.
-macro_rules! impl_drop_heap_trait (($name:ident) => (
-    #[cfg(feature = "safe_api")]
-    impl Drop for $name {
-        fn drop(&mut self) {
-            use clear_on_drop::clear::Clear;
-            Clear::clear(&mut self.value);
+            use zeroize::Zeroize;
+            self.value.zeroize();
         }
     }
 ));
@@ -229,7 +213,7 @@ macro_rules! construct_secret_key {
         pub struct $name { value: [u8; $size] }
 
         impl_omitted_debug_trait!($name);
-        impl_drop_stack_trait!($name);
+        impl_drop_trait!($name);
         impl_ct_partialeq_trait!($name);
 
         impl $name {
@@ -439,7 +423,7 @@ macro_rules! construct_hmac_key {
         pub struct $name { value: [u8; $size] }
 
         impl_omitted_debug_trait!($name);
-        impl_drop_stack_trait!($name);
+        impl_drop_trait!($name);
         impl_ct_partialeq_trait!($name);
 
         impl $name {
@@ -528,7 +512,7 @@ macro_rules! construct_blake2b_key {
         }
 
         impl_omitted_debug_trait!($name);
-        impl_drop_stack_trait!($name);
+        impl_drop_trait!($name);
         impl_ct_partialeq_trait!($name);
 
         impl $name {
@@ -740,7 +724,7 @@ macro_rules! construct_secret_key_variable_size {
         pub struct $name { value: Vec<u8> }
 
         impl_omitted_debug_trait!($name);
-        impl_drop_heap_trait!($name);
+        impl_drop_trait!($name);
         impl_ct_partialeq_trait!($name);
         impl_default_trait!($name, $size);
 
@@ -864,7 +848,7 @@ macro_rules! construct_password_variable_size {
         pub struct $name { value: Vec<u8> }
 
         impl_omitted_debug_trait!($name);
-        impl_drop_heap_trait!($name);
+        impl_drop_trait!($name);
         impl_ct_partialeq_trait!($name);
 
         impl $name {

@@ -49,7 +49,7 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-extern crate clear_on_drop;
+extern crate zeroize;
 #[cfg(feature = "safe_api")]
 extern crate rand_os;
 extern crate subtle;

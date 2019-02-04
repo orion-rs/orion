@@ -76,7 +76,7 @@ use crate::{
 	hazardous::kdf::pbkdf2,
 	util,
 };
-use clear_on_drop::clear::Clear;
+use zeroize::Zeroize;
 
 #[must_use]
 /// Hash a password using PBKDF2-HMAC-SHA512.
@@ -97,7 +97,7 @@ pub fn hash_password(
 	)?;
 
 	let dk = PasswordHash::from_slice(&buffer)?;
-	buffer.clear();
+	buffer.zeroize();
 
 	Ok(dk)
 }
@@ -119,7 +119,7 @@ pub fn hash_password_verify(
 		&mut dk,
 	)?;
 
-	dk.clear();
+	dk.zeroize();
 
 	Ok(is_good)
 }

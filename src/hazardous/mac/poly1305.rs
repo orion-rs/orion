@@ -99,11 +99,11 @@ pub struct Poly1305 {
 
 impl Drop for Poly1305 {
 	fn drop(&mut self) {
-		use clear_on_drop::clear::Clear;
-		self.a.clear();
-		self.r.clear();
-		self.s.clear();
-		self.buffer.clear();
+		use zeroize::Zeroize;
+		self.a.zeroize();
+		self.r.zeroize();
+		self.s.zeroize();
+		self.buffer.zeroize();
 	}
 }
 

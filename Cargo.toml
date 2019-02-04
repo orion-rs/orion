@@ -22,13 +22,13 @@ exclude = [
 rand_os = { version = "0.1.2", optional = true }
 tiny-keccak = "1.4.2"
 subtle = { version = "2", default-features = false }
-clear_on_drop = "=0.2.3"
+zeroize = { version = "0.5.2", default-features = false }
 
 [features]
 default = [ "safe_api" ]
 safe_api = [ "rand_os" ]
-nightly = [ "clear_on_drop/nightly", "subtle/nightly", "safe_api" ]
-no_std = [ "clear_on_drop/nightly", "subtle/nightly" ]
+nightly = [ "subtle/nightly", "safe_api" ]
+no_std = [ "subtle/nightly" ]
 
 [dev-dependencies]
 hex = "0.3.2"

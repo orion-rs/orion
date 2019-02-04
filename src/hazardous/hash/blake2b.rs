@@ -73,7 +73,6 @@ use crate::{
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE},
 };
-use clear_on_drop::clear::Clear;
 
 construct_blake2b_key! {
 	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.
@@ -182,10 +181,10 @@ pub struct Blake2b {
 
 impl Drop for Blake2b {
 	fn drop(&mut self) {
-		use clear_on_drop::clear::Clear;
-		self.init_state.clear();
-		self.internal_state.clear();
-		self.buffer.clear();
+		use zeroize::Zeroize;
+		self.init_state.zeroize();
+		self.internal_state.zeroize();
+		self.buffer.zeroize();
 	}
 }
 
@@ -348,7 +347,6 @@ impl Blake2b {
 				self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
 				// Using .unwrap() since overflow should not happen in practice
 				self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
-				bytes.clear();
 				return Ok(());
 			}
 
@@ -373,8 +371,6 @@ impl Blake2b {
 			// Using .unwrap() since overflow should not happen in practice
 			self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
 		}
-
-		bytes.clear();
 
 		Ok(())
 	}
