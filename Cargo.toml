@@ -42,6 +42,6 @@ opt-level = 1
 opt-level = 3
 
 [badges]
-travis-ci = { repository = "brycx/orion" }
-codecov = { repository = "brycx/orion" }
+travis-ci = { repository = "brycx/orion", branch = "crates-published" }
+codecov = { repository = "brycx/orion", branch = "crates-published" }
 maintenance = { status = "actively-developed" }

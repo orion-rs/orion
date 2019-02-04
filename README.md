@@ -1,5 +1,5 @@
 # orion
-[![Build Status](https://travis-ci.org/brycx/orion.svg?branch=crates-published)](https://travis-ci.org/brycx/orion) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion) [![dependency status](https://deps.rs/repo/github/brycx/orion/status.svg)](https://deps.rs/repo/github/brycx/orion)
+[![Build Status](https://travis-ci.org/brycx/orion.svg?branch=crates-published)](https://travis-ci.org/brycx/orion) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion) [![dependency status](https://deps.rs/repo/github/brycx/orion/status.svg)](https://deps.rs/repo/github/brycx/orion) [![Documentation](https://docs.rs/orion/badge.svg)](https://docs.rs/orion/) [![Crates.io](https://img.shields.io/crates/v/orion.svg)](https://crates.io/crates/orion)
 
 ### About
 orion is a cryptography library written in pure Rust. It aims to provide easy and usable crypto while trying to minimize the use of unsafe code. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
