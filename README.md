@@ -57,7 +57,9 @@ The [wiki](https://github.com/brycx/orion/wiki/Testing-suite) has details on how
 cargo test
 ```
 
-Fuzzing is done using libFuzzer with [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz). Fuzzing targets can be run with:
+Fuzzing is done using either [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz), with targets in the `fuzz/` folder, or [honggfuzz-rs](https://github.com/rust-fuzz/honggfuzz-rs) in [orion-fuzz](https://github.com/brycx/orion-fuzz). The fuzzing targets in orion-fuzz are newer and maintained more. See [orion-fuzz](https://github.com/brycx/orion-fuz) on how to start fuzzing with honggfuzz-rs.
+
+Fuzzing targets for cargo-fuzz can be run with:
 ```
 cargo +nightly fuzz run -O fuzz_target
 ```
