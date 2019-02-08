@@ -111,10 +111,10 @@ pub struct Sha512 {
 
 impl Drop for Sha512 {
 	fn drop(&mut self) {
-		use clear_on_drop::clear::Clear;
-		self.working_state.clear();
-		self.buffer.clear();
-		self.message_len.clear();
+		use zeroize::Zeroize;
+		self.working_state.zeroize();
+		self.buffer.zeroize();
+		self.message_len.zeroize();
 	}
 }
 

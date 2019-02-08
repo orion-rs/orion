@@ -107,7 +107,7 @@ use crate::{
 		IETF_CHACHA_NONCESIZE,
 	},
 };
-use clear_on_drop::clear::Clear;
+use zeroize::Zeroize;
 
 construct_secret_key! {
 	/// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and
@@ -136,8 +136,8 @@ struct InternalState {
 
 impl Drop for InternalState {
 	fn drop(&mut self) {
-		use clear_on_drop::clear::Clear;
-		self.state.clear();
+		use zeroize::Zeroize;
+		self.state.zeroize();
 	}
 }
 
@@ -333,8 +333,8 @@ pub fn encrypt(
 		}
 	}
 
-	keystream_block.clear();
-	keystream_state.clear();
+	keystream_block.zeroize();
+	keystream_state.zeroize();
 
 	Ok(())
 }
@@ -371,7 +371,7 @@ pub fn keystream_block(
 
 	chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
 
-	keystream_state.clear();
+	keystream_state.zeroize();
 
 	Ok(keystream_block)
 }
@@ -393,7 +393,7 @@ pub fn hchacha20(
 	let mut keystream_block: [u8; HCHACHA_OUTSIZE] = [0u8; HCHACHA_OUTSIZE];
 	chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
 
-	keystream_state.clear();
+	keystream_state.zeroize();
 
 	Ok(keystream_block)
 }

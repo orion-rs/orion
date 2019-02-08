@@ -74,7 +74,7 @@ use crate::{
 		hash::sha512,
 	},
 };
-use clear_on_drop::clear::Clear;
+use zeroize::Zeroize;
 
 construct_hmac_key! {
 	/// A type to represent the `SecretKey` that HMAC uses for authentication.
@@ -139,8 +139,8 @@ impl Hmac {
 		self.ipad_hasher.update(ipad.as_ref()).unwrap();
 		self.opad_hasher.update(opad.as_ref()).unwrap();
 		self.working_hasher = self.ipad_hasher.clone();
-		ipad.clear();
-		opad.clear();
+		ipad.zeroize();
+		opad.zeroize();
 	}
 
 	/// Reset to `init()` state.
