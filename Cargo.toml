@@ -21,7 +21,7 @@ exclude = [
 [dependencies]
 rand_os = { version = "0.1.2", optional = true }
 tiny-keccak = "1.4.2"
-subtle = { version = "2", default-features = false }
+subtle = { version = "2.0.0", default-features = false }
 zeroize = { version = "0.5.2", default-features = false }
 
 [features]
