@@ -828,6 +828,27 @@ mod public {
 			assert_eq!(res_1, res_2);
 			assert_eq!(res_2, res_3);
 			assert_eq!(res_3, res_4);
+
+			if data.is_empty() {
+				// init(), finalize()
+				let mut state_5 = init(sk, size).unwrap();
+				let res_5 = state_5.finalize().unwrap();
+
+				// init(), reset(), finalize()
+				let mut state_6 = init(sk, size).unwrap();
+				state_6.reset(sk).unwrap();
+				let res_6 = state_6.finalize().unwrap();
+
+				// init(), update(), reset(), finalize()
+				let mut state_7 = init(sk, size).unwrap();
+				state_7.update(b"Wrong data").unwrap();
+				state_7.reset(sk).unwrap();
+				let res_7 = state_7.finalize().unwrap();
+
+				assert_eq!(res_4, res_5);
+				assert_eq!(res_5, res_6);
+				assert_eq!(res_6, res_7);
+			}
 		}
 
 		/// Related bug: https://github.com/brycx/orion/issues/46
