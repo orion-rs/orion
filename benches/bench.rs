@@ -36,6 +36,7 @@ mod mac {
 				b.bytes = $input_len;
 
 				b.iter(|| {
+					// SecretKey processes the input for use with HMAC.
 					let key = hmac::SecretKey::from_slice(&[0x01; 64]).unwrap();
 					let _ = hmac::hmac(&key, &[0u8; $input_len]).unwrap();
 				});
@@ -112,7 +113,7 @@ mod hash {
 				b.bytes = $input_len;
 
 				b.iter(|| {
-					let _digest = sha512::digest(&[0u8; $input_len]).unwrap();
+					let _ = sha512::digest(&[0u8; $input_len]).unwrap();
 				});
 			}
 		};
