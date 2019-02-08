@@ -69,7 +69,8 @@ mod aead {
 				let mut out = [0u8; $input_len + 16];
 
 				b.iter(|| {
-					chacha20poly1305::seal(&key, &nonce, &[0u8; $input_len], None, &mut out).unwrap();
+					chacha20poly1305::seal(&key, &nonce, &[0u8; $input_len], None, &mut out)
+						.unwrap();
 				});
 			}
 		};
@@ -86,7 +87,8 @@ mod aead {
 				let mut out = [0u8; $input_len + 16];
 
 				b.iter(|| {
-					xchacha20poly1305::seal(&key, &nonce, &[0u8; $input_len], None, &mut out).unwrap();
+					xchacha20poly1305::seal(&key, &nonce, &[0u8; $input_len], None, &mut out)
+						.unwrap();
 				});
 			}
 		};
@@ -213,7 +215,8 @@ mod kdf {
 				let mut out = [0u8; $input_len];
 
 				b.iter(|| {
-					hkdf::derive_key(&[0x01; 64], &[0x01; 64], Some(&[0x01; 64]), &mut out).unwrap();
+					hkdf::derive_key(&[0x01; 64], &[0x01; 64], Some(&[0x01; 64]), &mut out)
+						.unwrap();
 				});
 			}
 		};
