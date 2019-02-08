@@ -421,7 +421,11 @@ mod public {
 			assert_eq!(res_1, res_2);
 			assert_eq!(res_2, res_3);
 			assert_eq!(res_3, res_4);
-
+			
+			// Tests for the assumption that returning Ok() on empty update() calls 
+			// with streaming API's, gives the correct result. This is done by testing
+			// the reasoning that if update() is empty, returns Ok(), it is the same as 
+			// calling init() -> finalize(). i.e not calling update() at all.
 			if data.is_empty() {
 				// init(), finalize()
 				let mut state_5 = init(&sk);
