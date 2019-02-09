@@ -81,5 +81,8 @@ construct_password_variable_size! {
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is empty.
+	/// - The `OsRng` fails to initialize or read from its source.
+	/// - `length` is 0.
+	/// - `length` is not less than `u32::max_value()`.
 	(Password)
 }
