@@ -36,6 +36,7 @@
 //! - The hashed password does not match the expected when verifying.
 //!
 //! # Security:
+//! - Use `Password::generate()` to randomly generate a password of 128 bytes.
 //! - Salts should always be generated using a CSPRNG. The `gen_rand_key`
 //!   function
 //! in `util` can be used for this.
