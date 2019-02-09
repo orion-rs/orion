@@ -80,8 +80,12 @@ construct_hmac_key! {
 	/// A type to represent the `SecretKey` that HMAC uses for authentication.
 	///
 	/// # Note:
-	/// `SecretKey` pads the secret key for use with HMAC, when initialized.
-	///
+	/// `SecretKey` pads the secret key for use with HMAC to a length of 128, when initialized.
+	/// 
+	/// Using `unprotected_as_bytes()` will return the secret key with padding. 
+	/// 
+	/// Using `get_length()` will return the length with padding (always 128).
+	/// 
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - The `OsRng` fails to initialize or read from its source.

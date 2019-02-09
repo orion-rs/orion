@@ -73,7 +73,11 @@ construct_hmac_key! {
 	///
 	/// # Note:
 	/// Because `Password` is used as a `SecretKey` for HMAC during hashing, `Password` already
-	/// pads the given password, for use in HMAC, when initialized.
+	/// pads the given password to a length of 128, for use in HMAC, when initialized.
+	/// 
+	/// Using `unprotected_as_bytes()` will return the password with padding. 
+	/// 
+	/// Using `get_length()` will return the length with padding (always 128).
 	///
 	/// # Exceptions:
 	/// An exception will be thrown if:

@@ -78,7 +78,11 @@ construct_blake2b_key! {
 	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.
 	///
 	/// # Note:
-	/// `SecretKey` pads the secret key for use with BLAKE2b, when initialized.
+	/// `SecretKey` pads the secret key for use with BLAKE2b to a length of 128, when initialized.
+	/// 
+	/// Using `unprotected_as_bytes()` will return the key with padding. 
+	/// 
+	/// Using `get_length()` will return the length with padding (always 128).
 	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
