@@ -100,7 +100,7 @@ pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
 	errors::UnknownCryptoError,
 	hazardous::{
-		constants::{POLY1305_BLOCKSIZE, POLY1305_KEYSIZE},
+		constants::{POLY1305_KEYSIZE, POLY1305_OUTSIZE},
 		mac::poly1305::{self, OneTimeKey},
 		stream::chacha20,
 	},
@@ -178,7 +178,7 @@ pub fn seal(
 	ad: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	if dst_out.len() < plaintext.len() + POLY1305_BLOCKSIZE {
+	if dst_out.len() < plaintext.len() + POLY1305_OUTSIZE {
 		return Err(UnknownCryptoError);
 	}
 	if plaintext.is_empty() {
@@ -201,7 +201,7 @@ pub fn seal(
 	let mut poly1305_state = poly1305::init(&poly1305_key);
 
 	process_authentication(&mut poly1305_state, &optional_ad, &dst_out, plaintext.len())?;
-	dst_out[plaintext.len()..(plaintext.len() + POLY1305_BLOCKSIZE)]
+	dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
 		.copy_from_slice(&poly1305_state.finalize()?.unprotected_as_bytes());
 
 	Ok(())
@@ -216,10 +216,10 @@ pub fn open(
 	ad: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	if ciphertext_with_tag.len() <= POLY1305_BLOCKSIZE {
+	if ciphertext_with_tag.len() <= POLY1305_OUTSIZE {
 		return Err(UnknownCryptoError);
 	}
-	if dst_out.len() < ciphertext_with_tag.len() - POLY1305_BLOCKSIZE {
+	if dst_out.len() < ciphertext_with_tag.len() - POLY1305_OUTSIZE {
 		return Err(UnknownCryptoError);
 	}
 
@@ -228,7 +228,7 @@ pub fn open(
 		None => &[0u8; 0],
 	};
 
-	let ciphertext_len = ciphertext_with_tag.len() - POLY1305_BLOCKSIZE;
+	let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
 
 	let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes())?;
 	let mut poly1305_state = poly1305::init(&poly1305_key);
@@ -270,7 +270,7 @@ mod public {
 			let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
 			let mut dst_out_ct_less = [0u8; 79]; // 64 + Poly1305TagLen - 1
 			let mut dst_out_ct_more = [0u8; 81]; // 64 + Poly1305TagLen + 1
-			let mut dst_out_ct_more_2 = [0u8; 64 + (POLY1305_BLOCKSIZE * 2)];
+			let mut dst_out_ct_more_2 = [0u8; 64 + (POLY1305_OUTSIZE * 2)];
 
 			assert!(seal(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
@@ -365,7 +365,7 @@ mod public {
 			assert!(open(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; POLY1305_BLOCKSIZE],
+				&[0u8; POLY1305_OUTSIZE],
 				None,
 				&mut dst_out_pt,
 			)
@@ -374,7 +374,7 @@ mod public {
 			assert!(open(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; POLY1305_BLOCKSIZE - 1],
+				&[0u8; POLY1305_OUTSIZE - 1],
 				None,
 				&mut dst_out_pt,
 			)
@@ -384,7 +384,7 @@ mod public {
 			seal(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; POLY1305_BLOCKSIZE + 1],
+				&[0u8; POLY1305_OUTSIZE + 1],
 				None,
 				&mut dst_out_ct,
 			)
@@ -393,7 +393,7 @@ mod public {
 			assert!(open(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&dst_out_ct[..(POLY1305_BLOCKSIZE + 1) + 16],
+				&dst_out_ct[..(POLY1305_OUTSIZE + 1) + 16],
 				None,
 				&mut dst_out_pt,
 			)
@@ -472,10 +472,10 @@ mod public {
 					input
 				};
 
-				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
 
-				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
 
 				seal(
@@ -524,10 +524,10 @@ mod public {
 					input
 				};
 
-				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
 
-				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
 
 				seal(
@@ -590,10 +590,10 @@ mod public {
 					input
 				};
 
-				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
 
-				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
 
 				seal(

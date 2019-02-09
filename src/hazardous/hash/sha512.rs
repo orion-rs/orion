@@ -52,7 +52,7 @@
 use crate::{
 	endianness::{load_u64_into_be, store_u64_into_be},
 	errors::{FinalizationCryptoError, UnknownCryptoError},
-	hazardous::constants::SHA2_BLOCKSIZE,
+	hazardous::constants::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 };
 
 construct_nonce_no_generator! {
@@ -61,7 +61,7 @@ construct_nonce_no_generator! {
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is not 64 bytes.
-	(Digest, 64)	
+	(Digest, SHA512_OUTSIZE)
 }
 
 #[rustfmt::skip]
@@ -102,7 +102,7 @@ const H0: [u64; 8] = [
 /// SHA512 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
 pub struct Sha512 {
 	working_state: [u64; 8],
-	buffer: [u8; SHA2_BLOCKSIZE],
+	buffer: [u8; SHA512_BLOCKSIZE],
 	leftover: usize,
 	message_len: [u64; 2],
 	is_finalized: bool,
@@ -237,7 +237,7 @@ impl Sha512 {
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
 		self.working_state = H0;
-		self.buffer = [0u8; SHA2_BLOCKSIZE];
+		self.buffer = [0u8; SHA512_BLOCKSIZE];
 		self.leftover = 0;
 		self.message_len = [0u64; 2];
 		self.is_finalized = false;
@@ -272,7 +272,7 @@ impl Sha512 {
 		// First fill up if there is leftover space
 		if self.leftover > 0 {
 			// Using .unwrap() since overflow should not happen in practice
-			let fill = SHA2_BLOCKSIZE.checked_sub(self.leftover).unwrap();
+			let fill = SHA512_BLOCKSIZE.checked_sub(self.leftover).unwrap();
 
 			if bytes.len() < fill {
 				self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
@@ -291,13 +291,13 @@ impl Sha512 {
 			bytes = &bytes[fill..];
 		}
 
-		while bytes.len() >= SHA2_BLOCKSIZE {
+		while bytes.len() >= SHA512_BLOCKSIZE {
 			// Process data
-			self.buffer.copy_from_slice(&bytes[..SHA2_BLOCKSIZE]);
+			self.buffer.copy_from_slice(&bytes[..SHA512_BLOCKSIZE]);
 			self.process();
-			self.increment_mlen(SHA2_BLOCKSIZE as u64);
+			self.increment_mlen(SHA512_BLOCKSIZE as u64);
 			// Reduce by slice
-			bytes = &bytes[SHA2_BLOCKSIZE..];
+			bytes = &bytes[SHA512_BLOCKSIZE..];
 		}
 
 		if !bytes.is_empty() {
@@ -321,7 +321,7 @@ impl Sha512 {
 
 		// self.leftover should not be greater than SHA2_BLCOKSIZE
 		// as that would have been processed in the update call
-		assert!(self.leftover < SHA2_BLOCKSIZE);
+		assert!(self.leftover < SHA512_BLOCKSIZE);
 		self.buffer[self.leftover] = 0x80;
 		// Using .unwrap() since overflow should not happen in practice
 		self.leftover = self.leftover.checked_add(1).unwrap();
@@ -331,7 +331,7 @@ impl Sha512 {
 		}
 
 		// Check for available space for length padding
-		if (SHA2_BLOCKSIZE - self.leftover) < 16 {
+		if (SHA512_BLOCKSIZE - self.leftover) < 16 {
 			self.process();
 			for itm in self.buffer.iter_mut().take(self.leftover) {
 				*itm = 0;
@@ -339,9 +339,9 @@ impl Sha512 {
 		}
 
 		// Pad with length
-		self.buffer[SHA2_BLOCKSIZE - 16..SHA2_BLOCKSIZE - 8]
+		self.buffer[SHA512_BLOCKSIZE - 16..SHA512_BLOCKSIZE - 8]
 			.copy_from_slice(&self.message_len[0].to_be_bytes());
-		self.buffer[SHA2_BLOCKSIZE - 8..SHA2_BLOCKSIZE]
+		self.buffer[SHA512_BLOCKSIZE - 8..SHA512_BLOCKSIZE]
 			.copy_from_slice(&self.message_len[1].to_be_bytes());
 
 		self.process();
@@ -358,7 +358,7 @@ impl Sha512 {
 pub fn init() -> Sha512 {
 	Sha512 {
 		working_state: H0,
-		buffer: [0u8; SHA2_BLOCKSIZE],
+		buffer: [0u8; SHA512_BLOCKSIZE],
 		leftover: 0,
 		message_len: [0u64; 2],
 		is_finalized: false,
@@ -574,7 +574,7 @@ mod public {
 		// Test for issues when incrementally processing data
 		// with leftover
 		fn test_streaming_consistency() {
-			for len in 0..SHA2_BLOCKSIZE * 4 {
+			for len in 0..SHA512_BLOCKSIZE * 4 {
 				let data = vec![0u8; len];
 				let mut state = init();
 				let mut other_data: Vec<u8> = Vec::new();
@@ -582,15 +582,15 @@ mod public {
 				other_data.extend_from_slice(&data);
 				state.update(&data).unwrap();
 
-				if data.len() > SHA2_BLOCKSIZE {
+				if data.len() > SHA512_BLOCKSIZE {
 					other_data.extend_from_slice(b"");
 					state.update(b"").unwrap();
 				}
-				if data.len() > SHA2_BLOCKSIZE * 2 {
+				if data.len() > SHA512_BLOCKSIZE * 2 {
 					other_data.extend_from_slice(b"Extra");
 					state.update(b"Extra").unwrap();
 				}
-				if data.len() > SHA2_BLOCKSIZE * 3 {
+				if data.len() > SHA512_BLOCKSIZE * 3 {
 					other_data.extend_from_slice(&[0u8; 256]);
 					state.update(&[0u8; 256]).unwrap();
 				}
@@ -656,7 +656,7 @@ mod private {
 		fn test_mlen_increase_values() {
 			let mut context = Sha512 {
 				working_state: H0,
-				buffer: [0u8; SHA2_BLOCKSIZE],
+				buffer: [0u8; SHA512_BLOCKSIZE],
 				leftover: 0,
 				message_len: [0u64; 2],
 				is_finalized: false,
@@ -678,7 +678,7 @@ mod private {
 		fn test_panic_on_second_overflow() {
 			let mut context = Sha512 {
 				working_state: H0,
-				buffer: [0u8; SHA2_BLOCKSIZE],
+				buffer: [0u8; SHA512_BLOCKSIZE],
 				leftover: 0,
 				message_len: [u64::max_value(), u64::max_value() - 7],
 				is_finalized: false,

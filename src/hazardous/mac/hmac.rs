@@ -70,7 +70,7 @@
 use crate::{
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
 	hazardous::{
-		constants::{BlocksizeArray, HLEN, SHA2_BLOCKSIZE},
+		constants::{BlocksizeArray, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 		hash::sha512,
 	},
 };
@@ -81,15 +81,15 @@ construct_hmac_key! {
 	///
 	/// # Note:
 	/// `SecretKey` pads the secret key for use with HMAC to a length of 128, when initialized.
-	/// 
-	/// Using `unprotected_as_bytes()` will return the secret key with padding. 
-	/// 
+	///
+	/// Using `unprotected_as_bytes()` will return the secret key with padding.
+	///
 	/// Using `get_length()` will return the length with padding (always 128).
-	/// 
+	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - The `OsRng` fails to initialize or read from its source.
-	(SecretKey, SHA2_BLOCKSIZE)
+	(SecretKey, SHA512_BLOCKSIZE)
 }
 
 construct_tag! {
@@ -98,7 +98,7 @@ construct_tag! {
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is not 64 bytes.
-	(Tag, HLEN)
+	(Tag, SHA512_OUTSIZE)
 }
 
 #[must_use]
@@ -127,11 +127,11 @@ impl Hmac {
 	#[inline]
 	/// Pad `key` with `ipad` and `opad`.
 	fn pad_key_io(&mut self, key: &SecretKey) {
-		let mut ipad: BlocksizeArray = [0x36; SHA2_BLOCKSIZE];
-		let mut opad: BlocksizeArray = [0x5C; SHA2_BLOCKSIZE];
-		// `key` has already been padded with zeroes to a length of SHA2_BLOCKSIZE
+		let mut ipad: BlocksizeArray = [0x36; SHA512_BLOCKSIZE];
+		let mut opad: BlocksizeArray = [0x5C; SHA512_BLOCKSIZE];
+		// `key` has already been padded with zeroes to a length of SHA512_BLOCKSIZE
 		// in SecretKey::from_slice
-		assert_eq!(key.unprotected_as_bytes().len(), SHA2_BLOCKSIZE);
+		assert_eq!(key.unprotected_as_bytes().len(), SHA512_BLOCKSIZE);
 		for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {
 			opad[idx] ^= itm;
 			ipad[idx] ^= itm;
@@ -497,7 +497,7 @@ mod public {
 		#[cfg(feature = "safe_api")]
 		// Test for issues when incrementally processing data.
 		fn test_streaming_consistency() {
-			for len in 0..SHA2_BLOCKSIZE * 4 {
+			for len in 0..SHA512_BLOCKSIZE * 4 {
 				let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 				let data = vec![0u8; len];
 				let mut state = init(&sk);
@@ -506,15 +506,15 @@ mod public {
 				other_data.extend_from_slice(&data);
 				state.update(&data).unwrap();
 
-				if data.len() > SHA2_BLOCKSIZE {
+				if data.len() > SHA512_BLOCKSIZE {
 					other_data.extend_from_slice(b"");
 					state.update(b"").unwrap();
 				}
-				if data.len() > SHA2_BLOCKSIZE * 2 {
+				if data.len() > SHA512_BLOCKSIZE * 2 {
 					other_data.extend_from_slice(b"Extra");
 					state.update(b"Extra").unwrap();
 				}
-				if data.len() > SHA2_BLOCKSIZE * 3 {
+				if data.len() > SHA512_BLOCKSIZE * 3 {
 					other_data.extend_from_slice(&[0u8; 256]);
 					state.update(&[0u8; 256]).unwrap();
 				}

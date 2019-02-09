@@ -61,7 +61,7 @@
 use crate::{
 	errors::{UnknownCryptoError, ValidationCryptoError},
 	hazardous::{
-		constants::HLEN,
+		constants::SHA512_OUTSIZE,
 		mac::hmac::{self, SecretKey},
 	},
 	util,
@@ -98,7 +98,7 @@ pub fn expand(
 	let mut hmac = hmac::init(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
 	let okm_len = dst_out.len();
 
-	for (idx, hlen_block) in dst_out.chunks_mut(HLEN).enumerate() {
+	for (idx, hlen_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
 		let block_len = hlen_block.len();
 
 		hmac.update(optional_info)?;
@@ -106,7 +106,7 @@ pub fn expand(
 		hlen_block.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes()[..block_len]);
 
 		// Check if it's the last iteration, if yes don't process anything
-		if block_len < HLEN || (block_len * (idx + 1) == okm_len) {
+		if block_len < SHA512_OUTSIZE || (block_len * (idx + 1) == okm_len) {
 			break;
 		} else {
 			hmac.reset();

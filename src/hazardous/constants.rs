@@ -21,9 +21,9 @@
 // SOFTWARE.
 
 /// The blocksize for the hash function SHA512.
-pub const SHA2_BLOCKSIZE: usize = 128;
+pub const SHA512_BLOCKSIZE: usize = 128;
 /// The output size for the hash function SHA512.
-pub const HLEN: usize = 64;
+pub const SHA512_OUTSIZE: usize = 64;
 /// The blocksize which ChaCha20 operates on.
 pub const CHACHA_BLOCKSIZE: usize = 64;
 /// The key size for ChaCha20.
@@ -38,6 +38,8 @@ pub const HCHACHA_NONCESIZE: usize = 16;
 pub const XCHACHA_NONCESIZE: usize = 24;
 /// The blocksize which Poly1305 operates on.
 pub const POLY1305_BLOCKSIZE: usize = 16;
+/// The output size for Poly1305.
+pub const POLY1305_OUTSIZE: usize = 16;
 /// The key size for Poly1305.
 pub const POLY1305_KEYSIZE: usize = 32;
 /// The blocksize for the hash function BLAKE2b.
@@ -48,11 +50,11 @@ pub const BLAKE2B_KEYSIZE: usize = 64;
 pub const BLAKE2B_OUTSIZE: usize = 64;
 
 /// Type for an array of length `SHA2_BLOCKSIZE`.
-pub type BlocksizeArray = [u8; SHA2_BLOCKSIZE];
+pub type BlocksizeArray = [u8; SHA512_BLOCKSIZE];
 /// Type for an array of length `HLEN`.
-pub type HLenArray = [u8; HLEN];
+pub type HLenArray = [u8; SHA512_OUTSIZE];
 /// Type for a ChaCha state represented as an array of 16 32-bit unsigned
 /// integers.
 pub type ChaChaState = [u32; 16];
 /// Type for a Poly1305 tag.
-pub type Poly1305Tag = [u8; 16];
+pub type Poly1305Tag = [u8; POLY1305_OUTSIZE];

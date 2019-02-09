@@ -63,7 +63,7 @@
 use crate::{
 	errors::{UnknownCryptoError, ValidationCryptoError},
 	hazardous::{
-		constants::{HLenArray, HLEN, SHA2_BLOCKSIZE},
+		constants::{HLenArray, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 		mac::hmac,
 	},
 	util,
@@ -75,15 +75,15 @@ construct_hmac_key! {
 	/// # Note:
 	/// Because `Password` is used as a `SecretKey` for HMAC during hashing, `Password` already
 	/// pads the given password to a length of 128, for use in HMAC, when initialized.
-	/// 
-	/// Using `unprotected_as_bytes()` will return the password with padding. 
-	/// 
+	///
+	/// Using `unprotected_as_bytes()` will return the password with padding.
+	///
 	/// Using `get_length()` will return the length with padding (always 128).
 	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - The `OsRng` fails to initialize or read from its source.
-	(Password, SHA2_BLOCKSIZE)
+	(Password, SHA512_BLOCKSIZE)
 }
 
 #[inline]
@@ -138,7 +138,7 @@ pub fn derive_key(
 		&password.unprotected_as_bytes(),
 	)?);
 
-	for (idx, dk_block) in dst_out.chunks_mut(HLEN).enumerate() {
+	for (idx, dk_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
 		let block_len = dk_block.len();
 		let block_idx = (1u32).checked_add(idx as u32);
 

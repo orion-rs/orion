@@ -157,7 +157,7 @@ pub fn open(
 #[cfg(test)]
 mod public {
 	use super::*;
-	use crate::hazardous::constants::POLY1305_BLOCKSIZE;
+	use crate::hazardous::constants::POLY1305_OUTSIZE;
 	// One function tested per submodule.
 
 	mod test_seal {
@@ -169,7 +169,7 @@ mod public {
 			let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
 			let mut dst_out_ct_less = [0u8; 79]; // 64 + Poly1305TagLen - 1
 			let mut dst_out_ct_more = [0u8; 81]; // 64 + Poly1305TagLen + 1
-			let mut dst_out_ct_more_2 = [0u8; 64 + (POLY1305_BLOCKSIZE * 2)];
+			let mut dst_out_ct_more_2 = [0u8; 64 + (POLY1305_OUTSIZE * 2)];
 
 			assert!(seal(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
@@ -264,7 +264,7 @@ mod public {
 			assert!(open(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				&[0u8; POLY1305_BLOCKSIZE],
+				&[0u8; POLY1305_OUTSIZE],
 				None,
 				&mut dst_out_pt,
 			)
@@ -273,7 +273,7 @@ mod public {
 			assert!(open(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				&[0u8; POLY1305_BLOCKSIZE - 1],
+				&[0u8; POLY1305_OUTSIZE - 1],
 				None,
 				&mut dst_out_pt,
 			)
@@ -283,7 +283,7 @@ mod public {
 			seal(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				&[0u8; POLY1305_BLOCKSIZE + 1],
+				&[0u8; POLY1305_OUTSIZE + 1],
 				None,
 				&mut dst_out_ct,
 			)
@@ -292,7 +292,7 @@ mod public {
 			assert!(open(
 				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
 				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				&dst_out_ct[..(POLY1305_BLOCKSIZE + 1) + 16],
+				&dst_out_ct[..(POLY1305_OUTSIZE + 1) + 16],
 				None,
 				&mut dst_out_pt,
 			)
@@ -371,10 +371,10 @@ mod public {
 					input
 				};
 
-				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
 
-				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
 
 				seal(
@@ -423,10 +423,10 @@ mod public {
 					input
 				};
 
-				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
 
-				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
 
 				seal(
@@ -489,10 +489,10 @@ mod public {
 					input
 				};
 
-				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
 
-				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_BLOCKSIZE];
+				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
 				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
 
 				seal(
