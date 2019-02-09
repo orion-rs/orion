@@ -55,14 +55,13 @@ use crate::{
 	hazardous::constants::SHA2_BLOCKSIZE,
 };
 
-construct_digest! {
+construct_nonce_no_generator! {
 	/// A type to represent the `Digest` that SHA512 returns.
 	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
-	/// - `slice` is empty.
-	/// - `slice` is greater than 64 bytes.
-	(Digest, 64)
+	/// - `slice` is not 64 bytes.
+	(Digest, 64)	
 }
 
 #[rustfmt::skip]

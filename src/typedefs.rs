@@ -293,7 +293,7 @@ macro_rules! construct_nonce_no_generator {
         fn test_as_bytes_nonce_no_gen() {
             let test = $name::from_slice(&[0u8; $size]).unwrap();
             assert!(test.as_bytes().len() == $size);
-            assert!(test.as_bytes() == &[0u8; $size]);
+            assert!(test.as_bytes() == [0u8; $size].as_ref());
         }
 
         #[test]
