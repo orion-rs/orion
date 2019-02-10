@@ -43,28 +43,16 @@
 //! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!
 //! # Example:
-//! ### Generating HMAC:
 //! ```
 //! use orion::hazardous::mac::hmac;
 //!
 //! let key = hmac::SecretKey::generate().unwrap();
-//! let msg = "Some message.";
 //!
-//! let mut tag = hmac::init(&key);
-//! tag.update(msg.as_bytes()).unwrap();
-//! tag.finalize().unwrap();
-//! ```
-//! ### Verifying HMAC:
-//! ```
-//! use orion::hazardous::mac::hmac;
-//!
-//! let key = hmac::SecretKey::generate().unwrap();
-//! let msg = "Some message.";
-//!
-//! let mut tag = hmac::init(&key);
-//! tag.update(msg.as_bytes()).unwrap();
-//!
-//! assert!(hmac::verify(&tag.finalize().unwrap(), &key, msg.as_bytes()).unwrap());
+//! let mut state = hmac::init(&key);
+//! state.update(b"Some message.").unwrap();
+//! let tag = state.finalize().unwrap();
+//! 
+//! assert!(hmac::verify(&tag, &key, b"Some message.").unwrap());
 //! ```
 
 use crate::{

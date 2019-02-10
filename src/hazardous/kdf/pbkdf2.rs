@@ -31,7 +31,7 @@
 //! # Exceptions:
 //! An exception will be thrown if:
 //! - The length of `dst_out` is less than 1.
-//! - The length of `dst_out` is greater than (2^32 - 1) * hLen.
+//! - The length of `dst_out` is greater than (2^32 - 1) * 64.
 //! - The specified iteration count is less than 1.
 //! - The hashed password does not match the expected when verifying.
 //!

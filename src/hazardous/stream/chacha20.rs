@@ -51,7 +51,7 @@
 //! same length as the `plaintext`.
 //!
 //! ### Note:
-//! `keystream_block` is for use-cases where more control over the keystream
+//! `keystream_block()` is for use-cases where more control over the keystream
 //! used for encryption/decryption is desired. It does not encrypt anything.
 //! This function's `counter` parameter is never increased and therefor is not
 //! checked for potential overflow on increase either. Only use it if you are
