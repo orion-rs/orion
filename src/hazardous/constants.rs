@@ -49,9 +49,9 @@ pub const BLAKE2B_KEYSIZE: usize = 64;
 /// The output size for the hash function BLAKE2b.
 pub const BLAKE2B_OUTSIZE: usize = 64;
 
-/// Type for an array of length `SHA2_BLOCKSIZE`.
+/// Type for an array of length `SHA512_BLOCKSIZE`.
 pub type BlocksizeArray = [u8; SHA512_BLOCKSIZE];
-/// Type for an array of length `HLEN`.
+/// Type for an array of length `SHA512_OUTSIZE`.
 pub type HLenArray = [u8; SHA512_OUTSIZE];
 /// Type for a ChaCha state represented as an array of 16 32-bit unsigned
 /// integers.
