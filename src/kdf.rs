@@ -49,7 +49,6 @@
 //! - `iterations` is 0.
 //! - `length` is 0.
 //! - `length` is not less than `u32::max_value()`.
-//! - The `OsRng` fails to initialize or read from its source.
 //! - The `expected` does not match the derived key.
 //!
 //!
