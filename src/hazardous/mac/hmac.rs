@@ -51,7 +51,7 @@
 //! let mut state = hmac::init(&key);
 //! state.update(b"Some message.").unwrap();
 //! let tag = state.finalize().unwrap();
-//! 
+//!
 //! assert!(hmac::verify(&tag, &key, b"Some message.").unwrap());
 //! ```
 
