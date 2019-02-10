@@ -44,4 +44,5 @@ opt-level = 3
 [badges]
 travis-ci = { repository = "brycx/orion", branch = "crates-published" }
 codecov = { repository = "brycx/orion", branch = "crates-published" }
+appveyor = { repository = "brycx/orion", branch = "crates-published" }
 maintenance = { status = "actively-developed" }
