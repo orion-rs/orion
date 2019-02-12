@@ -35,6 +35,8 @@
 //! ## Message authentication
 //! `orion::auth` offers message authentication and verification using HMAC.
 //!
+//! ## Hashing
+//! `orion::hash` offers hashing using BLAKE2b.
 //!
 //! ### A note on `no_std`:
 //! When orion is used in a `no_std` context, access to nearly all functionality
