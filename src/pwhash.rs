@@ -48,8 +48,8 @@
 //! - `iterations`: The number of iterations performed by PBKDF2, i.e. the cost
 //!   parameter.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - `iterations` is 0.
 //! - The `OsRng` fails to initialize or read from its source.
 //! - The `expected_with_salt` is not constructed exactly as in

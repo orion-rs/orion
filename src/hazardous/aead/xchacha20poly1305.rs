@@ -36,8 +36,8 @@
 //! timestamps or monotonically increasing counters in order to discard previous
 //! messages and prevent replay attacks." See [libsodium docs](https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data) for more information.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting.
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when
 //!   decrypting.

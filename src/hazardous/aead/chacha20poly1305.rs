@@ -43,8 +43,8 @@
 //! because such a truncation may repeat after a short time." See [RFC](https://tools.ietf.org/html/rfc8439#section-3)
 //! for more information.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext + 16` when encrypting.
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when
 //!   decrypting.

@@ -44,8 +44,8 @@ use subtle::ConstantTimeEq;
 ///   bytes to be generated is
 /// implied by the length of `dst`.
 ///
-/// # Exceptions:
-/// An exception will be thrown if:
+/// # Errors:
+/// An error will be returned if:
 /// - The `OsRng` fails to initialize or read from its source.
 /// - `dst` is empty.
 ///
@@ -79,8 +79,8 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 /// - `a`: The first slice used in the comparison.
 /// - `b`: The second slice used in the comparison.
 ///
-/// # Exceptions:
-/// An exception will be thrown if:
+/// # Errors:
+/// An error will be returned if:
 /// - `a` and `b` do not have the same length.
 /// - `a` is not equal to `b`.
 ///

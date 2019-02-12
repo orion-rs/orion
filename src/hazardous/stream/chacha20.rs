@@ -36,8 +36,8 @@
 //! because such a truncation may repeat after a short time." See [RFC](https://tools.ietf.org/html/rfc8439)
 //! for more information.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - `slice` when calling `SecretKey::from_slice()` is not 32 bytes.
 //! - The `OsRng` fails to initialize or read from its source when calling
 //!   `SecretKey::generate()`.

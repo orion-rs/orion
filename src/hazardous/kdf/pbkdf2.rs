@@ -28,8 +28,8 @@
 //!   derived key is implied by the length of `dk_out`.
 //! - `expected`: The expected derived key.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - The length of `dst_out` is less than 1.
 //! - The length of `dst_out` is greater than (2^32 - 1) * 64.
 //! - The specified iteration count is less than 1.

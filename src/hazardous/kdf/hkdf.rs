@@ -29,8 +29,8 @@
 //!   derived key is implied by the length of `okm_out`.
 //! - `expected`: The expected derived key.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - The length of `dst_out` is less than 1.
 //! - The length of `dst_out` is greater than 255 * hash_output_size_in_bytes.
 //! - The derived key does not match the expected when verifying.

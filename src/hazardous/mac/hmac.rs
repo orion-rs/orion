@@ -25,8 +25,8 @@
 //! - `data`: Data to be authenticated.
 //! - `expected`: The expected authentication tag.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - `finalize()` is called twice without a `reset()` in between.
 //! - `update()` is called after `finalize()` without a `reset()` in between.
 //! - The HMAC does not match the expected when verifying.

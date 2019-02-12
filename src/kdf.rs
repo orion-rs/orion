@@ -44,8 +44,8 @@
 //!   parameter.
 //! - `length`: The desired length of the derived key.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - `iterations` is 0.
 //! - `length` is 0.
 //! - `length` is not less than `u32::max_value()`.
