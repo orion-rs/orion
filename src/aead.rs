@@ -45,8 +45,8 @@
 //!   24 bytes being the nonce and the last
 //! 16 bytes being the corresponding Poly1305 tag.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - `secret_key` is not 32 bytes.
 //! - `plaintext` is empty.
 //! - `plaintext` is longer than (2^32)-2.

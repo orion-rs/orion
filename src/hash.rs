@@ -35,8 +35,8 @@
 //! # Parameters:
 //! - `data`:  The data to be hashed.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //!
 //! # Security:
 //! - This interface does not support supplying BLAKE2b with a secret key, and

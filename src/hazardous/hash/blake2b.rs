@@ -26,8 +26,8 @@
 //! - `data`: The data to be hashed.
 //! - `expected`: The expected digest when verifying.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - `size` is 0.
 //! - `size` is greater than 64.
 //! - `finalize()` is called twice without a `reset()` in between.

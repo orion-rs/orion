@@ -38,8 +38,8 @@
 //! - `data`: Data to be authenticated.
 //! - `expected`: The expected authentication tag.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - The calculated `Tag` does not match the expected.
 //!
 //! # Security:

@@ -29,8 +29,8 @@
 //! - `dst_out`: Destination array that will hold the ciphertext/plaintext after
 //!   encryption/decryption.
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
 //! - `plaintext` or `ciphertext` is empty.
 //! - `plaintext` or `ciphertext` is longer than (2^32)-2.

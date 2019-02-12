@@ -41,8 +41,8 @@
 //! The cSHAKE256 implementation currently relies on the `tiny-keccak` crate.
 //! Currently, this crate will produce ***incorrect results on big-endian based systems***. See the [issue here](https://github.com/debris/tiny-keccak/issues/15).
 //!
-//! # Exceptions:
-//! An exception will be thrown if:
+//! # Errors:
+//! An error will be returned if:
 //! - The length of `dst_out` is zero.
 //! - The length of `dst_out` is greater than 65536.
 //! - `finalize()` is called twice in a row without calling `reset()` in
