@@ -27,7 +27,7 @@
 //! encrypted data has been tampered with before decrypting it.
 //!
 //! An example of this could be sending messages across networks, where
-//! confidentiality of these messages is required.
+//! confidentiality and authenticity of these messages is required.
 //!
 //! # About:
 //! - The nonce is automatically generated.
