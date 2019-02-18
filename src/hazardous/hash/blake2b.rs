@@ -318,7 +318,12 @@ impl Blake2b {
 
 		if secret_key.is_some() && self.is_keyed {
 			// .unwrap() cannot panic since secret_key.is_some() == true
-			self.update(secret_key.unwrap().unprotected_as_bytes())?;
+			let sk = secret_key.unwrap();
+			self.update(sk.unprotected_as_bytes())?;
+			// The state needs updating with the secret key padded to blocksize length
+			let pad = [0u8; BLAKE2B_BLOCKSIZE];
+			let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
+			self.update(pad[..rem].as_ref())?;
 		}
 
 		Ok(())
@@ -427,6 +432,10 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
 		context.update(key.unprotected_as_bytes())?;
+		// The state needs updating with the secret key padded to blocksize length
+		let pad = [0u8; BLAKE2B_BLOCKSIZE];
+		let rem = BLAKE2B_BLOCKSIZE - key.get_length();
+		context.update(pad[..rem].as_ref())?;
 	} else {
 		context.internal_state[0] ^= 0x01010000 ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
