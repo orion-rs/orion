@@ -71,25 +71,18 @@
 use crate::{
 	endianness::{load_u64_into_le, store_u64_into_le},
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
-	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE},
+	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE, BLAKE2B_KEYSIZE},
 };
 
-construct_blake2b_key! {
+construct_secret_key! {
 	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.
-	///
-	/// # Note:
-	/// `SecretKey` pads the secret key for use with BLAKE2b to a length of 128, when initialized.
-	///
-	/// Using `unprotected_as_bytes()` will return the key with padding.
-	///
-	/// Using `get_length()` will return the length with padding (always 128).
 	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
-	(SecretKey, BLAKE2B_BLOCKSIZE)
+	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, BLAKE2B_KEYSIZE)
 }
 
 construct_digest! {
@@ -430,7 +423,7 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		context.is_keyed = true;
 		// .unwrap() cannot panic since secret_key.is_some() == true
 		let key = secret_key.unwrap();
-		let klen = key.get_original_length();
+		let klen = key.get_length();
 		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
 		context.update(key.unprotected_as_bytes())?;
