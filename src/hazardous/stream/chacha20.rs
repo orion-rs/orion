@@ -117,7 +117,7 @@ construct_secret_key! {
 	/// An exception will be thrown if:
 	/// - `slice` is not 32 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
-	(SecretKey, test_secret_key, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE)
+	(SecretKey, test_secret_key, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE)
 }
 
 construct_nonce_no_generator! {

@@ -74,7 +74,7 @@ construct_secret_key! {
 	/// An exception will be thrown if:
 	/// - `slice` is not 32 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
-	(OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
+	(OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
 }
 
 construct_tag! {

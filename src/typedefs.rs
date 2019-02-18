@@ -264,15 +264,14 @@ macro_rules! func_generate_variable_size (($name:ident) => (
 /// 
 /// - $test_module_name: The name for the newtype's testing module (usually "test_$name").
 /// 
-/// - $size: The size of the newtypes value field. The array containing the bytes.
-/// 
 /// - $lower_bound/$upper_bound: An inclusive range that defines what length a secret value might be.
-/// This does not have to be the same as $size. Used to validate length of `slice` in from_slice().
+///  Used to validate length of `slice` in from_slice(). $upper_bound also defines the `value` field
+/// array allocation size.
 /// 
 /// - $gen_length: The amount of data to be randomly generated when using generate(). 
 macro_rules! construct_secret_key {
     ($(#[$meta:meta])*
-    ($name:ident, $test_module_name:ident, $size:expr, $lower_bound:expr, $upper_bound:expr, $gen_length:expr)) => (
+    ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr, $gen_length:expr)) => (
         #[must_use]
         $(#[$meta])*
         ///
@@ -280,7 +279,7 @@ macro_rules! construct_secret_key {
         /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
         /// that the type implements.
         pub struct $name { 
-            value: [u8; $size],
+            value: [u8; $upper_bound],
             original_length: usize,
         }
 
@@ -291,7 +290,7 @@ macro_rules! construct_secret_key {
         impl $name {
             func_from_slice_new!($name, $lower_bound, $upper_bound);
             func_unprotected_as_bytes_new!();
-            func_generate_new!($name, $size, $gen_length);
+            func_generate_new!($name, $upper_bound, $gen_length);
             func_get_length_new!();
         }
 
@@ -304,7 +303,7 @@ macro_rules! construct_secret_key {
                 // $lower_bound:
                 assert!($lower_bound <= $upper_bound);
                 // $upper_bound:
-                assert!($upper_bound <= $size);
+                //assert!($upper_bound <= $size);
                 // $gen_length:
                 assert!($gen_length <= $upper_bound);
                 assert!($gen_length >= $lower_bound);
@@ -625,6 +624,7 @@ macro_rules! construct_hmac_key {
     );
 }
 
+/*
 /// Macro to construct a secret key used for BLAKE2b. It is padded aginst a
 /// BLOCKSIZE value, but can at most be half that when generated or constructed
 /// from a slice.
@@ -753,6 +753,7 @@ macro_rules! construct_blake2b_key {
         }
     );
 }
+*/
 
 /// Macro to construct a digest returned by BLAKE2b.
 macro_rules! construct_digest {
