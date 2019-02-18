@@ -102,6 +102,29 @@ macro_rules! impl_drop_trait (($name:ident) => (
 
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
 /// if the slice is not of length `$size`.
+/// $lower_bound and $upper_bound is the inclusive range of which a slice might be acceptable 
+/// in length. If a slice may only be a fixed size, $lower_bound and $upper_bound should be the same.
+/// value will be allocated with a size of $upper_bound.
+macro_rules! func_from_slice_new (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
+    #[must_use]
+    /// Make an object from a given byte slice.
+    pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
+        
+        let slice_len = slice.len();
+        
+        if slice_len < $lower_bound || slice_len > $upper_bound {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut value = [0u8; $upper_bound];
+        value[..slice_len].copy_from_slice(slice);
+
+        Ok($name { value: value, original_length: slice_len })
+    }
+));
+
+/// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
+/// if the slice is not of length `$size`.
 macro_rules! func_from_slice (($name:ident, $size:expr) => (
     #[must_use]
     /// Make an object from a given byte slice.
@@ -145,6 +168,18 @@ macro_rules! func_unprotected_as_bytes (() => (
     }
 ));
 
+/// Macro to implement a `unprotected_as_bytes()` function for objects that
+/// implement extra protections. Typically used on objects that implement
+/// `Drop`, `Debug` and/or `PartialEq`.
+macro_rules! func_unprotected_as_bytes_new (() => (
+    #[must_use]
+    /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
+    /// needed. This __**breaks protections**__ that the type implements.
+    pub fn unprotected_as_bytes(&self) -> &[u8] {
+        self.value[..self.original_length].as_ref()
+    }
+));
+
 /// Macro to implement a `as_bytes()` function for objects that don't implement
 /// extra protections.
 macro_rules! func_as_bytes (() => (
@@ -164,6 +199,15 @@ macro_rules! func_get_length (() => (
     }
 ));
 
+/// Macro to implement a `get_length()` function which will return the objects'
+/// length of field `value`.
+macro_rules! func_get_length_new (() => (
+    /// Return the length of the object.
+    pub fn get_length(&self) -> usize {
+        self.original_length
+    }
+));
+
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a fixed length $size.
 macro_rules! func_generate (($name:ident, $size:expr) => (
@@ -176,6 +220,21 @@ macro_rules! func_generate (($name:ident, $size:expr) => (
         util::secure_rand_bytes(&mut value)?;
 
         Ok($name { value: value })
+    }
+));
+
+/// Macro to implement a `generate()` function for objects that benefit from
+/// having a CSPRNG available to generate data of a fixed length $size.
+macro_rules! func_generate_new (($name:ident, $size:expr, $gen_length:expr) => (
+    #[must_use]
+    #[cfg(feature = "safe_api")]
+    /// Randomly generate using a CSPRNG. Not available in `no_std` context.
+    pub fn generate() -> Result<$name, UnknownCryptoError> {
+        use crate::util;
+        let mut value = [0u8; $size];
+        util::secure_rand_bytes(&mut value[..$gen_length])?;
+
+        Ok($name { value: value, original_length: $gen_length })
     }
 ));
 
@@ -199,69 +258,141 @@ macro_rules! func_generate_variable_size (($name:ident) => (
     }
 ));
 
-/// Macro to construct a type containing sensitive data, using a fixed-size
-/// array.
+/// Macro to construct a type containing sensitive data, using a fixed-size array.
+/// 
+/// - $name: The name for the newtype.
+/// 
+/// - $test_module_name: The name for the newtype's testing module (usually "test_$name").
+/// 
+/// - $size: The size of the newtypes value field. The array containing the bytes.
+/// 
+/// - $lower_bound/$upper_bound: An inclusive range that defines what length a secret value might be.
+/// This does not have to be the same as $size. Used to validate length of `slice` in from_slice().
+/// 
+/// - $gen_length: The amount of data to be randomly generated when using generate(). 
 macro_rules! construct_secret_key {
     ($(#[$meta:meta])*
-    ($name:ident, $size:expr)) => (
+    ($name:ident, $test_module_name:ident, $size:expr, $lower_bound:expr, $upper_bound:expr, $gen_length:expr)) => (
         #[must_use]
         $(#[$meta])*
         ///
         /// # Security:
         /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
         /// that the type implements.
-        pub struct $name { value: [u8; $size] }
+        pub struct $name { 
+            value: [u8; $size],
+            original_length: usize,
+        }
 
         impl_omitted_debug_trait!($name);
         impl_drop_trait!($name);
         impl_ct_partialeq_trait!($name);
 
         impl $name {
-            func_from_slice!($name, $size);
-            func_unprotected_as_bytes!();
-            func_generate!($name, $size);
-            func_get_length!();
+            func_from_slice_new!($name, $lower_bound, $upper_bound);
+            func_unprotected_as_bytes_new!();
+            func_generate_new!($name, $size, $gen_length);
+            func_get_length_new!();
         }
 
-        #[test]
-        fn test_key_size() {
-            assert!($name::from_slice(&[0u8; $size]).is_ok());
-            assert!($name::from_slice(&[0u8; 0]).is_err());
-            assert!($name::from_slice(&[0u8; $size - 1]).is_err());
-            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
-        }
-        #[test]
-        fn test_unprotected_as_bytes_secret_key() {
-            let test = $name::from_slice(&[0u8; $size]).unwrap();
-            assert!(test.unprotected_as_bytes() == &[0u8; $size]);
-            assert!(test.unprotected_as_bytes().len() == $size);
-        }
+        #[cfg(test)]
+        mod $test_module_name {
+            use super::*;
+        
+            #[test]
+            fn test_size_parameters() {
+                // $lower_bound:
+                assert!($lower_bound <= $upper_bound);
+                // $upper_bound:
+                assert!($upper_bound <= $size);
+                // $gen_length:
+                assert!($gen_length <= $upper_bound);
+                assert!($gen_length >= $lower_bound);
+            }
 
-        #[test]
-        fn test_get_length_secret_key() {
-            let test = $name::from_slice(&[0u8; $size]).unwrap();
-            assert!(test.unprotected_as_bytes().len() == test.get_length());
-            assert!($size == test.get_length());
-        }
+            #[test]
+            fn test_from_slice() {
+                assert!($name::from_slice(&[0u8; $upper_bound]).is_ok());
+                assert!($name::from_slice(&[0u8; $lower_bound]).is_ok());
 
-        #[test]
-        #[cfg(feature = "safe_api")]
-        fn test_generate_secret_key() {
-            let test_zero = $name::from_slice(&[0u8; $size]).unwrap();
-            // A random one should never be all 0's.
-            let test_rand = $name::generate().unwrap();
-            assert!(test_zero != test_rand);
-            // A random generated one should always be $size in length.
-            assert!(test_rand.get_length() == $size);
-        }
+                assert!($name::from_slice(&[0u8; $upper_bound + 1]).is_err());
+                assert!($name::from_slice(&[0u8; $lower_bound - 1]).is_err());
+                assert!($name::from_slice(&[0u8; 0]).is_err());
 
-        #[test]
-        #[cfg(feature = "safe_api")]
-        // format! is only available with std
-        fn test_omitted_debug_secret_key() {
-            let secret = format!("{:?}", [0u8; $size].as_ref());
-            let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
-            assert_eq!(test_debug_contents.contains(&secret), false);
+                // Test non-fixed-length definitions
+                if $upper_bound != $lower_bound {
+                    assert!($name::from_slice(&[0u8; $upper_bound - 1]).is_ok());
+                    assert!($name::from_slice(&[0u8; $lower_bound + 1]).is_ok());
+                }
+            }
+
+            #[test]
+            fn test_as_bytes() {
+                let test_upper = $name::from_slice(&[0u8; $upper_bound]).unwrap();
+                let test_lower = $name::from_slice(&[0u8; $lower_bound]).unwrap();
+            
+                assert!(test_upper.unprotected_as_bytes() == [0u8; $upper_bound].as_ref());
+                assert!(test_upper.unprotected_as_bytes().len() == $upper_bound);
+
+                assert!(test_lower.unprotected_as_bytes() == [0u8; $lower_bound].as_ref());
+                assert!(test_lower.unprotected_as_bytes().len() == $lower_bound);
+
+                // Test non-fixed-length definitions
+                if $lower_bound != $upper_bound {
+                    let test_upper = $name::from_slice(&[0u8; $upper_bound - 1]).unwrap();
+                    let test_lower = $name::from_slice(&[0u8; $lower_bound + 1]).unwrap();
+
+                    assert!(test_upper.unprotected_as_bytes() == [0u8; $upper_bound - 1].as_ref());
+                    assert!(test_upper.unprotected_as_bytes().len() == $upper_bound - 1);
+
+                    assert!(test_lower.unprotected_as_bytes() == [0u8; $lower_bound + 1].as_ref());
+                    assert!(test_lower.unprotected_as_bytes().len() == $lower_bound + 1);
+                }
+            }
+
+            #[test]
+            fn test_get_length() {
+                let test_upper = $name::from_slice(&[0u8; $upper_bound]).unwrap();
+                let test_lower = $name::from_slice(&[0u8; $lower_bound]).unwrap();
+                        
+                assert!(test_upper.unprotected_as_bytes().len() == test_upper.get_length());
+                assert!(test_upper.get_length() == $upper_bound);
+
+                assert!(test_lower.unprotected_as_bytes().len() == test_lower.get_length());
+                assert!(test_lower.get_length() == $lower_bound);
+
+                // Test non-fixed-length definitions
+                if $lower_bound != $upper_bound {
+                    let test_upper = $name::from_slice(&[0u8; $upper_bound - 1]).unwrap();
+                    let test_lower = $name::from_slice(&[0u8; $lower_bound + 1]).unwrap();
+
+                    assert!(test_upper.unprotected_as_bytes().len() == test_upper.get_length());
+                    assert!(test_upper.get_length() == $upper_bound - 1);
+
+                    assert!(test_lower.unprotected_as_bytes().len() == test_lower.get_length());
+                    assert!(test_lower.get_length() == $lower_bound + 1);
+                }
+            }
+
+            #[test]
+            #[cfg(feature = "safe_api")]
+            fn test_generate() {
+                let test_zero = $name::from_slice(&[0u8; $gen_length]).unwrap();
+                // A random one should never be all 0's.
+                let test_rand = $name::generate().unwrap();
+                assert!(test_zero != test_rand);
+                // A random generated one should always be $gen_length in length.
+                assert!(test_rand.get_length() == $gen_length);
+            }
+
+            #[test]
+            #[cfg(feature = "safe_api")]
+            // format! is only available with std
+            fn test_omitted_debug() {
+                let secret = format!("{:?}", [0u8; $upper_bound].as_ref());
+                let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $upper_bound]).unwrap());
+                assert_eq!(test_debug_contents.contains(&secret), false);
+            }
         }
     );
 }
