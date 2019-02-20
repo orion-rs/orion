@@ -606,7 +606,7 @@ macro_rules! construct_secret_key_variable_size {
         /// # Security:
         /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
         /// that the type implements.
-        pub struct $name { 
+        pub struct $name {
             value: Vec<u8>,
             original_length: usize,
         }
@@ -673,7 +673,7 @@ macro_rules! construct_salt_variable_size {
         #[cfg(feature = "safe_api")]
         $(#[$meta])*
         ///
-        pub struct $name { 
+        pub struct $name {
             value: Vec<u8>,
             original_length: usize,
         }
