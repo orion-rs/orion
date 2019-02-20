@@ -37,7 +37,7 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
             let mut value = vec![0u8; $size];
             util::secure_rand_bytes(&mut value).unwrap();
 
-            $name { value: value }
+            $name { value: value, original_length: $size }
         }
     }
 ));
@@ -112,7 +112,7 @@ macro_rules! impl_drop_trait (($name:ident) => (
 /// be acceptable in length. If a slice may only be a fixed size, $lower_bound
 /// and $upper_bound should be the same. value will be allocated with a size of
 /// $upper_bound.
-macro_rules! func_from_slice_new (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
+macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
     #[must_use]
     /// Make an object from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
@@ -142,7 +142,7 @@ macro_rules! func_from_slice_variable_size (($name:ident) => (
             return Err(UnknownCryptoError);
         }
 
-        Ok($name { value: Vec::from(slice) })
+        Ok($name { value: Vec::from(slice), original_length: slice.len() })
     }
 ));
 
@@ -150,18 +150,6 @@ macro_rules! func_from_slice_variable_size (($name:ident) => (
 /// implement extra protections. Typically used on objects that implement
 /// `Drop`, `Debug` and/or `PartialEq`.
 macro_rules! func_unprotected_as_bytes (() => (
-    #[must_use]
-    /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
-    /// needed. This __**breaks protections**__ that the type implements.
-    pub fn unprotected_as_bytes(&self) -> &[u8] {
-        self.value.as_ref()
-    }
-));
-
-/// Macro to implement a `unprotected_as_bytes()` function for objects that
-/// implement extra protections. Typically used on objects that implement
-/// `Drop`, `Debug` and/or `PartialEq`.
-macro_rules! func_unprotected_as_bytes_new (() => (
     #[must_use]
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
     /// needed. This __**breaks protections**__ that the type implements.
@@ -176,16 +164,6 @@ macro_rules! func_as_bytes (() => (
     #[must_use]
     /// Return the object as byte slice.
     pub fn as_bytes(&self) -> &[u8] {
-        self.value.as_ref()
-    }
-));
-
-/// Macro to implement a `as_bytes()` function for objects that don't implement
-/// extra protections.
-macro_rules! func_as_bytes_new (() => (
-    #[must_use]
-    /// Return the object as byte slice.
-    pub fn as_bytes(&self) -> &[u8] {
         self.value[..self.original_length].as_ref()
     }
 ));
@@ -195,37 +173,13 @@ macro_rules! func_as_bytes_new (() => (
 macro_rules! func_get_length (() => (
     /// Return the length of the object.
     pub fn get_length(&self) -> usize {
-        self.value.len()
-    }
-));
-
-/// Macro to implement a `get_length()` function which will return the objects'
-/// length of field `value`.
-macro_rules! func_get_length_new (() => (
-    /// Return the length of the object.
-    pub fn get_length(&self) -> usize {
         self.original_length
     }
 ));
 
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a fixed length $size.
-macro_rules! func_generate (($name:ident, $size:expr) => (
-    #[must_use]
-    #[cfg(feature = "safe_api")]
-    /// Randomly generate using a CSPRNG. Not available in `no_std` context.
-    pub fn generate() -> Result<$name, UnknownCryptoError> {
-        use crate::util;
-        let mut value = [0u8; $size];
-        util::secure_rand_bytes(&mut value)?;
-
-        Ok($name { value: value })
-    }
-));
-
-/// Macro to implement a `generate()` function for objects that benefit from
-/// having a CSPRNG available to generate data of a fixed length $size.
-macro_rules! func_generate_new (($name:ident, $size:expr, $gen_length:expr) => (
+macro_rules! func_generate (($name:ident, $size:expr, $gen_length:expr) => (
     #[must_use]
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
@@ -254,7 +208,7 @@ macro_rules! func_generate_variable_size (($name:ident) => (
         let mut value = vec![0u8; length];
         util::secure_rand_bytes(&mut value)?;
 
-        Ok($name { value: value })
+        Ok($name { value: value, original_length: length })
     }
 ));
 
@@ -412,10 +366,10 @@ macro_rules! construct_secret_key {
         impl_ct_partialeq_trait!($name, unprotected_as_bytes);
 
         impl $name {
-            func_from_slice_new!($name, $lower_bound, $upper_bound);
-            func_unprotected_as_bytes_new!();
-            func_generate_new!($name, $upper_bound, $gen_length);
-            func_get_length_new!();
+            func_from_slice!($name, $lower_bound, $upper_bound);
+            func_unprotected_as_bytes!();
+            func_generate!($name, $upper_bound, $gen_length);
+            func_get_length!();
         }
 
         #[cfg(test)]
@@ -460,9 +414,9 @@ macro_rules! construct_public {
         impl_normal_debug_trait!($name);
 
         impl $name {
-            func_from_slice_new!($name, $lower_bound, $upper_bound);
-            func_as_bytes_new!();
-            func_get_length_new!();
+            func_from_slice!($name, $lower_bound, $upper_bound);
+            func_as_bytes!();
+            func_get_length!();
         }
 
         #[cfg(test)]
@@ -492,10 +446,10 @@ macro_rules! construct_public {
         impl_normal_debug_trait!($name);
 
         impl $name {
-            func_from_slice_new!($name, $lower_bound, $upper_bound);
-            func_as_bytes_new!();
-            func_generate_new!($name, $upper_bound, $gen_length);
-            func_get_length_new!();
+            func_from_slice!($name, $lower_bound, $upper_bound);
+            func_as_bytes!();
+            func_generate!($name, $upper_bound, $gen_length);
+            func_get_length!();
         }
 
         #[cfg(test)]
@@ -532,9 +486,9 @@ macro_rules! construct_tag {
         impl_ct_partialeq_trait!($name, unprotected_as_bytes);
 
         impl $name {
-            func_from_slice_new!($name, $lower_bound, $upper_bound);
-            func_unprotected_as_bytes_new!();
-            func_get_length_new!();
+            func_from_slice!($name, $lower_bound, $upper_bound);
+            func_unprotected_as_bytes!();
+            func_get_length!();
         }
 
         #[cfg(test)]
@@ -562,7 +516,10 @@ macro_rules! construct_hmac_key {
         /// # Security:
         /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
         /// that the type implements.
-        pub struct $name { value: [u8; $size] }
+        pub struct $name {
+            value: [u8; $size],
+            original_length: usize,
+        }
 
         impl_omitted_debug_trait!($name);
         impl_drop_trait!($name);
@@ -585,11 +542,11 @@ macro_rules! construct_hmac_key {
                     secret_key[..slice_len].copy_from_slice(slice);
                 }
 
-                Ok($name { value: secret_key })
+                Ok($name { value: secret_key, original_length: $size })
             }
 
             func_unprotected_as_bytes!();
-            func_generate!($name, $size);
+            func_generate!($name, $size, $size);
             func_get_length!();
         }
 
@@ -649,7 +606,10 @@ macro_rules! construct_secret_key_variable_size {
         /// # Security:
         /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
         /// that the type implements.
-        pub struct $name { value: Vec<u8> }
+        pub struct $name { 
+            value: Vec<u8>,
+            original_length: usize,
+        }
 
         impl_omitted_debug_trait!($name);
         impl_drop_trait!($name);
@@ -713,7 +673,10 @@ macro_rules! construct_salt_variable_size {
         #[cfg(feature = "safe_api")]
         $(#[$meta])*
         ///
-        pub struct $name { value: Vec<u8> }
+        pub struct $name { 
+            value: Vec<u8>,
+            original_length: usize,
+        }
 
         impl_normal_debug_trait!($name);
         impl_default_trait!($name, $default_size);
