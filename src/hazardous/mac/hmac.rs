@@ -86,7 +86,7 @@ construct_tag! {
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is not 64 bytes.
-	(Tag, SHA512_OUTSIZE)
+	(Tag, test_tag, SHA512_OUTSIZE, SHA512_OUTSIZE)
 }
 
 #[must_use]

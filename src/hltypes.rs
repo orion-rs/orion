@@ -71,7 +71,7 @@ construct_tag! {
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is not 128 bytes.
-	(PasswordHash, 128)
+	(PasswordHash, test_password_hash, 128, 128)
 }
 
 construct_password_variable_size! {

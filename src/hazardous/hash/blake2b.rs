@@ -92,7 +92,7 @@ construct_digest! {
 	/// An exception will be thrown if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
-	(Digest, 64)
+	(Digest, test_digest, 1, BLAKE2B_OUTSIZE)
 }
 
 #[allow(clippy::unreadable_literal)]

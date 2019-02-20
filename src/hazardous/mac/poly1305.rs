@@ -83,7 +83,7 @@ construct_tag! {
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is not 16 bytes.
-	(Tag, POLY1305_OUTSIZE)
+	(Tag, test_tag, POLY1305_OUTSIZE, POLY1305_OUTSIZE)
 }
 
 #[must_use]

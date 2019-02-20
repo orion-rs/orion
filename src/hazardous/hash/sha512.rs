@@ -55,13 +55,13 @@ use crate::{
 	hazardous::constants::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 };
 
-construct_nonce_no_generator! {
+construct_digest! {
 	/// A type to represent the `Digest` that SHA512 returns.
 	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is not 64 bytes.
-	(Digest, SHA512_OUTSIZE)
+	(Digest, test_digest, SHA512_OUTSIZE, SHA512_OUTSIZE)
 }
 
 #[rustfmt::skip]
