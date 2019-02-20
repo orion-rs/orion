@@ -55,7 +55,7 @@ use crate::{
 	hazardous::constants::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 };
 
-construct_digest! {
+construct_public! {
 	/// A type to represent the `Digest` that SHA512 returns.
 	///
 	/// # Exceptions:

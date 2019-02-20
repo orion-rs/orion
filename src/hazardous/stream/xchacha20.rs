@@ -84,14 +84,14 @@ use crate::{
 	},
 };
 
-construct_nonce_with_generator! {
+construct_public! {
 	/// A type that represents a `Nonce` that XChaCha20 and XChaCha20Poly1305 use.
 	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is not 24 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
-	(Nonce, XCHACHA_NONCESIZE)
+	(Nonce, test_nonce, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE)
 }
 
 #[must_use]

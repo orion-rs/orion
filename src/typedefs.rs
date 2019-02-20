@@ -130,23 +130,6 @@ macro_rules! func_from_slice_new (($name:ident, $lower_bound:expr, $upper_bound:
     }
 ));
 
-/// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
-/// if the slice is not of length `$size`.
-macro_rules! func_from_slice (($name:ident, $size:expr) => (
-    #[must_use]
-    /// Make an object from a given byte slice.
-    pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-        if slice.len() != $size {
-            return Err(UnknownCryptoError);
-        }
-
-        let mut value = [0u8; $size];
-        value.copy_from_slice(slice);
-
-        Ok($name { value: value })
-    }
-));
-
 #[cfg(feature = "safe_api")]
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
 /// if the slice is not of length `$size`.
@@ -462,7 +445,7 @@ macro_rules! construct_secret_key {
 ///   secret value might be.
 ///  Used to validate length of `slice` in from_slice(). $upper_bound also
 /// defines the `value` field array allocation size.
-macro_rules! construct_digest {
+macro_rules! construct_public {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr)) => (
         #[must_use]
@@ -492,6 +475,40 @@ macro_rules! construct_digest {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes!($name, $lower_bound, $upper_bound, as_bytes);
             test_get_length!($name, $lower_bound, $upper_bound, as_bytes);
+        }
+    );
+
+    ($(#[$meta:meta])*
+    ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr, $gen_length:expr)) => (
+        #[must_use]
+        #[derive(Clone, Copy)]
+        $(#[$meta])*
+        ///
+        pub struct $name {
+            value: [u8; $upper_bound],
+            original_length: usize,
+        }
+
+        impl_ct_partialeq_trait!($name, as_bytes);
+        impl_normal_debug_trait!($name);
+
+        impl $name {
+            func_from_slice_new!($name, $lower_bound, $upper_bound);
+            func_as_bytes_new!();
+            func_generate_new!($name, $upper_bound, $gen_length);
+            func_get_length_new!();
+        }
+
+        #[cfg(test)]
+        mod $test_module_name {
+            use super::*;
+            // Replace $gen_length with $upper_bound since a digest doesn't have
+            // generate() function.
+            test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
+            test_from_slice!($name, $lower_bound, $upper_bound);
+            test_as_bytes!($name, $lower_bound, $upper_bound, as_bytes);
+            test_get_length!($name, $lower_bound, $upper_bound, as_bytes);
+            test_generate!($name, $gen_length);
         }
     );
 }
@@ -531,96 +548,6 @@ macro_rules! construct_tag {
             test_as_bytes!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
             test_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
             test_omitted_debug!($name, $upper_bound);
-        }
-    );
-}
-
-/// Macro to construct a nonce where a random generator is not applicable.
-macro_rules! construct_nonce_no_generator {
-    ($(#[$meta:meta])*
-    ($name:ident, $size:expr)) => (
-        #[must_use]
-        $(#[$meta])*
-        pub struct $name { value: [u8; $size] }
-
-        impl_normal_debug_trait!($name);
-        impl_normal_partialeq_trait!($name);
-
-        impl $name {
-            func_from_slice!($name, $size);
-            func_as_bytes!();
-            func_get_length!();
-        }
-
-        #[test]
-        fn test_nonce_size() {
-            assert!($name::from_slice(&[0u8; $size]).is_ok());
-            assert!($name::from_slice(&[0u8; $size - $size]).is_err());
-            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
-        }
-        #[test]
-        fn test_as_bytes_nonce_no_gen() {
-            let test = $name::from_slice(&[0u8; $size]).unwrap();
-            assert!(test.as_bytes().len() == $size);
-            assert!(test.as_bytes() == [0u8; $size].as_ref());
-        }
-
-        #[test]
-        fn test_get_length_nonce_no_gen() {
-            let test = $name::from_slice(&[0u8; $size]).unwrap();
-            assert!(test.as_bytes().len() == test.get_length());
-            assert!($size == test.get_length());
-        }
-    );
-}
-
-/// Macro to construct a nonce where a random generator is applicable.
-macro_rules! construct_nonce_with_generator {
-    ($(#[$meta:meta])*
-    ($name:ident, $size:expr)) => (
-        #[must_use]
-        $(#[$meta])*
-        pub struct $name { value: [u8; $size] }
-
-        impl_normal_debug_trait!($name);
-        impl_normal_partialeq_trait!($name);
-
-        impl $name {
-            func_from_slice!($name, $size);
-            func_as_bytes!();
-            func_generate!($name, $size);
-            func_get_length!();
-        }
-
-        #[test]
-        fn test_nonce_size() {
-            assert!($name::from_slice(&[0u8; $size]).is_ok());
-            assert!($name::from_slice(&[0u8; $size - $size]).is_err());
-            assert!($name::from_slice(&[0u8; $size + 1]).is_err());
-        }
-        #[test]
-        fn test_as_bytes_nonce_with_gen() {
-            let test = $name::from_slice(&[0u8; $size]).unwrap();
-            assert!(test.as_bytes().len() == $size);
-            assert!(test.as_bytes() == &[0u8; $size]);
-        }
-
-        #[test]
-        fn test_get_length_nonce_with_gen() {
-            let test = $name::from_slice(&[0u8; $size]).unwrap();
-            assert!(test.as_bytes().len() == test.get_length());
-            assert!($size == test.get_length());
-        }
-
-        #[test]
-        #[cfg(feature = "safe_api")]
-        fn test_generate_nonce() {
-            let test_zero = $name::from_slice(&[0u8; $size]).unwrap();
-            // A random one should never be all 0's.
-            let test_rand = $name::generate().unwrap();
-            assert!(test_zero != test_rand);
-            // A random generated one should always be $size in length.
-            assert!(test_rand.get_length() == $size);
         }
     );
 }

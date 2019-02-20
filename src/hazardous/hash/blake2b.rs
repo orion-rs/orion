@@ -85,7 +85,7 @@ construct_secret_key! {
 	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, BLAKE2B_KEYSIZE)
 }
 
-construct_digest! {
+construct_public! {
 	/// A type to represent the `Digest` that BLAKE2b returns.
 	///
 	/// # Exceptions:
