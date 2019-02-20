@@ -78,12 +78,12 @@ construct_secret_key_variable_size! {
 	/// A type to represent the `Password` that PBKDF2 hashes and uses for key derivation.
 	///
 	/// As default it will randomly generate a `Password` of 32 bytes.
-	/// 
+	///
 	/// ### Note:
 	/// Due to the return type of the Default trait, the `default()` method cannot let the caller
 	/// handle a failing CSPRNG. If the CSPRNG fails, that function panics. If handling a failing CSPRNG's
 	/// error is needed, use instead `generate()`.
-	/// 
+	///
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is empty.

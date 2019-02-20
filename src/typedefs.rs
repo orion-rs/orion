@@ -260,7 +260,6 @@ macro_rules! func_generate_variable_size (($name:ident) => (
 
 ///
 /// Test implementation macros
-/// 
 
 #[cfg(test)]
 macro_rules! test_bound_parameters (($name:ident, $lower_bound:expr, $upper_bound:expr, $gen_length:expr) => (
@@ -433,8 +432,8 @@ macro_rules! construct_secret_key {
     );
 }
 
-/// Macro to construct a digest type containing non-sensitive data, using a fixed-size
-/// array.
+/// Macro to construct a digest type containing non-sensitive data, using a
+/// fixed-size array.
 ///
 /// - $name: The name for the newtype.
 ///
@@ -637,7 +636,6 @@ macro_rules! construct_hmac_key {
     );
 }
 
-
 #[cfg(feature = "safe_api")]
 /// Macro to construct a type containing sensitive data which is stored on the
 /// heap.
@@ -668,7 +666,7 @@ macro_rules! construct_secret_key_variable_size {
         #[cfg(test)]
         mod $test_module_name {
             use super::*;
-        
+
             #[test]
             fn test_from_slice_key() {
                 assert!($name::from_slice(&[0u8; 512]).is_ok());
