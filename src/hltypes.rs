@@ -40,7 +40,7 @@ construct_secret_key_variable_size! {
 	/// - The `OsRng` fails to initialize or read from its source.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
-	(SecretKey, 32)
+	(SecretKey, test_secret_key, 32)
 }
 
 construct_salt_variable_size! {
@@ -74,15 +74,21 @@ construct_tag! {
 	(PasswordHash, test_password_hash, 128, 128)
 }
 
-construct_password_variable_size! {
+construct_secret_key_variable_size! {
 	/// A type to represent the `Password` that PBKDF2 hashes and uses for key derivation.
 	///
-	///
+	/// As default it will randomly generate a `Password` of 32 bytes.
+	/// 
+	/// ### Note:
+	/// Due to the return type of the Default trait, the `default()` method cannot let the caller
+	/// handle a failing CSPRNG. If the CSPRNG fails, that function panics. If handling a failing CSPRNG's
+	/// error is needed, use instead `generate()`.
+	/// 
 	/// # Exceptions:
 	/// An exception will be thrown if:
 	/// - `slice` is empty.
 	/// - The `OsRng` fails to initialize or read from its source.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
-	(Password)
+	(Password, test_password, 32)
 }
