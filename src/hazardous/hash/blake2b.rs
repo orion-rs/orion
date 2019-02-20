@@ -71,7 +71,7 @@
 use crate::{
 	endianness::{load_u64_into_le, store_u64_into_le},
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
-	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE, BLAKE2B_KEYSIZE},
+	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_KEYSIZE, BLAKE2B_OUTSIZE},
 };
 
 construct_secret_key! {
