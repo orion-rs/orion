@@ -99,7 +99,7 @@ const H0: [u64; 8] = [
 ];
 
 #[derive(Clone)]
-/// SHA512 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+/// SHA512 streaming state.
 pub struct Sha512 {
 	working_state: [u64; 8],
 	buffer: [u8; SHA512_BLOCKSIZE],

@@ -91,8 +91,7 @@ construct_tag! {
 
 #[must_use]
 #[derive(Clone)]
-/// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the
-/// [RFC 2104](https://tools.ietf.org/html/rfc2104).
+/// HMAC-SHA512 streaming state.
 pub struct Hmac {
 	working_hasher: sha512::Sha512,
 	opad_hasher: sha512::Sha512,

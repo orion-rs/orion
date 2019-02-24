@@ -79,7 +79,7 @@ use tiny_keccak::Keccak;
 
 #[must_use]
 #[derive(Clone)]
-/// cSHAKE256 as specified in the [NIST SP 800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final).
+/// cSHAKE256 streaming state.
 pub struct CShake {
 	setup_hasher: Keccak,
 	hasher: Keccak,

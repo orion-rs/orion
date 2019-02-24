@@ -87,7 +87,7 @@ construct_tag! {
 
 #[must_use]
 #[derive(Clone)]
-/// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+/// Poly1305 streaming state.
 pub struct Poly1305 {
 	a: [u32; 5],
 	r: [u32; 5],
