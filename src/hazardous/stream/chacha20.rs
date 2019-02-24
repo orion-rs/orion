@@ -43,12 +43,16 @@
 //!   `SecretKey::generate()`.
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
 //! - `plaintext` or `ciphertext` are empty.
-//! - `plaintext` or `ciphertext` are longer than (2^32)-2.
 //! - The `initial_counter` is high enough to cause a potential overflow.
 //!
 //! Even though `dst_out` is allowed to be of greater length than `plaintext`,
 //! the `ciphertext` produced by `chacha20`/`xchacha20` will always be of the
 //! same length as the `plaintext`.
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2^32-1 keystream blocks are processed or more than 2^32-1 * 64 
+//! bytes of data are processed.
 //!
 //! ### Note:
 //! `keystream_block()` is for use-cases where more control over the keystream
@@ -131,6 +135,7 @@ construct_nonce_no_generator! {
 #[derive(Clone)]
 struct InternalState {
 	state: ChaChaState,
+	internal_counter: u32,
 	is_ietf: bool,
 }
 
@@ -222,6 +227,10 @@ impl InternalState {
 			return Err(UnknownCryptoError);
 		}
 
+		// If this panics, max amount of keystream blocks
+		// have been retrieved.
+		self.internal_counter = self.internal_counter.checked_add(1).unwrap();
+
 		// Only set block counter if not HChaCha
 		if self.is_ietf {
 			// .unwrap() cannot panic here since the above two
@@ -293,15 +302,10 @@ pub fn encrypt(
 	if plaintext.is_empty() {
 		return Err(UnknownCryptoError);
 	}
-	// Check data limitation for secret_key,nonce combination at max is (2^32)-2
-	if plaintext.len() as u32 == u32::max_value() {
-		// `usize::max_value() as u32` == `u32::max_value()` so we have to compare
-		// equals
-		return Err(UnknownCryptoError);
-	}
 
 	let mut chacha_state = InternalState {
 		state: [0_u32; 16],
+		internal_counter: 0,
 		is_ietf: true,
 	};
 
@@ -362,6 +366,7 @@ pub fn keystream_block(
 ) -> Result<[u8; CHACHA_BLOCKSIZE], UnknownCryptoError> {
 	let mut chacha_state = InternalState {
 		state: [0_u32; 16],
+		internal_counter: 0,
 		is_ietf: true,
 	};
 	chacha_state.init_state(secret_key, &nonce.as_bytes())?;
@@ -385,6 +390,7 @@ pub fn hchacha20(
 ) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
 	let mut chacha_state = InternalState {
 		state: [0_u32; 16],
+		internal_counter: 0,
 		is_ietf: false,
 	};
 	chacha_state.init_state(secret_key, nonce)?;
@@ -833,6 +839,7 @@ mod private {
 		fn test_nonce_length() {
 			let mut chacha_state = InternalState {
 				state: [0_u32; 16],
+				internal_counter: 0,
 				is_ietf: true,
 			};
 
@@ -848,6 +855,7 @@ mod private {
 
 			let mut hchacha_state = InternalState {
 				state: [0_u32; 16],
+				internal_counter: 0,
 				is_ietf: false,
 			};
 
@@ -873,6 +881,7 @@ mod private {
 				fn prop_test_nonce_length_ietf(nonce: Vec<u8>) -> bool {
 					let mut chacha_state_ietf = InternalState {
 						state: [0_u32; 16],
+						internal_counter: 0,
 						is_ietf: true,
 					};
 
@@ -906,6 +915,7 @@ mod private {
 				fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
 					let mut chacha_state_hchacha = InternalState {
 						state: [0_u32; 16],
+						internal_counter: 0,
 						is_ietf: false,
 					};
 
@@ -941,6 +951,7 @@ mod private {
 		fn test_process_block_wrong_combination_of_variant_and_nonce() {
 			let mut chacha_state_ietf = InternalState {
 				state: [0_u32; 16],
+				internal_counter: 0,
 				is_ietf: true,
 			};
 			chacha_state_ietf
@@ -949,6 +960,7 @@ mod private {
 
 			let mut chacha_state_hchacha = InternalState {
 				state: [0_u32; 16],
+				internal_counter: 0,
 				is_ietf: false,
 			};
 
@@ -961,6 +973,34 @@ mod private {
 			assert!(chacha_state_hchacha.process_block(None).is_ok());
 			assert!(chacha_state_ietf.process_block(Some(1)).is_ok());
 		}
+
+		#[test]
+		#[should_panic]
+		fn test_process_block_panic_on_too_much_keystream_data_ietf() {
+			let mut chacha_state_ietf = InternalState {
+				state: [0_u32; 16],
+				internal_counter: (u32::max_value() - 128),
+				is_ietf: true,
+			};
+
+			for amount in 0..(128 + 1) {
+				let _keystream_block = chacha_state_ietf.process_block(Some(amount as u32));
+			}
+		}
+
+		#[test]
+		#[should_panic]
+		fn test_process_block_panic_on_too_much_keystream_data_hchacha() {
+			let mut chacha_state_ietf = InternalState {
+				state: [0_u32; 16],
+				internal_counter: (u32::max_value() - 128),
+				is_ietf: false,
+			};
+
+			for _ in 0..(128 + 1) {
+				let _keystream_block = chacha_state_ietf.process_block(None);
+			}
+		}
 	}
 
 	mod test_serialize_block {
@@ -970,6 +1010,7 @@ mod private {
 		fn test_wrong_combination_of_variant_and_dst_out() {
 			let mut chacha_state_ietf = InternalState {
 				state: [0_u32; 16],
+				internal_counter: 0,
 				is_ietf: true,
 			};
 
@@ -979,6 +1020,7 @@ mod private {
 
 			let mut chacha_state_hchacha = InternalState {
 				state: [0_u32; 16],
+				internal_counter: 0,
 				is_ietf: false,
 			};
 
@@ -1017,6 +1059,7 @@ mod test_vectors {
 	fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
 		let mut chacha_state = InternalState {
 			state: [0_u32; 16],
+			internal_counter: 0,
 			is_ietf: true,
 		};
 
@@ -1035,6 +1078,7 @@ mod test_vectors {
 				0x01234567, 0x11111111, 0x01020304, 0x9b8d6f43, 0x01234567, 0x11111111, 0x01020304,
 				0x9b8d6f43, 0x01234567,
 			],
+			internal_counter: 0,
 			is_ietf: true,
 		};
 		let expected: [u32; 4] = [0xea2a92f4, 0xcb1cf8ce, 0x4581472e, 0x5881c4bb];
@@ -1058,6 +1102,7 @@ mod test_vectors {
 				0x2a5f714c, 0x53372767, 0xb00a5631, 0x974c541a, 0x359e9963, 0x5c971061, 0x3d631689,
 				0x2098d9d6, 0x91dbd320,
 			],
+			internal_counter: 0,
 			is_ietf: true,
 		};
 		let expected: ChaChaState = [

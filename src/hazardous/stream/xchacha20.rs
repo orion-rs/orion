@@ -33,13 +33,16 @@
 //! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
 //! - `plaintext` or `ciphertext` is empty.
-//! - `plaintext` or `ciphertext` is longer than (2^32)-2.
 //! - The `initial_counter` is high enough to cause a potential overflow.
 //!
 //! Even though `dst_out` is allowed to be of greater length than `plaintext`,
 //! the `ciphertext` produced by `chacha20`/`xchacha20` will always be of the
 //! same length as the `plaintext`.
 //!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2^32-1 * 64 bytes of data are processed.
+//! 
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
 //!   key. Should this happen,
