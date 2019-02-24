@@ -37,6 +37,10 @@
 //! - `reset()` is called with `None` as `secret_key` but the struct was
 //!   initialized with `Some(secret_key)`.
 //!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2*(2^64-1) bytes of data are hashed.
+//!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
 //!   `SecretKey::generate()` can be used

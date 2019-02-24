@@ -37,7 +37,7 @@
 //! # Panics:
 //! A panic will occur if:
 //! - The length of `dst_out` is greater than (2^32 - 1) * 64.
-//! 
+//!
 //! # Security:
 //! - Use `Password::generate()` to randomly generate a password of 128 bytes.
 //! - Salts should always be generated using a CSPRNG. The `gen_rand_key`
