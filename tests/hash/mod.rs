@@ -1,5 +1,6 @@
 pub mod blake2b_kat;
 pub mod sha512_nist_cavp;
+pub mod other_blake2b;
 
 extern crate orion;
 use self::orion::hazardous::hash::{blake2b, sha512};
