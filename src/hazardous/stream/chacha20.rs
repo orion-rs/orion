@@ -48,10 +48,11 @@
 //! Even though `dst_out` is allowed to be of greater length than `plaintext`,
 //! the `ciphertext` produced by `chacha20`/`xchacha20` will always be of the
 //! same length as the `plaintext`.
-//! 
+//!
 //! # Panics:
 //! A panic will occur if:
-//! - More than 2^32-1 keystream blocks are processed.
+//! - More than 2^32-1 keystream blocks are processed or more than 2^32-1 * 64 
+//! bytes of data are processed.
 //!
 //! ### Note:
 //! `keystream_block()` is for use-cases where more control over the keystream
@@ -228,7 +229,7 @@ impl InternalState {
 
 		// If this panics, max amount of keystream blocks
 		// have been retrieved.
-		self.internal_counter.checked_add(1).unwrap();
+		self.internal_counter = self.internal_counter.checked_add(1).unwrap();
 
 		// Only set block counter if not HChaCha
 		if self.is_ietf {
@@ -971,6 +972,34 @@ mod private {
 			assert!(chacha_state_ietf.process_block(None).is_err());
 			assert!(chacha_state_hchacha.process_block(None).is_ok());
 			assert!(chacha_state_ietf.process_block(Some(1)).is_ok());
+		}
+
+		#[test]
+		#[should_panic]
+		fn test_process_block_panic_on_too_much_keystream_data_ietf() {
+			let mut chacha_state_ietf = InternalState {
+				state: [0_u32; 16],
+				internal_counter: (u32::max_value() - 128),
+				is_ietf: true,
+			};
+
+			for amount in 0..(128 + 1) {
+				let _keystream_block = chacha_state_ietf.process_block(Some(amount as u32));
+			}
+		}
+
+		#[test]
+		#[should_panic]
+		fn test_process_block_panic_on_too_much_keystream_data_hchacha() {
+			let mut chacha_state_ietf = InternalState {
+				state: [0_u32; 16],
+				internal_counter: (u32::max_value() - 128),
+				is_ietf: false,
+			};
+
+			for _ in 0..(128 + 1) {
+				let _keystream_block = chacha_state_ietf.process_block(None);
+			}
 		}
 	}
 

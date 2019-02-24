@@ -52,6 +52,10 @@
 //! - `plaintext` or `ciphertext_with_tag` are empty.
 //! - The received tag does not match the calculated tag when decrypting.
 //!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2^32-1 * 64 bytes of data are processed.
+//!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
 //!   key. Should this happen,

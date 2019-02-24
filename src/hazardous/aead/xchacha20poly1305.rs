@@ -43,8 +43,11 @@
 //!   decrypting.
 //! - The length of `ciphertext_with_tag` is not greater than `16`.
 //! - `plaintext` or `ciphertext_with_tag` are empty.
-//! - `plaintext` or `ciphertext_with_tag - 16` are longer than (2^32)-2.
 //! - The received tag does not match the calculated tag when decrypting.
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2^32-1 * 64 bytes of data are processed.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
