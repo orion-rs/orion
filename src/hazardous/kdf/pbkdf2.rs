@@ -31,10 +31,13 @@
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than 1.
-//! - The length of `dst_out` is greater than (2^32 - 1) * 64.
 //! - The specified iteration count is less than 1.
 //! - The hashed password does not match the expected when verifying.
 //!
+//! # Panics:
+//! A panic will occur if:
+//! - The length of `dst_out` is greater than (2^32 - 1) * 64.
+//! 
 //! # Security:
 //! - Use `Password::generate()` to randomly generate a password of 128 bytes.
 //! - Salts should always be generated using a CSPRNG. The `gen_rand_key`
@@ -140,22 +143,10 @@ pub fn derive_key(
 
 	for (idx, dk_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
 		let block_len = dk_block.len();
-		let block_idx = (1u32).checked_add(idx as u32);
+		let block_idx = (1u32).checked_add(idx as u32).unwrap();
 
-		if block_idx.is_some() {
-			function_f(
-				salt,
-				iterations,
-				// .unwrap() cannot panic since block_idx.is_some() == true
-				block_idx.unwrap(),
-				dk_block,
-				block_len,
-				&mut hmac,
-			)?;
-			hmac.reset();
-		} else {
-			return Err(UnknownCryptoError);
-		}
+		function_f(salt, iterations, block_idx, dk_block, block_len, &mut hmac)?;
+		hmac.reset();
 	}
 
 	Ok(())
