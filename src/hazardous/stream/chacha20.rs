@@ -43,7 +43,6 @@
 //!   `SecretKey::generate()`.
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
 //! - `plaintext` or `ciphertext` are empty.
-//! - `plaintext` or `ciphertext` are longer than (2^32)-2.
 //! - The `initial_counter` is high enough to cause a potential overflow.
 //!
 //! Even though `dst_out` is allowed to be of greater length than `plaintext`,
@@ -300,12 +299,6 @@ pub fn encrypt(
 	// encrypts an empty plaintext, they might think the plaintext wasn't empty
 	// when checking data in `dst_ciphertext` after encryption
 	if plaintext.is_empty() {
-		return Err(UnknownCryptoError);
-	}
-	// Check data limitation for secret_key,nonce combination at max is (2^32)-2
-	if plaintext.len() as u32 == u32::max_value() {
-		// `usize::max_value() as u32` == `u32::max_value()` so we have to compare
-		// equals
 		return Err(UnknownCryptoError);
 	}
 
