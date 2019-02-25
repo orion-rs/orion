@@ -89,7 +89,8 @@ mod boringssl_aead_chacha20_poly1305 {
 	// Skipped because orion doesn't allow empty plaintext
 	// #[test]
 	// fn boringssl_test_case_7() {
-	// let key = decode("9a97f65b9b4c721b960a672145fca8d4e32e67f9111ea979ce9c4826806aeee6").unwrap();
+	// let key = decode("
+	// 9a97f65b9b4c721b960a672145fca8d4e32e67f9111ea979ce9c4826806aeee6").unwrap();
 	// let nonce = decode("000000003de9c0da2bd7f91e").unwrap();
 	// let aad = "".as_bytes();
 	// let input = "".as_bytes();

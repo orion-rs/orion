@@ -87,8 +87,8 @@ mod rfc_aead_chacha20_poly1305 {
 		];
 
 		let plaintext = "\
-		                 Internet-Drafts are draft documents valid for a maximum of six months and may \
-		                 be updated, replaced, or obsoleted by other documents at any time. It is \
+		                 Internet-Drafts are draft documents valid for a maximum of six months and may be \
+		                 updated, replaced, or obsoleted by other documents at any time. It is \
 		                 inappropriate to use Internet-Drafts as reference material or to cite \
 		                 them other than as /\u{201c}work in progress./\u{201d}"
 			.as_bytes();

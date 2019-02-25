@@ -51,7 +51,7 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - More than 2^32-1 keystream blocks are processed or more than 2^32-1 * 64 
+//! - More than 2^32-1 keystream blocks are processed or more than 2^32-1 * 64
 //! bytes of data are processed.
 //!
 //! ### Note:
