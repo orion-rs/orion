@@ -396,7 +396,12 @@ macro_rules! construct_secret_key {
 ///
 /// - $lower_bound/$upper_bound: An inclusive range that defines what length a
 ///   secret value might be.
-///  Used to validate length of `slice` in from_slice(). $upper_bound also
+/// 
+/// - $gen_length: The amount of data to be randomly generated when using
+///   generate(). If not supplied, the public newtype will not have a `generate()`
+///   function available.
+/// 
+/// Used to validate length of `slice` in from_slice(). $upper_bound also
 /// defines the `value` field array allocation size.
 macro_rules! construct_public {
     ($(#[$meta:meta])*
@@ -422,7 +427,7 @@ macro_rules! construct_public {
         #[cfg(test)]
         mod $test_module_name {
             use super::*;
-            // Replace $gen_length with $upper_bound since a digest doesn't have
+            // Replace $gen_length with $upper_bound since this doesn't have
             // generate() function.
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
@@ -455,8 +460,6 @@ macro_rules! construct_public {
         #[cfg(test)]
         mod $test_module_name {
             use super::*;
-            // Replace $gen_length with $upper_bound since a digest doesn't have
-            // generate() function.
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes!($name, $lower_bound, $upper_bound, as_bytes);
