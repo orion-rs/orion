@@ -90,8 +90,8 @@ use crate::{
 construct_nonce_with_generator! {
 	/// A type that represents a `Nonce` that XChaCha20 and XChaCha20Poly1305 use.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is not 24 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
 	(Nonce, XCHACHA_NONCESIZE)

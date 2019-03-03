@@ -117,8 +117,8 @@ construct_secret_key! {
 	/// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and
 	/// `xchacha20poly1305` use.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is not 32 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
 	(SecretKey, CHACHA_KEYSIZE)
@@ -126,8 +126,8 @@ construct_secret_key! {
 construct_nonce_no_generator! {
 	/// A type that represents a `Nonce` that ChaCha20 and ChaCha20Poly1305 use.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is not 12 bytes.
 	(Nonce, IETF_CHACHA_NONCESIZE)
 }

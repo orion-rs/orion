@@ -58,8 +58,8 @@ use crate::{
 construct_nonce_no_generator! {
 	/// A type to represent the `Digest` that SHA512 returns.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is not 64 bytes.
 	(Digest, SHA512_OUTSIZE)
 }

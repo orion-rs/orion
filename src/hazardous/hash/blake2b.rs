@@ -88,8 +88,8 @@ construct_blake2b_key! {
 	///
 	/// Using `get_length()` will return the length with padding (always 128).
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
@@ -99,8 +99,8 @@ construct_blake2b_key! {
 construct_digest! {
 	/// A type to represent the `Digest` that BLAKE2b returns.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
 	(Digest, 64)

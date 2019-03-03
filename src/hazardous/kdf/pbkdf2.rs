@@ -83,8 +83,8 @@ construct_hmac_key! {
 	///
 	/// Using `get_length()` will return the length with padding (always 128).
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - The `OsRng` fails to initialize or read from its source.
 	(Password, SHA512_BLOCKSIZE)
 }
