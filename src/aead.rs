@@ -94,7 +94,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 	let nonce = Nonce::generate()?;
 
 	let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
-	dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes());
+	dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref());
 
 	aead::xchacha20poly1305::seal(
 		&chacha20::SecretKey::from_slice(&secret_key.unprotected_as_bytes())?,

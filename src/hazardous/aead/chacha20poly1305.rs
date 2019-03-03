@@ -193,7 +193,7 @@ pub fn seal(
 		None => &[0u8; 0],
 	};
 
-	let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes())?;
+	let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_ref())?;
 	chacha20::encrypt(
 		secret_key,
 		nonce,
@@ -233,7 +233,7 @@ pub fn open(
 
 	let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
 
-	let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_bytes())?;
+	let poly1305_key = poly1305_key_gen(&secret_key.unprotected_as_bytes(), &nonce.as_ref())?;
 	let mut poly1305_state = poly1305::init(&poly1305_key);
 	process_authentication(
 		&mut poly1305_state,

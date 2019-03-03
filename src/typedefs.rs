@@ -57,12 +57,12 @@ macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
 ));
 
 /// Macro that implements the `PartialEq` trait on a object called `$name` that
-/// also implements `as_bytes()`. This `PartialEq` will NOT perform in
+/// also implements `AsRef<[u8]>`. This `PartialEq` will NOT perform in
 /// constant time.
 macro_rules! impl_normal_partialeq_trait (($name:ident) => (
     impl PartialEq for $name {
         fn eq(&self, other: &$name) -> bool {
-            (&self.as_bytes() == &other.as_bytes())
+            (&self.as_ref() == &other.as_ref())
         }
     }
 ));
@@ -89,7 +89,7 @@ macro_rules! impl_normal_debug_trait (($name:ident) => (
     }
 ));
 
-/// Macro that implements the `Drop` trait on a object called `$name` which as a
+/// Macro that implements the `Drop` trait on a object called `$name` which has a
 /// field `value`. This `Drop` will zero out the field `value` when the objects
 /// destructor is called. WARNING: This requires value to be an array as
 /// clear_on_drop will not be called correctly if this particluar trait is
@@ -99,6 +99,18 @@ macro_rules! impl_drop_trait (($name:ident) => (
         fn drop(&mut self) {
             use zeroize::Zeroize;
             self.value.zeroize();
+        }
+    }
+));
+
+/// Macro that implements the `AsRef<[u8]>` trait on a object called `$name` which has
+/// fields `value` and `original_length`. This will return the inner `value` as a byte slice, 
+/// and should only be implemented on public types which don't have any special protections.
+macro_rules! impl_asref_trait (($name:ident) => (
+    impl AsRef<[u8]> for $name {
+        #[inline]
+        fn as_ref(&self) -> &[u8] {
+            &self.value[..self.original_length]
         }
     }
 ));
@@ -154,16 +166,6 @@ macro_rules! func_unprotected_as_bytes (() => (
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
     /// needed. This __**breaks protections**__ that the type implements.
     pub fn unprotected_as_bytes(&self) -> &[u8] {
-        self.value[..self.original_length].as_ref()
-    }
-));
-
-/// Macro to implement a `as_bytes()` function for objects that don't implement
-/// extra protections.
-macro_rules! func_as_bytes (() => (
-    #[must_use]
-    /// Return the object as byte slice.
-    pub fn as_bytes(&self) -> &[u8] {
         self.value[..self.original_length].as_ref()
     }
 ));
@@ -415,12 +417,12 @@ macro_rules! construct_public {
             original_length: usize,
         }
 
-        impl_ct_partialeq_trait!($name, as_bytes);
+        impl_ct_partialeq_trait!($name, as_ref);
         impl_normal_debug_trait!($name);
+        impl_asref_trait!($name);
 
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
-            func_as_bytes!();
             func_get_length!();
         }
 
@@ -431,8 +433,8 @@ macro_rules! construct_public {
             // generate() function.
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
-            test_as_bytes!($name, $lower_bound, $upper_bound, as_bytes);
-            test_get_length!($name, $lower_bound, $upper_bound, as_bytes);
+            test_as_bytes!($name, $lower_bound, $upper_bound, as_ref);
+            test_get_length!($name, $lower_bound, $upper_bound, as_ref);
         }
     );
 
@@ -447,12 +449,12 @@ macro_rules! construct_public {
             original_length: usize,
         }
 
-        impl_ct_partialeq_trait!($name, as_bytes);
+        impl_ct_partialeq_trait!($name, as_ref);
         impl_normal_debug_trait!($name);
+        impl_asref_trait!($name);
 
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
-            func_as_bytes!();
             func_generate!($name, $upper_bound, $gen_length);
             func_get_length!();
         }
@@ -462,8 +464,8 @@ macro_rules! construct_public {
             use super::*;
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
-            test_as_bytes!($name, $lower_bound, $upper_bound, as_bytes);
-            test_get_length!($name, $lower_bound, $upper_bound, as_bytes);
+            test_as_bytes!($name, $lower_bound, $upper_bound, as_ref);
+            test_get_length!($name, $lower_bound, $upper_bound, as_ref);
             test_generate!($name, $gen_length);
         }
     );
@@ -540,7 +542,7 @@ macro_rules! construct_hmac_key {
                 let slice_len = slice.len();
 
                 if slice_len > $size {
-                    secret_key[..SHA512_OUTSIZE].copy_from_slice(&sha512::digest(slice)?.as_bytes());
+                    secret_key[..SHA512_OUTSIZE].copy_from_slice(&sha512::digest(slice)?.as_ref());
                 } else {
                     secret_key[..slice_len].copy_from_slice(slice);
                 }
@@ -684,10 +686,10 @@ macro_rules! construct_salt_variable_size {
         impl_normal_debug_trait!($name);
         impl_default_trait!($name, $default_size);
         impl_normal_partialeq_trait!($name);
+        impl_asref_trait!($name);
 
         impl $name {
             func_from_slice_variable_size!($name);
-            func_as_bytes!();
             func_get_length!();
             func_generate_variable_size!($name);
         }
@@ -703,8 +705,8 @@ macro_rules! construct_salt_variable_size {
         #[test]
         fn test_as_bytes_salt() {
             let test = $name::from_slice(&[0u8; 256]).unwrap();
-            assert!(test.as_bytes().len() == 256);
-            assert!(test.as_bytes() == [0u8; 256].as_ref());
+            assert!(test.as_ref().len() == 256);
+            assert!(test.as_ref() == [0u8; 256].as_ref());
         }
 
         #[test]

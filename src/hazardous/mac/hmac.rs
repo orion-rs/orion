@@ -160,8 +160,8 @@ impl Hmac {
 
 		self.is_finalized = true;
 		let mut outer_hasher = self.opad_hasher.clone();
-		outer_hasher.update(self.working_hasher.finalize()?.as_bytes())?;
-		let tag = Tag::from_slice(outer_hasher.finalize()?.as_bytes())?;
+		outer_hasher.update(self.working_hasher.finalize()?.as_ref())?;
+		let tag = Tag::from_slice(outer_hasher.finalize()?.as_ref())?;
 
 		Ok(tag)
 	}

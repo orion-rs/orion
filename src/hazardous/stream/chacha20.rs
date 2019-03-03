@@ -310,7 +310,7 @@ pub fn encrypt(
 		is_ietf: true,
 	};
 
-	chacha_state.init_state(secret_key, &nonce.as_bytes())?;
+	chacha_state.init_state(secret_key, &nonce.as_ref())?;
 
 	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 	let mut keystream_state: ChaChaState = [0u32; 16];
@@ -370,7 +370,7 @@ pub fn keystream_block(
 		internal_counter: 0,
 		is_ietf: true,
 	};
-	chacha_state.init_state(secret_key, &nonce.as_bytes())?;
+	chacha_state.init_state(secret_key, &nonce.as_ref())?;
 
 	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 	let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter))?;

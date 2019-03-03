@@ -456,7 +456,7 @@ mod public {
 			state.reset();
 			state.update(data).unwrap();
 			let two = state.finalize().unwrap();
-			assert_eq!(one.as_bytes(), two.as_bytes());
+			assert_eq!(one.as_ref(), two.as_ref());
 		}
 
 		#[test]
@@ -597,7 +597,7 @@ mod public {
 
 				let digest_one_shot = digest(&other_data).unwrap();
 
-				assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
+				assert!(state.finalize().unwrap().as_ref() == digest_one_shot.as_ref());
 			}
 		}
 		// Proptests. Only exectued when NOT testing no_std.
