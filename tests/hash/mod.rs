@@ -1,4 +1,5 @@
 pub mod blake2b_kat;
+pub mod other_blake2b;
 pub mod sha512_nist_cavp;
 
 extern crate orion;

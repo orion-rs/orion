@@ -49,12 +49,14 @@
 //! An error will be returned if:
 //! - `secret_key` is not 32 bytes.
 //! - `plaintext` is empty.
-//! - `plaintext` is longer than (2^32)-2.
-//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes.
-//! - `ciphertext_with_tag_and_nonce` is longer than (2^32)-2.
+//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1).
 //! - The received tag does not match the calculated tag when calling
 //!   `aead::open()`.
 //! - The `OsRng` fails to initialize or read from its source.
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2^32-1 * 64 bytes of data are processed.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given

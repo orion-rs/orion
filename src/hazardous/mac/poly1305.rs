@@ -70,8 +70,8 @@ use crate::{
 construct_secret_key! {
 	/// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is not 32 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
 	(OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
@@ -80,15 +80,15 @@ construct_secret_key! {
 construct_tag! {
 	/// A type to represent the `Tag` that Poly1305 returns.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is not 16 bytes.
 	(Tag, test_tag, POLY1305_OUTSIZE, POLY1305_OUTSIZE)
 }
 
 #[must_use]
 #[derive(Clone)]
-/// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+/// Poly1305 streaming state.
 pub struct Poly1305 {
 	a: [u32; 5],
 	r: [u32; 5],

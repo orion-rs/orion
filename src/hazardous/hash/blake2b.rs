@@ -37,6 +37,10 @@
 //! - `reset()` is called with `None` as `secret_key` but the struct was
 //!   initialized with `Some(secret_key)`.
 //!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2*(2^64-1) bytes of data are hashed.
+//!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
 //!   `SecretKey::generate()` can be used
@@ -77,8 +81,8 @@ use crate::{
 construct_secret_key! {
 	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
@@ -88,8 +92,8 @@ construct_secret_key! {
 construct_public! {
 	/// A type to represent the `Digest` that BLAKE2b returns.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
 	(Digest, test_digest, 1, BLAKE2B_OUTSIZE)
@@ -163,7 +167,7 @@ impl Hasher {
 
 #[must_use]
 #[derive(Clone)]
-/// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
+/// BLAKE2b streaming state.
 pub struct Blake2b {
 	init_state: [u64; 8],
 	internal_state: [u64; 8],

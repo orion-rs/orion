@@ -34,12 +34,16 @@ construct_secret_key_variable_size! {
 	/// handle a failing CSPRNG. If the CSPRNG fails, that function panics. If handling a failing CSPRNG's
 	/// error is needed, use instead `generate()`.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is empty.
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// - The `OsRng` fails to initialize or read from its source when using `SecretKey::generate()`.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
+	///
+	/// # Panics:
+	/// A panic will occur if:
+	/// - The `OsRng` fails to initialize or read from its source when using `SecretKey::default()`.
 	(SecretKey, test_secret_key, 32)
 }
 
@@ -53,12 +57,16 @@ construct_salt_variable_size! {
 	/// handle a failing CSPRNG. If the CSPRNG fails, that function panics. If handling a failing CSPRNG's
 	/// error is needed, use instead `generate()`.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is empty.
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// - The `OsRng` fails to initialize or read from its source when using `Salt::generate()`.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
+	/// 
+	/// # Panics:
+	/// A panic will occur if:
+	/// - The `OsRng` fails to initialize or read from its source when using `Salt::default()`.
 	(Salt, 64)
 }
 
@@ -68,8 +76,8 @@ construct_tag! {
 	/// A `PasswordHash`'s first 64 bytes are the salt used to hash the password, and the last 64
 	/// bytes are the actual password hash.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is not 128 bytes.
 	(PasswordHash, test_password_hash, 128, 128)
 }
@@ -84,10 +92,10 @@ construct_secret_key_variable_size! {
 	/// handle a failing CSPRNG. If the CSPRNG fails, that function panics. If handling a failing CSPRNG's
 	/// error is needed, use instead `generate()`.
 	///
-	/// # Exceptions:
-	/// An exception will be thrown if:
+	/// # Errors:
+	/// An error will be returned if:
 	/// - `slice` is empty.
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// - The `OsRng` fails to initialize or read from its source when using `Password::generate()`.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
 	(Password, test_password, 32)
