@@ -89,6 +89,8 @@ construct_tag! {
 	(Tag, test_tag, SHA512_OUTSIZE, SHA512_OUTSIZE)
 }
 
+impl_from_trait!(Tag, SHA512_OUTSIZE);
+
 #[must_use]
 #[derive(Clone)]
 /// HMAC-SHA512 streaming state.

@@ -124,6 +124,8 @@ construct_secret_key! {
 	(SecretKey, test_secret_key, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE)
 }
 
+impl_from_trait!(SecretKey, CHACHA_KEYSIZE);
+
 construct_public! {
 	/// A type that represents a `Nonce` that ChaCha20 and ChaCha20Poly1305 use.
 	///
@@ -132,6 +134,8 @@ construct_public! {
 	/// - `slice` is not 12 bytes.
 	(Nonce, test_nonce, IETF_CHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE)
 }
+
+impl_from_trait!(Nonce, IETF_CHACHA_NONCESIZE);
 
 #[derive(Clone)]
 struct InternalState {

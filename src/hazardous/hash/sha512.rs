@@ -64,6 +64,8 @@ construct_public! {
 	(Digest, test_digest, SHA512_OUTSIZE, SHA512_OUTSIZE)
 }
 
+impl_from_trait!(Digest, SHA512_OUTSIZE);
+
 #[rustfmt::skip]
 #[allow(clippy::unreadable_literal)]
 /// The SHA512 constants as defined in the FIPS 180-4.

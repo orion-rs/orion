@@ -89,9 +89,9 @@ macro_rules! impl_normal_debug_trait (($name:ident) => (
     }
 ));
 
-/// Macro that implements the `Drop` trait on a object called `$name` which has a
-/// field `value`. This `Drop` will zero out the field `value` when the objects
-/// destructor is called. WARNING: This requires value to be an array as
+/// Macro that implements the `Drop` trait on a object called `$name` which has
+/// a field `value`. This `Drop` will zero out the field `value` when the
+/// objects destructor is called. WARNING: This requires value to be an array as
 /// clear_on_drop will not be called correctly if this particluar trait is
 /// implemented on Vec's.
 macro_rules! impl_drop_trait (($name:ident) => (
@@ -103,14 +103,31 @@ macro_rules! impl_drop_trait (($name:ident) => (
     }
 ));
 
-/// Macro that implements the `AsRef<[u8]>` trait on a object called `$name` which has
-/// fields `value` and `original_length`. This will return the inner `value` as a byte slice, 
-/// and should only be implemented on public types which don't have any special protections.
+/// Macro that implements the `AsRef<[u8]>` trait on a object called `$name`
+/// which has fields `value` and `original_length`. This will return the inner
+/// `value` as a byte slice, and should only be implemented on public types
+/// which don't have any special protections.
 macro_rules! impl_asref_trait (($name:ident) => (
-    impl AsRef<[u8]> for $name {
+    impl core::convert::AsRef<[u8]> for $name {
         #[inline]
         fn as_ref(&self) -> &[u8] {
             &self.value[..self.original_length]
+        }
+    }
+));
+
+/// Macro that implements the `From<[T]>` trait on a object called `$name`
+/// which has fields `value` and `original_length`. It implements From 
+/// based on `$size` and this macro should, in most cases, only be used for
+/// types which have a fixed-length. 
+macro_rules! impl_from_trait (($name:ident, $size:expr) => (
+    impl core::convert::From<[u8; $size]> for $name {
+        /// Make an object from a byte array.
+        fn from(bytes: [u8; $size]) -> $name {
+            $name {
+                value: bytes,
+                original_length: $size
+            }
         }
     }
 ));
@@ -398,11 +415,11 @@ macro_rules! construct_secret_key {
 ///
 /// - $lower_bound/$upper_bound: An inclusive range that defines what length a
 ///   secret value might be.
-/// 
+///
 /// - $gen_length: The amount of data to be randomly generated when using
-///   generate(). If not supplied, the public newtype will not have a `generate()`
-///   function available.
-/// 
+///   generate(). If not supplied, the public newtype will not have a
+///   `generate()` function available.
+///
 /// Used to validate length of `slice` in from_slice(). $upper_bound also
 /// defines the `value` field array allocation size.
 macro_rules! construct_public {

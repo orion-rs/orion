@@ -97,6 +97,8 @@ construct_public! {
 	(Nonce, test_nonce, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE)
 }
 
+impl_from_trait!(Nonce, XCHACHA_NONCESIZE);
+
 #[must_use]
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn encrypt(

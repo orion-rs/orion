@@ -49,7 +49,8 @@
 //! An error will be returned if:
 //! - `secret_key` is not 32 bytes.
 //! - `plaintext` is empty.
-//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1).
+//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes (XCHACHA_NONCESIZE +
+//!   POLY1305_BLOCKSIZE + 1).
 //! - The received tag does not match the calculated tag when calling
 //!   `aead::open()`.
 //! - The `OsRng` fails to initialize or read from its source.

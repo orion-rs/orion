@@ -63,7 +63,7 @@ construct_salt_variable_size! {
 	/// - The `OsRng` fails to initialize or read from its source when using `Salt::generate()`.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
-	/// 
+	///
 	/// # Panics:
 	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source when using `Salt::default()`.
@@ -81,6 +81,8 @@ construct_tag! {
 	/// - `slice` is not 128 bytes.
 	(PasswordHash, test_password_hash, 128, 128)
 }
+
+impl_from_trait!(PasswordHash, 128);
 
 construct_secret_key_variable_size! {
 	/// A type to represent the `Password` that PBKDF2 hashes and uses for key derivation.

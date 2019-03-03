@@ -77,6 +77,8 @@ construct_secret_key! {
 	(OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
 }
 
+impl_from_trait!(OneTimeKey, POLY1305_KEYSIZE);
+
 construct_tag! {
 	/// A type to represent the `Tag` that Poly1305 returns.
 	///
@@ -85,6 +87,8 @@ construct_tag! {
 	/// - `slice` is not 16 bytes.
 	(Tag, test_tag, POLY1305_OUTSIZE, POLY1305_OUTSIZE)
 }
+
+impl_from_trait!(Tag, POLY1305_OUTSIZE);
 
 #[must_use]
 #[derive(Clone)]
