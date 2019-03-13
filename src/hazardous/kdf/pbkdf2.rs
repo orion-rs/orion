@@ -143,6 +143,7 @@ pub fn derive_key(
 
 	for (idx, dk_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
 		let block_len = dk_block.len();
+		// If this panics, then the size limit for PBKDF2 is reached.
 		let block_idx = (1u32).checked_add(idx as u32).unwrap();
 
 		function_f(salt, iterations, block_idx, dk_block, block_len, &mut hmac)?;
