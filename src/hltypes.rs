@@ -40,7 +40,7 @@ construct_secret_key_variable_size! {
 	/// - The `OsRng` fails to initialize or read from its source when using `SecretKey::generate()`.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
-	/// 
+	///
 	/// # Panics:
 	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source when using `SecretKey::default()`.
@@ -63,7 +63,7 @@ construct_salt_variable_size! {
 	/// - The `OsRng` fails to initialize or read from its source when using `Salt::generate()`.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
-	/// 
+	///
 	/// # Panics:
 	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source when using `Salt::default()`.
