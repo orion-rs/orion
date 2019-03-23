@@ -67,7 +67,7 @@ construct_salt_variable_size! {
 	/// # Panics:
 	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source when using `Salt::default()`.
-	(Salt, 64)
+	(Salt, test_salt, 64)
 }
 
 construct_tag! {

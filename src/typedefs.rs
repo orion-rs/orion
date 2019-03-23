@@ -310,6 +310,39 @@ macro_rules! test_omitted_debug (($name:ident, $upper_bound:expr) => (
     }
 ));
 
+#[cfg(test)]
+#[cfg(feature = "safe_api")]
+macro_rules! test_from_slice_variable (($name:ident) => (
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_from_slice_variable() {
+        assert!($name::from_slice(&[0u8; 512]).is_ok());
+        assert!($name::from_slice(&[0u8; 256]).is_ok());
+        assert!($name::from_slice(&[0u8; 1]).is_ok());
+        assert!($name::from_slice(&[0u8; 0]).is_err());
+    }
+));
+
+#[cfg(test)]
+#[cfg(feature = "safe_api")]
+macro_rules! test_generate_variable (($name:ident) => (
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_generate_variable() {
+        assert!($name::generate(0).is_err());
+        assert!($name::generate(usize::max_value()).is_err());
+        assert!($name::generate(1).is_ok());
+        assert!($name::generate(64).is_ok());
+
+        let test_zero = $name::from_slice(&[0u8; 128]).unwrap();
+        // A random one should never be all 0's.
+        let test_rand = $name::generate(128).unwrap();
+        assert!(test_zero != test_rand);
+        // A random generated one should always be $size in length.
+        assert!(test_rand.get_length() == 128);
+    }
+));
+
 ///
 /// Newtype implementation macros
 
@@ -628,37 +661,9 @@ macro_rules! construct_secret_key_variable_size {
         mod $test_module_name {
             use super::*;
 
-            #[test]
-            fn test_from_slice_key() {
-                assert!($name::from_slice(&[0u8; 512]).is_ok());
-                assert!($name::from_slice(&[0u8; 256]).is_ok());
-                assert!($name::from_slice(&[0u8; 1]).is_ok());
-                assert!($name::from_slice(&[0u8; 0]).is_err());
-            }
-
-            #[test]
-            fn test_unprotected_as_bytes_derived_key() {
-                let test = $name::from_slice(&[0u8; 256]).unwrap();
-                assert!(test.unprotected_as_bytes().len() == 256);
-                assert!(test.unprotected_as_bytes() == [0u8; 256].as_ref());
-            }
-
-            #[test]
-            #[cfg(feature = "safe_api")]
-            fn test_generate_secret_key() {
-                assert!($name::generate(0).is_err());
-                assert!($name::generate(usize::max_value()).is_err());
-                assert!($name::generate(1).is_ok());
-                assert!($name::generate(64).is_ok());
-
-                let test_zero = $name::from_slice(&[0u8; 128]).unwrap();
-                // A random one should never be all 0's.
-                let test_rand = $name::generate(128).unwrap();
-                assert!(test_zero != test_rand);
-                // A random generated one should always be $size in length.
-                assert!(test_rand.get_length() == 128);
-            }
-
+            test_from_slice_variable!($name);
+            test_as_bytes_and_get_length!($name, 1, $default_size + 1, unprotected_as_bytes);
+            test_generate_variable!($name);
             test_omitted_debug!($name, $default_size);
         }
     );
@@ -669,7 +674,7 @@ macro_rules! construct_secret_key_variable_size {
 /// heap.
 macro_rules! construct_salt_variable_size {
     ($(#[$meta:meta])*
-    ($name:ident, $default_size:expr)) => (
+    ($name:ident, $test_module_name:ident, $default_size:expr)) => (
         #[must_use]
         #[cfg(feature = "safe_api")]
         $(#[$meta])*
@@ -690,35 +695,13 @@ macro_rules! construct_salt_variable_size {
             func_generate_variable_size!($name);
         }
 
-        #[test]
-        fn test_form_slice_salt() {
-            assert!($name::from_slice(&[0u8; 512]).is_ok());
-            assert!($name::from_slice(&[0u8; 256]).is_ok());
-            assert!($name::from_slice(&[0u8; 1]).is_ok());
-            assert!($name::from_slice(&[0u8; 0]).is_err());
-        }
+        #[cfg(test)]
+        mod $test_module_name {
+            use super::*;
 
-        #[test]
-        fn test_as_bytes_salt() {
-            let test = $name::from_slice(&[0u8; 256]).unwrap();
-            assert!(test.as_ref().len() == 256);
-            assert!(test.as_ref() == [0u8; 256].as_ref());
-        }
-
-        #[test]
-        #[cfg(feature = "safe_api")]
-        fn test_generate_salt() {
-            assert!($name::generate(0).is_err());
-            assert!($name::generate(usize::max_value()).is_err());
-            assert!($name::generate(1).is_ok());
-            assert!($name::generate(64).is_ok());
-
-            let test_zero = $name::from_slice(&[0u8; 128]).unwrap();
-            // A random one should never be all 0's.
-            let test_rand = $name::generate(128).unwrap();
-            assert!(test_zero != test_rand);
-            // A random generated one should always be $size in length.
-            assert!(test_rand.get_length() == 128);
+            test_from_slice_variable!($name);
+            test_as_bytes_and_get_length!($name, 1, $default_size + 1, as_ref);
+            test_generate_variable!($name);
         }
     );
 }
