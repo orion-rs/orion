@@ -256,36 +256,9 @@ macro_rules! test_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr
 ));
 
 #[cfg(test)]
-macro_rules! test_as_bytes (($name:ident, $lower_bound:expr, $upper_bound:expr, $bytes_function:ident) => (
+macro_rules! test_as_bytes_and_get_length (($name:ident, $lower_bound:expr, $upper_bound:expr, $bytes_function:ident) => (
     #[test]
     fn test_as_bytes() {
-        let test_upper = $name::from_slice(&[0u8; $upper_bound]).unwrap();
-        let test_lower = $name::from_slice(&[0u8; $lower_bound]).unwrap();
-
-        assert!(test_upper.$bytes_function().len() == test_upper.get_length());
-        assert!(test_upper.get_length() == $upper_bound);
-
-        assert!(test_lower.$bytes_function().len() == test_lower.get_length());
-        assert!(test_lower.get_length() == $lower_bound);
-
-        // Test non-fixed-length definitions
-        if $lower_bound != $upper_bound {
-            let test_upper = $name::from_slice(&[0u8; $upper_bound - 1]).unwrap();
-            let test_lower = $name::from_slice(&[0u8; $lower_bound + 1]).unwrap();
-
-            assert!(test_upper.$bytes_function().len() == test_upper.get_length());
-            assert!(test_upper.get_length() == $upper_bound - 1);
-
-            assert!(test_lower.$bytes_function().len() == test_lower.get_length());
-            assert!(test_lower.get_length() == $lower_bound + 1);
-        }
-    }
-));
-
-#[cfg(test)]
-macro_rules! test_get_length (($name:ident, $lower_bound:expr, $upper_bound:expr, $bytes_function:ident) => (
-    #[test]
-    fn test_get_length() {
         let test_upper = $name::from_slice(&[0u8; $upper_bound]).unwrap();
         let test_lower = $name::from_slice(&[0u8; $lower_bound]).unwrap();
 
@@ -386,8 +359,7 @@ macro_rules! construct_secret_key {
 
             test_bound_parameters!($name, $lower_bound, $upper_bound, $gen_length);
             test_from_slice!($name, $lower_bound, $upper_bound);
-            test_as_bytes!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
-            test_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
+            test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
 
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
@@ -446,8 +418,7 @@ macro_rules! construct_public {
             // generate() function.
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
-            test_as_bytes!($name, $lower_bound, $upper_bound, as_ref);
-            test_get_length!($name, $lower_bound, $upper_bound, as_ref);
+            test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, as_ref);
         }
     );
 
@@ -477,8 +448,7 @@ macro_rules! construct_public {
             use super::*;
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
-            test_as_bytes!($name, $lower_bound, $upper_bound, as_ref);
-            test_get_length!($name, $lower_bound, $upper_bound, as_ref);
+            test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, as_ref);
 
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
@@ -523,8 +493,7 @@ macro_rules! construct_tag {
             // generate() function.
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
-            test_as_bytes!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
-            test_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
+            test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
 
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
