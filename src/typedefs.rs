@@ -56,17 +56,6 @@ macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
     }
 ));
 
-/// Macro that implements the `PartialEq` trait on a object called `$name` that
-/// also implements `AsRef<[u8]>`. This `PartialEq` will NOT perform in
-/// constant time.
-macro_rules! impl_normal_partialeq_trait (($name:ident) => (
-    impl PartialEq for $name {
-        fn eq(&self, other: &$name) -> bool {
-            (&self.as_ref() == &other.as_ref())
-        }
-    }
-));
-
 /// Macro that implements the `Debug` trait on a object called `$name`.
 /// This `Debug` will omit any fields of object `$name` to avoid them being
 /// written to logs.
@@ -702,7 +691,7 @@ macro_rules! construct_salt_variable_size {
 
         impl_normal_debug_trait!($name);
         impl_default_trait!($name, $default_size);
-        impl_normal_partialeq_trait!($name);
+        impl_ct_partialeq_trait!($name, as_ref);
         impl_asref_trait!($name);
 
         impl $name {
