@@ -388,8 +388,15 @@ macro_rules! construct_secret_key {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
             test_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
-            test_generate!($name, $gen_length);
-            test_omitted_debug!($name, $upper_bound);
+
+            #[cfg(test)]
+            #[cfg(feature = "safe_api")]
+            mod tests_with_std {
+                use super::*;
+
+                test_generate!($name, $gen_length);
+                test_omitted_debug!($name, $upper_bound);
+            }
         }
     );
 }
@@ -472,7 +479,14 @@ macro_rules! construct_public {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes!($name, $lower_bound, $upper_bound, as_ref);
             test_get_length!($name, $lower_bound, $upper_bound, as_ref);
-            test_generate!($name, $gen_length);
+            
+            #[cfg(test)]
+            #[cfg(feature = "safe_api")]
+            mod tests_with_std {
+                use super::*;
+
+                test_generate!($name, $gen_length);
+            }
         }
     );
 }
@@ -511,7 +525,14 @@ macro_rules! construct_tag {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
             test_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
-            test_omitted_debug!($name, $upper_bound);
+            
+            #[cfg(test)]
+            #[cfg(feature = "safe_api")]
+            mod tests_with_std {
+                use super::*;
+
+                test_omitted_debug!($name, $upper_bound);
+            }
         }
     );
 }
