@@ -338,7 +338,6 @@ macro_rules! test_generate_variable (($name:ident) => (
         // A random one should never be all 0's.
         let test_rand = $name::generate(128).unwrap();
         assert!(test_zero != test_rand);
-        // A random generated one should always be $size in length.
         assert!(test_rand.get_length() == 128);
     }
 ));
