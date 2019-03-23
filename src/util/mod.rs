@@ -99,7 +99,7 @@ pub fn secure_cmp(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError
 		return Err(errors::UnknownCryptoError);
 	}
 
-	if a.ct_eq(b).unwrap_u8() == 1 {
+	if a.ct_eq(b).into() {
 		Ok(true)
 	} else {
 		Err(errors::UnknownCryptoError)

@@ -46,9 +46,9 @@ macro_rules! impl_ct_partialeq_trait (($name:ident) => (
     impl PartialEq for $name {
         fn eq(&self, other: &$name) -> bool {
             use subtle::ConstantTimeEq;
-             self.unprotected_as_bytes()
-                .ct_eq(&other.unprotected_as_bytes())
-                .unwrap_u8() == 1
+
+            (self.unprotected_as_bytes()
+                .ct_eq(other.unprotected_as_bytes())).into()
         }
     }
 ));
@@ -639,9 +639,8 @@ macro_rules! construct_digest {
         impl PartialEq for $name {
             fn eq(&self, other: &$name) -> bool {
                 use subtle::ConstantTimeEq;
-                 self.as_bytes()
-                    .ct_eq(&other.as_bytes())
-                    .unwrap_u8() == 1
+
+                (self.as_bytes().ct_eq(other.as_bytes())).into()
             }
         }
 
