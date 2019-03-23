@@ -106,9 +106,9 @@ macro_rules! impl_asref_trait (($name:ident) => (
 ));
 
 /// Macro that implements the `From<[T]>` trait on a object called `$name`
-/// which has fields `value` and `original_length`. It implements From 
+/// which has fields `value` and `original_length`. It implements From
 /// based on `$size` and this macro should, in most cases, only be used for
-/// types which have a fixed-length. 
+/// types which have a fixed-length.
 macro_rules! impl_from_trait (($name:ident, $size:expr) => (
     impl core::convert::From<[u8; $size]> for $name {
         /// Make an object from a byte array.
@@ -479,7 +479,7 @@ macro_rules! construct_public {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes!($name, $lower_bound, $upper_bound, as_ref);
             test_get_length!($name, $lower_bound, $upper_bound, as_ref);
-            
+
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
             mod tests_with_std {
@@ -525,7 +525,7 @@ macro_rules! construct_tag {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
             test_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
-            
+
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
             mod tests_with_std {
