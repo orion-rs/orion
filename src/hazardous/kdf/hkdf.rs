@@ -172,6 +172,15 @@ mod public {
 
 			assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
 		}
+
+		#[test]
+		fn hkdf_info_param() {
+			let mut okm_out = [0u8; 32];
+			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+
+			assert!(expand(&prk, Some(b""), &mut okm_out).is_ok());
+			assert!(expand(&prk, None, &mut okm_out).is_ok());
+		}
 	}
 
 	#[cfg(feature = "safe_api")]
