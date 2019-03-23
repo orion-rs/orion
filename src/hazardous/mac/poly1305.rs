@@ -706,6 +706,7 @@ mod public {
 		fn test_produce_same_hash() {
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 			produces_same_hash(&sk, b"Tests");
+			produces_same_hash(&sk, b"");
 		}
 
 		#[test]

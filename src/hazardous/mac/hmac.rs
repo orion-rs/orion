@@ -478,6 +478,7 @@ mod public {
 		fn test_produce_same_hash() {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			produces_same_hash(&sk, b"Tests");
+			produces_same_hash(&sk, b"");
 		}
 
 		#[test]

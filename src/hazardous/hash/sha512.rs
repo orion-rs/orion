@@ -567,7 +567,10 @@ mod public {
 
 		#[test]
 		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_produce_same_hash() { produces_same_hash(b"Tests"); }
+		fn test_produce_same_hash() { 
+			produces_same_hash(b"Tests");
+			produces_same_hash(b""); 
+		}
 
 		#[test]
 		#[cfg(feature = "safe_api")]
