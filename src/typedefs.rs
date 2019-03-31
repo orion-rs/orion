@@ -187,13 +187,13 @@ macro_rules! func_get_length (() => (
 
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a fixed length $size.
-macro_rules! func_generate (($name:ident, $size:expr, $gen_length:expr) => (
+macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) => (
     #[must_use]
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> Result<$name, UnknownCryptoError> {
         use crate::util;
-        let mut value = [0u8; $size];
+        let mut value = [0u8; $upper_bound];
         util::secure_rand_bytes(&mut value[..$gen_length])?;
 
         Ok($name { value: value, original_length: $gen_length })
