@@ -85,6 +85,9 @@ construct_secret_key! {
 	/// An error will be returned if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
+	///
+	/// # Panics:
+	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source.
 	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, BLAKE2B_KEYSIZE)
 }

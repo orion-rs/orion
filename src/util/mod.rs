@@ -46,9 +46,12 @@ use subtle::ConstantTimeEq;
 ///
 /// # Errors:
 /// An error will be returned if:
-/// - The `OsRng` fails to initialize or read from its source.
 /// - `dst` is empty.
 ///
+/// # Panics:
+/// A panic will occur if:
+/// - The `OsRng` fails to initialize or read from its source.
+/// 
 /// # Example:
 /// ```
 /// use orion::util;
@@ -62,8 +65,8 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 		return Err(errors::UnknownCryptoError);
 	}
 
-	let mut generator = OsRng::new()?;
-	generator.try_fill_bytes(dst)?;
+	let mut generator = OsRng::new().expect("FATAL: RNG failed to initialize.");
+	generator.fill_bytes(dst);
 
 	Ok(())
 }

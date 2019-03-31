@@ -38,9 +38,6 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `slice` when calling `SecretKey::from_slice()` is not 32 bytes.
-//! - The `OsRng` fails to initialize or read from its source when calling
-//!   `SecretKey::generate()`.
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
 //! - `plaintext` or `ciphertext` are empty.
 //! - The `initial_counter` is high enough to cause a potential overflow.
@@ -120,7 +117,10 @@ construct_secret_key! {
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 32 bytes.
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// 
+	/// # Panics:
+	/// A panic will occur if:
+	/// - The `OsRng` fails to initialize or read from its source. 
 	(SecretKey, test_secret_key, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE)
 }
 

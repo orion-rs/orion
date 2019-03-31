@@ -51,10 +51,13 @@
 //! # Errors:
 //! An error will be returned if:
 //! - `iterations` is 0.
-//! - The `OsRng` fails to initialize or read from its source.
 //! - The `expected_with_salt` is not constructed exactly as in
 //!   `pwhash::hash_password`.
 //! - The password hash does not match `expected_with_salt`.
+//! 
+//! # Panics:
+//! A panic will occur if:
+//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Security:
 //! - The iteration count should be set as high as feasible. The recommended

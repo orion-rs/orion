@@ -29,21 +29,15 @@ construct_secret_key_variable_size! {
 	///
 	/// As default it will randomly generate a `SecretKey` of 32 bytes.
 	///
-	/// ### Note:
-	/// Due to the return type of the Default trait, the `default()` method cannot let the caller
-	/// handle a failing CSPRNG. If the CSPRNG fails, that function panics. If handling a failing CSPRNG's
-	/// error is needed, use instead `generate()`.
-	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is empty.
-	/// - The `OsRng` fails to initialize or read from its source when using `SecretKey::generate()`.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
 	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source when using `SecretKey::default()`.
+	/// - The `OsRng` fails to initialize or read from its source.
 	(SecretKey, test_secret_key, 32)
 }
 
@@ -52,21 +46,15 @@ construct_salt_variable_size! {
 	///
 	/// As default it will randomly generate a `Salt` of 64 bytes.
 	///
-	/// ### Note:
-	/// Due to the return type of the Default trait, the `default()` method cannot let the caller
-	/// handle a failing CSPRNG. If the CSPRNG fails, that function panics. If handling a failing CSPRNG's
-	/// error is needed, use instead `generate()`.
-	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is empty.
-	/// - The `OsRng` fails to initialize or read from its source when using `Salt::generate()`.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
 	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source when using `Salt::default()`.
+	/// - The `OsRng` fails to initialize or read from its source.
 	(Salt, test_salt, 64)
 }
 
@@ -89,16 +77,14 @@ construct_secret_key_variable_size! {
 	///
 	/// As default it will randomly generate a `Password` of 32 bytes.
 	///
-	/// ### Note:
-	/// Due to the return type of the Default trait, the `default()` method cannot let the caller
-	/// handle a failing CSPRNG. If the CSPRNG fails, that function panics. If handling a failing CSPRNG's
-	/// error is needed, use instead `generate()`.
-	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is empty.
-	/// - The `OsRng` fails to initialize or read from its source when using `Password::generate()`.
 	/// - `length` is 0.
 	/// - `length` is not less than `u32::max_value()`.
+	///
+	/// # Panics:
+	/// A panic will occur if:
+	/// - The `OsRng` fails to initialize or read from its source.
 	(Password, test_password, 32)
 }

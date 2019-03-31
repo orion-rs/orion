@@ -73,7 +73,10 @@ construct_secret_key! {
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 32 bytes.
-	/// - The `OsRng` fails to initialize or read from its source.
+	///
+	/// # Panics:
+	/// A panic will occur if:
+	/// - The `OsRng` fails to initialize or read from its source. 
 	(OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
 }
 

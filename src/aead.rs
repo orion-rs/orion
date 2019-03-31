@@ -53,11 +53,11 @@
 //!   POLY1305_BLOCKSIZE + 1).
 //! - The received tag does not match the calculated tag when calling
 //!   `aead::open()`.
-//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Panics:
 //! A panic will occur if:
 //! - More than 2^32-1 * 64 bytes of data are processed.
+//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
