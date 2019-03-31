@@ -93,10 +93,10 @@ construct_public! {
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 24 bytes.
-	/// 	
+	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source. 
+	/// - The `OsRng` fails to initialize or read from its source.
 	(Nonce, test_nonce, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE)
 }
 

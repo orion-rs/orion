@@ -117,10 +117,10 @@ construct_secret_key! {
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 32 bytes.
-	/// 
+	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source. 
+	/// - The `OsRng` fails to initialize or read from its source.
 	(SecretKey, test_secret_key, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE)
 }
 

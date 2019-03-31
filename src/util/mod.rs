@@ -51,7 +51,7 @@ use subtle::ConstantTimeEq;
 /// # Panics:
 /// A panic will occur if:
 /// - The `OsRng` fails to initialize or read from its source.
-/// 
+///
 /// # Example:
 /// ```
 /// use orion::util;

@@ -82,10 +82,10 @@ construct_hmac_key! {
 	/// Using `unprotected_as_bytes()` will return the password with padding.
 	///
 	/// Using `get_length()` will return the length with padding (always 128).
-	///	
+	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source. 
+	/// - The `OsRng` fails to initialize or read from its source.
 	(Password, SHA512_BLOCKSIZE)
 }
 

@@ -76,7 +76,7 @@ construct_hmac_key! {
 	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source. 
+	/// - The `OsRng` fails to initialize or read from its source.
 	(SecretKey, SHA512_BLOCKSIZE)
 }
 

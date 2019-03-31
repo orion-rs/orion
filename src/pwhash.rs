@@ -54,7 +54,7 @@
 //! - The `expected_with_salt` is not constructed exactly as in
 //!   `pwhash::hash_password`.
 //! - The password hash does not match `expected_with_salt`.
-//! 
+//!
 //! # Panics:
 //! A panic will occur if:
 //! - The `OsRng` fails to initialize or read from its source.
@@ -89,7 +89,7 @@ pub fn hash_password(
 ) -> Result<PasswordHash, UnknownCryptoError> {
 	let mut buffer = [0u8; 128];
 	let mut salt = [0u8; 64];
-	// This cannot panic due to the size as the above size is 
+	// This cannot panic due to the size as the above size is
 	// statically specified and valid.
 	util::secure_rand_bytes(&mut salt).unwrap();
 
