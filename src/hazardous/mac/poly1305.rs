@@ -74,16 +74,21 @@ construct_secret_key! {
 	/// An error will be returned if:
 	/// - `slice` is not 32 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
-	(OneTimeKey, POLY1305_KEYSIZE)
+	(OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
 }
+
+impl_from_trait!(OneTimeKey, POLY1305_KEYSIZE);
+
 construct_tag! {
 	/// A type to represent the `Tag` that Poly1305 returns.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 16 bytes.
-	(Tag, POLY1305_OUTSIZE)
+	(Tag, test_tag, POLY1305_OUTSIZE, POLY1305_OUTSIZE)
 }
+
+impl_from_trait!(Tag, POLY1305_OUTSIZE);
 
 #[must_use]
 #[derive(Clone)]

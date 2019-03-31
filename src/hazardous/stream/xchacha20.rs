@@ -87,15 +87,17 @@ use crate::{
 	},
 };
 
-construct_nonce_with_generator! {
+construct_public! {
 	/// A type that represents a `Nonce` that XChaCha20 and XChaCha20Poly1305 use.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 24 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
-	(Nonce, XCHACHA_NONCESIZE)
+	(Nonce, test_nonce, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE)
 }
+
+impl_from_trait!(Nonce, XCHACHA_NONCESIZE);
 
 #[must_use]
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
@@ -107,9 +109,9 @@ pub fn encrypt(
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
 	let subkey: SecretKey =
-		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16])?)?;
+		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?)?;
 	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
-	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes()[16..24]);
+	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
 
 	chacha20::encrypt(
 		&subkey,

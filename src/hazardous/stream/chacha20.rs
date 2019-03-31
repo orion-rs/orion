@@ -121,16 +121,21 @@ construct_secret_key! {
 	/// An error will be returned if:
 	/// - `slice` is not 32 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
-	(SecretKey, CHACHA_KEYSIZE)
+	(SecretKey, test_secret_key, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE)
 }
-construct_nonce_no_generator! {
+
+impl_from_trait!(SecretKey, CHACHA_KEYSIZE);
+
+construct_public! {
 	/// A type that represents a `Nonce` that ChaCha20 and ChaCha20Poly1305 use.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 12 bytes.
-	(Nonce, IETF_CHACHA_NONCESIZE)
+	(Nonce, test_nonce, IETF_CHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE)
 }
+
+impl_from_trait!(Nonce, IETF_CHACHA_NONCESIZE);
 
 #[derive(Clone)]
 struct InternalState {
@@ -309,7 +314,7 @@ pub fn encrypt(
 		is_ietf: true,
 	};
 
-	chacha_state.init_state(secret_key, &nonce.as_bytes())?;
+	chacha_state.init_state(secret_key, &nonce.as_ref())?;
 
 	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 	let mut keystream_state: ChaChaState = [0u32; 16];
@@ -369,7 +374,7 @@ pub fn keystream_block(
 		internal_counter: 0,
 		is_ietf: true,
 	};
-	chacha_state.init_state(secret_key, &nonce.as_bytes())?;
+	chacha_state.init_state(secret_key, &nonce.as_ref())?;
 
 	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 	let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter))?;

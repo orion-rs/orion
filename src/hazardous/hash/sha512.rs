@@ -55,14 +55,16 @@ use crate::{
 	hazardous::constants::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 };
 
-construct_nonce_no_generator! {
+construct_public! {
 	/// A type to represent the `Digest` that SHA512 returns.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 64 bytes.
-	(Digest, SHA512_OUTSIZE)
+	(Digest, test_digest, SHA512_OUTSIZE, SHA512_OUTSIZE)
 }
+
+impl_from_trait!(Digest, SHA512_OUTSIZE);
 
 #[rustfmt::skip]
 #[allow(clippy::unreadable_literal)]
@@ -456,7 +458,7 @@ mod public {
 			state.reset();
 			state.update(data).unwrap();
 			let two = state.finalize().unwrap();
-			assert_eq!(one.as_bytes(), two.as_bytes());
+			assert_eq!(one.as_ref(), two.as_ref());
 		}
 
 		#[test]
@@ -600,7 +602,7 @@ mod public {
 
 				let digest_one_shot = digest(&other_data).unwrap();
 
-				assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
+				assert!(state.finalize().unwrap().as_ref() == digest_one_shot.as_ref());
 			}
 		}
 		// Proptests. Only exectued when NOT testing no_std.

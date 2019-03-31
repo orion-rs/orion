@@ -86,8 +86,10 @@ construct_tag! {
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 64 bytes.
-	(Tag, SHA512_OUTSIZE)
+	(Tag, test_tag, SHA512_OUTSIZE, SHA512_OUTSIZE)
 }
+
+impl_from_trait!(Tag, SHA512_OUTSIZE);
 
 #[must_use]
 #[derive(Clone)]
@@ -160,8 +162,8 @@ impl Hmac {
 
 		self.is_finalized = true;
 		let mut outer_hasher = self.opad_hasher.clone();
-		outer_hasher.update(self.working_hasher.finalize()?.as_bytes())?;
-		let tag = Tag::from_slice(outer_hasher.finalize()?.as_bytes())?;
+		outer_hasher.update(self.working_hasher.finalize()?.as_ref())?;
+		let tag = Tag::from_slice(outer_hasher.finalize()?.as_ref())?;
 
 		Ok(tag)
 	}

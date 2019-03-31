@@ -75,35 +75,28 @@
 use crate::{
 	endianness::{load_u64_into_le, store_u64_into_le},
 	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
-	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE},
+	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_KEYSIZE, BLAKE2B_OUTSIZE},
 };
 
-construct_blake2b_key! {
+construct_secret_key! {
 	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.
-	///
-	/// # Note:
-	/// `SecretKey` pads the secret key for use with BLAKE2b to a length of 128, when initialized.
-	///
-	/// Using `unprotected_as_bytes()` will return the key with padding.
-	///
-	/// Using `get_length()` will return the length with padding (always 128).
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
 	/// - The `OsRng` fails to initialize or read from its source.
-	(SecretKey, BLAKE2B_BLOCKSIZE)
+	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, BLAKE2B_KEYSIZE)
 }
 
-construct_digest! {
+construct_public! {
 	/// A type to represent the `Digest` that BLAKE2b returns.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
-	(Digest, 64)
+	(Digest, test_digest, 1, BLAKE2B_OUTSIZE)
 }
 
 #[allow(clippy::unreadable_literal)]
@@ -329,7 +322,12 @@ impl Blake2b {
 
 		if secret_key.is_some() && self.is_keyed {
 			// .unwrap() cannot panic since secret_key.is_some() == true
-			self.update(secret_key.unwrap().unprotected_as_bytes())?;
+			let sk = secret_key.unwrap();
+			self.update(sk.unprotected_as_bytes())?;
+			// The state needs updating with the secret key padded to blocksize length
+			let pad = [0u8; BLAKE2B_BLOCKSIZE];
+			let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
+			self.update(pad[..rem].as_ref())?;
 		}
 
 		Ok(())
@@ -434,10 +432,14 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		context.is_keyed = true;
 		// .unwrap() cannot panic since secret_key.is_some() == true
 		let key = secret_key.unwrap();
-		let klen = key.get_original_length();
+		let klen = key.get_length();
 		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
 		context.update(key.unprotected_as_bytes())?;
+		// The state needs updating with the secret key padded to blocksize length
+		let pad = [0u8; BLAKE2B_BLOCKSIZE];
+		let rem = BLAKE2B_BLOCKSIZE - key.get_length();
+		context.update(pad[..rem].as_ref())?;
 	} else {
 		context.internal_state[0] ^= 0x01010000 ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
@@ -958,7 +960,7 @@ mod public {
 
 				let digest_one_shot = Hasher::Blake2b512.digest(&other_data).unwrap();
 
-				assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
+				assert!(state.finalize().unwrap().as_ref() == digest_one_shot.as_ref());
 			}
 		}
 		// Proptests. Only exectued when NOT testing no_std.

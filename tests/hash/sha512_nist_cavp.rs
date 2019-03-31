@@ -18,7 +18,7 @@ fn test_streaming_1() {
 	state.update(b"hello world").unwrap();
 	let res = state.finalize().unwrap();
 
-	assert_eq!(&expected[..], res.as_bytes());
+	assert_eq!(&expected[..], res.as_ref());
 }
 
 #[test]
@@ -34,7 +34,7 @@ fn test_streaming_2() {
 	state.update(b"").unwrap();
 	let res = state.finalize().unwrap();
 
-	assert_eq!(&expected[..], res.as_bytes());
+	assert_eq!(&expected[..], res.as_ref());
 }
 
 #[test]
@@ -50,7 +50,7 @@ fn test_streaming_3() {
 	state.update(&[0u8; 256]).unwrap();
 	let res = state.finalize().unwrap();
 
-	assert_eq!(&expected[..], res.as_bytes());
+	assert_eq!(&expected[..], res.as_ref());
 }
 
 #[test]
