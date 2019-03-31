@@ -63,7 +63,7 @@ extern crate core;
 
 use crate::{
 	endianness::{load_u32_le, store_u32_into_le},
-	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
+	errors::UnknownCryptoError,
 	hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
 };
 
@@ -304,9 +304,9 @@ impl Poly1305 {
 
 	#[must_use]
 	/// Update state with a `data`. This can be called multiple times.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		let mut bytes = data;
@@ -347,9 +347,9 @@ impl Poly1305 {
 
 	#[must_use]
 	/// Return a Poly1305 tag.
-	pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
+	pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		self.is_finalized = true;
@@ -409,11 +409,11 @@ pub fn verify(
 	expected: &Tag,
 	one_time_key: &OneTimeKey,
 	data: &[u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	if &poly1305(one_time_key, data)? == expected {
 		Ok(true)
 	} else {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	}
 }
 

@@ -72,10 +72,7 @@
 //! ```
 
 pub use crate::hltypes::{Password, Salt, SecretKey};
-use crate::{
-	errors::{UnknownCryptoError, ValidationCryptoError},
-	hazardous::kdf::pbkdf2,
-};
+use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};
 use zeroize::Zeroize;
 
 #[must_use]
@@ -112,7 +109,7 @@ pub fn derive_key_verify(
 	password: &Password,
 	salt: &Salt,
 	iterations: usize,
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	let mut buffer = vec![0u8; expected.get_length()];
 
 	let is_good = pbkdf2::verify(

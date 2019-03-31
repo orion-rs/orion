@@ -51,7 +51,7 @@
 
 use crate::{
 	endianness::{load_u64_into_be, store_u64_into_be},
-	errors::{FinalizationCryptoError, UnknownCryptoError},
+	errors::UnknownCryptoError,
 	hazardous::constants::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 };
 
@@ -262,9 +262,9 @@ impl Sha512 {
 
 	#[must_use]
 	/// Update state with `data`. This can be called multiple times.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 		if data.is_empty() {
 			return Ok(());
@@ -314,9 +314,9 @@ impl Sha512 {
 
 	#[must_use]
 	/// Return a SHA512 digest.
-	pub fn finalize(&mut self) -> Result<Digest, FinalizationCryptoError> {
+	pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		self.is_finalized = true;

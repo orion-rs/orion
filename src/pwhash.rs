@@ -71,11 +71,7 @@
 //! ```
 
 pub use crate::hltypes::{Password, PasswordHash};
-use crate::{
-	errors::{UnknownCryptoError, ValidationCryptoError},
-	hazardous::kdf::pbkdf2,
-	util,
-};
+use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2, util};
 use zeroize::Zeroize;
 
 #[must_use]
@@ -108,7 +104,7 @@ pub fn hash_password_verify(
 	expected_with_salt: &PasswordHash,
 	password: &Password,
 	iterations: usize,
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	let mut dk = [0u8; 64];
 
 	let is_good = pbkdf2::verify(
