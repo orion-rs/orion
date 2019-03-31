@@ -62,7 +62,7 @@
 //! let digest = state.finalize().unwrap();
 //!
 //! // Using the streaming interface with a key.
-//! let secret_key = blake2b::SecretKey::generate().unwrap();
+//! let secret_key = blake2b::SecretKey::generate();
 //! let mut state_keyed = blake2b::init(Some(&secret_key), 64).unwrap();
 //! state_keyed.update(b"Some data").unwrap();
 //! let mac = state_keyed.finalize().unwrap();
@@ -539,7 +539,7 @@ mod public {
 				/// Given a valid size parameter, init should always pass. If size
 				/// is invalid, then init should always fail.
 				fn prop_init_size_key(size: usize) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					init_tester(Some(&sk), size)
 				}
 			}
@@ -577,7 +577,7 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 
 					let mut state = init(Some(&sk), 64).unwrap();
 					state.update(&data[..]).unwrap();
@@ -592,12 +592,12 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					let mut state = init(Some(&sk), 64).unwrap();
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
-					let bad_sk = SecretKey::generate().unwrap();
+					let bad_sk = SecretKey::generate();
 
 					let res = if verify(&tag, &bad_sk, 64, &data[..]).is_err() {
 						true
@@ -978,7 +978,7 @@ mod public {
 					if size >= 1 && size <= BLAKE2B_OUTSIZE {
 						// Will panic on incorrect results.
 						produces_same_hash(None, size, &data[..]);
-						let sk = SecretKey::generate().unwrap();
+						let sk = SecretKey::generate();
 						produces_same_hash(Some(&sk), size, &data[..]);
 					}
 
@@ -993,7 +993,7 @@ mod public {
 					if size >= 1 && size <= BLAKE2B_OUTSIZE {
 						// Will panic on incorrect results.
 						produces_same_state(None, size, &data[..]);
-						let sk = SecretKey::generate().unwrap();
+						let sk = SecretKey::generate();
 						produces_same_state(Some(&sk), size, &data[..]);
 					}
 

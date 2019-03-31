@@ -49,7 +49,7 @@
 //! ```
 //! use orion::hazardous::mac::poly1305;
 //!
-//! let one_time_key = poly1305::OneTimeKey::generate().unwrap();
+//! let one_time_key = poly1305::OneTimeKey::generate();
 //! let msg = "Some message.";
 //!
 //! let mut poly1305_state = poly1305::init(&one_time_key);
@@ -492,7 +492,7 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
@@ -507,12 +507,12 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
-					let bad_sk = OneTimeKey::generate().unwrap();
+					let bad_sk = OneTimeKey::generate();
 
 					let res = if verify(&tag, &bad_sk, &data[..]).is_err() {
 						true
@@ -758,7 +758,7 @@ mod public {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
 				fn prop_same_tag_different_usage(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 					// Will panic on incorrect results.
 					produces_same_hash(&sk, &data[..]);
 
@@ -770,7 +770,7 @@ mod public {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
 				fn prop_same_state_different_usage(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 					// Will panic on incorrect results.
 					produces_same_state(&sk, &data[..]);
 
@@ -782,7 +782,7 @@ mod public {
 				/// Using the one-shot function should always produce the
 				/// same result as when using the streaming interface.
 				fn prop_poly1305_same_as_streaming(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
 					let stream = state.finalize().unwrap();

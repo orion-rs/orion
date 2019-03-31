@@ -92,7 +92,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 		return Err(UnknownCryptoError);
 	}
 
-	let nonce = Nonce::generate()?;
+	let nonce = Nonce::generate();
 
 	let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 	dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref());

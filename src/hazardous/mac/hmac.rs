@@ -46,7 +46,7 @@
 //! ```
 //! use orion::hazardous::mac::hmac;
 //!
-//! let key = hmac::SecretKey::generate().unwrap();
+//! let key = hmac::SecretKey::generate();
 //!
 //! let mut state = hmac::init(&key);
 //! state.update(b"Some message.").unwrap();
@@ -258,7 +258,7 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
@@ -273,12 +273,12 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
-					let bad_sk = SecretKey::generate().unwrap();
+					let bad_sk = SecretKey::generate();
 
 					let res = if verify(&tag, &bad_sk, &data[..]).is_err() {
 						true
@@ -523,7 +523,7 @@ mod public {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
 				fn prop_same_hash_different_usage(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					// Will panic on incorrect results.
 					produces_same_hash(&sk, &data[..]);
 
@@ -535,7 +535,7 @@ mod public {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
 				fn prop_same_state_different_usage(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					// Will panic on incorrect results.
 					produces_same_state(&sk, &data[..]);
 
@@ -547,7 +547,7 @@ mod public {
 				/// Using the one-shot function should always produce the
 				/// same result as when using the streaming interface.
 				fn prop_hmac_same_as_streaming(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
 					let stream = state.finalize().unwrap();

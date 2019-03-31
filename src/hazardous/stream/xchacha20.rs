@@ -63,8 +63,8 @@
 //! ```
 //! use orion::hazardous::stream::xchacha20;
 //!
-//! let secret_key = xchacha20::SecretKey::generate().unwrap();
-//! let nonce = xchacha20::Nonce::generate().unwrap();
+//! let secret_key = xchacha20::SecretKey::generate();
+//! let nonce = xchacha20::Nonce::generate();
 //!
 //! // Length of this message is 15
 //! let message = "Data to protect".as_bytes();
