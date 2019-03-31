@@ -49,9 +49,9 @@ macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
     impl PartialEq for $name {
         fn eq(&self, other: &$name) -> bool {
             use subtle::ConstantTimeEq;
-             self.$bytes_function()
-                .ct_eq(&other.$bytes_function())
-                .unwrap_u8() == 1
+
+            (self.$bytes_function()
+                .ct_eq(other.$bytes_function())).into()
         }
     }
 ));

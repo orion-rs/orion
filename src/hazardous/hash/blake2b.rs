@@ -915,11 +915,21 @@ mod public {
 			produces_same_hash(None, 64, b"Tests");
 			produces_same_hash(None, 28, b"Tests");
 
+			produces_same_hash(None, 1, b"");
+			produces_same_hash(None, 32, b"");
+			produces_same_hash(None, 64, b"");
+			produces_same_hash(None, 28, b"");
+
 			let sk = SecretKey::from_slice(b"Testing").unwrap();
 			produces_same_hash(Some(&sk), 1, b"Tests");
 			produces_same_hash(Some(&sk), 32, b"Tests");
 			produces_same_hash(Some(&sk), 64, b"Tests");
 			produces_same_hash(Some(&sk), 28, b"Tests");
+
+			produces_same_hash(Some(&sk), 1, b"");
+			produces_same_hash(Some(&sk), 32, b"");
+			produces_same_hash(Some(&sk), 64, b"");
+			produces_same_hash(Some(&sk), 28, b"");
 		}
 
 		#[test]
