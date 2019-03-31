@@ -89,7 +89,9 @@ pub fn hash_password(
 ) -> Result<PasswordHash, UnknownCryptoError> {
 	let mut buffer = [0u8; 128];
 	let mut salt = [0u8; 64];
-	util::secure_rand_bytes(&mut salt)?;
+	// This cannot panic due to the size as the above size is 
+	// statically specified and valid.
+	util::secure_rand_bytes(&mut salt).unwrap();
 
 	buffer[..64].copy_from_slice(&salt);
 	pbkdf2::derive_key(
