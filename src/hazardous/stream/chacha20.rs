@@ -141,7 +141,6 @@ struct InternalState {
 
 impl Drop for InternalState {
 	fn drop(&mut self) {
-		use zeroize::Zeroize;
 		self.state.zeroize();
 	}
 }
