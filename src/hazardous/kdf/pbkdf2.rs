@@ -40,9 +40,8 @@
 //!
 //! # Security:
 //! - Use `Password::generate()` to randomly generate a password of 128 bytes.
-//! - Salts should always be generated using a CSPRNG. The `gen_rand_key`
-//!   function
-//! in `util` can be used for this.
+//! - Salts should always be generated using a CSPRNG.
+//!   `util::secure_rand_bytes()` can be used for this.
 //! - The recommended length for a salt is 64 bytes.
 //! - The iteration count should be set as high as feasible. The recommended
 //!   minimum is 100000.
