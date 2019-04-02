@@ -138,56 +138,6 @@ pub fn decrypt(
 	Ok(())
 }
 
-#[test]
-fn test_nonce_sizes() {
-	assert!(Nonce::from_slice(&[0u8; 23]).is_err());
-	assert!(Nonce::from_slice(&[0u8; 25]).is_err());
-	assert!(Nonce::from_slice(&[0u8; 24]).is_ok());
-}
-
-#[test]
-fn test_err_on_empty_pt_xchacha() {
-	let mut dst = [0u8; 64];
-
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 24]).unwrap(),
-		0,
-		&[0u8; 0],
-		&mut dst
-	)
-	.is_err());
-}
-
-#[test]
-fn test_err_on_initial_counter_overflow_xchacha() {
-	let mut dst = [0u8; 65];
-
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 24]).unwrap(),
-		4294967295,
-		&[0u8; 65],
-		&mut dst,
-	)
-	.is_err());
-}
-
-#[test]
-fn test_pass_on_one_iter_max_initial_counter() {
-	let mut dst = [0u8; 64];
-	// Should pass because only one iteration is completed, so block_counter will
-	// not increase
-	encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 24]).unwrap(),
-		4294967295,
-		&[0u8; 64],
-		&mut dst,
-	)
-	.unwrap();
-}
-
 //
 // The tests below are the same tests as the ones in `chacha20`
 // but with a bigger nonce. It's debatable whether this is needed, but right
