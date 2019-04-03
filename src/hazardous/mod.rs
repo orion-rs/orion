@@ -39,9 +39,6 @@ pub mod mac;
 /// Function).
 pub mod kdf;
 
-/// XOFs (Extendable Output Function).
-pub mod xof;
-
 /// Constant values and types.
 pub mod constants;
 

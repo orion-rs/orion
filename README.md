@@ -9,7 +9,6 @@ Currently supports:
 * **Stream ciphers**: (X)ChaCha20.
 * **KDF**: HKDF-HMAC-SHA512, PBKDF2-HMAC-SHA512.
 * **MAC**: HMAC-SHA512, Poly1305.
-* **XOF**: cSHAKE256.
 * **Hashing**: BLAKE2b, SHA512.
 
 ### Security

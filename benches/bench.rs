@@ -8,7 +8,6 @@ use orion::hazardous::{
 	kdf::{hkdf, pbkdf2},
 	mac::{hmac, poly1305},
 	stream::*,
-	xof::cshake,
 };
 use test::Bencher;
 
@@ -244,30 +243,4 @@ mod kdf {
 	bench_pbkdf2!(bench_pbkdf2_1000, 1000);
 	bench_pbkdf2!(bench_pbkdf2_10000, 10000);
 	bench_pbkdf2!(bench_pbkdf2_100000, 100000);
-}
-
-mod xof {
-	use super::*;
-
-	macro_rules! bench_cshake {
-		($bench_name:ident, $input_len:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
-
-				let mut out = [0u8; $input_len];
-
-				b.iter(|| {
-					let mut cshake = cshake::init(&[0x01; 64], None).unwrap();
-					cshake.update(&[0u8; $input_len]).unwrap();
-					cshake.finalize(&mut out).unwrap();
-				});
-			}
-		};
-	}
-
-	bench_cshake!(bench_cshake_512, 512);
-	bench_cshake!(bench_cshake_1024, 1024);
-	bench_cshake!(bench_cshake_2048, 2048);
-	bench_cshake!(bench_cshake_4096, 4096);
 }
