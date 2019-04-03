@@ -59,7 +59,7 @@
 //! ```
 
 use crate::{
-	errors::{UnknownCryptoError, ValidationCryptoError},
+	errors::UnknownCryptoError,
 	hazardous::{
 		constants::SHA512_OUTSIZE,
 		mac::hmac::{self, SecretKey},
@@ -138,11 +138,11 @@ pub fn verify(
 	ikm: &[u8],
 	info: Option<&[u8]>,
 	dst_out: &mut [u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	expand(&extract(salt, ikm)?, info, dst_out)?;
 
 	if util::secure_cmp(&dst_out, expected).is_err() {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	} else {
 		Ok(true)
 	}

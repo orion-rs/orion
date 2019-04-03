@@ -74,7 +74,7 @@
 extern crate core;
 
 use self::core::mem;
-use crate::errors::{FinalizationCryptoError, UnknownCryptoError};
+use crate::errors::UnknownCryptoError;
 use tiny_keccak::Keccak;
 
 #[must_use]
@@ -136,9 +136,9 @@ impl CShake {
 
 	#[must_use]
 	/// Set `data`. Can be called repeatedly.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			Err(FinalizationCryptoError)
+			Err(UnknownCryptoError)
 		} else {
 			self.hasher.update(data);
 			Ok(())
@@ -147,15 +147,15 @@ impl CShake {
 
 	#[must_use]
 	/// Return a cSHAKE hash and copy into `dst_out`.
-	pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn finalize(&mut self, dst_out: &mut [u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		self.is_finalized = true;
 
 		if dst_out.is_empty() || (dst_out.len() > 65536) {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		let mut hasher_new = Keccak::new(136, 0x04);

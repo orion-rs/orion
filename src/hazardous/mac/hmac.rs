@@ -56,7 +56,7 @@
 //! ```
 
 use crate::{
-	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
+	errors::UnknownCryptoError,
 	hazardous::{
 		constants::{BlocksizeArray, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 		hash::sha512,
@@ -144,9 +144,9 @@ impl Hmac {
 
 	#[must_use]
 	/// Update state with a `data`. This can be called multiple times.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			Err(FinalizationCryptoError)
+			Err(UnknownCryptoError)
 		} else {
 			self.working_hasher.update(data)?;
 			Ok(())
@@ -155,9 +155,9 @@ impl Hmac {
 
 	#[must_use]
 	/// Return a `Tag`.
-	pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
+	pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		self.is_finalized = true;
@@ -198,14 +198,14 @@ pub fn verify(
 	expected: &Tag,
 	secret_key: &SecretKey,
 	data: &[u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	let mut hmac_state = init(secret_key);
 	hmac_state.update(data)?;
 
 	if expected == &hmac_state.finalize()? {
 		Ok(true)
 	} else {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	}
 }
 

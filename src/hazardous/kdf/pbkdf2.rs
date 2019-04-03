@@ -63,7 +63,7 @@
 //! ```
 
 use crate::{
-	errors::{UnknownCryptoError, ValidationCryptoError},
+	errors::UnknownCryptoError,
 	hazardous::{
 		constants::{HLenArray, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 		mac::hmac,
@@ -160,11 +160,11 @@ pub fn verify(
 	salt: &[u8],
 	iterations: usize,
 	dst_out: &mut [u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	derive_key(password, salt, iterations, dst_out)?;
 
 	if util::secure_cmp(&dst_out, expected).is_err() {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	} else {
 		Ok(true)
 	}

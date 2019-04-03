@@ -59,10 +59,7 @@
 //! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).unwrap());
 //! ```
 
-use crate::{
-	errors::{UnknownCryptoError, ValidationCryptoError},
-	hazardous::mac::hmac,
-};
+use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
 pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};
 
 #[must_use]
@@ -82,7 +79,7 @@ pub fn authenticate_verify(
 	expected: &Tag,
 	secret_key: &SecretKey,
 	data: &[u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	let v_key = &hmac::SecretKey::from_slice(&secret_key.unprotected_as_bytes())?;
 
 	hmac::verify(&expected, &v_key, &data)?;

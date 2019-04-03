@@ -74,7 +74,7 @@
 
 use crate::{
 	endianness::{load_u64_into_le, store_u64_into_le},
-	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
+	errors::UnknownCryptoError,
 	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_KEYSIZE, BLAKE2B_OUTSIZE},
 };
 
@@ -335,9 +335,9 @@ impl Blake2b {
 
 	#[must_use]
 	/// Update state with a `data`. This can be called multiple times.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 		if data.is_empty() {
 			return Ok(());
@@ -383,9 +383,9 @@ impl Blake2b {
 
 	#[must_use]
 	/// Return a BLAKE2b digest.
-	pub fn finalize(&mut self) -> Result<Digest, FinalizationCryptoError> {
+	pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		self.is_finalized = true;
@@ -455,14 +455,14 @@ pub fn verify(
 	secret_key: &SecretKey,
 	size: usize,
 	data: &[u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	let mut state = init(Some(secret_key), size)?;
 	state.update(data)?;
 
 	if expected == &state.finalize()? {
 		Ok(true)
 	} else {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	}
 }
 
