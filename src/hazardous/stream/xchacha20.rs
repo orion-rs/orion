@@ -63,8 +63,8 @@
 //! ```
 //! use orion::hazardous::stream::xchacha20;
 //!
-//! let secret_key = xchacha20::SecretKey::generate().unwrap();
-//! let nonce = xchacha20::Nonce::generate().unwrap();
+//! let secret_key = xchacha20::SecretKey::generate();
+//! let nonce = xchacha20::Nonce::generate();
 //!
 //! // Length of this message is 15
 //! let message = "Data to protect".as_bytes();
@@ -93,6 +93,9 @@ construct_public! {
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 24 bytes.
+	///
+	/// # Panics:
+	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source.
 	(Nonce, test_nonce, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE)
 }

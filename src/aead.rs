@@ -53,11 +53,11 @@
 //!   POLY1305_BLOCKSIZE + 1).
 //! - The received tag does not match the calculated tag when calling
 //!   `aead::open()`.
-//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Panics:
 //! A panic will occur if:
 //! - More than 2^32-1 * 64 bytes of data are processed.
+//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -92,7 +92,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 		return Err(UnknownCryptoError);
 	}
 
-	let nonce = Nonce::generate()?;
+	let nonce = Nonce::generate();
 
 	let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
 	dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref());

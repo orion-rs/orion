@@ -187,16 +187,18 @@ macro_rules! func_get_length (() => (
 
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a fixed length $size.
-macro_rules! func_generate (($name:ident, $size:expr, $gen_length:expr) => (
+macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) => (
     #[must_use]
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
-    pub fn generate() -> Result<$name, UnknownCryptoError> {
+    pub fn generate() -> $name {
         use crate::util;
-        let mut value = [0u8; $size];
-        util::secure_rand_bytes(&mut value[..$gen_length])?;
+        let mut value = [0u8; $upper_bound];
+        // This will not panic on size, unless the newtype has been initialized $upper_bound
+        // or $gen_length with 0, statically.
+        util::secure_rand_bytes(&mut value[..$gen_length]).unwrap();
 
-        Ok($name { value: value, original_length: $gen_length })
+        $name { value: value, original_length: $gen_length }
     }
 ));
 
@@ -214,7 +216,8 @@ macro_rules! func_generate_variable_size (($name:ident) => (
         }
 
         let mut value = vec![0u8; length];
-        util::secure_rand_bytes(&mut value)?;
+        // This cannot panic on size input due to above length checks.
+        util::secure_rand_bytes(&mut value).unwrap();
 
         Ok($name { value: value, original_length: length })
     }
@@ -290,7 +293,7 @@ macro_rules! test_generate (($name:ident, $gen_length:expr) => (
     fn test_generate() {
         let test_zero = $name::from_slice(&[0u8; $gen_length]).unwrap();
         // A random one should never be all 0's.
-        let test_rand = $name::generate().unwrap();
+        let test_rand = $name::generate();
         assert!(test_zero != test_rand);
         // A random generated one should always be $gen_length in length.
         assert!(test_rand.get_length() == $gen_length);
@@ -609,7 +612,7 @@ macro_rules! construct_hmac_key {
         fn test_generate_hmac() {
             let test_zero = $name::from_slice(&[0u8; $size]).unwrap();
             // A random one should never be all 0's.
-            let test_rand = $name::generate().unwrap();
+            let test_rand = $name::generate();
             assert!(test_zero != test_rand);
             // A random generated one should always be $size in length.
             assert!(test_rand.get_length() == $size);
