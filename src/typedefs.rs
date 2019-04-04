@@ -100,7 +100,7 @@ macro_rules! impl_asref_trait (($name:ident) => (
     impl core::convert::AsRef<[u8]> for $name {
         #[inline]
         fn as_ref(&self) -> &[u8] {
-            &self.value[..self.original_length]
+            self.value[..self.original_length].as_ref()
         }
     }
 ));
