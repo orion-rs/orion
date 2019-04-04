@@ -62,7 +62,7 @@ mod aead {
 			#[bench]
 			pub fn $bench_name(b: &mut Bencher) {
 				b.bytes = $input_len;
-				let key = chacha20poly1305::SecretKey::generate().unwrap();
+				let key = chacha20poly1305::SecretKey::generate();
 				let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]).unwrap();
 
 				let mut out = [0u8; $input_len + 16];
@@ -80,8 +80,8 @@ mod aead {
 			#[bench]
 			pub fn $bench_name(b: &mut Bencher) {
 				b.bytes = $input_len;
-				let key = xchacha20poly1305::SecretKey::generate().unwrap();
-				let nonce = xchacha20poly1305::Nonce::generate().unwrap();
+				let key = xchacha20poly1305::SecretKey::generate();
+				let nonce = xchacha20poly1305::Nonce::generate();
 
 				let mut out = [0u8; $input_len + 16];
 
@@ -162,7 +162,7 @@ mod stream {
 			#[bench]
 			pub fn $bench_name(b: &mut Bencher) {
 				b.bytes = $input_len;
-				let key = chacha20::SecretKey::generate().unwrap();
+				let key = chacha20::SecretKey::generate();
 				let nonce = chacha20::Nonce::from_slice(&[0u8; 12]).unwrap();
 
 				let mut out = [0u8; $input_len];
@@ -179,8 +179,8 @@ mod stream {
 			#[bench]
 			pub fn $bench_name(b: &mut Bencher) {
 				b.bytes = $input_len;
-				let key = xchacha20::SecretKey::generate().unwrap();
-				let nonce = xchacha20::Nonce::generate().unwrap();
+				let key = xchacha20::SecretKey::generate();
+				let nonce = xchacha20::Nonce::generate();
 
 				let mut out = [0u8; $input_len];
 
