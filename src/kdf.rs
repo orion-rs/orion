@@ -91,7 +91,7 @@ pub fn derive_key(
 
 	pbkdf2::derive_key(
 		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
-		&salt.as_ref(),
+		salt.as_ref(),
 		iterations,
 		&mut buffer,
 	)?;
@@ -113,9 +113,9 @@ pub fn derive_key_verify(
 	let mut buffer = vec![0u8; expected.get_length()];
 
 	let is_good = pbkdf2::verify(
-		&expected.unprotected_as_bytes(),
+		expected.unprotected_as_bytes(),
 		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
-		&salt.as_ref(),
+		salt.as_ref(),
 		iterations,
 		&mut buffer,
 	)?;
