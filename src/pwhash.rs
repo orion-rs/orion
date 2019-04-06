@@ -73,8 +73,8 @@
 //! assert!(pwhash::hash_password_verify(&hash, &password, 100000).unwrap());
 //! ```
 
-pub use crate::hltypes::{Password, PasswordHash};
-use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2, util};
+pub use crate::hltypes::{Password, PasswordHash, Salt};
+use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};
 use zeroize::Zeroize;
 
 #[must_use]
@@ -84,15 +84,13 @@ pub fn hash_password(
 	iterations: usize,
 ) -> Result<PasswordHash, UnknownCryptoError> {
 	let mut buffer = [0u8; 128];
-	let mut salt = [0u8; 64];
-	// This cannot panic due to the size as the above size is
-	// statically specified and valid.
-	util::secure_rand_bytes(&mut salt).unwrap();
+	// Cannot panic as this is a valid size.
+	let salt = Salt::generate(64).unwrap();
 
-	buffer[..64].copy_from_slice(&salt);
+	buffer[..64].copy_from_slice(salt.as_ref());
 	pbkdf2::derive_key(
 		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
-		&salt,
+		salt.as_ref(),
 		iterations,
 		&mut buffer[64..],
 	)?;
