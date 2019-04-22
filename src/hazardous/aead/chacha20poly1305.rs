@@ -166,8 +166,7 @@ fn process_authentication(
 	padding_max[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
 	padding_max[8..16].copy_from_slice(&(buf_in_len as u64).to_le_bytes());
 
-	poly1305_state.update(&padding_max[..8])?;
-	poly1305_state.update(&padding_max[8..16])?;
+	poly1305_state.update(padding_max.as_ref())?;
 
 	Ok(())
 }
