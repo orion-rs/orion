@@ -69,15 +69,14 @@
 //! - It is recommended to use XChaCha20Poly1305 when possible.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::aead;
 //!
 //! let secret_key = aead::chacha20poly1305::SecretKey::generate();
 //!
 //! let nonce = aead::chacha20poly1305::Nonce::from_slice(&[
 //! 	0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
-//! 	])
-//! .unwrap();
+//! ])?;
 //! let ad = [
 //! 	0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
 //! 	];
@@ -91,13 +90,12 @@
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
 //! // Encrypt and place ciphertext + tag in dst_out_ct
-//! aead::chacha20poly1305::seal(&secret_key, &nonce, plaintext, Some(&ad), &mut dst_out_ct)
-//! 	.unwrap();
+//! aead::chacha20poly1305::seal(&secret_key, &nonce, plaintext, Some(&ad), &mut dst_out_ct)?;
 //! // Verify tag, if correct then decrypt and place plaintext in dst_out_pt
-//! aead::chacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt)
-//! 	.unwrap();
+//! aead::chacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{

@@ -60,15 +60,21 @@
 //! this, it will generate a `Salt` of 64 bytes.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::kdf;
 //!
-//! let user_password = kdf::Password::from_slice(b"User password").unwrap();
+//! let user_password = kdf::Password::from_slice(b"User password")?;
 //! let salt = kdf::Salt::default();
 //!
-//! let derived_key = kdf::derive_key(&user_password, &salt, 100000, 64).unwrap();
+//! let derived_key = kdf::derive_key(&user_password, &salt, 100000, 64)?;
 //!
-//! assert!(kdf::derive_key_verify(&derived_key, &user_password, &salt, 100000).unwrap());
+//! assert!(kdf::derive_key_verify(
+//! 	&derived_key,
+//! 	&user_password,
+//! 	&salt,
+//! 	100000
+//! )?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 pub use crate::hltypes::{Password, Salt, SecretKey};

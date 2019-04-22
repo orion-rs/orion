@@ -64,13 +64,14 @@
 //!   minimum is 100000.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::pwhash;
 //!
-//! let password = pwhash::Password::from_slice(b"Secret password").unwrap();
+//! let password = pwhash::Password::from_slice(b"Secret password")?;
 //!
-//! let hash = pwhash::hash_password(&password, 100000).unwrap();
-//! assert!(pwhash::hash_password_verify(&hash, &password, 100000).unwrap());
+//! let hash = pwhash::hash_password(&password, 100000)?;
+//! assert!(pwhash::hash_password_verify(&hash, &password, 100000)?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 pub use crate::hltypes::{Password, PasswordHash, Salt};

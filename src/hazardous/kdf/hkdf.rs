@@ -44,18 +44,25 @@
 //! - HKDF is not suitable for password storage.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::{hazardous::kdf::hkdf, util};
 //!
 //! let mut salt = [0u8; 64];
-//! util::secure_rand_bytes(&mut salt).unwrap();
+//! util::secure_rand_bytes(&mut salt)?;
 //! let mut okm_out = [0u8; 32];
 //!
-//! hkdf::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out).unwrap();
+//! hkdf::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out)?;
 //!
 //! let exp_okm = okm_out;
 //!
-//! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), None, &mut okm_out).unwrap());
+//! assert!(hkdf::verify(
+//! 	&exp_okm,
+//! 	&salt,
+//! 	"IKM".as_bytes(),
+//! 	None,
+//! 	&mut okm_out
+//! )?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{
