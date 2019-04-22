@@ -120,7 +120,6 @@ impl Hmac {
 		let mut opad: BlocksizeArray = [0x5C; SHA512_BLOCKSIZE];
 		// `key` has already been padded with zeroes to a length of SHA512_BLOCKSIZE
 		// in SecretKey::from_slice
-		assert_eq!(key.unprotected_as_bytes().len(), SHA512_BLOCKSIZE);
 		for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {
 			opad[idx] ^= itm;
 			ipad[idx] ^= itm;

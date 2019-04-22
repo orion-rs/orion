@@ -151,9 +151,9 @@ fn process_authentication(
 ) -> Result<(), UnknownCryptoError> {
 	// If buf_in_len is 0, then NO ciphertext gets authenticated.
 	// Because of this, buf may never be empty either.
-	assert!(!buf.is_empty());
-	assert!(buf_in_len > 0);
-	assert!(buf_in_len <= buf.len());
+	debug_assert!(!buf.is_empty());
+	debug_assert!(buf_in_len > 0);
+	debug_assert!(buf_in_len <= buf.len());
 
 	let mut padding_max = [0u8; 16];
 
