@@ -13,12 +13,14 @@ matrix:
     - rust: stable
       install:
         - cargo install --force cargo-audit
+        - rustup component add clippy-preview
       script:
         - cargo clean
         - cargo test
         - cargo test --release
         - cargo test --tests --no-default-features
         - cargo audit
+        - cargo clippy
     - rust: nightly
       script:
         - rustup component add rustfmt-preview
