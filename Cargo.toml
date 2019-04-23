@@ -14,7 +14,6 @@ exclude = [
     ".gitignore",
     ".travis.yml",
     "benches/*",
-    "fuzz/*",
     "tests/*"
 ]
 
