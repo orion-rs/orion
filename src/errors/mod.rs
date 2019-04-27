@@ -23,8 +23,6 @@
 extern crate core;
 
 use self::core::fmt;
-#[cfg(feature = "safe_api")]
-use rand_os::rand_core;
 
 /// Opaque error.
 #[derive(PartialEq)]
@@ -40,8 +38,8 @@ impl fmt::Debug for UnknownCryptoError {
 
 #[cfg(feature = "safe_api")]
 // Required for rand's generators
-impl From<rand_core::Error> for UnknownCryptoError {
-	fn from(_: rand_core::Error) -> Self { UnknownCryptoError }
+impl From<getrandom::Error> for UnknownCryptoError {
+	fn from(_: getrandom::Error) -> Self { UnknownCryptoError }
 }
 
 #[test]
@@ -59,13 +57,21 @@ fn test_unknown_crypto_error_debug_display() {
 #[test]
 #[cfg(feature = "safe_api")]
 // format! is only available with std
-fn test_unknown_crypto_error_from() {
+fn test_unknown_crypto_error_from_unavailable() {
 	let err = format!(
 		"{:?}",
-		UnknownCryptoError::from(rand_core::Error::new(
-			rand_core::ErrorKind::NotReady,
-			"CSPRNG not ready"
-		))
+		UnknownCryptoError::from(getrandom::Error::UNAVAILABLE)
+	);
+	assert_eq!(err, "UnknownCryptoError");
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+// format! is only available with std
+fn test_unknown_crypto_error_from_unkown() {
+	let err = format!(
+		"{:?}",
+		UnknownCryptoError::from(getrandom::Error::UNKNOWN)
 	);
 	assert_eq!(err, "UnknownCryptoError");
 }
