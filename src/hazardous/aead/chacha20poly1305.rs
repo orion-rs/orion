@@ -101,8 +101,7 @@ pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
 	errors::UnknownCryptoError,
 	hazardous::{
-		constants::{POLY1305_KEYSIZE, POLY1305_OUTSIZE},
-		mac::poly1305::{self, OneTimeKey},
+		mac::poly1305::{self, OneTimeKey, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
 		stream::chacha20,
 	},
 	util,
@@ -656,7 +655,7 @@ mod private {
 
 	mod test_poly1305_key_gen {
 		use super::*;
-		use crate::hazardous::constants::{CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE};
+		use crate::hazardous::stream::chacha20::{CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE};
 
 		#[test]
 		fn test_key_lengths() {

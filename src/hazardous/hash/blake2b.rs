@@ -76,8 +76,14 @@
 use crate::{
 	endianness::{load_u64_into_le, store_u64_into_le},
 	errors::UnknownCryptoError,
-	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_KEYSIZE, BLAKE2B_OUTSIZE},
 };
+
+/// The blocksize for the hash function BLAKE2b.
+const BLAKE2B_BLOCKSIZE: usize = 128;
+/// The maximum key size for the hash function BLAKE2b when used in keyed mode.
+const BLAKE2B_KEYSIZE: usize = 64;
+/// The maximum output size for the hash function BLAKE2b.
+const BLAKE2B_OUTSIZE: usize = 64;
 
 construct_secret_key! {
 	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.

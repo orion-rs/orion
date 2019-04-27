@@ -12,7 +12,10 @@ use self::{
 	},
 	orion::{
 		errors::UnknownCryptoError,
-		hazardous::{aead, constants},
+		hazardous::{
+			aead,
+			stream::{chacha20::IETF_CHACHA_NONCESIZE, xchacha20::XCHACHA_NONCESIZE},
+		},
 	},
 };
 
@@ -44,7 +47,7 @@ fn aead_test_runner(
 	}
 
 	// Determine variant based on NONCE size
-	if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
+	if nonce.len() == IETF_CHACHA_NONCESIZE {
 		aead::chacha20poly1305::seal(
 			&SecretKey::from_slice(&key).unwrap(),
 			&chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
@@ -67,7 +70,7 @@ fn aead_test_runner(
 		assert!(dst_pt_out[..].as_ref() == input);
 
 		Ok(())
-	} else if nonce.len() == constants::XCHACHA_NONCESIZE {
+	} else if nonce.len() == XCHACHA_NONCESIZE {
 		aead::xchacha20poly1305::seal(
 			&SecretKey::from_slice(&key).unwrap(),
 			&xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),

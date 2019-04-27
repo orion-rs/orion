@@ -9,9 +9,9 @@ extern crate orion;
 use self::{
 	chacha20::SecretKey,
 	hex::decode,
-	orion::hazardous::{
-		constants,
-		stream::{chacha20, xchacha20},
+	orion::hazardous::stream::{
+		chacha20::{self, IETF_CHACHA_NONCESIZE},
+		xchacha20::{self, XCHACHA_NONCESIZE},
 	},
 };
 
@@ -26,7 +26,7 @@ pub fn chacha_test_runner(
 	let original_ct = ct.to_vec();
 
 	// Selecting variant based on nonce size
-	if nonce.len() == constants::IETF_CHACHA_NONCESIZE {
+	if nonce.len() == IETF_CHACHA_NONCESIZE {
 		chacha20::encrypt(
 			&SecretKey::from_slice(&key).unwrap(),
 			&chacha20::Nonce::from_slice(&nonce).unwrap(),
@@ -44,7 +44,7 @@ pub fn chacha_test_runner(
 		)
 		.unwrap();
 	}
-	if nonce.len() == constants::XCHACHA_NONCESIZE {
+	if nonce.len() == XCHACHA_NONCESIZE {
 		xchacha20::encrypt(
 			&SecretKey::from_slice(&key).unwrap(),
 			&xchacha20::Nonce::from_slice(&nonce).unwrap(),

@@ -94,8 +94,7 @@ use crate::{
 	errors::UnknownCryptoError,
 	hazardous::{
 		aead::chacha20poly1305,
-		constants::IETF_CHACHA_NONCESIZE,
-		stream::chacha20::{self, Nonce as IETFNonce},
+		stream::chacha20::{self, Nonce as IETFNonce, IETF_CHACHA_NONCESIZE},
 	},
 };
 
@@ -159,7 +158,7 @@ pub fn open(
 #[cfg(test)]
 mod public {
 	use super::*;
-	use crate::hazardous::constants::POLY1305_OUTSIZE;
+	use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
 	// One function tested per submodule.
 
 	mod test_seal {

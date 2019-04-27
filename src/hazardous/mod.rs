@@ -39,8 +39,5 @@ pub mod mac;
 /// Function).
 pub mod kdf;
 
-/// Constant values and types.
-pub mod constants;
-
 /// Stream ciphers.
 pub mod stream;

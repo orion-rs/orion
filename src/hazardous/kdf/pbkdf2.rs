@@ -72,7 +72,7 @@
 use crate::{
 	errors::UnknownCryptoError,
 	hazardous::{
-		constants::{HLenArray, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
+		hash::sha512::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 		mac::hmac,
 	},
 	util,
@@ -105,7 +105,7 @@ fn function_f(
 	block_len: usize,
 	hmac: &mut hmac::Hmac,
 ) -> Result<(), UnknownCryptoError> {
-	let mut u_step: HLenArray = [0u8; 64];
+	let mut u_step: [u8; SHA512_OUTSIZE] = [0u8; 64];
 	hmac.update(salt)?;
 	hmac.update(&index.to_be_bytes())?;
 

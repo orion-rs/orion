@@ -99,16 +99,22 @@
 use crate::{
 	endianness::{load_u32_into_le, store_u32_into_le},
 	errors::UnknownCryptoError,
-	hazardous::constants::{
-		ChaChaState,
-		CHACHA_BLOCKSIZE,
-		CHACHA_KEYSIZE,
-		HCHACHA_NONCESIZE,
-		HCHACHA_OUTSIZE,
-		IETF_CHACHA_NONCESIZE,
-	},
 };
 use zeroize::Zeroize;
+
+/// The key size for ChaCha20.
+pub const CHACHA_KEYSIZE: usize = 32;
+/// The nonce size for IETF ChaCha20.
+pub const IETF_CHACHA_NONCESIZE: usize = 12;
+/// The blocksize which ChaCha20 operates on.
+const CHACHA_BLOCKSIZE: usize = 64;
+/// The size of the subkey that HChaCha20 returns.
+const HCHACHA_OUTSIZE: usize = 32;
+/// The nonce size for HChaCha20.
+const HCHACHA_NONCESIZE: usize = 16;
+/// Type for a ChaCha state represented as an array of 16 32-bit unsigned
+/// integers.
+type ChaChaState = [u32; 16];
 
 construct_secret_key! {
 	/// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and
