@@ -67,12 +67,13 @@
 //! - To securely generate a strong key, use `SecretKey::default()`.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::aead;
 //!
 //! let secret_key = aead::SecretKey::default();
-//! let ciphertext = aead::seal(&secret_key, "Secret message".as_bytes()).unwrap();
-//! let decrypted_data = aead::open(&secret_key, &ciphertext).unwrap();
+//! let ciphertext = aead::seal(&secret_key, "Secret message".as_bytes())?;
+//! let decrypted_data = aead::open(&secret_key, &ciphertext)?;
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 pub use crate::hltypes::SecretKey;

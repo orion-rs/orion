@@ -43,16 +43,17 @@
 //! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::mac::hmac;
 //!
 //! let key = hmac::SecretKey::generate();
 //!
 //! let mut state = hmac::init(&key);
-//! state.update(b"Some message.").unwrap();
-//! let tag = state.finalize().unwrap();
+//! state.update(b"Some message.")?;
+//! let tag = state.finalize()?;
 //!
-//! assert!(hmac::verify(&tag, &key, b"Some message.").unwrap());
+//! assert!(hmac::verify(&tag, &key, b"Some message.")?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{
@@ -120,7 +121,6 @@ impl Hmac {
 		let mut opad: BlocksizeArray = [0x5C; SHA512_BLOCKSIZE];
 		// `key` has already been padded with zeroes to a length of SHA512_BLOCKSIZE
 		// in SecretKey::from_slice
-		assert_eq!(key.unprotected_as_bytes().len(), SHA512_BLOCKSIZE);
 		for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {
 			opad[idx] ^= itm;
 			ipad[idx] ^= itm;

@@ -35,18 +35,19 @@
 //! - It is recommended to use BLAKE2b when possible.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::hash::sha512;
 //!
 //! // Using the streaming interface
 //! let mut state = sha512::init();
-//! state.update(b"Hello world").unwrap();
-//! let hash = state.finalize().unwrap();
+//! state.update(b"Hello world")?;
+//! let hash = state.finalize()?;
 //!
 //! // Using the one-shot function
-//! let hash_one_shot = sha512::digest(b"Hello world").unwrap();
+//! let hash_one_shot = sha512::digest(b"Hello world")?;
 //!
 //! assert_eq!(hash, hash_one_shot);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{
@@ -323,7 +324,7 @@ impl Sha512 {
 
 		// self.leftover should not be greater than SHA2_BLCOKSIZE
 		// as that would have been processed in the update call
-		assert!(self.leftover < SHA512_BLOCKSIZE);
+		debug_assert!(self.leftover < SHA512_BLOCKSIZE);
 		self.buffer[self.leftover] = 0x80;
 		// Using .unwrap() since overflow should not happen in practice
 		self.leftover = self.leftover.checked_add(1).unwrap();

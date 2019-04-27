@@ -60,7 +60,7 @@
 //! - It is recommended to use XChaCha20Poly1305 when possible.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::stream::xchacha20;
 //!
 //! let secret_key = xchacha20::SecretKey::generate();
@@ -72,11 +72,12 @@
 //! let mut dst_out_pt = [0u8; 15];
 //! let mut dst_out_ct = [0u8; 15];
 //!
-//! xchacha20::encrypt(&secret_key, &nonce, 0, message, &mut dst_out_ct);
+//! xchacha20::encrypt(&secret_key, &nonce, 0, message, &mut dst_out_ct)?;
 //!
-//! xchacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
+//! xchacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt, message);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{

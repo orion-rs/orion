@@ -53,12 +53,13 @@ use subtle::ConstantTimeEq;
 /// - The `OsRng` fails to initialize or read from its source.
 ///
 /// # Example:
-/// ```
+/// ```rust
 /// use orion::util;
 ///
 /// let mut salt = [0u8; 64];
 ///
-/// util::secure_rand_bytes(&mut salt).unwrap();
+/// util::secure_rand_bytes(&mut salt)?;
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoError> {
 	if dst.is_empty() {
@@ -88,14 +89,15 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 /// - `a` is not equal to `b`.
 ///
 /// # Example:
-/// ```
+/// ```rust
 /// use orion::util;
 ///
 /// let mut mac = [0u8; 64];
-/// assert!(util::secure_cmp(&mac, &[0u8; 64]).unwrap());
+/// assert!(util::secure_cmp(&mac, &[0u8; 64])?);
 ///
-/// util::secure_rand_bytes(&mut mac).unwrap();
+/// util::secure_rand_bytes(&mut mac)?;
 /// assert!(util::secure_cmp(&mac, &[0u8; 64]).is_err());
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 pub fn secure_cmp(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
 	if a.len() != b.len() {

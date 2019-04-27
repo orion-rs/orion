@@ -53,23 +53,24 @@
 //! - The recommended minimum output size is 32.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::hash::blake2b;
 //!
 //! // Using the streaming interface without a key.
-//! let mut state = blake2b::init(None, 64).unwrap();
-//! state.update(b"Some data").unwrap();
-//! let digest = state.finalize().unwrap();
+//! let mut state = blake2b::init(None, 64)?;
+//! state.update(b"Some data")?;
+//! let digest = state.finalize()?;
 //!
 //! // Using the streaming interface with a key.
 //! let secret_key = blake2b::SecretKey::generate();
-//! let mut state_keyed = blake2b::init(Some(&secret_key), 64).unwrap();
-//! state_keyed.update(b"Some data").unwrap();
-//! let mac = state_keyed.finalize().unwrap();
-//! assert!(blake2b::verify(&mac, &secret_key, 64, b"Some data").unwrap());
+//! let mut state_keyed = blake2b::init(Some(&secret_key), 64)?;
+//! state_keyed.update(b"Some data")?;
+//! let mac = state_keyed.finalize()?;
+//! assert!(blake2b::verify(&mac, &secret_key, 64, b"Some data")?);
 //!
 //! // Using the `Hasher` for convenience functions.
-//! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data").unwrap();
+//! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data")?;
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{

@@ -69,15 +69,14 @@
 //! - It is recommended to use XChaCha20Poly1305 when possible.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::aead;
 //!
 //! let secret_key = aead::chacha20poly1305::SecretKey::generate();
 //!
 //! let nonce = aead::chacha20poly1305::Nonce::from_slice(&[
 //! 	0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
-//! 	])
-//! .unwrap();
+//! ])?;
 //! let ad = [
 //! 	0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
 //! 	];
@@ -91,13 +90,12 @@
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
 //! // Encrypt and place ciphertext + tag in dst_out_ct
-//! aead::chacha20poly1305::seal(&secret_key, &nonce, plaintext, Some(&ad), &mut dst_out_ct)
-//! 	.unwrap();
+//! aead::chacha20poly1305::seal(&secret_key, &nonce, plaintext, Some(&ad), &mut dst_out_ct)?;
 //! // Verify tag, if correct then decrypt and place plaintext in dst_out_pt
-//! aead::chacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt)
-//! 	.unwrap();
+//! aead::chacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
@@ -151,9 +149,9 @@ fn process_authentication(
 ) -> Result<(), UnknownCryptoError> {
 	// If buf_in_len is 0, then NO ciphertext gets authenticated.
 	// Because of this, buf may never be empty either.
-	assert!(!buf.is_empty());
+	debug_assert!(!buf.is_empty());
+	debug_assert!(buf_in_len <= buf.len());
 	assert!(buf_in_len > 0);
-	assert!(buf_in_len <= buf.len());
 
 	let mut padding_max = [0u8; 16];
 
@@ -166,8 +164,7 @@ fn process_authentication(
 	padding_max[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
 	padding_max[8..16].copy_from_slice(&(buf_in_len as u64).to_le_bytes());
 
-	poly1305_state.update(&padding_max[..8])?;
-	poly1305_state.update(&padding_max[8..16])?;
+	poly1305_state.update(padding_max.as_ref())?;
 
 	Ok(())
 }

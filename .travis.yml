@@ -17,7 +17,6 @@ matrix:
       script:
         - cargo tarpaulin --out Xml
         - bash <(curl -s https://codecov.io/bash)
-
     - name: "[RELEASE + DEBUG]: Tests w. sanitizers"
       rust: nightly
       script:
@@ -63,14 +62,18 @@ matrix:
         - cargo test --release --no-default-features --tests
         - cargo test --release --no-default-features --features nightly 
 
-    - name: "[RELEASE + DEBUG]: Tests + cargo-audit"
+    - name: "[RELEASE + DEBUG]: Tests + cargo-audit + clippy"
       rust: stable
       install:
         - cargo install --force cargo-audit
+        - rustup component add clippy-preview
       script:
         # cargo-audit
         - cargo clean
         - cargo audit
+
+        # clippy
+        - cargo clippy
 
         # Debug:
         - cargo test

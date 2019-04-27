@@ -49,14 +49,15 @@
 //! - The recommended minimum length for a `SecretKey` is 32.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::auth;
 //!
 //! let key = auth::SecretKey::default();
 //! let msg = "Some message.".as_bytes();
 //!
-//! let expected_tag = auth::authenticate(&key, msg).unwrap();
-//! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).unwrap());
+//! let expected_tag = auth::authenticate(&key, msg)?;
+//! assert!(auth::authenticate_verify(&expected_tag, &key, &msg)?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};

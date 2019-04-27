@@ -132,6 +132,7 @@ macro_rules! impl_from_trait (($name:ident, $size:expr) => (
 /// $upper_bound.
 macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
     #[must_use]
+    #[allow(clippy::double_comparisons)]
     /// Make an object from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
 

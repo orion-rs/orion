@@ -45,10 +45,11 @@
 //! - BLAKE2b is not suitable for password hashing. See `orion::pwhash` instead.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hash::{digest, Digest};
 //!
-//! let hash: Digest = digest(b"Some data").unwrap();
+//! let hash: Digest = digest(b"Some data")?;
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 pub use crate::hazardous::hash::blake2b::Digest;

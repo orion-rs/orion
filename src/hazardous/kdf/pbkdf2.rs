@@ -47,19 +47,26 @@
 //!   minimum is 100000.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::{hazardous::kdf::pbkdf2, util};
 //!
 //! let mut salt = [0u8; 64];
-//! util::secure_rand_bytes(&mut salt).unwrap();
-//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes()).unwrap();
+//! util::secure_rand_bytes(&mut salt)?;
+//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes())?;
 //! let mut dk_out = [0u8; 64];
 //!
-//! pbkdf2::derive_key(&password, &salt, 10000, &mut dk_out).unwrap();
+//! pbkdf2::derive_key(&password, &salt, 10000, &mut dk_out)?;
 //!
 //! let exp_dk = dk_out;
 //!
-//! assert!(pbkdf2::verify(&exp_dk, &password, &salt, 10000, &mut dk_out).unwrap());
+//! assert!(pbkdf2::verify(
+//! 	&exp_dk,
+//! 	&password,
+//! 	&salt,
+//! 	10000,
+//! 	&mut dk_out
+//! )?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{

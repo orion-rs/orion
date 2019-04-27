@@ -46,17 +46,18 @@
 //! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::mac::poly1305;
 //!
 //! let one_time_key = poly1305::OneTimeKey::generate();
 //! let msg = "Some message.";
 //!
 //! let mut poly1305_state = poly1305::init(&one_time_key);
-//! poly1305_state.update(msg.as_bytes()).unwrap();
-//! let tag = poly1305_state.finalize().unwrap();
+//! poly1305_state.update(msg.as_bytes())?;
+//! let tag = poly1305_state.finalize()?;
 //!
-//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes()).unwrap());
+//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes())?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 extern crate core;
