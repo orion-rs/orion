@@ -149,8 +149,8 @@ fn process_authentication(
 	// If buf_in_len is 0, then NO ciphertext gets authenticated.
 	// Because of this, buf may never be empty either.
 	debug_assert!(!buf.is_empty());
-	debug_assert!(buf_in_len > 0);
 	debug_assert!(buf_in_len <= buf.len());
+	assert!(buf_in_len > 0);
 
 	let mut padding_max = [0u8; 16];
 
