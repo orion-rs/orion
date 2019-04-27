@@ -70,6 +70,7 @@ matrix:
       script:
         # cargo-audit
         - cargo clean
+        - cargo build
         - cargo audit
 
         # clippy
