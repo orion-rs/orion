@@ -68,7 +68,7 @@
 use crate::{
 	errors::UnknownCryptoError,
 	hazardous::{
-		constants::SHA512_OUTSIZE,
+		hash::sha512::SHA512_OUTSIZE,
 		mac::hmac::{self, SecretKey},
 	},
 	util,

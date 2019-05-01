@@ -566,8 +566,7 @@ macro_rules! construct_hmac_key {
             #[must_use]
             /// Make an object from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-                use crate::hazardous::hash::sha512;
-                use crate::hazardous::constants::SHA512_OUTSIZE;
+                use crate::hazardous::hash::sha512::{self, SHA512_OUTSIZE};
 
                 let mut secret_key = [0u8; $size];
 

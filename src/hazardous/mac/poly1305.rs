@@ -65,8 +65,16 @@ extern crate core;
 use crate::{
 	endianness::{load_u32_le, store_u32_into_le},
 	errors::UnknownCryptoError,
-	hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
 };
+
+/// The blocksize which Poly1305 operates on.
+const POLY1305_BLOCKSIZE: usize = 16;
+/// The output size for Poly1305.
+pub const POLY1305_OUTSIZE: usize = 16;
+/// The key size for Poly1305.
+pub const POLY1305_KEYSIZE: usize = 32;
+/// Type for a Poly1305 tag.
+type Poly1305Tag = [u8; POLY1305_OUTSIZE];
 
 construct_secret_key! {
 	/// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.

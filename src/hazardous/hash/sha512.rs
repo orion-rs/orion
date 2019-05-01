@@ -53,8 +53,12 @@
 use crate::{
 	endianness::{load_u64_into_be, store_u64_into_be},
 	errors::UnknownCryptoError,
-	hazardous::constants::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 };
+
+/// The blocksize for the hash function SHA512.
+pub const SHA512_BLOCKSIZE: usize = 128;
+/// The output size for the hash function SHA512.
+pub const SHA512_OUTSIZE: usize = 64;
 
 construct_public! {
 	/// A type to represent the `Digest` that SHA512 returns.

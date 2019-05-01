@@ -58,10 +58,7 @@
 
 use crate::{
 	errors::UnknownCryptoError,
-	hazardous::{
-		constants::{BlocksizeArray, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
-		hash::sha512,
-	},
+	hazardous::hash::sha512::{self, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 };
 use zeroize::Zeroize;
 
@@ -117,8 +114,8 @@ impl Hmac {
 	#[inline]
 	/// Pad `key` with `ipad` and `opad`.
 	fn pad_key_io(&mut self, key: &SecretKey) {
-		let mut ipad: BlocksizeArray = [0x36; SHA512_BLOCKSIZE];
-		let mut opad: BlocksizeArray = [0x5C; SHA512_BLOCKSIZE];
+		let mut ipad = [0x36; SHA512_BLOCKSIZE];
+		let mut opad = [0x5C; SHA512_BLOCKSIZE];
 		// `key` has already been padded with zeroes to a length of SHA512_BLOCKSIZE
 		// in SecretKey::from_slice
 		for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {

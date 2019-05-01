@@ -82,11 +82,11 @@
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{
 	errors::UnknownCryptoError,
-	hazardous::{
-		constants::{IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE},
-		stream::chacha20::{self, Nonce as IETFNonce},
-	},
+	hazardous::stream::chacha20::{self, Nonce as IETFNonce, IETF_CHACHA_NONCESIZE},
 };
+
+/// The nonce size for XChaCha20.
+pub const XCHACHA_NONCESIZE: usize = 24;
 
 construct_public! {
 	/// A type that represents a `Nonce` that XChaCha20 and XChaCha20Poly1305 use.
