@@ -10,75 +10,136 @@ cache: cargo
 
 matrix:
   include:
-    - rust: stable
+    - name: "Code coverage"
+      rust:  nightly
+      install:
+        - RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force cargo-tarpaulin
+      script:
+        - cargo tarpaulin --out Xml
+        - bash <(curl -s https://codecov.io/bash)
+    - name: "[RELEASE + DEBUG]: Tests w. sanitizers"
+      rust: nightly
+      script:
+        - cargo clean
+        # Debug:
+        # Sanitizers with default features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --tests --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo test --tests --target x86_64-unknown-linux-gnu
+        # No default features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --tests --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --tests --target x86_64-unknown-linux-gnu
+        # Nightly features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
+        
+        # Release:
+        # Sanitizers with default features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --tests --release --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo test --tests --release --target x86_64-unknown-linux-gnu
+        # No default features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --tests --release --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --tests --release --target x86_64-unknown-linux-gnu
+        # Nightly features
+        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
+        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
+
+    - name: "[RELEASE + DEBUG]: Tests + rust-fmt"
+      rust: nightly
+      install:
+        - rustup component add rustfmt-preview
+      script:
+        # rust-fmt
+        - cargo clean
+        - cargo fmt --all -- --check
+
+        # Debug:
+        - cargo test
+        - cargo test --no-default-features --tests
+        - cargo test --no-default-features --features nightly
+        
+        # Release:
+        - cargo test --release
+        - cargo test --release --no-default-features --tests
+        - cargo test --release --no-default-features --features nightly 
+
+    - name: "[RELEASE + DEBUG]: Tests + cargo-audit + clippy"
+      rust: stable
       install:
         - cargo install --force cargo-audit
         - rustup component add clippy-preview
       script:
+        # cargo-audit
         - cargo clean
-        - cargo test
-        - cargo test --release
-        - cargo test --tests --no-default-features
+        - cargo build
         - cargo audit
+
+        # clippy
         - cargo clippy
-    - rust: nightly
-      script:
-        - rustup component add rustfmt-preview
-        - cargo clean
-        - cargo fmt --all -- --check
-        # Debug mode:
-        # First sanitizers with default features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --tests --target x86_64-unknown-linux-gnu
-        - RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test --tests --target x86_64-unknown-linux-gnu
-        # Then with nightly features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
-        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
+
+        # Debug:
+        - cargo test
+        - cargo test --no-default-features --tests
+
         # Release:
-        # First sanitizers with default features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --tests --release --target x86_64-unknown-linux-gnu
-        - RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test --tests --release --target x86_64-unknown-linux-gnu
-        # Then with nightly features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
-        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
-    # Ensure building in no_std is possible
-    - env: TARGET=thumbv7em-none-eabi
+        - cargo test --release
+        - cargo test --release --no-default-features --tests
+
+    - name: "[RELEASE + DEBUG]: Build no_std"
+      env: TARGET=thumbv7em-none-eabi
       rust: nightly
       install:
         - cargo install xargo || true
         - rustup target install armv7-unknown-linux-gnueabihf
         - rustup component add rust-src
       script:
+        # Debug:
         - xargo build --no-default-features --features no_std --verbose --target $TARGET
-    - env: TARGET=i686-unknown-linux-gnu
+          
+        # Release:
+        - xargo build --release --no-default-features --features no_std --verbose --target $TARGET
+    
+    - name: "[RELEASE + DEBUG]: 32-bit architecture"
+      env: TARGET=i686-unknown-linux-gnu
       rust: stable
       script:
+        # Debug:
         - cross test --target $TARGET
+        - cross test --no-default-features --tests --target $TARGET
+        
+        # Release:
         - cross test --release --target $TARGET
-    - env: TARGET=x86_64-apple-darwin
+        - cross test --release --no-default-features --tests --target $TARGET
+    
+    - name: "[RELEASE + DEBUG]: OSX"
+      env: TARGET=x86_64-apple-darwin
       os: osx
       rust: stable
       script:
+        # Debug:
         - cross test --target $TARGET
+        - cross test --no-default-features --tests --target $TARGET
+        
+        # Release:
         - cross test --release --target $TARGET
-    - env: TARGET=mips64-unknown-linux-gnuabi64
+        - cross test --release --no-default-features --tests --target $TARGET
+    
+    - name: "[RELEASE + DEBUG]: Big-endian"
+      env: TARGET=mips64-unknown-linux-gnuabi64
       rust: stable
       script:
+        # Debug:
         - cross test --target $TARGET
+        - cross test --no-default-features --tests --target $TARGET
+        
+        # Release:
         - cross test --release --target $TARGET
+        - cross test --release --no-default-features --tests --target $TARGET
+    
+    - name: "Documentation"
+      rust: stable
+      script:
+        - cargo doc --no-deps
+    
 
-before_cache: |
-  if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
-    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force cargo-tarpaulin
-  fi
 install:
   - cargo install cross || true
-
-after_success: |
-  if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
-    # RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
-    # Uncomment the following line for coveralls.io
-    # cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
-    # Uncomment the following two lines create and upload a report for codecov.io
-    cargo tarpaulin --out Xml
-    bash <(curl -s https://codecov.io/bash)
-  fi
