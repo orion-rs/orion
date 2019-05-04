@@ -243,7 +243,6 @@ impl InternalState {
 		if self.is_ietf {
 			// .unwrap() cannot panic here since the above two
 			// checks make sure block_count.is_some() == true
-			// if this branch it hit
 			self.state[12] = block_count.unwrap();
 		}
 
@@ -312,7 +311,7 @@ pub fn encrypt(
 	}
 
 	let mut chacha_state = InternalState {
-		state: [0_u32; 16],
+		state: [0u32; 16],
 		internal_counter: 0,
 		is_ietf: true,
 	};
@@ -327,13 +326,11 @@ pub fn encrypt(
 		.zip(dst_out.chunks_mut(CHACHA_BLOCKSIZE))
 		.enumerate()
 	{
-		let block_counter = initial_counter.checked_add(counter as u32);
-		if block_counter.is_some() {
-			keystream_state = chacha_state
-				// .unwrap() cannot panic here since block_counter.is_some() == true
-				.process_block(Some(block_counter.unwrap()))?;
-		} else {
-			return Err(UnknownCryptoError);
+		match initial_counter.checked_add(counter as u32) {
+			Some(ref block_counter) => {
+				keystream_state = chacha_state.process_block(Some(*block_counter))?
+			}
+			None => return Err(UnknownCryptoError),
 		}
 
 		chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;

@@ -69,9 +69,6 @@ fn test_unknown_crypto_error_from_unavailable() {
 #[cfg(feature = "safe_api")]
 // format! is only available with std
 fn test_unknown_crypto_error_from_unkown() {
-	let err = format!(
-		"{:?}",
-		UnknownCryptoError::from(getrandom::Error::UNKNOWN)
-	);
+	let err = format!("{:?}", UnknownCryptoError::from(getrandom::Error::UNKNOWN));
 	assert_eq!(err, "UnknownCryptoError");
 }
