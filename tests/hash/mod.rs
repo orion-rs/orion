@@ -18,8 +18,8 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 	state.update(input).unwrap();
 	let digest = state.finalize().unwrap();
 	// All KAT test vectors are 64 bytes in length
-	assert!(digest.as_bytes().len() == output.len());
-	assert!(digest.as_bytes() == &output[..]);
+	assert!(digest.as_ref().len() == output.len());
+	assert!(digest.as_ref() == &output[..]);
 }
 
 fn sha512_test_runner(data: &[u8], output: &[u8]) {
@@ -30,6 +30,6 @@ fn sha512_test_runner(data: &[u8], output: &[u8]) {
 	// Test one-shot function
 	let digest_one_shot = sha512::digest(data).unwrap();
 
-	assert!(digest.as_bytes() == digest_one_shot.as_bytes());
-	assert!(digest.as_bytes() == output);
+	assert!(digest.as_ref() == digest_one_shot.as_ref());
+	assert!(digest.as_ref() == output);
 }

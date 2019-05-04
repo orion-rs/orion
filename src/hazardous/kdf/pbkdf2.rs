@@ -40,33 +40,39 @@
 //!
 //! # Security:
 //! - Use `Password::generate()` to randomly generate a password of 128 bytes.
-//! - Salts should always be generated using a CSPRNG. The `gen_rand_key`
-//!   function
-//! in `util` can be used for this.
+//! - Salts should always be generated using a CSPRNG.
+//!   `util::secure_rand_bytes()` can be used for this.
 //! - The recommended length for a salt is 64 bytes.
 //! - The iteration count should be set as high as feasible. The recommended
 //!   minimum is 100000.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::{hazardous::kdf::pbkdf2, util};
 //!
 //! let mut salt = [0u8; 64];
-//! util::secure_rand_bytes(&mut salt).unwrap();
-//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes()).unwrap();
+//! util::secure_rand_bytes(&mut salt)?;
+//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes())?;
 //! let mut dk_out = [0u8; 64];
 //!
-//! pbkdf2::derive_key(&password, &salt, 10000, &mut dk_out).unwrap();
+//! pbkdf2::derive_key(&password, &salt, 10000, &mut dk_out)?;
 //!
 //! let exp_dk = dk_out;
 //!
-//! assert!(pbkdf2::verify(&exp_dk, &password, &salt, 10000, &mut dk_out).unwrap());
+//! assert!(pbkdf2::verify(
+//! 	&exp_dk,
+//! 	&password,
+//! 	&salt,
+//! 	10000,
+//! 	&mut dk_out
+//! )?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{
-	errors::{UnknownCryptoError, ValidationCryptoError},
+	errors::UnknownCryptoError,
 	hazardous::{
-		constants::{HLenArray, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
+		hash::sha512::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 		mac::hmac,
 	},
 	util,
@@ -83,8 +89,8 @@ construct_hmac_key! {
 	///
 	/// Using `get_length()` will return the length with padding (always 128).
 	///
-	/// # Errors:
-	/// An error will be returned if:
+	/// # Panics:
+	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source.
 	(Password, SHA512_BLOCKSIZE)
 }
@@ -99,7 +105,7 @@ fn function_f(
 	block_len: usize,
 	hmac: &mut hmac::Hmac,
 ) -> Result<(), UnknownCryptoError> {
-	let mut u_step: HLenArray = [0u8; 64];
+	let mut u_step: [u8; SHA512_OUTSIZE] = [0u8; 64];
 	hmac.update(salt)?;
 	hmac.update(&index.to_be_bytes())?;
 
@@ -161,11 +167,11 @@ pub fn verify(
 	salt: &[u8],
 	iterations: usize,
 	dst_out: &mut [u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	derive_key(password, salt, iterations, dst_out)?;
 
 	if util::secure_cmp(&dst_out, expected).is_err() {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	} else {
 		Ok(true)
 	}

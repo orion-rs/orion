@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.13.4"
+version = "0.14.0"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Easy and usable rust crypto"
 keywords = [ "cryptography", "crypto", "aead", "hash", "mac" ]
@@ -14,19 +14,17 @@ exclude = [
     ".gitignore",
     ".travis.yml",
     "benches/*",
-    "fuzz/*",
     "tests/*"
 ]
 
 [dependencies]
-rand_os = { version = "0.1.3", optional = true }
-tiny-keccak = "1.4.2"
-subtle = { version = "2.0.0", default-features = false }
+subtle = { version = "2.1.0", default-features = false }
 zeroize = { version = "0.6.0", default-features = false }
+getrandom = { version = "0.1.2", optional = true }
 
 [features]
 default = [ "safe_api" ]
-safe_api = [ "rand_os" ]
+safe_api = [ "getrandom" ]
 nightly = [ "subtle/nightly", "safe_api" ]
 no_std = [ "subtle/nightly" ]
 

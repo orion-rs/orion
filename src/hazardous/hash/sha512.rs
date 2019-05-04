@@ -35,34 +35,41 @@
 //! - It is recommended to use BLAKE2b when possible.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::hash::sha512;
 //!
 //! // Using the streaming interface
 //! let mut state = sha512::init();
-//! state.update(b"Hello world").unwrap();
-//! let hash = state.finalize().unwrap();
+//! state.update(b"Hello world")?;
+//! let hash = state.finalize()?;
 //!
 //! // Using the one-shot function
-//! let hash_one_shot = sha512::digest(b"Hello world").unwrap();
+//! let hash_one_shot = sha512::digest(b"Hello world")?;
 //!
 //! assert_eq!(hash, hash_one_shot);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{
 	endianness::{load_u64_into_be, store_u64_into_be},
-	errors::{FinalizationCryptoError, UnknownCryptoError},
-	hazardous::constants::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
+	errors::UnknownCryptoError,
 };
 
-construct_nonce_no_generator! {
+/// The blocksize for the hash function SHA512.
+pub const SHA512_BLOCKSIZE: usize = 128;
+/// The output size for the hash function SHA512.
+pub const SHA512_OUTSIZE: usize = 64;
+
+construct_public! {
 	/// A type to represent the `Digest` that SHA512 returns.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 64 bytes.
-	(Digest, SHA512_OUTSIZE)
+	(Digest, test_digest, SHA512_OUTSIZE, SHA512_OUTSIZE)
 }
+
+impl_from_trait!(Digest, SHA512_OUTSIZE);
 
 #[rustfmt::skip]
 #[allow(clippy::unreadable_literal)]
@@ -260,9 +267,9 @@ impl Sha512 {
 
 	#[must_use]
 	/// Update state with `data`. This can be called multiple times.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 		if data.is_empty() {
 			return Ok(());
@@ -312,16 +319,16 @@ impl Sha512 {
 
 	#[must_use]
 	/// Return a SHA512 digest.
-	pub fn finalize(&mut self) -> Result<Digest, FinalizationCryptoError> {
+	pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		self.is_finalized = true;
 
 		// self.leftover should not be greater than SHA2_BLCOKSIZE
 		// as that would have been processed in the update call
-		assert!(self.leftover < SHA512_BLOCKSIZE);
+		debug_assert!(self.leftover < SHA512_BLOCKSIZE);
 		self.buffer[self.leftover] = 0x80;
 		// Using .unwrap() since overflow should not happen in practice
 		self.leftover = self.leftover.checked_add(1).unwrap();
@@ -456,7 +463,7 @@ mod public {
 			state.reset();
 			state.update(data).unwrap();
 			let two = state.finalize().unwrap();
-			assert_eq!(one.as_bytes(), two.as_bytes());
+			assert_eq!(one.as_ref(), two.as_ref());
 		}
 
 		#[test]
@@ -600,7 +607,7 @@ mod public {
 
 				let digest_one_shot = digest(&other_data).unwrap();
 
-				assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
+				assert!(state.finalize().unwrap().as_ref() == digest_one_shot.as_ref());
 			}
 		}
 		// Proptests. Only exectued when NOT testing no_std.

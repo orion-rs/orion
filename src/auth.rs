@@ -49,27 +49,25 @@
 //! - The recommended minimum length for a `SecretKey` is 32.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::auth;
 //!
 //! let key = auth::SecretKey::default();
 //! let msg = "Some message.".as_bytes();
 //!
-//! let expected_tag = auth::authenticate(&key, msg).unwrap();
-//! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).unwrap());
+//! let expected_tag = auth::authenticate(&key, msg)?;
+//! assert!(auth::authenticate_verify(&expected_tag, &key, &msg)?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
-use crate::{
-	errors::{UnknownCryptoError, ValidationCryptoError},
-	hazardous::mac::hmac,
-};
+use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
 pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};
 
 #[must_use]
 /// Authenticate a message using HMAC-SHA512.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let mut state = hmac::init(&hmac::SecretKey::from_slice(
-		&secret_key.unprotected_as_bytes(),
+		secret_key.unprotected_as_bytes(),
 	)?);
 	state.update(data)?;
 
@@ -82,10 +80,10 @@ pub fn authenticate_verify(
 	expected: &Tag,
 	secret_key: &SecretKey,
 	data: &[u8],
-) -> Result<bool, ValidationCryptoError> {
-	let v_key = &hmac::SecretKey::from_slice(&secret_key.unprotected_as_bytes())?;
+) -> Result<bool, UnknownCryptoError> {
+	let key = hmac::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
 
-	hmac::verify(&expected, &v_key, &data)?;
+	hmac::verify(expected, &key, data)?;
 
 	Ok(true)
 }

@@ -44,24 +44,31 @@
 //! - HKDF is not suitable for password storage.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::{hazardous::kdf::hkdf, util};
 //!
 //! let mut salt = [0u8; 64];
-//! util::secure_rand_bytes(&mut salt).unwrap();
+//! util::secure_rand_bytes(&mut salt)?;
 //! let mut okm_out = [0u8; 32];
 //!
-//! hkdf::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out).unwrap();
+//! hkdf::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out)?;
 //!
 //! let exp_okm = okm_out;
 //!
-//! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), None, &mut okm_out).unwrap());
+//! assert!(hkdf::verify(
+//! 	&exp_okm,
+//! 	&salt,
+//! 	"IKM".as_bytes(),
+//! 	None,
+//! 	&mut okm_out
+//! )?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{
-	errors::{UnknownCryptoError, ValidationCryptoError},
+	errors::UnknownCryptoError,
 	hazardous::{
-		constants::SHA512_OUTSIZE,
+		hash::sha512::SHA512_OUTSIZE,
 		mac::hmac::{self, SecretKey},
 	},
 	util,
@@ -138,11 +145,11 @@ pub fn verify(
 	ikm: &[u8],
 	info: Option<&[u8]>,
 	dst_out: &mut [u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	expand(&extract(salt, ikm)?, info, dst_out)?;
 
 	if util::secure_cmp(&dst_out, expected).is_err() {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	} else {
 		Ok(true)
 	}

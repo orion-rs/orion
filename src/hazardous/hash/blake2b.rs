@@ -53,57 +53,60 @@
 //! - The recommended minimum output size is 32.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::hash::blake2b;
 //!
 //! // Using the streaming interface without a key.
-//! let mut state = blake2b::init(None, 64).unwrap();
-//! state.update(b"Some data").unwrap();
-//! let digest = state.finalize().unwrap();
+//! let mut state = blake2b::init(None, 64)?;
+//! state.update(b"Some data")?;
+//! let digest = state.finalize()?;
 //!
 //! // Using the streaming interface with a key.
-//! let secret_key = blake2b::SecretKey::generate().unwrap();
-//! let mut state_keyed = blake2b::init(Some(&secret_key), 64).unwrap();
-//! state_keyed.update(b"Some data").unwrap();
-//! let mac = state_keyed.finalize().unwrap();
-//! assert!(blake2b::verify(&mac, &secret_key, 64, b"Some data").unwrap());
+//! let secret_key = blake2b::SecretKey::generate();
+//! let mut state_keyed = blake2b::init(Some(&secret_key), 64)?;
+//! state_keyed.update(b"Some data")?;
+//! let mac = state_keyed.finalize()?;
+//! assert!(blake2b::verify(&mac, &secret_key, 64, b"Some data")?);
 //!
 //! // Using the `Hasher` for convenience functions.
-//! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data").unwrap();
+//! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data")?;
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{
 	endianness::{load_u64_into_le, store_u64_into_le},
-	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
-	hazardous::constants::{BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE},
+	errors::UnknownCryptoError,
 };
 
-construct_blake2b_key! {
+/// The blocksize for the hash function BLAKE2b.
+const BLAKE2B_BLOCKSIZE: usize = 128;
+/// The maximum key size for the hash function BLAKE2b when used in keyed mode.
+const BLAKE2B_KEYSIZE: usize = 64;
+/// The maximum output size for the hash function BLAKE2b.
+const BLAKE2B_OUTSIZE: usize = 64;
+
+construct_secret_key! {
 	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.
-	///
-	/// # Note:
-	/// `SecretKey` pads the secret key for use with BLAKE2b to a length of 128, when initialized.
-	///
-	/// Using `unprotected_as_bytes()` will return the key with padding.
-	///
-	/// Using `get_length()` will return the length with padding (always 128).
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
+	///
+	/// # Panics:
+	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source.
-	(SecretKey, BLAKE2B_BLOCKSIZE)
+	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, BLAKE2B_KEYSIZE)
 }
 
-construct_digest! {
+construct_public! {
 	/// A type to represent the `Digest` that BLAKE2b returns.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is empty.
 	/// - `slice` is greater than 64 bytes.
-	(Digest, 64)
+	(Digest, test_digest, 1, BLAKE2B_OUTSIZE)
 }
 
 #[allow(clippy::unreadable_literal)]
@@ -329,7 +332,12 @@ impl Blake2b {
 
 		if secret_key.is_some() && self.is_keyed {
 			// .unwrap() cannot panic since secret_key.is_some() == true
-			self.update(secret_key.unwrap().unprotected_as_bytes())?;
+			let sk = secret_key.unwrap();
+			self.update(sk.unprotected_as_bytes())?;
+			// The state needs updating with the secret key padded to blocksize length
+			let pad = [0u8; BLAKE2B_BLOCKSIZE];
+			let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
+			self.update(pad[..rem].as_ref())?;
 		}
 
 		Ok(())
@@ -337,9 +345,9 @@ impl Blake2b {
 
 	#[must_use]
 	/// Update state with a `data`. This can be called multiple times.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 		if data.is_empty() {
 			return Ok(());
@@ -385,9 +393,9 @@ impl Blake2b {
 
 	#[must_use]
 	/// Return a BLAKE2b digest.
-	pub fn finalize(&mut self) -> Result<Digest, FinalizationCryptoError> {
+	pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		self.is_finalized = true;
@@ -434,10 +442,14 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		context.is_keyed = true;
 		// .unwrap() cannot panic since secret_key.is_some() == true
 		let key = secret_key.unwrap();
-		let klen = key.get_original_length();
+		let klen = key.get_length();
 		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
 		context.update(key.unprotected_as_bytes())?;
+		// The state needs updating with the secret key padded to blocksize length
+		let pad = [0u8; BLAKE2B_BLOCKSIZE];
+		let rem = BLAKE2B_BLOCKSIZE - key.get_length();
+		context.update(pad[..rem].as_ref())?;
 	} else {
 		context.internal_state[0] ^= 0x01010000 ^ (size as u64);
 		context.init_state.copy_from_slice(&context.internal_state);
@@ -453,14 +465,14 @@ pub fn verify(
 	secret_key: &SecretKey,
 	size: usize,
 	data: &[u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	let mut state = init(Some(secret_key), size)?;
 	state.update(data)?;
 
 	if expected == &state.finalize()? {
 		Ok(true)
 	} else {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	}
 }
 
@@ -534,7 +546,7 @@ mod public {
 				/// Given a valid size parameter, init should always pass. If size
 				/// is invalid, then init should always fail.
 				fn prop_init_size_key(size: usize) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					init_tester(Some(&sk), size)
 				}
 			}
@@ -572,7 +584,7 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 
 					let mut state = init(Some(&sk), 64).unwrap();
 					state.update(&data[..]).unwrap();
@@ -587,12 +599,12 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					let mut state = init(Some(&sk), 64).unwrap();
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
-					let bad_sk = SecretKey::generate().unwrap();
+					let bad_sk = SecretKey::generate();
 
 					let res = if verify(&tag, &bad_sk, 64, &data[..]).is_err() {
 						true
@@ -958,7 +970,7 @@ mod public {
 
 				let digest_one_shot = Hasher::Blake2b512.digest(&other_data).unwrap();
 
-				assert!(state.finalize().unwrap().as_bytes() == digest_one_shot.as_bytes());
+				assert!(state.finalize().unwrap().as_ref() == digest_one_shot.as_ref());
 			}
 		}
 		// Proptests. Only exectued when NOT testing no_std.
@@ -973,7 +985,7 @@ mod public {
 					if size >= 1 && size <= BLAKE2B_OUTSIZE {
 						// Will panic on incorrect results.
 						produces_same_hash(None, size, &data[..]);
-						let sk = SecretKey::generate().unwrap();
+						let sk = SecretKey::generate();
 						produces_same_hash(Some(&sk), size, &data[..]);
 					}
 
@@ -988,7 +1000,7 @@ mod public {
 					if size >= 1 && size <= BLAKE2B_OUTSIZE {
 						// Will panic on incorrect results.
 						produces_same_state(None, size, &data[..]);
-						let sk = SecretKey::generate().unwrap();
+						let sk = SecretKey::generate();
 						produces_same_state(Some(&sk), size, &data[..]);
 					}
 

@@ -38,9 +38,6 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `slice` when calling `SecretKey::from_slice()` is not 32 bytes.
-//! - The `OsRng` fails to initialize or read from its source when calling
-//!   `SecretKey::generate()`.
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
 //! - `plaintext` or `ciphertext` are empty.
 //! - The `initial_counter` is high enough to cause a potential overflow.
@@ -77,15 +74,14 @@
 //! - It is recommended to use XChaCha20Poly1305 when possible.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::stream::chacha20;
 //!
-//! let secret_key = chacha20::SecretKey::generate().unwrap();
+//! let secret_key = chacha20::SecretKey::generate();
 //!
 //! let nonce = chacha20::Nonce::from_slice(&[
 //! 	0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
-//! 	])
-//! .unwrap();
+//! ])?;
 //!
 //! // Length of this message is 15
 //! let message = "Data to protect".as_bytes();
@@ -93,25 +89,32 @@
 //! let mut dst_out_pt = [0u8; 15];
 //! let mut dst_out_ct = [0u8; 15];
 //!
-//! chacha20::encrypt(&secret_key, &nonce, 0, message, &mut dst_out_ct);
+//! chacha20::encrypt(&secret_key, &nonce, 0, message, &mut dst_out_ct)?;
 //!
-//! chacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
+//! chacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt, message);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 use crate::{
 	endianness::{load_u32_into_le, store_u32_into_le},
 	errors::UnknownCryptoError,
-	hazardous::constants::{
-		ChaChaState,
-		CHACHA_BLOCKSIZE,
-		CHACHA_KEYSIZE,
-		HCHACHA_NONCESIZE,
-		HCHACHA_OUTSIZE,
-		IETF_CHACHA_NONCESIZE,
-	},
 };
 use zeroize::Zeroize;
+
+/// The key size for ChaCha20.
+pub const CHACHA_KEYSIZE: usize = 32;
+/// The nonce size for IETF ChaCha20.
+pub const IETF_CHACHA_NONCESIZE: usize = 12;
+/// The blocksize which ChaCha20 operates on.
+const CHACHA_BLOCKSIZE: usize = 64;
+/// The size of the subkey that HChaCha20 returns.
+const HCHACHA_OUTSIZE: usize = 32;
+/// The nonce size for HChaCha20.
+const HCHACHA_NONCESIZE: usize = 16;
+/// Type for a ChaCha state represented as an array of 16 32-bit unsigned
+/// integers.
+type ChaChaState = [u32; 16];
 
 construct_secret_key! {
 	/// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and
@@ -120,17 +123,25 @@ construct_secret_key! {
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 32 bytes.
+	///
+	/// # Panics:
+	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source.
-	(SecretKey, CHACHA_KEYSIZE)
+	(SecretKey, test_secret_key, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE)
 }
-construct_nonce_no_generator! {
+
+impl_from_trait!(SecretKey, CHACHA_KEYSIZE);
+
+construct_public! {
 	/// A type that represents a `Nonce` that ChaCha20 and ChaCha20Poly1305 use.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 12 bytes.
-	(Nonce, IETF_CHACHA_NONCESIZE)
+	(Nonce, test_nonce, IETF_CHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE)
 }
+
+impl_from_trait!(Nonce, IETF_CHACHA_NONCESIZE);
 
 #[derive(Clone)]
 struct InternalState {
@@ -232,7 +243,6 @@ impl InternalState {
 		if self.is_ietf {
 			// .unwrap() cannot panic here since the above two
 			// checks make sure block_count.is_some() == true
-			// if this branch it hit
 			self.state[12] = block_count.unwrap();
 		}
 
@@ -301,12 +311,12 @@ pub fn encrypt(
 	}
 
 	let mut chacha_state = InternalState {
-		state: [0_u32; 16],
+		state: [0u32; 16],
 		internal_counter: 0,
 		is_ietf: true,
 	};
 
-	chacha_state.init_state(secret_key, &nonce.as_bytes())?;
+	chacha_state.init_state(secret_key, &nonce.as_ref())?;
 
 	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 	let mut keystream_state: ChaChaState = [0u32; 16];
@@ -316,13 +326,11 @@ pub fn encrypt(
 		.zip(dst_out.chunks_mut(CHACHA_BLOCKSIZE))
 		.enumerate()
 	{
-		let block_counter = initial_counter.checked_add(counter as u32);
-		if block_counter.is_some() {
-			keystream_state = chacha_state
-				// .unwrap() cannot panic here since block_counter.is_some() == true
-				.process_block(Some(block_counter.unwrap()))?;
-		} else {
-			return Err(UnknownCryptoError);
+		match initial_counter.checked_add(counter as u32) {
+			Some(ref block_counter) => {
+				keystream_state = chacha_state.process_block(Some(*block_counter))?
+			}
+			None => return Err(UnknownCryptoError),
 		}
 
 		chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
@@ -366,7 +374,7 @@ pub fn keystream_block(
 		internal_counter: 0,
 		is_ietf: true,
 	};
-	chacha_state.init_state(secret_key, &nonce.as_bytes())?;
+	chacha_state.init_state(secret_key, &nonce.as_ref())?;
 
 	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 	let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter))?;

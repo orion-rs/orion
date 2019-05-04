@@ -60,11 +60,11 @@
 //! - It is recommended to use XChaCha20Poly1305 when possible.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::stream::xchacha20;
 //!
-//! let secret_key = xchacha20::SecretKey::generate().unwrap();
-//! let nonce = xchacha20::Nonce::generate().unwrap();
+//! let secret_key = xchacha20::SecretKey::generate();
+//! let nonce = xchacha20::Nonce::generate();
 //!
 //! // Length of this message is 15
 //! let message = "Data to protect".as_bytes();
@@ -72,30 +72,36 @@
 //! let mut dst_out_pt = [0u8; 15];
 //! let mut dst_out_ct = [0u8; 15];
 //!
-//! xchacha20::encrypt(&secret_key, &nonce, 0, message, &mut dst_out_ct);
+//! xchacha20::encrypt(&secret_key, &nonce, 0, message, &mut dst_out_ct)?;
 //!
-//! xchacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt);
+//! xchacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt, message);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{
 	errors::UnknownCryptoError,
-	hazardous::{
-		constants::{IETF_CHACHA_NONCESIZE, XCHACHA_NONCESIZE},
-		stream::chacha20::{self, Nonce as IETFNonce},
-	},
+	hazardous::stream::chacha20::{self, Nonce as IETFNonce, IETF_CHACHA_NONCESIZE},
 };
 
-construct_nonce_with_generator! {
+/// The nonce size for XChaCha20.
+pub const XCHACHA_NONCESIZE: usize = 24;
+
+construct_public! {
 	/// A type that represents a `Nonce` that XChaCha20 and XChaCha20Poly1305 use.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 24 bytes.
+	///
+	/// # Panics:
+	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source.
-	(Nonce, XCHACHA_NONCESIZE)
+	(Nonce, test_nonce, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE)
 }
+
+impl_from_trait!(Nonce, XCHACHA_NONCESIZE);
 
 #[must_use]
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
@@ -107,9 +113,9 @@ pub fn encrypt(
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
 	let subkey: SecretKey =
-		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16])?)?;
+		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?)?;
 	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
-	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes()[16..24]);
+	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
 
 	chacha20::encrypt(
 		&subkey,
@@ -134,56 +140,6 @@ pub fn decrypt(
 	encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)?;
 
 	Ok(())
-}
-
-#[test]
-fn test_nonce_sizes() {
-	assert!(Nonce::from_slice(&[0u8; 23]).is_err());
-	assert!(Nonce::from_slice(&[0u8; 25]).is_err());
-	assert!(Nonce::from_slice(&[0u8; 24]).is_ok());
-}
-
-#[test]
-fn test_err_on_empty_pt_xchacha() {
-	let mut dst = [0u8; 64];
-
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 24]).unwrap(),
-		0,
-		&[0u8; 0],
-		&mut dst
-	)
-	.is_err());
-}
-
-#[test]
-fn test_err_on_initial_counter_overflow_xchacha() {
-	let mut dst = [0u8; 65];
-
-	assert!(encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 24]).unwrap(),
-		4294967295,
-		&[0u8; 65],
-		&mut dst,
-	)
-	.is_err());
-}
-
-#[test]
-fn test_pass_on_one_iter_max_initial_counter() {
-	let mut dst = [0u8; 64];
-	// Should pass because only one iteration is completed, so block_counter will
-	// not increase
-	encrypt(
-		&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-		&Nonce::from_slice(&[0u8; 24]).unwrap(),
-		4294967295,
-		&[0u8; 64],
-		&mut dst,
-	)
-	.unwrap();
 }
 
 //

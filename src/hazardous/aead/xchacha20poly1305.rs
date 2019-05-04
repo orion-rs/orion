@@ -63,11 +63,11 @@
 //! - It is recommended to use XChaCha20Poly1305 when possible.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::aead;
 //!
-//! let secret_key = aead::xchacha20poly1305::SecretKey::generate().unwrap();
-//! let nonce = aead::xchacha20poly1305::Nonce::generate().unwrap();
+//! let secret_key = aead::xchacha20poly1305::SecretKey::generate();
+//! let nonce = aead::xchacha20poly1305::Nonce::generate();
 //!
 //! let ad = [
 //! 	0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
@@ -82,21 +82,19 @@
 //! let mut dst_out_ct = [0u8; 114 + 16];
 //! let mut dst_out_pt = [0u8; 114];
 //! // Encrypt and place ciphertext + tag in dst_out_ct
-//! aead::xchacha20poly1305::seal(&secret_key, &nonce, plaintext, Some(&ad), &mut dst_out_ct)
-//! 	.unwrap();
+//! aead::xchacha20poly1305::seal(&secret_key, &nonce, plaintext, Some(&ad), &mut dst_out_ct)?;
 //! // Verify tag, if correct then decrypt and place plaintext in dst_out_pt
-//! aead::xchacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt)
-//! 	.unwrap();
+//! aead::xchacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 pub use crate::hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
 use crate::{
 	errors::UnknownCryptoError,
 	hazardous::{
 		aead::chacha20poly1305,
-		constants::IETF_CHACHA_NONCESIZE,
-		stream::chacha20::{self, Nonce as IETFNonce},
+		stream::chacha20::{self, Nonce as IETFNonce, IETF_CHACHA_NONCESIZE},
 	},
 };
 
@@ -110,9 +108,9 @@ pub fn seal(
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
 	let subkey: SecretKey =
-		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16])?)?;
+		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?)?;
 	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
-	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes()[16..24]);
+	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
 
 	chacha20poly1305::seal(
 		&subkey,
@@ -135,9 +133,9 @@ pub fn open(
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
 	let subkey: SecretKey =
-		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_bytes()[0..16])?)?;
+		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?)?;
 	let mut prefixed_nonce = [0u8; 12];
-	prefixed_nonce[4..12].copy_from_slice(&nonce.as_bytes()[16..24]);
+	prefixed_nonce[4..12].copy_from_slice(&nonce.as_ref()[16..24]);
 
 	chacha20poly1305::open(
 		&subkey,
@@ -160,7 +158,7 @@ pub fn open(
 #[cfg(test)]
 mod public {
 	use super::*;
-	use crate::hazardous::constants::POLY1305_OUTSIZE;
+	use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
 	// One function tested per submodule.
 
 	mod test_seal {

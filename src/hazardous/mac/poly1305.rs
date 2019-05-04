@@ -46,26 +46,35 @@
 //! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::mac::poly1305;
 //!
-//! let one_time_key = poly1305::OneTimeKey::generate().unwrap();
+//! let one_time_key = poly1305::OneTimeKey::generate();
 //! let msg = "Some message.";
 //!
 //! let mut poly1305_state = poly1305::init(&one_time_key);
-//! poly1305_state.update(msg.as_bytes()).unwrap();
-//! let tag = poly1305_state.finalize().unwrap();
+//! poly1305_state.update(msg.as_bytes())?;
+//! let tag = poly1305_state.finalize()?;
 //!
-//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes()).unwrap());
+//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes())?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 extern crate core;
 
 use crate::{
 	endianness::{load_u32_le, store_u32_into_le},
-	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
-	hazardous::constants::{Poly1305Tag, POLY1305_BLOCKSIZE, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
+	errors::UnknownCryptoError,
 };
+
+/// The blocksize which Poly1305 operates on.
+const POLY1305_BLOCKSIZE: usize = 16;
+/// The output size for Poly1305.
+pub const POLY1305_OUTSIZE: usize = 16;
+/// The key size for Poly1305.
+pub const POLY1305_KEYSIZE: usize = 32;
+/// Type for a Poly1305 tag.
+type Poly1305Tag = [u8; POLY1305_OUTSIZE];
 
 construct_secret_key! {
 	/// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
@@ -73,17 +82,25 @@ construct_secret_key! {
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 32 bytes.
+	///
+	/// # Panics:
+	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source.
-	(OneTimeKey, POLY1305_KEYSIZE)
+	(OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
 }
+
+impl_from_trait!(OneTimeKey, POLY1305_KEYSIZE);
+
 construct_tag! {
 	/// A type to represent the `Tag` that Poly1305 returns.
 	///
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 16 bytes.
-	(Tag, POLY1305_OUTSIZE)
+	(Tag, test_tag, POLY1305_OUTSIZE, POLY1305_OUTSIZE)
 }
+
+impl_from_trait!(Tag, POLY1305_OUTSIZE);
 
 #[must_use]
 #[derive(Clone)]
@@ -299,9 +316,9 @@ impl Poly1305 {
 
 	#[must_use]
 	/// Update state with a `data`. This can be called multiple times.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		let mut bytes = data;
@@ -342,9 +359,9 @@ impl Poly1305 {
 
 	#[must_use]
 	/// Return a Poly1305 tag.
-	pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
+	pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		self.is_finalized = true;
@@ -404,11 +421,11 @@ pub fn verify(
 	expected: &Tag,
 	one_time_key: &OneTimeKey,
 	data: &[u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	if &poly1305(one_time_key, data)? == expected {
 		Ok(true)
 	} else {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	}
 }
 
@@ -484,7 +501,7 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
@@ -499,12 +516,12 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
-					let bad_sk = OneTimeKey::generate().unwrap();
+					let bad_sk = OneTimeKey::generate();
 
 					let res = if verify(&tag, &bad_sk, &data[..]).is_err() {
 						true
@@ -750,7 +767,7 @@ mod public {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
 				fn prop_same_tag_different_usage(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 					// Will panic on incorrect results.
 					produces_same_hash(&sk, &data[..]);
 
@@ -762,7 +779,7 @@ mod public {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
 				fn prop_same_state_different_usage(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 					// Will panic on incorrect results.
 					produces_same_state(&sk, &data[..]);
 
@@ -774,7 +791,7 @@ mod public {
 				/// Using the one-shot function should always produce the
 				/// same result as when using the streaming interface.
 				fn prop_poly1305_same_as_streaming(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate().unwrap();
+					let sk = OneTimeKey::generate();
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
 					let stream = state.finalize().unwrap();

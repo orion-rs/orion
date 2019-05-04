@@ -51,31 +51,31 @@
 //! # Errors:
 //! An error will be returned if:
 //! - `iterations` is 0.
-//! - The `OsRng` fails to initialize or read from its source.
 //! - The `expected_with_salt` is not constructed exactly as in
 //!   `pwhash::hash_password`.
 //! - The password hash does not match `expected_with_salt`.
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Security:
 //! - The iteration count should be set as high as feasible. The recommended
 //!   minimum is 100000.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::pwhash;
 //!
-//! let password = pwhash::Password::from_slice(b"Secret password").unwrap();
+//! let password = pwhash::Password::from_slice(b"Secret password")?;
 //!
-//! let hash = pwhash::hash_password(&password, 100000).unwrap();
-//! assert!(pwhash::hash_password_verify(&hash, &password, 100000).unwrap());
+//! let hash = pwhash::hash_password(&password, 100000)?;
+//! assert!(pwhash::hash_password_verify(&hash, &password, 100000)?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
-pub use crate::hltypes::{Password, PasswordHash};
-use crate::{
-	errors::{UnknownCryptoError, ValidationCryptoError},
-	hazardous::kdf::pbkdf2,
-	util,
-};
+pub use crate::hltypes::{Password, PasswordHash, Salt};
+use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};
 use zeroize::Zeroize;
 
 #[must_use]
@@ -85,13 +85,13 @@ pub fn hash_password(
 	iterations: usize,
 ) -> Result<PasswordHash, UnknownCryptoError> {
 	let mut buffer = [0u8; 128];
-	let mut salt = [0u8; 64];
-	util::secure_rand_bytes(&mut salt)?;
+	// Cannot panic as this is a valid size.
+	let salt = Salt::generate(64).unwrap();
 
-	buffer[..64].copy_from_slice(&salt);
+	buffer[..64].copy_from_slice(salt.as_ref());
 	pbkdf2::derive_key(
 		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
-		&salt,
+		salt.as_ref(),
 		iterations,
 		&mut buffer[64..],
 	)?;
@@ -108,7 +108,7 @@ pub fn hash_password_verify(
 	expected_with_salt: &PasswordHash,
 	password: &Password,
 	iterations: usize,
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	let mut dk = [0u8; 64];
 
 	let is_good = pbkdf2::verify(

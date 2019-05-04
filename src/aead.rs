@@ -53,11 +53,11 @@
 //!   POLY1305_BLOCKSIZE + 1).
 //! - The received tag does not match the calculated tag when calling
 //!   `aead::open()`.
-//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Panics:
 //! A panic will occur if:
 //! - More than 2^32-1 * 64 bytes of data are processed.
+//! - The `OsRng` fails to initialize or read from its source.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -67,12 +67,13 @@
 //! - To securely generate a strong key, use `SecretKey::default()`.
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::aead;
 //!
 //! let secret_key = aead::SecretKey::default();
-//! let ciphertext = aead::seal(&secret_key, "Secret message".as_bytes()).unwrap();
-//! let decrypted_data = aead::open(&secret_key, &ciphertext).unwrap();
+//! let ciphertext = aead::seal(&secret_key, "Secret message".as_bytes())?;
+//! let decrypted_data = aead::open(&secret_key, &ciphertext)?;
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 pub use crate::hltypes::SecretKey;
@@ -80,8 +81,11 @@ use crate::{
 	errors::UnknownCryptoError,
 	hazardous::{
 		aead,
-		constants::{POLY1305_BLOCKSIZE, XCHACHA_NONCESIZE},
-		stream::{chacha20, xchacha20::Nonce},
+		mac::poly1305::POLY1305_OUTSIZE,
+		stream::{
+			chacha20,
+			xchacha20::{Nonce, XCHACHA_NONCESIZE},
+		},
 	},
 };
 
@@ -92,13 +96,13 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 		return Err(UnknownCryptoError);
 	}
 
-	let nonce = Nonce::generate()?;
+	let nonce = Nonce::generate();
 
-	let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
-	dst_out[..XCHACHA_NONCESIZE].copy_from_slice(&nonce.as_bytes());
+	let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_OUTSIZE)];
+	dst_out[..XCHACHA_NONCESIZE].copy_from_slice(nonce.as_ref());
 
 	aead::xchacha20poly1305::seal(
-		&chacha20::SecretKey::from_slice(&secret_key.unprotected_as_bytes())?,
+		&chacha20::SecretKey::from_slice(secret_key.unprotected_as_bytes())?,
 		&nonce,
 		plaintext,
 		None,
@@ -115,15 +119,15 @@ pub fn open(
 	ciphertext_with_tag_and_nonce: &[u8],
 ) -> Result<Vec<u8>, UnknownCryptoError> {
 	// `+ 1` to avoid empty ciphertexts
-	if ciphertext_with_tag_and_nonce.len() < (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE + 1) {
+	if ciphertext_with_tag_and_nonce.len() < (XCHACHA_NONCESIZE + POLY1305_OUTSIZE + 1) {
 		return Err(UnknownCryptoError);
 	}
 
 	let mut dst_out =
-		vec![0u8; ciphertext_with_tag_and_nonce.len() - (XCHACHA_NONCESIZE + POLY1305_BLOCKSIZE)];
+		vec![0u8; ciphertext_with_tag_and_nonce.len() - (XCHACHA_NONCESIZE + POLY1305_OUTSIZE)];
 
 	aead::xchacha20poly1305::open(
-		&chacha20::SecretKey::from_slice(&secret_key.unprotected_as_bytes())?,
+		&chacha20::SecretKey::from_slice(secret_key.unprotected_as_bytes())?,
 		&Nonce::from_slice(&ciphertext_with_tag_and_nonce[..XCHACHA_NONCESIZE])?,
 		&ciphertext_with_tag_and_nonce[XCHACHA_NONCESIZE..],
 		None,

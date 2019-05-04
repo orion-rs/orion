@@ -43,24 +43,22 @@
 //! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!
 //! # Example:
-//! ```
+//! ```rust
 //! use orion::hazardous::mac::hmac;
 //!
-//! let key = hmac::SecretKey::generate().unwrap();
+//! let key = hmac::SecretKey::generate();
 //!
 //! let mut state = hmac::init(&key);
-//! state.update(b"Some message.").unwrap();
-//! let tag = state.finalize().unwrap();
+//! state.update(b"Some message.")?;
+//! let tag = state.finalize()?;
 //!
-//! assert!(hmac::verify(&tag, &key, b"Some message.").unwrap());
+//! assert!(hmac::verify(&tag, &key, b"Some message.")?);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 use crate::{
-	errors::{FinalizationCryptoError, UnknownCryptoError, ValidationCryptoError},
-	hazardous::{
-		constants::{BlocksizeArray, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
-		hash::sha512,
-	},
+	errors::UnknownCryptoError,
+	hazardous::hash::sha512::{self, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 };
 use zeroize::Zeroize;
 
@@ -74,8 +72,8 @@ construct_hmac_key! {
 	///
 	/// Using `get_length()` will return the length with padding (always 128).
 	///
-	/// # Errors:
-	/// An error will be returned if:
+	/// # Panics:
+	/// A panic will occur if:
 	/// - The `OsRng` fails to initialize or read from its source.
 	(SecretKey, SHA512_BLOCKSIZE)
 }
@@ -86,8 +84,10 @@ construct_tag! {
 	/// # Errors:
 	/// An error will be returned if:
 	/// - `slice` is not 64 bytes.
-	(Tag, SHA512_OUTSIZE)
+	(Tag, test_tag, SHA512_OUTSIZE, SHA512_OUTSIZE)
 }
+
+impl_from_trait!(Tag, SHA512_OUTSIZE);
 
 #[must_use]
 #[derive(Clone)]
@@ -114,11 +114,10 @@ impl Hmac {
 	#[inline]
 	/// Pad `key` with `ipad` and `opad`.
 	fn pad_key_io(&mut self, key: &SecretKey) {
-		let mut ipad: BlocksizeArray = [0x36; SHA512_BLOCKSIZE];
-		let mut opad: BlocksizeArray = [0x5C; SHA512_BLOCKSIZE];
+		let mut ipad = [0x36; SHA512_BLOCKSIZE];
+		let mut opad = [0x5C; SHA512_BLOCKSIZE];
 		// `key` has already been padded with zeroes to a length of SHA512_BLOCKSIZE
 		// in SecretKey::from_slice
-		assert_eq!(key.unprotected_as_bytes().len(), SHA512_BLOCKSIZE);
 		for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {
 			opad[idx] ^= itm;
 			ipad[idx] ^= itm;
@@ -142,9 +141,9 @@ impl Hmac {
 
 	#[must_use]
 	/// Update state with a `data`. This can be called multiple times.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), FinalizationCryptoError> {
+	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
-			Err(FinalizationCryptoError)
+			Err(UnknownCryptoError)
 		} else {
 			self.working_hasher.update(data)?;
 			Ok(())
@@ -153,15 +152,15 @@ impl Hmac {
 
 	#[must_use]
 	/// Return a `Tag`.
-	pub fn finalize(&mut self) -> Result<Tag, FinalizationCryptoError> {
+	pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
 		if self.is_finalized {
-			return Err(FinalizationCryptoError);
+			return Err(UnknownCryptoError);
 		}
 
 		self.is_finalized = true;
 		let mut outer_hasher = self.opad_hasher.clone();
-		outer_hasher.update(self.working_hasher.finalize()?.as_bytes())?;
-		let tag = Tag::from_slice(outer_hasher.finalize()?.as_bytes())?;
+		outer_hasher.update(self.working_hasher.finalize()?.as_ref())?;
+		let tag = Tag::from_slice(outer_hasher.finalize()?.as_ref())?;
 
 		Ok(tag)
 	}
@@ -196,14 +195,14 @@ pub fn verify(
 	expected: &Tag,
 	secret_key: &SecretKey,
 	data: &[u8],
-) -> Result<bool, ValidationCryptoError> {
+) -> Result<bool, UnknownCryptoError> {
 	let mut hmac_state = init(secret_key);
 	hmac_state.update(data)?;
 
 	if expected == &hmac_state.finalize()? {
 		Ok(true)
 	} else {
-		Err(ValidationCryptoError)
+		Err(UnknownCryptoError)
 	}
 }
 
@@ -256,7 +255,7 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
@@ -271,12 +270,12 @@ mod public {
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
-					let bad_sk = SecretKey::generate().unwrap();
+					let bad_sk = SecretKey::generate();
 
 					let res = if verify(&tag, &bad_sk, &data[..]).is_err() {
 						true
@@ -521,7 +520,7 @@ mod public {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
 				fn prop_same_hash_different_usage(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					// Will panic on incorrect results.
 					produces_same_hash(&sk, &data[..]);
 
@@ -533,7 +532,7 @@ mod public {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
 				fn prop_same_state_different_usage(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					// Will panic on incorrect results.
 					produces_same_state(&sk, &data[..]);
 
@@ -545,7 +544,7 @@ mod public {
 				/// Using the one-shot function should always produce the
 				/// same result as when using the streaming interface.
 				fn prop_hmac_same_as_streaming(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate().unwrap();
+					let sk = SecretKey::generate();
 					let mut state = init(&sk);
 					state.update(&data[..]).unwrap();
 					let stream = state.finalize().unwrap();

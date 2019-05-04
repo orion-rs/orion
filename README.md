@@ -9,7 +9,6 @@ Currently supports:
 * **Stream ciphers**: (X)ChaCha20.
 * **KDF**: HKDF-HMAC-SHA512, PBKDF2-HMAC-SHA512.
 * **MAC**: HMAC-SHA512, Poly1305.
-* **XOF**: cSHAKE256.
 * **Hashing**: BLAKE2b, SHA512.
 
 ### Security
@@ -50,18 +49,13 @@ Can be viewed [here](https://docs.rs/orion) or built with:
 cargo doc --no-deps
 ```
 
-### Tests/Fuzzing
+### Tests and Fuzzing
 The [wiki](https://github.com/brycx/orion/wiki/Testing-suite) has details on how orion is tested. To run all tests:
 ```
 cargo test
 ```
 
-Fuzzing is done using either [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz), with targets in the `fuzz/` folder, or [honggfuzz-rs](https://github.com/rust-fuzz/honggfuzz-rs) in [orion-fuzz](https://github.com/brycx/orion-fuzz). The fuzzing targets in orion-fuzz are newer and maintained more. See [orion-fuzz](https://github.com/brycx/orion-fuzz) on how to start fuzzing with honggfuzz-rs.
-
-Fuzzing targets for cargo-fuzz can be run with:
-```
-cargo +nightly fuzz run -O fuzz_target
-```
+Fuzzing is done using [honggfuzz-rs](https://github.com/rust-fuzz/honggfuzz-rs) in [orion-fuzz](https://github.com/brycx/orion-fuzz). See [orion-fuzz](https://github.com/brycx/orion-fuzz) on how to start fuzzing orion.
 
 ### Benchmarks
 The library can be benchmarked as below. All benchmarking tests are located in `benches/`.
