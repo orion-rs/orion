@@ -28,6 +28,10 @@
 //! - `finalize()` is called twice without a `reset()` in between.
 //! - `update()` is called after `finalize()` without a `reset()` in between.
 //!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2*(2^64-1) __bits__ of data are hashed.
+//!
 //! # Security:
 //! - SHA512 is vulnerable to length extension attacks.
 //!

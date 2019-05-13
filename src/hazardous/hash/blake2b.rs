@@ -48,7 +48,7 @@
 //! - The minimum recommended size for a secret key is 32 bytes.
 //! - When using `Blake2b` with a secret key, then the output can be used as a
 //!   MAC. If this is the
-//! intention, __**avoid using**__ `as_bytes()` to compare such MACs and use
+//! intention, __**avoid using**__ `as_ref()` to compare such MACs and use
 //! instead `verify()`, which will compare the MAC in constant time.
 //! - The recommended minimum output size is 32.
 //!

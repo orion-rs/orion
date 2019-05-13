@@ -35,8 +35,9 @@
 //! # Parameters:
 //! - `data`:  The data to be hashed.
 //!
-//! # Errors:
-//! An error will be returned if:
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2*(2^64-1) __bits__ of data are hashed.
 //!
 //! # Security:
 //! - This interface does not support supplying BLAKE2b with a secret key, and
