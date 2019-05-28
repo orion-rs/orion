@@ -327,13 +327,14 @@ pub fn encrypt(
 	{
 		match initial_counter.checked_add(counter as u32) {
 			Some(ref block_counter) => {
-
 				keystream_state = chacha_state.process_block(Some(*block_counter))?;
 				// We only want to allocate a `keystream_block` if the `ciphertext_block`
 				// is not long enough to hold the entire serialized keystream.
 				if ciphertext_block.len() == CHACHA_BLOCKSIZE {
 					chacha_state.serialize_block(&keystream_state, ciphertext_block)?;
-					for (ct_keystream, plaintext) in ciphertext_block.iter_mut().zip(plaintext_block.iter()) {
+					for (ct_keystream, plaintext) in
+						ciphertext_block.iter_mut().zip(plaintext_block.iter())
+					{
 						*ct_keystream ^= plaintext;
 					}
 				} else {
@@ -345,7 +346,7 @@ pub fn encrypt(
 						// due to chunks(), so indexing is no problem here
 						ciphertext_block[idx] = keystream_block[idx] ^ itm;
 					}
-					
+
 					keystream_block.zeroize();
 				}
 			}
