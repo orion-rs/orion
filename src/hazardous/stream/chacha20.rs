@@ -155,37 +155,39 @@ impl Drop for InternalState {
 }
 
 impl InternalState {
-	#[inline(always)]
-	/// Perform a single round on index `x`, `y` and `z` with an
-	/// `n_bit_rotation` left-rotation.
-	fn round(&mut self, x: usize, y: usize, z: usize, n_bit_rotation: u32) {
-		self.state[x] = self.state[x].wrapping_add(self.state[z]);
-		self.state[y] ^= self.state[x];
-		self.state[y] = self.state[y].rotate_left(n_bit_rotation);
+	#[inline]
+	/// ChaCha quarter round.
+	fn quarter_round(state: &mut ChaChaState, x: usize, y: usize, z: usize, w: usize) {
+		state[x] = state[x].wrapping_add(state[y]);
+		state[w] ^= state[x];
+		state[w] = state[w].rotate_left(16);
+
+		state[z] = state[z].wrapping_add(state[w]);
+		state[y] ^= state[z];
+		state[y] = state[y].rotate_left(12);
+
+		state[x] = state[x].wrapping_add(state[y]);
+		state[w] ^= state[x];
+		state[w] = state[w].rotate_left(8);
+
+		state[z] = state[z].wrapping_add(state[w]);
+		state[y] ^= state[z];
+		state[y] = state[y].rotate_left(7);
 	}
 
-	#[inline(always)]
-	/// ChaCha quarter round on a `InternalState`. Indexed by four `usize`s.
-	fn quarter_round(&mut self, x: usize, y: usize, z: usize, w: usize) {
-		self.round(x, w, y, 16);
-		self.round(z, y, w, 12);
-		self.round(x, w, y, 8);
-		self.round(z, y, w, 7);
-	}
-
-	#[inline(always)]
+	#[inline]
 	/// Performs 8 `quarter_round` function calls to process a inner block.
-	fn process_inner_block(&mut self) {
+	fn process_inner_block(state: &mut ChaChaState) {
 		// Perform column rounds
-		self.quarter_round(0, 4, 8, 12);
-		self.quarter_round(1, 5, 9, 13);
-		self.quarter_round(2, 6, 10, 14);
-		self.quarter_round(3, 7, 11, 15);
+		Self::quarter_round(state, 0, 4, 8, 12);
+		Self::quarter_round(state, 1, 5, 9, 13);
+		Self::quarter_round(state, 2, 6, 10, 14);
+		Self::quarter_round(state, 3, 7, 11, 15);
 		// Perform diagonal rounds
-		self.quarter_round(0, 5, 10, 15);
-		self.quarter_round(1, 6, 11, 12);
-		self.quarter_round(2, 7, 8, 13);
-		self.quarter_round(3, 4, 9, 14);
+		Self::quarter_round(state, 0, 5, 10, 15);
+		Self::quarter_round(state, 1, 6, 11, 12);
+		Self::quarter_round(state, 2, 7, 8, 13);
+		Self::quarter_round(state, 3, 4, 9, 14);
 	}
 
 	#[must_use]
@@ -246,21 +248,20 @@ impl InternalState {
 			self.state[12] = block_count.unwrap();
 		}
 
-		let mut working_state: InternalState = self.clone();
+		let mut working_state = self.state;
 
 		for _ in 0..10 {
-			working_state.process_inner_block();
+			Self::process_inner_block(&mut working_state);
 		}
 
 		if self.is_ietf {
 			working_state
-				.state
 				.iter_mut()
 				.zip(self.state.iter())
 				.for_each(|(a, b)| *a = a.wrapping_add(*b));
 		}
 
-		Ok(working_state.state)
+		Ok(working_state)
 	}
 
 	#[must_use]
@@ -1077,7 +1078,7 @@ mod test_vectors {
 
 	#[test]
 	fn rfc8439_quarter_round_results() {
-		let mut chacha_state = InternalState {
+		let chacha_state = InternalState {
 			state: [
 				0x11111111, 0x01020304, 0x9b8d6f43, 0x01234567, 0x11111111, 0x01020304, 0x9b8d6f43,
 				0x01234567, 0x11111111, 0x01020304, 0x9b8d6f43, 0x01234567, 0x11111111, 0x01020304,
@@ -1088,20 +1089,22 @@ mod test_vectors {
 		};
 		let expected: [u32; 4] = [0xea2a92f4, 0xcb1cf8ce, 0x4581472e, 0x5881c4bb];
 
-		chacha_state.quarter_round(0, 1, 2, 3);
-		chacha_state.quarter_round(4, 5, 6, 7);
-		chacha_state.quarter_round(8, 9, 10, 11);
-		chacha_state.quarter_round(12, 13, 14, 15);
+		let mut wstate = chacha_state.state;
 
-		assert_eq!(chacha_state.state[0..4], expected);
-		assert_eq!(chacha_state.state[4..8], expected);
-		assert_eq!(chacha_state.state[8..12], expected);
-		assert_eq!(chacha_state.state[12..16], expected);
+		InternalState::quarter_round(&mut wstate, 0, 1, 2, 3);
+		InternalState::quarter_round(&mut wstate, 4, 5, 6, 7);
+		InternalState::quarter_round(&mut wstate, 8, 9, 10, 11);
+		InternalState::quarter_round(&mut wstate, 12, 13, 14, 15);
+
+		assert_eq!(wstate[0..4], expected);
+		assert_eq!(wstate[4..8], expected);
+		assert_eq!(wstate[8..12], expected);
+		assert_eq!(wstate[12..16], expected);
 	}
 
 	#[test]
 	fn rfc8439_quarter_round_results_on_indices() {
-		let mut chacha_state = InternalState {
+		let chacha_state = InternalState {
 			state: [
 				0x879531e0, 0xc5ecf37d, 0x516461b1, 0xc9a62f8a, 0x44c20ef3, 0x3390af7f, 0xd9fc690b,
 				0x2a5f714c, 0x53372767, 0xb00a5631, 0x974c541a, 0x359e9963, 0x5c971061, 0x3d631689,
@@ -1116,8 +1119,10 @@ mod test_vectors {
 			0x2098d9d6, 0x91dbd320,
 		];
 
-		chacha_state.quarter_round(2, 7, 8, 13);
-		assert_eq!(chacha_state.state[..], expected);
+		let mut wstate = chacha_state.state;
+
+		InternalState::quarter_round(&mut wstate, 2, 7, 8, 13);
+		assert_eq!(wstate[..], expected);
 	}
 
 	#[test]
