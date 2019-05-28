@@ -318,8 +318,6 @@ pub fn encrypt(
 	};
 
 	chacha_state.init_state(secret_key, &nonce.as_ref())?;
-
-	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 	let mut keystream_state: ChaChaState = [0u32; 16];
 
 	for (counter, (plaintext_block, ciphertext_block)) in plaintext
@@ -329,21 +327,32 @@ pub fn encrypt(
 	{
 		match initial_counter.checked_add(counter as u32) {
 			Some(ref block_counter) => {
-				keystream_state = chacha_state.process_block(Some(*block_counter))?
+
+				keystream_state = chacha_state.process_block(Some(*block_counter))?;
+				// We only want to allocate a `keystream_block` if the `ciphertext_block`
+				// is not long enough to hold the entire serialized keystream.
+				if ciphertext_block.len() == CHACHA_BLOCKSIZE {
+					chacha_state.serialize_block(&keystream_state, ciphertext_block)?;
+					for (ct_keystream, plaintext) in ciphertext_block.iter_mut().zip(plaintext_block.iter()) {
+						*ct_keystream ^= plaintext;
+					}
+				} else {
+					let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
+					chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
+
+					for (idx, itm) in plaintext_block.iter().enumerate() {
+						// `ciphertext_block` and `plaintext_block` have the same length
+						// due to chunks(), so indexing is no problem here
+						ciphertext_block[idx] = keystream_block[idx] ^ itm;
+					}
+					
+					keystream_block.zeroize();
+				}
 			}
 			None => return Err(UnknownCryptoError),
 		}
-
-		chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
-
-		for (idx, itm) in plaintext_block.iter().enumerate() {
-			// `ciphertext_block` and `plaintext_block` have the same length
-			// due to chunks(), so indexing is no problem here
-			ciphertext_block[idx] = keystream_block[idx] ^ itm;
-		}
 	}
 
-	keystream_block.zeroize();
 	keystream_state.zeroize();
 
 	Ok(())
