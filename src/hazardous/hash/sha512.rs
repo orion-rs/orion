@@ -142,38 +142,37 @@ impl core::fmt::Debug for Sha512 {
 impl Sha512 {
 	#[inline]
 	/// The Ch function as specified in FIPS 180-4 section 4.1.3.
-	fn ch(&self, x: u64, y: u64, z: u64) -> u64 { z ^ (x & (y ^ z)) }
+	fn ch(x: u64, y: u64, z: u64) -> u64 { z ^ (x & (y ^ z)) }
 
 	#[inline]
 	/// The Maj function as specified in FIPS 180-4 section 4.1.3.
-	fn maj(&self, x: u64, y: u64, z: u64) -> u64 { (x & y) | (z & (x | y)) }
+	fn maj(x: u64, y: u64, z: u64) -> u64 { (x & y) | (z & (x | y)) }
 
 	#[inline]
 	/// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-	fn big_sigma_0(&self, x: u64) -> u64 {
+	fn big_sigma_0(x: u64) -> u64 {
 		(x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39)
 	}
 
 	#[inline]
 	/// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-	fn big_sigma_1(&self, x: u64) -> u64 {
+	fn big_sigma_1(x: u64) -> u64 {
 		(x.rotate_right(14)) ^ x.rotate_right(18) ^ x.rotate_right(41)
 	}
 
 	#[inline]
 	/// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-	fn small_sigma_0(&self, x: u64) -> u64 { (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7) }
+	fn small_sigma_0(x: u64) -> u64 { (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7) }
 
 	#[inline]
 	/// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-	fn small_sigma_1(&self, x: u64) -> u64 { (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6) }
+	fn small_sigma_1(x: u64) -> u64 { (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6) }
 
 	#[inline]
 	#[allow(clippy::many_single_char_names)]
 	#[allow(clippy::too_many_arguments)]
 	/// Message compression adopted from [mbed TLS](https://tls.mbed.org/sha-512-source-code).
 	fn compress(
-		&self,
 		a: u64,
 		b: u64,
 		c: u64,
@@ -186,12 +185,12 @@ impl Sha512 {
 		ki: u64,
 	) {
 		let temp1 = h
-			.wrapping_add(self.big_sigma_1(e))
-			.wrapping_add(self.ch(e, f, g))
+			.wrapping_add(Self::big_sigma_1(e))
+			.wrapping_add(Self::ch(e, f, g))
 			.wrapping_add(ki)
 			.wrapping_add(x);
 
-		let temp2 = self.big_sigma_0(a).wrapping_add(self.maj(a, b, c));
+		let temp2 = Self::big_sigma_0(a).wrapping_add(Self::maj(a, b, c));
 
 		*d = d.wrapping_add(temp1);
 		*h = temp1.wrapping_add(temp2);
@@ -206,10 +205,9 @@ impl Sha512 {
 		load_u64_into_be(&self.buffer, &mut w[..16]);
 
 		for t in 16..80 {
-			w[t] = self
-				.small_sigma_1(w[t - 2])
+			w[t] = Self::small_sigma_1(w[t - 2])
 				.wrapping_add(w[t - 7])
-				.wrapping_add(self.small_sigma_0(w[t - 15]))
+				.wrapping_add(Self::small_sigma_0(w[t - 15]))
 				.wrapping_add(w[t - 16]);
 		}
 
@@ -225,14 +223,14 @@ impl Sha512 {
 
 		let mut t = 0;
 		while t < 80 {
-			self.compress(a, b, c, &mut d, e, f, g, &mut h, w[t], K[t]); t += 1;
-			self.compress(h, a, b, &mut c, d, e, f, &mut g, w[t], K[t]); t += 1;
-			self.compress(g, h, a, &mut b, c, d, e, &mut f, w[t], K[t]); t += 1;
-			self.compress(f, g, h, &mut a, b, c, d, &mut e, w[t], K[t]); t += 1;
-			self.compress(e, f, g, &mut h, a, b, c, &mut d, w[t], K[t]); t += 1;
-			self.compress(d, e, f, &mut g, h, a, b, &mut c, w[t], K[t]); t += 1;
-			self.compress(c, d, e, &mut f, g, h, a, &mut b, w[t], K[t]); t += 1;
-			self.compress(b, c, d, &mut e, f, g, h, &mut a, w[t], K[t]); t += 1;
+			Self::compress(a, b, c, &mut d, e, f, g, &mut h, w[t], K[t]); t += 1;
+			Self::compress(h, a, b, &mut c, d, e, f, &mut g, w[t], K[t]); t += 1;
+			Self::compress(g, h, a, &mut b, c, d, e, &mut f, w[t], K[t]); t += 1;
+			Self::compress(f, g, h, &mut a, b, c, d, &mut e, w[t], K[t]); t += 1;
+			Self::compress(e, f, g, &mut h, a, b, c, &mut d, w[t], K[t]); t += 1;
+			Self::compress(d, e, f, &mut g, h, a, b, &mut c, w[t], K[t]); t += 1;
+			Self::compress(c, d, e, &mut f, g, h, a, &mut b, w[t], K[t]); t += 1;
+			Self::compress(b, c, d, &mut e, f, g, h, &mut a, w[t], K[t]); t += 1;
 		}
 
 		self.working_state[0] = self.working_state[0].wrapping_add(a);
