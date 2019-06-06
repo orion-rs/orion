@@ -227,16 +227,7 @@ impl Blake2b {
 	#[allow(clippy::many_single_char_names)]
 	#[allow(clippy::too_many_arguments)]
 	/// The primitive mixing function G as defined in the RFC.
-	fn prim_mix_g(
-		&mut self,
-		x: u64,
-		y: u64,
-		a: usize,
-		b: usize,
-		c: usize,
-		d: usize,
-		w: &mut [u64],
-	) {
+	fn prim_mix_g(x: u64, y: u64, a: usize, b: usize, c: usize, d: usize, w: &mut [u64]) {
 		w[a] = w[a].wrapping_add(w[b]).wrapping_add(x);
 		w[d] ^= w[a];
 		w[d] = (w[d]).rotate_right(32u32);
@@ -253,15 +244,15 @@ impl Blake2b {
 
 	#[inline(always)]
 	/// Perform a single round based on a message schedule selection.
-	fn round(&mut self, ri: usize, m: &mut [u64], w: &mut [u64]) {
-		self.prim_mix_g(m[SIGMA[ri][0]], m[SIGMA[ri][1]], 0, 4, 8, 12, w);
-		self.prim_mix_g(m[SIGMA[ri][2]], m[SIGMA[ri][3]], 1, 5, 9, 13, w);
-		self.prim_mix_g(m[SIGMA[ri][4]], m[SIGMA[ri][5]], 2, 6, 10, 14, w);
-		self.prim_mix_g(m[SIGMA[ri][6]], m[SIGMA[ri][7]], 3, 7, 11, 15, w);
-		self.prim_mix_g(m[SIGMA[ri][8]], m[SIGMA[ri][9]], 0, 5, 10, 15, w);
-		self.prim_mix_g(m[SIGMA[ri][10]], m[SIGMA[ri][11]], 1, 6, 11, 12, w);
-		self.prim_mix_g(m[SIGMA[ri][12]], m[SIGMA[ri][13]], 2, 7, 8, 13, w);
-		self.prim_mix_g(m[SIGMA[ri][14]], m[SIGMA[ri][15]], 3, 4, 9, 14, w);
+	fn round(ri: usize, m: &mut [u64; 16], w: &mut [u64; 16]) {
+		Self::prim_mix_g(m[SIGMA[ri][0]], m[SIGMA[ri][1]], 0, 4, 8, 12, w);
+		Self::prim_mix_g(m[SIGMA[ri][2]], m[SIGMA[ri][3]], 1, 5, 9, 13, w);
+		Self::prim_mix_g(m[SIGMA[ri][4]], m[SIGMA[ri][5]], 2, 6, 10, 14, w);
+		Self::prim_mix_g(m[SIGMA[ri][6]], m[SIGMA[ri][7]], 3, 7, 11, 15, w);
+		Self::prim_mix_g(m[SIGMA[ri][8]], m[SIGMA[ri][9]], 0, 5, 10, 15, w);
+		Self::prim_mix_g(m[SIGMA[ri][10]], m[SIGMA[ri][11]], 1, 6, 11, 12, w);
+		Self::prim_mix_g(m[SIGMA[ri][12]], m[SIGMA[ri][13]], 2, 7, 8, 13, w);
+		Self::prim_mix_g(m[SIGMA[ri][14]], m[SIGMA[ri][15]], 3, 4, 9, 14, w);
 	}
 
 	#[allow(clippy::needless_range_loop)]
@@ -288,18 +279,18 @@ impl Blake2b {
 			self.f[1] ^ IV[7],
 		];
 
-		self.round(0, &mut m_vec, &mut w_vec);
-		self.round(1, &mut m_vec, &mut w_vec);
-		self.round(2, &mut m_vec, &mut w_vec);
-		self.round(3, &mut m_vec, &mut w_vec);
-		self.round(4, &mut m_vec, &mut w_vec);
-		self.round(5, &mut m_vec, &mut w_vec);
-		self.round(6, &mut m_vec, &mut w_vec);
-		self.round(7, &mut m_vec, &mut w_vec);
-		self.round(8, &mut m_vec, &mut w_vec);
-		self.round(9, &mut m_vec, &mut w_vec);
-		self.round(10, &mut m_vec, &mut w_vec);
-		self.round(11, &mut m_vec, &mut w_vec);
+		Self::round(0, &mut m_vec, &mut w_vec);
+		Self::round(1, &mut m_vec, &mut w_vec);
+		Self::round(2, &mut m_vec, &mut w_vec);
+		Self::round(3, &mut m_vec, &mut w_vec);
+		Self::round(4, &mut m_vec, &mut w_vec);
+		Self::round(5, &mut m_vec, &mut w_vec);
+		Self::round(6, &mut m_vec, &mut w_vec);
+		Self::round(7, &mut m_vec, &mut w_vec);
+		Self::round(8, &mut m_vec, &mut w_vec);
+		Self::round(9, &mut m_vec, &mut w_vec);
+		Self::round(10, &mut m_vec, &mut w_vec);
+		Self::round(11, &mut m_vec, &mut w_vec);
 
 		// XOR the two halves together and into the state
 		self.internal_state[0] ^= w_vec[0] ^ w_vec[8];
@@ -330,17 +321,17 @@ impl Blake2b {
 		self.f = [0u64; 2];
 		self.is_finalized = false;
 
-		if secret_key.is_some() && self.is_keyed {
-			// .unwrap() cannot panic since secret_key.is_some() == true
-			let sk = secret_key.unwrap();
-			self.update(sk.unprotected_as_bytes())?;
-			// The state needs updating with the secret key padded to blocksize length
-			let pad = [0u8; BLAKE2B_BLOCKSIZE];
-			let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
-			self.update(pad[..rem].as_ref())?;
+		match secret_key {
+			Some(sk) => {
+				self.update(sk.unprotected_as_bytes())?;
+				// The state needs updating with the secret key padded to blocksize length
+				let pad = [0u8; BLAKE2B_BLOCKSIZE];
+				let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
+				self.update(pad[..rem].as_ref())?;
+				Ok(())
+			}
+			None => Ok(()),
 		}
-
-		Ok(())
 	}
 
 	#[must_use]
@@ -438,21 +429,22 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		size,
 	};
 
-	if secret_key.is_some() {
-		context.is_keyed = true;
-		// .unwrap() cannot panic since secret_key.is_some() == true
-		let key = secret_key.unwrap();
-		let klen = key.get_length();
-		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
-		context.init_state.copy_from_slice(&context.internal_state);
-		context.update(key.unprotected_as_bytes())?;
-		// The state needs updating with the secret key padded to blocksize length
-		let pad = [0u8; BLAKE2B_BLOCKSIZE];
-		let rem = BLAKE2B_BLOCKSIZE - key.get_length();
-		context.update(pad[..rem].as_ref())?;
-	} else {
-		context.internal_state[0] ^= 0x01010000 ^ (size as u64);
-		context.init_state.copy_from_slice(&context.internal_state);
+	match secret_key {
+		Some(sk) => {
+			context.is_keyed = true;
+			let klen = sk.get_length();
+			context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
+			context.init_state.copy_from_slice(&context.internal_state);
+			context.update(sk.unprotected_as_bytes())?;
+			// The state needs updating with the secret key padded to blocksize length
+			let pad = [0u8; BLAKE2B_BLOCKSIZE];
+			let rem = BLAKE2B_BLOCKSIZE - klen;
+			context.update(pad[..rem].as_ref())?;
+		}
+		None => {
+			context.internal_state[0] ^= 0x01010000 ^ (size as u64);
+			context.init_state.copy_from_slice(&context.internal_state);
+		}
 	}
 
 	Ok(context)
