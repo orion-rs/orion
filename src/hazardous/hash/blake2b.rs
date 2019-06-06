@@ -321,17 +321,17 @@ impl Blake2b {
 		self.f = [0u64; 2];
 		self.is_finalized = false;
 
-		if secret_key.is_some() && self.is_keyed {
-			// .unwrap() cannot panic since secret_key.is_some() == true
-			let sk = secret_key.unwrap();
-			self.update(sk.unprotected_as_bytes())?;
-			// The state needs updating with the secret key padded to blocksize length
-			let pad = [0u8; BLAKE2B_BLOCKSIZE];
-			let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
-			self.update(pad[..rem].as_ref())?;
+		match secret_key {
+			Some(sk) => {
+				self.update(sk.unprotected_as_bytes())?;
+				// The state needs updating with the secret key padded to blocksize length
+				let pad = [0u8; BLAKE2B_BLOCKSIZE];
+				let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
+				self.update(pad[..rem].as_ref())?;
+				Ok(())
+			}
+			None => Ok(()),
 		}
-
-		Ok(())
 	}
 
 	#[must_use]
@@ -429,21 +429,22 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 		size,
 	};
 
-	if secret_key.is_some() {
-		context.is_keyed = true;
-		// .unwrap() cannot panic since secret_key.is_some() == true
-		let key = secret_key.unwrap();
-		let klen = key.get_length();
-		context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
-		context.init_state.copy_from_slice(&context.internal_state);
-		context.update(key.unprotected_as_bytes())?;
-		// The state needs updating with the secret key padded to blocksize length
-		let pad = [0u8; BLAKE2B_BLOCKSIZE];
-		let rem = BLAKE2B_BLOCKSIZE - key.get_length();
-		context.update(pad[..rem].as_ref())?;
-	} else {
-		context.internal_state[0] ^= 0x01010000 ^ (size as u64);
-		context.init_state.copy_from_slice(&context.internal_state);
+	match secret_key {
+		Some(sk) => {
+			context.is_keyed = true;
+			let klen = sk.get_length();
+			context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
+			context.init_state.copy_from_slice(&context.internal_state);
+			context.update(sk.unprotected_as_bytes())?;
+			// The state needs updating with the secret key padded to blocksize length
+			let pad = [0u8; BLAKE2B_BLOCKSIZE];
+			let rem = BLAKE2B_BLOCKSIZE - klen;
+			context.update(pad[..rem].as_ref())?;
+		}
+		None => {
+			context.internal_state[0] ^= 0x01010000 ^ (size as u64);
+			context.init_state.copy_from_slice(&context.internal_state);
+		}
 	}
 
 	Ok(context)
