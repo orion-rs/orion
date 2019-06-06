@@ -191,36 +191,45 @@ impl InternalState {
 	}
 
 	#[must_use]
-	#[inline(always)]
+	#[inline]
 	/// Initialize either a ChaCha or HChaCha state with a `secret_key` and
 	/// `nonce`.
-	fn init_state(
-		&mut self,
+	fn init(
 		secret_key: &SecretKey,
 		nonce: &[u8],
-	) -> Result<(), UnknownCryptoError> {
-		if (nonce.len() != IETF_CHACHA_NONCESIZE) && self.is_ietf {
+		is_ietf: bool,
+	) -> Result<Self, UnknownCryptoError> {
+		if (nonce.len() != IETF_CHACHA_NONCESIZE) && is_ietf {
 			return Err(UnknownCryptoError);
 		}
-		if (nonce.len() != HCHACHA_NONCESIZE) && !self.is_ietf {
+		if (nonce.len() != HCHACHA_NONCESIZE) && !is_ietf {
 			return Err(UnknownCryptoError);
 		}
+
+		let mut internal_state = Self {
+			state: [0u32; 16],
+			internal_counter: 0,
+			is_ietf,
+		};
 
 		// Setup state with constants
-		self.state[0] = 0x6170_7865_u32;
-		self.state[1] = 0x3320_646e_u32;
-		self.state[2] = 0x7962_2d32_u32;
-		self.state[3] = 0x6b20_6574_u32;
+		internal_state.state[0] = 0x6170_7865_u32;
+		internal_state.state[1] = 0x3320_646e_u32;
+		internal_state.state[2] = 0x7962_2d32_u32;
+		internal_state.state[3] = 0x6b20_6574_u32;
 
-		load_u32_into_le(&secret_key.unprotected_as_bytes(), &mut self.state[4..12]);
+		load_u32_into_le(
+			&secret_key.unprotected_as_bytes(),
+			&mut internal_state.state[4..12],
+		);
 
-		if self.is_ietf {
-			load_u32_into_le(nonce, &mut self.state[13..16]);
+		if is_ietf {
+			load_u32_into_le(nonce, &mut internal_state.state[13..16]);
 		} else {
-			load_u32_into_le(nonce, &mut self.state[12..16]);
+			load_u32_into_le(nonce, &mut internal_state.state[12..16]);
 		}
 
-		Ok(())
+		Ok(internal_state)
 	}
 
 	#[must_use]
@@ -311,13 +320,7 @@ pub fn encrypt(
 		return Err(UnknownCryptoError);
 	}
 
-	let mut chacha_state = InternalState {
-		state: [0u32; 16],
-		internal_counter: 0,
-		is_ietf: true,
-	};
-
-	chacha_state.init_state(secret_key, &nonce.as_ref())?;
+	let mut chacha_state = InternalState::init(secret_key, &nonce.as_ref(), true)?;
 	let mut keystream_state: ChaChaState = [0u32; 16];
 
 	for (counter, (plaintext_block, ciphertext_block)) in plaintext
@@ -380,13 +383,7 @@ pub fn keystream_block(
 	nonce: &Nonce,
 	counter: u32,
 ) -> Result<[u8; CHACHA_BLOCKSIZE], UnknownCryptoError> {
-	let mut chacha_state = InternalState {
-		state: [0_u32; 16],
-		internal_counter: 0,
-		is_ietf: true,
-	};
-	chacha_state.init_state(secret_key, &nonce.as_ref())?;
-
+	let mut chacha_state = InternalState::init(secret_key, &nonce.as_ref(), true)?;
 	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 	let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter))?;
 
@@ -404,13 +401,7 @@ pub fn hchacha20(
 	secret_key: &SecretKey,
 	nonce: &[u8],
 ) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
-	let mut chacha_state = InternalState {
-		state: [0_u32; 16],
-		internal_counter: 0,
-		is_ietf: false,
-	};
-	chacha_state.init_state(secret_key, nonce)?;
-
+	let mut chacha_state = InternalState::init(secret_key, &nonce.as_ref(), false)?;
 	let mut keystream_state = chacha_state.process_block(None)?;
 	let mut keystream_block: [u8; HCHACHA_OUTSIZE] = [0u8; HCHACHA_OUTSIZE];
 	chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
@@ -853,37 +844,43 @@ mod private {
 
 		#[test]
 		fn test_nonce_length() {
-			let mut chacha_state = InternalState {
-				state: [0_u32; 16],
-				internal_counter: 0,
-				is_ietf: true,
-			};
+			assert!(InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 15],
+				true
+			)
+			.is_err());
+			assert!(InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 10],
+				true
+			)
+			.is_err());
+			assert!(InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 12],
+				true
+			)
+			.is_ok());
 
-			assert!(chacha_state
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15])
-				.is_err());
-			assert!(chacha_state
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 10])
-				.is_err());
-			assert!(chacha_state
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
-				.is_ok());
-
-			let mut hchacha_state = InternalState {
-				state: [0_u32; 16],
-				internal_counter: 0,
-				is_ietf: false,
-			};
-
-			assert!(hchacha_state
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15])
-				.is_err());
-			assert!(hchacha_state
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 17])
-				.is_err());
-			assert!(hchacha_state
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
-				.is_ok());
+			assert!(InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 15],
+				false
+			)
+			.is_err());
+			assert!(InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 17],
+				false
+			)
+			.is_err());
+			assert!(InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 16],
+				false
+			)
+			.is_ok());
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
@@ -895,17 +892,10 @@ mod private {
 				// Always fail to intialize state while the nonce is not
 				// the correct length. If it is correct length, never panic.
 				fn prop_test_nonce_length_ietf(nonce: Vec<u8>) -> bool {
-					let mut chacha_state_ietf = InternalState {
-						state: [0_u32; 16],
-						internal_counter: 0,
-						is_ietf: true,
-					};
-
 					let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
 
 					if nonce.len() != IETF_CHACHA_NONCESIZE {
-						let res = if chacha_state_ietf
-							.init_state(&sk, &nonce[..]).is_err() {
+						let res = if InternalState::init(&sk, &nonce[..], true).is_err() {
 							true
 						} else {
 							false
@@ -913,8 +903,7 @@ mod private {
 
 						return res;
 					} else {
-						let res = if chacha_state_ietf
-							.init_state(&sk, &nonce[..]).is_ok() {
+						let res = if InternalState::init(&sk, &nonce[..], true).is_ok() {
 							true
 						} else {
 							false
@@ -929,17 +918,10 @@ mod private {
 				// Always fail to intialize state while the nonce is not
 				// the correct length. If it is correct length, never panic.
 				fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
-					let mut chacha_state_hchacha = InternalState {
-						state: [0_u32; 16],
-						internal_counter: 0,
-						is_ietf: false,
-					};
-
 					let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
 
 					if nonce.len() != HCHACHA_NONCESIZE {
-						let res = if chacha_state_hchacha
-							.init_state(&sk, &nonce[..]).is_err() {
+						let res = if InternalState::init(&sk, &nonce[..], false).is_err() {
 							true
 						} else {
 							false
@@ -947,8 +929,7 @@ mod private {
 
 						return res;
 					} else {
-						let res = if chacha_state_hchacha
-							.init_state(&sk, &nonce[..]).is_ok() {
+						let res = if InternalState::init(&sk, &nonce[..], false).is_ok() {
 							true
 						} else {
 							false
@@ -965,24 +946,18 @@ mod private {
 		use super::*;
 		#[test]
 		fn test_process_block_wrong_combination_of_variant_and_nonce() {
-			let mut chacha_state_ietf = InternalState {
-				state: [0_u32; 16],
-				internal_counter: 0,
-				is_ietf: true,
-			};
-			chacha_state_ietf
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
-				.unwrap();
-
-			let mut chacha_state_hchacha = InternalState {
-				state: [0_u32; 16],
-				internal_counter: 0,
-				is_ietf: false,
-			};
-
-			chacha_state_hchacha
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
-				.unwrap();
+			let mut chacha_state_ietf = InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 12],
+				true,
+			)
+			.unwrap();
+			let mut chacha_state_hchacha = InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 16],
+				false,
+			)
+			.unwrap();
 
 			assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
 			assert!(chacha_state_ietf.process_block(None).is_err());
@@ -1024,25 +999,19 @@ mod private {
 
 		#[test]
 		fn test_wrong_combination_of_variant_and_dst_out() {
-			let mut chacha_state_ietf = InternalState {
-				state: [0_u32; 16],
-				internal_counter: 0,
-				is_ietf: true,
-			};
+			let mut chacha_state_ietf = InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 12],
+				true,
+			)
+			.unwrap();
 
-			chacha_state_ietf
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 12])
-				.unwrap();
-
-			let mut chacha_state_hchacha = InternalState {
-				state: [0_u32; 16],
-				internal_counter: 0,
-				is_ietf: false,
-			};
-
-			chacha_state_hchacha
-				.init_state(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16])
-				.unwrap();
+			let mut chacha_state_hchacha = InternalState::init(
+				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
+				&[0u8; 16],
+				false,
+			)
+			.unwrap();
 
 			let mut hchacha_out = [0u8; HCHACHA_OUTSIZE];
 			let mut ietf_out = [0u8; CHACHA_BLOCKSIZE];
@@ -1073,17 +1042,11 @@ mod test_vectors {
 
 	// Convenience function for testing.
 	fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
-		let mut chacha_state = InternalState {
-			state: [0_u32; 16],
-			internal_counter: 0,
-			is_ietf: true,
-		};
-
-		chacha_state
-			.init_state(&SecretKey::from_slice(key).unwrap(), nonce)
-			.unwrap();
-
-		Ok(chacha_state)
+		Ok(InternalState::init(
+			&SecretKey::from_slice(key)?,
+			nonce,
+			true,
+		)?)
 	}
 
 	#[test]
