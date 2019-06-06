@@ -143,7 +143,6 @@ construct_public! {
 
 impl_from_trait!(Nonce, IETF_CHACHA_NONCESIZE);
 
-#[derive(Clone)]
 struct InternalState {
 	state: ChaChaState,
 	internal_counter: u32,
@@ -371,9 +370,7 @@ pub fn decrypt(
 	ciphertext: &[u8],
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)?;
-
-	Ok(())
+	encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
 #[must_use]
@@ -401,7 +398,7 @@ pub fn hchacha20(
 	secret_key: &SecretKey,
 	nonce: &[u8],
 ) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
-	let mut chacha_state = InternalState::init(secret_key, &nonce.as_ref(), false)?;
+	let mut chacha_state = InternalState::init(secret_key, nonce, false)?;
 	let mut keystream_state = chacha_state.process_block(None)?;
 	let mut keystream_block: [u8; HCHACHA_OUTSIZE] = [0u8; HCHACHA_OUTSIZE];
 	chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
