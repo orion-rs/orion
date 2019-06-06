@@ -150,15 +150,11 @@ impl Sha512 {
 
 	#[inline]
 	/// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-	fn big_sigma_0(x: u64) -> u64 {
-		(x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39)
-	}
+	fn big_sigma_0(x: u64) -> u64 { (x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39) }
 
 	#[inline]
 	/// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-	fn big_sigma_1(x: u64) -> u64 {
-		(x.rotate_right(14)) ^ x.rotate_right(18) ^ x.rotate_right(41)
-	}
+	fn big_sigma_1(x: u64) -> u64 { (x.rotate_right(14)) ^ x.rotate_right(18) ^ x.rotate_right(41) }
 
 	#[inline]
 	/// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
