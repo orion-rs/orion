@@ -37,7 +37,7 @@
 //!
 //! # Security:
 //! - Salts should always be generated using a CSPRNG.
-//!   `util::secure_rand_bytes()` can be used for this.
+//!   [`util::secure_rand_bytes()`] can be used for this.
 //! - The recommended length for a salt is 64 bytes.
 //! - Even though a salt value is optional, it is strongly recommended to use
 //!   one.
@@ -64,6 +64,8 @@
 //! )?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`util::secure_rand_bytes()`]: https://docs.rs/orion/latest/orion/util/fn.secure_rand_bytes.html
+
 
 use crate::{
 	errors::UnknownCryptoError,

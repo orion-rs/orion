@@ -52,7 +52,7 @@
 //! bytes of data are processed.
 //!
 //! ### Note:
-//! `keystream_block()` is for use-cases where more control over the keystream
+//! [`keystream_block`] is for use-cases where more control over the keystream
 //! used for encryption/decryption is desired. It does not encrypt anything.
 //! This function's `counter` parameter is never increased and therefor is not
 //! checked for potential overflow on increase either. Only use it if you are
@@ -65,13 +65,13 @@
 //! compromised.
 //! - Functions herein do not provide any data integrity. If you need
 //! data integrity, which is nearly ***always the case***, you should use an
-//! AEAD construction instead. See orions `aead` module for this.
+//! AEAD construction instead. See orions [`aead`] module for this.
 //! - Only a nonce for XChaCha20 is big enough to be randomly generated using a
 //!   CSPRNG.
-//! - To securely generate a strong key, use `SecretKey::generate()`.
+//! - To securely generate a strong key, use [`SecretKey::generate()`].
 //!
 //! # Recommendation:
-//! - It is recommended to use XChaCha20Poly1305 when possible.
+//! - It is recommended to use [XChaCha20Poly1305] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -96,6 +96,10 @@
 //! assert_eq!(dst_out_pt, message);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`keystream_block`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/fn.keystream_block.html
+//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
+//! [`aead`]: https://docs.rs/orion/latest/orion/hazardous/aead/index.html
+//! [XChaCha20Poly1305]: https://docs.rs/orion/latest/orion/hazardous/aead/xchacha20poly1305/index.html
 use crate::{
 	endianness::{load_u32_into_le, store_u32_into_le},
 	errors::UnknownCryptoError,

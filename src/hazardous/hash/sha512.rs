@@ -25,8 +25,8 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `finalize()` is called twice without a `reset()` in between.
-//! - `update()` is called after `finalize()` without a `reset()` in between.
+//! - [`finalize()`] is called twice without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in between.
 //!
 //! # Panics:
 //! A panic will occur if:
@@ -36,7 +36,7 @@
 //! - SHA512 is vulnerable to length extension attacks.
 //!
 //! # Recommendation:
-//! - It is recommended to use BLAKE2b when possible.
+//! - It is recommended to use [BLAKE2b] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -53,6 +53,10 @@
 //! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/hash/sha512/struct.Sha512.html
+//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/hash/sha512/struct.Sha512.html
+//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/hash/sha512/struct.Sha512.html
+//! [BLAKE2b]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/index.html
 
 use crate::{
 	endianness::{load_u64_into_be, store_u64_into_be},

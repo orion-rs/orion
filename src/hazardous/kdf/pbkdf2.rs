@@ -39,9 +39,9 @@
 //! - The length of `dst_out` is greater than (2^32 - 1) * 64.
 //!
 //! # Security:
-//! - Use `Password::generate()` to randomly generate a password of 128 bytes.
+//! - Use [`Password::generate()`] to randomly generate a password of 128 bytes.
 //! - Salts should always be generated using a CSPRNG.
-//!   `util::secure_rand_bytes()` can be used for this.
+//!   [`util::secure_rand_bytes()`] can be used for this.
 //! - The recommended length for a salt is 64 bytes.
 //! - The iteration count should be set as high as feasible. The recommended
 //!   minimum is 100000.
@@ -68,6 +68,8 @@
 //! )?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`Password::generate()`]: https://docs.rs/orion/latest/orion/hazardous/kdf/pbkdf2/struct.Password.html
+//! [`util::secure_rand_bytes()`]: https://docs.rs/orion/latest/orion/util/fn.secure_rand_bytes.html
 
 use crate::{
 	errors::UnknownCryptoError,

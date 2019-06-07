@@ -32,13 +32,13 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `finalize()` is called twice without a `reset()` in between.
-//! - `update()` is called after `finalize()` without a `reset()` in between.
+//! - [`finalize()`] is called twice without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in between.
 //! - The calculated tag does not match the expected when verifying.
 //!
 //! # Security:
 //! - The one-time key should be generated using a CSPRNG.
-//!   `OneTimeKey::generate()` can be used for this.
+//!   [`OneTimeKey::generate()`] can be used for this.
 //!
 //! # Recommendation:
 //! - If you are unsure of whether to use HMAC or Poly1305, it is most often
@@ -59,6 +59,10 @@
 //! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes())?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/struct.Poly1305.html
+//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/struct.Poly1305.html
+//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/struct.Poly1305.html
+//! [`OneTimeKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/struct.OneTimeKey.html
 
 extern crate core;
 

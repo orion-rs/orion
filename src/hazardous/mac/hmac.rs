@@ -27,13 +27,13 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `finalize()` is called twice without a `reset()` in between.
-//! - `update()` is called after `finalize()` without a `reset()` in between.
+//! - [`finalize()`] is called twice without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in between.
 //! - The HMAC does not match the expected when verifying.
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
-//!   `SecretKey::generate()` can be used
+//!   [`SecretKey::generate()`] can be used
 //! for this. It generates a secret key of 128 bytes.
 //! - The minimum recommended size for a secret key is 64 bytes.
 //!
@@ -55,6 +55,10 @@
 //! assert!(hmac::verify(&tag, &key, b"Some message.")?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
+//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
+//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
+//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.SecretKey.html
 
 use crate::{
 	errors::UnknownCryptoError,

@@ -53,11 +53,11 @@
 //! AEAD construction instead. See orions `aead` module for this.
 //! - Only a nonce for XChaCha20 is big enough to be randomly generated using a
 //!   CSPRNG.
-//! `Nonce::generate()` can be used for this.
-//! - To securely generate a strong key, use `SecretKey::generate()`.
+//! [`Nonce::generate()`] can be used for this.
+//! - To securely generate a strong key, use [`SecretKey::generate()`].
 //!
 //! # Recommendation:
-//! - It is recommended to use XChaCha20Poly1305 when possible.
+//! - It is recommended to use [XChaCha20Poly1305] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -79,6 +79,9 @@
 //! assert_eq!(dst_out_pt, message);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`Nonce::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/xchacha20/struct.Nonce.html
+//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
+//! [XChaCha20Poly1305]: https://docs.rs/orion/latest/orion/hazardous/aead/xchacha20poly1305/index.html
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{
 	errors::UnknownCryptoError,

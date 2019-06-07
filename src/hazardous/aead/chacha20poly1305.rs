@@ -63,10 +63,10 @@
 //! compromised.
 //! - Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated
 //!   using a CSPRNG.
-//! - To securely generate a strong key, use `SecretKey::generate()`.
+//! - To securely generate a strong key, use [`SecretKey::generate()`].
 //!
 //! # Recommendation:
-//! - It is recommended to use XChaCha20Poly1305 when possible.
+//! - It is recommended to use [XChaCha20Poly1305] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -97,6 +97,8 @@
 //! assert_eq!(dst_out_pt.as_ref(), plaintext.as_ref());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
+//! [XChaCha20Poly1305]: https://docs.rs/orion/latest/orion/hazardous/aead/xchacha20poly1305/index.html
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
 	errors::UnknownCryptoError,

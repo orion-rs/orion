@@ -30,11 +30,11 @@
 //! An error will be returned if:
 //! - `size` is 0.
 //! - `size` is greater than 64.
-//! - `finalize()` is called twice without a `reset()` in between.
-//! - `update()` is called after `finalize()` without a `reset()` in between.
-//! - `reset()` is called with `Some(secret_key)` but the struct was initialized
+//! - [`finalize()`] is called twice without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in between.
+//! - [`reset()`] is called with `Some(secret_key)` but the struct was initialized
 //!   with `None`.
-//! - `reset()` is called with `None` as `secret_key` but the struct was
+//! - [`reset()`] is called with `None` as `secret_key` but the struct was
 //!   initialized with `Some(secret_key)`.
 //!
 //! # Panics:
@@ -43,13 +43,13 @@
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
-//!   `SecretKey::generate()` can be used
+//!   [`SecretKey::generate()`] can be used
 //! for this. It generates a secret key of 64 bytes.
 //! - The minimum recommended size for a secret key is 32 bytes.
-//! - When using `Blake2b` with a secret key, then the output can be used as a
+//! - When using Blake2b with a secret key, then the output can be used as a
 //!   MAC. If this is the
-//! intention, __**avoid using**__ `as_ref()` to compare such MACs and use
-//! instead `verify()`, which will compare the MAC in constant time.
+//! intention, __**avoid using**__ [`as_ref()`] to compare such MACs and use
+//! instead [`verify()`], which will compare the MAC in constant time.
 //! - The recommended minimum output size is 32.
 //!
 //! # Example:
@@ -72,7 +72,12 @@
 //! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data")?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-
+//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Blake2b.html
+//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Blake2b.html
+//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Blake2b.html
+//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.SecretKey.html
+//! [`verify()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/fn.verify.html
+//! [`as_ref()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Digest.html
 use crate::{
 	endianness::{load_u64_into_le, store_u64_into_le},
 	errors::UnknownCryptoError,
@@ -86,7 +91,7 @@ const BLAKE2B_KEYSIZE: usize = 64;
 const BLAKE2B_OUTSIZE: usize = 64;
 
 construct_secret_key! {
-	/// A type to represent the `SecretKey` that BLAKE2b uses for keyed mode.
+	/// A type to represent the secret key that BLAKE2b uses for keyed mode.
 	///
 	/// # Errors:
 	/// An error will be returned if:
