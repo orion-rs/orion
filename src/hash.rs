@@ -43,7 +43,7 @@
 //! - This interface does not support supplying BLAKE2b with a secret key, and
 //!   the hashes retrieved
 //! from using `orion::hash` are therefore not suitable as MACs.
-//! - BLAKE2b is not suitable for password hashing. See `orion::pwhash` instead.
+//! - BLAKE2b is not suitable for password hashing. See [`orion::pwhash`] instead.
 //!
 //! # Example:
 //! ```rust
@@ -52,6 +52,7 @@
 //! let hash: Digest = digest(b"Some data")?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`orion::pwhash`]: https://docs.rs/orion/latest/orion/pwhash/index.html
 
 pub use crate::hazardous::hash::blake2b::Digest;
 use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};

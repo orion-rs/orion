@@ -35,10 +35,10 @@
 //! - A salt of 64 bytes is automatically generated.
 //! - The password hash length is set to 64.
 //!
-//! The first 64 bytes of the `PasswordHash` returned by `pwhash::hash_password`
+//! The first 64 bytes of the [`PasswordHash`] returned by [`pwhash::hash_password`]
 //! is the salt used to hash the password and the last 64 bytes is the actual
 //! hashed password. When using this function with
-//! `pwhash::hash_password_verify()`, then the separation of the salt and the
+//! [`pwhash::hash_password_verify`], then the separation of the salt and the
 //! password hash is automatically handled.
 //!
 //! # Parameters:
@@ -52,7 +52,7 @@
 //! An error will be returned if:
 //! - `iterations` is 0.
 //! - The `expected_with_salt` is not constructed exactly as in
-//!   `pwhash::hash_password`.
+//!   [`pwhash::hash_password`].
 //! - The password hash does not match `expected_with_salt`.
 //!
 //! # Panics:
@@ -73,6 +73,9 @@
 //! assert!(pwhash::hash_password_verify(&hash, &password, 100000)?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`PasswordHash`]: https://docs.rs/orion/latest/orion/pwhash/struct.PasswordHash.html
+//! [`pwhash::hash_password`]: https://docs.rs/orion/latest/orion/pwhash/fn.hash_password.html
+//! [`pwhash::hash_password_verify`]: https://docs.rs/orion/latest/orion/pwhash/fn.hash_password_verify.html
 
 pub use crate::hltypes::{Password, PasswordHash, Salt};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};

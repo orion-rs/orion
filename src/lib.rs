@@ -23,27 +23,34 @@
 //! A usable pure-Rust cryptography library.
 //!
 //! ## Authenticated secret-key encryption
-//! `orion::aead` offers authenticated secret-key encryption using
+//! [`orion::aead`] offers authenticated secret-key encryption using
 //! XChaCha20Poly1305.
 //!
 //! ## Password hashing and verification
-//! `orion::pwhash` offers password hashing and verification using PBKDF2.
+//! [`orion::pwhash`] offers password hashing and verification using PBKDF2.
 //!
 //! ## Key derivation
-//! `orion::kdf` offers key derivation using PBKDF2.
+//! [`orion::kdf`] offers key derivation using PBKDF2.
 //!
 //! ## Message authentication
-//! `orion::auth` offers message authentication and verification using HMAC.
+//! [`orion::auth`] offers message authentication and verification using HMAC.
 //!
 //! ## Hashing
-//! `orion::hash` offers hashing using BLAKE2b.
+//! [`orion::hash`] offers hashing using BLAKE2b.
 //!
 //! ### A note on `no_std`:
 //! When orion is used in a `no_std` context, access to nearly all functionality
-//! outside of `hazardous`, is not available.
+//! outside of [`orion::hazardous`], is not available.
 //!
 //!
 //! More information about orion is available in the [wiki](https://github.com/brycx/orion/wiki).
+//! 
+//! [`orion::aead`]: https://docs.rs/orion/latest/orion/aead/index.html
+//! [`orion::pwhash`]: https://docs.rs/orion/latest/orion/pwhash/index.html
+//! [`orion::kdf`]: https://docs.rs/orion/latest/orion/kdf/index.html
+//! [`orion::auth`]: https://docs.rs/orion/latest/orion/auth/index.html
+//! [`orion::hash`]: https://docs.rs/orion/latest/orion/hash/index.html
+//! [`orion::hazardous`]: https://docs.rs/orion/latest/orion/hazardous/index.html
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]

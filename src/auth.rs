@@ -40,13 +40,13 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - The calculated `Tag` does not match the expected.
+//! - The calculated [`Tag`] does not match the expected.
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
-//!   `SecretKey::default()` can be used for
-//! this, it will generate a `SecretKey` of 32 bytes.
-//! - The recommended minimum length for a `SecretKey` is 32.
+//!   [`SecretKey::default()`] can be used for
+//! this, it will generate a [`SecretKey`] of 32 bytes.
+//! - The recommended minimum length for a [`SecretKey`] is 32.
 //!
 //! # Example:
 //! ```rust
@@ -59,6 +59,9 @@
 //! assert!(auth::authenticate_verify(&expected_tag, &key, &msg)?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`SecretKey`]: https://docs.rs/orion/latest/orion/auth/struct.SecretKey.html
+//! [`SecretKey::default()`]: https://docs.rs/orion/latest/orion/auth/struct.SecretKey.html
+//! [`Tag`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Tag.html
 
 use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
 pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};

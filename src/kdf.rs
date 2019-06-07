@@ -55,9 +55,9 @@
 //! # Security:
 //! - The iteration count should be set as high as feasible. The recommended
 //!   minimum is 100000.
-//! - The salt should always be generated using a CSPRNG. `Salt::default()` can
+//! - The salt should always be generated using a CSPRNG. [`Salt::default()`] can
 //!   be used for
-//! this, it will generate a `Salt` of 64 bytes.
+//! this, it will generate a [`Salt`] of 64 bytes.
 //!
 //! # Example:
 //! ```rust
@@ -76,6 +76,8 @@
 //! )?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`Salt`]: https://docs.rs/orion/latest/orion/kdf/struct.Salt.html
+//! [`Salt::default()`]: https://docs.rs/orion/latest/orion/kdf/struct.Salt.html
 
 pub use crate::hltypes::{Password, Salt, SecretKey};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};

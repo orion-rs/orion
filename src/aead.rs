@@ -35,7 +35,7 @@
 //!   the authenticated
 //! ciphertext with the last 16 bytes being the corresponding Poly1305 tag.
 //! - Uses XChaCha20Poly1305 with no additional data.
-//! - When using `seal` and `open` then the separation of tags, nonces and
+//! - When using [`seal`] and [`open`] then the separation of tags, nonces and
 //!   ciphertext are automatically handled.
 //!
 //! # Parameters:
@@ -49,10 +49,10 @@
 //! An error will be returned if:
 //! - `secret_key` is not 32 bytes.
 //! - `plaintext` is empty.
-//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes (XCHACHA_NONCESIZE +
-//!   POLY1305_BLOCKSIZE + 1).
+//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes ([`XCHACHA_NONCESIZE`] +
+//!   [`POLY1305_OUTSIZE`] + 1).
 //! - The received tag does not match the calculated tag when calling
-//!   `aead::open()`.
+//!   [`open`].
 //!
 //! # Panics:
 //! A panic will occur if:
@@ -64,7 +64,7 @@
 //!   key. Should this happen,
 //! the security of all data that has been encrypted with that given key is
 //! compromised.
-//! - To securely generate a strong key, use `SecretKey::default()`.
+//! - To securely generate a strong key, use [`SecretKey::default()`].
 //!
 //! # Example:
 //! ```rust
@@ -75,6 +75,11 @@
 //! let decrypted_data = aead::open(&secret_key, &ciphertext)?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`seal`]: https://docs.rs/orion/latest/orion/aead/fn.seal.html
+//! [`open`]: https://docs.rs/orion/latest/orion/aead/fn.open.html
+//! [`POLY1305_OUTSIZE`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/constant.POLY1305_OUTSIZE.html
+//! [`XCHACHA_NONCESIZE`]: https://docs.rs/orion/latest/orion/hazardous/stream/xchacha20/constant.XCHACHA_NONCESIZE.html
+//! [`SecretKey::default()`]: https://docs.rs/orion/latest/orion/aead/struct.SecretKey.html
 
 pub use crate::hltypes::SecretKey;
 use crate::{
