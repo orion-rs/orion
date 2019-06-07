@@ -135,7 +135,7 @@ matrix:
         - cross test --release --target $TARGET
         - cross test --release --no-default-features --tests --target $TARGET
     
-    - name: "[RELEASE]: WebAssembly"
+    - name: "[RELEASE (stable)]: WebAssembly"
       env: TARGET=wasm32-unknown-unknown
       rust: stable
       install:
@@ -143,6 +143,14 @@ matrix:
       script:
         # Release:
         - cargo check --target wasm32-unknown-unknown
+
+    - name: "[RELEASE (nightly)]: WebAssembly"
+      env: TARGET=wasm32-unknown-unknown
+      rust: nightly
+      install:
+        - rustup target add wasm32-unknown-unknown
+      script:
+        # Release:
         - cargo check --no-default-features --features no_std --target wasm32-unknown-unknown
     
     - name: "Documentation"
