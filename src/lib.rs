@@ -50,6 +50,7 @@
 #![deny(overflowing_literals)]
 #![deny(missing_docs)]
 #![deny(warnings)]
+#![doc(html_root_url = "https://docs.rs/orion/0.14.1")]
 
 #[cfg(feature = "safe_api")]
 extern crate getrandom;
