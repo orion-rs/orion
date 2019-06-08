@@ -44,7 +44,7 @@
 //!
 //!
 //! More information about orion is available in the [wiki](https://github.com/brycx/orion/wiki).
-//! 
+//!
 //! [`orion::aead`]: https://docs.rs/orion/latest/orion/aead/index.html
 //! [`orion::pwhash`]: https://docs.rs/orion/latest/orion/pwhash/index.html
 //! [`orion::kdf`]: https://docs.rs/orion/latest/orion/kdf/index.html

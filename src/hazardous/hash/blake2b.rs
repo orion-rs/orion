@@ -31,9 +31,10 @@
 //! - `size` is 0.
 //! - `size` is greater than 64.
 //! - [`finalize()`] is called twice without a [`reset()`] in between.
-//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in between.
-//! - [`reset()`] is called with `Some(secret_key)` but the struct was initialized
-//!   with `None`.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
+//!   between.
+//! - [`reset()`] is called with `Some(secret_key)` but the struct was
+//!   initialized with `None`.
 //! - [`reset()`] is called with `None` as `secret_key` but the struct was
 //!   initialized with `Some(secret_key)`.
 //!

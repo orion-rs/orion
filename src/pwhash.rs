@@ -35,9 +35,9 @@
 //! - A salt of 64 bytes is automatically generated.
 //! - The password hash length is set to 64.
 //!
-//! The first 64 bytes of the [`PasswordHash`] returned by [`pwhash::hash_password`]
-//! is the salt used to hash the password and the last 64 bytes is the actual
-//! hashed password. When using this function with
+//! The first 64 bytes of the [`PasswordHash`] returned by
+//! [`pwhash::hash_password`] is the salt used to hash the password and the last
+//! 64 bytes is the actual hashed password. When using this function with
 //! [`pwhash::hash_password_verify`], then the separation of the salt and the
 //! password hash is automatically handled.
 //!

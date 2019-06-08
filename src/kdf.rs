@@ -55,8 +55,8 @@
 //! # Security:
 //! - The iteration count should be set as high as feasible. The recommended
 //!   minimum is 100000.
-//! - The salt should always be generated using a CSPRNG. [`Salt::default()`] can
-//!   be used for
+//! - The salt should always be generated using a CSPRNG. [`Salt::default()`]
+//!   can be used for
 //! this, it will generate a [`Salt`] of 64 bytes.
 //!
 //! # Example:

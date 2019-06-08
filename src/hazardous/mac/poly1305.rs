@@ -33,7 +33,8 @@
 //! # Errors:
 //! An error will be returned if:
 //! - [`finalize()`] is called twice without a [`reset()`] in between.
-//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
+//!   between.
 //! - The calculated tag does not match the expected when verifying.
 //!
 //! # Security:

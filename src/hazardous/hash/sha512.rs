@@ -26,7 +26,8 @@
 //! # Errors:
 //! An error will be returned if:
 //! - [`finalize()`] is called twice without a [`reset()`] in between.
-//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
+//!   between.
 //!
 //! # Panics:
 //! A panic will occur if:

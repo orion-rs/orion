@@ -49,10 +49,9 @@
 //! An error will be returned if:
 //! - `secret_key` is not 32 bytes.
 //! - `plaintext` is empty.
-//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes ([`XCHACHA_NONCESIZE`] +
-//!   [`POLY1305_OUTSIZE`] + 1).
-//! - The received tag does not match the calculated tag when calling
-//!   [`open`].
+//! - `ciphertext_with_tag_and_nonce` is less than 41 bytes
+//!   ([`XCHACHA_NONCESIZE`] + [`POLY1305_OUTSIZE`] + 1).
+//! - The received tag does not match the calculated tag when calling [`open`].
 //!
 //! # Panics:
 //! A panic will occur if:
