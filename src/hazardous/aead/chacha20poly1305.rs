@@ -129,8 +129,14 @@ fn poly1305_key_gen(key: &[u8], nonce: &[u8]) -> Result<OneTimeKey, UnknownCrypt
 /// Padding size that gives the needed bytes to pad `input` to an integral
 /// multiple of 16.
 fn padding(input: &[u8]) -> usize {
-	if input.len() % 16 != 0 {
-		16 - (input.len() % 16)
+	if input.is_empty() {
+		return 0;
+	}
+
+	let rem = input.len() % 16;
+
+	if rem != 0 {
+		16 - rem
 	} else {
 		0
 	}
