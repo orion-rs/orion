@@ -162,13 +162,21 @@ fn process_authentication(
 
 	let mut padding_max = [0u8; 16];
 
-	poly1305_state.update(ad)?;
-	poly1305_state.update(&padding_max[..padding(ad)])?;
+	if !ad.is_empty() {
+		poly1305_state.update(ad)?;
+		poly1305_state.update(&padding_max[..padding(ad)])?;
+	}
+
 	poly1305_state.update(&buf[..buf_in_len])?;
 	poly1305_state.update(&padding_max[..padding(&buf[..buf_in_len])])?;
 
 	// Using the 16 bytes from padding template to store length information
-	padding_max[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
+	if !ad.is_empty() {
+		// If ad is empty then padding_max[..8] already reflects its 0-length
+		// since it was initialized with 0's.
+		padding_max[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
+	}
+
 	padding_max[8..16].copy_from_slice(&(buf_in_len as u64).to_le_bytes());
 
 	poly1305_state.update(padding_max.as_ref())?;
