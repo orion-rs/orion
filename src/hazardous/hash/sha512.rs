@@ -285,7 +285,7 @@ impl Sha512 {
 
 			let fill = SHA512_BLOCKSIZE - self.leftover;
 
-			if bytes.len() < fill {				
+			if bytes.len() < fill {
 				self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
 				self.leftover += bytes.len();
 				self.increment_mlen(bytes.len() as u64);

@@ -153,7 +153,14 @@ pub fn derive_key(
 		// If this panics, then the size limit for PBKDF2 is reached.
 		let block_idx = (1u32).checked_add(idx as u32).unwrap();
 
-		function_f(salt, iterations, block_idx, dk_block, dk_block.len(), &mut hmac)?;
+		function_f(
+			salt,
+			iterations,
+			block_idx,
+			dk_block,
+			dk_block.len(),
+			&mut hmac,
+		)?;
 		hmac.reset();
 	}
 
