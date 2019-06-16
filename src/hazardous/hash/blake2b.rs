@@ -353,17 +353,18 @@ impl Blake2b {
 		let mut bytes = data;
 
 		if self.leftover > 0 {
-			// Using .unwrap() since overflow should not happen in practice
-			let fill = BLAKE2B_BLOCKSIZE.checked_sub(self.leftover).unwrap();
+			debug_assert!(self.leftover <= BLAKE2B_BLOCKSIZE);
+
+			let fill = BLAKE2B_BLOCKSIZE - self.leftover;
 
 			if bytes.len() <= fill {
 				self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
-				// Using .unwrap() since overflow should not happen in practice
-				self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
+				self.leftover += bytes.len();
 				return Ok(());
 			}
 
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
+			// Process data
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f();
 			self.leftover = 0;
@@ -380,9 +381,10 @@ impl Blake2b {
 		}
 
 		if !bytes.is_empty() {
-			self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
-			// Using .unwrap() since overflow should not happen in practice
-			self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
+			debug_assert!(self.leftover == 0);
+
+			self.buffer[..bytes.len()].copy_from_slice(bytes);
+			self.leftover += bytes.len();
 		}
 
 		Ok(())
@@ -397,8 +399,6 @@ impl Blake2b {
 
 		self.is_finalized = true;
 
-		let mut digest = [0u8; 64];
-
 		let in_buffer_len = self.leftover;
 		self.increment_offset(in_buffer_len as u64);
 		// Mark that it is the last block of data to be processed
@@ -409,6 +409,7 @@ impl Blake2b {
 		}
 		self.compress_f();
 
+		let mut digest = [0u8; 64];
 		store_u64_into_le(&self.internal_state, &mut digest);
 
 		Ok(Digest::from_slice(&digest[..self.size])?)

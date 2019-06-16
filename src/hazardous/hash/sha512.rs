@@ -281,13 +281,13 @@ impl Sha512 {
 		let mut bytes = data;
 		// First fill up if there is leftover space
 		if self.leftover > 0 {
-			// Using .unwrap() since overflow should not happen in practice
-			let fill = SHA512_BLOCKSIZE.checked_sub(self.leftover).unwrap();
+			debug_assert!(self.leftover <= SHA512_BLOCKSIZE);
 
-			if bytes.len() < fill {
+			let fill = SHA512_BLOCKSIZE - self.leftover;
+
+			if bytes.len() < fill {				
 				self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
-				// Using .unwrap() since overflow should not happen in practice
-				self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
+				self.leftover += bytes.len();
 				self.increment_mlen(bytes.len() as u64);
 				return Ok(());
 			}
@@ -311,9 +311,10 @@ impl Sha512 {
 		}
 
 		if !bytes.is_empty() {
-			self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
-			// Using .unwrap() since overflow should not happen in practice
-			self.leftover = self.leftover.checked_add(bytes.len()).unwrap();
+			debug_assert!(self.leftover == 0);
+
+			self.buffer[..bytes.len()].copy_from_slice(bytes);
+			self.leftover = bytes.len();
 			self.increment_mlen(bytes.len() as u64);
 		}
 
@@ -333,8 +334,7 @@ impl Sha512 {
 		// as that would have been processed in the update call
 		debug_assert!(self.leftover < SHA512_BLOCKSIZE);
 		self.buffer[self.leftover] = 0x80;
-		// Using .unwrap() since overflow should not happen in practice
-		self.leftover = self.leftover.checked_add(1).unwrap();
+		self.leftover += 1;
 
 		for itm in self.buffer.iter_mut().skip(self.leftover) {
 			*itm = 0;

@@ -325,10 +325,15 @@ impl Poly1305 {
 		if self.is_finalized {
 			return Err(UnknownCryptoError);
 		}
+		if data.is_empty() {
+			return Ok(());
+		}
 
 		let mut bytes = data;
 
 		if self.leftover != 0 {
+			debug_assert!(self.leftover <= POLY1305_BLOCKSIZE);
+
 			let mut want = POLY1305_BLOCKSIZE - self.leftover;
 			if want > bytes.len() {
 				want = bytes.len();
