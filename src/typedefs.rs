@@ -43,15 +43,24 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
 ));
 
 /// Macro that implements the `PartialEq` trait on a object called `$name` that
-/// also implements `unprotected_as_bytes()`. This `PartialEq` will perform in
+/// provides a given $bytes_function to return a slice. This `PartialEq` will perform in
 /// constant time.
 macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
-    impl PartialEq for $name {
+    impl core::cmp::PartialEq<$name> for $name {
         fn eq(&self, other: &$name) -> bool {
             use subtle::ConstantTimeEq;
 
             (self.$bytes_function()
                 .ct_eq(other.$bytes_function())).into()
+        }
+    }
+
+    impl core::cmp::PartialEq<&[u8]> for $name {
+        fn eq(&self, other: &&[u8]) -> bool {
+            use subtle::ConstantTimeEq;
+
+            (self.$bytes_function()
+                .ct_eq(*other)).into()
         }
     }
 ));
@@ -241,6 +250,18 @@ macro_rules! test_bound_parameters (($name:ident, $lower_bound:expr, $upper_boun
 ));
 
 #[cfg(test)]
+macro_rules! test_partial_eq (($name:ident, $upper_bound:expr) => (
+    #[test]
+    fn test_partial_eq() {
+        assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() == $name::from_slice(&[0u8; $upper_bound]).unwrap());
+        assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() != $name::from_slice(&[1u8; $upper_bound]).unwrap()); 
+
+        assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() == [0u8; $upper_bound].as_ref());
+        assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() != [1u8; $upper_bound].as_ref());
+    }
+));
+
+#[cfg(test)]
 macro_rules! test_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
     #[test]
     fn test_from_slice() {
@@ -396,6 +417,7 @@ macro_rules! construct_secret_key {
             test_bound_parameters!($name, $lower_bound, $upper_bound, $gen_length);
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
+            test_partial_eq!($name, $upper_bound);
 
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
@@ -455,6 +477,7 @@ macro_rules! construct_public {
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, as_ref);
+            test_partial_eq!($name, $upper_bound);
         }
     );
 
@@ -485,6 +508,7 @@ macro_rules! construct_public {
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, as_ref);
+            test_partial_eq!($name, $upper_bound);
 
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
@@ -530,6 +554,7 @@ macro_rules! construct_tag {
             test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
+            test_partial_eq!($name, $upper_bound);
 
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
@@ -584,6 +609,15 @@ macro_rules! construct_hmac_key {
             func_unprotected_as_bytes!();
             func_generate!($name, $size, $size);
             func_get_length!();
+        }
+
+        #[test]
+        fn test_partial_eq() {
+            assert!($name::from_slice(&[0u8; $size]).unwrap() == $name::from_slice(&[0u8; $size]).unwrap());
+            assert!($name::from_slice(&[0u8; $size]).unwrap() != $name::from_slice(&[1u8; $size]).unwrap()); 
+
+            assert!($name::from_slice(&[0u8; $size]).unwrap() == [0u8; $size].as_ref());
+            assert!($name::from_slice(&[0u8; $size]).unwrap() != [1u8; $size].as_ref());
         }
 
         #[test]
@@ -667,6 +701,7 @@ macro_rules! construct_secret_key_variable_size {
             test_as_bytes_and_get_length!($name, 1, $default_size + 1, unprotected_as_bytes);
             test_generate_variable!($name);
             test_omitted_debug!($name, $default_size);
+            test_partial_eq!($name, $default_size);
         }
     );
 }
@@ -704,6 +739,7 @@ macro_rules! construct_salt_variable_size {
             test_from_slice_variable!($name);
             test_as_bytes_and_get_length!($name, 1, $default_size + 1, as_ref);
             test_generate_variable!($name);
+            test_partial_eq!($name, $default_size);
         }
     );
 }
