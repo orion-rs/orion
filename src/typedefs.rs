@@ -178,6 +178,7 @@ macro_rules! func_from_slice_variable_size (($name:ident) => (
 /// implement extra protections. Typically used on objects that implement
 /// `Drop`, `Debug` and/or `PartialEq`.
 macro_rules! func_unprotected_as_bytes (() => (
+    #[inline]
     #[must_use]
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
     /// needed. This __**breaks protections**__ that the type implements.
