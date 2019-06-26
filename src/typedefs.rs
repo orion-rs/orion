@@ -43,8 +43,8 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
 ));
 
 /// Macro that implements the `PartialEq` trait on a object called `$name` that
-/// provides a given $bytes_function to return a slice. This `PartialEq` will perform in
-/// constant time.
+/// provides a given $bytes_function to return a slice. This `PartialEq` will
+/// perform in constant time.
 macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
     impl core::cmp::PartialEq<$name> for $name {
         fn eq(&self, other: &$name) -> bool {
@@ -255,7 +255,7 @@ macro_rules! test_partial_eq (($name:ident, $upper_bound:expr) => (
     #[test]
     fn test_partial_eq() {
         assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() == $name::from_slice(&[0u8; $upper_bound]).unwrap());
-        assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() != $name::from_slice(&[1u8; $upper_bound]).unwrap()); 
+        assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() != $name::from_slice(&[1u8; $upper_bound]).unwrap());
 
         assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() == [0u8; $upper_bound].as_ref());
         assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() != [1u8; $upper_bound].as_ref());
@@ -615,7 +615,7 @@ macro_rules! construct_hmac_key {
         #[test]
         fn test_partial_eq() {
             assert!($name::from_slice(&[0u8; $size]).unwrap() == $name::from_slice(&[0u8; $size]).unwrap());
-            assert!($name::from_slice(&[0u8; $size]).unwrap() != $name::from_slice(&[1u8; $size]).unwrap()); 
+            assert!($name::from_slice(&[0u8; $size]).unwrap() != $name::from_slice(&[1u8; $size]).unwrap());
 
             assert!($name::from_slice(&[0u8; $size]).unwrap() == [0u8; $size].as_ref());
             assert!($name::from_slice(&[0u8; $size]).unwrap() != [1u8; $size].as_ref());
