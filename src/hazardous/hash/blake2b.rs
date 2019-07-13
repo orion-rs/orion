@@ -267,9 +267,9 @@ impl Blake2b {
 		match data {
 			Some(bytes) => { 
 				debug_assert!(bytes.len() == BLAKE2B_BLOCKSIZE);
-				load_u64_into_le(bytes, &mut m_vec[..16]);
+				load_u64_into_le(bytes, &mut m_vec);
 			},
-			None => load_u64_into_le(&self.buffer, &mut m_vec[..16]),
+			None => load_u64_into_le(&self.buffer, &mut m_vec),
 		}
 		let mut w_vec = [
 			self.internal_state[0],
