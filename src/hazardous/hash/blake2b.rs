@@ -261,11 +261,16 @@ impl Blake2b {
 		Self::prim_mix_g(m[SIGMA[ri][14]], m[SIGMA[ri][15]], 3, 4, 9, 14, w);
 	}
 
-	#[allow(clippy::needless_range_loop)]
 	/// The compression function f as defined in the RFC.
-	fn compress_f(&mut self) {
+	fn compress_f(&mut self, data: Option<&[u8]>) {
 		let mut m_vec = [0u64; 16];
-		load_u64_into_le(&self.buffer, &mut m_vec);
+		match data {
+			Some(bytes) => { 
+				debug_assert!(bytes.len() == BLAKE2B_BLOCKSIZE);
+				load_u64_into_le(bytes, &mut m_vec[..16]);
+			},
+			None => load_u64_into_le(&self.buffer, &mut m_vec[..16]),
+		}
 		let mut w_vec = [
 			self.internal_state[0],
 			self.internal_state[1],
@@ -352,7 +357,7 @@ impl Blake2b {
 
 		let mut bytes = data;
 
-		if self.leftover > 0 {
+		if self.leftover != 0 {
 			debug_assert!(self.leftover <= BLAKE2B_BLOCKSIZE);
 
 			let fill = BLAKE2B_BLOCKSIZE - self.leftover;
@@ -366,16 +371,16 @@ impl Blake2b {
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
 			// Process data
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
-			self.compress_f();
+			self.compress_f(None);
 			self.leftover = 0;
 			// Reduce by slice
 			bytes = &bytes[fill..];
 		}
 
 		while bytes.len() > BLAKE2B_BLOCKSIZE {
-			self.buffer.copy_from_slice(&bytes[..BLAKE2B_BLOCKSIZE]);
+			// Process data
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
-			self.compress_f();
+			self.compress_f(Some(bytes[..BLAKE2B_BLOCKSIZE].as_ref()));
 			// Reduce by slice
 			bytes = &bytes[BLAKE2B_BLOCKSIZE..];
 		}
@@ -407,7 +412,7 @@ impl Blake2b {
 		for leftover_block in self.buffer.iter_mut().skip(in_buffer_len) {
 			*leftover_block = 0;
 		}
-		self.compress_f();
+		self.compress_f(None);
 
 		let mut digest = [0u8; 64];
 		store_u64_into_le(&self.internal_state, &mut digest);
