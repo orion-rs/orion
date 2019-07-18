@@ -406,16 +406,16 @@ macro_rules! construct_secret_key {
         /// use orion::hazardous::stream::chacha20::SecretKey;
         ///
         /// // Initialize a secret key with 32 random bytes.
-        /// let key_bytes: [u8; 32] = 
+        /// let key_bytes: [u8; 32] =
         ///     [0x2f, 0xbd, 0x03, 0xeb, 0x36, 0x66, 0xa9, 0x8c,
         ///      0x39, 0x7f, 0xe7, 0xc3, 0x53, 0x4b, 0x9f, 0x8e,
         ///      0x17, 0x76, 0x5d, 0x96, 0xf4, 0x08, 0x6c, 0x8f,
         ///      0x25, 0x98, 0x80, 0xd9, 0xb2, 0xa5, 0x56, 0xce];
         /// let secret_key = SecretKey::from_slice(&key_bytes).unwrap();
-        /// 
+        ///
         /// // Variable-time comparison: INSECURE!! DO NOT DO THIS!!
         /// assert!(secret_key.unprotected_as_bytes() == key_bytes);
-        /// 
+        ///
         /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
         /// assert!(secret_key == &key_bytes[..]);
         /// ```
@@ -567,9 +567,9 @@ macro_rules! construct_tag {
         /// use orion::hazardous::mac::hmac::Tag;
         ///
         /// // Initialize a tag with 64 random bytes.
-        /// let tag_bytes: [u8; 64] = 
+        /// let tag_bytes: [u8; 64] =
         ///     [0x15, 0xf2, 0x52, 0x22, 0x01, 0x4c, 0x01, 0x85,
-        ///      0x6d, 0xe3, 0xb4, 0x94, 0x09, 0x9a, 0xe8, 0x28, 
+        ///      0x6d, 0xe3, 0xb4, 0x94, 0x09, 0x9a, 0xe8, 0x28,
         ///      0xf1, 0x61, 0xc8, 0xbc, 0x57, 0x2e, 0xa3, 0x1a,
         ///      0x49, 0x1f, 0x79, 0x84, 0x93, 0x49, 0x68, 0xab,
         ///      0xb2, 0xc8, 0xf1, 0xa7, 0xa6, 0xbc, 0x4d, 0x60,
@@ -580,7 +580,7 @@ macro_rules! construct_tag {
         ///
         /// // Variable-time comparison: INSECURE!! DO NOT DO THIS!!
         /// assert!(tag.unprotected_as_bytes() == &tag_bytes[..]);
-        /// 
+        ///
         /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
         /// assert!(tag == &tag_bytes[..]);
         /// ```
@@ -640,21 +640,21 @@ macro_rules! construct_hmac_key {
         /// use orion::hazardous::mac::hmac::SecretKey;
         ///
         /// // Initialize a secret key with 32 random bytes.
-        /// let key_bytes: [u8; 32] = 
+        /// let key_bytes: [u8; 32] =
         ///     [0x2f, 0xbd, 0x03, 0xeb, 0x36, 0x66, 0xa9, 0x8c,
         ///      0x39, 0x7f, 0xe7, 0xc3, 0x53, 0x4b, 0x9f, 0x8e,
         ///      0x17, 0x76, 0x5d, 0x96, 0xf4, 0x08, 0x6c, 0x8f,
         ///      0x25, 0x98, 0x80, 0xd9, 0xb2, 0xa5, 0x56, 0xce];
         /// let secret_key = SecretKey::from_slice(&key_bytes).unwrap();
-        /// 
+        ///
         /// // The `SecretKey::from_slice` function pads the key,
         /// // so we need to get a new slice for comparisons. Admittedly,
         /// // this does make the insecure example below a trivial comparison.
         /// let key_bytes_padded = secret_key.unprotected_as_bytes();
-        /// 
+        ///
         /// // Variable-time comparison: INSECURE!! DO NOT DO THIS!!
         /// assert!(secret_key.unprotected_as_bytes() == key_bytes_padded);
-        /// 
+        ///
         /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
         /// assert!(secret_key == key_bytes_padded);
         /// ```
@@ -767,16 +767,16 @@ macro_rules! construct_secret_key_variable_size {
         /// use orion::pwhash::Password;
         ///
         /// // Initialize a password with 32 random bytes.
-        /// let pw_bytes: [u8; 32] = 
+        /// let pw_bytes: [u8; 32] =
         ///     [0x2f, 0xbd, 0x03, 0xeb, 0x36, 0x66, 0xa9, 0x8c,
         ///      0x39, 0x7f, 0xe7, 0xc3, 0x53, 0x4b, 0x9f, 0x8e,
         ///      0x17, 0x76, 0x5d, 0x96, 0xf4, 0x08, 0x6c, 0x8f,
         ///      0x25, 0x98, 0x80, 0xd9, 0xb2, 0xa5, 0x56, 0xce];
         /// let password = Password::from_slice(&pw_bytes).unwrap();
-        /// 
+        ///
         /// // Variable-time comparison: INSECURE!! DO NOT DO THIS!!
         /// assert!(password.unprotected_as_bytes() == pw_bytes);
-        /// 
+        ///
         /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
         /// assert!(password == &pw_bytes[..]);
         /// ```
