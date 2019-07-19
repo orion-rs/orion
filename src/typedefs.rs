@@ -397,7 +397,7 @@ macro_rules! construct_secret_key {
         /// that the type implements.
         ///
         /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
-        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte string. The trait
+        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
         /// is implemented in such a way that the comparison happens in constant time. Thus, users should
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. Although the `orion::hazardous::stream::chacha20::SecretKey`
@@ -559,7 +559,7 @@ macro_rules! construct_tag {
         /// that the type implements.
         ///
         /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
-        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte string. The trait
+        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
         /// is implemented in such a way that the comparison happens in constant time. Thus, users should
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below.
@@ -632,7 +632,7 @@ macro_rules! construct_hmac_key {
         /// that the type implements.
         ///
         /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
-        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte string. The trait
+        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
         /// is implemented in such a way that the comparison happens in constant time. Thus, users should
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below.
@@ -758,7 +758,7 @@ macro_rules! construct_secret_key_variable_size {
         /// that the type implements.
         ///
         /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
-        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte string. The trait
+        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
         /// is implemented in such a way that the comparison happens in constant time. Thus, users should
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. Although the `orion::pwhash::Password` type is used, this example
