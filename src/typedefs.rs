@@ -407,11 +407,8 @@ macro_rules! construct_secret_key {
         /// // Initialize a secret key with 32 random bytes.
         /// let secret_key = SecretKey::generate();
         ///
-        /// // Get the byte slice out of the key to demonstrate the comparison.
-        /// let key_bytes = secret_key.unprotected_as_bytes();
-        ///
         /// // Secure, costant-time comparison with byte slice
-        /// assert!(secret_key == &key_bytes[..]);
+        /// assert!(secret_key != &[0; 32][..]);
         /// ```
         pub struct $name {
             value: [u8; $upper_bound],
@@ -623,12 +620,9 @@ macro_rules! construct_hmac_key {
         ///
         /// // Initialize a secret key with 32 random bytes.
         /// let secret_key = SecretKey::generate();
-        /// 
-        /// // Get the byte slice out of the key to demonstrate the comparison.
-        /// let key_bytes = secret_key.unprotected_as_bytes();
         ///
         /// // Secure, costant-time comparison with byte slice
-        /// assert!(secret_key == key_bytes);
+        /// assert!(secret_key != key_bytes);
         /// ```
         pub struct $name {
             value: [u8; $size],
@@ -739,12 +733,9 @@ macro_rules! construct_secret_key_variable_size {
         ///
         /// // Initialize a password with 32 random bytes.
         /// let password = Password::generate(32).unwrap();
-
-        /// // Get the byte slice out of the Password to demonstrate the comparison.
-        /// let pw_bytes = password.unprotected_as_bytes();
         ///
         /// // Secure, costant-time comparison with byte slice
-        /// assert!(password == &pw_bytes[..]);
+        /// assert!(password != &[0; 32][..]);
         /// ```
         pub struct $name {
             value: Vec<u8>,
