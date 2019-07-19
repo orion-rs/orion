@@ -410,7 +410,7 @@ macro_rules! construct_secret_key {
         /// // Get the byte slice out of the key to demonstrate the comparison.
         /// let key_bytes = secret_key.unprotected_as_bytes();
         ///
-        /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
+        /// // Secure, costant-time comparison with byte slice
         /// assert!(secret_key == &key_bytes[..]);
         /// ```
         pub struct $name {
@@ -627,7 +627,7 @@ macro_rules! construct_hmac_key {
         /// // Get the byte slice out of the key to demonstrate the comparison.
         /// let key_bytes = secret_key.unprotected_as_bytes();
         ///
-        /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
+        /// // Secure, costant-time comparison with byte slice
         /// assert!(secret_key == key_bytes);
         /// ```
         pub struct $name {
@@ -743,7 +743,7 @@ macro_rules! construct_secret_key_variable_size {
         /// // Get the byte slice out of the Password to demonstrate the comparison.
         /// let pw_bytes = password.unprotected_as_bytes();
         ///
-        /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
+        /// // Secure, costant-time comparison with byte slice
         /// assert!(password == &pw_bytes[..]);
         /// ```
         pub struct $name {
