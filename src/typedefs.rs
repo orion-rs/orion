@@ -410,9 +410,6 @@ macro_rules! construct_secret_key {
         /// // Get the byte slice out of the key to demonstrate the comparison.
         /// let key_bytes = secret_key.unprotected_as_bytes();
         ///
-        /// // Variable-time comparison: INSECURE!! DO NOT DO THIS!!
-        /// assert!(secret_key.unprotected_as_bytes() == key_bytes);
-        ///
         /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
         /// assert!(secret_key == &key_bytes[..]);
         /// ```
@@ -630,9 +627,6 @@ macro_rules! construct_hmac_key {
         /// // Get the byte slice out of the key to demonstrate the comparison.
         /// let key_bytes = secret_key.unprotected_as_bytes();
         ///
-        /// // Variable-time comparison: INSECURE!! DO NOT DO THIS!!
-        /// assert!(secret_key.unprotected_as_bytes() == key_bytes);
-        ///
         /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
         /// assert!(secret_key == key_bytes);
         /// ```
@@ -748,9 +742,6 @@ macro_rules! construct_secret_key_variable_size {
 
         /// // Get the byte slice out of the Password to demonstrate the comparison.
         /// let pw_bytes = password.unprotected_as_bytes();
-        ///
-        /// // Variable-time comparison: INSECURE!! DO NOT DO THIS!!
-        /// assert!(password.unprotected_as_bytes() == pw_bytes);
         ///
         /// // Constant-time comparison: SECURE, PREFER THIS WHEN POSSIBLE
         /// assert!(password == &pw_bytes[..]);
