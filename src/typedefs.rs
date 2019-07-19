@@ -400,8 +400,7 @@ macro_rules! construct_secret_key {
         /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
         /// is implemented in such a way that the comparison happens in constant time. Thus, users should
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
-        /// Examples are shown below. Although the `orion::hazardous::stream::chacha20::SecretKey`
-        /// type is used, this example applies to any fixed-size store of sensitive data.
+        /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
         /// use orion::hazardous::stream::chacha20::SecretKey;
         ///
@@ -562,7 +561,7 @@ macro_rules! construct_tag {
         /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
         /// is implemented in such a way that the comparison happens in constant time. Thus, users should
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
-        /// Examples are shown below.
+        /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
         /// use orion::hazardous::mac::hmac::Tag;
         ///
@@ -635,7 +634,7 @@ macro_rules! construct_hmac_key {
         /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
         /// is implemented in such a way that the comparison happens in constant time. Thus, users should
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
-        /// Examples are shown below.
+        /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
         /// use orion::hazardous::mac::hmac::SecretKey;
         ///
@@ -761,8 +760,7 @@ macro_rules! construct_secret_key_variable_size {
         /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
         /// is implemented in such a way that the comparison happens in constant time. Thus, users should
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
-        /// Examples are shown below. Although the `orion::pwhash::Password` type is used, this example
-        /// applies to any heap-allocated store of sensitive data.
+        /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
         /// use orion::pwhash::Password;
         ///
