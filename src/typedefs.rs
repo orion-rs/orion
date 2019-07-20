@@ -622,7 +622,7 @@ macro_rules! construct_hmac_key {
         /// let secret_key = SecretKey::generate();
         ///
         /// // Secure, costant-time comparison with byte slice
-        /// assert!(secret_key != key_bytes);
+        /// assert!(secret_key != &[0; 32][..]);
         /// ```
         pub struct $name {
             value: [u8; $size],
