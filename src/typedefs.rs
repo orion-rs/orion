@@ -564,6 +564,7 @@ macro_rules! construct_tag {
         ///
         /// // Secure, costant-time comparison with byte slice
         /// assert!(tag == &[1; 64][..]);
+        /// # Ok(())
         /// # }
         /// ```
         pub struct $name {
