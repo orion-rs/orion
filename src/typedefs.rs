@@ -556,12 +556,15 @@ macro_rules! construct_tag {
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
         /// use orion::hazardous::mac::hmac::Tag;
+        /// # use orion::errors::UnknownCryptoError;
         ///
+        /// # fn main() -> Result<(), Box<UnknownCryptoError>> {
         /// // Initialize an arbitrary, 64-byte tag.
-        /// let tag = Tag::from_slice(&[1; 64]).unwrap();
+        /// let tag = Tag::from_slice(&[1; 64])?;
         ///
         /// // Constant-time comparison
         /// assert!(tag == &[1; 64][..]);
+        /// # }
         /// ```
         pub struct $name {
             value: [u8; $upper_bound],
@@ -730,12 +733,17 @@ macro_rules! construct_secret_key_variable_size {
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
         /// use orion::pwhash::Password;
+        /// # use orion::errors::UnknownCryptoError;
         ///
+        /// # fn main() -> Result<(), Box<UnknownCryptoError>> {
         /// // Initialize a password with 32 random bytes.
-        /// let password = Password::generate(32).unwrap();
+        /// let password = Password::generate(32)?;
         ///
         /// // Secure, costant-time comparison with byte slice
         /// assert!(password != &[0; 32][..]);
+        /// #
+        /// # Ok(())
+        /// # }
         /// ```
         pub struct $name {
             value: Vec<u8>,
