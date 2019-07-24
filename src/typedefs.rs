@@ -562,7 +562,7 @@ macro_rules! construct_tag {
         /// // Initialize an arbitrary, 64-byte tag.
         /// let tag = Tag::from_slice(&[1; 64])?;
         ///
-        /// // Constant-time comparison
+        /// // Secure, costant-time comparison with byte slice
         /// assert!(tag == &[1; 64][..]);
         /// # }
         /// ```
