@@ -407,7 +407,7 @@ macro_rules! construct_secret_key {
         /// // Initialize a secret key with 32 random bytes.
         /// let secret_key = SecretKey::generate();
         ///
-        /// // Secure, costant-time comparison with byte slice
+        /// // Secure, constant-time comparison with a byte slice
         /// assert!(secret_key != &[0; 32][..]);
         /// ```
         pub struct $name {
@@ -562,7 +562,7 @@ macro_rules! construct_tag {
         /// // Initialize an arbitrary, 64-byte tag.
         /// let tag = Tag::from_slice(&[1; 64])?;
         ///
-        /// // Secure, costant-time comparison with byte slice
+        /// // Secure, constant-time comparison with a byte slice
         /// assert!(tag == &[1; 64][..]);
         /// # Ok(())
         /// # }
@@ -625,7 +625,7 @@ macro_rules! construct_hmac_key {
         /// // Initialize a secret key with 32 random bytes.
         /// let secret_key = SecretKey::generate();
         ///
-        /// // Secure, costant-time comparison with byte slice
+        /// // Secure, constant-time comparison with a byte slice
         /// assert!(secret_key != &[0; 32][..]);
         /// ```
         pub struct $name {
@@ -740,7 +740,7 @@ macro_rules! construct_secret_key_variable_size {
         /// // Initialize a password with 32 random bytes.
         /// let password = Password::generate(32)?;
         ///
-        /// // Secure, costant-time comparison with byte slice
+        /// // Secure, constant-time comparison with a byte slice
         /// assert!(password != &[0; 32][..]);
         /// #
         /// # Ok(())
