@@ -395,6 +395,21 @@ macro_rules! construct_secret_key {
         /// # Security:
         /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
         /// that the type implements.
+        ///
+        /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
+        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+        /// is implemented in such a way that the comparison happens in constant time. Thus, users should
+        /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+        /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
+        /// ```rust
+        /// use orion::hazardous::stream::chacha20::SecretKey;
+        ///
+        /// // Initialize a secret key with 32 random bytes.
+        /// let secret_key = SecretKey::generate();
+        ///
+        /// // Secure, costant-time comparison with byte slice
+        /// assert!(secret_key != &[0; 32][..]);
+        /// ```
         pub struct $name {
             value: [u8; $upper_bound],
             original_length: usize,
@@ -533,6 +548,25 @@ macro_rules! construct_tag {
         /// # Security:
         /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
         /// that the type implements.
+        ///
+        /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
+        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+        /// is implemented in such a way that the comparison happens in constant time. Thus, users should
+        /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+        /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
+        /// ```rust
+        /// use orion::hazardous::mac::hmac::Tag;
+        /// # use orion::errors::UnknownCryptoError;
+        ///
+        /// # fn main() -> Result<(), Box<UnknownCryptoError>> {
+        /// // Initialize an arbitrary, 64-byte tag.
+        /// let tag = Tag::from_slice(&[1; 64])?;
+        ///
+        /// // Secure, costant-time comparison with byte slice
+        /// assert!(tag == &[1; 64][..]);
+        /// # Ok(())
+        /// # }
+        /// ```
         pub struct $name {
             value: [u8; $upper_bound],
             original_length: usize,
@@ -579,6 +613,21 @@ macro_rules! construct_hmac_key {
         /// # Security:
         /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
         /// that the type implements.
+        ///
+        /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
+        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+        /// is implemented in such a way that the comparison happens in constant time. Thus, users should
+        /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+        /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
+        /// ```rust
+        /// use orion::hazardous::mac::hmac::SecretKey;
+        ///
+        /// // Initialize a secret key with 32 random bytes.
+        /// let secret_key = SecretKey::generate();
+        ///
+        /// // Secure, costant-time comparison with byte slice
+        /// assert!(secret_key != &[0; 32][..]);
+        /// ```
         pub struct $name {
             value: [u8; $size],
             original_length: usize,
@@ -677,6 +726,26 @@ macro_rules! construct_secret_key_variable_size {
         /// # Security:
         /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
         /// that the type implements.
+        ///
+        /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
+        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+        /// is implemented in such a way that the comparison happens in constant time. Thus, users should
+        /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+        /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
+        /// ```rust
+        /// use orion::pwhash::Password;
+        /// # use orion::errors::UnknownCryptoError;
+        ///
+        /// # fn main() -> Result<(), Box<UnknownCryptoError>> {
+        /// // Initialize a password with 32 random bytes.
+        /// let password = Password::generate(32)?;
+        ///
+        /// // Secure, costant-time comparison with byte slice
+        /// assert!(password != &[0; 32][..]);
+        /// #
+        /// # Ok(())
+        /// # }
+        /// ```
         pub struct $name {
             value: Vec<u8>,
             original_length: usize,
