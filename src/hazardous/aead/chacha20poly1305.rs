@@ -476,7 +476,9 @@ mod public {
 		use super::*;
 
 		// Only return true if both a and b are true.
-		fn check_all_true(a: bool, b: bool) -> bool { (a == true) && (b == true) }
+		fn check_all_true(a: bool, b: bool) -> bool {
+			(a == true) && (b == true)
+		}
 
 		quickcheck! {
 			// Sealing input, and then opening should always yield the same input.
