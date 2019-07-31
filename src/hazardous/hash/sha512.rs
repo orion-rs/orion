@@ -215,7 +215,6 @@ impl Sha512 {
 	/// Process data in `self.buffer`.
 	fn process(&mut self, data: Option<&[u8]>) {
 		let mut w = [0u64; 80];
-		
 		match data {
 			Some(bytes) => { 
 				debug_assert!(bytes.len() == SHA512_BLOCKSIZE);

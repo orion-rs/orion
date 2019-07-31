@@ -265,10 +265,10 @@ impl Blake2b {
 	fn compress_f(&mut self, data: Option<&[u8]>) {
 		let mut m_vec = [0u64; 16];
 		match data {
-			Some(bytes) => { 
+			Some(bytes) => {
 				debug_assert!(bytes.len() == BLAKE2B_BLOCKSIZE);
 				load_u64_into_le(bytes, &mut m_vec);
-			},
+			}
 			None => load_u64_into_le(&self.buffer, &mut m_vec),
 		}
 		let mut w_vec = [
