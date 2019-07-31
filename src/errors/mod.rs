@@ -29,17 +29,23 @@ use self::core::fmt;
 pub struct UnknownCryptoError;
 
 impl fmt::Display for UnknownCryptoError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "UnknownCryptoError") }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "UnknownCryptoError")
+	}
 }
 
 impl fmt::Debug for UnknownCryptoError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "UnknownCryptoError") }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "UnknownCryptoError")
+	}
 }
 
 #[cfg(feature = "safe_api")]
 // Required for rand's generators
 impl From<getrandom::Error> for UnknownCryptoError {
-	fn from(_: getrandom::Error) -> Self { UnknownCryptoError }
+	fn from(_: getrandom::Error) -> Self {
+		UnknownCryptoError
+	}
 }
 
 #[test]

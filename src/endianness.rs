@@ -156,14 +156,20 @@ mod public {
 
 	#[test]
 	#[should_panic]
-	fn test_load_single_src_high() { load_u32_le(&[0u8; 5]); }
+	fn test_load_single_src_high() {
+		load_u32_le(&[0u8; 5]);
+	}
 
 	#[test]
 	#[should_panic]
-	fn test_load_single_src_low() { load_u32_le(&[0u8; 3]); }
+	fn test_load_single_src_low() {
+		load_u32_le(&[0u8; 3]);
+	}
 
 	#[test]
-	fn test_load_single_src_ok() { load_u32_le(&[0u8; 4]); }
+	fn test_load_single_src_ok() {
+		load_u32_le(&[0u8; 4]);
+	}
 
 	#[test]
 	fn test_results_store_and_load_u32_into_le() {

@@ -43,15 +43,9 @@ matrix:
         - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
 
-    - name: "[RELEASE + DEBUG]: Tests + rust-fmt"
+    - name: "[RELEASE + DEBUG]: Tests"
       rust: nightly
-      install:
-        - rustup component add rustfmt-preview
       script:
-        # rust-fmt
-        - cargo clean
-        - cargo fmt --all -- --check
-
         # Debug:
         - cargo test
         - cargo test --no-default-features --tests
@@ -62,12 +56,17 @@ matrix:
         - cargo test --release --no-default-features --tests
         - cargo test --release --no-default-features --features nightly 
 
-    - name: "[RELEASE + DEBUG]: Tests + cargo-audit + clippy"
+    - name: "[RELEASE + DEBUG]: Tests + cargo-audit + clippy + fmt"
       rust: stable
       install:
         - cargo install --force cargo-audit
-        - rustup component add clippy-preview
+        - rustup component add clippy
+        - rustup component add rustfmt
       script:
+        # rust-fmt
+        - cargo clean
+        - cargo fmt --all -- --check
+
         # cargo-audit
         - cargo clean
         - cargo build

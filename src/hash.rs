@@ -72,7 +72,9 @@ mod public {
 	mod test_digest {
 		use super::*;
 		#[test]
-		fn basic_test() { let _digest = digest(b"Some data").unwrap(); }
+		fn basic_test() {
+			let _digest = digest(b"Some data").unwrap();
+		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
