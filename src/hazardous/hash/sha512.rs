@@ -201,9 +201,16 @@ impl Sha512 {
 	#[rustfmt::skip]
 	#[allow(clippy::many_single_char_names)]
 	/// Process data in `self.buffer`.
-	fn process(&mut self) {
+	fn process(&mut self, data: Option<&[u8]>) {
 		let mut w = [0u64; 80];
-		load_u64_into_be(&self.buffer, &mut w[..16]);
+		
+		match data {
+			Some(bytes) => { 
+				debug_assert!(bytes.len() == SHA512_BLOCKSIZE);
+				load_u64_into_be(bytes, &mut w[..16]);
+			},
+			None => load_u64_into_be(&self.buffer, &mut w[..16]),
+		}
 
 		for t in 16..80 {
 			w[t] = Self::small_sigma_1(w[t - 2])
@@ -284,32 +291,35 @@ impl Sha512 {
 		}
 
 		let mut bytes = data;
-		// First fill up if there is leftover space
-		if self.leftover > 0 {
+
+		if self.leftover != 0 {
 			debug_assert!(self.leftover <= SHA512_BLOCKSIZE);
 
-			let fill = SHA512_BLOCKSIZE - self.leftover;
+			let mut want = SHA512_BLOCKSIZE - self.leftover;
+			if want > bytes.len() {
+				want = bytes.len();
+			}
 
-			if bytes.len() < fill {
-				self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
-				self.leftover += bytes.len();
-				self.increment_mlen(bytes.len() as u64);
+			for (idx, itm) in bytes.iter().enumerate().take(want) {
+				self.buffer[self.leftover + idx] = *itm;
+			}
+
+			// Reduce by slice
+			bytes = &bytes[want..];
+			self.leftover += want;
+			self.increment_mlen(want as u64);
+
+			if self.leftover < SHA512_BLOCKSIZE {
 				return Ok(());
 			}
 
-			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
-			// Process data
-			self.process();
-			self.increment_mlen(fill as u64);
+			self.process(None);
 			self.leftover = 0;
-			// Reduce by slice
-			bytes = &bytes[fill..];
 		}
 
 		while bytes.len() >= SHA512_BLOCKSIZE {
 			// Process data
-			self.buffer.copy_from_slice(&bytes[..SHA512_BLOCKSIZE]);
-			self.process();
+			self.process(Some(bytes[..SHA512_BLOCKSIZE].as_ref()));
 			self.increment_mlen(SHA512_BLOCKSIZE as u64);
 			// Reduce by slice
 			bytes = &bytes[SHA512_BLOCKSIZE..];
@@ -347,7 +357,7 @@ impl Sha512 {
 
 		// Check for available space for length padding
 		if (SHA512_BLOCKSIZE - self.leftover) < 16 {
-			self.process();
+			self.process(None);
 			for itm in self.buffer.iter_mut().take(self.leftover) {
 				*itm = 0;
 			}
@@ -359,7 +369,7 @@ impl Sha512 {
 		self.buffer[SHA512_BLOCKSIZE - 8..SHA512_BLOCKSIZE]
 			.copy_from_slice(&self.message_len[1].to_be_bytes());
 
-		self.process();
+		self.process(None);
 
 		let mut digest = [0u8; 64];
 		store_u64_into_be(&self.working_state, &mut digest);
