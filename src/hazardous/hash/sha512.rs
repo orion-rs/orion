@@ -256,6 +256,11 @@ impl Sha512 {
 	#[inline]
 	/// Increment the message length during processing of data.
 	fn increment_mlen(&mut self, length: u64) {
+		// The checked shift checks that the right-hand side is a legal shift.
+		// The result can still overflow if length > u64::max_value() / 8.
+		// Should be impossible for a user to trigger.
+		debug_assert!(length <= u64::max_value() / 8);
+
 		// left-shift to get bit-sized representation of length
 		// using .unwrap() because it should not panic in practice
 		let len = length.checked_shl(3).unwrap();
@@ -682,7 +687,7 @@ mod private {
 			context.increment_mlen(12);
 			assert!(context.message_len == [0u64, 240u64]);
 			// Overflow
-			context.increment_mlen(u64::max_value());
+			context.increment_mlen(u64::max_value() / 8);
 			assert!(context.message_len == [1u64, 232u64]);
 		}
 
