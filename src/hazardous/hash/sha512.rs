@@ -382,10 +382,10 @@ impl Sha512 {
 
 		self.process(None);
 
-		let mut digest = [0u8; 64];
+		let mut digest = [0u8; SHA512_OUTSIZE];
 		store_u64_into_be(&self.working_state, &mut digest);
 
-		Ok(Digest::from_slice(&digest)?)
+		Ok(Digest::from(digest))
 	}
 }
 
