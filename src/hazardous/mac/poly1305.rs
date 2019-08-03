@@ -395,7 +395,7 @@ impl Poly1305 {
 		self.process_end_of_stream();
 		store_u32_into_le(&self.a[0..4], &mut local_buffer);
 
-		Ok(Tag::from_slice(&local_buffer)?)
+		Ok(Tag::from(local_buffer))
 	}
 }
 
