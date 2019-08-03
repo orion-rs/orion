@@ -216,10 +216,10 @@ impl Sha512 {
 	fn process(&mut self, data: Option<&[u8]>) {
 		let mut w = [0u64; 80];
 		match data {
-			Some(bytes) => { 
+			Some(bytes) => {
 				debug_assert!(bytes.len() == SHA512_BLOCKSIZE);
 				load_u64_into_be(bytes, &mut w[..16]);
-			},
+			}
 			None => load_u64_into_be(&self.buffer, &mut w[..16]),
 		}
 
