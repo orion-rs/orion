@@ -110,13 +110,13 @@ pub fn seal(
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
 	let subkey: SecretKey =
-		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?)?;
+		SecretKey::from(chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?);
 	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
 	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
 
 	chacha20poly1305::seal(
 		&subkey,
-		&IETFNonce::from_slice(&prefixed_nonce)?,
+		&IETFNonce::from(prefixed_nonce),
 		plaintext,
 		ad,
 		dst_out,
@@ -135,13 +135,13 @@ pub fn open(
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
 	let subkey: SecretKey =
-		SecretKey::from_slice(&chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?)?;
-	let mut prefixed_nonce = [0u8; 12];
-	prefixed_nonce[4..12].copy_from_slice(&nonce.as_ref()[16..24]);
+		SecretKey::from(chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?);
+	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
+	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
 
 	chacha20poly1305::open(
 		&subkey,
-		&IETFNonce::from_slice(&prefixed_nonce)?,
+		&IETFNonce::from(prefixed_nonce),
 		ciphertext_with_tag,
 		ad,
 		dst_out,
