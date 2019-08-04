@@ -409,6 +409,9 @@ macro_rules! construct_secret_key {
         ///
         /// // Secure, constant-time comparison with a byte slice
         /// assert!(secret_key != &[0; 32][..]);
+        ///
+        /// // Secure, constant-time comparison with another SecretKey
+        /// assert!(secret_key != SecretKey::generate());
         /// ```
         pub struct $name {
             value: [u8; $upper_bound],
@@ -564,6 +567,9 @@ macro_rules! construct_tag {
         ///
         /// // Secure, constant-time comparison with a byte slice
         /// assert!(tag == &[1; 64][..]);
+        ///
+        /// // Secure, constant-time comparison with another Tag
+        /// assert!(tag == Tag::from_slice(&[1; 64])?);
         /// # Ok(())
         /// # }
         /// ```
@@ -627,6 +633,9 @@ macro_rules! construct_hmac_key {
         ///
         /// // Secure, constant-time comparison with a byte slice
         /// assert!(secret_key != &[0; 32][..]);
+        ///
+        /// // Secure, constant-time comparison with another SecretKey
+        /// assert!(secret_key != SecretKey::generate());
         /// ```
         pub struct $name {
             value: [u8; $size],
@@ -742,6 +751,9 @@ macro_rules! construct_secret_key_variable_size {
         ///
         /// // Secure, constant-time comparison with a byte slice
         /// assert!(password != &[0; 32][..]);
+        ///
+        /// // Secure, constant-time comparison with another Password
+        /// assert!(password != Password::generate(32)?);
         /// #
         /// # Ok(())
         /// # }
