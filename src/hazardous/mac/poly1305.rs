@@ -90,7 +90,7 @@ construct_secret_key! {
 	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// - Failure to generate random bytes securely.
 	(OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
 }
 

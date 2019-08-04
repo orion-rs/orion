@@ -101,7 +101,7 @@ construct_secret_key! {
 	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// - Failure to generate random bytes securely.
 	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, BLAKE2B_KEYSIZE)
 }
 

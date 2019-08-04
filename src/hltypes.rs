@@ -37,7 +37,7 @@ construct_secret_key_variable_size! {
 	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// - Failure to generate random bytes securely.
 	(SecretKey, test_secret_key, 32)
 }
 
@@ -54,7 +54,7 @@ construct_salt_variable_size! {
 	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// - Failure to generate random bytes securely.
 	(Salt, test_salt, 64)
 }
 
@@ -85,6 +85,6 @@ construct_secret_key_variable_size! {
 	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// - Failure to generate random bytes securely.
 	(Password, test_password, 32)
 }

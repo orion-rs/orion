@@ -93,7 +93,7 @@ construct_hmac_key! {
 	///
 	/// # Panics:
 	/// A panic will occur if:
-	/// - The `OsRng` fails to initialize or read from its source.
+	/// - Failure to generate random bytes securely.
 	(Password, SHA512_BLOCKSIZE)
 }
 

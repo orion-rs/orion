@@ -57,7 +57,7 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - The `OsRng` fails to initialize or read from its source.
+//! - Failure to generate random bytes securely.
 //!
 //! # Security:
 //! - The iteration count should be set as high as feasible. The recommended
