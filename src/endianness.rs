@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use core::convert::TryInto;
 use core::mem;
 
 macro_rules! impl_store_into {
@@ -28,6 +29,8 @@ macro_rules! impl_store_into {
 		/// Store bytes in `src` in `dst`.
 		pub fn $func_name(src: &[$type_alias], dst: &mut [u8]) {
 			let type_alias_len = mem::size_of::<$type_alias>();
+			// The length of src must be evenly divisable by the length of dst,
+			// making sure .chunks_exact() leaves no remainder.
 			assert!((type_alias_len * src.len()) == dst.len());
 
 			for (src_elem, dst_chunk) in src.iter().zip(dst.chunks_exact_mut(type_alias_len)) {
@@ -43,13 +46,15 @@ macro_rules! impl_load_into {
 		/// Load bytes in `src` into `dst`.
 		pub fn $func_name(src: &[u8], dst: &mut [$type_alias]) {
 			let type_alias_len = mem::size_of::<$type_alias>();
+			// The length of src must be evenly divisable by the length of dst,
+			// making sure .chunks_exact() leaves no remainder.
 			assert!((dst.len() * type_alias_len) == src.len());
 
-			let mut tmp = [0u8; mem::size_of::<$type_alias>()];
-
 			for (src_chunk, dst_elem) in src.chunks_exact(type_alias_len).zip(dst.iter_mut()) {
-				tmp.copy_from_slice(src_chunk);
-				*dst_elem = $type_alias_expr::$conv_function(tmp);
+				// The above assert and this debug assert should prove that .unwrap()
+				// cannot panic using TryInto.
+				debug_assert!(src_chunk.len() == type_alias_len);
+				*dst_elem = $type_alias_expr::$conv_function(src_chunk.try_into().unwrap());
 			}
 		}
 	};
@@ -60,12 +65,10 @@ macro_rules! impl_load {
 		#[inline]
 		/// Convert bytes in `src` to a given primitive.
 		pub fn $func_name(src: &[u8]) -> $type_alias {
+			// Satisfying this assert should prove that using TryInto
+			// cannot panic.
 			assert!(mem::size_of::<$type_alias>() == src.len());
-
-			let mut tmp = [0u8; mem::size_of::<$type_alias>()];
-			tmp.copy_from_slice(src);
-
-			$type_alias_expr::$conv_function(tmp)
+			$type_alias_expr::$conv_function(src.try_into().unwrap())
 		}
 	};
 }
