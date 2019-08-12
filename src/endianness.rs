@@ -43,7 +43,6 @@ macro_rules! impl_store_into {
 macro_rules! impl_load_into {
 	($type_alias:ty, $type_alias_expr:ident, $conv_function:ident, $func_name:ident) => {
 		#[inline]
-		#[allow(dead_code)]
 		/// Load bytes in `src` into `dst`.
 		pub fn $func_name(src: &[u8], dst: &mut [$type_alias]) {
 			let type_alias_len = mem::size_of::<$type_alias>();
@@ -76,6 +75,7 @@ macro_rules! impl_load {
 
 impl_load!(u32, u32, from_le_bytes, load_u32_le);
 
+#[cfg(test)]
 impl_load_into!(u32, u32, from_le_bytes, load_u32_into_le);
 
 impl_load_into!(u64, u64, from_le_bytes, load_u64_into_le);

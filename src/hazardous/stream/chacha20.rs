@@ -101,8 +101,8 @@
 //! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
 //! [`aead`]: https://docs.rs/orion/latest/orion/hazardous/aead/index.html
 //! [XChaCha20Poly1305]: https://docs.rs/orion/latest/orion/hazardous/aead/xchacha20poly1305/index.html
+use crate::endianness::load_u32_le;
 use crate::errors::UnknownCryptoError;
-use core::convert::TryInto;
 use zeroize::Zeroize;
 
 /// The key size for ChaCha20.
@@ -261,31 +261,31 @@ impl InternalState {
 
 		// Row 1 and 2 with secret key.
 		let r1 = U32x4(
-			u32::from_le_bytes(sk[0..4].try_into().unwrap()),
-			u32::from_le_bytes(sk[4..8].try_into().unwrap()),
-			u32::from_le_bytes(sk[8..12].try_into().unwrap()),
-			u32::from_le_bytes(sk[12..16].try_into().unwrap()),
+			load_u32_le(&sk[0..4]),
+			load_u32_le(&sk[4..8]),
+			load_u32_le(&sk[8..12]),
+			load_u32_le(&sk[12..16]),
 		);
 
 		let r2 = U32x4(
-			u32::from_le_bytes(sk[16..20].try_into().unwrap()),
-			u32::from_le_bytes(sk[20..24].try_into().unwrap()),
-			u32::from_le_bytes(sk[24..28].try_into().unwrap()),
-			u32::from_le_bytes(sk[28..32].try_into().unwrap()),
+			load_u32_le(&sk[16..20]),
+			load_u32_le(&sk[20..24]),
+			load_u32_le(&sk[24..28]),
+			load_u32_le(&sk[28..32]),
 		);
 
 		let mut r3 = U32x4(0, 0, 0, 0);
 
 		if is_ietf {
 			// Counter is already set.
-			r3.1 = u32::from_le_bytes(n[0..4].try_into().unwrap());
-			r3.2 = u32::from_le_bytes(n[4..8].try_into().unwrap());
-			r3.3 = u32::from_le_bytes(n[8..12].try_into().unwrap());
+			r3.1 = load_u32_le(&n[0..4]);
+			r3.2 = load_u32_le(&n[4..8]);
+			r3.3 = load_u32_le(&n[8..12]);
 		} else {
-			r3.0 = u32::from_le_bytes(n[0..4].try_into().unwrap());
-			r3.1 = u32::from_le_bytes(n[4..8].try_into().unwrap());
-			r3.2 = u32::from_le_bytes(n[8..12].try_into().unwrap());
-			r3.3 = u32::from_le_bytes(n[12..16].try_into().unwrap());
+			r3.0 = load_u32_le(&n[0..4]);
+			r3.1 = load_u32_le(&n[4..8]);
+			r3.2 = load_u32_le(&n[8..12]);
+			r3.3 = load_u32_le(&n[12..16]);
 		}
 
 		Ok(Self {
