@@ -28,7 +28,6 @@
 //! - `plaintext`: The data to be encrypted.
 //! - `dst_out`: Destination array that will hold the ciphertext/plaintext after
 //!   encryption/decryption.
-//! - `bytes`: The bytes that will be encrypted/decrypted when using the in-place functions.
 //!
 //! `nonce`: "Counters and LFSRs are both acceptable ways of generating unique
 //! nonces, as is encrypting a counter using a block cipher with a 64-bit block
@@ -40,7 +39,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
-//! - `plaintext`, `bytes` or `ciphertext` are empty.
+//! - `plaintext` or `ciphertext` are empty.
 //! - The `initial_counter` is high enough to cause a potential overflow.
 //!
 //! Even though `dst_out` is allowed to be of greater length than `plaintext`,
@@ -389,7 +388,7 @@ impl Serialize {
 
 #[must_use]
 /// In-place IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn encrypt_in_place(
+fn encrypt_in_place(
 	secret_key: &SecretKey,
 	nonce: &Nonce,
 	initial_counter: u32,
@@ -449,17 +448,6 @@ pub fn encrypt(
 		initial_counter,
 		&mut dst_out[..plaintext.len()],
 	)
-}
-
-#[must_use]
-/// In-place IETF ChaCha20 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn decrypt_in_place(
-	secret_key: &SecretKey,
-	nonce: &Nonce,
-	initial_counter: u32,
-	bytes: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-	encrypt_in_place(secret_key, nonce, initial_counter, bytes)
 }
 
 #[must_use]
