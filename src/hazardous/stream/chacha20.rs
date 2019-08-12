@@ -100,10 +100,8 @@
 //! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
 //! [`aead`]: https://docs.rs/orion/latest/orion/hazardous/aead/index.html
 //! [XChaCha20Poly1305]: https://docs.rs/orion/latest/orion/hazardous/aead/xchacha20poly1305/index.html
-use crate::{
-	endianness::{load_u32_into_le, store_u32_into_le},
-	errors::UnknownCryptoError,
-};
+use crate::errors::UnknownCryptoError;
+use core::convert::TryInto;
 use zeroize::Zeroize;
 
 /// The key size for ChaCha20.
@@ -116,9 +114,6 @@ const CHACHA_BLOCKSIZE: usize = 64;
 const HCHACHA_OUTSIZE: usize = 32;
 /// The nonce size for HChaCha20.
 const HCHACHA_NONCESIZE: usize = 16;
-/// Type for a ChaCha state represented as an array of 16 32-bit unsigned
-/// integers.
-type ChaChaState = [u32; 16];
 
 construct_secret_key! {
 	/// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and
@@ -147,94 +142,158 @@ construct_public! {
 
 impl_from_trait!(Nonce, IETF_CHACHA_NONCESIZE);
 
+#[derive(Clone, Copy)]
+struct U32x4(u32, u32, u32, u32);
+
+impl core::ops::BitXor for U32x4 {
+	type Output = Self;
+
+	#[must_use]
+	#[inline(always)]
+	fn bitxor(self, _rhs: Self) -> Self::Output {
+		Self(
+			self.0 ^ _rhs.0,
+			self.1 ^ _rhs.1,
+			self.2 ^ _rhs.2,
+			self.3 ^ _rhs.3,
+		)
+	}
+}
+
+impl U32x4 {
+	#[must_use]
+	#[inline(always)]
+	pub const fn wrapping_add(self, _rhs: Self) -> Self {
+		Self(
+			self.0.wrapping_add(_rhs.0),
+			self.1.wrapping_add(_rhs.1),
+			self.2.wrapping_add(_rhs.2),
+			self.3.wrapping_add(_rhs.3),
+		)
+	}
+
+	#[must_use]
+	#[inline(always)]
+	pub const fn shuffle_left_1(self) -> Self {
+		Self(self.1, self.2, self.3, self.0)
+	}
+
+	#[must_use]
+	#[inline(always)]
+	pub const fn shuffle_left_2(self) -> Self {
+		Self(self.2, self.3, self.0, self.1)
+	}
+
+	#[must_use]
+	#[inline(always)]
+	pub const fn shuffle_left_3(self) -> Self {
+		Self(self.3, self.0, self.1, self.2)
+	}
+
+	#[must_use]
+	#[inline(always)]
+	pub const fn rotate_left(self, n: u32) -> Self {
+		Self(
+			self.0.rotate_left(n),
+			self.1.rotate_left(n),
+			self.2.rotate_left(n),
+			self.3.rotate_left(n),
+		)
+	}
+}
+
+/// ChaCha quarter round.
+fn round(r0: &mut U32x4, r1: &mut U32x4, r2: &mut U32x4, r3: &mut U32x4) {
+	*r0 = r0.wrapping_add(*r1);
+	*r3 = (*r3 ^ *r0).rotate_left(16);
+
+	*r2 = r2.wrapping_add(*r3);
+	*r1 = (*r1 ^ *r2).rotate_left(12);
+
+	*r0 = r0.wrapping_add(*r1);
+	*r3 = (*r3 ^ *r0).rotate_left(8);
+
+	*r2 = r2.wrapping_add(*r3);
+	*r1 = (*r1 ^ *r2).rotate_left(7);
+}
+
+/// Double round operation with shuffle.
+fn double_round(r0: &mut U32x4, r1: &mut U32x4, r2: &mut U32x4, r3: &mut U32x4) {
+	round(r0, r1, r2, r3);
+
+	// Shuffle
+	*r1 = r1.shuffle_left_1();
+	*r2 = r2.shuffle_left_2();
+	*r3 = r3.shuffle_left_3();
+
+	round(r0, r1, r2, r3);
+
+	// Unshuffle
+	*r1 = r1.shuffle_left_3();
+	*r2 = r2.shuffle_left_2();
+	*r3 = r3.shuffle_left_1();
+}
+
 struct InternalState {
-	state: ChaChaState,
+	state: [U32x4; 4],
 	internal_counter: u32,
 	is_ietf: bool,
 }
 
-impl Drop for InternalState {
-	fn drop(&mut self) {
-		self.state.zeroize();
-	}
-}
-
 impl InternalState {
-	#[inline]
-	/// ChaCha quarter round.
-	fn quarter_round(state: &mut ChaChaState, x: usize, y: usize, z: usize, w: usize) {
-		state[x] = state[x].wrapping_add(state[y]);
-		state[w] ^= state[x];
-		state[w] = state[w].rotate_left(16);
-
-		state[z] = state[z].wrapping_add(state[w]);
-		state[y] ^= state[z];
-		state[y] = state[y].rotate_left(12);
-
-		state[x] = state[x].wrapping_add(state[y]);
-		state[w] ^= state[x];
-		state[w] = state[w].rotate_left(8);
-
-		state[z] = state[z].wrapping_add(state[w]);
-		state[y] ^= state[z];
-		state[y] = state[y].rotate_left(7);
-	}
-
-	#[inline]
-	/// Performs 8 `quarter_round` function calls to process a inner block.
-	fn process_inner_block(state: &mut ChaChaState) {
-		// Perform column rounds
-		Self::quarter_round(state, 0, 4, 8, 12);
-		Self::quarter_round(state, 1, 5, 9, 13);
-		Self::quarter_round(state, 2, 6, 10, 14);
-		Self::quarter_round(state, 3, 7, 11, 15);
-		// Perform diagonal rounds
-		Self::quarter_round(state, 0, 5, 10, 15);
-		Self::quarter_round(state, 1, 6, 11, 12);
-		Self::quarter_round(state, 2, 7, 8, 13);
-		Self::quarter_round(state, 3, 4, 9, 14);
-	}
-
 	#[must_use]
 	#[inline]
+	#[allow(clippy::unreadable_literal)]
 	/// Initialize either a ChaCha or HChaCha state with a `secret_key` and
 	/// `nonce`.
-	fn init(
-		secret_key: &SecretKey,
-		nonce: &[u8],
-		is_ietf: bool,
-	) -> Result<Self, UnknownCryptoError> {
-		if (nonce.len() != IETF_CHACHA_NONCESIZE) && is_ietf {
+	fn new(sk: &[u8], n: &[u8], is_ietf: bool) -> Result<Self, UnknownCryptoError> {
+		if sk.len() != CHACHA_KEYSIZE {
 			return Err(UnknownCryptoError);
 		}
-		if (nonce.len() != HCHACHA_NONCESIZE) && !is_ietf {
+		if (n.len() != IETF_CHACHA_NONCESIZE) && is_ietf {
+			return Err(UnknownCryptoError);
+		}
+		if (n.len() != HCHACHA_NONCESIZE) && !is_ietf {
 			return Err(UnknownCryptoError);
 		}
 
-		let mut internal_state = Self {
-			state: [0u32; 16],
-			internal_counter: 0,
-			is_ietf,
-		};
+		// Row 0 with constants.
+		let r0 = U32x4(0x61707865, 0x3320646e, 0x79622d32, 0x6b206574);
 
-		// Setup state with constants
-		internal_state.state[0] = 0x6170_7865_u32;
-		internal_state.state[1] = 0x3320_646e_u32;
-		internal_state.state[2] = 0x7962_2d32_u32;
-		internal_state.state[3] = 0x6b20_6574_u32;
-
-		load_u32_into_le(
-			&secret_key.unprotected_as_bytes(),
-			&mut internal_state.state[4..12],
+		// Row 1 and 2 with secret key.
+		let r1 = U32x4(
+			u32::from_le_bytes(sk[0..4].try_into().unwrap()),
+			u32::from_le_bytes(sk[4..8].try_into().unwrap()),
+			u32::from_le_bytes(sk[8..12].try_into().unwrap()),
+			u32::from_le_bytes(sk[12..16].try_into().unwrap()),
 		);
 
+		let r2 = U32x4(
+			u32::from_le_bytes(sk[16..20].try_into().unwrap()),
+			u32::from_le_bytes(sk[20..24].try_into().unwrap()),
+			u32::from_le_bytes(sk[24..28].try_into().unwrap()),
+			u32::from_le_bytes(sk[28..32].try_into().unwrap()),
+		);
+
+		let mut r3 = U32x4(0u32.to_le(), 0, 0, 0);
+
 		if is_ietf {
-			load_u32_into_le(nonce, &mut internal_state.state[13..16]);
+			// Counter is already set.
+			r3.1 = u32::from_le_bytes(n[0..4].try_into().unwrap());
+			r3.2 = u32::from_le_bytes(n[4..8].try_into().unwrap());
+			r3.3 = u32::from_le_bytes(n[8..12].try_into().unwrap());
 		} else {
-			load_u32_into_le(nonce, &mut internal_state.state[12..16]);
+			r3.0 = u32::from_le_bytes(n[0..4].try_into().unwrap());
+			r3.1 = u32::from_le_bytes(n[4..8].try_into().unwrap());
+			r3.2 = u32::from_le_bytes(n[8..12].try_into().unwrap());
+			r3.3 = u32::from_le_bytes(n[12..16].try_into().unwrap());
 		}
 
-		Ok(internal_state)
+		Ok(Self {
+			state: [r0, r1, r2, r3],
+			internal_counter: 0,
+			is_ietf,
+		})
 	}
 
 	#[must_use]
@@ -242,12 +301,15 @@ impl InternalState {
 	/// Process either a ChaCha20 or HChaCha20 block.
 	fn process_block(
 		&mut self,
-		block_count: Option<u32>,
-	) -> Result<ChaChaState, UnknownCryptoError> {
-		if self.is_ietf && block_count.is_none() {
-			return Err(UnknownCryptoError);
+		block_counter: Option<u32>,
+	) -> Result<[U32x4; 4], UnknownCryptoError> {
+		if self.is_ietf {
+			match block_counter {
+				Some(counter) => self.state[3].0 = counter.to_le(),
+				None => return Err(UnknownCryptoError),
+			};
 		}
-		if !self.is_ietf && block_count.is_some() {
+		if !self.is_ietf && block_counter.is_some() {
 			return Err(UnknownCryptoError);
 		}
 
@@ -255,54 +317,114 @@ impl InternalState {
 		// have been retrieved.
 		self.internal_counter = self.internal_counter.checked_add(1).unwrap();
 
-		// Only set block counter if not HChaCha
+		let mut wr0 = self.state[0];
+		let mut wr1 = self.state[1];
+		let mut wr2 = self.state[2];
+		let mut wr3 = self.state[3];
+
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+		double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+
 		if self.is_ietf {
-			// .unwrap() cannot panic here since the above two
-			// checks make sure block_count.is_some() == true
-			self.state[12] = block_count.unwrap();
+			wr0 = wr0.wrapping_add(self.state[0]);
+			wr1 = wr1.wrapping_add(self.state[1]);
+			wr2 = wr2.wrapping_add(self.state[2]);
+			wr3 = wr3.wrapping_add(self.state[3]);
 		}
 
-		let mut working_state = self.state;
+		Ok([wr0, wr1, wr2, wr3])
+	}
+}
 
-		for _ in 0..10 {
-			Self::process_inner_block(&mut working_state);
+macro_rules! xor_slices {
+	($destination:expr, $other:expr) => {
+		for (inplace, _other) in $destination.iter_mut().zip($other.iter()) {
+			*inplace ^= _other;
+			}
+	};
+}
+
+/// Read a ChaCha state matrix row as bytes and XOR with 16-byte block.
+fn xor_row_into(row: &U32x4, slice_in: &mut [u8]) {
+	debug_assert!(slice_in.len() == 16);
+
+	xor_slices!(slice_in[0..4], row.0.to_le_bytes().as_ref());
+	xor_slices!(slice_in[4..8], row.1.to_le_bytes().as_ref());
+	xor_slices!(slice_in[8..12], row.2.to_le_bytes().as_ref());
+	xor_slices!(slice_in[12..16], row.3.to_le_bytes().as_ref());
+}
+
+enum Serialize {
+	IetfChaCha,
+	HChaCha,
+}
+
+impl Serialize {
+	fn xor_in_place(self, ks: &[U32x4; 4], inplace: &mut [u8]) {
+		match self {
+			Serialize::IetfChaCha => {
+				debug_assert!(inplace.len() == CHACHA_BLOCKSIZE);
+
+				for (vector_counter, inplace_block) in inplace.chunks_exact_mut(16).enumerate() {
+					debug_assert!(vector_counter < 4);
+					xor_row_into(&ks[vector_counter], inplace_block);
+				}
+			}
+			Serialize::HChaCha => {
+				debug_assert!(inplace.len() == HCHACHA_OUTSIZE);
+
+				xor_row_into(&ks[0], &mut inplace[0..16]);
+				xor_row_into(&ks[3], &mut inplace[16..32]);
+			}
 		}
+	}
+}
 
-		if self.is_ietf {
-			working_state
-				.iter_mut()
-				.zip(self.state.iter())
-				.for_each(|(a, b)| *a = a.wrapping_add(*b));
-		}
-
-		Ok(working_state)
+#[must_use]
+/// In-place IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn encrypt_in_place(
+	secret_key: &SecretKey,
+	nonce: &Nonce,
+	initial_counter: u32,
+	bytes: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+	if bytes.is_empty() {
+		return Err(UnknownCryptoError);
 	}
 
-	#[must_use]
-	#[inline(always)]
-	/// Serialize a keystream block of 16 u32's, into a little-endian byte
-	/// array.
-	fn serialize_block(
-		&mut self,
-		src_block: &ChaChaState,
-		dst_block: &mut [u8],
-	) -> Result<(), UnknownCryptoError> {
-		if (dst_block.len() != CHACHA_BLOCKSIZE) && self.is_ietf {
-			return Err(UnknownCryptoError);
-		}
-		if (dst_block.len() != HCHACHA_OUTSIZE) && !self.is_ietf {
-			return Err(UnknownCryptoError);
-		}
+	let mut state = InternalState::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true)?;
 
-		if self.is_ietf {
-			store_u32_into_le(src_block, dst_block);
+	for (counter, bytes_block) in bytes.chunks_mut(CHACHA_BLOCKSIZE).enumerate() {
+		let block_counter = initial_counter.checked_add(counter as u32);
+
+		if block_counter.is_some() {
+			let keystream_state = state.process_block(block_counter)?;
+
+			if bytes_block.len() == CHACHA_BLOCKSIZE {
+				Serialize::IetfChaCha.xor_in_place(&keystream_state, bytes_block);
+			} else {
+				let block_len = bytes_block.len();
+				let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
+
+				keystream_block[..block_len].copy_from_slice(bytes_block);
+				Serialize::IetfChaCha.xor_in_place(&keystream_state, &mut keystream_block);
+				bytes_block.copy_from_slice(keystream_block[..block_len].as_ref());
+				keystream_block.zeroize();
+			}
 		} else {
-			store_u32_into_le(&src_block[0..4], &mut dst_block[0..16]);
-			store_u32_into_le(&src_block[12..16], &mut dst_block[16..32]);
+			return Err(UnknownCryptoError);
 		}
-
-		Ok(())
 	}
+
+	Ok(())
 }
 
 #[must_use]
@@ -317,54 +439,28 @@ pub fn encrypt(
 	if dst_out.len() < plaintext.len() {
 		return Err(UnknownCryptoError);
 	}
-	// Err on empty `plaintext` because the `dst_ciphertext` is user-controlled, so
-	// if we don't panic here and just return `dst_ciphertext` when the user
-	// encrypts an empty plaintext, they might think the plaintext wasn't empty
-	// when checking data in `dst_ciphertext` after encryption
 	if plaintext.is_empty() {
 		return Err(UnknownCryptoError);
 	}
 
-	let mut chacha_state = InternalState::init(secret_key, &nonce.as_ref(), true)?;
-	let mut keystream_state: ChaChaState = [0u32; 16];
+	dst_out[..plaintext.len()].copy_from_slice(plaintext);
+	encrypt_in_place(
+		secret_key,
+		nonce,
+		initial_counter,
+		&mut dst_out[..plaintext.len()],
+	)
+}
 
-	for (counter, (plaintext_block, ciphertext_block)) in plaintext
-		.chunks(CHACHA_BLOCKSIZE)
-		.zip(dst_out.chunks_mut(CHACHA_BLOCKSIZE))
-		.enumerate()
-	{
-		match initial_counter.checked_add(counter as u32) {
-			Some(ref block_counter) => {
-				keystream_state = chacha_state.process_block(Some(*block_counter))?;
-				// We only want to allocate a `keystream_block` if the `ciphertext_block`
-				// is not long enough to hold the entire serialized keystream.
-				if ciphertext_block.len() == CHACHA_BLOCKSIZE {
-					chacha_state.serialize_block(&keystream_state, ciphertext_block)?;
-					for (ct_keystream, plaintext) in
-						ciphertext_block.iter_mut().zip(plaintext_block.iter())
-					{
-						*ct_keystream ^= plaintext;
-					}
-				} else {
-					let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
-					chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
-
-					for (idx, itm) in plaintext_block.iter().enumerate() {
-						// `ciphertext_block` and `plaintext_block` have the same length
-						// due to chunks(), so indexing is no problem here
-						ciphertext_block[idx] = keystream_block[idx] ^ itm;
-					}
-
-					keystream_block.zeroize();
-				}
-			}
-			None => return Err(UnknownCryptoError),
-		}
-	}
-
-	keystream_state.zeroize();
-
-	Ok(())
+#[must_use]
+/// In-place IETF ChaCha20 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub fn decrypt_in_place(
+	secret_key: &SecretKey,
+	nonce: &Nonce,
+	initial_counter: u32,
+	bytes: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+	encrypt_in_place(secret_key, nonce, initial_counter, bytes)
 }
 
 #[must_use]
@@ -386,13 +482,13 @@ pub fn keystream_block(
 	nonce: &Nonce,
 	counter: u32,
 ) -> Result<[u8; CHACHA_BLOCKSIZE], UnknownCryptoError> {
-	let mut chacha_state = InternalState::init(secret_key, &nonce.as_ref(), true)?;
+	let mut chacha_state =
+		InternalState::new(secret_key.unprotected_as_bytes(), &nonce.as_ref(), true)?;
 	let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
-	let mut keystream_state: ChaChaState = chacha_state.process_block(Some(counter))?;
-
-	chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
-
-	keystream_state.zeroize();
+	Serialize::IetfChaCha.xor_in_place(
+		&chacha_state.process_block(Some(counter))?,
+		&mut keystream_block,
+	);
 
 	Ok(keystream_block)
 }
@@ -404,12 +500,9 @@ pub fn hchacha20(
 	secret_key: &SecretKey,
 	nonce: &[u8],
 ) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
-	let mut chacha_state = InternalState::init(secret_key, nonce, false)?;
-	let mut keystream_state = chacha_state.process_block(None)?;
-	let mut keystream_block: [u8; HCHACHA_OUTSIZE] = [0u8; HCHACHA_OUTSIZE];
-	chacha_state.serialize_block(&keystream_state, &mut keystream_block)?;
-
-	keystream_state.zeroize();
+	let mut chacha_state = InternalState::new(secret_key.unprotected_as_bytes(), nonce, false)?;
+	let mut keystream_block = [0u8; HCHACHA_OUTSIZE];
+	Serialize::HChaCha.xor_in_place(&chacha_state.process_block(None)?, &mut keystream_block);
 
 	Ok(keystream_block)
 }
@@ -847,43 +940,13 @@ mod private {
 
 		#[test]
 		fn test_nonce_length() {
-			assert!(InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 15],
-				true
-			)
-			.is_err());
-			assert!(InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 10],
-				true
-			)
-			.is_err());
-			assert!(InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 12],
-				true
-			)
-			.is_ok());
+			assert!(InternalState::new(&[0u8; 32], &[0u8; 15], true).is_err());
+			assert!(InternalState::new(&[0u8; 32], &[0u8; 10], true).is_err());
+			assert!(InternalState::new(&[0u8; 32], &[0u8; 12], true).is_ok());
 
-			assert!(InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 15],
-				false
-			)
-			.is_err());
-			assert!(InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 17],
-				false
-			)
-			.is_err());
-			assert!(InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-				false
-			)
-			.is_ok());
+			assert!(InternalState::new(&[0u8; 32], &[0u8; 15], false).is_err());
+			assert!(InternalState::new(&[0u8; 32], &[0u8; 17], false).is_err());
+			assert!(InternalState::new(&[0u8; 32], &[0u8; 16], false).is_ok());
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
@@ -895,10 +958,10 @@ mod private {
 				// Always fail to intialize state while the nonce is not
 				// the correct length. If it is correct length, never panic.
 				fn prop_test_nonce_length_ietf(nonce: Vec<u8>) -> bool {
-					let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
+					let sk = &[0u8; 32];
 
 					if nonce.len() != IETF_CHACHA_NONCESIZE {
-						let res = if InternalState::init(&sk, &nonce[..], true).is_err() {
+						let res = if InternalState::new(sk, &nonce[..], true).is_err() {
 							true
 						} else {
 							false
@@ -906,7 +969,7 @@ mod private {
 
 						return res;
 					} else {
-						let res = if InternalState::init(&sk, &nonce[..], true).is_ok() {
+						let res = if InternalState::new(sk, &nonce[..], true).is_ok() {
 							true
 						} else {
 							false
@@ -921,10 +984,10 @@ mod private {
 				// Always fail to intialize state while the nonce is not
 				// the correct length. If it is correct length, never panic.
 				fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
-					let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
+					let sk = &[0u8; 32];
 
 					if nonce.len() != HCHACHA_NONCESIZE {
-						let res = if InternalState::init(&sk, &nonce[..], false).is_err() {
+						let res = if InternalState::new(sk, &nonce[..], false).is_err() {
 							true
 						} else {
 							false
@@ -932,7 +995,7 @@ mod private {
 
 						return res;
 					} else {
-						let res = if InternalState::init(&sk, &nonce[..], false).is_ok() {
+						let res = if InternalState::new(sk, &nonce[..], false).is_ok() {
 							true
 						} else {
 							false
@@ -949,18 +1012,9 @@ mod private {
 		use super::*;
 		#[test]
 		fn test_process_block_wrong_combination_of_variant_and_nonce() {
-			let mut chacha_state_ietf = InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 12],
-				true,
-			)
-			.unwrap();
-			let mut chacha_state_hchacha = InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-				false,
-			)
-			.unwrap();
+			let mut chacha_state_ietf = InternalState::new(&[0u8; 32], &[0u8; 12], true).unwrap();
+			let mut chacha_state_hchacha =
+				InternalState::new(&[0u8; 32], &[0u8; 16], false).unwrap();
 
 			assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
 			assert!(chacha_state_ietf.process_block(None).is_err());
@@ -972,7 +1026,12 @@ mod private {
 		#[should_panic]
 		fn test_process_block_panic_on_too_much_keystream_data_ietf() {
 			let mut chacha_state_ietf = InternalState {
-				state: [0_u32; 16],
+				state: [
+					U32x4(0, 0, 0, 0),
+					U32x4(0, 0, 0, 0),
+					U32x4(0, 0, 0, 0),
+					U32x4(0, 0, 0, 0),
+				],
 				internal_counter: (u32::max_value() - 128),
 				is_ietf: true,
 			};
@@ -986,7 +1045,12 @@ mod private {
 		#[should_panic]
 		fn test_process_block_panic_on_too_much_keystream_data_hchacha() {
 			let mut chacha_state_ietf = InternalState {
-				state: [0_u32; 16],
+				state: [
+					U32x4(0, 0, 0, 0),
+					U32x4(0, 0, 0, 0),
+					U32x4(0, 0, 0, 0),
+					U32x4(0, 0, 0, 0),
+				],
 				internal_counter: (u32::max_value() - 128),
 				is_ietf: false,
 			};
@@ -996,46 +1060,6 @@ mod private {
 			}
 		}
 	}
-
-	mod test_serialize_block {
-		use super::*;
-
-		#[test]
-		fn test_wrong_combination_of_variant_and_dst_out() {
-			let mut chacha_state_ietf = InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 12],
-				true,
-			)
-			.unwrap();
-
-			let mut chacha_state_hchacha = InternalState::init(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-				false,
-			)
-			.unwrap();
-
-			let mut hchacha_out = [0u8; HCHACHA_OUTSIZE];
-			let mut ietf_out = [0u8; CHACHA_BLOCKSIZE];
-
-			let ietf_src = chacha_state_ietf.process_block(Some(1)).unwrap();
-			let hchacha_src = chacha_state_hchacha.process_block(None).unwrap();
-
-			assert!(chacha_state_hchacha
-				.serialize_block(&hchacha_src, &mut ietf_out)
-				.is_err());
-			assert!(chacha_state_ietf
-				.serialize_block(&ietf_src, &mut hchacha_out)
-				.is_err());
-			assert!(chacha_state_hchacha
-				.serialize_block(&hchacha_src, &mut hchacha_out)
-				.is_ok());
-			assert!(chacha_state_ietf
-				.serialize_block(&ietf_src, &mut ietf_out)
-				.is_ok());
-		}
-	}
 }
 
 // Testing any test vectors that aren't put into library's /tests folder.
@@ -1043,64 +1067,20 @@ mod private {
 mod test_vectors {
 	use super::*;
 
+	// NOTE: These PartialEq implementation should only be available in testing.
+	#[cfg(test)]
+	impl core::cmp::PartialEq for U32x4 {
+		#[must_use]
+		#[inline(always)]
+		fn eq(&self, other: &Self) -> bool {
+			(self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3)
+		}
+	}
+
 	// Convenience function for testing.
 	fn init(key: &[u8], nonce: &[u8]) -> Result<InternalState, UnknownCryptoError> {
-		Ok(InternalState::init(
-			&SecretKey::from_slice(key)?,
-			nonce,
-			true,
-		)?)
+		Ok(InternalState::new(key, nonce, true)?)
 	}
-
-	#[test]
-	fn rfc8439_quarter_round_results() {
-		let chacha_state = InternalState {
-			state: [
-				0x11111111, 0x01020304, 0x9b8d6f43, 0x01234567, 0x11111111, 0x01020304, 0x9b8d6f43,
-				0x01234567, 0x11111111, 0x01020304, 0x9b8d6f43, 0x01234567, 0x11111111, 0x01020304,
-				0x9b8d6f43, 0x01234567,
-			],
-			internal_counter: 0,
-			is_ietf: true,
-		};
-		let expected: [u32; 4] = [0xea2a92f4, 0xcb1cf8ce, 0x4581472e, 0x5881c4bb];
-
-		let mut wstate = chacha_state.state;
-
-		InternalState::quarter_round(&mut wstate, 0, 1, 2, 3);
-		InternalState::quarter_round(&mut wstate, 4, 5, 6, 7);
-		InternalState::quarter_round(&mut wstate, 8, 9, 10, 11);
-		InternalState::quarter_round(&mut wstate, 12, 13, 14, 15);
-
-		assert_eq!(wstate[0..4], expected);
-		assert_eq!(wstate[4..8], expected);
-		assert_eq!(wstate[8..12], expected);
-		assert_eq!(wstate[12..16], expected);
-	}
-
-	#[test]
-	fn rfc8439_quarter_round_results_on_indices() {
-		let chacha_state = InternalState {
-			state: [
-				0x879531e0, 0xc5ecf37d, 0x516461b1, 0xc9a62f8a, 0x44c20ef3, 0x3390af7f, 0xd9fc690b,
-				0x2a5f714c, 0x53372767, 0xb00a5631, 0x974c541a, 0x359e9963, 0x5c971061, 0x3d631689,
-				0x2098d9d6, 0x91dbd320,
-			],
-			internal_counter: 0,
-			is_ietf: true,
-		};
-		let expected: ChaChaState = [
-			0x879531e0, 0xc5ecf37d, 0xbdb886dc, 0xc9a62f8a, 0x44c20ef3, 0x3390af7f, 0xd9fc690b,
-			0xcfacafd2, 0xe46bea80, 0xb00a5631, 0x974c541a, 0x359e9963, 0x5c971061, 0xccc07c79,
-			0x2098d9d6, 0x91dbd320,
-		];
-
-		let mut wstate = chacha_state.state;
-
-		InternalState::quarter_round(&mut wstate, 2, 7, 8, 13);
-		assert_eq!(wstate[..], expected);
-	}
-
 	#[test]
 	fn rfc8439_chacha20_block_results() {
 		let key = [
@@ -1119,21 +1099,21 @@ mod test_vectors {
 			0xcb, 0xd0, 0x83, 0xe8, 0xa2, 0x50, 0x3c, 0x4e,
 		];
 
-		let expected_init: ChaChaState = [
-			0x61707865, 0x3320646e, 0x79622d32, 0x6b206574, 0x03020100, 0x07060504, 0x0b0a0908,
-			0x0f0e0d0c, 0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c, 0x00000001, 0x09000000,
-			0x4a000000, 0x00000000,
+		let expected_init = [
+			U32x4(0x61707865, 0x3320646e, 0x79622d32, 0x6b206574),
+			U32x4(0x03020100, 0x07060504, 0x0b0a0908, 0x0f0e0d0c),
+			U32x4(0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c),
+			U32x4(0x00000001, 0x09000000, 0x4a000000, 0x00000000),
 		];
 		// Test initial key-steup
 		let mut state = init(&key, &nonce).unwrap();
-		state.state[12] = 1_u32;
-		assert_eq!(state.state[..], expected_init[..]);
+		// Set block counter
+		state.state[3].0 = 1;
+		assert!(state.state[..] == expected_init[..]);
 
 		let keystream_block_from_state = state.process_block(Some(1)).unwrap();
 		let mut ser_block = [0u8; 64];
-		state
-			.serialize_block(&keystream_block_from_state, &mut ser_block)
-			.unwrap();
+		Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
 
 		let keystream_block_only = keystream_block(
 			&SecretKey::from_slice(&key).unwrap(),
@@ -1164,20 +1144,19 @@ mod test_vectors {
 			0xc3, 0x87, 0xb6, 0x69, 0xb2, 0xee, 0x65, 0x86,
 		];
 		// Unserialized state
-		let expected_state: ChaChaState = [
-			0xade0b876, 0x903df1a0, 0xe56a5d40, 0x28bd8653, 0xb819d2bd, 0x1aed8da0, 0xccef36a8,
-			0xc70d778b, 0x7c5941da, 0x8d485751, 0x3fe02477, 0x374ad8b8, 0xf4b8436a, 0x1ca11815,
-			0x69b687c3, 0x8665eeb2,
+		let expected_state = [
+			U32x4(0xade0b876, 0x903df1a0, 0xe56a5d40, 0x28bd8653),
+			U32x4(0xb819d2bd, 0x1aed8da0, 0xccef36a8, 0xc70d778b),
+			U32x4(0x7c5941da, 0x8d485751, 0x3fe02477, 0x374ad8b8),
+			U32x4(0xf4b8436a, 0x1ca11815, 0x69b687c3, 0x8665eeb2),
 		];
 
 		let mut state = init(&key, &nonce).unwrap();
 		let keystream_block_from_state = state.process_block(Some(0)).unwrap();
-		assert_eq!(keystream_block_from_state[..], expected_state[..]);
+		assert!(keystream_block_from_state[..] == expected_state[..]);
 
 		let mut ser_block = [0u8; 64];
-		state
-			.serialize_block(&keystream_block_from_state, &mut ser_block)
-			.unwrap();
+		Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
 
 		let keystream_block_only = keystream_block(
 			&SecretKey::from_slice(&key).unwrap(),
@@ -1208,20 +1187,19 @@ mod test_vectors {
 			0xac, 0xe1, 0x0a, 0x1f, 0x4b, 0x79, 0x4d, 0x6f,
 		];
 		// Unserialized state
-		let expected_state: ChaChaState = [
-			0xbee7079f, 0x7a385155, 0x7c97ba98, 0x0d082d73, 0xa0290fcb, 0x6965e348, 0x3e53c612,
-			0xed7aee32, 0x7621b729, 0x434ee69c, 0xb03371d5, 0xd539d874, 0x281fed31, 0x45fb0a51,
-			0x1f0ae1ac, 0x6f4d794b,
+		let expected_state = [
+			U32x4(0xbee7079f, 0x7a385155, 0x7c97ba98, 0x0d082d73),
+			U32x4(0xa0290fcb, 0x6965e348, 0x3e53c612, 0xed7aee32),
+			U32x4(0x7621b729, 0x434ee69c, 0xb03371d5, 0xd539d874),
+			U32x4(0x281fed31, 0x45fb0a51, 0x1f0ae1ac, 0x6f4d794b),
 		];
 
 		let mut state = init(&key, &nonce).unwrap();
 		let keystream_block_from_state = state.process_block(Some(1)).unwrap();
-		assert_eq!(keystream_block_from_state[..], expected_state[..]);
+		assert!(keystream_block_from_state[..] == expected_state[..]);
 
 		let mut ser_block = [0u8; 64];
-		state
-			.serialize_block(&keystream_block_from_state, &mut ser_block)
-			.unwrap();
+		Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
 
 		let keystream_block_only = keystream_block(
 			&SecretKey::from_slice(&key).unwrap(),
@@ -1252,20 +1230,19 @@ mod test_vectors {
 			0xa6, 0x4a, 0xdd, 0xeb, 0x00, 0x6c, 0x13, 0xa0,
 		];
 		// Unserialized state
-		let expected_state: ChaChaState = [
-			0x2452eb3a, 0x9249f8ec, 0x8d829d9b, 0xddd4ceb1, 0xe8252083, 0x60818b01, 0xf38422b8,
-			0x5aaa49c9, 0xbb00ca8e, 0xda3ba7b4, 0xc4b592d1, 0xfdf2732f, 0x4436274e, 0x2561b3c8,
-			0xebdd4aa6, 0xa0136c00,
+		let expected_state = [
+			U32x4(0x2452eb3a, 0x9249f8ec, 0x8d829d9b, 0xddd4ceb1),
+			U32x4(0xe8252083, 0x60818b01, 0xf38422b8, 0x5aaa49c9),
+			U32x4(0xbb00ca8e, 0xda3ba7b4, 0xc4b592d1, 0xfdf2732f),
+			U32x4(0x4436274e, 0x2561b3c8, 0xebdd4aa6, 0xa0136c00),
 		];
 
 		let mut state = init(&key, &nonce).unwrap();
 		let keystream_block_from_state = state.process_block(Some(1)).unwrap();
-		assert_eq!(keystream_block_from_state[..], expected_state[..]);
+		assert!(keystream_block_from_state[..] == expected_state[..]);
 
 		let mut ser_block = [0u8; 64];
-		state
-			.serialize_block(&keystream_block_from_state, &mut ser_block)
-			.unwrap();
+		Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
 
 		let keystream_block_only = keystream_block(
 			&SecretKey::from_slice(&key).unwrap(),
@@ -1296,20 +1273,19 @@ mod test_vectors {
 			0x73, 0x74, 0xf4, 0x87, 0x2e, 0x99, 0xf0, 0x96,
 		];
 		// Unserialized state
-		let expected_state: ChaChaState = [
-			0xfb4dd572, 0x4bc42ef1, 0xdf922636, 0x327f1394, 0xa78dea8f, 0x5e269039, 0xa1bebbc1,
-			0xcaf09aae, 0xa25ab213, 0x48a6b46c, 0x1b9d9bcb, 0x092c5be6, 0x546ca624, 0x1bec45d5,
-			0x87f47473, 0x96f0992e,
+		let expected_state = [
+			U32x4(0xfb4dd572, 0x4bc42ef1, 0xdf922636, 0x327f1394),
+			U32x4(0xa78dea8f, 0x5e269039, 0xa1bebbc1, 0xcaf09aae),
+			U32x4(0xa25ab213, 0x48a6b46c, 0x1b9d9bcb, 0x092c5be6),
+			U32x4(0x546ca624, 0x1bec45d5, 0x87f47473, 0x96f0992e),
 		];
 
 		let mut state = init(&key, &nonce).unwrap();
 		let keystream_block_from_state = state.process_block(Some(2)).unwrap();
-		assert_eq!(keystream_block_from_state[..], expected_state[..]);
+		assert!(keystream_block_from_state[..] == expected_state[..]);
 
 		let mut ser_block = [0u8; 64];
-		state
-			.serialize_block(&keystream_block_from_state, &mut ser_block)
-			.unwrap();
+		Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
 
 		let keystream_block_only = keystream_block(
 			&SecretKey::from_slice(&key).unwrap(),
@@ -1340,20 +1316,19 @@ mod test_vectors {
 			0xfa, 0x19, 0x8a, 0x39, 0x53, 0x1b, 0xed, 0x6d,
 		];
 		// Unserialized state
-		let expected_state: ChaChaState = [
-			0x374dc6c2, 0x3736d58c, 0xb904e24a, 0xcd3f93ef, 0x88228b1a, 0x96a4dfb3, 0x5b76ab72,
-			0xc727ee54, 0x0e0e978a, 0xf3145c95, 0x1b748ea8, 0xf786c297, 0x99c28f5f, 0x628314e8,
-			0x398a19fa, 0x6ded1b53,
+		let expected_state = [
+			U32x4(0x374dc6c2, 0x3736d58c, 0xb904e24a, 0xcd3f93ef),
+			U32x4(0x88228b1a, 0x96a4dfb3, 0x5b76ab72, 0xc727ee54),
+			U32x4(0x0e0e978a, 0xf3145c95, 0x1b748ea8, 0xf786c297),
+			U32x4(0x99c28f5f, 0x628314e8, 0x398a19fa, 0x6ded1b53),
 		];
 
 		let mut state = init(&key, &nonce).unwrap();
 		let keystream_block_from_state = state.process_block(Some(0)).unwrap();
-		assert_eq!(keystream_block_from_state[..], expected_state[..]);
+		assert!(keystream_block_from_state[..] == expected_state[..]);
 
 		let mut ser_block = [0u8; 64];
-		state
-			.serialize_block(&keystream_block_from_state, &mut ser_block)
-			.unwrap();
+		Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
 
 		let keystream_block_only = keystream_block(
 			&SecretKey::from_slice(&key).unwrap(),
@@ -1377,29 +1352,33 @@ mod test_vectors {
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00,
 		];
 		// First block setup expected
-		let first_state: ChaChaState = [
-			0x61707865, 0x3320646e, 0x79622d32, 0x6b206574, 0x03020100, 0x07060504, 0x0b0a0908,
-			0x0f0e0d0c, 0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c, 0x00000001, 0x00000000,
-			0x4a000000, 0x00000000,
+		let first_state = [
+			U32x4(0x61707865, 0x3320646e, 0x79622d32, 0x6b206574),
+			U32x4(0x03020100, 0x07060504, 0x0b0a0908, 0x0f0e0d0c),
+			U32x4(0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c),
+			U32x4(0x00000001, 0x00000000, 0x4a000000, 0x00000000),
 		];
 		// Second block setup expected
-		let second_state: ChaChaState = [
-			0x61707865, 0x3320646e, 0x79622d32, 0x6b206574, 0x03020100, 0x07060504, 0x0b0a0908,
-			0x0f0e0d0c, 0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c, 0x00000002, 0x00000000,
-			0x4a000000, 0x00000000,
+		let second_state = [
+			U32x4(0x61707865, 0x3320646e, 0x79622d32, 0x6b206574),
+			U32x4(0x03020100, 0x07060504, 0x0b0a0908, 0x0f0e0d0c),
+			U32x4(0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c),
+			U32x4(0x00000002, 0x00000000, 0x4a000000, 0x00000000),
 		];
 
 		// First block operation expected
-		let first_block: ChaChaState = [
-			0xf3514f22, 0xe1d91b40, 0x6f27de2f, 0xed1d63b8, 0x821f138c, 0xe2062c3d, 0xecca4f7e,
-			0x78cff39e, 0xa30a3b8a, 0x920a6072, 0xcd7479b5, 0x34932bed, 0x40ba4c79, 0xcd343ec6,
-			0x4c2c21ea, 0xb7417df0,
+		let first_block = [
+			U32x4(0xf3514f22, 0xe1d91b40, 0x6f27de2f, 0xed1d63b8),
+			U32x4(0x821f138c, 0xe2062c3d, 0xecca4f7e, 0x78cff39e),
+			U32x4(0xa30a3b8a, 0x920a6072, 0xcd7479b5, 0x34932bed),
+			U32x4(0x40ba4c79, 0xcd343ec6, 0x4c2c21ea, 0xb7417df0),
 		];
 		// Second block operation expected
-		let second_block: ChaChaState = [
-			0x9f74a669, 0x410f633f, 0x28feca22, 0x7ec44dec, 0x6d34d426, 0x738cb970, 0x3ac5e9f3,
-			0x45590cc4, 0xda6e8b39, 0x892c831a, 0xcdea67c1, 0x2b7e1d90, 0x037463f3, 0xa11a2073,
-			0xe8bcfb88, 0xedc49139,
+		let second_block = [
+			U32x4(0x9f74a669, 0x410f633f, 0x28feca22, 0x7ec44dec),
+			U32x4(0x6d34d426, 0x738cb970, 0x3ac5e9f3, 0x45590cc4),
+			U32x4(0xda6e8b39, 0x892c831a, 0xcdea67c1, 0x2b7e1d90),
+			U32x4(0x037463f3, 0xa11a2073, 0xe8bcfb88, 0xedc49139),
 		];
 
 		// Expected keystream
@@ -1418,24 +1397,20 @@ mod test_vectors {
 		let mut state = init(&key, &nonce).unwrap();
 		// Block call with initial counter
 		let first_block_state = state.process_block(Some(1)).unwrap();
-		assert_eq!(first_block_state, first_block);
+		assert!(first_block_state == first_block);
 		// Test first internal state
-		assert_eq!(first_state, state.state);
+		assert!(first_state == state.state);
 
 		// Next iteration call, increase counter
 		let second_block_state = state.process_block(Some(1 + 1)).unwrap();
-		assert_eq!(second_block_state, second_block);
+		assert!(second_block_state == second_block);
 		// Test second internal state
-		assert_eq!(second_state, state.state);
+		assert!(second_state == state.state);
 
 		let mut actual_keystream = [0u8; 128];
 		// Append first keystream block
-		state
-			.serialize_block(&first_block_state, &mut actual_keystream[..64])
-			.unwrap();
-		state
-			.serialize_block(&second_block_state, &mut actual_keystream[64..])
-			.unwrap();
+		Serialize::IetfChaCha.xor_in_place(&first_block_state, &mut actual_keystream[..64]);
+		Serialize::IetfChaCha.xor_in_place(&second_block_state, &mut actual_keystream[64..]);
 		assert_eq!(
 			actual_keystream[..expected_keystream.len()].as_ref(),
 			expected_keystream.as_ref()
