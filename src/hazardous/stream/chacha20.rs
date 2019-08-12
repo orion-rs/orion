@@ -28,6 +28,7 @@
 //! - `plaintext`: The data to be encrypted.
 //! - `dst_out`: Destination array that will hold the ciphertext/plaintext after
 //!   encryption/decryption.
+//! - `bytes`: The bytes that will be encrypted/decrypted when using the in-place functions.
 //!
 //! `nonce`: "Counters and LFSRs are both acceptable ways of generating unique
 //! nonces, as is encrypting a counter using a block cipher with a 64-bit block
@@ -39,7 +40,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
-//! - `plaintext` or `ciphertext` are empty.
+//! - `plaintext`, `bytes` or `ciphertext` are empty.
 //! - The `initial_counter` is high enough to cause a potential overflow.
 //!
 //! Even though `dst_out` is allowed to be of greater length than `plaintext`,
@@ -247,9 +248,7 @@ impl InternalState {
 	/// Initialize either a ChaCha or HChaCha state with a `secret_key` and
 	/// `nonce`.
 	fn new(sk: &[u8], n: &[u8], is_ietf: bool) -> Result<Self, UnknownCryptoError> {
-		if sk.len() != CHACHA_KEYSIZE {
-			return Err(UnknownCryptoError);
-		}
+		debug_assert!(sk.len() == CHACHA_KEYSIZE);
 		if (n.len() != IETF_CHACHA_NONCESIZE) && is_ietf {
 			return Err(UnknownCryptoError);
 		}

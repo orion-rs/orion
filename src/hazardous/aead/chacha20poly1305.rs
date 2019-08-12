@@ -196,7 +196,7 @@ pub fn seal(
 	}
 
 	let optional_ad = match ad {
-		Some(ref n_val) => *n_val,
+		Some(n_val) => n_val,
 		None => &[0u8; 0],
 	};
 
@@ -210,7 +210,7 @@ pub fn seal(
 	)?;
 	let mut poly1305_state = poly1305::init(&poly1305_key);
 
-	process_authentication(&mut poly1305_state, &optional_ad, &dst_out, plaintext.len())?;
+	process_authentication(&mut poly1305_state, optional_ad, &dst_out, plaintext.len())?;
 	dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
 		.copy_from_slice(&poly1305_state.finalize()?.unprotected_as_bytes());
 
@@ -234,7 +234,7 @@ pub fn open(
 	}
 
 	let optional_ad = match ad {
-		Some(ref n_val) => *n_val,
+		Some(n_val) => n_val,
 		None => &[0u8; 0],
 	};
 
@@ -244,7 +244,7 @@ pub fn open(
 	let mut poly1305_state = poly1305::init(&poly1305_key);
 	process_authentication(
 		&mut poly1305_state,
-		&optional_ad,
+		optional_ad,
 		ciphertext_with_tag,
 		ciphertext_len,
 	)?;
