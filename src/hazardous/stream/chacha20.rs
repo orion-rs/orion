@@ -274,7 +274,7 @@ impl InternalState {
 			u32::from_le_bytes(sk[28..32].try_into().unwrap()),
 		);
 
-		let mut r3 = U32x4(0u32.to_le(), 0, 0, 0);
+		let mut r3 = U32x4(0, 0, 0, 0);
 
 		if is_ietf {
 			// Counter is already set.
@@ -304,7 +304,7 @@ impl InternalState {
 	) -> Result<[U32x4; 4], UnknownCryptoError> {
 		if self.is_ietf {
 			match block_counter {
-				Some(counter) => self.state[3].0 = counter.to_le(),
+				Some(counter) => self.state[3].0 = counter,
 				None => return Err(UnknownCryptoError),
 			};
 		}
