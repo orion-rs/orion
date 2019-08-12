@@ -61,7 +61,7 @@ use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 #[must_use]
 /// Hashing using BLAKE2b-256.
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
-	Ok(blake2b::Hasher::Blake2b256.digest(data)?)
+	blake2b::Hasher::Blake2b256.digest(data)
 }
 
 // Testing public functions in the module.

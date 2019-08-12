@@ -417,7 +417,7 @@ impl Blake2b {
 		let mut digest = [0u8; 64];
 		store_u64_into_le(&self.internal_state, &mut digest);
 
-		Ok(Digest::from_slice(&digest[..self.size])?)
+		Digest::from_slice(&digest[..self.size])
 	}
 }
 

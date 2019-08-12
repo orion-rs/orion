@@ -113,10 +113,7 @@ use crate::{
 #[inline]
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &SecretKey, nonce: &Nonce) -> Result<OneTimeKey, UnknownCryptoError> {
-	let one_time_key =
-		OneTimeKey::from_slice(&chacha20::keystream_block(key, nonce, 0)?[..POLY1305_KEYSIZE])?;
-
-	Ok(one_time_key)
+	OneTimeKey::from_slice(&chacha20::keystream_block(key, nonce, 0)?[..POLY1305_KEYSIZE])
 }
 
 #[must_use]
@@ -173,10 +170,7 @@ fn process_authentication(
 	}
 
 	padding_max[8..16].copy_from_slice(&(buf_in_len as u64).to_le_bytes());
-
-	poly1305_state.update(padding_max.as_ref())?;
-
-	Ok(())
+	poly1305_state.update(padding_max.as_ref())
 }
 
 #[must_use]
@@ -200,7 +194,6 @@ pub fn seal(
 		None => &[0u8; 0],
 	};
 
-	let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
 	chacha20::encrypt(
 		secret_key,
 		nonce,
@@ -208,11 +201,13 @@ pub fn seal(
 		plaintext,
 		&mut dst_out[..plaintext.len()],
 	)?;
+
+	let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
 	let mut poly1305_state = poly1305::init(&poly1305_key);
 
 	process_authentication(&mut poly1305_state, optional_ad, &dst_out, plaintext.len())?;
 	dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
-		.copy_from_slice(&poly1305_state.finalize()?.unprotected_as_bytes());
+		.copy_from_slice(poly1305_state.finalize()?.unprotected_as_bytes());
 
 	Ok(())
 }
@@ -250,7 +245,7 @@ pub fn open(
 	)?;
 
 	util::secure_cmp(
-		&poly1305_state.finalize()?.unprotected_as_bytes(),
+		poly1305_state.finalize()?.unprotected_as_bytes(),
 		&ciphertext_with_tag[ciphertext_len..],
 	)?;
 
@@ -260,9 +255,7 @@ pub fn open(
 		1,
 		&ciphertext_with_tag[..ciphertext_len],
 		dst_out,
-	)?;
-
-	Ok(())
+	)
 }
 
 // Testing public functions in the module.

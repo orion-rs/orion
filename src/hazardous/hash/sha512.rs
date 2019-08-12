@@ -406,8 +406,7 @@ pub fn init() -> Sha512 {
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 	let mut state = init();
 	state.update(data)?;
-
-	Ok(state.finalize()?)
+	state.finalize()
 }
 
 #[cfg(test)]

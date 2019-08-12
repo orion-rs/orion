@@ -421,8 +421,7 @@ pub fn init(one_time_key: &OneTimeKey) -> Poly1305 {
 pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let mut poly_1305_state = init(one_time_key);
 	poly_1305_state.update(data)?;
-
-	Ok(poly_1305_state.finalize()?)
+	poly_1305_state.finalize()
 }
 
 #[must_use]
