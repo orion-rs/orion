@@ -31,7 +31,7 @@ features = ["no_std"]
 `no_std` requires Rust nightly and benefits from the same inline assembly features as when using the `nightly` feature.
 
 When orion is used in a `no_std` context, access to nearly all functionality, except for that in
-`hazardous`, is not available. This is because the high-level functionality depends on the `OsRng`
+`hazardous`, is not available. This is because the high-level functionality depends on the systems random generator,
 which is not available in `no_std`.
 
 - `nightly`: The nightly feature enables the use of inline assembly for [constant-time comparisons](https://crates.io/crates/subtle). Using `nightly` is recommended for security. Specify the dependency as such, to use the `nightly` feature:
