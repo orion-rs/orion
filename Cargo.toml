@@ -18,9 +18,9 @@ exclude = [
 ]
 
 [dependencies]
-subtle = { version = "2.1.0", default-features = false }
-zeroize = { version = "0.9.3", default-features = false }
-getrandom = { version = "0.1.7", optional = true }
+subtle = { version = "2.1.1", default-features = false }
+zeroize = { version = "0.10.0", default-features = false }
+getrandom = { version = "0.1.10", optional = true }
 
 [features]
 default = [ "safe_api" ]
