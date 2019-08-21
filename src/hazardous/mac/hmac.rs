@@ -150,8 +150,7 @@ impl Hmac {
 		if self.is_finalized {
 			Err(UnknownCryptoError)
 		} else {
-			self.working_hasher.update(data)?;
-			Ok(())
+			self.working_hasher.update(data)
 		}
 	}
 
@@ -190,8 +189,7 @@ pub fn init(secret_key: &SecretKey) -> Hmac {
 pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let mut hmac_state = init(secret_key);
 	hmac_state.update(data)?;
-
-	Ok(hmac_state.finalize()?)
+	hmac_state.finalize()
 }
 
 #[must_use]

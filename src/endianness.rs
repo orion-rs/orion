@@ -75,6 +75,7 @@ macro_rules! impl_load {
 
 impl_load!(u32, u32, from_le_bytes, load_u32_le);
 
+#[cfg(test)]
 impl_load_into!(u32, u32, from_le_bytes, load_u32_into_le);
 
 impl_load_into!(u64, u64, from_le_bytes, load_u64_into_le);

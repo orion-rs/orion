@@ -120,9 +120,7 @@ pub fn seal(
 		plaintext,
 		ad,
 		dst_out,
-	)?;
-
-	Ok(())
+	)
 }
 
 #[must_use]
@@ -145,9 +143,7 @@ pub fn open(
 		ciphertext_with_tag,
 		ad,
 		dst_out,
-	)?;
-
-	Ok(())
+	)
 }
 
 //

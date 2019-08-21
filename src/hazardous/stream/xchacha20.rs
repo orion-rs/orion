@@ -126,9 +126,7 @@ pub fn encrypt(
 		initial_counter,
 		plaintext,
 		dst_out,
-	)?;
-
-	Ok(())
+	)
 }
 
 #[must_use]
@@ -140,9 +138,7 @@ pub fn decrypt(
 	ciphertext: &[u8],
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)?;
-
-	Ok(())
+	encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
 //

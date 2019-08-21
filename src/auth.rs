@@ -73,8 +73,7 @@ pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownC
 		secret_key.unprotected_as_bytes(),
 	)?);
 	state.update(data)?;
-
-	Ok(state.finalize()?)
+	state.finalize()
 }
 
 #[must_use]
@@ -85,10 +84,7 @@ pub fn authenticate_verify(
 	data: &[u8],
 ) -> Result<bool, UnknownCryptoError> {
 	let key = hmac::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
-
-	hmac::verify(expected, &key, data)?;
-
-	Ok(true)
+	hmac::verify(expected, &key, data)
 }
 
 // Testing public functions in the module.

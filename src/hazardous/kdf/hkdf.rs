@@ -80,8 +80,7 @@ use crate::{
 pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError> {
 	let mut prk = hmac::init(&SecretKey::from_slice(salt)?);
 	prk.update(ikm)?;
-
-	Ok(prk.finalize()?)
+	prk.finalize()
 }
 
 #[must_use]
@@ -133,9 +132,7 @@ pub fn derive_key(
 	info: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	expand(&extract(salt, ikm)?, info, dst_out)?;
-
-	Ok(())
+	expand(&extract(salt, ikm)?, info, dst_out)
 }
 
 #[must_use]
