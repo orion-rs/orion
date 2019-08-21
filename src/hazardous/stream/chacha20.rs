@@ -174,19 +174,19 @@ impl U32x4 {
 
 	#[must_use]
 	#[inline(always)]
-	pub const fn shuffle_left_1(self) -> Self {
+	pub const fn shl_1(self) -> Self {
 		Self(self.1, self.2, self.3, self.0)
 	}
 
 	#[must_use]
 	#[inline(always)]
-	pub const fn shuffle_left_2(self) -> Self {
+	pub const fn shl_2(self) -> Self {
 		Self(self.2, self.3, self.0, self.1)
 	}
 
 	#[must_use]
 	#[inline(always)]
-	pub const fn shuffle_left_3(self) -> Self {
+	pub const fn shl_3(self) -> Self {
 		Self(self.3, self.0, self.1, self.2)
 	}
 
@@ -222,22 +222,33 @@ fn double_round(r0: &mut U32x4, r1: &mut U32x4, r2: &mut U32x4, r3: &mut U32x4) 
 	round(r0, r1, r2, r3);
 
 	// Shuffle
-	*r1 = r1.shuffle_left_1();
-	*r2 = r2.shuffle_left_2();
-	*r3 = r3.shuffle_left_3();
+	*r1 = r1.shl_1();
+	*r2 = r2.shl_2();
+	*r3 = r3.shl_3();
 
 	round(r0, r1, r2, r3);
 
 	// Unshuffle
-	*r1 = r1.shuffle_left_3();
-	*r2 = r2.shuffle_left_2();
-	*r3 = r3.shuffle_left_1();
+	*r1 = r1.shl_3();
+	*r2 = r2.shl_2();
+	*r3 = r3.shl_1();
 }
 
 struct InternalState {
 	state: [U32x4; 4],
 	internal_counter: u32,
 	is_ietf: bool,
+}
+
+impl Drop for InternalState {
+	fn drop(&mut self) {
+		for row in self.state.iter_mut() {
+			row.0.zeroize();
+			row.1.zeroize();
+			row.2.zeroize();
+			row.3.zeroize();
+		}
+	}
 }
 
 impl InternalState {
@@ -273,19 +284,21 @@ impl InternalState {
 			load_u32_le(&sk[28..32]),
 		);
 
-		let mut r3 = U32x4(0, 0, 0, 0);
-
-		if is_ietf {
-			// Counter is already set.
-			r3.1 = load_u32_le(&n[0..4]);
-			r3.2 = load_u32_le(&n[4..8]);
-			r3.3 = load_u32_le(&n[8..12]);
+		let r3 = if is_ietf {
+			U32x4(
+				0,
+				load_u32_le(&n[0..4]),
+				load_u32_le(&n[4..8]),
+				load_u32_le(&n[8..12]),
+			)
 		} else {
-			r3.0 = load_u32_le(&n[0..4]);
-			r3.1 = load_u32_le(&n[4..8]);
-			r3.2 = load_u32_le(&n[8..12]);
-			r3.3 = load_u32_le(&n[12..16]);
-		}
+			U32x4(
+				load_u32_le(&n[0..4]),
+				load_u32_le(&n[4..8]),
+				load_u32_le(&n[8..12]),
+				load_u32_le(&n[12..16]),
+			)
+		};
 
 		Ok(Self {
 			state: [r0, r1, r2, r3],

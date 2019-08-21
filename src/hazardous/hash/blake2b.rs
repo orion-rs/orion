@@ -670,7 +670,7 @@ mod public {
 				/// Given some data, .digest() should produce the same output as when
 				/// calling with streaming state.
 				fn prop_hasher_digest_256_same_as_streaming(data: Vec<u8>) -> bool {
-					let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();;
+					let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
 
 					let mut state = init(None, 32).unwrap();
 					state.update(&data[..]).unwrap();
@@ -683,7 +683,7 @@ mod public {
 				/// Given some data, .digest() should produce the same output as when
 				/// calling with streaming state.
 				fn prop_hasher_digest_384_same_as_streaming(data: Vec<u8>) -> bool {
-					let d256 = Hasher::Blake2b384.digest(&data[..]).unwrap();;
+					let d256 = Hasher::Blake2b384.digest(&data[..]).unwrap();
 
 					let mut state = init(None, 48).unwrap();
 					state.update(&data[..]).unwrap();
@@ -696,7 +696,7 @@ mod public {
 				/// Given some data, .digest() should produce the same output as when
 				/// calling with streaming state.
 				fn prop_hasher_digest_512_same_as_streaming(data: Vec<u8>) -> bool {
-					let d256 = Hasher::Blake2b512.digest(&data[..]).unwrap();;
+					let d256 = Hasher::Blake2b512.digest(&data[..]).unwrap();
 
 					let mut state = init(None, 64).unwrap();
 					state.update(&data[..]).unwrap();
