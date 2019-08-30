@@ -37,7 +37,7 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - More than 2*(2^64-1) __bits__ of data are hashed.
+//! - More than 2*(2^64-1) bytes of data are hashed.
 //!
 //! # Security:
 //! - This interface does not support supplying BLAKE2b with a secret key, and
