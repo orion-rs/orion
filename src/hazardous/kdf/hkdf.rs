@@ -145,12 +145,7 @@ pub fn verify(
 	dst_out: &mut [u8],
 ) -> Result<bool, UnknownCryptoError> {
 	expand(&extract(salt, ikm)?, info, dst_out)?;
-
-	if util::secure_cmp(&dst_out, expected).is_err() {
-		Err(UnknownCryptoError)
-	} else {
-		Ok(true)
-	}
+	util::secure_cmp(&dst_out, expected)
 }
 
 // Testing public functions in the module.

@@ -167,16 +167,16 @@ impl Hasher {
 		let mut state = init(None, size)?;
 		state.update(data)?;
 
-		Ok(state.finalize()?)
+		state.finalize()
 	}
 
 	#[must_use]
 	/// Return a `Blake2b` state selected by the given Blake2b variant.
 	pub fn init(&self) -> Result<Blake2b, UnknownCryptoError> {
 		match *self {
-			Hasher::Blake2b256 => Ok(init(None, 32)?),
-			Hasher::Blake2b384 => Ok(init(None, 48)?),
-			Hasher::Blake2b512 => Ok(init(None, 64)?),
+			Hasher::Blake2b256 => init(None, 32),
+			Hasher::Blake2b384 => init(None, 48),
+			Hasher::Blake2b512 => init(None, 64),
 		}
 	}
 }
@@ -338,8 +338,7 @@ impl Blake2b {
 				// The state needs updating with the secret key padded to blocksize length
 				let pad = [0u8; BLAKE2B_BLOCKSIZE];
 				let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
-				self.update(pad[..rem].as_ref())?;
-				Ok(())
+				self.update(pad[..rem].as_ref())
 			}
 			None => Ok(()),
 		}
