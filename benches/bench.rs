@@ -212,6 +212,65 @@ mod hash {
 		}
 	}
 
+	// Convenience function for testing Blake2b with a secret key.
+	fn blake2b_keyed(
+		sk: Option<&blake2b::SecretKey>,
+		size: usize,
+		input: &[u8],
+	) -> Result<blake2b::Digest, orion::errors::UnknownCryptoError> {
+		let mut state = blake2b::init(sk, size).unwrap();
+		state.update(input).unwrap();
+		state.finalize()
+	}
+
+	pub fn bench_blake2b_256_keyed(c: &mut Criterion) {
+		let mut group = c.benchmark_group("BLAKE2b-256_keyed");
+		let sk = &blake2b::SecretKey::generate();
+
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute mac", *size),
+				&input,
+				|b, input_message| b.iter(|| blake2b_keyed(Some(sk), 32, input_message).unwrap()),
+			);
+		}
+	}
+
+	pub fn bench_blake2b_384_keyed(c: &mut Criterion) {
+		let mut group = c.benchmark_group("BLAKE2b-384_keyed");
+		let sk = &blake2b::SecretKey::generate();
+
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute mac", *size),
+				&input,
+				|b, input_message| b.iter(|| blake2b_keyed(Some(sk), 48, input_message).unwrap()),
+			);
+		}
+	}
+
+	pub fn bench_blake2b_512_keyed(c: &mut Criterion) {
+		let mut group = c.benchmark_group("BLAKE2b-512_keyed");
+		let sk = &blake2b::SecretKey::generate();
+
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute mac", *size),
+				&input,
+				|b, input_message| b.iter(|| blake2b_keyed(Some(sk), 64, input_message).unwrap()),
+			);
+		}
+	}
+
 	criterion_group! {
 		name = hash_benches;
 		config = Criterion::default();
@@ -220,6 +279,9 @@ mod hash {
 		bench_blake2b_256,
 		bench_blake2b_384,
 		bench_blake2b_512,
+		bench_blake2b_256_keyed,
+		bench_blake2b_384_keyed,
+		bench_blake2b_512_keyed,
 	}
 }
 
