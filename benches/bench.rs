@@ -73,11 +73,11 @@ mod mac {
 	}
 
 	criterion_group! {
-        name = mac_benches;
-        config = Criterion::default();
-        targets =
-        bench_poly1305,
-        bench_hmac,
+		name = mac_benches;
+		config = Criterion::default();
+		targets =
+		bench_poly1305,
+		bench_hmac,
 	}
 }
 
@@ -133,11 +133,11 @@ mod aead {
 	}
 
 	criterion_group! {
-        name = aead_benches;
-        config = Criterion::default();
-        targets =
-        bench_chacha20poly1305,
-        bench_xchacha20poly1305,
+		name = aead_benches;
+		config = Criterion::default();
+		targets =
+		bench_chacha20poly1305,
+		bench_xchacha20poly1305,
 	}
 }
 
@@ -213,11 +213,11 @@ mod hash {
 	}
 
 	criterion_group! {
-        name = hash_benches;
-        config = Criterion::default();
-        targets =
-        bench_sha512,
-        bench_blake2b_256,
+		name = hash_benches;
+		config = Criterion::default();
+		targets =
+		bench_sha512,
+		bench_blake2b_256,
 		bench_blake2b_384,
 		bench_blake2b_512,
 	}
@@ -271,11 +271,11 @@ mod stream {
 	}
 
 	criterion_group! {
-        name = stream_benches;
-        config = Criterion::default();
-        targets =
-        bench_chacha20,
-        bench_xchacha20,
+		name = stream_benches;
+		config = Criterion::default();
+		targets =
+		bench_chacha20,
+		bench_xchacha20,
 	}
 }
 
@@ -336,11 +336,11 @@ mod kdf {
 	}
 
 	criterion_group! {
-        name = kdf_benches;
-        config = Criterion::default();
-        targets =
-        bench_hkdf,
-        bench_pbkdf2,
+		name = kdf_benches;
+		config = Criterion::default();
+		targets =
+		bench_hkdf,
+		bench_pbkdf2,
 	}
 }
 
