@@ -12,7 +12,7 @@ fn test_streaming_1() {
 		106, 255, 35, 70, 171,
 	];
 
-	let mut state = sha512::init();
+	let mut state = sha512::Sha512::init();
 	state.update(b"hello world").unwrap();
 	state.update(b"hello world").unwrap();
 	state.update(b"hello world").unwrap();
@@ -30,7 +30,7 @@ fn test_streaming_2() {
 		122, 249, 39, 218, 62,
 	];
 
-	let mut state = sha512::init();
+	let mut state = sha512::Sha512::init();
 	state.update(b"").unwrap();
 	let res = state.finalize().unwrap();
 
@@ -46,7 +46,7 @@ fn test_streaming_3() {
 		251, 153, 16, 198,
 	];
 
-	let mut state = sha512::init();
+	let mut state = sha512::Sha512::init();
 	state.update(&[0u8; 256]).unwrap();
 	let res = state.finalize().unwrap();
 

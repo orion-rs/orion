@@ -69,7 +69,7 @@ pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};
 #[must_use]
 /// Authenticate a message using HMAC-SHA512.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	let mut state = hmac::init(&hmac::SecretKey::from_slice(
+	let mut state = hmac::Hmac::init(&hmac::SecretKey::from_slice(
 		secret_key.unprotected_as_bytes(),
 	)?);
 	state.update(data)?;

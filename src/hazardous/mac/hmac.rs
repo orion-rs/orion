@@ -49,7 +49,7 @@
 //!
 //! let key = hmac::SecretKey::generate();
 //!
-//! let mut state = hmac::init(&key);
+//! let mut state = hmac::Hmac::init(&key);
 //! state.update(b"Some message.")?;
 //! let tag = state.finalize()?;
 //!
@@ -138,6 +138,20 @@ impl Hmac {
 		opad.zeroize();
 	}
 
+	#[must_use]
+	/// Initialize `Hmac` struct with a given key.
+	pub fn init(secret_key: &SecretKey) -> Self {
+		let mut state = Hmac {
+			working_hasher: sha512::Sha512::init(),
+			opad_hasher: sha512::Sha512::init(),
+			ipad_hasher: sha512::Sha512::init(),
+			is_finalized: false,
+		};
+
+		state.pad_key_io(secret_key);
+		state
+	}
+
 	/// Reset to `init()` state.
 	pub fn reset(&mut self) {
 		self.working_hasher = self.ipad_hasher.clone();
@@ -171,23 +185,9 @@ impl Hmac {
 }
 
 #[must_use]
-/// Initialize `Hmac` struct with a given key.
-pub fn init(secret_key: &SecretKey) -> Hmac {
-	let mut state = Hmac {
-		working_hasher: sha512::init(),
-		opad_hasher: sha512::init(),
-		ipad_hasher: sha512::init(),
-		is_finalized: false,
-	};
-
-	state.pad_key_io(secret_key);
-	state
-}
-
-#[must_use]
 /// One-shot function for generating an HMAC-SHA512 tag of `data`.
 pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	let mut hmac_state = init(secret_key);
+	let mut hmac_state = Hmac::init(secret_key);
 	hmac_state.update(data)?;
 	hmac_state.finalize()
 }
@@ -199,7 +199,7 @@ pub fn verify(
 	secret_key: &SecretKey,
 	data: &[u8],
 ) -> Result<bool, UnknownCryptoError> {
-	let mut hmac_state = init(secret_key);
+	let mut hmac_state = Hmac::init(secret_key);
 	hmac_state.update(data)?;
 
 	if expected == &hmac_state.finalize()? {
@@ -236,7 +236,7 @@ mod public {
 			let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut tag = init(&secret_key);
+			let mut tag = Hmac::init(&secret_key);
 			tag.update(data).unwrap();
 
 			assert_eq!(
@@ -260,7 +260,7 @@ mod public {
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
 
-					let mut state = init(&sk);
+					let mut state = Hmac::init(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 					// Failed verification on Err so res is not needed.
@@ -274,7 +274,7 @@ mod public {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
-					let mut state = init(&sk);
+					let mut state = Hmac::init(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
@@ -300,7 +300,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::init(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -316,7 +316,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::init(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -329,7 +329,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::init(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.update(data).is_err());
@@ -344,7 +344,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::init(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -356,7 +356,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::init(&sk);
 			state.update(data).unwrap();
 			let one = state.finalize().unwrap();
 			state.reset();
@@ -370,7 +370,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::init(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.finalize().is_err());
@@ -386,25 +386,25 @@ mod public {
 		/// finalize() and reset() produce the same Digest.
 		fn produces_same_hash(sk: &SecretKey, data: &[u8]) {
 			// init(), update(), finalize()
-			let mut state_1 = init(&sk);
+			let mut state_1 = Hmac::init(&sk);
 			state_1.update(data).unwrap();
 			let res_1 = state_1.finalize().unwrap();
 
 			// init(), reset(), update(), finalize()
-			let mut state_2 = init(&sk);
+			let mut state_2 = Hmac::init(&sk);
 			state_2.reset();
 			state_2.update(data).unwrap();
 			let res_2 = state_2.finalize().unwrap();
 
 			// init(), update(), reset(), update(), finalize()
-			let mut state_3 = init(&sk);
+			let mut state_3 = Hmac::init(&sk);
 			state_3.update(data).unwrap();
 			state_3.reset();
 			state_3.update(data).unwrap();
 			let res_3 = state_3.finalize().unwrap();
 
 			// init(), update(), finalize(), reset(), update(), finalize()
-			let mut state_4 = init(&sk);
+			let mut state_4 = Hmac::init(&sk);
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset();
@@ -421,16 +421,16 @@ mod public {
 			// calling init() -> finalize(). i.e not calling update() at all.
 			if data.is_empty() {
 				// init(), finalize()
-				let mut state_5 = init(&sk);
+				let mut state_5 = Hmac::init(&sk);
 				let res_5 = state_5.finalize().unwrap();
 
 				// init(), reset(), finalize()
-				let mut state_6 = init(&sk);
+				let mut state_6 = Hmac::init(&sk);
 				state_6.reset();
 				let res_6 = state_6.finalize().unwrap();
 
 				// init(), update(), reset(), finalize()
-				let mut state_7 = init(&sk);
+				let mut state_7 = Hmac::init(&sk);
 				state_7.update(b"Wrong data").unwrap();
 				state_7.reset();
 				let res_7 = state_7.finalize().unwrap();
@@ -446,19 +446,19 @@ mod public {
 		/// finalize() and reset() produce the same Digest.
 		fn produces_same_state(sk: &SecretKey, data: &[u8]) {
 			// init()
-			let state_1 = init(&sk);
+			let state_1 = Hmac::init(&sk);
 
 			// init(), reset()
-			let mut state_2 = init(&sk);
+			let mut state_2 = Hmac::init(&sk);
 			state_2.reset();
 
 			// init(), update(), reset()
-			let mut state_3 = init(&sk);
+			let mut state_3 = Hmac::init(&sk);
 			state_3.update(data).unwrap();
 			state_3.reset();
 
 			// init(), update(), finalize(), reset()
-			let mut state_4 = init(&sk);
+			let mut state_4 = Hmac::init(&sk);
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset();
@@ -490,7 +490,7 @@ mod public {
 			for len in 0..SHA512_BLOCKSIZE * 4 {
 				let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 				let data = vec![0u8; len];
-				let mut state = init(&sk);
+				let mut state = Hmac::init(&sk);
 				let mut other_data: Vec<u8> = Vec::new();
 
 				other_data.extend_from_slice(&data);
@@ -548,7 +548,7 @@ mod public {
 				/// same result as when using the streaming interface.
 				fn prop_hmac_same_as_streaming(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
-					let mut state = init(&sk);
+					let mut state = Hmac::init(&sk);
 					state.update(&data[..]).unwrap();
 					let stream = state.finalize().unwrap();
 					let one_shot = hmac(&sk, &data[..]).unwrap();

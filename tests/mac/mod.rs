@@ -20,7 +20,7 @@ fn hmac_test_runner(
 	trunc: Option<usize>,
 ) -> Result<(), UnknownCryptoError> {
 	let key = hmac::SecretKey::from_slice(secret_key).unwrap();
-	let mut mac = hmac::init(&key);
+	let mut mac = hmac::Hmac::init(&key);
 	mac.update(data).unwrap();
 
 	let res = mac.finalize().unwrap();
@@ -48,7 +48,7 @@ fn hmac_test_runner(
 }
 
 fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), UnknownCryptoError> {
-	let mut state = poly1305::init(&OneTimeKey::from_slice(key).unwrap());
+	let mut state = poly1305::Poly1305::init(&OneTimeKey::from_slice(key).unwrap());
 	state.update(input).unwrap();
 
 	let tag_stream = state.finalize().unwrap();

@@ -58,13 +58,13 @@
 //! use orion::hazardous::hash::blake2b;
 //!
 //! // Using the streaming interface without a key.
-//! let mut state = blake2b::init(None, 64)?;
+//! let mut state = blake2b::Blake2b::init(None, 64)?;
 //! state.update(b"Some data")?;
 //! let digest = state.finalize()?;
 //!
 //! // Using the streaming interface with a key.
 //! let secret_key = blake2b::SecretKey::generate();
-//! let mut state_keyed = blake2b::init(Some(&secret_key), 64)?;
+//! let mut state_keyed = blake2b::Blake2b::init(Some(&secret_key), 64)?;
 //! state_keyed.update(b"Some data")?;
 //! let mac = state_keyed.finalize()?;
 //! assert!(blake2b::verify(&mac, &secret_key, 64, b"Some data")?);
@@ -164,7 +164,7 @@ impl Hasher {
 			Hasher::Blake2b512 => 64,
 		};
 
-		let mut state = init(None, size)?;
+		let mut state = Blake2b::init(None, size)?;
 		state.update(data)?;
 
 		state.finalize()
@@ -174,9 +174,9 @@ impl Hasher {
 	/// Return a `Blake2b` state selected by the given Blake2b variant.
 	pub fn init(&self) -> Result<Blake2b, UnknownCryptoError> {
 		match *self {
-			Hasher::Blake2b256 => init(None, 32),
-			Hasher::Blake2b384 => init(None, 48),
-			Hasher::Blake2b512 => init(None, 64),
+			Hasher::Blake2b256 => Blake2b::init(None, 32),
+			Hasher::Blake2b384 => Blake2b::init(None, 48),
+			Hasher::Blake2b512 => Blake2b::init(None, 64),
 		}
 	}
 }
@@ -315,6 +315,47 @@ impl Blake2b {
 	}
 
 	#[must_use]
+	#[allow(clippy::unreadable_literal)]
+	/// Initialize a `Blake2b` struct with a given size and an optional key.
+	pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Self, UnknownCryptoError> {
+		if size < 1 || size > BLAKE2B_OUTSIZE {
+			return Err(UnknownCryptoError);
+		}
+
+		let mut context = Blake2b {
+			init_state: [0u64; 8],
+			internal_state: IV,
+			buffer: [0u8; BLAKE2B_BLOCKSIZE],
+			leftover: 0,
+			t: [0u64; 2],
+			f: [0u64; 2],
+			is_finalized: false,
+			is_keyed: false,
+			size,
+		};
+
+		match secret_key {
+			Some(sk) => {
+				context.is_keyed = true;
+				let klen = sk.get_length();
+				context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
+				context.init_state.copy_from_slice(&context.internal_state);
+				context.update(sk.unprotected_as_bytes())?;
+				// The state needs updating with the secret key padded to blocksize length
+				let pad = [0u8; BLAKE2B_BLOCKSIZE];
+				let rem = BLAKE2B_BLOCKSIZE - klen;
+				context.update(pad[..rem].as_ref())?;
+			}
+			None => {
+				context.internal_state[0] ^= 0x01010000 ^ (size as u64);
+				context.init_state.copy_from_slice(&context.internal_state);
+			}
+		}
+
+		Ok(context)
+	}
+
+	#[must_use]
 	/// Reset to `init()` state.
 	pub fn reset(&mut self, secret_key: Option<&SecretKey>) -> Result<(), UnknownCryptoError> {
 		if secret_key.is_some() && (!self.is_keyed) {
@@ -421,47 +462,6 @@ impl Blake2b {
 }
 
 #[must_use]
-#[allow(clippy::unreadable_literal)]
-/// Initialize a `Blake2b` struct with a given size and an optional key.
-pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, UnknownCryptoError> {
-	if size < 1 || size > BLAKE2B_OUTSIZE {
-		return Err(UnknownCryptoError);
-	}
-
-	let mut context = Blake2b {
-		init_state: [0u64; 8],
-		internal_state: IV,
-		buffer: [0u8; BLAKE2B_BLOCKSIZE],
-		leftover: 0,
-		t: [0u64; 2],
-		f: [0u64; 2],
-		is_finalized: false,
-		is_keyed: false,
-		size,
-	};
-
-	match secret_key {
-		Some(sk) => {
-			context.is_keyed = true;
-			let klen = sk.get_length();
-			context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
-			context.init_state.copy_from_slice(&context.internal_state);
-			context.update(sk.unprotected_as_bytes())?;
-			// The state needs updating with the secret key padded to blocksize length
-			let pad = [0u8; BLAKE2B_BLOCKSIZE];
-			let rem = BLAKE2B_BLOCKSIZE - klen;
-			context.update(pad[..rem].as_ref())?;
-		}
-		None => {
-			context.internal_state[0] ^= 0x01010000 ^ (size as u64);
-			context.init_state.copy_from_slice(&context.internal_state);
-		}
-	}
-
-	Ok(context)
-}
-
-#[must_use]
 /// Verify a Blake2b Digest in constant time.
 pub fn verify(
 	expected: &Digest,
@@ -469,7 +469,7 @@ pub fn verify(
 	size: usize,
 	data: &[u8],
 ) -> Result<bool, UnknownCryptoError> {
-	let mut state = init(Some(secret_key), size)?;
+	let mut state = Blake2b::init(Some(secret_key), size)?;
 	state.update(data)?;
 
 	if expected == &state.finalize()? {
@@ -508,11 +508,19 @@ mod public {
 		/// incorrect Result is returned.
 		fn init_tester(sk: Option<&SecretKey>, size: usize) -> bool {
 			if size >= 1 && size <= BLAKE2B_OUTSIZE {
-				let res = if init(sk, size).is_ok() { true } else { false };
+				let res = if Blake2b::init(sk, size).is_ok() {
+					true
+				} else {
+					false
+				};
 
 				return res;
 			} else {
-				let res = if init(sk, size).is_err() { true } else { false };
+				let res = if Blake2b::init(sk, size).is_err() {
+					true
+				} else {
+					false
+				};
 
 				return res;
 			}
@@ -564,7 +572,7 @@ mod public {
 			let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut tag = init(Some(&secret_key), 64).unwrap();
+			let mut tag = Blake2b::init(Some(&secret_key), 64).unwrap();
 			tag.update(data).unwrap();
 
 			assert_eq!(
@@ -589,7 +597,7 @@ mod public {
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
 
-					let mut state = init(Some(&sk), 64).unwrap();
+					let mut state = Blake2b::init(Some(&sk), 64).unwrap();
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 					// Failed verification on Err so res is not needed.
@@ -603,7 +611,7 @@ mod public {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
-					let mut state = init(Some(&sk), 64).unwrap();
+					let mut state = Blake2b::init(Some(&sk), 64).unwrap();
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
@@ -671,7 +679,7 @@ mod public {
 				fn prop_hasher_digest_256_same_as_streaming(data: Vec<u8>) -> bool {
 					let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
 
-					let mut state = init(None, 32).unwrap();
+					let mut state = Blake2b::init(None, 32).unwrap();
 					state.update(&data[..]).unwrap();
 
 					(d256 == state.finalize().unwrap())
@@ -684,7 +692,7 @@ mod public {
 				fn prop_hasher_digest_384_same_as_streaming(data: Vec<u8>) -> bool {
 					let d256 = Hasher::Blake2b384.digest(&data[..]).unwrap();
 
-					let mut state = init(None, 48).unwrap();
+					let mut state = Blake2b::init(None, 48).unwrap();
 					state.update(&data[..]).unwrap();
 
 					(d256 == state.finalize().unwrap())
@@ -697,7 +705,7 @@ mod public {
 				fn prop_hasher_digest_512_same_as_streaming(data: Vec<u8>) -> bool {
 					let d256 = Hasher::Blake2b512.digest(&data[..]).unwrap();
 
-					let mut state = init(None, 64).unwrap();
+					let mut state = Blake2b::init(None, 64).unwrap();
 					state.update(&data[..]).unwrap();
 
 					(d256 == state.finalize().unwrap())
@@ -738,7 +746,7 @@ mod public {
 
 		#[test]
 		fn test_double_reset_ok() {
-			let mut state = init(None, 64).unwrap();
+			let mut state = Blake2b::init(None, 64).unwrap();
 			state.update(b"Tests").unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset(None).unwrap();
@@ -749,13 +757,13 @@ mod public {
 		fn test_switching_keyed_modes_fails() {
 			let secret_key = SecretKey::from_slice(b"Testing").unwrap();
 
-			let mut state = init(Some(&secret_key), 64).unwrap();
+			let mut state = Blake2b::init(Some(&secret_key), 64).unwrap();
 			state.update(b"Tests").unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.reset(None).is_err());
 			assert!(state.reset(Some(&secret_key)).is_ok());
 
-			let mut state_second = init(None, 64).unwrap();
+			let mut state_second = Blake2b::init(None, 64).unwrap();
 			state_second.update(b"Tests").unwrap();
 			let _ = state_second.finalize().unwrap();
 			assert!(state_second.reset(Some(&secret_key)).is_err());
@@ -769,7 +777,7 @@ mod public {
 		#[test]
 		/// Related bug: https://github.com/brycx/orion/issues/28
 		fn test_update_after_finalize_fail() {
-			let mut state = init(None, 64).unwrap();
+			let mut state = Blake2b::init(None, 64).unwrap();
 			state.update(b"Test").unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.update(b"Test").is_err());
@@ -777,7 +785,7 @@ mod public {
 
 		#[test]
 		fn test_update_after_finalize_with_reset() {
-			let mut state = init(None, 64).unwrap();
+			let mut state = Blake2b::init(None, 64).unwrap();
 			state.update(b"Test").unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset(None).unwrap();
@@ -790,7 +798,7 @@ mod public {
 
 		#[test]
 		fn test_double_finalize_fail() {
-			let mut state = init(None, 64).unwrap();
+			let mut state = Blake2b::init(None, 64).unwrap();
 			state.update(b"Test").unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.finalize().is_err());
@@ -798,7 +806,7 @@ mod public {
 
 		#[test]
 		fn test_finalize_after_reset() {
-			let mut state = init(None, 64).unwrap();
+			let mut state = Blake2b::init(None, 64).unwrap();
 			state.update(b"Test").unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset(None).unwrap();
@@ -807,7 +815,7 @@ mod public {
 
 		#[test]
 		fn test_double_finalize_with_reset_no_update() {
-			let mut state = init(None, 64).unwrap();
+			let mut state = Blake2b::init(None, 64).unwrap();
 			state.update(b"Test").unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset(None).unwrap();
@@ -823,25 +831,25 @@ mod public {
 		/// finalize() and reset() produce the same Digest/Tag.
 		fn produces_same_hash(sk: Option<&SecretKey>, size: usize, data: &[u8]) {
 			// init(), update(), finalize()
-			let mut state_1 = init(sk, size).unwrap();
+			let mut state_1 = Blake2b::init(sk, size).unwrap();
 			state_1.update(data).unwrap();
 			let res_1 = state_1.finalize().unwrap();
 
 			// init(), reset(), update(), finalize()
-			let mut state_2 = init(sk, size).unwrap();
+			let mut state_2 = Blake2b::init(sk, size).unwrap();
 			state_2.reset(sk).unwrap();
 			state_2.update(data).unwrap();
 			let res_2 = state_2.finalize().unwrap();
 
 			// init(), update(), reset(), update(), finalize()
-			let mut state_3 = init(sk, size).unwrap();
+			let mut state_3 = Blake2b::init(sk, size).unwrap();
 			state_3.update(data).unwrap();
 			state_3.reset(sk).unwrap();
 			state_3.update(data).unwrap();
 			let res_3 = state_3.finalize().unwrap();
 
 			// init(), update(), finalize(), reset(), update(), finalize()
-			let mut state_4 = init(sk, size).unwrap();
+			let mut state_4 = Blake2b::init(sk, size).unwrap();
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset(sk).unwrap();
@@ -858,16 +866,16 @@ mod public {
 			// calling init() -> finalize(). i.e not calling update() at all.
 			if data.is_empty() {
 				// init(), finalize()
-				let mut state_5 = init(sk, size).unwrap();
+				let mut state_5 = Blake2b::init(sk, size).unwrap();
 				let res_5 = state_5.finalize().unwrap();
 
 				// init(), reset(), finalize()
-				let mut state_6 = init(sk, size).unwrap();
+				let mut state_6 = Blake2b::init(sk, size).unwrap();
 				state_6.reset(sk).unwrap();
 				let res_6 = state_6.finalize().unwrap();
 
 				// init(), update(), reset(), finalize()
-				let mut state_7 = init(sk, size).unwrap();
+				let mut state_7 = Blake2b::init(sk, size).unwrap();
 				state_7.update(b"Wrong data").unwrap();
 				state_7.reset(sk).unwrap();
 				let res_7 = state_7.finalize().unwrap();
@@ -883,19 +891,19 @@ mod public {
 		/// finalize() and reset() produce the same Digest/Tag.
 		fn produces_same_state(sk: Option<&SecretKey>, size: usize, data: &[u8]) {
 			// init()
-			let state_1 = init(sk, size).unwrap();
+			let state_1 = Blake2b::init(sk, size).unwrap();
 
 			// init(), reset()
-			let mut state_2 = init(sk, size).unwrap();
+			let mut state_2 = Blake2b::init(sk, size).unwrap();
 			state_2.reset(sk).unwrap();
 
 			// init(), update(), reset()
-			let mut state_3 = init(sk, size).unwrap();
+			let mut state_3 = Blake2b::init(sk, size).unwrap();
 			state_3.update(data).unwrap();
 			state_3.reset(sk).unwrap();
 
 			// init(), update(), finalize(), reset()
-			let mut state_4 = init(sk, size).unwrap();
+			let mut state_4 = Blake2b::init(sk, size).unwrap();
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset(sk).unwrap();
@@ -952,7 +960,7 @@ mod public {
 		fn test_streaming_consistency() {
 			for len in 0..BLAKE2B_BLOCKSIZE * 4 {
 				let data = vec![0u8; len];
-				let mut state = init(None, 64).unwrap();
+				let mut state = Blake2b::init(None, 64).unwrap();
 				let mut other_data: Vec<u8> = Vec::new();
 
 				other_data.extend_from_slice(&data);
