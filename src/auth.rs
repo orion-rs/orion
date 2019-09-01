@@ -31,7 +31,7 @@
 //! requests.
 //!
 //! # About:
-//! - Uses HMAC-SHA512.
+//! - Uses Blake2b in keyed mode.
 //!
 //! # Parameters:
 //! - `secret_key`: Secret key used to authenticate `data`.
@@ -45,8 +45,8 @@
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
 //!   [`SecretKey::default()`] can be used for
-//! this, it will generate a [`SecretKey`] of 32 bytes.
-//! - The recommended minimum length for a [`SecretKey`] is 32.
+//! this, it will generate a [`SecretKey`] of 16 bytes.
+//! - The recommended length for a [`SecretKey`] is 16 bytes.
 //!
 //! # Example:
 //! ```rust
@@ -61,30 +61,34 @@
 //! ```
 //! [`SecretKey`]: https://docs.rs/orion/latest/orion/auth/struct.SecretKey.html
 //! [`SecretKey::default()`]: https://docs.rs/orion/latest/orion/auth/struct.SecretKey.html
-//! [`Tag`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Tag.html
+//! [`Tag`]: struct.Tag.html
 
-use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
-pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};
+pub use crate::hltypes::{Blake2bTag as Tag, SecretKey};
+use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
+
+/// The recommended Tag size (bytes) to be output by Blake2b in keyed mode.
+const BLAKE2B_TAG_SIZE: usize = 16;
 
 #[must_use]
-/// Authenticate a message using HMAC-SHA512.
+/// Authenticate a message using Blake2b in keyed mode.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	let mut state = hmac::init(&hmac::SecretKey::from_slice(
-		secret_key.unprotected_as_bytes(),
-	)?);
+	let blake2b_secret_key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
+	let mut state = blake2b::init(Some(&blake2b_secret_key), BLAKE2B_TAG_SIZE)?;
 	state.update(data)?;
-	state.finalize()
+	let blake2b_digest = state.finalize()?;
+	Tag::from_slice(blake2b_digest.as_ref())
 }
 
 #[must_use]
-/// Authenticate and verify a message using HMAC-SHA512.
+/// Authenticate and verify a message using Blake2b in keyed mode.
 pub fn authenticate_verify(
 	expected: &Tag,
 	secret_key: &SecretKey,
 	data: &[u8],
 ) -> Result<bool, UnknownCryptoError> {
-	let key = hmac::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
-	hmac::verify(expected, &key, data)
+	let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
+	let expected_digest = blake2b::Digest::from_slice(expected.unprotected_as_bytes())?;
+	blake2b::verify(&expected_digest, &key, BLAKE2B_TAG_SIZE, data)
 }
 
 // Testing public functions in the module.
@@ -100,13 +104,13 @@ mod public {
 			let sec_key_false = SecretKey::default();
 			let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-			let hmac_bob = authenticate(&sec_key_correct, &msg).unwrap();
+			let mac_bob = authenticate(&sec_key_correct, &msg).unwrap();
 
 			assert_eq!(
-				authenticate_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
+				authenticate_verify(&mac_bob, &sec_key_correct, &msg).unwrap(),
 				true
 			);
-			assert!(authenticate_verify(&hmac_bob, &sec_key_false, &msg).is_err());
+			assert!(authenticate_verify(&mac_bob, &sec_key_false, &msg).is_err());
 		}
 
 		#[test]
@@ -114,13 +118,10 @@ mod public {
 			let sec_key = SecretKey::generate(64).unwrap();
 			let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-			let hmac_bob = authenticate(&sec_key, &msg).unwrap();
+			let mac_bob = authenticate(&sec_key, &msg).unwrap();
 
-			assert_eq!(
-				authenticate_verify(&hmac_bob, &sec_key, &msg).unwrap(),
-				true
-			);
-			assert!(authenticate_verify(&hmac_bob, &sec_key, b"bad msg").is_err());
+			assert!(authenticate_verify(&mac_bob, &sec_key, &msg).unwrap());
+			assert!(authenticate_verify(&mac_bob, &sec_key, b"bad msg").is_err());
 		}
 	}
 
