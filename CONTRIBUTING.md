@@ -62,6 +62,7 @@ Before submitting a pull request, please make sure you have done the following:
 
 - [ ] Explain what the pull request changes, in the description of the GitHub PR.
 - [ ] If the pull request is a bugfix, try to include a regression test for the bug.
+- [ ] During development it might come in handy to disable clippy deny attributes (`#![deny(warnings)]`, etc). If this has been done, please make sure to enable them again, before submitting a pull request.
 
 All pull requests should be opened against the `master` branch.
 
