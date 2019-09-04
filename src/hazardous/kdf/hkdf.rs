@@ -78,7 +78,7 @@ use crate::{
 #[must_use]
 /// The HKDF extract step.
 pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError> {
-	let mut prk = hmac::Hmac::init(&SecretKey::from_slice(salt)?);
+	let mut prk = hmac::Hmac::new(&SecretKey::from_slice(salt)?);
 	prk.update(ikm)?;
 	prk.finalize()
 }
@@ -102,7 +102,7 @@ pub fn expand(
 		None => &[0u8; 0],
 	};
 
-	let mut hmac = hmac::Hmac::init(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
+	let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
 	let okm_len = dst_out.len();
 
 	for (idx, hlen_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {

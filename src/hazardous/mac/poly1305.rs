@@ -53,7 +53,7 @@
 //! let one_time_key = poly1305::OneTimeKey::generate();
 //! let msg = "Some message.";
 //!
-//! let mut poly1305_state = poly1305::Poly1305::init(&one_time_key);
+//! let mut poly1305_state = poly1305::Poly1305::new(&one_time_key);
 //! poly1305_state.update(msg.as_bytes())?;
 //! let tag = poly1305_state.finalize()?;
 //!
@@ -297,7 +297,7 @@ impl Poly1305 {
 	#[must_use]
 	#[allow(clippy::unreadable_literal)]
 	/// Initialize a `Poly1305` struct with a given one-time key.
-	pub fn init(one_time_key: &OneTimeKey) -> Self {
+	pub fn new(one_time_key: &OneTimeKey) -> Self {
 		let mut state = Poly1305 {
 			a: [0u32; 5],
 			r: [0u32; 5],
@@ -321,7 +321,7 @@ impl Poly1305 {
 		state
 	}
 
-	/// Reset to `init()` state.
+	/// Reset to `new()` state.
 	pub fn reset(&mut self) {
 		self.a = [0u32; 5];
 		self.leftover = 0;
@@ -412,7 +412,7 @@ impl Poly1305 {
 #[must_use]
 /// One-shot function for generating a Poly1305 tag of `data`.
 pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	let mut poly_1305_state = Poly1305::init(one_time_key);
+	let mut poly_1305_state = Poly1305::new(one_time_key);
 	poly_1305_state.update(data)?;
 	poly_1305_state.finalize()
 }
@@ -481,7 +481,7 @@ mod public {
 			let secret_key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut tag = Poly1305::init(&secret_key);
+			let mut tag = Poly1305::new(&secret_key);
 			tag.update(data).unwrap();
 
 			assert_eq!(
@@ -505,7 +505,7 @@ mod public {
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
 					let sk = OneTimeKey::generate();
 
-					let mut state = Poly1305::init(&sk);
+					let mut state = Poly1305::new(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 					// Failed verification on Err so res is not needed.
@@ -519,7 +519,7 @@ mod public {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = OneTimeKey::generate();
-					let mut state = Poly1305::init(&sk);
+					let mut state = Poly1305::new(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
@@ -545,7 +545,7 @@ mod public {
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Poly1305::init(&sk);
+			let mut state = Poly1305::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -561,7 +561,7 @@ mod public {
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Poly1305::init(&sk);
+			let mut state = Poly1305::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -574,7 +574,7 @@ mod public {
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Poly1305::init(&sk);
+			let mut state = Poly1305::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.update(data).is_err());
@@ -589,7 +589,7 @@ mod public {
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Poly1305::init(&sk);
+			let mut state = Poly1305::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -601,7 +601,7 @@ mod public {
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Poly1305::init(&sk);
+			let mut state = Poly1305::new(&sk);
 			state.update(data).unwrap();
 			let one = state.finalize().unwrap();
 			state.reset();
@@ -615,7 +615,7 @@ mod public {
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Poly1305::init(&sk);
+			let mut state = Poly1305::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.finalize().is_err());
@@ -627,29 +627,29 @@ mod public {
 		use super::*;
 
 		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
+		/// Testing different usage combinations of new(), update(),
 		/// finalize() and reset() produce the same Digest.
 		fn produces_same_hash(sk: &OneTimeKey, data: &[u8]) {
-			// init(), update(), finalize()
-			let mut state_1 = Poly1305::init(&sk);
+			// new(), update(), finalize()
+			let mut state_1 = Poly1305::new(&sk);
 			state_1.update(data).unwrap();
 			let res_1 = state_1.finalize().unwrap();
 
-			// init(), reset(), update(), finalize()
-			let mut state_2 = Poly1305::init(&sk);
+			// new(), reset(), update(), finalize()
+			let mut state_2 = Poly1305::new(&sk);
 			state_2.reset();
 			state_2.update(data).unwrap();
 			let res_2 = state_2.finalize().unwrap();
 
-			// init(), update(), reset(), update(), finalize()
-			let mut state_3 = Poly1305::init(&sk);
+			// new(), update(), reset(), update(), finalize()
+			let mut state_3 = Poly1305::new(&sk);
 			state_3.update(data).unwrap();
 			state_3.reset();
 			state_3.update(data).unwrap();
 			let res_3 = state_3.finalize().unwrap();
 
-			// init(), update(), finalize(), reset(), update(), finalize()
-			let mut state_4 = Poly1305::init(&sk);
+			// new(), update(), finalize(), reset(), update(), finalize()
+			let mut state_4 = Poly1305::new(&sk);
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset();
@@ -663,19 +663,19 @@ mod public {
 			// Tests for the assumption that returning Ok() on empty update() calls
 			// with streaming API's, gives the correct result. This is done by testing
 			// the reasoning that if update() is empty, returns Ok(), it is the same as
-			// calling init() -> finalize(). i.e not calling update() at all.
+			// calling new() -> finalize(). i.e not calling update() at all.
 			if data.is_empty() {
-				// init(), finalize()
-				let mut state_5 = Poly1305::init(&sk);
+				// new(), finalize()
+				let mut state_5 = Poly1305::new(&sk);
 				let res_5 = state_5.finalize().unwrap();
 
-				// init(), reset(), finalize()
-				let mut state_6 = Poly1305::init(&sk);
+				// new(), reset(), finalize()
+				let mut state_6 = Poly1305::new(&sk);
 				state_6.reset();
 				let res_6 = state_6.finalize().unwrap();
 
-				// init(), update(), reset(), finalize()
-				let mut state_7 = Poly1305::init(&sk);
+				// new(), update(), reset(), finalize()
+				let mut state_7 = Poly1305::new(&sk);
 				state_7.update(b"Wrong data").unwrap();
 				state_7.reset();
 				let res_7 = state_7.finalize().unwrap();
@@ -687,23 +687,23 @@ mod public {
 		}
 
 		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
+		/// Testing different usage combinations of new(), update(),
 		/// finalize() and reset() produce the same Digest.
 		fn produces_same_state(sk: &OneTimeKey, data: &[u8]) {
-			// init()
-			let state_1 = Poly1305::init(&sk);
+			// new()
+			let state_1 = Poly1305::new(&sk);
 
-			// init(), reset()
-			let mut state_2 = Poly1305::init(&sk);
+			// new(), reset()
+			let mut state_2 = Poly1305::new(&sk);
 			state_2.reset();
 
-			// init(), update(), reset()
-			let mut state_3 = Poly1305::init(&sk);
+			// new(), update(), reset()
+			let mut state_3 = Poly1305::new(&sk);
 			state_3.update(data).unwrap();
 			state_3.reset();
 
-			// init(), update(), finalize(), reset()
-			let mut state_4 = Poly1305::init(&sk);
+			// new(), update(), finalize(), reset()
+			let mut state_4 = Poly1305::new(&sk);
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset();
@@ -736,7 +736,7 @@ mod public {
 			for len in 0..POLY1305_BLOCKSIZE * 4 {
 				let key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
 				let data = vec![0u8; len];
-				let mut state = Poly1305::init(&key);
+				let mut state = Poly1305::new(&key);
 				let mut other_data: Vec<u8> = Vec::new();
 
 				other_data.extend_from_slice(&data);
@@ -794,7 +794,7 @@ mod public {
 				/// same result as when using the streaming interface.
 				fn prop_poly1305_same_as_streaming(data: Vec<u8>) -> bool {
 					let sk = OneTimeKey::generate();
-					let mut state = Poly1305::init(&sk);
+					let mut state = Poly1305::new(&sk);
 					state.update(&data[..]).unwrap();
 					let stream = state.finalize().unwrap();
 					let one_shot = poly1305(&sk, &data[..]).unwrap();
@@ -824,7 +824,7 @@ mod private {
 			let block_3 = [0u8; 16];
 
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let mut state = Poly1305::init(&sk);
+			let mut state = Poly1305::new(&sk);
 
 			assert!(state.process_block(&block_0).is_err());
 			assert!(state.process_block(&block_1).is_err());
@@ -840,13 +840,13 @@ mod private {
 		fn test_process_no_panic() {
 			let block = [0u8; 16];
 			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let mut state = Poly1305::init(&sk);
+			let mut state = Poly1305::new(&sk);
 			// Should not panic
 			state.process_end_of_stream();
 			state.reset();
 			state.process_end_of_stream();
 
-			let mut state = Poly1305::init(&sk);
+			let mut state = Poly1305::new(&sk);
 			state.process_block(&block).unwrap();
 			// Should not panic
 			state.process_end_of_stream();

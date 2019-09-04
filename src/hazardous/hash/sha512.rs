@@ -44,7 +44,7 @@
 //! use orion::hazardous::hash::sha512;
 //!
 //! // Using the streaming interface
-//! let mut state = sha512::Sha512::init();
+//! let mut state = sha512::Sha512::new();
 //! state.update(b"Hello world")?;
 //! let hash = state.finalize()?;
 //!
@@ -284,7 +284,7 @@ impl Sha512 {
 
 	#[must_use]
 	/// Initialize a `Sha512` struct.
-	pub fn init() -> Self {
+	pub fn new() -> Self {
 		Sha512 {
 			working_state: H0,
 			buffer: [0u8; SHA512_BLOCKSIZE],
@@ -294,7 +294,7 @@ impl Sha512 {
 		}
 	}
 
-	/// Reset to `init()` state.
+	/// Reset to `new()` state.
 	pub fn reset(&mut self) {
 		self.working_state = H0;
 		self.buffer = [0u8; SHA512_BLOCKSIZE];
@@ -404,7 +404,7 @@ impl Sha512 {
 #[must_use]
 /// Calculate a SHA512 digest of some `data`.
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
-	let mut state = Sha512::init();
+	let mut state = Sha512::new();
 	state.update(data)?;
 	state.finalize()
 }
@@ -433,7 +433,7 @@ mod public {
 		fn test_double_reset_ok() {
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Sha512::init();
+			let mut state = Sha512::new();
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -448,7 +448,7 @@ mod public {
 		fn test_update_after_finalize_with_reset_ok() {
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Sha512::init();
+			let mut state = Sha512::new();
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -460,7 +460,7 @@ mod public {
 		fn test_update_after_finalize_err() {
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Sha512::init();
+			let mut state = Sha512::new();
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.update(data).is_err());
@@ -474,7 +474,7 @@ mod public {
 		fn test_double_finalize_with_reset_no_update_ok() {
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Sha512::init();
+			let mut state = Sha512::new();
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -485,7 +485,7 @@ mod public {
 		fn test_double_finalize_with_reset_ok() {
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Sha512::init();
+			let mut state = Sha512::new();
 			state.update(data).unwrap();
 			let one = state.finalize().unwrap();
 			state.reset();
@@ -498,7 +498,7 @@ mod public {
 		fn test_double_finalize_err() {
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = Sha512::init();
+			let mut state = Sha512::new();
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.finalize().is_err());
@@ -510,29 +510,29 @@ mod public {
 		use super::*;
 
 		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
+		/// Testing different usage combinations of new(), update(),
 		/// finalize() and reset() produce the same Digest.
 		fn produces_same_hash(data: &[u8]) {
-			// init(), update(), finalize()
-			let mut state_1 = Sha512::init();
+			// new(), update(), finalize()
+			let mut state_1 = Sha512::new();
 			state_1.update(data).unwrap();
 			let res_1 = state_1.finalize().unwrap();
 
-			// init(), reset(), update(), finalize()
-			let mut state_2 = Sha512::init();
+			// new(), reset(), update(), finalize()
+			let mut state_2 = Sha512::new();
 			state_2.reset();
 			state_2.update(data).unwrap();
 			let res_2 = state_2.finalize().unwrap();
 
-			// init(), update(), reset(), update(), finalize()
-			let mut state_3 = Sha512::init();
+			// new(), update(), reset(), update(), finalize()
+			let mut state_3 = Sha512::new();
 			state_3.update(data).unwrap();
 			state_3.reset();
 			state_3.update(data).unwrap();
 			let res_3 = state_3.finalize().unwrap();
 
-			// init(), update(), finalize(), reset(), update(), finalize()
-			let mut state_4 = Sha512::init();
+			// new(), update(), finalize(), reset(), update(), finalize()
+			let mut state_4 = Sha512::new();
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset();
@@ -546,19 +546,19 @@ mod public {
 			// Tests for the assumption that returning Ok() on empty update() calls
 			// with streaming API's, gives the correct result. This is done by testing
 			// the reasoning that if update() is empty, returns Ok(), it is the same as
-			// calling init() -> finalize(). i.e not calling update() at all.
+			// calling new() -> finalize(). i.e not calling update() at all.
 			if data.is_empty() {
-				// init(), finalize()
-				let mut state_5 = Sha512::init();
+				// new(), finalize()
+				let mut state_5 = Sha512::new();
 				let res_5 = state_5.finalize().unwrap();
 
-				// init(), reset(), finalize()
-				let mut state_6 = Sha512::init();
+				// new(), reset(), finalize()
+				let mut state_6 = Sha512::new();
 				state_6.reset();
 				let res_6 = state_6.finalize().unwrap();
 
-				// init(), update(), reset(), finalize()
-				let mut state_7 = Sha512::init();
+				// new(), update(), reset(), finalize()
+				let mut state_7 = Sha512::new();
 				state_7.update(b"Wrong data").unwrap();
 				state_7.reset();
 				let res_7 = state_7.finalize().unwrap();
@@ -570,23 +570,23 @@ mod public {
 		}
 
 		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
+		/// Testing different usage combinations of new(), update(),
 		/// finalize() and reset() produce the same Digest.
 		fn produces_same_state(data: &[u8]) {
-			// init()
-			let state_1 = Sha512::init();
+			// new()
+			let state_1 = Sha512::new();
 
-			// init(), reset()
-			let mut state_2 = Sha512::init();
+			// new(), reset()
+			let mut state_2 = Sha512::new();
 			state_2.reset();
 
-			// init(), update(), reset()
-			let mut state_3 = Sha512::init();
+			// new(), update(), reset()
+			let mut state_3 = Sha512::new();
 			state_3.update(data).unwrap();
 			state_3.reset();
 
-			// init(), update(), finalize(), reset()
-			let mut state_4 = Sha512::init();
+			// new(), update(), finalize(), reset()
+			let mut state_4 = Sha512::new();
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset();
@@ -616,7 +616,7 @@ mod public {
 		fn test_streaming_consistency() {
 			for len in 0..SHA512_BLOCKSIZE * 4 {
 				let data = vec![0u8; len];
-				let mut state = Sha512::init();
+				let mut state = Sha512::new();
 				let mut other_data: Vec<u8> = Vec::new();
 
 				other_data.extend_from_slice(&data);
@@ -671,7 +671,7 @@ mod public {
 				/// Using the one-shot function should always produce the
 				/// same result as when using the streaming interface.
 				fn prop_digest_same_as_streaming(data: Vec<u8>) -> bool {
-					let mut state = Sha512::init();
+					let mut state = Sha512::new();
 					state.update(&data[..]).unwrap();
 					let stream = state.finalize().unwrap();
 					let one_shot = digest(&data[..]).unwrap();
