@@ -59,9 +59,9 @@ cargo test
 Fuzzing is done using [honggfuzz-rs](https://github.com/rust-fuzz/honggfuzz-rs) in [orion-fuzz](https://github.com/brycx/orion-fuzz). See [orion-fuzz](https://github.com/brycx/orion-fuzz) on how to start fuzzing orion.
 
 ### Benchmarks
-The library can be benchmarked as below. All benchmarking tests are located in `benches/`.
+The library can be benchmarked with [Criterion](https://github.com/bheisler/criterion.rs) as below. All benchmarking tests are located in `benches/`.
 ```
-cargo +nightly bench
+cargo bench
 ```
 ### Changelog
 Please refer to the [CHANGELOG.md](https://github.com/brycx/orion/blob/master/CHANGELOG.md) list.

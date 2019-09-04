@@ -32,12 +32,26 @@ no_std = [ "subtle/nightly" ]
 hex = "0.3.2"
 serde_json = "1.0.40"
 quickcheck = "0.8.5"
+criterion = "0.3.0"
 
-[profile.dev]
-opt-level = 1
+[[bench]]
+name = "bench"
+harness = false
+
+[profile.bench]
+opt-level = 3
+debug = false
+lto = true
+debug-assertions = false
 
 [profile.release]
 opt-level = 3
+debug = false
+lto = true
+debug-assertions = false
+
+[profile.dev]
+opt-level = 1
 
 [badges]
 travis-ci = { repository = "brycx/orion", branch = "crates-published" }
