@@ -64,7 +64,10 @@ The library can be benchmarked as below. All benchmarking tests are located in `
 cargo +nightly bench
 ```
 ### Changelog
-Can be found [here](https://github.com/brycx/orion/releases).
+Please refer to the [CHANGELOG.md](https://github.com/brycx/orion/blob/master/CHANGELOG.md) list.
+
+### Contributing
+Please refer to the guidelines in [CONTRIBUTING.md](https://github.com/brycx/orion/blob/master/CONTRIBUTING.md) for information on how to contribute to orion.
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.
