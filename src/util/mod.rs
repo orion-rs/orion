@@ -95,10 +95,6 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 pub fn secure_cmp(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
-	if a.len() != b.len() {
-		return Err(errors::UnknownCryptoError);
-	}
-
 	if a.ct_eq(b).into() {
 		Ok(true)
 	} else {
