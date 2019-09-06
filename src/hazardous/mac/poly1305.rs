@@ -398,7 +398,6 @@ impl Poly1305 {
 	}
 }
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Initialize a `Poly1305` struct with a given one-time key.
 pub fn init(one_time_key: &OneTimeKey) -> Poly1305 {
 	let mut poly_1305_state = Poly1305 {
