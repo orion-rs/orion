@@ -389,7 +389,6 @@ impl Sha512 {
 	}
 }
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Initialize a `Sha512` struct.
 pub fn init() -> Sha512 {
 	Sha512 {
