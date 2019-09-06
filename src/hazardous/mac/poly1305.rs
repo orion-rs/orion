@@ -158,7 +158,7 @@ impl Poly1305 {
 		self.s[3] = load_u32_le(&key.unprotected_as_bytes()[28..32]);
 	}
 
-    #[rustfmt::skip]
+	#[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
     #[allow(clippy::unreadable_literal)]
@@ -249,7 +249,7 @@ impl Poly1305 {
         Ok(())
     }
 
-    #[rustfmt::skip]
+	#[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
     #[allow(clippy::unreadable_literal)]
