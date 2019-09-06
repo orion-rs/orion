@@ -94,7 +94,6 @@ construct_tag! {
 
 impl_from_trait!(Tag, SHA512_OUTSIZE);
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 #[derive(Clone)]
 /// HMAC-SHA512 streaming state.
 pub struct Hmac {
