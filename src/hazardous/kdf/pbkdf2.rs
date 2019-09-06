@@ -129,7 +129,7 @@ fn function_f(
 	Ok(())
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// PBKDF2-SHA512 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 pub fn derive_key(
@@ -167,7 +167,7 @@ pub fn derive_key(
 	Ok(())
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
 pub fn verify(
 	expected: &[u8],

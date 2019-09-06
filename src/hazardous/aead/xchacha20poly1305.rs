@@ -95,7 +95,7 @@ use crate::{
 	},
 };
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// AEAD XChaCha20Poly1305 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn seal(
 	secret_key: &SecretKey,
@@ -118,7 +118,7 @@ pub fn seal(
 	)
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// AEAD XChaCha20Poly1305 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn open(
 	secret_key: &SecretKey,

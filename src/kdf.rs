@@ -83,7 +83,7 @@ pub use crate::hltypes::{Password, Salt, SecretKey};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};
 use zeroize::Zeroize;
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Derive a key using PBKDF2-HMAC-SHA512.
 pub fn derive_key(
 	password: &Password,
@@ -110,7 +110,7 @@ pub fn derive_key(
 	Ok(dk)
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Derive and verify a key using PBKDF2-HMAC-SHA512.
 pub fn derive_key_verify(
 	expected: &SecretKey,
