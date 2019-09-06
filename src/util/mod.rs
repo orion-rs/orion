@@ -23,7 +23,7 @@
 use crate::errors;
 use subtle::ConstantTimeEq;
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 #[cfg(feature = "safe_api")]
 /// Generate random bytes using a CSPRNG. Not available in `no_std` context.
 ///
@@ -67,7 +67,7 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 	Ok(())
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Compare two equal length slices in constant time.
 ///
 /// # About:

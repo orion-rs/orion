@@ -140,7 +140,7 @@ macro_rules! impl_from_trait (($name:ident, $size:expr) => (
 /// and $upper_bound should be the same. value will be allocated with a size of
 /// $upper_bound.
 macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
-    #[must_use]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[allow(clippy::double_comparisons)]
     /// Make an object from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
@@ -162,7 +162,7 @@ macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
 /// if the slice is not of length `$size`.
 macro_rules! func_from_slice_variable_size (($name:ident) => (
-    #[must_use]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[cfg(feature = "safe_api")]
     /// Make an object from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
@@ -217,7 +217,7 @@ macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) =
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a variable length.
 macro_rules! func_generate_variable_size (($name:ident) => (
-    #[must_use]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
@@ -647,7 +647,7 @@ macro_rules! construct_hmac_key {
         impl_ct_partialeq_trait!($name, unprotected_as_bytes);
 
         impl $name {
-            #[must_use]
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
             /// Make an object from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
                 use crate::hazardous::hash::sha512::{self, SHA512_OUTSIZE};

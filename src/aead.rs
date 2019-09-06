@@ -93,7 +93,7 @@ use crate::{
 	},
 };
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Authenticated encryption using XChaCha20Poly1305.
 pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
 	if plaintext.is_empty() {
@@ -116,7 +116,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 	Ok(dst_out)
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Authenticated decryption using XChaCha20Poly1305.
 pub fn open(
 	secret_key: &SecretKey,
@@ -232,7 +232,7 @@ mod public {
 		}
 	}
 
-	// Proptests. Only exectued when NOT testing no_std.
+	// Proptests. Only executed when NOT testing no_std.
 	#[cfg(feature = "safe_api")]
 	mod proptest {
 		use super::*;

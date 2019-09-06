@@ -106,7 +106,7 @@ construct_public! {
 
 impl_from_trait!(Nonce, XCHACHA_NONCESIZE);
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn encrypt(
 	secret_key: &SecretKey,
@@ -129,7 +129,7 @@ pub fn encrypt(
 	)
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn decrypt(
 	secret_key: &SecretKey,

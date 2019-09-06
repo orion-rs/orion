@@ -252,7 +252,6 @@ impl Drop for InternalState {
 }
 
 impl InternalState {
-	#[must_use]
 	#[inline]
 	#[allow(clippy::unreadable_literal)]
 	/// Initialize either a ChaCha or HChaCha state with a `secret_key` and
@@ -307,7 +306,6 @@ impl InternalState {
 		})
 	}
 
-	#[must_use]
 	#[inline(always)]
 	/// Process either a ChaCha20 or HChaCha20 block.
 	fn process_block(
