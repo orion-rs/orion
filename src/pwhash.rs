@@ -81,7 +81,7 @@ pub use crate::hltypes::{Password, PasswordHash, Salt};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};
 use zeroize::Zeroize;
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hash a password using PBKDF2-HMAC-SHA512.
 pub fn hash_password(
 	password: &Password,
@@ -105,7 +105,7 @@ pub fn hash_password(
 	Ok(dk)
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hash and verify a password using PBKDF2-HMAC-SHA512.
 pub fn hash_password_verify(
 	expected_with_salt: &PasswordHash,

@@ -69,8 +69,8 @@ use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 /// The recommended Tag size (bytes) to be output by Blake2b in keyed mode.
 const BLAKE2B_TAG_SIZE: usize = 16;
 
-#[must_use]
-/// Authenticate a message using Blake2b in keyed mode.
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+/// Authenticate a message using BLAKE2b-256 in keyed mode.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let blake2b_secret_key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
 	let mut state = blake2b::init(Some(&blake2b_secret_key), BLAKE2B_TAG_SIZE)?;
@@ -79,8 +79,8 @@ pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownC
 	Tag::from_slice(blake2b_digest.as_ref())
 }
 
-#[must_use]
-/// Authenticate and verify a message using Blake2b in keyed mode.
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+/// Authenticate and verify a message using BLAKE2b-256 in keyed mode.
 pub fn authenticate_verify(
 	expected: &Tag,
 	secret_key: &SecretKey,

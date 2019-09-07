@@ -155,7 +155,7 @@ pub enum Hasher {
 }
 
 impl Hasher {
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a digest selected by the given Blake2b variant.
 	pub fn digest(&self, data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 		let size: usize = match *self {
@@ -170,7 +170,7 @@ impl Hasher {
 		state.finalize()
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a `Blake2b` state selected by the given Blake2b variant.
 	pub fn init(&self) -> Result<Blake2b, UnknownCryptoError> {
 		match *self {
@@ -314,7 +314,7 @@ impl Blake2b {
 		self.internal_state[7] ^= w_vec[7] ^ w_vec[15];
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Reset to `init()` state.
 	pub fn reset(&mut self, secret_key: Option<&SecretKey>) -> Result<(), UnknownCryptoError> {
 		if secret_key.is_some() && (!self.is_keyed) {
@@ -344,7 +344,7 @@ impl Blake2b {
 		}
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
@@ -394,7 +394,7 @@ impl Blake2b {
 		Ok(())
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a BLAKE2b digest.
 	pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
 		if self.is_finalized {
@@ -420,7 +420,7 @@ impl Blake2b {
 	}
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 #[allow(clippy::unreadable_literal)]
 /// Initialize a `Blake2b` struct with a given size and an optional key.
 pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, UnknownCryptoError> {
@@ -461,7 +461,7 @@ pub fn init(secret_key: Option<&SecretKey>, size: usize) -> Result<Blake2b, Unkn
 	Ok(context)
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Verify a Blake2b Digest in constant time.
 pub fn verify(
 	expected: &Digest,

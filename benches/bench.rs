@@ -1,6 +1,29 @@
-#![feature(test)]
+// MIT License
+
+// Copyright (c) 2018-2019 The orion Developers
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+extern crate criterion;
 extern crate orion;
-extern crate test;
+
+use criterion::*;
 
 use orion::hazardous::{
 	aead::{chacha20poly1305, xchacha20poly1305},
@@ -9,238 +32,384 @@ use orion::hazardous::{
 	mac::{hmac, poly1305},
 	stream::*,
 };
-use test::Bencher;
 
 mod mac {
 	use super::*;
 
-	macro_rules! bench_poly1305 {
-		($bench_name:ident, $input_len:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
-				let key = poly1305::OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+	static INPUT_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
 
-				b.iter(|| {
-					let _ = poly1305::poly1305(&key, &[0u8; $input_len]).unwrap();
-				});
-			}
-		};
+	pub fn bench_poly1305(c: &mut Criterion) {
+		let mut group = c.benchmark_group("Poly1305");
+		let key = poly1305::OneTimeKey::generate();
+
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute mac", *size),
+				&input,
+				|b, input_message| b.iter(|| poly1305::poly1305(&key, &input_message).unwrap()),
+			);
+		}
 	}
 
-	macro_rules! bench_hmac {
-		($bench_name:ident, $input_len:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
+	pub fn bench_hmac(c: &mut Criterion) {
+		let mut group = c.benchmark_group("HMAC-SHA512");
+		// NOTE: Setting the key like this will pad it for HMAC.
+		// Padding is therefor not included in benchmarks.
+		let key = hmac::SecretKey::generate();
 
-				b.iter(|| {
-					// SecretKey processes the input for use with HMAC.
-					let key = hmac::SecretKey::from_slice(&[0x01; 64]).unwrap();
-					let _ = hmac::hmac(&key, &[0u8; $input_len]).unwrap();
-				});
-			}
-		};
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute mac", *size),
+				&input,
+				|b, input_message| b.iter(|| hmac::hmac(&key, &input_message).unwrap()),
+			);
+		}
 	}
 
-	bench_hmac!(bench_hmac_512, 512);
-	bench_hmac!(bench_hmac_1024, 1024);
-	bench_hmac!(bench_hmac_2048, 2048);
-	bench_hmac!(bench_hmac_4096, 4096);
-
-	bench_poly1305!(bench_poly1305_512, 512);
-	bench_poly1305!(bench_poly1305_1024, 1024);
-	bench_poly1305!(bench_poly1305_2048, 2048);
-	bench_poly1305!(bench_poly1305_4096, 4096);
+	criterion_group! {
+		name = mac_benches;
+		config = Criterion::default();
+		targets =
+		bench_poly1305,
+		bench_hmac,
+	}
 }
 
 mod aead {
 	use super::*;
 
-	macro_rules! bench_chacha20poly1305 {
-		($bench_name:ident, $input_len:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
-				let key = chacha20poly1305::SecretKey::generate();
-				let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]).unwrap();
+	static INPUT_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
 
-				let mut out = [0u8; $input_len + 16];
+	pub fn bench_chacha20poly1305(c: &mut Criterion) {
+		let mut group = c.benchmark_group("ChaCha20-Poly1305");
+		let key = chacha20poly1305::SecretKey::generate();
+		let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]).unwrap();
 
-				b.iter(|| {
-					chacha20poly1305::seal(&key, &nonce, &[0u8; $input_len], None, &mut out)
-						.unwrap();
-				});
-			}
-		};
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+			let mut out = vec![0u8; input.len() + 16];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("encrypt", *size),
+				&input,
+				|b, input_message| {
+					b.iter(|| {
+						chacha20poly1305::seal(&key, &nonce, &input_message, None, &mut out)
+							.unwrap()
+					})
+				},
+			);
+		}
 	}
 
-	macro_rules! bench_xchacha20poly1305 {
-		($bench_name:ident, $input_len:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
-				let key = xchacha20poly1305::SecretKey::generate();
-				let nonce = xchacha20poly1305::Nonce::generate();
+	pub fn bench_xchacha20poly1305(c: &mut Criterion) {
+		let mut group = c.benchmark_group("XChaCha20-Poly1305");
+		let key = xchacha20poly1305::SecretKey::generate();
+		let nonce = xchacha20poly1305::Nonce::generate();
 
-				let mut out = [0u8; $input_len + 16];
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+			let mut out = vec![0u8; input.len() + 16];
 
-				b.iter(|| {
-					xchacha20poly1305::seal(&key, &nonce, &[0u8; $input_len], None, &mut out)
-						.unwrap();
-				});
-			}
-		};
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("encrypt", *size),
+				&input,
+				|b, input_message| {
+					b.iter(|| {
+						xchacha20poly1305::seal(&key, &nonce, &input_message, None, &mut out)
+							.unwrap()
+					})
+				},
+			);
+		}
 	}
 
-	bench_chacha20poly1305!(bench_chacha20poly1305_512, 512);
-	bench_chacha20poly1305!(bench_chacha20poly1305_1024, 1024);
-	bench_chacha20poly1305!(bench_chacha20poly1305_2048, 2048);
-	bench_chacha20poly1305!(bench_chacha20poly1305_4096, 4096);
-
-	bench_xchacha20poly1305!(bench_xchacha20poly1305_512, 512);
-	bench_xchacha20poly1305!(bench_xchacha20poly1305_1024, 1024);
-	bench_xchacha20poly1305!(bench_xchacha20poly1305_2048, 2048);
-	bench_xchacha20poly1305!(bench_xchacha20poly1305_4096, 4096);
+	criterion_group! {
+		name = aead_benches;
+		config = Criterion::default();
+		targets =
+		bench_chacha20poly1305,
+		bench_xchacha20poly1305,
+	}
 }
 
 mod hash {
 	use super::*;
 
-	macro_rules! bench_sha512 {
-		($bench_name:ident, $input_len:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
+	static INPUT_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
 
-				b.iter(|| {
-					let _ = sha512::digest(&[0u8; $input_len]).unwrap();
-				});
-			}
-		};
+	pub fn bench_sha512(c: &mut Criterion) {
+		let mut group = c.benchmark_group("SHA512");
+
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute hash", *size),
+				&input,
+				|b, input_message| b.iter(|| sha512::digest(&input_message).unwrap()),
+			);
+		}
 	}
 
-	macro_rules! bench_blake2b {
-		($bench_name:ident, $input_len:expr, $worker_function:path) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
+	pub fn bench_blake2b_256(c: &mut Criterion) {
+		let mut group = c.benchmark_group("BLAKE2b-256");
 
-				b.iter(|| {
-					let _ = $worker_function.digest(&[0u8; $input_len]).unwrap();
-				});
-			}
-		};
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute hash", *size),
+				&input,
+				|b, input_message| {
+					b.iter(|| blake2b::Hasher::Blake2b256.digest(&input_message).unwrap())
+				},
+			);
+		}
 	}
 
-	bench_sha512!(bench_sha512_512, 512);
-	bench_sha512!(bench_sha512_1024, 1024);
-	bench_sha512!(bench_sha512_2048, 2048);
-	bench_sha512!(bench_sha512_4096, 4096);
+	pub fn bench_blake2b_384(c: &mut Criterion) {
+		let mut group = c.benchmark_group("BLAKE2b-384");
 
-	bench_blake2b!(bench_blake2b256_512, 512, blake2b::Hasher::Blake2b256);
-	bench_blake2b!(bench_blake2b256_1024, 1024, blake2b::Hasher::Blake2b256);
-	bench_blake2b!(bench_blake2b256_2048, 2048, blake2b::Hasher::Blake2b256);
-	bench_blake2b!(bench_blake2b256_4096, 4096, blake2b::Hasher::Blake2b256);
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
 
-	bench_blake2b!(bench_blake2b384_512, 512, blake2b::Hasher::Blake2b384);
-	bench_blake2b!(bench_blake2b384_1024, 1024, blake2b::Hasher::Blake2b384);
-	bench_blake2b!(bench_blake2b384_2048, 2048, blake2b::Hasher::Blake2b384);
-	bench_blake2b!(bench_blake2b384_4096, 4096, blake2b::Hasher::Blake2b384);
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute hash", *size),
+				&input,
+				|b, input_message| {
+					b.iter(|| blake2b::Hasher::Blake2b384.digest(&input_message).unwrap())
+				},
+			);
+		}
+	}
 
-	bench_blake2b!(bench_blake2b512_512, 512, blake2b::Hasher::Blake2b512);
-	bench_blake2b!(bench_blake2b512_1024, 1024, blake2b::Hasher::Blake2b512);
-	bench_blake2b!(bench_blake2b512_2048, 2048, blake2b::Hasher::Blake2b512);
-	bench_blake2b!(bench_blake2b512_4096, 4096, blake2b::Hasher::Blake2b512);
+	pub fn bench_blake2b_512(c: &mut Criterion) {
+		let mut group = c.benchmark_group("BLAKE2b-512");
+
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute hash", *size),
+				&input,
+				|b, input_message| {
+					b.iter(|| blake2b::Hasher::Blake2b512.digest(&input_message).unwrap())
+				},
+			);
+		}
+	}
+
+	// Convenience function for testing Blake2b with a secret key.
+	fn blake2b_keyed(
+		sk: Option<&blake2b::SecretKey>,
+		size: usize,
+		input: &[u8],
+	) -> Result<blake2b::Digest, orion::errors::UnknownCryptoError> {
+		let mut state = blake2b::init(sk, size).unwrap();
+		state.update(input).unwrap();
+		state.finalize()
+	}
+
+	pub fn bench_blake2b_256_keyed(c: &mut Criterion) {
+		let mut group = c.benchmark_group("BLAKE2b-256_keyed");
+		let sk = &blake2b::SecretKey::generate();
+
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute mac", *size),
+				&input,
+				|b, input_message| b.iter(|| blake2b_keyed(Some(sk), 32, input_message).unwrap()),
+			);
+		}
+	}
+
+	pub fn bench_blake2b_384_keyed(c: &mut Criterion) {
+		let mut group = c.benchmark_group("BLAKE2b-384_keyed");
+		let sk = &blake2b::SecretKey::generate();
+
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute mac", *size),
+				&input,
+				|b, input_message| b.iter(|| blake2b_keyed(Some(sk), 48, input_message).unwrap()),
+			);
+		}
+	}
+
+	pub fn bench_blake2b_512_keyed(c: &mut Criterion) {
+		let mut group = c.benchmark_group("BLAKE2b-512_keyed");
+		let sk = &blake2b::SecretKey::generate();
+
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("compute mac", *size),
+				&input,
+				|b, input_message| b.iter(|| blake2b_keyed(Some(sk), 64, input_message).unwrap()),
+			);
+		}
+	}
+
+	criterion_group! {
+		name = hash_benches;
+		config = Criterion::default();
+		targets =
+		bench_sha512,
+		bench_blake2b_256,
+		bench_blake2b_384,
+		bench_blake2b_512,
+		bench_blake2b_256_keyed,
+		bench_blake2b_384_keyed,
+		bench_blake2b_512_keyed,
+	}
 }
 
 mod stream {
 	use super::*;
 
-	macro_rules! bench_chacha20 {
-		($bench_name:ident, $input_len:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
-				let key = chacha20::SecretKey::generate();
-				let nonce = chacha20::Nonce::from_slice(&[0u8; 12]).unwrap();
+	static INPUT_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
 
-				let mut out = [0u8; $input_len];
+	pub fn bench_chacha20(c: &mut Criterion) {
+		let mut group = c.benchmark_group("ChaCha20");
+		let key = chacha20poly1305::SecretKey::generate();
+		let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]).unwrap();
 
-				b.iter(|| {
-					chacha20::encrypt(&key, &nonce, 0, &[0u8; $input_len], &mut out).unwrap();
-				});
-			}
-		};
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+			let mut out = vec![0u8; input.len()];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("xor-stream", *size),
+				&input,
+				|b, input_message| {
+					b.iter(|| chacha20::encrypt(&key, &nonce, 0, &input_message, &mut out).unwrap())
+				},
+			);
+		}
 	}
 
-	macro_rules! bench_xchacha20 {
-		($bench_name:ident, $input_len:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
-				let key = xchacha20::SecretKey::generate();
-				let nonce = xchacha20::Nonce::generate();
+	pub fn bench_xchacha20(c: &mut Criterion) {
+		let mut group = c.benchmark_group("XChaCha20");
+		let key = xchacha20::SecretKey::generate();
+		let nonce = xchacha20::Nonce::generate();
 
-				let mut out = [0u8; $input_len];
+		for size in INPUT_SIZES.iter() {
+			let input = vec![0u8; *size];
+			let mut out = vec![0u8; input.len()];
 
-				b.iter(|| {
-					xchacha20::encrypt(&key, &nonce, 0, &[0u8; $input_len], &mut out).unwrap();
-				});
-			}
-		};
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("xor-stream", *size),
+				&input,
+				|b, input_message| {
+					b.iter(|| {
+						xchacha20::encrypt(&key, &nonce, 0, &input_message, &mut out).unwrap()
+					})
+				},
+			);
+		}
 	}
 
-	bench_chacha20!(bench_chacha20_512, 512);
-	bench_chacha20!(bench_chacha20_1024, 1024);
-	bench_chacha20!(bench_chacha20_2048, 2048);
-	bench_chacha20!(bench_chacha20_4096, 4096);
-
-	bench_xchacha20!(bench_xchacha20_512, 512);
-	bench_xchacha20!(bench_xchacha20_1024, 1024);
-	bench_xchacha20!(bench_xchacha20_2048, 2048);
-	bench_xchacha20!(bench_xchacha20_4096, 4096);
+	criterion_group! {
+		name = stream_benches;
+		config = Criterion::default();
+		targets =
+		bench_chacha20,
+		bench_xchacha20,
+	}
 }
 
 mod kdf {
 	use super::*;
 
-	macro_rules! bench_hkdf {
-		($bench_name:ident, $input_len:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				b.bytes = $input_len;
+	static OKM_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
+	static PBKDF2_ITERATIONS: [usize; 3] = [1000, 10000, 100000];
 
-				let mut out = [0u8; $input_len];
+	pub fn bench_hkdf(c: &mut Criterion) {
+		let mut group = c.benchmark_group("HKDF-HMAC-SHA512");
 
-				b.iter(|| {
-					hkdf::derive_key(&[0x01; 64], &[0x01; 64], Some(&[0x01; 64]), &mut out)
-						.unwrap();
-				});
-			}
-		};
+		for size in OKM_SIZES.iter() {
+			let ikm = vec![0u8; 64];
+			let salt = ikm.clone();
+			let mut okm_out = vec![0u8; *size];
+
+			group.throughput(Throughput::Bytes(*size as u64));
+			group.bench_with_input(
+				BenchmarkId::new("derive bytes", *size),
+				&ikm,
+				|b, input_ikm| {
+					b.iter(|| hkdf::derive_key(&salt, input_ikm, None, &mut okm_out).unwrap())
+				},
+			);
+		}
 	}
 
-	macro_rules! bench_pbkdf2 {
-		($bench_name:ident, $cost_param:expr) => {
-			#[bench]
-			pub fn $bench_name(b: &mut Bencher) {
-				let mut dk_out = [0u8; 64];
+	pub fn bench_pbkdf2(c: &mut Criterion) {
+		let mut group = c.benchmark_group("PBKDF2-HMAC-SHA512");
+		// 10 is the lowest acceptable same size.
+		group.sample_size(10);
+		group.measurement_time(core::time::Duration::new(30, 0));
 
-				b.iter(|| {
-					let password = pbkdf2::Password::from_slice(&[0x01; 64]).unwrap();
-					pbkdf2::derive_key(&password, &[0x01; 64], $cost_param, &mut dk_out).unwrap();
-				});
-			}
-		};
+		for iterations in PBKDF2_ITERATIONS.iter() {
+			let ikm = vec![0u8; 64];
+			let salt = ikm.clone();
+			let mut dk_out = vec![0u8; 64];
+
+			// NOTE: The password newtype creation is included
+			// as this pads the salt for HMAC internally.
+			group.bench_with_input(
+				BenchmarkId::new("derive 64 bytes", *iterations),
+				&iterations,
+				|b, iter_count| {
+					b.iter(|| {
+						pbkdf2::derive_key(
+							&pbkdf2::Password::from_slice(&salt).unwrap(),
+							&ikm,
+							**iter_count,
+							&mut dk_out,
+						)
+						.unwrap()
+					})
+				},
+			);
+		}
 	}
 
-	bench_hkdf!(bench_hkdf_512, 512);
-	bench_hkdf!(bench_hkdf_1024, 1024);
-	bench_hkdf!(bench_hkdf_2048, 2048);
-	bench_hkdf!(bench_hkdf_4096, 4096);
-
-	bench_pbkdf2!(bench_pbkdf2_1000, 1000);
-	bench_pbkdf2!(bench_pbkdf2_10000, 10000);
-	bench_pbkdf2!(bench_pbkdf2_100000, 100000);
+	criterion_group! {
+		name = kdf_benches;
+		config = Criterion::default();
+		targets =
+		bench_hkdf,
+		bench_pbkdf2,
+	}
 }
+
+criterion_main!(
+	mac::mac_benches,
+	aead::aead_benches,
+	hash::hash_benches,
+	stream::stream_benches,
+	kdf::kdf_benches,
+);
