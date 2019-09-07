@@ -7,7 +7,7 @@ use self::orion::hazardous::hash::{blake2b, sha512};
 
 fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 	// Only make SecretKey if test case key value is not empty, otherwise it will be
-	// BLOCKSIZE zero bytes.
+	// set to BLOCKSIZE zero bytes.
 	let mut state = if key.is_empty() {
 		blake2b::init(None, output.len()).unwrap()
 	} else {
@@ -23,11 +23,10 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 }
 
 fn sha512_test_runner(data: &[u8], output: &[u8]) {
-	// Test streaming
 	let mut state = sha512::init();
 	state.update(data).unwrap();
 	let digest = state.finalize().unwrap();
-	// Test one-shot function
+
 	let digest_one_shot = sha512::digest(data).unwrap();
 
 	assert!(digest.as_ref() == digest_one_shot.as_ref());

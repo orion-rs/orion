@@ -302,7 +302,6 @@ impl Blake2b {
 		Self::round(10, &mut m_vec, &mut w_vec);
 		Self::round(11, &mut m_vec, &mut w_vec);
 
-		// XOR the two halves together and into the state
 		self.internal_state[0] ^= w_vec[0] ^ w_vec[8];
 		self.internal_state[1] ^= w_vec[1] ^ w_vec[9];
 		self.internal_state[2] ^= w_vec[2] ^ w_vec[10];
@@ -367,25 +366,20 @@ impl Blake2b {
 			}
 
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
-			// Process data
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f(None);
 			self.leftover = 0;
-			// Reduce by slice
 			bytes = &bytes[fill..];
 		}
 
 		while bytes.len() > BLAKE2B_BLOCKSIZE {
-			// Process data
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f(Some(bytes[..BLAKE2B_BLOCKSIZE].as_ref()));
-			// Reduce by slice
 			bytes = &bytes[BLAKE2B_BLOCKSIZE..];
 		}
 
 		if !bytes.is_empty() {
 			debug_assert!(self.leftover == 0);
-
 			self.buffer[..bytes.len()].copy_from_slice(bytes);
 			self.leftover += bytes.len();
 		}

@@ -283,9 +283,11 @@ impl InternalState {
 			load_u32_le(&sk[28..32]),
 		);
 
+		// Row 3 with counter and nonce if IETF,
+		// but only nonce if HChaCha20.
 		let r3 = if is_ietf {
 			U32x4(
-				0,
+				0, // Default counter
 				load_u32_le(&n[0..4]),
 				load_u32_le(&n[4..8]),
 				load_u32_le(&n[8..12]),

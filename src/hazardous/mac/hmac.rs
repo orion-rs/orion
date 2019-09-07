@@ -128,7 +128,7 @@ impl Hmac {
 		}
 
 		// Due to opad_hasher and ipad_hasher being initialized in init()
-		// and the size of input to update() is known to be acceptable size,
+		// and the size of ipad/opad is known to be acceptable,
 		// .unwrap() here should not be able to panic
 		self.ipad_hasher.update(ipad.as_ref()).unwrap();
 		self.opad_hasher.update(opad.as_ref()).unwrap();

@@ -340,10 +340,9 @@ impl Poly1305 {
 			for (idx, itm) in bytes.iter().enumerate().take(want) {
 				self.buffer[self.leftover + idx] = *itm;
 			}
-			// Reduce by slice
+
 			bytes = &bytes[want..];
 			self.leftover += want;
-
 			if self.leftover < POLY1305_BLOCKSIZE {
 				return Ok(());
 			}
@@ -355,7 +354,6 @@ impl Poly1305 {
 
 		while bytes.len() >= POLY1305_BLOCKSIZE {
 			self.process_block(&bytes[0..POLY1305_BLOCKSIZE])?;
-			// Reduce by slice
 			bytes = &bytes[POLY1305_BLOCKSIZE..];
 		}
 
@@ -389,7 +387,7 @@ impl Poly1305 {
 
 			self.process_block(&local_buffer)?;
 		}
-		// Get tag
+
 		self.process_end_of_stream();
 		store_u32_into_le(&self.a[0..4], &mut local_buffer);
 
