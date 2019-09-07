@@ -181,7 +181,6 @@ impl Hasher {
 	}
 }
 
-#[must_use]
 #[derive(Clone)]
 /// BLAKE2b streaming state.
 pub struct Blake2b {

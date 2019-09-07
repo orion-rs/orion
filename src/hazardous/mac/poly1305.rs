@@ -107,7 +107,6 @@ construct_tag! {
 
 impl_from_trait!(Tag, POLY1305_OUTSIZE);
 
-#[must_use]
 #[derive(Clone)]
 /// Poly1305 streaming state.
 pub struct Poly1305 {

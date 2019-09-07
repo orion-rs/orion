@@ -29,7 +29,6 @@
 /// default and secure length of random bytes.
 macro_rules! impl_default_trait (($name:ident, $size:expr) => (
     impl core::default::Default for $name {
-        #[must_use]
         #[cfg(feature = "safe_api")]
         /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
         fn default() -> $name {
@@ -120,6 +119,7 @@ macro_rules! impl_asref_trait (($name:ident) => (
 /// types which have a fixed-length.
 macro_rules! impl_from_trait (($name:ident, $size:expr) => (
     impl core::convert::From<[u8; $size]> for $name {
+        #[inline]
         /// Make an object from a byte array.
         fn from(bytes: [u8; $size]) -> $name {
             $name {
@@ -179,7 +179,6 @@ macro_rules! func_from_slice_variable_size (($name:ident) => (
 /// `Drop`, `Debug` and/or `PartialEq`.
 macro_rules! func_unprotected_as_bytes (() => (
     #[inline]
-    #[must_use]
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
     /// needed. This __**breaks protections**__ that the type implements.
     pub fn unprotected_as_bytes(&self) -> &[u8] {
@@ -190,6 +189,7 @@ macro_rules! func_unprotected_as_bytes (() => (
 /// Macro to implement a `get_length()` function which will return the objects'
 /// length of field `value`.
 macro_rules! func_get_length (() => (
+    #[inline]
     /// Return the length of the object.
     pub fn get_length(&self) -> usize {
         self.original_length
@@ -199,7 +199,7 @@ macro_rules! func_get_length (() => (
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a fixed length $size.
 macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) => (
-    #[must_use]
+    
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> $name {
@@ -389,7 +389,6 @@ macro_rules! test_generate_variable (($name:ident) => (
 macro_rules! construct_secret_key {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr, $gen_length:expr)) => (
-        #[must_use]
         $(#[$meta])*
         ///
         /// # Security:
@@ -470,7 +469,6 @@ macro_rules! construct_secret_key {
 macro_rules! construct_public {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr)) => (
-        #[must_use]
         #[derive(Clone, Copy)]
         $(#[$meta])*
         ///
@@ -502,7 +500,6 @@ macro_rules! construct_public {
 
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr, $gen_length:expr)) => (
-        #[must_use]
         #[derive(Clone, Copy)]
         $(#[$meta])*
         ///
@@ -544,7 +541,6 @@ macro_rules! construct_public {
 macro_rules! construct_tag {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr)) => (
-        #[must_use]
         #[derive(Clone, Copy)]
         $(#[$meta])*
         ///
@@ -613,7 +609,6 @@ macro_rules! construct_tag {
 macro_rules! construct_hmac_key {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
-        #[must_use]
         $(#[$meta])*
         ///
         /// # Security:
@@ -728,7 +723,6 @@ macro_rules! construct_hmac_key {
 macro_rules! construct_secret_key_variable_size {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $default_size:expr)) => (
-        #[must_use]
         #[cfg(feature = "safe_api")]
         $(#[$meta])*
         ///
@@ -794,7 +788,6 @@ macro_rules! construct_secret_key_variable_size {
 macro_rules! construct_salt_variable_size {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $default_size:expr)) => (
-        #[must_use]
         #[cfg(feature = "safe_api")]
         $(#[$meta])*
         ///

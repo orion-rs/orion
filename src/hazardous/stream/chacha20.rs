@@ -377,6 +377,7 @@ enum Serialize {
 }
 
 impl Serialize {
+	#[inline]
 	fn xor_in_place(self, ks: &[U32x4; 4], inplace: &mut [u8]) {
 		match self {
 			Serialize::IetfChaCha => {
@@ -1066,8 +1067,6 @@ mod test_vectors {
 	// NOTE: These PartialEq implementation should only be available in testing.
 	#[cfg(test)]
 	impl core::cmp::PartialEq for U32x4 {
-		#[must_use]
-		#[inline(always)]
 		fn eq(&self, other: &Self) -> bool {
 			(self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3)
 		}

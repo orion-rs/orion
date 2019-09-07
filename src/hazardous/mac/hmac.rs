@@ -169,7 +169,6 @@ impl Hmac {
 	}
 }
 
-#[must_use]
 /// Initialize `Hmac` struct with a given key.
 pub fn init(secret_key: &SecretKey) -> Hmac {
 	let mut state = Hmac {
