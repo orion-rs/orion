@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2019 The orion Developers
+// Copyright (c) 2019 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! ### **Caution**:
-//! Usage of the `hazardous` module is __**only intended for advanced users**__.
-//! `hazardous` contains implementations with a much higher degree of control.
-//! It is also much easier to misuse those implementations. Only use `hazardous`
-//! if absolutely necessary.
-
-/// AEADs (Authenticated Encryption with Associated Data).
-pub mod aead;
-
-/// Cryptographic hash functions.
-pub mod hash;
-
-/// MACs (Message Authentication Code).
-pub mod mac;
-
-/// KDFs (Key Derivation Function) and PBKDF (Password-Based Key Derivation
-/// Function).
-pub mod kdf;
-
-/// Stream ciphers.
-pub mod stream;
-
-/// Encryption and authentication of a stream of messages or chunks
-pub mod secret_stream;
+/// a secret stream based on XChaCha20Poly1305
+pub mod xchacha20poly1305;
