@@ -70,7 +70,7 @@
 //! let password = pwhash::Password::from_slice(b"Secret password")?;
 //!
 //! let hash = pwhash::hash_password(&password, 100000)?;
-//! assert!(pwhash::hash_password_verify(&hash, &password, 100000)?);
+//! assert!(pwhash::hash_password_verify(&hash, &password, 100000).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`PasswordHash`]: https://docs.rs/orion/latest/orion/pwhash/struct.PasswordHash.html
@@ -111,10 +111,10 @@ pub fn hash_password_verify(
 	expected_with_salt: &PasswordHash,
 	password: &Password,
 	iterations: usize,
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	let mut dk = [0u8; 64];
 
-	let is_good = pbkdf2::verify(
+	pbkdf2::verify(
 		&expected_with_salt.unprotected_as_bytes()[64..],
 		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
 		&expected_with_salt.unprotected_as_bytes()[..64],
@@ -124,7 +124,7 @@ pub fn hash_password_verify(
 
 	dk.zeroize();
 
-	Ok(is_good)
+	Ok(())
 }
 
 // Testing public functions in the module.
@@ -141,10 +141,7 @@ mod public {
 
 			let pbkdf2_dk = hash_password(&password, 100).unwrap();
 
-			assert_eq!(
-				hash_password_verify(&pbkdf2_dk, &password, 100).unwrap(),
-				true
-			);
+			assert!(hash_password_verify(&pbkdf2_dk, &password, 100).is_ok());
 		}
 
 		#[test]

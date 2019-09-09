@@ -65,7 +65,7 @@
 //! 	&salt,
 //! 	10000,
 //! 	&mut dk_out
-//! )?);
+//! ).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Password::generate()`]: https://docs.rs/orion/latest/orion/hazardous/kdf/pbkdf2/struct.Password.html
@@ -175,7 +175,7 @@ pub fn verify(
 	salt: &[u8],
 	iterations: usize,
 	dst_out: &mut [u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	derive_key(password, salt, iterations, dst_out)?;
 	util::secure_cmp(&dst_out, expected)
 }

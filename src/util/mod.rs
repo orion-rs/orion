@@ -88,15 +88,15 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 /// use orion::util;
 ///
 /// let mut mac = [0u8; 64];
-/// assert!(util::secure_cmp(&mac, &[0u8; 64])?);
+/// assert!(util::secure_cmp(&mac, &[0u8; 64]).is_ok());
 ///
 /// util::secure_rand_bytes(&mut mac)?;
 /// assert!(util::secure_cmp(&mac, &[0u8; 64]).is_err());
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
-pub fn secure_cmp(a: &[u8], b: &[u8]) -> Result<bool, errors::UnknownCryptoError> {
+pub fn secure_cmp(a: &[u8], b: &[u8]) -> Result<(), errors::UnknownCryptoError> {
 	if a.ct_eq(b).into() {
-		Ok(true)
+		Ok(())
 	} else {
 		Err(errors::UnknownCryptoError)
 	}
@@ -126,8 +126,8 @@ fn test_ct_eq_ok() {
 	let buf_1 = [0x06; 10];
 	let buf_2 = [0x06; 10];
 
-	assert_eq!(secure_cmp(&buf_1, &buf_2).unwrap(), true);
-	assert_eq!(secure_cmp(&buf_2, &buf_1).unwrap(), true);
+	assert!(secure_cmp(&buf_1, &buf_2).is_ok());
+	assert!(secure_cmp(&buf_2, &buf_1).is_ok());
 }
 
 #[test]

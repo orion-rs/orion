@@ -61,7 +61,7 @@
 //! 	"IKM".as_bytes(),
 //! 	None,
 //! 	&mut okm_out
-//! )?);
+//! ).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`util::secure_rand_bytes()`]: https://docs.rs/orion/latest/orion/util/fn.secure_rand_bytes.html
@@ -143,7 +143,7 @@ pub fn verify(
 	ikm: &[u8],
 	info: Option<&[u8]>,
 	dst_out: &mut [u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	expand(&extract(salt, ikm)?, info, dst_out)?;
 	util::secure_cmp(&dst_out, expected)
 }

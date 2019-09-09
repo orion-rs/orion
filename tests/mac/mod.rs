@@ -61,12 +61,18 @@ fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) -> Result<(), U
 		&OneTimeKey::from_slice(key).unwrap(),
 		input
 	)
-	.unwrap());
+	.is_ok());
 
 	// If the MACs are modified, then they should not be equal to the expected
 	let mut bad_tag = tag_stream.unprotected_as_bytes().to_vec();
 	bad_tag[0] ^= 1;
 	assert!(Tag::from_slice(&bad_tag).unwrap() != Tag::from_slice(&output).unwrap());
+	assert!(poly1305::verify(
+		&Tag::from_slice(&bad_tag).unwrap(),
+		&OneTimeKey::from_slice(key).unwrap(),
+		input
+	)
+	.is_err());
 
 	Ok(())
 }
