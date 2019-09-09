@@ -106,6 +106,17 @@ construct_public! {
 
 impl_from_trait!(Nonce, XCHACHA_NONCESIZE);
 
+/// Generate a subkey using HChaCha20 for XChaCha20 and corresponding nonce.
+pub(crate) fn subkey_and_nonce(secret_key: &SecretKey, nonce: &Nonce) -> (SecretKey, IETFNonce) {
+	// .unwrap() should not be able to panic because we pass a 16-byte nonce.
+	let subkey: SecretKey =
+		SecretKey::from(chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16]).unwrap());
+	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
+	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
+
+	(subkey, IETFNonce::from(prefixed_nonce))
+}
+
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn encrypt(
@@ -115,18 +126,9 @@ pub fn encrypt(
 	plaintext: &[u8],
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	let subkey: SecretKey =
-		SecretKey::from(chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?);
-	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
-	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
+	let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
 
-	chacha20::encrypt(
-		&subkey,
-		&IETFNonce::from(prefixed_nonce),
-		initial_counter,
-		plaintext,
-		dst_out,
-	)
+	chacha20::encrypt(&subkey, &ietf_nonce, initial_counter, plaintext, dst_out)
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
