@@ -126,14 +126,15 @@ impl SecretStreamXChaCha20Poly1305 {
 
 	/// creates a new internal state
 	pub fn new(key: chacha20Key, nonce: Nonce) -> Self {
-		let mut s = SecretStreamXChaCha20Poly1305 {
+		let mut state = Self {
 			key: hchacha20(&key, &nonce.as_ref()[..HCHACHA_NONCESIZE]).unwrap(),
 			nonce: [0u8; IETF_CHACHA_NONCESIZE],
 		};
-		s.reset_counter();
-		s.get_inonce_mut()
+		state.reset_counter();
+		state
+			.get_inonce_mut()
 			.copy_from_slice(&nonce.as_ref()[HCHACHA_NONCESIZE..]);
-		s
+		state
 	}
 
 	/// prepare a new push or pull operation
