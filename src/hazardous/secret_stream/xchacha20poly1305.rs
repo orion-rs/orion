@@ -68,8 +68,10 @@ pub const SECRETSTREAM_XCHACHA20POLY1305_ABYTES: usize =
 //TODO assert that counterbytes + inoncebytes = IETF_CHACHA_NONCESIZE
 
 fn xor_buf8(out: &mut [u8], input: &[u8]) {
-	for i in 0..8 {
-		out[i] ^= input[i];
+	debug_assert_eq!(out.len(), 8);
+	debug_assert_eq!(input.len(), 8);
+	for i in out.iter_mut().zip(input.iter()) {
+		*i.0 ^= *i.1;
 	}
 }
 
@@ -304,7 +306,7 @@ impl SecretStreamXChaCha20Poly1305 {
 			&cipher[msgpos..(msgpos + mlen)],
 			plaintext_out,
 		)?;
-		xor_buf8(self.get_inonce_mut(), mac.unprotected_as_bytes());
+		xor_buf8(self.get_inonce_mut(), &mac.unprotected_as_bytes()[..8]);
 		increment4(self.get_counter_mut());
 		if tag == Tag::REKEY
 			|| secure_cmp(
