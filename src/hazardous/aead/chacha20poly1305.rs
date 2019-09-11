@@ -168,18 +168,14 @@ fn process_authentication(
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// AEAD ChaCha20Poly1305 encryption and authentication as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn seal_split(
+pub fn seal(
 	secret_key: &SecretKey,
 	nonce: &Nonce,
 	plaintext: &[u8],
 	ad: Option<&[u8]>,
-	crypt_out: &mut [u8],
-	mac_out: &mut [u8],
+	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	if crypt_out.len() < plaintext.len() {
-		return Err(UnknownCryptoError);
-	}
-	if mac_out.len() < POLY1305_OUTSIZE {
+	if dst_out.len() < plaintext.len() + POLY1305_OUTSIZE {
 		return Err(UnknownCryptoError);
 	}
 	if plaintext.is_empty() {
@@ -196,39 +192,15 @@ pub fn seal_split(
 		nonce,
 		1,
 		plaintext,
-		&mut crypt_out[..plaintext.len()],
+		&mut dst_out[..plaintext.len()],
 	)?;
 
 	let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
 	let mut poly1305_state = poly1305::init(&poly1305_key);
 
-	process_authentication(
-		&mut poly1305_state,
-		optional_ad,
-		&crypt_out,
-		plaintext.len(),
-	)?;
-	mac_out.copy_from_slice(poly1305_state.finalize()?.unprotected_as_bytes());
-
-	Ok(())
-}
-
-#[must_use]
-/// AEAD ChaCha20Poly1305 encryption and authentication as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn seal(
-	secret_key: &SecretKey,
-	nonce: &Nonce,
-	plaintext: &[u8],
-	ad: Option<&[u8]>,
-	dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-	if dst_out.len() < plaintext.len() + POLY1305_OUTSIZE {
-		return Err(UnknownCryptoError);
-	}
-	let mut mac_buffer: [u8; POLY1305_OUTSIZE] = [0; POLY1305_OUTSIZE]; //TODO
-	seal_split(secret_key, nonce, plaintext, ad, dst_out, &mut mac_buffer)?;
-
-	dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)].copy_from_slice(&mac_buffer);
+	process_authentication(&mut poly1305_state, optional_ad, &dst_out, plaintext.len())?;
+	dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
+		.copy_from_slice(poly1305_state.finalize()?.unprotected_as_bytes());
 
 	Ok(())
 }
