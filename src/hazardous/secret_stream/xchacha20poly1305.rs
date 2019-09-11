@@ -32,6 +32,8 @@ use crate::hazardous::stream::chacha20::{
 	Nonce as chacha20Nonce, SecretKey as chacha20Key, CHACHA_KEYSIZE, HCHACHA_NONCESIZE,
 	IETF_CHACHA_NONCESIZE,
 };
+pub use crate::hazardous::stream::xchacha20::Nonce;
+
 use crate::util::secure_cmp;
 use bitflags::bitflags;
 
@@ -83,17 +85,6 @@ fn increment4(buf: &mut [u8]) {
 		c >>= 8;
 	}
 }
-
-construct_public! {
-	/// A type that represents a `Nonce` that a XChaCha20Poly1305 secreat stream uses
-	///
-	/// # Errors:
-	/// An error will be returned if:
-	/// - `slice` is not 24 bytes.
-	(Nonce, test_nonce, SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES, SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES)
-}
-
-impl_from_trait!(Nonce, SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES);
 
 /// Secret Stream State
 pub struct SecretStreamXChaCha20Poly1305 {
