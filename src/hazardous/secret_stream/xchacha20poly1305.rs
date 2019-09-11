@@ -146,7 +146,7 @@ impl SecretStreamXChaCha20Poly1305 {
 	/// derives a new secret key used for encryption/decryption
 	pub fn rekey(&mut self) -> Result<(), UnknownCryptoError> {
 		let mut new_key_and_inonce =
-			[0u8; CHACHA_KEYSIZE + SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES]; //TODO
+			[0u8; CHACHA_KEYSIZE + SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
 
 		new_key_and_inonce[..CHACHA_KEYSIZE].copy_from_slice(&self.key[..CHACHA_KEYSIZE]);
 		new_key_and_inonce[CHACHA_KEYSIZE..]
