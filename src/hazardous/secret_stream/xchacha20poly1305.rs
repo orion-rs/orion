@@ -24,7 +24,6 @@
 // https://download.libsodium.org/doc/secret-key_cryptography/secretstream
 // https://github.com/jedisct1/libsodium/blob/stable/src/libsodium/crypto_secretstream/xchacha20poly1305/secretstream_xchacha20poly1305.c
 
-use crate::endianness::store_u64_into_le;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::mac::poly1305::{init, OneTimeKey, POLY1305_KEYSIZE, POLY1305_OUTSIZE};
 use crate::hazardous::stream::chacha20::{
@@ -220,9 +219,9 @@ impl SecretStreamXChaCha20Poly1305 {
 				.overflowing_add(msglen)
 				.0) & 15)],
 		)?;
-		store_u64_into_le(&[adlen as u64], &mut slen);
+		slen.copy_from_slice(&(adlen as u64).to_le_bytes());
 		poly.update(&slen)?;
-		store_u64_into_le(&[BLOCKSIZE as u64 + msglen as u64], &mut slen);
+		slen.copy_from_slice(&(BLOCKSIZE as u64 + msglen as u64).to_le_bytes());
 		poly.update(&slen)?;
 		let mac = poly.finalize()?;
 		dst_out[macpos..(macpos + mac.get_length())].copy_from_slice(mac.unprotected_as_bytes());
@@ -257,14 +256,14 @@ impl SecretStreamXChaCha20Poly1305 {
 		let mut block = [0u8; BLOCKSIZE];
 		let mut slen = [0u8; 8];
 		let pad = [0u8; 16];
-		let mlen = cipher.len() - SECRETSTREAM_XCHACHA20POLY1305_ABYTES;
+		let msglen = cipher.len() - SECRETSTREAM_XCHACHA20POLY1305_ABYTES;
 		let adlen = match ad {
 			Some(v) => v.len(),
 			None => 0,
 		};
 		let msgpos = core::mem::size_of::<Tag>();
-		let macpos = msgpos + mlen;
-		if plaintext_out.len() < mlen {
+		let macpos = msgpos + msglen;
+		if plaintext_out.len() < msglen {
 			return Err(UnknownCryptoError);
 		}
 		chacha20_enc_in_place(&self.get_key(), &self.get_nonce(), 0, &mut block)?;
@@ -280,11 +279,17 @@ impl SecretStreamXChaCha20Poly1305 {
 		let tag = Tag::from_bits(block[0]).ok_or(UnknownCryptoError)?;
 		block[0] = cipher[0];
 		poly.update(&block)?;
-		poly.update(&cipher[msgpos..(msgpos + mlen)])?;
-		poly.update(&pad[..((16usize.overflowing_sub(BLOCKSIZE).0.overflowing_add(mlen).0) & 15)])?;
-		store_u64_into_le(&[adlen as u64], &mut slen);
+		poly.update(&cipher[msgpos..(msgpos + msglen)])?;
+		poly.update(
+			&pad[..((16usize
+				.overflowing_sub(BLOCKSIZE)
+				.0
+				.overflowing_add(msglen)
+				.0) & 15)],
+		)?;
+		slen.copy_from_slice(&(adlen as u64).to_le_bytes());
 		poly.update(&slen)?;
-		store_u64_into_le(&[BLOCKSIZE as u64 + mlen as u64], &mut slen);
+		slen.copy_from_slice(&(BLOCKSIZE as u64 + msglen as u64).to_le_bytes());
 		poly.update(&slen)?;
 		let mut mac = poly.finalize()?;
 		if !(mac == &cipher[macpos..macpos + mac.get_length()]) {
@@ -295,7 +300,7 @@ impl SecretStreamXChaCha20Poly1305 {
 			&self.get_key(),
 			&self.get_nonce(),
 			2,
-			&cipher[msgpos..(msgpos + mlen)],
+			&cipher[msgpos..(msgpos + msglen)],
 			plaintext_out,
 		)?;
 		xor_buf8(self.get_inonce_mut(), &mac.unprotected_as_bytes()[..8]);
