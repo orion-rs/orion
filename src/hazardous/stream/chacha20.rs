@@ -401,7 +401,7 @@ impl Serialize {
 }
 
 /// In-place IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn encrypt_in_place(
+pub(crate) fn encrypt_in_place(
 	secret_key: &SecretKey,
 	nonce: &Nonce,
 	initial_counter: u32,
