@@ -29,11 +29,10 @@ use crate::hazardous::mac::poly1305::{init, OneTimeKey, POLY1305_KEYSIZE, POLY13
 use crate::hazardous::stream::chacha20::{
 	encrypt as chacha20_enc, encrypt_in_place as chacha20_enc_in_place, hchacha20,
 	Nonce as chacha20Nonce, SecretKey as chacha20Key, CHACHA_KEYSIZE, HCHACHA_NONCESIZE,
-	IETF_CHACHA_NONCESIZE,
 };
 pub use crate::hazardous::stream::xchacha20::Nonce;
+use crate::subtle::ConstantTimeEq;
 
-use crate::util::secure_cmp;
 use bitflags::bitflags;
 
 //TODO Add more tests
@@ -76,27 +75,20 @@ fn xor_buf8(out: &mut [u8], input: &[u8]) {
 	}
 }
 
-fn increment4(buf: &mut [u8]) {
-	let mut c = 1u16;
-	for item in buf.iter_mut().take(4) {
-		c += u16::from(*item);
-		*item = c as u8;
-		c >>= 8;
-	}
-}
+type NonceType = [u8; 8];
+type CounterType = u32;
 
 /// Secret Stream State
 pub struct SecretStreamXChaCha20Poly1305 {
 	key: [u8; CHACHA_KEYSIZE],
-	/// Split into 4 bytes that also act as counter and 8 bytes of nonce
-	nonce: [u8; IETF_CHACHA_NONCESIZE],
+	counter: CounterType,
+	r_nonce: NonceType,
 }
 
 impl Drop for SecretStreamXChaCha20Poly1305 {
 	fn drop(&mut self) {
 		use zeroize::Zeroize;
 		self.key.zeroize();
-		self.nonce.zeroize();
 	}
 }
 
@@ -114,24 +106,22 @@ impl SecretStreamXChaCha20Poly1305 {
 		chacha20Key::from(self.key)
 	}
 	fn get_nonce(&self) -> chacha20Nonce {
-		chacha20Nonce::from(self.nonce)
-	}
-	fn get_inonce_mut(&mut self) -> &mut [u8] {
-		&mut self.nonce[SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES..]
-	}
-	fn get_counter_mut(&mut self) -> &mut [u8] {
-		&mut self.nonce[..SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES]
+		let mut nonce = [0u8; 12];
+		nonce[..SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES]
+			.copy_from_slice(&self.counter.to_le_bytes());
+		nonce[SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES..].copy_from_slice(&self.r_nonce);
+		chacha20Nonce::from(nonce)
 	}
 
 	/// creates a new internal state
 	pub fn new(key: chacha20Key, nonce: Nonce) -> Self {
 		let mut state = Self {
 			key: hchacha20(&key, &nonce.as_ref()[..HCHACHA_NONCESIZE]).unwrap(),
-			nonce: [0u8; IETF_CHACHA_NONCESIZE],
+			counter: 1,
+			r_nonce: [0u8; 8],
 		};
-		state.reset_counter();
 		state
-			.get_inonce_mut()
+			.r_nonce
 			.copy_from_slice(&nonce.as_ref()[HCHACHA_NONCESIZE..]);
 		state
 	}
@@ -148,8 +138,7 @@ impl SecretStreamXChaCha20Poly1305 {
 			[0u8; CHACHA_KEYSIZE + SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
 
 		new_key_and_inonce[..CHACHA_KEYSIZE].copy_from_slice(&self.key[..CHACHA_KEYSIZE]);
-		new_key_and_inonce[CHACHA_KEYSIZE..]
-			.copy_from_slice(&self.nonce[SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES..]);
+		new_key_and_inonce[CHACHA_KEYSIZE..].copy_from_slice(&self.r_nonce);
 
 		chacha20_enc_in_place(
 			&self.get_key(),
@@ -159,10 +148,10 @@ impl SecretStreamXChaCha20Poly1305 {
 		)?;
 
 		self.key[..CHACHA_KEYSIZE].copy_from_slice(&new_key_and_inonce[..CHACHA_KEYSIZE]);
-		self.nonce[SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES..]
+		self.r_nonce
 			.copy_from_slice(&new_key_and_inonce[CHACHA_KEYSIZE..]);
 
-		self.reset_counter();
+		self.counter = 1;
 		Ok(())
 	}
 
@@ -198,7 +187,7 @@ impl SecretStreamXChaCha20Poly1305 {
 		if adlen > 0 {
 			poly.update(ad.unwrap())?;
 		}
-		poly.update(&pad[..((16usize.overflowing_sub(adlen).0) & 15)])?;
+		poly.update(&pad[..(16usize.wrapping_sub(adlen) & 15)])?;
 		block[0] = tag.bits();
 		chacha20_enc_in_place(&self.get_key(), &self.get_nonce(), 1, &mut block)?;
 		poly.update(&block)?;
@@ -212,28 +201,16 @@ impl SecretStreamXChaCha20Poly1305 {
 			&mut dst_out[cipherpos..],
 		)?;
 		poly.update(&dst_out[cipherpos..(cipherpos + msglen)])?;
-		poly.update(
-			&pad[..((16usize
-				.overflowing_sub(BLOCKSIZE)
-				.0
-				.overflowing_add(msglen)
-				.0) & 15)],
-		)?;
+		poly.update(&pad[..((16usize.wrapping_sub(BLOCKSIZE).wrapping_add(msglen)) & 15)])?;
 		slen.copy_from_slice(&(adlen as u64).to_le_bytes());
 		poly.update(&slen)?;
 		slen.copy_from_slice(&(BLOCKSIZE as u64 + msglen as u64).to_le_bytes());
 		poly.update(&slen)?;
 		let mac = poly.finalize()?;
 		dst_out[macpos..(macpos + mac.get_length())].copy_from_slice(mac.unprotected_as_bytes());
-		xor_buf8(self.get_inonce_mut(), &dst_out[macpos..macpos + 8]);
-		increment4(self.get_counter_mut());
-		if tag == Tag::REKEY
-			|| secure_cmp(
-				self.get_counter_mut(),
-				&[0u8; SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES],
-			)
-			.is_ok()
-		{
+		xor_buf8(self.r_nonce.as_mut(), &dst_out[macpos..macpos + 8]);
+		self.counter = self.counter.wrapping_add(1);
+		if bool::from(tag.bits().ct_eq(&Tag::REKEY.bits()) | self.counter.ct_eq(&0u32)) {
 			self.rekey()?;
 		}
 		Ok(())
@@ -273,20 +250,14 @@ impl SecretStreamXChaCha20Poly1305 {
 		if adlen > 0 {
 			poly.update(ad.unwrap())?;
 		}
-		poly.update(&pad[..((16usize.overflowing_sub(adlen).0) & 15)])?;
+		poly.update(&pad[..(16usize.wrapping_sub(adlen) & 15)])?;
 		block[0] = cipher[0];
 		chacha20_enc_in_place(&self.get_key(), &self.get_nonce(), 1, &mut block)?;
 		let tag = Tag::from_bits(block[0]).ok_or(UnknownCryptoError)?;
 		block[0] = cipher[0];
 		poly.update(&block)?;
 		poly.update(&cipher[msgpos..(msgpos + msglen)])?;
-		poly.update(
-			&pad[..((16usize
-				.overflowing_sub(BLOCKSIZE)
-				.0
-				.overflowing_add(msglen)
-				.0) & 15)],
-		)?;
+		poly.update(&pad[..((16usize.wrapping_sub(BLOCKSIZE).wrapping_add(msglen)) & 15)])?;
 		slen.copy_from_slice(&(adlen as u64).to_le_bytes());
 		poly.update(&slen)?;
 		slen.copy_from_slice(&(BLOCKSIZE as u64 + msglen as u64).to_le_bytes());
@@ -303,27 +274,13 @@ impl SecretStreamXChaCha20Poly1305 {
 			&cipher[msgpos..(msgpos + msglen)],
 			plaintext_out,
 		)?;
-		xor_buf8(self.get_inonce_mut(), &mac.unprotected_as_bytes()[..8]);
-		increment4(self.get_counter_mut());
-		if tag == Tag::REKEY
-			|| secure_cmp(
-				self.get_counter_mut(),
-				&[0u8; SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES],
-			)
-			.is_ok()
-		{
+		xor_buf8(self.r_nonce.as_mut(), &mac.unprotected_as_bytes()[..8]);
+		self.counter = self.counter.wrapping_add(1);
+		if bool::from(tag.bits().ct_eq(&Tag::REKEY.bits()) | self.counter.ct_eq(&0u32)) {
 			self.rekey()?;
 		}
 		*tag_out = tag;
 		Ok(())
-	}
-
-	/// Resets the internal message counter
-	fn reset_counter(&mut self) {
-		self.nonce[0] = 1;
-		self.nonce[1] = 0;
-		self.nonce[2] = 0;
-		self.nonce[3] = 0;
 	}
 }
 
@@ -343,7 +300,8 @@ mod private {
 	fn test_push_with_zero_key_and_nonce() {
 		let mut s = SecretStreamXChaCha20Poly1305 {
 			key: [0; 32],
-			nonce: [0; 12],
+			counter: 0,
+			r_nonce: [0; 8],
 		};
 		let k = chacha20Key::from_slice(&[0; 32]).unwrap();
 		s.init(k, Nonce::from_slice(&[0; 24]).unwrap());
@@ -351,7 +309,7 @@ mod private {
 			encode(s.key),
 			"1140704c328d1d5d0e30086cdf209dbd6a43b8f41518a11cc387b669b2ee6586"
 		);
-		assert_eq!(encode(s.nonce), "010000000000000000000000");
+		assert_eq!(encode(s.get_nonce().as_ref()), "010000000000000000000000");
 
 		let plaintext = "1234";
 		let mut out = [0u8; 21];
@@ -362,7 +320,7 @@ mod private {
 			encode(s.key),
 			"1140704c328d1d5d0e30086cdf209dbd6a43b8f41518a11cc387b669b2ee6586"
 		);
-		assert_eq!(encode(s.nonce), "020000001738c2e8527f54f7");
+		assert_eq!(encode(s.get_nonce().as_ref()), "020000001738c2e8527f54f7");
 		//2
 		s.push(plaintext.as_bytes(), None, &mut out, Tag::MESSAGE)
 			.unwrap();
@@ -371,7 +329,7 @@ mod private {
 			encode(s.key),
 			"1140704c328d1d5d0e30086cdf209dbd6a43b8f41518a11cc387b669b2ee6586"
 		);
-		assert_eq!(encode(s.nonce), "03000000cb290bbbc9d5b7ad");
+		assert_eq!(encode(s.get_nonce().as_ref()), "03000000cb290bbbc9d5b7ad");
 		//3
 		s.push(plaintext.as_bytes(), None, &mut out, Tag::MESSAGE)
 			.unwrap();
@@ -380,7 +338,7 @@ mod private {
 			encode(s.key),
 			"1140704c328d1d5d0e30086cdf209dbd6a43b8f41518a11cc387b669b2ee6586"
 		);
-		assert_eq!(encode(s.nonce), "04000000b14f0c810170cac0");
+		assert_eq!(encode(s.get_nonce().as_ref()), "04000000b14f0c810170cac0");
 		//4
 		s.push(plaintext.as_bytes(), None, &mut out, Tag::MESSAGE)
 			.unwrap();
@@ -389,14 +347,15 @@ mod private {
 			encode(s.key),
 			"1140704c328d1d5d0e30086cdf209dbd6a43b8f41518a11cc387b669b2ee6586"
 		);
-		assert_eq!(encode(s.nonce), "0500000041d0992f938bd72e");
+		assert_eq!(encode(s.get_nonce().as_ref()), "0500000041d0992f938bd72e");
 	}
 
 	#[test]
 	fn test_decrypt() {
 		let mut s = SecretStreamXChaCha20Poly1305 {
 			key: [0; 32],
-			nonce: [0; 12],
+			counter: 0,
+			r_nonce: [0; 8],
 		};
 		let plaintext = "1234";
 		let out = decode("5d1c4d54eb1738c2e8527f54f7b9bf46bcacc95f18").unwrap();
@@ -414,7 +373,8 @@ mod private {
 	fn test_rekey() {
 		let mut s = SecretStreamXChaCha20Poly1305 {
 			key: [0; 32],
-			nonce: [0; 12],
+			counter: 0,
+			r_nonce: [0; 8],
 		};
 		s.init(
 			chacha20Key::from_slice(&[0; 32]).unwrap(),
@@ -425,30 +385,8 @@ mod private {
 			encode(s.key),
 			"99217472f2ff51598d4ea663ec55921afa989dbcaaecf003df3373219b910f80"
 		);
-		assert_eq!(encode(s.nonce), "01000000a4c0ddd43adf8183");
+		assert_eq!(encode(s.get_nonce().as_ref()), "01000000a4c0ddd43adf8183");
 	}
 
-	#[test]
-	fn test_inonce_length() {
-		let mut s = SecretStreamXChaCha20Poly1305 {
-			key: [0; 32],
-			nonce: [0; 12],
-		};
-		assert_eq!(
-			s.get_inonce_mut().len(),
-			SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES
-		);
-	}
-
-	#[test]
-	fn test_counter_length() {
-		let mut s = SecretStreamXChaCha20Poly1305 {
-			key: [0; 32],
-			nonce: [0; 12],
-		};
-		assert_eq!(
-			s.get_counter_mut().len(),
-			SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES
-		);
-	}
+	//TODO: Add static asserts for lengths
 }
