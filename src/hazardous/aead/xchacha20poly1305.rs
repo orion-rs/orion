@@ -86,14 +86,9 @@
 //! ```
 //! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
 //! [`Nonce::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/xchacha20/struct.Nonce.html
+use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
-use crate::{
-	errors::UnknownCryptoError,
-	hazardous::{
-		aead::chacha20poly1305,
-		stream::chacha20::{self, Nonce as IETFNonce, IETF_CHACHA_NONCESIZE},
-	},
-};
+use crate::{errors::UnknownCryptoError, hazardous::aead::chacha20poly1305};
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// AEAD XChaCha20Poly1305 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
@@ -104,18 +99,9 @@ pub fn seal(
 	ad: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	let subkey: SecretKey =
-		SecretKey::from(chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?);
-	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
-	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
+	let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
 
-	chacha20poly1305::seal(
-		&subkey,
-		&IETFNonce::from(prefixed_nonce),
-		plaintext,
-		ad,
-		dst_out,
-	)
+	chacha20poly1305::seal(&subkey, &ietf_nonce, plaintext, ad, dst_out)
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -127,18 +113,9 @@ pub fn open(
 	ad: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	let subkey: SecretKey =
-		SecretKey::from(chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16])?);
-	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
-	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
+	let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
 
-	chacha20poly1305::open(
-		&subkey,
-		&IETFNonce::from(prefixed_nonce),
-		ciphertext_with_tag,
-		ad,
-		dst_out,
-	)
+	chacha20poly1305::open(&subkey, &ietf_nonce, ciphertext_with_tag, ad, dst_out)
 }
 
 //

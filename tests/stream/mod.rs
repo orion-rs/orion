@@ -1,14 +1,11 @@
 pub mod other_chacha20;
-pub mod other_hchacha20;
 pub mod rfc_chacha20;
 pub mod rfc_xchacha20;
 
-extern crate hex;
 extern crate orion;
 
 use self::{
 	chacha20::SecretKey,
-	hex::decode,
 	orion::hazardous::stream::{
 		chacha20::{self, IETF_CHACHA_NONCESIZE},
 		xchacha20::{self, XCHACHA_NONCESIZE},
@@ -65,14 +62,4 @@ pub fn chacha_test_runner(
 
 	assert!(&original_pt == &pt);
 	assert!(&original_ct == &ct);
-}
-
-pub fn hchacha_test_runner(key: &str, nonce: &str, output_expected: &str) {
-	let actual: [u8; 32] = chacha20::hchacha20(
-		&SecretKey::from_slice(&decode(key).unwrap()).unwrap(),
-		&decode(nonce).unwrap(),
-	)
-	.unwrap();
-
-	assert_eq!(&actual, &decode(output_expected).unwrap()[..]);
 }
