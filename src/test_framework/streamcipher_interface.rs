@@ -22,6 +22,7 @@
 
 #![allow(non_snake_case)]
 
+#[cfg(feature = "safe_api")]
 use crate::errors::UnknownCryptoError;
 
 #[cfg(feature = "safe_api")]
@@ -49,6 +50,7 @@ pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 	initial_counter_max_ok(&encryptor, &decryptor, &key, &nonce);
 }
 
+#[cfg(feature = "safe_api")]
 /// Given a input length `a` find out how many times
 /// the initial counter on encrypt()/decrypt() would
 /// increase.
@@ -94,6 +96,7 @@ where
 	return enc_res && dec_res;
 }
 
+#[cfg(feature = "safe_api")]
 fn encrypt_decrypt_input_empty<Encryptor, Decryptor, Key, Nonce>(
 	encryptor: &Encryptor,
 	decryptor: &Decryptor,
@@ -173,6 +176,7 @@ fn encrypt_decrypt_same_plaintext<Encryptor, Decryptor, Key, Nonce>(
 	assert_eq!(input, &dst_out_pt[..]);
 }
 
+#[cfg(feature = "safe_api")]
 /// Test that a initial counter will not overflow the internal.
 fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
 	encryptor: &Encryptor,
@@ -202,6 +206,7 @@ fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
 	.is_err());
 }
 
+#[cfg(feature = "safe_api")]
 /// Test that processing one block does not fail on the largest possible initial block counter.
 fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
 	encryptor: &Encryptor,

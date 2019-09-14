@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 #![allow(non_snake_case)]
-
+#[cfg(feature = "safe_api")]
 use crate::errors::UnknownCryptoError;
 
 #[cfg(feature = "safe_api")]

@@ -511,6 +511,7 @@ pub(super) fn hchacha20(
 mod public {
 	use super::*;
 
+	#[cfg(feature = "safe_api")]
 	mod test_encrypt_decrypt {
 		use super::*;
 		use crate::test_framework::streamcipher_interface::*;

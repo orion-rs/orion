@@ -35,6 +35,7 @@ pub trait TestableStreamingContext<T: PartialEq> {
 	fn compare_states(state_1: &Self, state_2: &Self);
 }
 
+#[allow(dead_code)] // Allow because blocksize field is only used with std.
 /// A streaming context tester.
 pub struct StreamingContextConsistencyTester<R, T> {
 	_return_type: R,

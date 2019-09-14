@@ -212,6 +212,7 @@ pub fn verify(
 mod public {
 	use super::*;
 
+	#[cfg(feature = "safe_api")]
 	mod test_verify {
 		use super::*;
 

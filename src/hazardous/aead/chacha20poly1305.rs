@@ -256,14 +256,15 @@ pub fn open(
 
 // Testing public functions in the module.
 #[cfg(test)]
+#[cfg(feature = "safe_api")]
 mod public {
 	use super::*;
-
+	
+	#[cfg(feature = "safe_api")]
 	mod test_seal_open {
 		use super::*;
 		use crate::test_framework::aead_interface::*;
 
-		#[cfg(feature = "safe_api")]
 		#[test]
 		fn test_aead_interface() {
 			let default_input = &[0u8; 64];

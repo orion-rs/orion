@@ -120,6 +120,7 @@ pub fn open(
 
 // Testing public functions in the module.
 #[cfg(test)]
+#[cfg(feature = "safe_api")]
 mod public {
 	use super::*;
 
