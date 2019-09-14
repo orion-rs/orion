@@ -101,3 +101,6 @@ pub mod kdf;
 
 #[cfg(feature = "safe_api")]
 mod hltypes;
+
+#[cfg(test)]
+pub mod test_framework;
