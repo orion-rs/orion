@@ -145,7 +145,7 @@ pub fn derive_key(
 		return Err(UnknownCryptoError);
 	}
 
-	let mut hmac = hmac::init(&hmac::SecretKey::from_slice(
+	let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(
 		&password.unprotected_as_bytes(),
 	)?);
 

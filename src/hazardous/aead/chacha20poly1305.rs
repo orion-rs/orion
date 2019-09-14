@@ -107,14 +107,17 @@ use crate::{
 
 #[inline]
 /// Poly1305 key generation using IETF ChaCha20.
-fn poly1305_key_gen(key: &SecretKey, nonce: &Nonce) -> Result<OneTimeKey, UnknownCryptoError> {
+pub(crate) fn poly1305_key_gen(
+	key: &SecretKey,
+	nonce: &Nonce,
+) -> Result<OneTimeKey, UnknownCryptoError> {
 	OneTimeKey::from_slice(&chacha20::keystream_block(key, nonce, 0)?[..POLY1305_KEYSIZE])
 }
 
 #[inline]
 /// Padding size that gives the needed bytes to pad `input` to an integral
 /// multiple of 16.
-fn padding(input: &[u8]) -> usize {
+pub(crate) fn padding(input: &[u8]) -> usize {
 	if input.is_empty() {
 		return 0;
 	}
@@ -196,7 +199,7 @@ pub fn seal(
 	)?;
 
 	let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
-	let mut poly1305_state = poly1305::init(&poly1305_key);
+	let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 	process_authentication(&mut poly1305_state, optional_ad, &dst_out, plaintext.len())?;
 	dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
@@ -229,7 +232,7 @@ pub fn open(
 	let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
 
 	let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
-	let mut poly1305_state = poly1305::init(&poly1305_key);
+	let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 	process_authentication(
 		&mut poly1305_state,
 		optional_ad,
@@ -711,7 +714,7 @@ mod private {
 			let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
 			let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-			let mut poly1305_state = poly1305::init(&poly1305_key);
+			let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 			process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 0).unwrap();
 		}
@@ -723,7 +726,7 @@ mod private {
 			let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
 			let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-			let mut poly1305_state = poly1305::init(&poly1305_key);
+			let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 			process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 0], 64).unwrap();
 		}
@@ -735,7 +738,7 @@ mod private {
 			let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
 			let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-			let mut poly1305_state = poly1305::init(&poly1305_key);
+			let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 			process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
 		}
@@ -746,7 +749,7 @@ mod private {
 			let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
 			let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-			let mut poly1305_state = poly1305::init(&poly1305_key);
+			let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).is_ok());
 
