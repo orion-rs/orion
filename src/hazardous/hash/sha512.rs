@@ -144,6 +144,12 @@ impl core::fmt::Debug for Sha512 {
 	}
 }
 
+impl Default for Sha512 {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl Sha512 {
 	#[inline]
 	/// The Ch function as specified in FIPS 180-4 section 4.1.3.

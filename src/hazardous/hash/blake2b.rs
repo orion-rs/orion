@@ -172,7 +172,7 @@ impl Hasher {
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a `Blake2b` state selected by the given Blake2b variant.
-	pub fn new(&self) -> Result<Blake2b, UnknownCryptoError> {
+	pub fn init(&self) -> Result<Blake2b, UnknownCryptoError> {
 		match *self {
 			Hasher::Blake2b256 => Blake2b::new(None, 32),
 			Hasher::Blake2b384 => Blake2b::new(None, 48),
@@ -639,9 +639,9 @@ mod public {
 			assert_ne!(digest_384, Hasher::Blake2b384.digest(b"Wrong").unwrap());
 			assert_ne!(digest_512, Hasher::Blake2b512.digest(b"Wrong").unwrap());
 
-			let _state_256 = Hasher::Blake2b256.new().unwrap();
-			let _state_384 = Hasher::Blake2b384.new().unwrap();
-			let _state_512 = Hasher::Blake2b512.new().unwrap();
+			let _state_256 = Hasher::Blake2b256.init().unwrap();
+			let _state_384 = Hasher::Blake2b384.init().unwrap();
+			let _state_512 = Hasher::Blake2b512.init().unwrap();
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
@@ -724,9 +724,9 @@ mod public {
 			quickcheck! {
 				/// .new() should never fail.
 				fn prop_hasher_init_no_panic() -> bool {
-					let _d256 = Hasher::Blake2b256.new().unwrap();
-					let _d384 = Hasher::Blake2b384.new().unwrap();
-					let _d512 = Hasher::Blake2b512.new().unwrap();
+					let _d256 = Hasher::Blake2b256.init().unwrap();
+					let _d384 = Hasher::Blake2b384.init().unwrap();
+					let _d512 = Hasher::Blake2b512.init().unwrap();
 
 					true
 				}
