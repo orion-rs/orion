@@ -24,11 +24,13 @@
 // https://download.libsodium.org/doc/secret-key_cryptography/secretstream
 // https://github.com/jedisct1/libsodium/blob/stable/src/libsodium/crypto_secretstream/xchacha20poly1305/secretstream_xchacha20poly1305.c
 
+use crate::const_assert;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::mac::poly1305::{init, OneTimeKey, POLY1305_KEYSIZE, POLY1305_OUTSIZE};
 use crate::hazardous::stream::chacha20::{
 	encrypt as chacha20_enc, encrypt_in_place as chacha20_enc_in_place, hchacha20,
 	Nonce as chacha20Nonce, SecretKey as chacha20Key, CHACHA_KEYSIZE, HCHACHA_NONCESIZE,
+	IETF_CHACHA_NONCESIZE,
 };
 pub use crate::hazardous::stream::xchacha20::Nonce;
 use crate::subtle::ConstantTimeEq;
@@ -75,14 +77,14 @@ fn xor_buf8(out: &mut [u8], input: &[u8]) {
 	}
 }
 
-type NonceType = [u8; 8];
+type INonceType = [u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
 type CounterType = u32;
 
 /// Secret Stream State
 pub struct SecretStreamXChaCha20Poly1305 {
 	key: [u8; CHACHA_KEYSIZE],
 	counter: CounterType,
-	r_nonce: NonceType,
+	r_nonce: INonceType,
 }
 
 impl Drop for SecretStreamXChaCha20Poly1305 {
@@ -115,6 +117,17 @@ impl SecretStreamXChaCha20Poly1305 {
 
 	/// creates a new internal state
 	pub fn new(key: chacha20Key, nonce: Nonce) -> Self {
+		const_assert!(
+			SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES == core::mem::size_of::<CounterType>()
+		);
+		const_assert!(
+			SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES == core::mem::size_of::<INonceType>()
+		);
+		const_assert!(
+			SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES
+				+ SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES
+				== IETF_CHACHA_NONCESIZE
+		);
 		let mut state = Self {
 			key: hchacha20(&key, &nonce.as_ref()[..HCHACHA_NONCESIZE]).unwrap(),
 			counter: 1,
