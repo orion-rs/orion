@@ -140,8 +140,7 @@ impl core::fmt::Debug for Poly1305 {
 }
 
 impl Poly1305 {
-
-    #[rustfmt::skip]
+	#[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
     #[allow(clippy::unreadable_literal)]

@@ -23,12 +23,8 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 }
 
 fn sha512_test_runner(data: &[u8], output: &[u8]) {
-<<<<<<< HEAD
 	// Test streaming
 	let mut state = sha512::Sha512::new();
-=======
-	let mut state = sha512::init();
->>>>>>> master
 	state.update(data).unwrap();
 	let digest = state.finalize().unwrap();
 
