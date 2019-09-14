@@ -435,17 +435,6 @@ mod public {
 		use super::*;
 
 		#[test]
-		fn test_poly1305_verify_ok() {
-			let tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
-			verify(
-				&tag,
-				&OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-			)
-			.unwrap();
-		}
-
-		#[test]
 		fn test_poly1305_verify_err() {
 			let mut tag =
 				poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
@@ -458,44 +447,10 @@ mod public {
 			.is_err());
 		}
 
-		#[test]
-		fn finalize_and_verify_true() {
-			let secret_key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut tag = Poly1305::new(&secret_key);
-			tag.update(data).unwrap();
-
-			assert_eq!(
-				verify(
-					&tag.finalize().unwrap(),
-					&OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
-					data
-				)
-				.unwrap(),
-				true
-			);
-		}
-
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
-
-			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
-				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate();
-
-					let mut state = Poly1305::new(&sk);
-					state.update(&data[..]).unwrap();
-					let tag = state.finalize().unwrap();
-					// Failed verification on Err so res is not needed.
-					let _res = verify(&tag, &sk, &data[..]).unwrap();
-
-					true
-				}
-			}
 
 			quickcheck! {
 				/// When using the same parameters verify() should always yeild true.
