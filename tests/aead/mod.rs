@@ -14,7 +14,11 @@ use self::{
 		errors::UnknownCryptoError,
 		hazardous::{
 			aead,
-			stream::{chacha20::IETF_CHACHA_NONCESIZE, xchacha20::XCHACHA_NONCESIZE},
+			mac::poly1305::POLY1305_OUTSIZE,
+			stream::{
+				chacha20::{CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE},
+				xchacha20::XCHACHA_NONCESIZE,
+			},
 		},
 	},
 };
@@ -30,19 +34,12 @@ fn aead_test_runner(
 	let mut dst_ct_out = vec![0u8; input.len() + 16];
 	let mut dst_pt_out = vec![0u8; input.len()];
 
-	// Make sure the boringssl parameters are acceptable
-	if (key.len() != 32) || (tag.len() != 16) {
-		// Should fail if key is of invalid length
-		if key.len() != 32 {
-			assert!(aead::chacha20poly1305::seal(
-				&SecretKey::from_slice(&key).unwrap(),
-				&chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
-				input,
-				Some(aad),
-				&mut dst_ct_out,
-			)
-			.is_err());
-		}
+	if key.len() != CHACHA_KEYSIZE {
+		assert!(SecretKey::from_slice(&key).is_err());
+		return Ok(());
+	}
+	if tag.len() != POLY1305_OUTSIZE {
+		// Nothing to assert here
 		return Ok(());
 	}
 
@@ -94,17 +91,9 @@ fn aead_test_runner(
 		assert!(dst_pt_out[..].as_ref() == input);
 
 		Ok(())
-
-	// If the nonce is not of valid legnth, check for expected fail
 	} else {
-		assert!(aead::chacha20poly1305::seal(
-			&SecretKey::from_slice(&key).unwrap(),
-			&chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
-			input,
-			Some(aad),
-			&mut dst_ct_out,
-		)
-		.is_err());
+		assert!(xchacha20poly1305::Nonce::from_slice(&nonce).is_err());
+		assert!(chacha20poly1305::Nonce::from_slice(&nonce).is_err());
 
 		Ok(())
 	}

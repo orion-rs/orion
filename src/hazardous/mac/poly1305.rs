@@ -107,7 +107,6 @@ construct_tag! {
 
 impl_from_trait!(Tag, POLY1305_OUTSIZE);
 
-#[must_use]
 #[derive(Clone)]
 /// Poly1305 streaming state.
 pub struct Poly1305 {
@@ -141,7 +140,7 @@ impl core::fmt::Debug for Poly1305 {
 }
 
 impl Poly1305 {
-	#[must_use]
+
     #[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
@@ -294,7 +293,6 @@ impl Poly1305 {
         self.a[3] = h3;
     }
 
-	#[must_use]
 	#[allow(clippy::unreadable_literal)]
 	/// Initialize a `Poly1305` struct with a given one-time key.
 	pub fn new(one_time_key: &OneTimeKey) -> Self {
@@ -329,7 +327,7 @@ impl Poly1305 {
 		self.buffer = [0u8; POLY1305_BLOCKSIZE];
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
@@ -352,10 +350,9 @@ impl Poly1305 {
 			for (idx, itm) in bytes.iter().enumerate().take(want) {
 				self.buffer[self.leftover + idx] = *itm;
 			}
-			// Reduce by slice
+
 			bytes = &bytes[want..];
 			self.leftover += want;
-
 			if self.leftover < POLY1305_BLOCKSIZE {
 				return Ok(());
 			}
@@ -367,7 +364,6 @@ impl Poly1305 {
 
 		while bytes.len() >= POLY1305_BLOCKSIZE {
 			self.process_block(&bytes[0..POLY1305_BLOCKSIZE])?;
-			// Reduce by slice
 			bytes = &bytes[POLY1305_BLOCKSIZE..];
 		}
 
@@ -377,7 +373,7 @@ impl Poly1305 {
 		Ok(())
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a Poly1305 tag.
 	pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
 		if self.is_finalized {
@@ -401,7 +397,7 @@ impl Poly1305 {
 
 			self.process_block(&local_buffer)?;
 		}
-		// Get tag
+
 		self.process_end_of_stream();
 		store_u32_into_le(&self.a[0..4], &mut local_buffer);
 
@@ -409,7 +405,7 @@ impl Poly1305 {
 	}
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// One-shot function for generating a Poly1305 tag of `data`.
 pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let mut poly_1305_state = Poly1305::new(one_time_key);
@@ -417,7 +413,7 @@ pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCr
 	poly_1305_state.finalize()
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Verify a Poly1305 tag in constant time.
 pub fn verify(
 	expected: &Tag,

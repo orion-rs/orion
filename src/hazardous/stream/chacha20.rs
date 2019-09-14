@@ -252,7 +252,6 @@ impl Drop for InternalState {
 }
 
 impl InternalState {
-	#[must_use]
 	#[inline]
 	#[allow(clippy::unreadable_literal)]
 	/// Initialize either a ChaCha or HChaCha state with a `secret_key` and
@@ -284,9 +283,11 @@ impl InternalState {
 			load_u32_le(&sk[28..32]),
 		);
 
+		// Row 3 with counter and nonce if IETF,
+		// but only nonce if HChaCha20.
 		let r3 = if is_ietf {
 			U32x4(
-				0,
+				0, // Default counter
 				load_u32_le(&n[0..4]),
 				load_u32_le(&n[4..8]),
 				load_u32_le(&n[8..12]),
@@ -307,7 +308,6 @@ impl InternalState {
 		})
 	}
 
-	#[must_use]
 	#[inline(always)]
 	/// Process either a ChaCha20 or HChaCha20 block.
 	fn process_block(
@@ -379,6 +379,7 @@ enum Serialize {
 }
 
 impl Serialize {
+	#[inline]
 	fn xor_in_place(self, ks: &[U32x4; 4], inplace: &mut [u8]) {
 		match self {
 			Serialize::IetfChaCha => {
@@ -399,7 +400,6 @@ impl Serialize {
 	}
 }
 
-#[must_use]
 /// In-place IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 fn encrypt_in_place(
 	secret_key: &SecretKey,
@@ -438,7 +438,7 @@ fn encrypt_in_place(
 	Ok(())
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn encrypt(
 	secret_key: &SecretKey,
@@ -463,7 +463,7 @@ pub fn encrypt(
 	)
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// IETF ChaCha20 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn decrypt(
 	secret_key: &SecretKey,
@@ -475,7 +475,7 @@ pub fn decrypt(
 	encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// IETF ChaCha20 block function returning a serialized keystream block.
 pub fn keystream_block(
 	secret_key: &SecretKey,
@@ -493,7 +493,6 @@ pub fn keystream_block(
 	Ok(keystream_block)
 }
 
-#[must_use]
 #[doc(hidden)]
 /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub fn hchacha20(
@@ -1070,8 +1069,6 @@ mod test_vectors {
 	// NOTE: These PartialEq implementation should only be available in testing.
 	#[cfg(test)]
 	impl core::cmp::PartialEq for U32x4 {
-		#[must_use]
-		#[inline(always)]
 		fn eq(&self, other: &Self) -> bool {
 			(self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3)
 		}

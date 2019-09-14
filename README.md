@@ -58,13 +58,18 @@ cargo test
 
 Fuzzing is done using [honggfuzz-rs](https://github.com/rust-fuzz/honggfuzz-rs) in [orion-fuzz](https://github.com/brycx/orion-fuzz). See [orion-fuzz](https://github.com/brycx/orion-fuzz) on how to start fuzzing orion.
 
+Constant-time execution tests can be found at [orion-dudect](https://github.com/brycx/orion-dudect).
+
 ### Benchmarks
-The library can be benchmarked as below. All benchmarking tests are located in `benches/`.
+The library can be benchmarked with [Criterion](https://github.com/bheisler/criterion.rs) as below. All benchmarking tests are located in `benches/`.
 ```
-cargo +nightly bench
+cargo bench
 ```
 ### Changelog
-Can be found [here](https://github.com/brycx/orion/releases).
+Please refer to the [CHANGELOG.md](https://github.com/brycx/orion/blob/master/CHANGELOG.md) list.
+
+### Contributing
+Please refer to the guidelines in [CONTRIBUTING.md](https://github.com/brycx/orion/blob/master/CONTRIBUTING.md) for information on how to contribute to orion.
 
 ### License
 orion is licensed under the MIT license. See the `LICENSE` file for more information.

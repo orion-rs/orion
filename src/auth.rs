@@ -66,7 +66,7 @@
 use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
 pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Authenticate a message using HMAC-SHA512.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let mut state = hmac::Hmac::new(&hmac::SecretKey::from_slice(
@@ -76,7 +76,7 @@ pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownC
 	state.finalize()
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Authenticate and verify a message using HMAC-SHA512.
 pub fn authenticate_verify(
 	expected: &Tag,

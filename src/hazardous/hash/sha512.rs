@@ -230,7 +230,6 @@ impl Sha512 {
 				.wrapping_add(w[t - 16]);
 		}
 
-		// Initialize working variables
 		let mut a = self.working_state[0];
 		let mut b = self.working_state[1];
 		let mut c = self.working_state[2];
@@ -267,7 +266,8 @@ impl Sha512 {
 	fn increment_mlen(&mut self, length: u64) {
 		// The checked shift checks that the right-hand side is a legal shift.
 		// The result can still overflow if length > u64::max_value() / 8.
-		// Should be impossible for a user to trigger.
+		// Should be impossible for a user to trigger, becuase update() processes
+		// in SHA512_BLOCKSIZE chunks.
 		debug_assert!(length <= u64::max_value() / 8);
 
 		// left-shift to get bit-sized representation of length
@@ -282,7 +282,6 @@ impl Sha512 {
 		}
 	}
 
-	#[must_use]
 	/// Initialize a `Sha512` struct.
 	pub fn new() -> Self {
 		Sha512 {
@@ -303,7 +302,7 @@ impl Sha512 {
 		self.is_finalized = false;
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Update state with `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
@@ -327,7 +326,6 @@ impl Sha512 {
 				self.buffer[self.leftover + idx] = *itm;
 			}
 
-			// Reduce by slice
 			bytes = &bytes[want..];
 			self.leftover += want;
 			self.increment_mlen(want as u64);
@@ -341,16 +339,13 @@ impl Sha512 {
 		}
 
 		while bytes.len() >= SHA512_BLOCKSIZE {
-			// Process data
 			self.process(Some(bytes[..SHA512_BLOCKSIZE].as_ref()));
 			self.increment_mlen(SHA512_BLOCKSIZE as u64);
-			// Reduce by slice
 			bytes = &bytes[SHA512_BLOCKSIZE..];
 		}
 
 		if !bytes.is_empty() {
 			debug_assert!(self.leftover == 0);
-
 			self.buffer[..bytes.len()].copy_from_slice(bytes);
 			self.leftover = bytes.len();
 			self.increment_mlen(bytes.len() as u64);
@@ -359,7 +354,7 @@ impl Sha512 {
 		Ok(())
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a SHA512 digest.
 	pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
 		if self.is_finalized {
@@ -368,7 +363,7 @@ impl Sha512 {
 
 		self.is_finalized = true;
 
-		// self.leftover should not be greater than SHA2_BLCOKSIZE
+		// self.leftover should not be greater than SHA512_BLCOKSIZE
 		// as that would have been processed in the update call
 		debug_assert!(self.leftover < SHA512_BLOCKSIZE);
 		self.buffer[self.leftover] = 0x80;
@@ -386,7 +381,6 @@ impl Sha512 {
 			}
 		}
 
-		// Pad with length
 		self.buffer[SHA512_BLOCKSIZE - 16..SHA512_BLOCKSIZE - 8]
 			.copy_from_slice(&self.message_len[0].to_be_bytes());
 		self.buffer[SHA512_BLOCKSIZE - 8..SHA512_BLOCKSIZE]
@@ -401,7 +395,7 @@ impl Sha512 {
 	}
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Calculate a SHA512 digest of some `data`.
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 	let mut state = Sha512::new();

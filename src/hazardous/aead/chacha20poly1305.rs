@@ -105,14 +105,12 @@ use crate::{
 	util,
 };
 
-#[must_use]
 #[inline]
 /// Poly1305 key generation using IETF ChaCha20.
 fn poly1305_key_gen(key: &SecretKey, nonce: &Nonce) -> Result<OneTimeKey, UnknownCryptoError> {
 	OneTimeKey::from_slice(&chacha20::keystream_block(key, nonce, 0)?[..POLY1305_KEYSIZE])
 }
 
-#[must_use]
 #[inline]
 /// Padding size that gives the needed bytes to pad `input` to an integral
 /// multiple of 16.
@@ -130,7 +128,6 @@ fn padding(input: &[u8]) -> usize {
 	}
 }
 
-#[must_use]
 #[inline]
 /// Process data to be authenticated using a `Poly1305` struct initialized with
 /// a one-time-key. Up to `buf_in_len` data in `buf` get's authenticated. The
@@ -169,7 +166,7 @@ fn process_authentication(
 	poly1305_state.update(padding_max.as_ref())
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// AEAD ChaCha20Poly1305 encryption and authentication as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn seal(
 	secret_key: &SecretKey,
@@ -208,7 +205,7 @@ pub fn seal(
 	Ok(())
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// AEAD ChaCha20Poly1305 decryption and authentication as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub fn open(
 	secret_key: &SecretKey,
@@ -454,7 +451,7 @@ mod public {
 		}
 	}
 
-	// Proptests. Only exectued when NOT testing no_std.
+	// Proptests. Only executed when NOT testing no_std.
 	#[cfg(feature = "safe_api")]
 	mod proptest {
 		use super::*;

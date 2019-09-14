@@ -41,7 +41,6 @@ impl fmt::Debug for UnknownCryptoError {
 }
 
 #[cfg(feature = "safe_api")]
-// Required for rand's generators
 impl From<getrandom::Error> for UnknownCryptoError {
 	fn from(_: getrandom::Error) -> Self {
 		UnknownCryptoError
@@ -55,7 +54,7 @@ fn test_unknown_crypto_error_debug_display() {
 	// Tests Debug impl though "{:?}"
 	let err = format!("{:?}", UnknownCryptoError);
 	assert_eq!(err, "UnknownCryptoError");
-	// Tests Display impl though "{:?}"
+	// Tests Display impl though "{}"
 	let err = format!("{}", UnknownCryptoError);
 	assert_eq!(err, "UnknownCryptoError");
 }

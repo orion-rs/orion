@@ -75,7 +75,7 @@ use crate::{
 	util,
 };
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// The HKDF extract step.
 pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError> {
 	let mut prk = hmac::Hmac::new(&SecretKey::from_slice(salt)?);
@@ -83,7 +83,7 @@ pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError>
 	prk.finalize()
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// The HKDF expand step.
 pub fn expand(
 	prk: &hmac::Tag,
@@ -124,7 +124,7 @@ pub fn expand(
 	Ok(())
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Combine `extract` and `expand` to return a derived key.
 pub fn derive_key(
 	salt: &[u8],
@@ -135,7 +135,7 @@ pub fn derive_key(
 	expand(&extract(salt, ikm)?, info, dst_out)
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Verify a derived key in constant time.
 pub fn verify(
 	expected: &[u8],

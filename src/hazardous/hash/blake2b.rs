@@ -155,7 +155,7 @@ pub enum Hasher {
 }
 
 impl Hasher {
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a digest selected by the given Blake2b variant.
 	pub fn digest(&self, data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 		let size: usize = match *self {
@@ -170,7 +170,7 @@ impl Hasher {
 		state.finalize()
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a `Blake2b` state selected by the given Blake2b variant.
 	pub fn new(&self) -> Result<Blake2b, UnknownCryptoError> {
 		match *self {
@@ -181,7 +181,6 @@ impl Hasher {
 	}
 }
 
-#[must_use]
 #[derive(Clone)]
 /// BLAKE2b streaming state.
 pub struct Blake2b {
@@ -303,7 +302,6 @@ impl Blake2b {
 		Self::round(10, &mut m_vec, &mut w_vec);
 		Self::round(11, &mut m_vec, &mut w_vec);
 
-		// XOR the two halves together and into the state
 		self.internal_state[0] ^= w_vec[0] ^ w_vec[8];
 		self.internal_state[1] ^= w_vec[1] ^ w_vec[9];
 		self.internal_state[2] ^= w_vec[2] ^ w_vec[10];
@@ -314,7 +312,7 @@ impl Blake2b {
 		self.internal_state[7] ^= w_vec[7] ^ w_vec[15];
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	#[allow(clippy::unreadable_literal)]
 	/// Initialize a `Blake2b` struct with a given size and an optional key.
 	pub fn new(secret_key: Option<&SecretKey>, size: usize) -> Result<Self, UnknownCryptoError> {
@@ -355,7 +353,7 @@ impl Blake2b {
 		Ok(context)
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Reset to `new()` state.
 	pub fn reset(&mut self, secret_key: Option<&SecretKey>) -> Result<(), UnknownCryptoError> {
 		if secret_key.is_some() && (!self.is_keyed) {
@@ -385,7 +383,7 @@ impl Blake2b {
 		}
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
@@ -409,25 +407,20 @@ impl Blake2b {
 			}
 
 			self.buffer[self.leftover..(self.leftover + fill)].copy_from_slice(&bytes[..fill]);
-			// Process data
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f(None);
 			self.leftover = 0;
-			// Reduce by slice
 			bytes = &bytes[fill..];
 		}
 
 		while bytes.len() > BLAKE2B_BLOCKSIZE {
-			// Process data
 			self.increment_offset(BLAKE2B_BLOCKSIZE as u64);
 			self.compress_f(Some(bytes[..BLAKE2B_BLOCKSIZE].as_ref()));
-			// Reduce by slice
 			bytes = &bytes[BLAKE2B_BLOCKSIZE..];
 		}
 
 		if !bytes.is_empty() {
 			debug_assert!(self.leftover == 0);
-
 			self.buffer[..bytes.len()].copy_from_slice(bytes);
 			self.leftover += bytes.len();
 		}
@@ -435,7 +428,7 @@ impl Blake2b {
 		Ok(())
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a BLAKE2b digest.
 	pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
 		if self.is_finalized {
@@ -461,7 +454,7 @@ impl Blake2b {
 	}
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Verify a Blake2b Digest in constant time.
 pub fn verify(
 	expected: &Digest,

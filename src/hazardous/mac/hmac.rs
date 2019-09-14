@@ -94,7 +94,6 @@ construct_tag! {
 
 impl_from_trait!(Tag, SHA512_OUTSIZE);
 
-#[must_use]
 #[derive(Clone)]
 /// HMAC-SHA512 streaming state.
 pub struct Hmac {
@@ -138,7 +137,6 @@ impl Hmac {
 		opad.zeroize();
 	}
 
-	#[must_use]
 	/// Initialize `Hmac` struct with a given key.
 	pub fn new(secret_key: &SecretKey) -> Self {
 		let mut state = Hmac {
@@ -158,7 +156,7 @@ impl Hmac {
 		self.is_finalized = false;
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Update state with a `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
@@ -168,7 +166,7 @@ impl Hmac {
 		}
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a `Tag`.
 	pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
 		if self.is_finalized {
@@ -184,7 +182,7 @@ impl Hmac {
 	}
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// One-shot function for generating an HMAC-SHA512 tag of `data`.
 pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
 	let mut hmac_state = Hmac::new(secret_key);
@@ -192,7 +190,7 @@ pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoErr
 	hmac_state.finalize()
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Verify a HMAC-SHA512 Tag in constant time.
 pub fn verify(
 	expected: &Tag,

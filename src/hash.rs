@@ -58,7 +58,7 @@
 pub use crate::hazardous::hash::blake2b::Digest;
 use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hashing using BLAKE2b-256.
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 	blake2b::Hasher::Blake2b256.digest(data)
