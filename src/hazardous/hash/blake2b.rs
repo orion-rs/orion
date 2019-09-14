@@ -320,7 +320,7 @@ impl Blake2b {
 			return Err(UnknownCryptoError);
 		}
 
-		let mut context = Blake2b {
+		let mut context = Self {
 			init_state: [0u64; 8],
 			internal_state: IV,
 			buffer: [0u8; BLAKE2B_BLOCKSIZE],

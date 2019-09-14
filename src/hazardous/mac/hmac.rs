@@ -139,7 +139,7 @@ impl Hmac {
 
 	/// Initialize `Hmac` struct with a given key.
 	pub fn new(secret_key: &SecretKey) -> Self {
-		let mut state = Hmac {
+		let mut state = Self {
 			working_hasher: sha512::Sha512::new(),
 			opad_hasher: sha512::Sha512::new(),
 			ipad_hasher: sha512::Sha512::new(),

@@ -290,7 +290,7 @@ impl Sha512 {
 
 	/// Initialize a `Sha512` struct.
 	pub fn new() -> Self {
-		Sha512 {
+		Self {
 			working_state: H0,
 			buffer: [0u8; SHA512_BLOCKSIZE],
 			leftover: 0,

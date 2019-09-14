@@ -295,7 +295,7 @@ impl Poly1305 {
 	#[allow(clippy::unreadable_literal)]
 	/// Initialize a `Poly1305` struct with a given one-time key.
 	pub fn new(one_time_key: &OneTimeKey) -> Self {
-		let mut state = Poly1305 {
+		let mut state = Self {
 			a: [0u32; 5],
 			r: [0u32; 5],
 			s: [0u32; 4],
