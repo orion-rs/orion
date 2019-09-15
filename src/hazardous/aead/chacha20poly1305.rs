@@ -117,12 +117,12 @@ pub(crate) fn poly1305_key_gen(
 #[inline]
 /// Padding size that gives the needed bytes to pad `input` to an integral
 /// multiple of 16.
-pub(crate) fn padding(input: &[u8]) -> usize {
-	if input.is_empty() {
+pub(crate) fn padding(input: usize) -> usize {
+	if input == 0 {
 		return 0;
 	}
 
-	let rem = input.len() % 16;
+	let rem = input % 16;
 
 	if rem != 0 {
 		16 - rem
@@ -152,11 +152,11 @@ fn process_authentication(
 
 	if !ad.is_empty() {
 		poly1305_state.update(ad)?;
-		poly1305_state.update(&padding_max[..padding(ad)])?;
+		poly1305_state.update(&padding_max[..padding(ad.len())])?;
 	}
 
 	poly1305_state.update(&buf[..buf_in_len])?;
-	poly1305_state.update(&padding_max[..padding(&buf[..buf_in_len])])?;
+	poly1305_state.update(&padding_max[..padding(buf[..buf_in_len].len())])?;
 
 	// Using the 16 bytes from padding template to store length information
 	if !ad.is_empty() {
@@ -658,23 +658,23 @@ mod private {
 		use super::*;
 		#[test]
 		fn test_length_padding() {
-			assert_eq!(padding(&[0u8; 0]), 0);
-			assert_eq!(padding(&[0u8; 1]), 15);
-			assert_eq!(padding(&[0u8; 2]), 14);
-			assert_eq!(padding(&[0u8; 3]), 13);
-			assert_eq!(padding(&[0u8; 4]), 12);
-			assert_eq!(padding(&[0u8; 5]), 11);
-			assert_eq!(padding(&[0u8; 6]), 10);
-			assert_eq!(padding(&[0u8; 7]), 9);
-			assert_eq!(padding(&[0u8; 8]), 8);
-			assert_eq!(padding(&[0u8; 9]), 7);
-			assert_eq!(padding(&[0u8; 10]), 6);
-			assert_eq!(padding(&[0u8; 11]), 5);
-			assert_eq!(padding(&[0u8; 12]), 4);
-			assert_eq!(padding(&[0u8; 13]), 3);
-			assert_eq!(padding(&[0u8; 14]), 2);
-			assert_eq!(padding(&[0u8; 15]), 1);
-			assert_eq!(padding(&[0u8; 16]), 0);
+			assert_eq!(padding(0), 0);
+			assert_eq!(padding(1), 15);
+			assert_eq!(padding(2), 14);
+			assert_eq!(padding(3), 13);
+			assert_eq!(padding(4), 12);
+			assert_eq!(padding(5), 11);
+			assert_eq!(padding(6), 10);
+			assert_eq!(padding(7), 9);
+			assert_eq!(padding(8), 8);
+			assert_eq!(padding(9), 7);
+			assert_eq!(padding(10), 6);
+			assert_eq!(padding(11), 5);
+			assert_eq!(padding(12), 4);
+			assert_eq!(padding(13), 3);
+			assert_eq!(padding(14), 2);
+			assert_eq!(padding(15), 1);
+			assert_eq!(padding(16), 0);
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
@@ -686,7 +686,7 @@ mod private {
 				// The usize that padding() returns should always
 				// be what remains to make input a multiple of 16 in length.
 				fn prop_padding_result(input: Vec<u8>) -> bool {
-					let rem = padding(&input[..]);
+					let rem = padding(input[..].len());
 
 					(((input.len() + rem) % 16) == 0)
 				}
@@ -696,7 +696,7 @@ mod private {
 				// padding() should never return a usize above 15.
 				// The usize must always be in range of 0..=15.
 				fn prop_result_never_above_15(input: Vec<u8>) -> bool {
-					let rem: usize = padding(&input[..]);
+					let rem: usize = padding(input[..].len());
 
 					(rem < 16)
 				}
