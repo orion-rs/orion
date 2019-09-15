@@ -89,7 +89,7 @@ where
 		self.consistency(&[0u8; 0]);
 		self.produces_same_state(&Self::DEFAULT_INPUT);
 		// Following test requires std.
-		self.incremental_processing_with_leftover(self.blocksize);
+		self.incremental_processing_with_leftover();
 		self.incremental_and_one_shot(&Self::DEFAULT_INPUT);
 		self.double_finalize_with_reset_no_update_ok(&Self::DEFAULT_INPUT);
 		self.double_finalize_with_reset_ok(&Self::DEFAULT_INPUT);
@@ -121,7 +121,7 @@ where
 
 	/// Related bug: https://github.com/brycx/orion/issues/46
 	/// Testing different usage combinations of new(), update(),
-	/// finalize() and reset() produce the same Digest.
+	/// finalize() and reset() produce the same output.
 	///
 	/// It is important to ensure this is also called with empty
 	/// `data`.
@@ -184,7 +184,7 @@ where
 
 	/// Related bug: https://github.com/brycx/orion/issues/46
 	/// Testing different usage combinations of new(), update(),
-	/// finalize() and reset() produce the same Digest.
+	/// finalize() and reset() produce the same output.
 	pub fn produces_same_state(&self, data: &[u8]) {
 		// new()
 		let state_1 = self._initial_context.clone();
@@ -213,8 +213,8 @@ where
 	/// Test for issues when incrementally processing data
 	/// with leftover in the internal buffer. It should produce
 	/// the same results as processing the same data in a single pass.
-	pub fn incremental_processing_with_leftover(&self, blocksize: usize) {
-		for len in 0..blocksize * 4 {
+	pub fn incremental_processing_with_leftover(&self) {
+		for len in 0..self.blocksize * 4 {
 			let data = vec![0u8; len];
 			let mut state = self._initial_context.clone();
 			let mut other_data: Vec<u8> = Vec::new();
@@ -222,15 +222,15 @@ where
 			other_data.extend_from_slice(&data);
 			state.update(&data).unwrap();
 
-			if data.len() > blocksize {
+			if data.len() > self.blocksize {
 				other_data.extend_from_slice(b"");
 				state.update(b"").unwrap();
 			}
-			if data.len() > blocksize * 2 {
+			if data.len() > self.blocksize * 2 {
 				other_data.extend_from_slice(b"Extra");
 				state.update(b"Extra").unwrap();
 			}
-			if data.len() > blocksize * 3 {
+			if data.len() > self.blocksize * 3 {
 				other_data.extend_from_slice(&[0u8; 256]);
 				state.update(&[0u8; 256]).unwrap();
 			}
@@ -252,7 +252,7 @@ where
 		assert!(streaming_result == one_shot_result);
 	}
 
-	/// finalize(), reset(), finalize(): OK
+	/// new(), finalize(), reset(), finalize(): OK
 	pub fn double_finalize_with_reset_no_update_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
@@ -261,7 +261,7 @@ where
 		assert!(state.finalize().is_ok());
 	}
 
-	/// finalize(), reset(), update(), finalize(): OK
+	/// new(), finalize(), reset(), update(), finalize(): OK
 	pub fn double_finalize_with_reset_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
@@ -271,7 +271,7 @@ where
 		assert!(state.finalize().is_ok());
 	}
 
-	/// finalize(), finalize(): ERR
+	/// new(), finalize(), finalize(): ERR
 	pub fn double_finalize_err(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
@@ -279,7 +279,7 @@ where
 		assert!(state.finalize().is_err());
 	}
 
-	/// finalize(), reset(), update(): OK
+	/// new(), finalize(), reset(), update(): OK
 	pub fn update_after_finalize_with_reset_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
@@ -289,7 +289,7 @@ where
 	}
 
 	/// Related bug: https://github.com/brycx/orion/issues/28
-	/// finalize(), update(): ERR
+	/// new(), update(), finalize(), update(): ERR
 	pub fn update_after_finalize_err(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();

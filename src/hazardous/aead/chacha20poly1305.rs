@@ -259,7 +259,7 @@ pub fn open(
 #[cfg(feature = "safe_api")]
 mod public {
 	use super::*;
-	
+
 	#[cfg(feature = "safe_api")]
 	mod test_seal_open {
 		use super::*;
