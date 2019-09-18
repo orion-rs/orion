@@ -63,7 +63,7 @@
 //! [`SecretKey::default()`]: https://docs.rs/orion/latest/orion/auth/struct.SecretKey.html
 //! [`Tag`]: struct.Tag.html
 
-pub use crate::hltypes::{Tag, SecretKey};
+pub use crate::hltypes::{SecretKey, Tag};
 use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 
 /// The recommended Tag size (bytes) to be output by BLAKE2b in keyed mode.
@@ -87,9 +87,9 @@ pub fn authenticate_verify(
 	secret_key: &SecretKey,
 	data: &[u8],
 ) -> Result<bool, UnknownCryptoError> {
-    if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
-        return Err(UnknownCryptoError);
-    }
+	if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
+		return Err(UnknownCryptoError);
+	}
 	let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
 	let expected_digest = blake2b::Digest::from_slice(expected.unprotected_as_bytes())?;
 	blake2b::verify(&expected_digest, &key, BLAKE2B_TAG_SIZE, data)
@@ -128,15 +128,15 @@ mod public {
 			assert!(authenticate_verify(&mac_bob, &sec_key, b"bad msg").is_err());
 		}
 
-        #[test]
-        fn test_authenticate_verify_key_too_small() {
-            let sec_key = SecretKey::generate(31).unwrap();
-            let msg = "what do ya want for nothing?".as_bytes().to_vec();
+		#[test]
+		fn test_authenticate_verify_key_too_small() {
+			let sec_key = SecretKey::generate(31).unwrap();
+			let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-            let mac_bob = authenticate(&sec_key, &msg).unwrap();
+			let mac_bob = authenticate(&sec_key, &msg).unwrap();
 
 			assert!(authenticate_verify(&mac_bob, &sec_key, &msg).is_err());
-        }
+		}
 	}
 
 	// Proptests. Only exectued when NOT testing no_std.
