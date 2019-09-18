@@ -41,6 +41,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - The calculated [`Tag`] does not match the expected.
+//! - The `SecretKey` supplied is greater than 64 bytes.
 //!
 //! # Panics:
 //! A panic will occur if:
