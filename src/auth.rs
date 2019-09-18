@@ -42,6 +42,10 @@
 //! An error will be returned if:
 //! - The calculated [`Tag`] does not match the expected.
 //!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2*(2^64-1) bytes of data are authenticated.
+//!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
 //!   [`SecretKey::default()`] can be used for
