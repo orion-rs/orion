@@ -73,6 +73,9 @@ const BLAKE2B_MIN_KEY_SIZE: usize = 32;
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Authenticate a message using BLAKE2b-256 in keyed mode.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
+	if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
+		return Err(UnknownCryptoError);
+	}
 	let blake2b_secret_key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
 	let mut state = blake2b::init(Some(&blake2b_secret_key), BLAKE2B_TAG_SIZE)?;
 	state.update(data)?;
@@ -87,9 +90,6 @@ pub fn authenticate_verify(
 	secret_key: &SecretKey,
 	data: &[u8],
 ) -> Result<bool, UnknownCryptoError> {
-	if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
-		return Err(UnknownCryptoError);
-	}
 	let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
 	let expected_digest = blake2b::Digest::from_slice(expected.unprotected_as_bytes())?;
 	blake2b::verify(&expected_digest, &key, BLAKE2B_TAG_SIZE, data)
@@ -129,13 +129,11 @@ mod public {
 		}
 
 		#[test]
-		fn test_authenticate_verify_key_too_small() {
+		fn test_authenticate_key_too_small() {
 			let sec_key = SecretKey::generate(31).unwrap();
 			let msg = "what do ya want for nothing?".as_bytes().to_vec();
 
-			let mac_bob = authenticate(&sec_key, &msg).unwrap();
-
-			assert!(authenticate_verify(&mac_bob, &sec_key, &msg).is_err());
+			assert!(authenticate(&sec_key, &msg).is_err());
 		}
 	}
 
