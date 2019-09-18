@@ -291,7 +291,7 @@ impl Sha512 {
 		}
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Update state with `data`. This can be called multiple times.
 	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
 		if self.is_finalized {
@@ -347,7 +347,7 @@ impl Sha512 {
 		Ok(())
 	}
 
-	#[must_use]
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Return a SHA512 digest.
 	pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
 		if self.is_finalized {
@@ -389,7 +389,6 @@ impl Sha512 {
 	}
 }
 
-#[must_use]
 /// Initialize a `Sha512` struct.
 pub fn init() -> Sha512 {
 	Sha512 {
@@ -401,7 +400,7 @@ pub fn init() -> Sha512 {
 	}
 }
 
-#[must_use]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Calculate a SHA512 digest of some `data`.
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 	let mut state = init();
