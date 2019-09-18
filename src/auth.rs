@@ -67,7 +67,7 @@ pub use crate::hltypes::{Blake2bTag as Tag, SecretKey};
 use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 
 /// The recommended Tag size (bytes) to be output by Blake2b in keyed mode.
-const BLAKE2B_TAG_SIZE: usize = 16;
+const BLAKE2B_TAG_SIZE: usize = 32;
 
 #[must_use]
 /// Authenticate a message using Blake2b in keyed mode.

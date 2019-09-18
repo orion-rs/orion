@@ -73,15 +73,15 @@ construct_tag! {
 impl_from_trait!(PasswordHash, 128);
 
 construct_tag! {
-	/// A type to represent the `Tag` output by Blake2b hash in keyed mode.
+	/// A type to represent the `Tag` output by BLAKE2b hash in keyed mode.
 	///
 	/// # Errors:
 	/// An error will be returned if:
-	/// - `slice` is not 16 bytes.
-	(Blake2bTag, test_blake2b_tag, 16, 16)
+	/// - `slice` is not 32 bytes.
+	(Tag, test_tag, 32, 32)
 }
 
-impl_from_trait!(Blake2bTag, 16);
+impl_from_trait!(Tag, 32);
 
 construct_secret_key_variable_size! {
 	/// A type to represent the `Password` that PBKDF2 hashes and uses for key derivation.
