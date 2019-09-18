@@ -68,6 +68,7 @@ use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 
 /// The recommended Tag size (bytes) to be output by BLAKE2b in keyed mode.
 const BLAKE2B_TAG_SIZE: usize = 32;
+/// The minimum `SecretKey` size (bytes) to be used by BLAKE2b in keyed mode.
 const BLAKE2B_MIN_KEY_SIZE: usize = 32;
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
