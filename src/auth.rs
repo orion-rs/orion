@@ -31,7 +31,7 @@
 //! requests.
 //!
 //! # About:
-//! - Uses BLAKE2b in keyed mode.
+//! - Uses BLAKE2b-256 in keyed mode.
 //!
 //! # Parameters:
 //! - `secret_key`: Secret key used to authenticate `data`.
@@ -50,7 +50,7 @@
 //! - The secret key should always be generated using a CSPRNG.
 //!   [`SecretKey::default()`] can be used for
 //! this; it will generate a [`SecretKey`] of 32 bytes.
-//! - The recommended minimum length for a [`SecretKey`] is 16 bytes.
+//! - The required minimum length for a [`SecretKey`] is 32 bytes.
 //!
 //! # Example:
 //! ```rust
