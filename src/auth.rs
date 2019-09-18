@@ -95,6 +95,9 @@ pub fn authenticate_verify(
 	secret_key: &SecretKey,
 	data: &[u8],
 ) -> Result<bool, UnknownCryptoError> {
+	if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
+		return Err(UnknownCryptoError);
+	}
 	let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
 	let expected_digest = blake2b::Digest::from_slice(expected.unprotected_as_bytes())?;
 	blake2b::verify(&expected_digest, &key, BLAKE2B_TAG_SIZE, data)
