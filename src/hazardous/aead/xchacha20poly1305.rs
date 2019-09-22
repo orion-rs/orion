@@ -84,8 +84,8 @@
 //! assert_eq!(dst_out_pt.as_ref(), message.as_ref());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
-//! [`Nonce::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/xchacha20/struct.Nonce.html
+//! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
+//! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
 use crate::{errors::UnknownCryptoError, hazardous::aead::chacha20poly1305};

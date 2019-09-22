@@ -53,7 +53,7 @@
 //! let hash: Digest = digest(b"Some data")?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`orion::pwhash`]: https://docs.rs/orion/latest/orion/pwhash/index.html
+//! [`orion::pwhash`]: ../pwhash/index.html
 
 pub use crate::hazardous::hash::blake2b::Digest;
 use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};

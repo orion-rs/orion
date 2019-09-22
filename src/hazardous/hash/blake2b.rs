@@ -73,12 +73,12 @@
 //! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data")?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Blake2b.html
-//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Blake2b.html
-//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Blake2b.html
-//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.SecretKey.html
-//! [`verify()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/fn.verify.html
-//! [`as_ref()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Digest.html
+//! [`update()`]: struct.Blake2b.html
+//! [`reset()`]: struct.Blake2b.html
+//! [`finalize()`]: struct.Blake2b.html
+//! [`SecretKey::generate()`]: struct.SecretKey.html
+//! [`verify()`]: fn.verify.html
+//! [`as_ref()`]: struct.Digest.html
 use crate::{
 	endianness::{load_u64_into_le, store_u64_into_le},
 	errors::UnknownCryptoError,
