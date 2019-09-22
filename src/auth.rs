@@ -144,6 +144,15 @@ mod public {
 
 			assert!(authenticate(&sec_key, &msg).is_err());
 		}
+
+		#[test]
+		fn test_authenticate_verify_key_too_small() {
+			let sec_key = SecretKey::generate(31).unwrap();
+			let msg = "what do ya want for nothing?".as_bytes().to_vec();
+            let mac = Tag::from_slice(&[0u8; 32][..]).unwrap();
+
+			assert!(authenticate_verify(&mac, &sec_key, &msg).is_err());
+		}
 	}
 
 	// Proptests. Only exectued when NOT testing no_std.
@@ -192,5 +201,24 @@ mod public {
 				}
 			}
 		}
+
+        quickcheck!{
+            /// Verify the bounds of 32..=64 (inclusive) for the `SecretKey` used
+            /// in `authenticate`.
+            fn prop_authenticate_key_size(input: Vec<u8>) -> bool {
+                let sec_key_res = SecretKey::from_slice(&input);
+                if input.len() == 0 || input.len() >= u32::max_value() as usize {
+                    return sec_key_res.is_err();
+                }
+                let sec_key = sec_key_res.unwrap();
+			    let msg = "what do ya want for nothing?".as_bytes().to_vec();
+                let auth_res = authenticate(&sec_key, &msg);
+                if input.len() >= 32 && input.len() <= 64 {
+                    auth_res.is_ok()
+                } else {
+                    auth_res.is_err()
+                }
+            }
+        }
 	}
 }
