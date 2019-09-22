@@ -73,9 +73,9 @@
 //! assert!(pwhash::hash_password_verify(&hash, &password, 100000)?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`PasswordHash`]: https://docs.rs/orion/latest/orion/pwhash/struct.PasswordHash.html
-//! [`pwhash::hash_password`]: https://docs.rs/orion/latest/orion/pwhash/fn.hash_password.html
-//! [`pwhash::hash_password_verify`]: https://docs.rs/orion/latest/orion/pwhash/fn.hash_password_verify.html
+//! [`PasswordHash`]: struct.PasswordHash.html
+//! [`pwhash::hash_password`]: fn.hash_password.html
+//! [`pwhash::hash_password_verify`]: fn.hash_password_verify.html
 
 pub use crate::hltypes::{Password, PasswordHash, Salt};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};

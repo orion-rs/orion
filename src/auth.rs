@@ -59,9 +59,9 @@
 //! assert!(auth::authenticate_verify(&expected_tag, &key, &msg)?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey`]: https://docs.rs/orion/latest/orion/auth/struct.SecretKey.html
-//! [`SecretKey::default()`]: https://docs.rs/orion/latest/orion/auth/struct.SecretKey.html
-//! [`Tag`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Tag.html
+//! [`SecretKey`]: struct.SecretKey.html
+//! [`SecretKey::default()`]: struct.SecretKey.html
+//! [`Tag`]: ../hazardous/mac/hmac/struct.Tag.html
 
 use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
 pub use crate::{hazardous::mac::hmac::Tag, hltypes::SecretKey};
