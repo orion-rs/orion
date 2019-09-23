@@ -34,6 +34,7 @@ pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 	nonce: Nonce,
 	counter: u32,
 	input: &[u8],
+	expected: Option<&[u8]>,
 ) where
 	Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
 	Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
@@ -44,6 +45,17 @@ pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 	if !input.is_empty() {
 		encrypt_decrypt_same_plaintext(&encryptor, &decryptor, &key, &nonce, counter, input);
 		encrypt_decrypt_out_length(&encryptor, &decryptor, &key, &nonce, input);
+		if expected.is_some() {
+			encrypt_decrypt_equals_expected(
+				&encryptor,
+				&decryptor,
+				&key,
+				&nonce,
+				counter,
+				input,
+				expected.unwrap(),
+			);
+		}
 	}
 
 	encrypt_decrypt_input_empty(&encryptor, &decryptor, &key, &nonce);
@@ -174,6 +186,31 @@ fn encrypt_decrypt_same_plaintext<Encryptor, Decryptor, Key, Nonce>(
 	let mut dst_out_pt = vec![0u8; input.len()];
 	decryptor(key, nonce, counter, &dst_out_ct, &mut dst_out_pt).unwrap();
 
+	assert_eq!(input, &dst_out_pt[..]);
+}
+
+#[cfg(feature = "safe_api")]
+/// Test that encrypting and decrypting produces expected plaintext/ciphertext.
+fn encrypt_decrypt_equals_expected<Encryptor, Decryptor, Key, Nonce>(
+	encryptor: &Encryptor,
+	decryptor: &Decryptor,
+	key: &Key,
+	nonce: &Nonce,
+	counter: u32,
+	input: &[u8],
+	expected: &[u8],
+) where
+	Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
+	Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
+{
+	assert!(!input.is_empty());
+
+	let mut dst_out_ct = vec![0u8; input.len()];
+	encryptor(key, nonce, counter, input, &mut dst_out_ct).unwrap();
+	assert_eq!(expected, &dst_out_ct[..]);
+
+	let mut dst_out_pt = vec![0u8; input.len()];
+	decryptor(key, nonce, counter, &dst_out_ct, &mut dst_out_pt).unwrap();
 	assert_eq!(input, &dst_out_pt[..]);
 }
 

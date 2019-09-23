@@ -166,7 +166,7 @@ mod public {
 
 			let secret_key = SecretKey::generate();
 			let nonce = Nonce::generate();
-			StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, 0, default_input);
+			StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, 0, default_input, None);
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
@@ -178,7 +178,7 @@ mod public {
 				fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
 					let secret_key = SecretKey::generate();
 					let nonce = Nonce::generate();
-					StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input);
+					StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
 
 					true
 				}
