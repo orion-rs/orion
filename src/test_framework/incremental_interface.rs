@@ -26,9 +26,13 @@ use crate::errors::UnknownCryptoError;
 pub trait TestableStreamingContext<T: PartialEq> {
 	/// Interface to streaming API.
 	fn reset(&mut self) -> Result<(), UnknownCryptoError>;
+	///
 	fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError>;
+	///
 	fn finalize(&mut self) -> Result<T, UnknownCryptoError>;
+	///
 	fn one_shot(input: &[u8]) -> Result<T, UnknownCryptoError>;
+	///
 	fn verify_result(expected: &T, input: &[u8]) -> Result<(), UnknownCryptoError>;
 
 	/// Testing utiliy-functions.
@@ -65,6 +69,7 @@ where
 	const DEFAULT_INPUT: [u8; 37] = [255u8; 37];
 
 	#[cfg(feature = "safe_api")]
+	///
 	pub fn run_all_tests_property(&self, data: &[u8]) {
 		self.consistency(data);
 		self.consistency(&[0u8; 0]);
@@ -315,6 +320,6 @@ where
 	/// Using different input should result in a failed verification.
 	pub fn verify_diff_input_err(data: &[u8]) {
 		let expected = T::one_shot(&data).unwrap();
-		assert!(T::verify_result(&expected, "Bad data".as_bytes()).is_err());
+		assert!(T::verify_result(&expected, b"Bad data").is_err());
 	}
 }

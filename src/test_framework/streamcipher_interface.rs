@@ -26,6 +26,7 @@
 use crate::errors::UnknownCryptoError;
 
 #[cfg(feature = "safe_api")]
+///
 pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 	encryptor: Encryptor,
 	decryptor: Decryptor,
@@ -93,7 +94,7 @@ where
 	let enc_res = encryptor(key, nonce, counter, &[0u8; 0], &mut dst_out).is_err();
 	let dec_res = decryptor(key, nonce, counter, &[0u8; 0], &mut dst_out).is_err();
 
-	return enc_res && dec_res;
+	enc_res && dec_res
 }
 
 #[cfg(feature = "safe_api")]

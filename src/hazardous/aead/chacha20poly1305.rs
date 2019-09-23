@@ -277,6 +277,7 @@ mod public {
 				secret_key,
 				nonce,
 				default_input,
+				None,
 				POLY1305_OUTSIZE,
 				&[0u8; 0],
 			);
@@ -293,7 +294,7 @@ mod public {
 			fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
 				let secret_key = SecretKey::generate();
 				let nonce = Nonce::from_slice(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
-				AeadTestRunner(seal, open, secret_key, nonce, &input, POLY1305_OUTSIZE, &ad);
+				AeadTestRunner(seal, open, secret_key, nonce, &input, None, POLY1305_OUTSIZE, &ad);
 
 				true
 			}
