@@ -62,9 +62,7 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
 			tag.len(),
 			aad,
 		);
-	}
-
-	if nonce.len() == XCHACHA_NONCESIZE {
+	} else if nonce.len() == XCHACHA_NONCESIZE {
 		let sk = SecretKey::from_slice(&key).unwrap();
 		let n = xchacha20poly1305::Nonce::from_slice(&nonce).unwrap();
 
