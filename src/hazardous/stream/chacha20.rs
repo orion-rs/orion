@@ -96,10 +96,10 @@
 //! assert_eq!(dst_out_pt, message);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`keystream_block`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/fn.keystream_block.html
-//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
-//! [`aead`]: https://docs.rs/orion/latest/orion/hazardous/aead/index.html
-//! [XChaCha20Poly1305]: https://docs.rs/orion/latest/orion/hazardous/aead/xchacha20poly1305/index.html
+//! [`keystream_block`]: fn.keystream_block.html
+//! [`SecretKey::generate()`]: struct.SecretKey.html
+//! [`aead`]: ../../aead/index.html
+//! [XChaCha20Poly1305]: ../../aead/xchacha20poly1305/index.html
 use crate::endianness::load_u32_le;
 use crate::errors::UnknownCryptoError;
 use zeroize::Zeroize;

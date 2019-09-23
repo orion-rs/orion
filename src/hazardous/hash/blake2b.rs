@@ -45,7 +45,7 @@
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
 //!   [`SecretKey::generate()`] can be used
-//! for this. It generates a secret key of 64 bytes.
+//! for this. It generates a secret key of 32 bytes.
 //! - The minimum recommended size for a secret key is 32 bytes.
 //! - When using Blake2b with a secret key, then the output can be used as a
 //!   MAC. If this is the
@@ -73,12 +73,12 @@
 //! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data")?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Blake2b.html
-//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Blake2b.html
-//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Blake2b.html
-//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.SecretKey.html
-//! [`verify()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/fn.verify.html
-//! [`as_ref()`]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/struct.Digest.html
+//! [`update()`]: struct.Blake2b.html
+//! [`reset()`]: struct.Blake2b.html
+//! [`finalize()`]: struct.Blake2b.html
+//! [`SecretKey::generate()`]: struct.SecretKey.html
+//! [`verify()`]: fn.verify.html
+//! [`as_ref()`]: struct.Digest.html
 use crate::{
 	endianness::{load_u64_into_le, store_u64_into_le},
 	errors::UnknownCryptoError,
@@ -90,6 +90,8 @@ const BLAKE2B_BLOCKSIZE: usize = 128;
 const BLAKE2B_KEYSIZE: usize = 64;
 /// The maximum output size for the hash function BLAKE2b.
 const BLAKE2B_OUTSIZE: usize = 64;
+/// The default size for a randomly generated secret key.
+const BLAKE2B_GENSIZE: usize = 32;
 
 construct_secret_key! {
 	/// A type to represent the secret key that BLAKE2b uses for keyed mode.
@@ -102,7 +104,7 @@ construct_secret_key! {
 	/// # Panics:
 	/// A panic will occur if:
 	/// - Failure to generate random bytes securely.
-	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, BLAKE2B_KEYSIZE)
+	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, BLAKE2B_GENSIZE)
 }
 
 construct_public! {

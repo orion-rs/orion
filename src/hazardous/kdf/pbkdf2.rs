@@ -68,8 +68,8 @@
 //! )?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`Password::generate()`]: https://docs.rs/orion/latest/orion/hazardous/kdf/pbkdf2/struct.Password.html
-//! [`util::secure_rand_bytes()`]: https://docs.rs/orion/latest/orion/util/fn.secure_rand_bytes.html
+//! [`Password::generate()`]: struct.Password.html#method.generate
+//! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::{
 	errors::UnknownCryptoError,

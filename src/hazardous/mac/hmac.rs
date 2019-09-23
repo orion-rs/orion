@@ -56,10 +56,10 @@
 //! assert!(hmac::verify(&tag, &key, b"Some message.")?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
-//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
-//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
-//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.SecretKey.html
+//! [`update()`]: struct.Hmac.html
+//! [`reset()`]: struct.Hmac.html
+//! [`finalize()`]: struct.Hmac.html
+//! [`SecretKey::generate()`]: struct.SecretKey.html
 
 use crate::{
 	errors::UnknownCryptoError,

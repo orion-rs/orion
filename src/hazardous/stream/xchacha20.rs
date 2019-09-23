@@ -79,9 +79,9 @@
 //! assert_eq!(dst_out_pt, message);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`Nonce::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/xchacha20/struct.Nonce.html
-//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
-//! [XChaCha20Poly1305]: https://docs.rs/orion/latest/orion/hazardous/aead/xchacha20poly1305/index.html
+//! [`Nonce::generate()`]: struct.Nonce.html
+//! [`SecretKey::generate()`]: ../chacha20/struct.SecretKey.html
+//! [XChaCha20Poly1305]: ../../aead/xchacha20poly1305/index.html
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{
 	errors::UnknownCryptoError,
@@ -118,7 +118,7 @@ pub(crate) fn subkey_and_nonce(secret_key: &SecretKey, nonce: &Nonce) -> (Secret
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn encrypt(
 	secret_key: &SecretKey,
 	nonce: &Nonce,
@@ -132,7 +132,7 @@ pub fn encrypt(
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn decrypt(
 	secret_key: &SecretKey,
 	nonce: &Nonce,

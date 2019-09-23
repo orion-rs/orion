@@ -92,7 +92,7 @@ mod wireguard_xchacha20_poly1305 {
 	use self::{hex::decode, orion::hazardous::aead};
 
 	fn wireguard_test_runner(key: &[u8], nonce: &[u8], plaintext: &[u8], expected_ct: &[u8]) {
-		// This test vectors ciphertext already includes the tag
+		// These test vector ciphertexts already include the tag
 		// So the default test runner can't be used
 		let mut dst_out_ct = vec![0u8; expected_ct.len()];
 		let mut dst_out_pt = vec![0u8; plaintext.len()];
