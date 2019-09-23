@@ -480,6 +480,8 @@ mod public {
 			StreamingContextConsistencyTester, TestableStreamingContext,
 		};
 
+		// If a Poly1305 one-time key is all 0's then the tag will also be, regardless
+		// of which message data has been processed.
 		const KEY: [u8; 32] = [24u8; 32];
 
 		impl TestableStreamingContext<Tag> for Poly1305 {
