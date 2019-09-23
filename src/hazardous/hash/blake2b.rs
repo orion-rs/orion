@@ -90,6 +90,7 @@ const BLAKE2B_BLOCKSIZE: usize = 128;
 const BLAKE2B_KEYSIZE: usize = 64;
 /// The maximum output size for the hash function BLAKE2b.
 const BLAKE2B_OUTSIZE: usize = 64;
+#[cfg(feature = "safe_api")]
 /// The default size for a randomly generated secret key.
 const BLAKE2B_GENSIZE: usize = 32;
 
