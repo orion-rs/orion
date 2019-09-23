@@ -23,5 +23,5 @@
 /// IETF ChaCha20 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub mod chacha20;
 
-/// XChaCha20 as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+/// XChaCha20 as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub mod xchacha20;

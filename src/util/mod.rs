@@ -73,7 +73,7 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 ///
 /// # About:
 /// Compare two equal length slices, in constant time, using the
-/// [subtle](https://crates.io/crates/subtle) crate.
+/// [subtle](https://github.com/dalek-cryptography/subtle) crate.
 ///
 /// # Parameters:
 /// - `a`: The first slice used in the comparison.
