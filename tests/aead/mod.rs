@@ -32,15 +32,7 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
 	if input.is_empty() || output.is_empty() {
 		return;
 	}
-	if nonce.len() != IETF_CHACHA_NONCESIZE {
-		assert!(chacha20poly1305::Nonce::from_slice(&nonce).is_err());
-		return;
-	}
-	if nonce.len() != XCHACHA_NONCESIZE {
-		assert!(xchacha20poly1305::Nonce::from_slice(&nonce).is_err());
-		return;
-	}
-
+	
 	let mut dst_ct_out = vec![0u8; input.len() + tag.len()];
 	let mut dst_pt_out = vec![0u8; input.len()];
 
@@ -96,6 +88,9 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
 			tag.len(),
 			aad,
 		);
+	} else {
+		assert!(chacha20poly1305::Nonce::from_slice(&nonce).is_err());
+		assert!(xchacha20poly1305::Nonce::from_slice(&nonce).is_err());
 	}
 }
 
