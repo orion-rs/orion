@@ -23,10 +23,6 @@
 ///
 /// Trait implementation macros
 
-//TODO: Should the tag of a mac implement zeroize?
-// automatic zeroize on drop?
-// Should they implement Copy, Clone?
-
 #[cfg(feature = "safe_api")]
 /// Macro that implements the `Default` trait, which will make a type, that
 /// needs secure default methods like CSPRNG generation, return itself with a
@@ -580,14 +576,6 @@ macro_rules! construct_tag {
 
         impl_omitted_debug_trait!($name);
         impl_ct_partialeq_trait!($name, unprotected_as_bytes);
-
-        impl zeroize::Zeroize for $name {
-            fn zeroize(&mut self) {
-                self.value.zeroize();
-                self.original_length.zeroize();
-
-            }
-        }
 
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
