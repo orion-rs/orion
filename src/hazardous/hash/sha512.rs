@@ -503,7 +503,6 @@ mod public {
 			let _ = state.finalize().unwrap();
 			assert!(state.finalize().is_err());
 		}
-
 	}
 
 	mod test_streaming_interface {

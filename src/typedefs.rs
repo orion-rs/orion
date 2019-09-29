@@ -54,6 +54,8 @@ macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
         }
     }
 
+    impl core::cmp::Eq for $name {}
+
     impl core::cmp::PartialEq<&[u8]> for $name {
         fn eq(&self, other: &&[u8]) -> bool {
             use subtle::ConstantTimeEq;

@@ -31,7 +31,7 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
 	if input.is_empty() || output.is_empty() {
 		return;
 	}
-	
+
 	let sk = SecretKey::from_slice(&key).unwrap();
 	let mut dst_ct_out = vec![0u8; input.len() + tag.len()];
 	let mut dst_pt_out = vec![0u8; input.len()];
