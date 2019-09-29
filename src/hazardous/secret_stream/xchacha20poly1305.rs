@@ -24,26 +24,60 @@
 // https://download.libsodium.org/doc/secret-key_cryptography/secretstream
 // https://github.com/jedisct1/libsodium/blob/stable/src/libsodium/crypto_secretstream/xchacha20poly1305/secretstream_xchacha20poly1305.c
 
+//! # About:
+//! Stream encryption based on XChaCha20Poly1305
+//! This algorithm and implementation is based on the [secretstream API]
+//! (https://download.libsodium.org/doc/secret-key_cryptography/secretstream) of Libsodium
+//!
+//! # Parameters:
+//! - `secret_key`: The secret key.
+//! - `nonce`: The nonce value.
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be
+//!   `None`. This data is also not contained in the output).
+//! - `plaintext`: The data to be encrypted.
+//! - `ciphertext`: The encrypted data with Poly1305 mac and tag indicating its function
+//! - `dst_out`: Destination array that will hold the
+//!   `ciphertext`/`plaintext` after encryption/decryption.
+//! - `tag`: Indicates the type of message
+//!
+//! # Errors:
+//! An error will be returned if:
+//! - The length of `dst_out` is less than `plaintext + 17` when encrypting.
+//! - The length of `dst_out` is less than `ciphertext - 17` when
+//!   decrypting.
+//! - The length of `ciphertext_with_tag` is not greater than `16`.
+//! - The received mac does not match the calculated mac when decrypting. (this can indicate
+//!   a dropped or reordered message )
+//!
+//! # Security:
+//! - It is critical for security that a given nonce is not re-used with a given
+//!   key.
+//! -The nonce can be  randomly generated using a CSPRNG.
+//! [`Nonce::generate()`] can be used for this.
+//! - To securely generate a strong key, use [`SecretKey::generate()`].
+//! - The length of messages is leaked.
+
+
 use crate::const_assert;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead::chacha20poly1305::{padding, poly1305_key_gen};
 use crate::hazardous::mac::poly1305::{Poly1305, Tag as PolyTag, POLY1305_OUTSIZE};
 use crate::hazardous::stream::chacha20::{
 	encrypt as chacha20_enc, encrypt_in_place as chacha20_enc_in_place, Nonce as chacha20Nonce,
-	SecretKey as chacha20Key, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
+	CHACHA_KEYSIZE, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
 };
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
+use crate::hazardous::stream::chacha20::SecretKey;
 pub use crate::hazardous::stream::xchacha20::Nonce;
 
 use bitflags::bitflags;
 use subtle::ConstantTimeEq;
 
-//TODO Add more tests
 
 bitflags! {
 	/// Tag that indicates the type of message
 	pub struct Tag: u8 {
-		/// A simple message with no special meaning
+		/// A  message with no special meaning
 		const MESSAGE = 0b0000_0000;
 		/// Marks that the message is the end of a set of messages. Allows the decrypting site to
 		/// start working with this data
@@ -78,7 +112,7 @@ type CounterType = u32;
 
 /// Secret Stream State
 pub struct SecretStreamXChaCha20Poly1305 {
-	key: chacha20Key,
+	key: SecretKey,
 	counter: CounterType,
 	inonce: INonceType,
 }
@@ -103,7 +137,7 @@ impl SecretStreamXChaCha20Poly1305 {
 	}
 
 	/// creates a new internal state
-	pub fn new(key: chacha20Key, nonce: Nonce) -> Self {
+	pub fn new(secret_key: SecretKey, nonce: Nonce) -> Self {
 		const_assert!(
 			SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES == core::mem::size_of::<CounterType>()
 		);
@@ -116,7 +150,7 @@ impl SecretStreamXChaCha20Poly1305 {
 				== IETF_CHACHA_NONCESIZE
 		);
 		let mut state = Self {
-			key: subkey_and_nonce(&key, &nonce).0,
+			key: subkey_and_nonce(&secret_key, &nonce).0,
 			counter: 1,
 			inonce: [0u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES],
 		};
@@ -126,13 +160,8 @@ impl SecretStreamXChaCha20Poly1305 {
 		state
 	}
 
-	/// prepare a new push or pull operation
-	pub fn init(&mut self, key: chacha20Key, nonce: Nonce) {
-		*self = SecretStreamXChaCha20Poly1305::new(key, nonce);
-	}
-
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// derives a new secret key used for encryption/decryption
+	/// derives a new internal key used for encryption/decryption
 	pub fn rekey(&mut self) -> Result<(), UnknownCryptoError> {
 		let mut new_key_and_inonce =
 			[0u8; CHACHA_KEYSIZE + SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
@@ -142,7 +171,7 @@ impl SecretStreamXChaCha20Poly1305 {
 
 		chacha20_enc_in_place(&self.key, &self.get_nonce(), 0, &mut new_key_and_inonce)?;
 
-		self.key = chacha20Key::from_slice(&new_key_and_inonce[..CHACHA_KEYSIZE]).unwrap();
+		self.key = SecretKey::from_slice(&new_key_and_inonce[..CHACHA_KEYSIZE]).unwrap();
 		self.inonce
 			.copy_from_slice(&new_key_and_inonce[CHACHA_KEYSIZE..]);
 
@@ -151,8 +180,7 @@ impl SecretStreamXChaCha20Poly1305 {
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// TODO: Doc
-	/// //Ecryptes a message
+	/// Encrypts a message
 	pub fn encrypt_message(
 		&mut self,
 		plaintext: &[u8],
@@ -200,19 +228,18 @@ impl SecretStreamXChaCha20Poly1305 {
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// TODO: Doc
-	/// Decryptes a message
+	/// Decrypts a message
 	pub fn decrypt_message(
 		&mut self,
-		cipher: &[u8],
+		ciphertext: &[u8],
 		ad: Option<&[u8]>,
-		plaintext_out: &mut [u8],
+		dst_out: &mut [u8],
 	) -> Result<Tag, UnknownCryptoError> {
-		if cipher.len() < SECRETSTREAM_XCHACHA20POLY1305_ABYTES {
+		if ciphertext.len() < SECRETSTREAM_XCHACHA20POLY1305_ABYTES {
 			return Err(UnknownCryptoError);
 		}
-		let msglen = cipher.len() - SECRETSTREAM_XCHACHA20POLY1305_ABYTES;
-		if plaintext_out.len() < msglen {
+		let msglen = ciphertext.len() - SECRETSTREAM_XCHACHA20POLY1305_ABYTES;
+		if dst_out.len() < msglen {
 			return Err(UnknownCryptoError);
 		}
 		let mut block = [0u8; BLOCKSIZE];
@@ -224,22 +251,22 @@ impl SecretStreamXChaCha20Poly1305 {
 		let msgpos = core::mem::size_of::<Tag>();
 		let macpos = msgpos + msglen;
 
-		block[0] = cipher[0];
+		block[0] = ciphertext[0];
 		chacha20_enc_in_place(&self.key, &self.get_nonce(), 1, &mut block)?;
 		let tag = Tag::from_bits(block[0]).ok_or(UnknownCryptoError)?;
-		block[0] = cipher[0];
+		block[0] = ciphertext[0];
 		let mac = self
-			.generate_auth_tag(cipher, ad, msglen, &block, adlen, msgpos)
+			.generate_auth_tag(ciphertext, ad, msglen, &block, adlen, msgpos)
 			.unwrap();
-		if !(mac == &cipher[macpos..macpos + mac.get_length()]) {
+		if !(mac == &ciphertext[macpos..macpos + mac.get_length()]) {
 			return Err(UnknownCryptoError);
 		}
 		chacha20_enc(
 			&self.key,
 			&self.get_nonce(),
 			2,
-			&cipher[msgpos..(msgpos + msglen)],
-			plaintext_out,
+			&ciphertext[msgpos..(msgpos + msglen)],
+			dst_out,
 		)?;
 		xor_buf8(self.inonce.as_mut(), &mac.unprotected_as_bytes()[..8]);
 		self.counter = self.counter.wrapping_add(1);
@@ -335,7 +362,7 @@ mod private {
 	#[test]
 	fn test_enc_and_dec_valid() {
 		let mut s = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[
+			SecretKey::from_slice(&[
 				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
 				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
 				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
@@ -522,7 +549,7 @@ mod private {
 
 		//decrypt
 		let mut s = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[
+			SecretKey::from_slice(&[
 				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
 				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
 				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
@@ -573,7 +600,7 @@ mod private {
 	#[test]
 	fn test_reorder_or_drop_msg() {
 		let mut s = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[
+			SecretKey::from_slice(&[
 				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
 				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
 				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
@@ -625,7 +652,7 @@ mod private {
 	#[test]
 	fn test_modified_tag() {
 		let mut s = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[
+			SecretKey::from_slice(&[
 				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
 				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
 				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
@@ -651,7 +678,7 @@ mod private {
 	#[test]
 	fn test_modified_mac() {
 		let mut s = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[
+			SecretKey::from_slice(&[
 				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
 				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
 				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
@@ -678,7 +705,7 @@ mod private {
 	#[test]
 	fn test_modified_cipher() {
 		let mut s = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[
+			SecretKey::from_slice(&[
 				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
 				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
 				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
@@ -707,7 +734,7 @@ mod private {
 		let mut cipher = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		let mut cipher2 = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[0; 32]).unwrap(),
+			SecretKey::from_slice(&[0; 32]).unwrap(),
 			Nonce::from_slice(&[0; 24]).unwrap(),
 		);
 		state_enc
@@ -725,14 +752,14 @@ mod private {
 		let mut cipher = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		let mut cipher2 = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[0; 32]).unwrap(),
+			SecretKey::from_slice(&[0; 32]).unwrap(),
 			Nonce::from_slice(&[0; 24]).unwrap(),
 		);
 		state_enc
 			.encrypt_message(&input, None, &mut cipher, Tag::MESSAGE)
 			.unwrap();
 		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[0; 32]).unwrap(),
+			SecretKey::from_slice(&[0; 32]).unwrap(),
 			Nonce::from_slice(&[0; 24]).unwrap(),
 		);
 		state_enc.rekey().unwrap();
@@ -745,7 +772,7 @@ mod private {
 	#[test]
 	fn test_decrypt_cipher_too_short() {
 		let mut state = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[0; 32]).unwrap(),
+			SecretKey::from_slice(&[0; 32]).unwrap(),
 			Nonce::from_slice(&[0; 24]).unwrap(),
 		);
 		let cipher = [0u8; 16];
@@ -756,7 +783,7 @@ mod private {
 	#[test]
 	fn test_decrypt_buffer_too_short() {
 		let mut state = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[
+			SecretKey::from_slice(&[
 				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
 				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
 				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
@@ -780,7 +807,7 @@ mod private {
 	#[test]
 	fn test_decrypt_buffer_exact() {
 		let mut state = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[
+			SecretKey::from_slice(&[
 				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
 				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
 				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
@@ -805,7 +832,7 @@ mod private {
 	#[test]
 	fn test_encrypt_buffer_too_short() {
 		let mut state = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[0; 32]).unwrap(),
+			SecretKey::from_slice(&[0; 32]).unwrap(),
 			Nonce::from_slice(&[0; 24]).unwrap(),
 		);
 		let text = [0u8; 16];
@@ -818,7 +845,7 @@ mod private {
 	#[test]
 	fn test_encrypt_buffer_exact() {
 		let mut state = SecretStreamXChaCha20Poly1305::new(
-			chacha20Key::from_slice(&[0; 32]).unwrap(),
+			SecretKey::from_slice(&[0; 32]).unwrap(),
 			Nonce::from_slice(&[0; 24]).unwrap(),
 		);
 		let text = [0u8; 16];
