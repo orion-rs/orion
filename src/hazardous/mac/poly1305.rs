@@ -60,10 +60,10 @@
 //! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes())?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/struct.Poly1305.html
-//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/struct.Poly1305.html
-//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/struct.Poly1305.html
-//! [`OneTimeKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/struct.OneTimeKey.html
+//! [`update()`]: struct.Poly1305.html
+//! [`reset()`]: struct.Poly1305.html
+//! [`finalize()`]: struct.Poly1305.html
+//! [`OneTimeKey::generate()`]: struct.OneTimeKey.html
 
 extern crate core;
 
@@ -615,7 +615,6 @@ mod public {
 			let _ = state.finalize().unwrap();
 			assert!(state.finalize().is_err());
 		}
-
 	}
 
 	mod test_streaming_interface {

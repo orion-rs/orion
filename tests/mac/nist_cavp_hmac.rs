@@ -764,7 +764,6 @@ fn test_nist_cavp() {
 			&decode(test_case[1]).unwrap(),
 			&decode(test_case[2]).unwrap(),
 			Some(test_case[3].parse::<usize>().unwrap()),
-		)
-		.unwrap();
+		);
 	}
 }

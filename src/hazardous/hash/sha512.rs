@@ -54,10 +54,10 @@
 //! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/hash/sha512/struct.Sha512.html
-//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/hash/sha512/struct.Sha512.html
-//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/hash/sha512/struct.Sha512.html
-//! [BLAKE2b]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/index.html
+//! [`update()`]: struct.Sha512.html
+//! [`reset()`]: struct.Sha512.html
+//! [`finalize()`]: struct.Sha512.html
+//! [BLAKE2b]: ../blake2b/index.html
 
 use crate::{
 	endianness::{load_u64_into_be, store_u64_into_be},
@@ -503,7 +503,6 @@ mod public {
 			let _ = state.finalize().unwrap();
 			assert!(state.finalize().is_err());
 		}
-
 	}
 
 	mod test_streaming_interface {

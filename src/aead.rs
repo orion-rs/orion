@@ -74,11 +74,11 @@
 //! let decrypted_data = aead::open(&secret_key, &ciphertext)?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`seal`]: https://docs.rs/orion/latest/orion/aead/fn.seal.html
-//! [`open`]: https://docs.rs/orion/latest/orion/aead/fn.open.html
-//! [`POLY1305_OUTSIZE`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/constant.POLY1305_OUTSIZE.html
-//! [`XCHACHA_NONCESIZE`]: https://docs.rs/orion/latest/orion/hazardous/stream/xchacha20/constant.XCHACHA_NONCESIZE.html
-//! [`SecretKey::default()`]: https://docs.rs/orion/latest/orion/aead/struct.SecretKey.html
+//! [`seal`]: fn.seal.html
+//! [`open`]: fn.open.html
+//! [`POLY1305_OUTSIZE`]: ../hazardous/mac/poly1305/constant.POLY1305_OUTSIZE.html
+//! [`XCHACHA_NONCESIZE`]: ../hazardous/stream/xchacha20/constant.XCHACHA_NONCESIZE.html
+//! [`SecretKey::default()`]: struct.SecretKey.html
 
 pub use crate::hltypes::SecretKey;
 use crate::{

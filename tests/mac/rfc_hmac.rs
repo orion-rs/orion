@@ -17,7 +17,7 @@ mod rfc4231 {
 		)
 		.unwrap();
 
-		assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None).is_ok());
+		hmac_test_runner(&secret_key, &data, &expected_hmac_512, None);
 	}
 
 	#[test]
@@ -31,7 +31,7 @@ mod rfc4231 {
 		)
 		.unwrap();
 
-		assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
+		hmac_test_runner(&secret_key, &data, &expected_hmac_512, None);
 	}
 
 	#[test]
@@ -49,7 +49,7 @@ mod rfc4231 {
 		)
 		.unwrap();
 
-		assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
+		hmac_test_runner(&secret_key, &data, &expected_hmac_512, None);
 	}
 
 	#[test]
@@ -67,7 +67,7 @@ mod rfc4231 {
 		)
 		.unwrap();
 
-		assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
+		hmac_test_runner(&secret_key, &data, &expected_hmac_512, None);
 	}
 
 	#[test]
@@ -77,7 +77,12 @@ mod rfc4231 {
 
 		let expected_hmac_512 = decode("415fad6271580a531d4179bc891d87a6").unwrap();
 
-		assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, Some(16),).is_ok());
+		hmac_test_runner(
+			&secret_key,
+			&data,
+			&expected_hmac_512,
+			Some(expected_hmac_512.len()),
+		);
 	}
 
 	#[test]
@@ -102,7 +107,7 @@ mod rfc4231 {
 		)
 		.unwrap();
 
-		assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
+		hmac_test_runner(&secret_key, &data, &expected_hmac_512, None);
 	}
 
 	#[test]
@@ -130,6 +135,6 @@ mod rfc4231 {
 		)
 		.unwrap();
 
-		assert!(hmac_test_runner(&secret_key, &data, &expected_hmac_512, None,).is_ok());
+		hmac_test_runner(&secret_key, &data, &expected_hmac_512, None);
 	}
 }

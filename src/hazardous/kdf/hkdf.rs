@@ -64,7 +64,7 @@
 //! )?);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`util::secure_rand_bytes()`]: https://docs.rs/orion/latest/orion/util/fn.secure_rand_bytes.html
+//! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::{
 	errors::UnknownCryptoError,
