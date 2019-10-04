@@ -282,7 +282,7 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-	// One function tested per submodule.
+
 	mod test_padding {
 		use super::*;
 		#[test]
@@ -381,11 +381,8 @@ mod private {
 			let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).is_ok());
-
 			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 63).is_ok());
-
 			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 1).is_ok());
-
 			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 1], 1).is_ok());
 		}
 	}

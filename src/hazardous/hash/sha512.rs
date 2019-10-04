@@ -499,7 +499,6 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-	// One function tested per submodule.
 
 	mod test_increment_mlen {
 		use super::*;
@@ -537,7 +536,6 @@ mod private {
 			};
 			// u64::max_value() - 7, to leave so that the length represented
 			// in bites should overflow by exactly one.
-
 			context.increment_mlen(1);
 		}
 	}

@@ -431,21 +431,9 @@ pub fn verify(
 mod public {
 	use super::*;
 
+	#[cfg(feature = "safe_api")]
 	mod test_verify {
 		use super::*;
-
-		#[test]
-		fn test_poly1305_verify_err() {
-			let mut tag =
-				poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
-			tag.value[0] ^= 1;
-			assert!(verify(
-				&tag,
-				&OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-			)
-			.is_err());
-		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
@@ -453,22 +441,16 @@ mod public {
 			use super::*;
 
 			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
+				/// When using a different key, verify() should always yield an error.
+				/// NOTE: Using different and same input data is tested with TestableStreamingContext.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = OneTimeKey::generate();
 					let mut state = Poly1305::new(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
-
 					let bad_sk = OneTimeKey::generate();
 
-					let res = if verify(&tag, &bad_sk, &data[..]).is_err() {
-						true
-					} else {
-						false
-					};
-
-					res
+					verify(&tag, &bad_sk, &data[..]).is_err()
 				}
 			}
 		}

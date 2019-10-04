@@ -185,8 +185,6 @@ pub fn verify(
 mod public {
 	use super::*;
 
-	// One function tested per submodule.
-
 	mod test_verify {
 		use super::*;
 

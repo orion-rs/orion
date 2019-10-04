@@ -25,18 +25,22 @@ use core::marker::PhantomData;
 
 /// Trait to define default streaming contexts that can be tested.
 pub trait TestableStreamingContext<T: PartialEq> {
-	/// Interface to streaming API.
+	/// Streaming context function to reset the internal state.
 	fn reset(&mut self) -> Result<(), UnknownCryptoError>;
-	///
+
+	/// Streaming context function to update the internal state.
 	fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError>;
-	///
+
+	/// Streaming context function to finalize the internal state.
 	fn finalize(&mut self) -> Result<T, UnknownCryptoError>;
-	///
+
+	/// Streaming context function to combine new(), update() and finalize() from the internal state.
 	fn one_shot(input: &[u8]) -> Result<T, UnknownCryptoError>;
-	///
+
+	/// Streaming context function to verify pre-computed results.
 	fn verify_result(expected: &T, input: &[u8]) -> Result<(), UnknownCryptoError>;
 
-	/// Testing utiliy-functions.
+	/// Testing utiliy-function that compares the internal state to another.
 	fn compare_states(state_1: &Self, state_2: &Self);
 }
 
@@ -55,8 +59,7 @@ where
 	T: TestableStreamingContext<R> + Clone,
 {
 	/// The streaming interface tester is created utilizing an initialized
-	/// streaming state and a return type. The contents of the return type
-	/// do not matter.
+	/// streaming state.
 	pub fn new(streaming_context: T, blocksize: usize) -> Self {
 		Self {
 			_return_type: PhantomData,
@@ -70,13 +73,16 @@ where
 	const DEFAULT_INPUT: [u8; 37] = [255u8; 37];
 
 	#[cfg(feature = "safe_api")]
-	///
+	/// Run all consistency tests given some input data.
+	/// Usually used with quickcheck.
 	pub fn run_all_tests_property(&self, data: &[u8]) {
 		self.consistency(data);
 		self.consistency(&[0u8; 0]);
 		self.produces_same_state(data);
+
 		// Following test requires std.
 		self.incremental_and_one_shot(data);
+
 		self.double_finalize_with_reset_no_update_ok(data);
 		self.double_finalize_with_reset_ok(data);
 		self.double_finalize_err(data);
@@ -90,13 +96,15 @@ where
 
 	#[cfg(feature = "safe_api")]
 	/// Used when quickcheck is not available to generate input.
-	/// Default input `data` is used instead.
+	/// Default input data is used instead. Requires std.
 	pub fn run_all_tests(&self) {
 		self.consistency(&Self::DEFAULT_INPUT);
 		self.consistency(&[0u8; 0]);
 		self.produces_same_state(&Self::DEFAULT_INPUT);
+
 		// Following test requires std.
 		self.incremental_processing_with_leftover();
+
 		self.incremental_and_one_shot(&Self::DEFAULT_INPUT);
 		self.double_finalize_with_reset_no_update_ok(&Self::DEFAULT_INPUT);
 		self.double_finalize_with_reset_ok(&Self::DEFAULT_INPUT);
@@ -111,7 +119,7 @@ where
 
 	#[cfg(not(feature = "safe_api"))]
 	/// Used when quickcheck is not available to generate input.
-	/// Default input `data` is used instead.
+	/// Default input data is used instead. Without std.
 	pub fn run_all_tests(&self) {
 		self.consistency(&Self::DEFAULT_INPUT);
 		self.consistency(&[0u8; 0]);

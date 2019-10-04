@@ -26,7 +26,7 @@
 use crate::errors::UnknownCryptoError;
 
 #[cfg(feature = "safe_api")]
-///
+/// Test runner for stream ciphers.
 pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 	encryptor: Encryptor,
 	decryptor: Decryptor,
@@ -41,7 +41,7 @@ pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 {
 	// Skip tests that require non-empty input.
 	// The tests that check for behavior in empty and non-empty
-	// input, do not take an input parameter for that reason.
+	// input, do not take an input parameter.
 	if !input.is_empty() {
 		encrypt_decrypt_same_plaintext(&encryptor, &decryptor, &key, &nonce, counter, input);
 		encrypt_decrypt_out_length(&encryptor, &decryptor, &key, &nonce, input);

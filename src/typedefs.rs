@@ -78,8 +78,6 @@ macro_rules! impl_omitted_debug_trait (($name:ident) => (
 ));
 
 /// Macro that implements the `Debug` trait on a object called `$name`.
-/// This `Debug` will omit any fields of object `$name` to avoid them being
-/// written to logs.
 macro_rules! impl_normal_debug_trait (($name:ident) => (
     impl core::fmt::Debug for $name {
         fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -97,7 +95,7 @@ macro_rules! impl_drop_trait (($name:ident) => (
     impl Drop for $name {
         fn drop(&mut self) {
             use zeroize::Zeroize;
-            self.value.zeroize();
+            self.value.iter_mut().zeroize();
         }
     }
 ));
@@ -144,7 +142,7 @@ macro_rules! impl_from_trait (($name:ident, $size:expr) => (
 macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[allow(clippy::double_comparisons)]
-    /// Make an object from a given byte slice.
+    /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
 
         let slice_len = slice.len();
@@ -166,7 +164,7 @@ macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr
 macro_rules! func_from_slice_variable_size (($name:ident) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[cfg(feature = "safe_api")]
-    /// Make an object from a given byte slice.
+    /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
         if slice.is_empty() {
             return Err(UnknownCryptoError);
@@ -208,7 +206,7 @@ macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) =
         use crate::util;
         let mut value = [0u8; $upper_bound];
         // This will not panic on size, unless the newtype has been initialized $upper_bound
-        // or $gen_length with 0, statically.
+        // or $gen_length with 0.
         util::secure_rand_bytes(&mut value[..$gen_length]).unwrap();
 
         $name { value: value, original_length: $gen_length }
@@ -382,9 +380,8 @@ macro_rules! test_generate_variable (($name:ident) => (
 ///   "test_$name").
 ///
 /// - $lower_bound/$upper_bound: An inclusive range that defines what length a
-///   secret value might be.
-///  Used to validate length of `slice` in from_slice(). $upper_bound also
-/// defines the `value` field array allocation size.
+///   secret value might be. Used to validate length of `slice` in from_slice().
+///   $upper_bound also defines the `value` field array allocation size.
 ///
 /// - $gen_length: The amount of data to be randomly generated when using
 ///   generate().
@@ -460,14 +457,12 @@ macro_rules! construct_secret_key {
 ///   "test_$name").
 ///
 /// - $lower_bound/$upper_bound: An inclusive range that defines what length a
-///   secret value might be.
+///   public value might be. Used to validate length of `slice` in from_slice().
+///   $upper_bound also defines the `value` field array allocation size.
 ///
 /// - $gen_length: The amount of data to be randomly generated when using
 ///   generate(). If not supplied, the public newtype will not have a
 ///   `generate()` function available.
-///
-/// Used to validate length of `slice` in from_slice(). $upper_bound also
-/// defines the `value` field array allocation size.
 macro_rules! construct_public {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr)) => (
@@ -645,7 +640,7 @@ macro_rules! construct_hmac_key {
 
         impl $name {
             #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-            /// Make an object from a given byte slice.
+            /// Construct from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
                 use crate::hazardous::hash::sha512::{self, SHA512_OUTSIZE};
 

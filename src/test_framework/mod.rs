@@ -20,13 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// Testing framework for streaming context that offer
-/// incremental processing.
+/// Tests for a streaming context that offers incremental processing.
 pub mod incremental_interface;
 
-/// Testing framework for AEAD interfaces such as
-/// `chacha20poly1305`.
+/// Tests for AEAD interfaces such as `chacha20poly1305`.
 pub mod aead_interface;
 
-/// Testing framework for Stream Cipherts such as `chacha20`
+/// Tests for stream ciphers such as `chacha20`.
 pub mod streamcipher_interface;

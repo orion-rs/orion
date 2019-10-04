@@ -138,13 +138,9 @@ mod public {
 		#[test]
 		fn test_pbkdf2_verify() {
 			let password = Password::from_slice(&[0u8; 64]).unwrap();
-
 			let pbkdf2_dk = hash_password(&password, 100).unwrap();
 
-			assert_eq!(
-				hash_password_verify(&pbkdf2_dk, &password, 100).unwrap(),
-				true
-			);
+			assert!(hash_password_verify(&pbkdf2_dk, &password, 100).is_ok());
 		}
 
 		#[test]
@@ -208,11 +204,7 @@ mod public {
 				let pass = Password::from_slice(&passin[..]).unwrap();
 				let pass_hash = hash_password(&pass, 100).unwrap();
 
-				if hash_password_verify(&pass_hash, &pass, 100).is_ok() {
-					true
-				} else {
-					false
-				}
+				hash_password_verify(&pass_hash, &pass, 100).is_ok()
 			}
 		}
 
@@ -229,11 +221,7 @@ mod public {
 				let pass_hash = hash_password(&pass, 100).unwrap();
 				let bad_pass = Password::generate(32).unwrap();
 
-				if hash_password_verify(&pass_hash, &bad_pass, 100).is_err() {
-					true
-				} else {
-					false
-				}
+				hash_password_verify(&pass_hash, &bad_pass, 100).is_err()
 			}
 		}
 	}

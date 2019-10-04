@@ -477,10 +477,6 @@ pub fn verify(
 mod public {
 	use super::*;
 
-	// One function tested per submodule.
-
-	/// Compare two Blake2b state objects to check if their fields
-	/// are the same.
 	fn compare_blake2b_states(state_1: &Blake2b, state_2: &Blake2b) {
 		assert_eq!(state_1.init_state, state_2.init_state);
 		assert_eq!(state_1.internal_state, state_2.internal_state);
@@ -526,15 +522,7 @@ mod public {
 			}
 
 			fn compare_states(state_1: &Blake2b, state_2: &Blake2b) {
-				assert_eq!(state_1.init_state, state_2.init_state);
-				assert_eq!(state_1.internal_state, state_2.internal_state);
-				assert_eq!(state_1.buffer[..], state_2.buffer[..]);
-				assert_eq!(state_1.leftover, state_2.leftover);
-				assert_eq!(state_1.t, state_2.t);
-				assert_eq!(state_1.f, state_2.f);
-				assert_eq!(state_1.is_finalized, state_2.is_finalized);
-				assert_eq!(state_1.is_keyed, state_2.is_keyed);
-				assert_eq!(state_1.size, state_2.size);
+				compare_blake2b_states(state_1, state_2)
 			}
 		}
 
@@ -548,9 +536,30 @@ mod public {
 			);
 			test_runner.run_all_tests();
 		}
+
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(feature = "safe_api")]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				/// Related bug: https://github.com/brycx/orion/issues/46
+				/// Test different streaming state usage patterns.
+				fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+					let initial_state: Blake2b = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
+
+					let test_runner = StreamingContextConsistencyTester::<Digest, Blake2b>::new(
+						initial_state,
+						BLAKE2B_BLOCKSIZE,
+					);
+					test_runner.run_all_tests_property(&data);
+					true
+				}
+			}
+		}
 	}
 
-	mod test_init {
+	mod test_new {
 		use super::*;
 
 		/// Convenience testing function to avoid repetition when testing
@@ -558,21 +567,9 @@ mod public {
 		/// incorrect Result is returned.
 		fn new_tester(sk: Option<&SecretKey>, size: usize) -> bool {
 			if size >= 1 && size <= BLAKE2B_OUTSIZE {
-				let res = if Blake2b::new(sk, size).is_ok() {
-					true
-				} else {
-					false
-				};
-
-				return res;
+				Blake2b::new(sk, size).is_ok()
 			} else {
-				let res = if Blake2b::new(sk, size).is_err() {
-					true
-				} else {
-					false
-				};
-
-				return res;
+				Blake2b::new(sk, size).is_err()
 			}
 		}
 
@@ -598,44 +595,20 @@ mod public {
 			quickcheck! {
 				/// Given a valid size parameter, new should always pass. If size
 				/// is invalid, then new should always fail.
-				fn prop_new_size_no_key(size: usize) -> bool {
-					new_tester(None, size)
-				}
-			}
-
-			quickcheck! {
-				/// Given a valid size parameter, new should always pass. If size
-				/// is invalid, then new should always fail.
-				fn prop_new_size_key(size: usize) -> bool {
+				fn prop_new_size(size: usize) -> bool {
+					let no_key = new_tester(None, size);
 					let sk = SecretKey::generate();
-					new_tester(Some(&sk), size)
+					let key = new_tester(Some(&sk), size);
+
+					no_key && key
 				}
 			}
 		}
 	}
 
+	#[cfg(feature = "safe_api")]
 	mod test_verify {
 		use super::*;
-
-		#[test]
-		fn finalize_and_verify_true() {
-			let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut tag = Blake2b::new(Some(&secret_key), 64).unwrap();
-			tag.update(data).unwrap();
-
-			assert_eq!(
-				verify(
-					&tag.finalize().unwrap(),
-					&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
-					64,
-					data
-				)
-				.unwrap(),
-				true
-			);
-		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
@@ -643,37 +616,16 @@ mod public {
 			use super::*;
 
 			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
-				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate();
-
-					let mut state = Blake2b::new(Some(&sk), 64).unwrap();
-					state.update(&data[..]).unwrap();
-					let tag = state.finalize().unwrap();
-					// Failed verification on Err so res is not needed.
-					let _res = verify(&tag, &sk, 64, &data[..]).unwrap();
-
-					true
-				}
-			}
-
-			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
+				/// When using a different key, verify() should always yield an error.
+				/// NOTE: Using different and same input data is tested with TestableStreamingContext.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
 					let mut state = Blake2b::new(Some(&sk), 64).unwrap();
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
-
 					let bad_sk = SecretKey::generate();
 
-					let res = if verify(&tag, &bad_sk, 64, &data[..]).is_err() {
-						true
-					} else {
-						false
-					};
-
-					res
+					verify(&tag, &bad_sk, 64, &data[..]).is_err()
 				}
 			}
 		}
@@ -707,9 +659,9 @@ mod public {
 			use super::*;
 
 			quickcheck! {
-				/// Given some data, .digest() should never fail in practice and should
+				/// Given some data, digest() should never fail in practice and should
 				/// produce the same output on a second call.
-				/// Only if data is unreasonably large.
+				/// Only panics if data is unreasonably large.
 				fn prop_hasher_digest_no_panic_and_same_result(data: Vec<u8>) -> bool {
 					let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
 					let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
@@ -740,12 +692,12 @@ mod public {
 				/// Given some data, .digest() should produce the same output as when
 				/// calling with streaming state.
 				fn prop_hasher_digest_384_same_as_streaming(data: Vec<u8>) -> bool {
-					let d256 = Hasher::Blake2b384.digest(&data[..]).unwrap();
+					let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
 
 					let mut state = Blake2b::new(None, 48).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d256 == state.finalize().unwrap())
+					(d384 == state.finalize().unwrap())
 				}
 			}
 
@@ -753,18 +705,18 @@ mod public {
 				/// Given some data, .digest() should produce the same output as when
 				/// calling with streaming state.
 				fn prop_hasher_digest_512_same_as_streaming(data: Vec<u8>) -> bool {
-					let d256 = Hasher::Blake2b512.digest(&data[..]).unwrap();
+					let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
 
 					let mut state = Blake2b::new(None, 64).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d256 == state.finalize().unwrap())
+					(d512 == state.finalize().unwrap())
 				}
 			}
 
 			quickcheck! {
 				/// Given two different data, .digest() should never produce the
-				/// same output.ValidationCryptoError
+				/// same output.
 				fn prop_hasher_digest_diff_input_diff_result(data: Vec<u8>) -> bool {
 					let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
 					let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
@@ -779,7 +731,7 @@ mod public {
 			}
 
 			quickcheck! {
-				/// .new() should never fail.
+				/// .init() should never fail.
 				fn prop_hasher_init_no_panic() -> bool {
 					let _d256 = Hasher::Blake2b256.init().unwrap();
 					let _d384 = Hasher::Blake2b384.init().unwrap();
@@ -984,7 +936,6 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-	// One function tested per submodule.
 
 	mod test_increment_offset {
 		use super::*;

@@ -99,13 +99,9 @@ mod public {
 			let sec_key_correct = SecretKey::generate(64).unwrap();
 			let sec_key_false = SecretKey::default();
 			let msg = "what do ya want for nothing?".as_bytes().to_vec();
-
 			let hmac_bob = authenticate(&sec_key_correct, &msg).unwrap();
 
-			assert_eq!(
-				authenticate_verify(&hmac_bob, &sec_key_correct, &msg).unwrap(),
-				true
-			);
+			assert!(authenticate_verify(&hmac_bob, &sec_key_correct, &msg).is_ok());
 			assert!(authenticate_verify(&hmac_bob, &sec_key_false, &msg).is_err());
 		}
 
@@ -113,13 +109,9 @@ mod public {
 		fn test_authenticate_verify_bad_msg() {
 			let sec_key = SecretKey::generate(64).unwrap();
 			let msg = "what do ya want for nothing?".as_bytes().to_vec();
-
 			let hmac_bob = authenticate(&sec_key, &msg).unwrap();
 
-			assert_eq!(
-				authenticate_verify(&hmac_bob, &sec_key, &msg).unwrap(),
-				true
-			);
+			assert!(authenticate_verify(&hmac_bob, &sec_key, &msg).is_ok());
 			assert!(authenticate_verify(&hmac_bob, &sec_key, b"bad msg").is_err());
 		}
 	}
@@ -130,44 +122,36 @@ mod public {
 		use super::*;
 
 		quickcheck! {
-			/// Authentication and verifing that authentication with the same parameters
+			/// Authentication and verifying that authentication with the same parameters
 			/// should always be true.
 			fn prop_authenticate_verify(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
-
 				let tag = authenticate(&sk, &input[..]).unwrap();
-				authenticate_verify(&tag, &sk, &input[..]).unwrap()
+
+				authenticate_verify(&tag, &sk, &input[..]).is_ok()
 			}
 		}
 
 		quickcheck! {
-			/// Authentication and verifing that authentication with a different key should
+			/// Authentication and verifying that authentication with a different key should
 			/// never be true.
 			fn prop_verify_fail_diff_key(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
 				let sk2 = SecretKey::default();
-
 				let tag = authenticate(&sk, &input[..]).unwrap();
-				if authenticate_verify(&tag, &sk2, &input[..]).is_err() {
-					true
-				} else {
-					false
-				}
+
+				authenticate_verify(&tag, &sk2, &input[..]).is_err()
 			}
 		}
 
 		quickcheck! {
-			/// Authentication and verifing that authentication with different input should
+			/// Authentication and verifying that authentication with different input should
 			/// never be true.
 			fn prop_verify_fail_diff_input(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
-
 				let tag = authenticate(&sk, &input[..]).unwrap();
-				if authenticate_verify(&tag, &sk, b"Completely wrong input").is_err() {
-					true
-				} else {
-					false
-				}
+
+				authenticate_verify(&tag, &sk, b"Completely wrong input").is_err()
 			}
 		}
 	}

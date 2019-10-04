@@ -24,8 +24,9 @@
 #[cfg(feature = "safe_api")]
 use crate::errors::UnknownCryptoError;
 
+#[allow(clippy::too_many_arguments)]
 #[cfg(feature = "safe_api")]
-///
+/// Test runner for AEADs.
 pub fn AeadTestRunner<Sealer, Opener, Key, Nonce>(
 	sealer: Sealer,
 	opener: Opener,
@@ -41,7 +42,7 @@ pub fn AeadTestRunner<Sealer, Opener, Key, Nonce>(
 {
 	// Skip tests that require non-empty input.
 	// The tests that check for behavior in empty and non-empty
-	// input, do not take an input parameter for that reason.
+	// input do not take an input parameter.
 	if !input.is_empty() {
 		seal_dst_out_length(&sealer, &key, &nonce, input, tag_size, aad);
 		open_dst_out_length(&sealer, &opener, &key, &nonce, input, tag_size, aad);
@@ -67,6 +68,7 @@ pub fn AeadTestRunner<Sealer, Opener, Key, Nonce>(
 
 #[cfg(feature = "safe_api")]
 /// Related bug: https://github.com/brycx/orion/issues/52
+/// Test dst_out mutable array sizes when using seal().
 fn seal_dst_out_length<Sealer, Key, Nonce>(
 	sealer: &Sealer,
 	key: &Key,
@@ -104,6 +106,7 @@ fn seal_dst_out_length<Sealer, Key, Nonce>(
 
 #[cfg(feature = "safe_api")]
 /// Related bug: https://github.com/brycx/orion/issues/52
+/// Test input sizes when using seal().
 fn seal_plaintext_length<Sealer, Key, Nonce>(
 	sealer: &Sealer,
 	key: &Key,
@@ -130,6 +133,7 @@ fn seal_plaintext_length<Sealer, Key, Nonce>(
 
 #[cfg(feature = "safe_api")]
 /// Related bug: https://github.com/brycx/orion/issues/52
+/// Test dst_out mutable array sizes when using open().
 fn open_dst_out_length<Sealer, Opener, Key, Nonce>(
 	sealer: &Sealer,
 	opener: &Opener,
@@ -162,6 +166,7 @@ fn open_dst_out_length<Sealer, Opener, Key, Nonce>(
 }
 
 #[cfg(feature = "safe_api")]
+/// Test input sizes when using open().
 fn open_ciphertext_with_tag_length<Sealer, Opener, Key, Nonce>(
 	sealer: &Sealer,
 	opener: &Opener,
@@ -243,8 +248,9 @@ fn seal_open_same_plaintext<Sealer, Opener, Key, Nonce>(
 	assert_eq!(input, &dst_out_pt[..]);
 }
 
+#[allow(clippy::too_many_arguments)]
 #[cfg(feature = "safe_api")]
-/// Test that sealing and opening produces the expected ciphertext/plaintext.
+/// Test that sealing and opening produces the expected ciphertext.
 fn seal_open_equals_expected<Sealer, Opener, Key, Nonce>(
 	sealer: &Sealer,
 	opener: &Opener,

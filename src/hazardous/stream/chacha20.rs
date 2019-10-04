@@ -751,7 +751,7 @@ mod public {
 		}
 	}
 
-	// hex crate used Vec<u8>, so we need std.
+	// hex crate uses Vec<u8>, so we need std.
 	#[cfg(feature = "safe_api")]
 	mod test_hchacha20 {
 		use super::*;
@@ -762,11 +762,8 @@ mod public {
 		#[test]
 		fn test_nonce_length() {
 			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16],).is_ok());
-
 			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 17],).is_err());
-
 			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15],).is_err());
-
 			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 0],).is_err());
 		}
 
@@ -1213,20 +1210,27 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-	// One function tested per submodule.
 
 	mod test_init_state {
 		use super::*;
 
 		#[test]
 		fn test_nonce_length() {
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 15], true).is_err());
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 10], true).is_err());
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 12], true).is_ok());
+			assert!(InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 15], true).is_err());
+			assert!(InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 10], true).is_err());
+			assert!(InternalState::new(
+				&[0u8; CHACHA_KEYSIZE],
+				&[0u8; IETF_CHACHA_NONCESIZE],
+				true
+			)
+			.is_ok());
 
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 15], false).is_err());
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 17], false).is_err());
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 16], false).is_ok());
+			assert!(InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 15], false).is_err());
+			assert!(InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 17], false).is_err());
+			assert!(
+				InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false)
+					.is_ok()
+			);
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
@@ -1235,27 +1239,11 @@ mod private {
 			use super::*;
 
 			quickcheck! {
-				// Always fail to intialize state while the nonce is not
-				// the correct length. If it is correct length, never panic.
 				fn prop_test_nonce_length_ietf(nonce: Vec<u8>) -> bool {
-					let sk = &[0u8; 32];
-
-					if nonce.len() != IETF_CHACHA_NONCESIZE {
-						let res = if InternalState::new(sk, &nonce[..], true).is_err() {
-							true
-						} else {
-							false
-						};
-
-						return res;
+					if nonce.len() == IETF_CHACHA_NONCESIZE {
+						InternalState::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_ok()
 					} else {
-						let res = if InternalState::new(sk, &nonce[..], true).is_ok() {
-							true
-						} else {
-							false
-						};
-
-						return res;
+						InternalState::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_err()
 					}
 				}
 			}
@@ -1264,24 +1252,10 @@ mod private {
 				// Always fail to intialize state while the nonce is not
 				// the correct length. If it is correct length, never panic.
 				fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
-					let sk = &[0u8; 32];
-
-					if nonce.len() != HCHACHA_NONCESIZE {
-						let res = if InternalState::new(sk, &nonce[..], false).is_err() {
-							true
-						} else {
-							false
-						};
-
-						return res;
+					if nonce.len() == HCHACHA_NONCESIZE {
+						InternalState::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_ok()
 					} else {
-						let res = if InternalState::new(sk, &nonce[..], false).is_ok() {
-							true
-						} else {
-							false
-						};
-
-						return res;
+						InternalState::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_err()
 					}
 				}
 			}
@@ -1292,9 +1266,12 @@ mod private {
 		use super::*;
 		#[test]
 		fn test_process_block_wrong_combination_of_variant_and_nonce() {
-			let mut chacha_state_ietf = InternalState::new(&[0u8; 32], &[0u8; 12], true).unwrap();
+			let mut chacha_state_ietf =
+				InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true)
+					.unwrap();
 			let mut chacha_state_hchacha =
-				InternalState::new(&[0u8; 32], &[0u8; 16], false).unwrap();
+				InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false)
+					.unwrap();
 
 			assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
 			assert!(chacha_state_ietf.process_block(None).is_err());

@@ -143,12 +143,6 @@ pub fn decrypt(
 	encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
-//
-// The tests below are the same tests as the ones in `chacha20`
-// but with a bigger nonce. It's debatable whether this is needed, but right
-// now I'm keeping them as they don't seem to bring any disadvantages.
-//
-
 // Testing public functions in the module.
 #[cfg(test)]
 #[cfg(feature = "safe_api")]

@@ -222,22 +222,16 @@ mod public {
 			use super::*;
 
 			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
+				/// When using a different key, verify() should always yield an error.
+				/// NOTE: Using different and same input data is tested with TestableStreamingContext.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
 					let mut state = Hmac::new(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
-
 					let bad_sk = SecretKey::generate();
 
-					let res = if verify(&tag, &bad_sk, &data[..]).is_err() {
-						true
-					} else {
-						false
-					};
-
-					res
+					verify(&tag, &bad_sk, &data[..]).is_err()
 				}
 			}
 		}
