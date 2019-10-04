@@ -45,7 +45,7 @@ pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 	if !input.is_empty() {
 		encrypt_decrypt_same_plaintext(&encryptor, &decryptor, &key, &nonce, counter, input);
 		encrypt_decrypt_out_length(&encryptor, &decryptor, &key, &nonce, input);
-		if expected.is_some() {
+		if let Some(expected_result) = expected {
 			encrypt_decrypt_equals_expected(
 				&encryptor,
 				&decryptor,
@@ -53,7 +53,7 @@ pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 				&nonce,
 				counter,
 				input,
-				expected.unwrap(),
+				expected_result,
 			);
 		}
 	}
@@ -231,7 +231,7 @@ fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
 		nonce,
 		u32::max_value(),
 		&[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
-		&mut dst_out,
+		&mut dst_out
 	)
 	.is_err());
 	assert!(decryptor(
@@ -239,7 +239,7 @@ fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
 		nonce,
 		u32::max_value(),
 		&[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
-		&mut dst_out,
+		&mut dst_out
 	)
 	.is_err());
 }
@@ -261,7 +261,7 @@ fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
 		nonce,
 		u32::max_value(),
 		&[0u8; 64], // Only needs to process one keystream
-		&mut dst_out,
+		&mut dst_out
 	)
 	.is_ok());
 	assert!(decryptor(
@@ -269,7 +269,7 @@ fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
 		nonce,
 		u32::max_value(),
 		&[0u8; 64], // Only needs to process one keystream
-		&mut dst_out,
+		&mut dst_out
 	)
 	.is_ok());
 }
