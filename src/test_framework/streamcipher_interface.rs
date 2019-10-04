@@ -63,25 +63,6 @@ pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 	initial_counter_max_ok(&encryptor, &decryptor, &key, &nonce);
 }
 
-#[cfg(not(feature = "safe_api"))]
-/// no_std compatible test runner.
-pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
-	encryptor: Encryptor,
-	decryptor: Decryptor,
-	key: Key,
-	nonce: Nonce,
-	counter: u32,
-	input: &[u8],
-	expected: Option<&[u8]>,
-) where
-	Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-	Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-	encrypt_decrypt_input_empty(&encryptor, &decryptor, &key, &nonce);
-	initial_counter_overflow_err(&encryptor, &decryptor, &key, &nonce);
-	initial_counter_max_ok(&encryptor, &decryptor, &key, &nonce);
-}
-
 #[cfg(feature = "safe_api")]
 /// Given a input length `a` find out how many times
 /// the initial counter on encrypt()/decrypt() would
@@ -128,6 +109,7 @@ where
 	enc_res && dec_res
 }
 
+#[cfg(feature = "safe_api")]
 fn encrypt_decrypt_input_empty<Encryptor, Decryptor, Key, Nonce>(
 	encryptor: &Encryptor,
 	decryptor: &Decryptor,
@@ -232,6 +214,7 @@ fn encrypt_decrypt_equals_expected<Encryptor, Decryptor, Key, Nonce>(
 	assert_eq!(input, &dst_out_pt[..]);
 }
 
+#[cfg(feature = "safe_api")]
 /// Test that a initial counter will not overflow the internal.
 fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
 	encryptor: &Encryptor,
@@ -261,6 +244,7 @@ fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
 	.is_err());
 }
 
+#[cfg(feature = "safe_api")]
 /// Test that processing one block does not fail on the largest possible initial block counter.
 fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
 	encryptor: &Encryptor,
