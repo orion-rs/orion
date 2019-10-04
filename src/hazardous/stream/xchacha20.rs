@@ -159,16 +159,6 @@ mod public {
 		use super::*;
 		use crate::test_framework::streamcipher_interface::*;
 
-		#[cfg(feature = "safe_api")]
-		#[test]
-		fn test_streamcipher_interface() {
-			let default_input = &[0u8; 64];
-
-			let secret_key = SecretKey::generate();
-			let nonce = Nonce::generate();
-			StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, 0, default_input, None);
-		}
-
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
