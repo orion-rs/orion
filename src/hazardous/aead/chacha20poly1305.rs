@@ -260,30 +260,6 @@ pub fn open(
 mod public {
 	use super::*;
 
-	#[cfg(feature = "safe_api")]
-	mod test_seal_open {
-		use super::*;
-		use crate::test_framework::aead_interface::*;
-
-		#[test]
-		fn test_aead_interface() {
-			let default_input = &[0u8; 64];
-
-			let secret_key = SecretKey::generate();
-			let nonce = Nonce::from_slice(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
-			AeadTestRunner(
-				seal,
-				open,
-				secret_key,
-				nonce,
-				default_input,
-				None,
-				POLY1305_OUTSIZE,
-				&[0u8; 0],
-			);
-		}
-	}
-
 	// Proptests. Only executed when NOT testing no_std.
 	#[cfg(feature = "safe_api")]
 	mod proptest {

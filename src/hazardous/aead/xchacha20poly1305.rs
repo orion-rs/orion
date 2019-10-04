@@ -124,31 +124,6 @@ pub fn open(
 mod public {
 	use super::*;
 
-	mod test_seal_open {
-		use super::*;
-		use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
-		use crate::test_framework::aead_interface::*;
-
-		#[cfg(feature = "safe_api")]
-		#[test]
-		fn test_aead_interface() {
-			let default_input = &[0u8; 64];
-
-			let secret_key = SecretKey::generate();
-			let nonce = Nonce::generate();
-			AeadTestRunner(
-				seal,
-				open,
-				secret_key,
-				nonce,
-				default_input,
-				None,
-				POLY1305_OUTSIZE,
-				&[0u8; 0],
-			);
-		}
-	}
-
 	// Proptests. Only exectued when NOT testing no_std.
 	#[cfg(feature = "safe_api")]
 	mod proptest {
