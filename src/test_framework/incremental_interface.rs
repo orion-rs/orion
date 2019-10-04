@@ -134,7 +134,7 @@ where
 	///
 	/// It is important to ensure this is also called with empty
 	/// `data`.
-	pub fn consistency(&self, data: &[u8]) {
+	fn consistency(&self, data: &[u8]) {
 		// new(), update(), finalize()
 		let mut state_1 = self._initial_context.clone();
 		state_1.update(data).unwrap();
@@ -194,7 +194,7 @@ where
 	/// Related bug: https://github.com/brycx/orion/issues/46
 	/// Testing different usage combinations of new(), update(),
 	/// finalize() and reset() produce the same output.
-	pub fn produces_same_state(&self, data: &[u8]) {
+	fn produces_same_state(&self, data: &[u8]) {
 		// new()
 		let state_1 = self._initial_context.clone();
 
@@ -222,7 +222,7 @@ where
 	/// Test for issues when incrementally processing data
 	/// with leftover in the internal buffer. It should produce
 	/// the same results as processing the same data in a single pass.
-	pub fn incremental_processing_with_leftover(&self) {
+	fn incremental_processing_with_leftover(&self) {
 		for len in 0..self.blocksize * 4 {
 			let data = vec![0u8; len];
 			let mut state = self._initial_context.clone();
@@ -252,7 +252,7 @@ where
 	}
 
 	/// new(), update(), finalize() == one_shot()
-	pub fn incremental_and_one_shot(&self, data: &[u8]) {
+	fn incremental_and_one_shot(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(&data).unwrap();
 		let streaming_result = state.finalize().unwrap();
@@ -262,7 +262,7 @@ where
 	}
 
 	/// new(), update(), finalize(), reset(), finalize(): OK
-	pub fn double_finalize_with_reset_no_update_ok(&self, data: &[u8]) {
+	fn double_finalize_with_reset_no_update_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
 		let _ = state.finalize().unwrap();
@@ -271,7 +271,7 @@ where
 	}
 
 	/// new(), update(), finalize(), reset(), update(), finalize(): OK
-	pub fn double_finalize_with_reset_ok(&self, data: &[u8]) {
+	fn double_finalize_with_reset_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
 		let _ = state.finalize().unwrap();
@@ -281,7 +281,7 @@ where
 	}
 
 	/// new(), update(), finalize(), finalize(): ERR
-	pub fn double_finalize_err(&self, data: &[u8]) {
+	fn double_finalize_err(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
 		let _ = state.finalize().unwrap();
@@ -289,7 +289,7 @@ where
 	}
 
 	/// new(), update(), finalize(), reset(), update(): OK
-	pub fn update_after_finalize_with_reset_ok(&self, data: &[u8]) {
+	fn update_after_finalize_with_reset_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
 		let _ = state.finalize().unwrap();
@@ -299,7 +299,7 @@ where
 
 	/// Related bug: https://github.com/brycx/orion/issues/28
 	/// new(), update(), finalize(), update(): ERR
-	pub fn update_after_finalize_err(&self, data: &[u8]) {
+	fn update_after_finalize_err(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
 		let _ = state.finalize().unwrap();
@@ -307,7 +307,7 @@ where
 	}
 
 	/// reset(), reset(): OK
-	pub fn double_reset_ok(&self, data: &[u8]) {
+	fn double_reset_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
 		let _ = state.finalize().unwrap();
@@ -316,7 +316,7 @@ where
 	}
 
 	/// new(), finalize(): OK
-	pub fn immediate_finalize(&self) {
+	fn immediate_finalize(&self) {
 		let mut state = self._initial_context.clone();
 		assert!(state.finalize().is_ok());
 	}
