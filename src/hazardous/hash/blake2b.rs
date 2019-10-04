@@ -541,11 +541,9 @@ mod public {
 		#[test]
 		fn default_consistency_tests() {
 			let initial_state: Blake2b = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
-			let dummy_digest: Digest = Digest::from_slice(&[0u8; BLAKE2B_OUTSIZE]).unwrap();
 
 			let test_runner = StreamingContextConsistencyTester::<Digest, Blake2b>::new(
 				initial_state,
-				dummy_digest,
 				BLAKE2B_BLOCKSIZE,
 			);
 			test_runner.run_all_tests();

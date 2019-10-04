@@ -524,11 +524,9 @@ mod public {
 		#[test]
 		fn default_consistency_tests() {
 			let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
-			let dummy_tag: Tag = Tag::from_slice(&[0u8; POLY1305_OUTSIZE]).unwrap();
 
 			let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(
 				initial_state,
-				dummy_tag,
 				POLY1305_BLOCKSIZE,
 			);
 			test_runner.run_all_tests();
@@ -544,9 +542,8 @@ mod public {
 				/// Test different streaming state usage patterns.
 				fn prop_input_to_consistency(data: Vec<u8>) -> bool {
 					let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
-					let dummy_tag: Tag = Tag::from_slice(&[0u8; POLY1305_OUTSIZE]).unwrap();
 
-					let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(initial_state, dummy_tag, POLY1305_BLOCKSIZE);
+					let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(initial_state, POLY1305_BLOCKSIZE);
 					test_runner.run_all_tests_property(&data);
 					true
 				}

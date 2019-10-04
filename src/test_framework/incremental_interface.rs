@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 use crate::errors::UnknownCryptoError;
+use core::marker::PhantomData;
 
 /// Trait to define default streaming contexts that can be tested.
 pub trait TestableStreamingContext<T: PartialEq> {
@@ -42,7 +43,7 @@ pub trait TestableStreamingContext<T: PartialEq> {
 #[allow(dead_code)] // Allow because blocksize field is only used with std.
 /// A streaming context tester.
 pub struct StreamingContextConsistencyTester<R, T> {
-	_return_type: R,
+	_return_type: PhantomData<R>,
 	// The initial context to base further calls upon.
 	_initial_context: T,
 	blocksize: usize,
@@ -56,9 +57,9 @@ where
 	/// The streaming interface tester is created utilizing an initialized
 	/// streaming state and a return type. The contents of the return type
 	/// do not matter.
-	pub fn new(streaming_context: T, return_type: R, blocksize: usize) -> Self {
+	pub fn new(streaming_context: T, blocksize: usize) -> Self {
 		Self {
-			_return_type: return_type,
+			_return_type: PhantomData,
 			_initial_context: streaming_context,
 			blocksize,
 		}
