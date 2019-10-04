@@ -1,3 +1,4 @@
+#[cfg(feature = "safe_api")]
 #[cfg(test)]
 pub mod aead;
 #[cfg(test)]
