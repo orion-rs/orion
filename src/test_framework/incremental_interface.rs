@@ -83,6 +83,7 @@ where
 		self.update_after_finalize_with_reset_ok(data);
 		self.update_after_finalize_err(data);
 		self.double_reset_ok(data);
+		self.immediate_finalize();
 		Self::verify_same_input_ok(data);
 		Self::verify_diff_input_err(data);
 	}
@@ -103,6 +104,7 @@ where
 		self.update_after_finalize_with_reset_ok(&Self::DEFAULT_INPUT);
 		self.update_after_finalize_err(&Self::DEFAULT_INPUT);
 		self.double_reset_ok(&Self::DEFAULT_INPUT);
+		self.immediate_finalize();
 		Self::verify_same_input_ok(&Self::DEFAULT_INPUT);
 		Self::verify_diff_input_err(&Self::DEFAULT_INPUT);
 	}
@@ -121,6 +123,7 @@ where
 		self.update_after_finalize_with_reset_ok(&Self::DEFAULT_INPUT);
 		self.update_after_finalize_err(&Self::DEFAULT_INPUT);
 		self.double_reset_ok(&Self::DEFAULT_INPUT);
+		self.immediate_finalize();
 		Self::verify_same_input_ok(&Self::DEFAULT_INPUT);
 		Self::verify_diff_input_err(&Self::DEFAULT_INPUT);
 	}
@@ -258,7 +261,7 @@ where
 		assert!(streaming_result == one_shot_result);
 	}
 
-	/// new(), finalize(), reset(), finalize(): OK
+	/// new(), update(), finalize(), reset(), finalize(): OK
 	pub fn double_finalize_with_reset_no_update_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
@@ -267,7 +270,7 @@ where
 		assert!(state.finalize().is_ok());
 	}
 
-	/// new(), finalize(), reset(), update(), finalize(): OK
+	/// new(), update(), finalize(), reset(), update(), finalize(): OK
 	pub fn double_finalize_with_reset_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
@@ -277,7 +280,7 @@ where
 		assert!(state.finalize().is_ok());
 	}
 
-	/// new(), finalize(), finalize(): ERR
+	/// new(), update(), finalize(), finalize(): ERR
 	pub fn double_finalize_err(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
@@ -285,7 +288,7 @@ where
 		assert!(state.finalize().is_err());
 	}
 
-	/// new(), finalize(), reset(), update(): OK
+	/// new(), update(), finalize(), reset(), update(): OK
 	pub fn update_after_finalize_with_reset_ok(&self, data: &[u8]) {
 		let mut state = self._initial_context.clone();
 		state.update(data).unwrap();
@@ -310,6 +313,12 @@ where
 		let _ = state.finalize().unwrap();
 		state.reset().unwrap();
 		assert!(state.reset().is_ok());
+	}
+
+	/// new(), finalize(): OK
+	pub fn immediate_finalize(&self) {
+		let mut state = self._initial_context.clone();
+		assert!(state.finalize().is_ok());
 	}
 
 	/// Using the same input should always result in a succesfull verification.
