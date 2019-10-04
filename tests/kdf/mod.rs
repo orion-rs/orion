@@ -13,16 +13,11 @@ pub fn hkdf_test_runner(
 	info: &[u8],
 	okm_out: &mut [u8],
 ) -> bool {
-	let actual_prk = extract(salt, &ikm).unwrap();
-
 	if excp_prk.is_some() {
+		let actual_prk = extract(salt, &ikm).unwrap();
 		assert!(actual_prk == hmac::Tag::from_slice(excp_prk.unwrap()).unwrap());
 	}
 
-	expand(&actual_prk, Some(&info), okm_out).unwrap();
-
-	let mut okm_one_shot_dst = okm_out.to_vec();
-	derive_key(salt, ikm, Some(&info), &mut okm_one_shot_dst).unwrap();
-
-	((okm_out == excp_okm) == (okm_one_shot_dst == excp_okm))
+	// verify() also runs derive_key()
+	verify(excp_okm, salt, ikm, Some(&info), &mut okm_out.to_vec()).is_ok()
 }
