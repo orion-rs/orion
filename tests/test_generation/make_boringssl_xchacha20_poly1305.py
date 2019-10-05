@@ -41,7 +41,7 @@ with open('src/tests/test_data/original/boringssl_xchacha20_poly1305.txt') as in
     let output = decode(\"%s\").unwrap();
     let tag = decode(\"%s\").unwrap();
 
-    xchacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+    aead_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
 }
 """ % (key, nonce, ad, input, ct, tag))
 

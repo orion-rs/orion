@@ -74,5 +74,4 @@ mod openssl_test_vectors {
 		// Using empty keys since that is the same as None in test_runner
 		blake2b_test_runner(&input, &[0u8; 0], &expected_output);
 	}
-
 }

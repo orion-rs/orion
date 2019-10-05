@@ -68,8 +68,8 @@
 //! ).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`Password::generate()`]: https://docs.rs/orion/latest/orion/hazardous/kdf/pbkdf2/struct.Password.html
-//! [`util::secure_rand_bytes()`]: https://docs.rs/orion/latest/orion/util/fn.secure_rand_bytes.html
+//! [`Password::generate()`]: struct.Password.html#method.generate
+//! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::{
 	errors::UnknownCryptoError,
@@ -145,7 +145,7 @@ pub fn derive_key(
 		return Err(UnknownCryptoError);
 	}
 
-	let mut hmac = hmac::init(&hmac::SecretKey::from_slice(
+	let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(
 		&password.unprotected_as_bytes(),
 	)?);
 

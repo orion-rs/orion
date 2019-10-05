@@ -49,17 +49,17 @@
 //!
 //! let key = hmac::SecretKey::generate();
 //!
-//! let mut state = hmac::init(&key);
+//! let mut state = hmac::Hmac::new(&key);
 //! state.update(b"Some message.")?;
 //! let tag = state.finalize()?;
 //!
 //! assert!(hmac::verify(&tag, &key, b"Some message.").is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
-//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
-//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
-//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.SecretKey.html
+//! [`update()`]: struct.Hmac.html
+//! [`reset()`]: struct.Hmac.html
+//! [`finalize()`]: struct.Hmac.html
+//! [`SecretKey::generate()`]: struct.SecretKey.html
 
 use crate::{
 	errors::UnknownCryptoError,
@@ -127,8 +127,8 @@ impl Hmac {
 			ipad[idx] ^= itm;
 		}
 
-		// Due to opad_hasher and ipad_hasher being initialized in init()
-		// and the size of ipad/opad is known to be acceptable,
+		// Due to opad_hasher and ipad_hasher being initialized in new()
+		// and the size of input to update() is known to be acceptable size,
 		// .unwrap() here should not be able to panic
 		self.ipad_hasher.update(ipad.as_ref()).unwrap();
 		self.opad_hasher.update(opad.as_ref()).unwrap();
@@ -137,7 +137,20 @@ impl Hmac {
 		opad.zeroize();
 	}
 
-	/// Reset to `init()` state.
+	/// Initialize `Hmac` struct with a given key.
+	pub fn new(secret_key: &SecretKey) -> Self {
+		let mut state = Self {
+			working_hasher: sha512::Sha512::new(),
+			opad_hasher: sha512::Sha512::new(),
+			ipad_hasher: sha512::Sha512::new(),
+			is_finalized: false,
+		};
+
+		state.pad_key_io(secret_key);
+		state
+	}
+
+	/// Reset to `new()` state.
 	pub fn reset(&mut self) {
 		self.working_hasher = self.ipad_hasher.clone();
 		self.is_finalized = false;
@@ -169,23 +182,10 @@ impl Hmac {
 	}
 }
 
-/// Initialize `Hmac` struct with a given key.
-pub fn init(secret_key: &SecretKey) -> Hmac {
-	let mut state = Hmac {
-		working_hasher: sha512::init(),
-		opad_hasher: sha512::init(),
-		ipad_hasher: sha512::init(),
-		is_finalized: false,
-	};
-
-	state.pad_key_io(secret_key);
-	state
-}
-
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// One-shot function for generating an HMAC-SHA512 tag of `data`.
 pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	let mut hmac_state = init(secret_key);
+	let mut hmac_state = Hmac::new(secret_key);
 	hmac_state.update(data)?;
 	hmac_state.finalize()
 }
@@ -197,7 +197,7 @@ pub fn verify(
 	secret_key: &SecretKey,
 	data: &[u8],
 ) -> Result<(), UnknownCryptoError> {
-	let mut hmac_state = init(secret_key);
+	let mut hmac_state = Hmac::new(secret_key);
 	hmac_state.update(data)?;
 
 	if expected == &hmac_state.finalize()? {
@@ -234,7 +234,7 @@ mod public {
 			let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut tag = init(&secret_key);
+			let mut tag = Hmac::new(&secret_key);
 			tag.update(data).unwrap();
 
 			assert!(verify(
@@ -255,7 +255,7 @@ mod public {
 				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
 
-					let mut state = init(&sk);
+					let mut state = Hmac::new(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 					// Failed verification on Err so res is not needed.
@@ -269,7 +269,7 @@ mod public {
 				/// When using the same parameters verify() should always yeild true.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
-					let mut state = init(&sk);
+					let mut state = Hmac::new(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
 
@@ -295,7 +295,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -311,7 +311,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -324,7 +324,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.update(data).is_err());
@@ -339,7 +339,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			state.reset();
@@ -351,7 +351,7 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::new(&sk);
 			state.update(data).unwrap();
 			let one = state.finalize().unwrap();
 			state.reset();
@@ -365,41 +365,40 @@ mod public {
 			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 			let data = "what do ya want for nothing?".as_bytes();
 
-			let mut state = init(&sk);
+			let mut state = Hmac::new(&sk);
 			state.update(data).unwrap();
 			let _ = state.finalize().unwrap();
 			assert!(state.finalize().is_err());
 		}
-
 	}
 
 	mod test_streaming_interface {
 		use super::*;
 
 		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
+		/// Testing different usage combinations of new(), update(),
 		/// finalize() and reset() produce the same Digest.
 		fn produces_same_hash(sk: &SecretKey, data: &[u8]) {
-			// init(), update(), finalize()
-			let mut state_1 = init(&sk);
+			// new(), update(), finalize()
+			let mut state_1 = Hmac::new(&sk);
 			state_1.update(data).unwrap();
 			let res_1 = state_1.finalize().unwrap();
 
-			// init(), reset(), update(), finalize()
-			let mut state_2 = init(&sk);
+			// new(), reset(), update(), finalize()
+			let mut state_2 = Hmac::new(&sk);
 			state_2.reset();
 			state_2.update(data).unwrap();
 			let res_2 = state_2.finalize().unwrap();
 
-			// init(), update(), reset(), update(), finalize()
-			let mut state_3 = init(&sk);
+			// new(), update(), reset(), update(), finalize()
+			let mut state_3 = Hmac::new(&sk);
 			state_3.update(data).unwrap();
 			state_3.reset();
 			state_3.update(data).unwrap();
 			let res_3 = state_3.finalize().unwrap();
 
-			// init(), update(), finalize(), reset(), update(), finalize()
-			let mut state_4 = init(&sk);
+			// new(), update(), finalize(), reset(), update(), finalize()
+			let mut state_4 = Hmac::new(&sk);
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset();
@@ -413,19 +412,19 @@ mod public {
 			// Tests for the assumption that returning Ok() on empty update() calls
 			// with streaming API's, gives the correct result. This is done by testing
 			// the reasoning that if update() is empty, returns Ok(), it is the same as
-			// calling init() -> finalize(). i.e not calling update() at all.
+			// calling new() -> finalize(). i.e not calling update() at all.
 			if data.is_empty() {
-				// init(), finalize()
-				let mut state_5 = init(&sk);
+				// new(), finalize()
+				let mut state_5 = Hmac::new(&sk);
 				let res_5 = state_5.finalize().unwrap();
 
-				// init(), reset(), finalize()
-				let mut state_6 = init(&sk);
+				// new(), reset(), finalize()
+				let mut state_6 = Hmac::new(&sk);
 				state_6.reset();
 				let res_6 = state_6.finalize().unwrap();
 
-				// init(), update(), reset(), finalize()
-				let mut state_7 = init(&sk);
+				// new(), update(), reset(), finalize()
+				let mut state_7 = Hmac::new(&sk);
 				state_7.update(b"Wrong data").unwrap();
 				state_7.reset();
 				let res_7 = state_7.finalize().unwrap();
@@ -437,23 +436,23 @@ mod public {
 		}
 
 		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
+		/// Testing different usage combinations of new(), update(),
 		/// finalize() and reset() produce the same Digest.
 		fn produces_same_state(sk: &SecretKey, data: &[u8]) {
-			// init()
-			let state_1 = init(&sk);
+			// new()
+			let state_1 = Hmac::new(&sk);
 
-			// init(), reset()
-			let mut state_2 = init(&sk);
+			// new(), reset()
+			let mut state_2 = Hmac::new(&sk);
 			state_2.reset();
 
-			// init(), update(), reset()
-			let mut state_3 = init(&sk);
+			// new(), update(), reset()
+			let mut state_3 = Hmac::new(&sk);
 			state_3.update(data).unwrap();
 			state_3.reset();
 
-			// init(), update(), finalize(), reset()
-			let mut state_4 = init(&sk);
+			// new(), update(), finalize(), reset()
+			let mut state_4 = Hmac::new(&sk);
 			state_4.update(data).unwrap();
 			let _ = state_4.finalize().unwrap();
 			state_4.reset();
@@ -485,7 +484,7 @@ mod public {
 			for len in 0..SHA512_BLOCKSIZE * 4 {
 				let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
 				let data = vec![0u8; len];
-				let mut state = init(&sk);
+				let mut state = Hmac::new(&sk);
 				let mut other_data: Vec<u8> = Vec::new();
 
 				other_data.extend_from_slice(&data);
@@ -543,7 +542,7 @@ mod public {
 				/// same result as when using the streaming interface.
 				fn prop_hmac_same_as_streaming(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
-					let mut state = init(&sk);
+					let mut state = Hmac::new(&sk);
 					state.update(&data[..]).unwrap();
 					let stream = state.finalize().unwrap();
 					let one_shot = hmac(&sk, &data[..]).unwrap();

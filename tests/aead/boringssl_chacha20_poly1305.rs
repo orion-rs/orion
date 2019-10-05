@@ -3,7 +3,7 @@ mod boringssl_aead_chacha20_poly1305 {
 
 	extern crate hex;
 	use self::hex::decode;
-	use crate::aead::aead_test_runner as chacha20_poly1305_test_runner;
+	use crate::aead::aead_test_runner;
 
 	// Testing against BoringSSL test vector from [boringssl](https://boringssl.googlesource.com/boringssl/+/master/crypto/poly1305/poly1305_tests.txt).
 	// Pulled at commit (master): 0f5ecd3a854546d943104e1f7421e489b7f4d5aa
@@ -19,7 +19,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d63dbea45e8ca9671282fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b3692ddbd7f2d778b8c9803aee328091b58fab324e4fad675945585808b4831d7bc3ff4def08e4b7a9de576d26586cec64b6116").unwrap();
 		let tag = decode("1ae10b594f09e26a7e902ecbd0600691").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -32,7 +32,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("ae49da6934cb77822c83ed9852e46c9e").unwrap();
 		let tag = decode("dac9c841c168379dcf8f2bb8e22d6da2").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -45,7 +45,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("ae").unwrap();
 		let tag = decode("3ed2f824f901a8994052f852127c196a").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -58,7 +58,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("ae49da6934cb77822c83ed9852e46c9e").unwrap();
 		let tag = decode("2e9c9b1689adb5ec444002eb920efb66").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -71,7 +71,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("ae49da6934cb77822c83ed9852e46c").unwrap();
 		let tag = decode("05b2937f8bbc64fed21f0fb74cd7147c").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -84,21 +84,21 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("e275aeb341e1fc9a70c4fd4496fc7cdb").unwrap();
 		let tag = decode("41acd0560ea6843d3e5d4e5babf6e946").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
-	// Skipped because orion doesn't allow empty plaintext
-	// #[test]
-	// fn boringssl_test_case_7() {
-	// let key = decode("
-	// 9a97f65b9b4c721b960a672145fca8d4e32e67f9111ea979ce9c4826806aeee6").unwrap();
-	// let nonce = decode("000000003de9c0da2bd7f91e").unwrap();
-	// let aad = "".as_bytes();
-	// let input = "".as_bytes();
-	// let output = "".as_bytes();
-	// let tag = decode("5a6e21f4ba6dbee57380e79e79c30def").unwrap();
-	//
-	// chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input,
-	// &output).unwrap(); }
+
+	#[test]
+	fn boringssl_test_case_7() {
+		let key =
+			decode("9a97f65b9b4c721b960a672145fca8d4e32e67f9111ea979ce9c4826806aeee6").unwrap();
+		let nonce = decode("000000003de9c0da2bd7f91e").unwrap();
+		let aad = "".as_bytes();
+		let input = "".as_bytes();
+		let output = "".as_bytes();
+		let tag = decode("5a6e21f4ba6dbee57380e79e79c30def").unwrap();
+
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
+	}
 
 	#[test]
 	fn boringssl_test_case_8() {
@@ -110,7 +110,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("1a7c2f33f5").unwrap();
 		let tag = decode("2a63876a887f4f080c9df418813fc1fd").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -123,7 +123,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("e3e446f7ede9a19b62a4").unwrap();
 		let tag = decode("356d9eda66d08016b853d87c08b5c1b3").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -136,7 +136,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("281a366705c5a24b94e56146681e44").unwrap();
 		let tag = decode("59143dab187449060a3ec2a1681613cc").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -149,7 +149,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("1fb9b2958fce47a5cada9d895fbb0c00d3569858").unwrap();
 		let tag = decode("219b4252deb16a43b292165aabc5d5ce").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -162,7 +162,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("dad65e4244a1a17ce59d88b00af4f7434bd7830ffdd4c5558f").unwrap();
 		let tag = decode("7ae32f186cf9ec59b41b764b34307d4f").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -176,7 +176,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f374651a84138648a5919a").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -194,7 +194,7 @@ mod boringssl_aead_chacha20_poly1305 {
 				.unwrap();
 		let tag = decode("63c2b4e0973096299488b0a66ffa54c1").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -216,7 +216,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		.unwrap();
 		let tag = decode("4461139c4055333106cf7f7556fd4171").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -229,7 +229,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("8ff4ceb600e7d45696d02467f8e30df0d33864a040a41ffb9e4c2da09b92e88b6f6b850e9f7258d827b9aaf346").unwrap();
 		let tag = decode("b2ad07b86aca1b3ab34033c12d6a08cc").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -242,7 +242,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("027b86865b80b4c4da823a7d3dbcf5845bf57d58ee334eb357e82369cc628979e2947830d9d4817efd3d0bc4779f0b388943").unwrap();
 		let tag = decode("6de01091d749f189c4e25aa315b31495").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -255,7 +255,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("9b950b3caf7d25eaf5fca6fa3fe12ed077d80dcd5579851233c766bb8bb613ec91d925a939bb52fb88d5eda803cfe2a8cda2e055b962fd").unwrap();
 		let tag = decode("0887ec7d5e1a4e532746ec247a30825a").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -268,7 +268,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("ea765a829d961e08bacaed801237ef4067df38ad3737b7c6de4db587a102a86fc4abbaabea0ee97c95ca7f571c7bab6f38cbae60cd6e6a4ce3c7a320").unwrap();
 		let tag = decode("a27f18846f5a4f7fcc724656c91cf4f3").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -281,7 +281,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("146ec84f5dc1c9fe9de3307a9182dbaa75965bf85f5e64563e68d039a5b659aa8863b89228edb93ff3d8c3323ab0d03300476aa4aca206d4626a6b269b2078912d").unwrap();
 		let tag = decode("854cbb42bade86a09597482c8604681a").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -294,7 +294,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("911ead61b2aa81d00c5eff53aeea3ab713709ed571765890d558fb59d3993b45f598a39e5eff4be844c4d4bd1ef9622e60412b21140007d54dcf31b2c0e3e98cf33a00fd27f0").unwrap();
 		let tag = decode("2865d2a26f413cc92416340f9491e1be").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -307,7 +307,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("368fb69892447b75778f1c5236e1e9d5d89255c3d68d565a5bba4f524d6ad27de13087f301e2ef4c08f5e2c6128b1d3e26de845c4ac4869e4c8bd8858ad0d26dec3b5d61a9e3666a3911ba").unwrap();
 		let tag = decode("1414f1b91966340417c38226ccca9d3d").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -320,7 +320,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("d0076c88ad4bc12d77eb8ae8d9b5bf3a2c5888a8d4c15297b38ece5d64f673191dc81547240a0cbe066c9c563f5c3424809971b5a07dcc70b107305561ce85aecb0b0ea0e8b4ff4d1e4f84836955a945").unwrap();
 		let tag = decode("c5ca34599c6a8b357c6723ee12b24da8").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -333,7 +333,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("9d9ae6328711fb897a88462d20b8aa1b278134cdf7b23e1f1c809fa408b68a7bfc2be61a790008edaa98823381f45ae65f71042689d88acfa5f63332f0fba737c4772c972eba266640056452903d6522cefd3f264e").unwrap();
 		let tag = decode("e84211b6cfd43543f8b1b4db07a494d1").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -346,7 +346,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("229da76844426639e2fd3ef253a195e0a93f08452ba37219b6773f103134f3f87b1345f9b4bf8cfc11277c311780a2b6e19a363b6ac2efe6c4cc54a39b144e29c94b9ebbde6fd094c30f59d1b770ebf9fcad2a5c695dc003bf51").unwrap();
 		let tag = decode("55e025a1eb87bc84d4be00c775c92ad2").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -359,7 +359,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("252ea42b6e5740306816974a4fe67b66e793ebe0914778ef485d55288eb6c9c45fa34ac853dc7a39252520514c3cb34c72b973b14b32bc257687d398f36f64cc2a668faffa7305ab240171343b5f9f49b6c2197e4fbe187b10540d7cdcfa37").unwrap();
 		let tag = decode("ab1d8a5a1f3eda9b5609c0028737477f").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -372,7 +372,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("5f009fbce4ec8e4ca9d8d42258b1a3e4e920b2fbad33d5e9f07557d9595e841025193b521ba440110dd83958e8ee30219d952b418e98a6c624894aa248aedc0678f2d263e7bfaf54ca379fef6c5d2f7ac422ea4b4369408b82d6225a7a2cf9a9f46fd4ef").unwrap();
 		let tag = decode("1c6bdff7d8b9554dc7bf40e50b37d352").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -385,7 +385,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("9c44d9135db0dbf81c862c1f69bec55a279794cdd29a58e61909aa29ec4c120c9c5a508d856b9e56138095714a4bb58402a1ad06774cf4ecdf2273839c0007cb88b5444b25c76f6d2424281101d043fc6369ebb3b2ff63cdb0f11a6ea1b8a7dafc80cdaef2813fa661").unwrap();
 		let tag = decode("689a141bc11159d306dad7a4ecf6ad9d").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -398,7 +398,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("bdfbfea261b1f4c134445321db9e6e40476e2dd2f4e4dbe86e31d6a116d25830762e065b07b11a3799aab93a94b4f98c31c0faeb77ec52c02048e9579257e67f5a6bae9bc65210c25b37fc16ee93bda88fd5f30a533e470b6188c6ce5739fa3e90f77120b490fc1027964f277f40").unwrap();
 		let tag = decode("780cc54bb6f1c9b78545c1562cd9d550").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -411,7 +411,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("f0bb2b73d94f2a7cef70fe77e054f206998eacf2b86c05c4fa3f40f2b8cebf034fe17bcbee4dea821f51c18c0aa85b160f8508bd1dc455cc7f49668b1fb25557cdae147bf2399e07fcacaca18eccded741e026ef25365a6b0f44a6b3dd975ee6bb580f5fccd040b73c18b0fbf8f63199ba10fe").unwrap();
 		let tag = decode("2ecccea4607d14dbb2d2475792aeb468").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -424,7 +424,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("c2f109d6d94f77a7289c8a2ab33bc6a98d976554721b0c726cbf4121069473e62ba36e7090e02414f3edc25c5d83ac80b49ad528cda1e3ad815b5a8c8ae9ad0753de725319df236983abd3f69ab4465d9b806c075b1896d40bdba72d73ba84c4a530896eb94ffccf5fb67eb59119e66a1861872218f928cf").unwrap();
 		let tag = decode("17ec6cf2b172f01e3c456ad047196805").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -437,7 +437,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("a62e313ecf258cc9087cbb94fcc12643eb722d255c3f98c39f130e10058a375f0809662442c7b18044feb1602d89be40facae8e89ca967015f0b7f8c2e4e4a3855dbb46a066e49abf9cef67e6036400c8ff46b241fc99ba1974ba3ba6ea20dc52ec6753f6fc7697adbccd02b0bbea1df8352629b03b43cc3d632576787").unwrap();
 		let tag = decode("d29a8968067aeb457ffc114c3a9efb95").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -450,7 +450,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("8965db3d3ae4fb483208f147276e7d81b71a86e7202ffc9b1eaade009bc016838dc09ca4bcf30887b2f4243fbd652cd90ebed1ceef8151ff17ea70518d03b0f2a24960aa7de9b30fa65c2e2d57360061aae6d9376e984e9fcd5e5dd0911a4bc8deca832ffb76f252bd7da523076593ba6b174f7d9fb0377e066ecbb6638036241e86").unwrap();
 		let tag = decode("28a5284696ed82714eaa94c9ebe6e815").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -463,7 +463,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("97a97b8f0f5420845ae8d57567f9bba693d30e6db916fad0b971f553ad7d993f806f27ab8b458d8046062ced4778c004b4f958a4436141637c6039963308dea2f54008b7feab79650295ed41bf9e65e1a2d75ab1c7b2a70ebb9e9f38d07a9a672d3e95ea78afe9ac02f2566b48b0251aef6eeeca8bd15bd8d43b559426aa9d15d960ee35cb3edf").unwrap();
 		let tag = decode("4ef49e8a0c2ef85826d7f03e81c577f2").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -476,7 +476,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("0cb3d6c31e0f4029eca5524f951244df042fc637c4162511fea512a52d3f7581af097eb642e79e48666cb1086edbd38c4777c535a20945fabc23e7c9277e2b960aac46865f1026eb6da82759108b9baece5da930ccfc1052b1656b0eadaa120ed0c45ad04b24ae8cdb22ceab76c5f180b46a392ab45b1b99c612546e6b947f4d5c06ad5abee92ff96345ad43").unwrap();
 		let tag = decode("fad7d5a5193dfb121c68529ba8c0c35d").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -489,7 +489,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("d152bcb4c24c3711b0fad28548dc4db605bbc89237cdbea7dbf956b8855d1161a0781f27bd56d798141e2ace339955efb98fe05d9b44cd011e645106bf47726183958cb6df34ce5766695f60bc70b6fe0fabb9afa009a8ef043dbf75f861881368fa07726625448fe608d578cdc48277f2dc53eaaf1bdc075269a42f9302a57cad387a82c6969608acacda20e1cac4596c").unwrap();
 		let tag = decode("96ae06cd7c72456e5568a42317046158").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -502,7 +502,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("acb825e6023b44b03b2efc265603e887954e8612b2ee134bdcb61501cfb9492952bf67be597c3a005b09af74d9e421a576d2c65e98104780feab838d8cb1bd135452ea39dc8907a4c1a6a9161805e4fa3e16989e6a418a7eea2582bf895da967028eab7c95d846a6de4b9980785814cf00484baa2f6de609912fff689bce6e854261ffe866bd8e63274605c7c5ad677bd7897ade543e").unwrap();
 		let tag = decode("bcf523a9bcf772e157941753c6d7401e").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -515,7 +515,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("22586fe7338e99cdaad9f85bd724ba4cfe6249b8a71399f9a3707b5c4323b8d96679568dfc8d230aefb453df596e13eb3e8a439249bd64bc93a58f95089a62b94f6562b821c83d91f56c55147381e9de4beb4ae81bd6fe7caef7e7e9a2078f2fba8f3e70d4910da9accc92b8e81a61b0fefbece4bd89443e66e8ddda8e47a66a62f17fd0e7d0a4852ce1a4d43d72a0b5e8914bbec698f060f2b092").unwrap();
 		let tag = decode("bd05336ed6426de412aac37661953052").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -528,7 +528,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("ef70c7de98ab1d4ad817024a970be463443640eb0cd7ff234bdd00e653074a77a1d5749e698bd526dc709f82df06f4c0e64046b3dc5f3c7044aef53aebb807d32239d0652dd990362c44ec25bf5aeae641e27bf716e0c4a1c9fbd37bbf602bb0d0c35b0638be20dd5d5891d446137e842f92c0ee075c68225e4dbacb63cc6fb32442b4bcda5e62cb500a4df2741a4059034d2ccb71b0b8b0112bf1c4ca6eec74").unwrap();
 		let tag = decode("d48657033095db3f873c33445fec8d35").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -541,7 +541,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("aa87f9a83048b6919c8f2b050315db4e2adae4a9c2ca0109b81961b520e63299dcb028cec0b9d3249a945ee67dd029b40f361245c740f004f8cf0d2214fcfa65e6124a3e74b78aa94345c46fdc158d34823ed249ee550431eaae9218367321cdd6e6a477650469bb3cc137a8f48d9cf27934b16703608b383d2145659922fb83bb2e7ee2ef938a90f2ff846a4a949129b1fb74dde55c5ae013c2f285de84f7dac7d1662f23").unwrap();
 		let tag = decode("298f84c8312029a7b1f38c5ea6021f57").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -554,7 +554,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("e944bb2ab06d138ad633c16ce82706ecf0ef5d119be1f3460c9ce101d9c4e04ef1677707fca40d1f8ca181e07273707b06624d6d7063c3b7b0bb0151b757b3e5237fb8004c161233d8bc7e5f28ea1c18da1874b3d54c5ad6ff0835eed35c8853704585cf83996e5e7cec68180af414e04f08134d3b0384ebdf0393c9310b55d8698fe10cb362defc0995e9a13b48b42cff61ffd9fe4c3c8c6dab355713b88f6e98a02e7231a0c6644ec4").unwrap();
 		let tag = decode("6234e81e089b779d0d509d14e566b5d7").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -567,7 +567,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("c531633c0c98230dcf059c1081d1d69c96bab71c3143ae60f9fc2b9cd18762314496ab6e90bf6796252cb9f667a1f08da47fc2b0eecda813228cae00d4c0d71f5e01b6ce762fa636efffe55d0e89fdc89ba42521cc019ab9d408fcd79c14914e8bbf0ea44d8a1d35743ad628327e432fdcfeb0b6679ddca8c92b998473732abd55dba54eefff83c78488eee5f92b145a74b6866531476fc46279d4fde24d049c1ce2b42358ff3ab2ba3a8866e547af").unwrap();
 		let tag = decode("e3b4192f6e50528c4f4f70267f094c56").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -580,7 +580,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("40c6318d9e383e107cdd3e1c8951562193c3ef64ee442432a63e2edefc78f32ab07772aeac172cb67ecf4d21f8b448423527bbeb9d8ddd0b46bdb27f74096ceb24e41963b4cdca176676a75bdbe3abc270b349ac0c6cbd9c3a5cd5bce20202fc5cc0c1bdd4fd25e121e0a24bd7bbeb9b19b1912467bf5338ee2ce88aa383c082b42cc399c9654ca325f35523e81438beb3f8926be79c378822d7c8f785614408a5f7cac49e4543188725643e6c1a70b46d0ec400").unwrap();
 		let tag = decode("874875c9a0ba3060a0680291c3dc85a2").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -593,7 +593,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("a9aeb8f0a2b3ca141ac71a808dcc0c9798ac117c5d2bd09b3cfe622693a9f8ca62e841b58bddb2042f888e3099b53638b88dfc930b7a6ee4272d77e4b1d7e442bab6afbde96ab0b432f0092d9ca50eef42f63c60c09e7b8de019b32ebe4030c37b8183cc1e3b913b0ce4ee4d744398fa03f9af1c070bed8cdafd65b3a84140cb4deadc70184de757332ce3780af84353f540755227e886a8d7ad980f3dd6fd68263d82e93f883381dec888bc9f4f48349aa2b4c342cb9f48c6").unwrap();
 		let tag = decode("f6dcad5412b95994f5e4d6829c2eba98").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -606,7 +606,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("1a4b073881922c6366680cc9c2a127b26f264148651b29abb0c388cf6c9b1865dba5a991e1f8309efbdb91bce44b278772c58fd41273526c33fec84beb53d1689b9da8483f71be6db73a73417069bb4cd3f195236e8d0a00d124eed3a6b6f89415b19a27fbe35774f6a1a6ee4bd4350b252b975f0db2d2eea82f4836350850d6290901e726e8af13644e2d98bc1d569c20800521e6affe976bd407049a2e6d9dd23f88d52e651391ecd2fc45b864310824aaadfa203762a77c1d64562dae").unwrap();
 		let tag = decode("90fcc2544880250f1c3abe8a3761ba08").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -619,7 +619,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("2794e6e133f6892f23837fff60cf7c28ee9942f8982ef8089db117903d0143293fdf12ea1cc014bcd8806fb83c19570eed7af522db0de489bbc87133a13434518bcfb9cda4d9f6d832a69209657a447abf8afd816ae15f313c7ea95ec4bc694efc2386cdd8d915dc475e8fadf3421fbb0319a3c0b3b6dfa80ca3bb22c7aab07fe14a3fea5f0aee17ab1302338eeac010a04e505e20096a95f3347dc2b4510f62d6a4c1fae6b36939503a6ac22780a62d72f2fc3849d4ef21267fffdef23196d88fbb9b").unwrap();
 		let tag = decode("7fa630c9bcb455e89f13d7a99d5e8dbe").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -632,7 +632,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("a5c8cf42287d4760fca755e2111817b981c47e85b0047de270ec301ca5f7b3679f4749210892b6ea6568f3a6a4344734a0efc0120ffedecf212d55cbcbb67815ac964875af45f735b70092a8f8435f52fc01b981ae971d486026fb69a9c3927acfe1f2eab0340ae95f8dbee41b2548e400805ece191db5fd1f0804053f1dbfaf7f8d6fded3874cb92d99a2729d3faaa60522060cf0b8101b463b3eb35b380fcddb6406c027d73fe701a5090c8dd531c203ce979e26b9ced3431e2b726a7244a20d9377bd62951bf5").unwrap();
 		let tag = decode("82c6194de4d27aac4c54b023b9831634").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -645,7 +645,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("dd13fbf22c8d18354d774bcd18f7eb814e9b528e9e424abc4e3f2463195e8018576565d16ab48845d11c9277f2865ebb4dc412fd5b27078f8325eadf971e6944c66542e34d9dda971e2aba70dbd3e94a1e638d521477a027776b52acf90520ca229ebc760b73128879475d1cbe1f70fc598b549cd92d8a9ac6833e500c138c56474db84cb3d70b7aa4f293a4c2b4d818b0ff9fd85918dc590a12a8c0e375c4d98b7fc87596547eb960676aad5559834588f00f251a9d53f95c47af4df3c4299175d5211779c148cfc988a5e9d9").unwrap();
 		let tag = decode("aeb0a4eb29886f0a7a12ec0516bd4af5").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -658,7 +658,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("4146faffd7313f5d9f625370d20413cc62ab65f4acfa3c7ee1125b937dd7a39f638fc46c8ed004fb525698de5d8620ec153435571817c3de257b0d0e648ebb92940c86a98262d54e764f28cbdd4f7d9bea970291f2110414f62064d7229c6332236c507b3dac742e651d85a2a22fb243c0cc7cc2d016e5bea38f33f9a9ce048944a5fe8b078d71d23168e12dfe5a0f0b829771edc7073fb96032b7be471337a37aca0cf7c0cdd543eed686cd34934717fd79a3f18492eef72f9f450b880aa7e2e1b65e3b04c22e72301338b43aa32ceec2e6").unwrap();
 		let tag = decode("61c6d4d6918b04fc1b72a7a0e9a3b799").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -671,7 +671,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("01e237220b619054a1f3670928fe67d40484b5af40fbd04d032500aac5acaa3b4584dd99a58c390627636a50de5d744f76a56a33205f9e3b00e16162eb47ff3333e1e208ca200f1a5338a86e17bd92dd2d16af8bb022a7dc05b923d019e05247f1a0d0b4bfcfce58dd6d83830705707676d55739abee89fcd5cb94b8fde006a5da02df64b00a467f45970b5ca440f22319b9735a55d454b9fba0588fef0c59d3d83823eba6e0601a96e10233826c5adeea6b2a51d386a07a9e047ad405b23d4c3d89f30c31e3199f0c8f927bfac43ceea1f969de0a8c0f").unwrap();
 		let tag = decode("b9fec6da464c7b85b2a4726694562fe9").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -684,7 +684,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("66b7f69ac49fab4e5975aeb6fa9287d8eac02ac312c4de78f77f59da16cbcf87274e66801c4b862c33ea79cdc76528862bb2956c06db8b8acfac4794ebf39e35ac03cc73a4351a4ff762f681a48d6f25cad36e2814c9b5c40b9ae92509e58429106847789454d376836936bebc7a80e6c66e7aa52936d6b361378a41f849ad4e48f9ee2d3e92217a908fa8eb35736ac8ada7d32ae05391f2d807be3512543c36138a5fe660dd4cd4cd184bb43b6ba6bc0bae634e2fa9669304cd510ed5103f630068ff76d3375738de60a381842b421477e25a490cdd6894b2704125").unwrap();
 		let tag = decode("94118ccc68de1921d480aab43d1ef0d1").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -697,7 +697,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("91ddadb86b7ebef798ddaa59da51d71316fcf6c9678143178227d778750dc9827fc6cc21e605c505023e6db25849df7fb6fc1ca4d223aa215f8c85b724643c83bf8218815a9f9e2952384e0ca6a80a3760b39daf91a3c6154c4728c2371fd181fa3764753d0b0c23808a82cd8f0497246e3a0f17f8906a07c725d2891ce968a9d432c2b102d85c05510b28e715bb60d0403a77490e7f18be81218bc4f39287b9bb09f50227dd2f55e4fb70c4438da8ba3c8ffbced87d90155913faa9979fc57e6cbeddfaba3d3ab4163c0eebc7d94279c27d3ed56338893dba542eaefba30f8c3b").unwrap();
 		let tag = decode("8980e8e4fe796428b733f4f8e1954a45").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -710,7 +710,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("2c14c3931e98e84507c4c165c2ed47ad4a178f0e216cd7ac2453bbbf9f85dd06bd8ef54a9ff1fd3dd8e0cafb635d8f2de861a0db5b14d03f17aaea8c89b3010797c71c13a0e666899d7ff6e53c4f08be8ddb3e37688b5afa088079b6c7519b833e16560073e699530302028a3496e05edddec01a23a4c7983956250e8d9e616f7b940856955cde81c1efabf6b7b92f153d03f4cd17e7f7d2907670cfc84d45c1d7936775a3fce47968504278ffaecacea0871b227f250e2979516f6fa310fec0d8df1af7872e5a534e82870aa05f43ef0a455846b93ce938064fa33e92de262e4156dae56775").unwrap();
 		let tag = decode("16c972829819b8fb030b2c5f40dab717").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -723,7 +723,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("0b316ab2bcf5359900fa4082d5d253b49ad94b70e3fab544f98bd111cbcef6766cf953deec08cae1f489fe12f7acc0032db8a6b0c0eee0c206ea5fb973feaebf90f690e840094db5e13fdd7157ba127368c995b426529435a1bcdd1f14ce9125b8a0e4c96b6ec09e3c36a180adf81941c002d19c19d53c2009be803b987504606b7d43bdee5e0b32ff23c466b6cccfcd0d4e88fd1332e73712b5ab725c1a383e584f34f80daff29d285ae5e43cf1d0cc7a828e75c25daced3a581a93d7a50f313b33f38dddfaa23cd5b9914797db820ee2400d52bf5fa982277fe9b5881ac42981633b3957b0e935051828").unwrap();
 		let tag = decode("c549aa944d6d97e52e0793ed572682c0").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -736,7 +736,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("f8defb6fe95dfec499b909996a1f75a198a90e4d6c6464d00a357a555311c42fe92dbbc4b79c935e4f0b1a95e44fdbc1380bebabca28db4dd0d2870daaafc38ef27908c3509e945714801cc51f1a07b2430c74fa64f2a7c2f7fd1551d258c9c3be020873fc1bf19f33ab6c660911dcf2317195d0efee82d20ec26d22611f9cf86c51a64e28b3a1f344500018e0855c88dae3c07acaeaa10b60388484dce93e16e6e1a6e69e899806648a92568c8780e9f4baacd98cbb353ac2f908e775d92303cfab843f15be0e0c322a958802fb1a60fcc7631f151f4c2b8cb965d2d296acef250275a2fecc0cea803ce7c058b12dd2").unwrap();
 		let tag = decode("baf9a51180f172e5c0cc2c946ce55055").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -749,7 +749,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("0afce770a12f15d67ac104ba0640aab95922390607473cbda71321156a5559906be933fb0980da56f27e89796eaa1054f5aacf1668d9f273cc69071b9e8e22af6a205a6a88f7ad918e22f616bddbb07c78913c7e056e769e6fcf91c7600c2740212e3a176e4110cac9e361a59a773457064d2dc652dd115d04f1c3756c0e1d39f6737a16b4508663e310934c49c58058b3c7b9af7bb2334c8a163608c42499658986927cda365e2aead3ac29de16e47e954383ea566f8fb245a4e5a934c767bb3bf7e0eb8a477fd0e1f61bcb238462a0d19c5cea9293ca58ade76829413216a7882cd2846323046694f78cd8b0347792ebb75abdc1").unwrap();
 		let tag = decode("eb9b2ee43e9a3ae1e33561800169d868").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -762,7 +762,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("027b14197b4012256b133b78ddc94e72fb4d724fefa4ae329f5a5fa3fa784fe6d7e1e805e3f7a75557de64de506d38237b467fa577efb59e7cfe2356bed6655c5aa4e238dcfeb75c16549a0917268768a96acb5e20546a1fb7e3a7cff887f49f2cd7a135f72a98a779150f3207bf733e88861fd79eadbf77fa3bfe97bfe8b6a991cb3bcc2cde8287f7e89384846561934b0f3e05e0646e0e1907770df67a7594161a4d0763faa6fa844080932159999d528ee0558710058ce16f97d13ac9fd9bf5044191188bbfb598d0fafbdf790b61ce0781ecc04218a30ded45efd498cc9ba03562ed2b4a993ee98876b3ab7a9bc07829f1c4ca6ead98c06b").unwrap();
 		let tag = decode("e0bf9b6837428843f5a233ee5ddb8a1e").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -775,7 +775,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("c40180afd53001663ff4834110f56e6b0f178cd3c0e7f7de5d0089ee41d8403ffb98e84922706544a344d7e2625b12cf66b9c966f9f57d7b94e3e4b34e6f0aaed1763ce012782e2f5e1682e6c343fc7961fedddd0919d0b910e9923c17e36406979b256b85aec24ee352f03b48c1302eab419c83dccc5372cc059e9de596224fa70098eb32fc9579e97917b923914fa2efc30ab29b457bf14e45583b3771486bdc0876f3ea6e1a646746c4f8c5cb2641a1557c8473e6ea67d4811a67485ae9a678ff3a2408ca845c3b51957e189eef47dfc1d46bde4b9d754d7df13f828ddadb06e4ebddb5f0dafbdb28de4c5e6078926f20cdf9e97ecd58e309e640f74f06").unwrap();
 		let tag = decode("2e8eb9ff4467c0f61c2abf6ca10893ef").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -788,7 +788,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("2c217e969c04740a1acfa30117eb5b32dc573df3354f4cc3bf8f696ff905f1e640f3b2c250473b376622e0c9bda13b94640521be1ef0fc660b4c10dbe2bfc093030753e04f6aaecf813b43b61f960455974b8bb8a9b461d1e8fd3802315e863c00448f24dd38deb90e135493274eb14ccbde15c50dcad734ed815a806be6622492a84cd062e3ba567b909a205a1d0d2bedd40169697d261c7b6c2e0b1f069853fd470e8f364a142c386c439a6dbe192ded5a3d0fbf73799f588c59e58c60249d980ddcf0d9693631cd9b3f972509c3a77123d38d9e267ecad06e1208e3f1c0a69fbca7c3bb1a48fda19493d0f8f48398820057b94120f3ef97d87e9e8a1b301a2534c68f").unwrap();
 		let tag = decode("ce507bdb0c71f8e89f5078495f7995b8").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -801,7 +801,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("9c3faab9261a63cea9477b3269007283995b06ba77ef83d9e693f7e4ee9855550eef94855be39a7a435b6a3584b202973777c7b2482376ba47b49311947a64983b60236756ee4455d4cfada8c36af8eb06b06ba2f6b79ffb1185c89f2b2a831cfaa3855fc1841d8910908be5078352011168a67d36372d851a3217cabf593ea462dcd325cf9a4f67e85418fd5c924e9b92ab026cbee4e7ab1067066cb5949dfc699a68fe539e1abb13cec33904e5207e6963d24f5a0b770613b8b00014e791bfff88f9c25ca126127a2f8d1d1e9794efd28dce98b53e228073faae8d5047530d502184fc341321c3f55fcbf41187fc31262c325b97f519959b6a29b36c71f76f60196bb1457b77c8bb").unwrap();
 		let tag = decode("73b00b1705602479aab944dcc1b282a2").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -814,7 +814,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("7a3bf3e3ad5ae3ab71fb1f7121c3d8fb511099484b50af7ca128ee0337ed4b828dc4cde0b88dc1e8089101fa82c9beb3eb48fdcf0f5b16da441f5a3fce9a590022af95a94aed6a3e71e505f60f303c78c356f274ea85a55354078530664ecda32c80e77dc20974b3b38f4825b8fbee8c3970769a2f42c5181608a8d7d76ef4d093961b665ee42b9708fcafe2c82d3a307173e2a25ad2528c3bf83352b9265e45b70722d7cf8c9b80826d21335234ee3db69d0d37871c83222365900c96c17a7e9f5742d0bfe383be24d0d44590d4b0f29f7abe0c65daaffb968b3f2657b1eb300534eacb52ec7a6b6f9f57a50a91b1799f491361cf613c934b7f520dc4eeeb40ffc45e10be0a95e76f366d4eac14").unwrap();
 		let tag = decode("69302888812eea030d621b640e7bcf7c").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -827,7 +827,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("e580093789ba17ffb46672dc326f09278aca08598d3e5458eaa53e6ed45d5c71a396e35b5ea3fe7b7c0496a734d24f1c75420694be2ff095d5172fd3407794e4b99fd7c374fbe8d1564a048614d3f355bfb5866de1a53e1a51f9f5e8312253cfd82f36efaa1898c850ca0d975ad1e8b0d9597a5a9e6516fe2a3c92efb7495557a8afc3da15b0d3e2ba58f612519836946cf2d15b898320d16a026c8c00a1be2e35f0ebe68f28d91c6c45d24c3f3c157cb132fa659b7794df883d90741fa2d2afcc4f27858e13ecd41b154a35d24947ae7361170060c107d8ecacb393ea67104b60457278a392fdf1794bab97d3b02b71a4eb015eaa38a4b4c944c2bc7cd5e329da4a1ab2937a6af81a6caa5fce752331fdefd4").unwrap();
 		let tag = decode("19bbacfac768bb0ce71e39c5d4d3e9a0").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -840,7 +840,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("7d35cfe4be56bd6e0e09dedcd01735b915bc1891a4d1f6a541abc4bcd0ebe89dcb8e365e5813742e8ec65777b6159422fada747da99394252baf8a046fc1b60ad79755f545f4448627b7acaf403000894f5641e78d3f946dfca29ec617f0660dcd6e8d8827e67e1022a245c595d86e60fbd176bf721b171bbe5ecaf4ae671b9f3dd3920146e6ad431bd8fc431820e19454b6ca209723d80fdbee187fca9c937c979206ae97be55f6ba7366a5608770a11d537396485eb0a66586385f4d4cf3905d1fc90831c3e136d5d513fa22be285193142994a3ed477145bacdcbdd791e8b3b88b0d4f1d18b27382550a818c4fd8884bf36f677c6c3ff5677406e510911e696af75e5b3f859bef699bdd16e6215fdb98d874025eada50").unwrap();
 		let tag = decode("0fa4cb2bab84336409aa4349ab99a8bd").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -853,7 +853,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("f2e21052eebbb86a4f5e803360855d8632aa727dca6f5e79dd74d7aff106e442001928d113005b030f8446f8eff2ee951db663978abe43090dd5ad2c51ba97a0ecf988c607d95e486d02524f690fa3c28d5c48c1f75c1f555e7b43fe7e46f2ca2b9fdb408ec4ba18b6cdde2af673183cb7b1a3c23ae77eddd4cac75e1ea14743fc571f8d31ce2e96787524cd48aadaa474181c096a032184574ddc25a6e0ac8441c212bc36298708e33c963ae931e6c6241d1affeef7b6ef759495df44b6ab647447693cf703569e69aa72f1def9a342b8978c1edea9703a421ca75b92cac4de14b88c693200022b8a2ed22b1c4678b99f4d695e080dd1196d7168e14f0d0f8ff880d742e97b9f6d00af1f7118e10b77c5ef3ea6c52f84a20fd6ea46dc").unwrap();
 		let tag = decode("9bd8b7743c056bb2334833afd6143e18").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -866,7 +866,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("b842eadfdf431c135bd6581d3eccae54e2267d8890036aa33dfe2d2d9715c44625441210a3a0d666d708d30588fe851ec36e10d8fa3584ed77b095149494b7c54379d62c8935e1d2b9a8f47e4759ad0b3437fdf2cc2fb6c5ea25ad10e0bdc9dc5b0517fc237eb783cc461c46665e2b1d1a5b8008dbf409ea2a63fea0276de23a32c99d92a498807a0f95e208fc6262321a78aafaf0cc3f833fff37bd4efa66f6023a25cdc6702cee3912799563d908a5183c9956a06aa71085d855dc7c809ed6e2889592b361ab3ab39060f8e419152187a794a19c2a1128882201900ea2cd597860674bf78d9720643df8701676718fd201baed4935a88e50558daf86edd08a9ab227ac7afae55c974b68de8dacad4a4d79b13ed6dfe74017a4cb9148e033436fb6").unwrap();
 		let tag = decode("ee1ec36804e1d5cdbddb52608c711fd8").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -879,7 +879,7 @@ mod boringssl_aead_chacha20_poly1305 {
 		let output = decode("bd11ed07b7b4b30eeaf25d6a41a549cca0a5aee71f990ac566a37265d7af2ce3c03703427ee0b2755c2bdfc29f9d826aec6ee4ad28af48079ac23db16580b97424f3a4e35cc23625d39f95699d9ff5143e9a2bc26fcfee4f125f5aa2d968ccfc2faaf9db3c28850f6757f735cbc50c94c498bcde4f23bffafa8dd5f70d1a011e35eb26e905d4e68848fedebeb197be595c085ba33f11ba8398258445051751888e9bba111f800f31b37c447074ca6dce6d54b4dfad6cee5138643d4f6ac045e8047248924e88ea4294c7878bc22c9b41924ce301f22693c33733107bf1ba85e34806c5e4366ea66fc52a5f89dd9bf213239158b3d4d2600dde696c61d76c398b9bf10de9118e812e891c8f3355c0ecc6405f79bc32a58905e37888a1d8395fbedc3ac54eca569f").unwrap();
 		let tag = decode("296a397d280d026fc3627f4718971be9").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -893,7 +893,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -907,7 +907,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -921,7 +921,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -935,7 +935,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c2").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -949,7 +949,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -963,7 +963,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f3").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -977,7 +977,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f374").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -991,7 +991,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f37465").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -1005,7 +1005,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f374651a").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -1019,7 +1019,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f374651a84").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -1033,7 +1033,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f374651a8413").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -1047,7 +1047,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f374651a841386").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -1061,7 +1061,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f374651a84138648").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -1075,7 +1075,7 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f374651a84138648a5").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 
 	#[test]
@@ -1089,6 +1089,6 @@ mod boringssl_aead_chacha20_poly1305 {
 			decode("b5cc754f6dd19ef2d66f90e6bc9a322ddf216ef248cbe76b5ab6dd53bc36").unwrap();
 		let tag = decode("d3f7b9c295f374651a84138648a591").unwrap();
 
-		chacha20_poly1305_test_runner(&key, &nonce, &aad, &tag, &input, &output).unwrap();
+		aead_test_runner(&key, &nonce, &aad, &tag, &input, &output);
 	}
 }
