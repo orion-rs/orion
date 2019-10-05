@@ -90,9 +90,6 @@ const BLAKE2B_BLOCKSIZE: usize = 128;
 const BLAKE2B_KEYSIZE: usize = 64;
 /// The maximum output size for the hash function BLAKE2b.
 const BLAKE2B_OUTSIZE: usize = 64;
-#[cfg(feature = "safe_api")]
-/// The default size for a randomly generated secret key.
-const BLAKE2B_GENSIZE: usize = 32;
 
 construct_secret_key! {
 	/// A type to represent the secret key that BLAKE2b uses for keyed mode.
@@ -105,7 +102,7 @@ construct_secret_key! {
 	/// # Panics:
 	/// A panic will occur if:
 	/// - Failure to generate random bytes securely.
-	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, BLAKE2B_GENSIZE)
+	(SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, 32)
 }
 
 construct_public! {
