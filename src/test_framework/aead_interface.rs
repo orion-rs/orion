@@ -45,6 +45,7 @@ pub fn AeadTestRunner<Sealer, Opener, Key, Nonce>(
 		open_dst_out_length(&sealer, &opener, &key, &nonce, input, tag_size, aad);
 		open_modified_tag_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
 		open_modified_ciphertext_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
+		open_modified_aad_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
 		seal_open_equals_expected(
 			&sealer,
 			&opener,
@@ -300,4 +301,28 @@ fn open_modified_ciphertext_err<Sealer, Opener, Key, Nonce>(
 
 	let mut dst_out_pt = input.to_vec();
 	assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_err());
+}
+
+#[cfg(feature = "safe_api")]
+/// When opening sealed data with modified aad, an error should be returned.
+fn open_modified_aad_err<Sealer, Opener, Key, Nonce>(
+	sealer: &Sealer,
+	opener: &Opener,
+	key: &Key,
+	nonce: &Nonce,
+	input: &[u8],
+	tag_size: usize,
+	aad: &[u8],
+) where
+	Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
+	Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
+{
+	assert!(!input.is_empty());
+	let default_aad = if aad.is_empty() { None } else { Some(aad) };
+
+	let mut dst_out_ct = vec![0u8; input.len() + tag_size];
+	sealer(&key, &nonce, input, default_aad, &mut dst_out_ct).unwrap();
+
+	let mut dst_out_pt = input.to_vec();
+	assert!(opener(&key, &nonce, &dst_out_ct, Some(b"BAD AAD"), &mut dst_out_pt).is_err());
 }
