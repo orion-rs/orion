@@ -486,11 +486,7 @@ mod public {
 			fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
 				// This will only run verifcation tests on differing input. They do not
 				// include tests for different secret keys.
-				if verify(expected, &OneTimeKey::from_slice(&KEY).unwrap(), input).is_ok() {
-					Ok(())
-				} else {
-					Err(UnknownCryptoError)
-				}
+				verify(expected, &OneTimeKey::from_slice(&KEY).unwrap(), input)
 			}
 
 			fn compare_states(state_1: &Poly1305, state_2: &Poly1305) {
