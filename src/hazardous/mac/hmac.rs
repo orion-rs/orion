@@ -49,17 +49,17 @@
 //!
 //! let key = hmac::SecretKey::generate();
 //!
-//! let mut state = hmac::init(&key);
+//! let mut state = hmac::Hmac::new(&key);
 //! state.update(b"Some message.")?;
 //! let tag = state.finalize()?;
 //!
-//! assert!(hmac::verify(&tag, &key, b"Some message.")?);
+//! assert!(hmac::verify(&tag, &key, b"Some message.").is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
-//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
-//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.Hmac.html
-//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/mac/hmac/struct.SecretKey.html
+//! [`update()`]: struct.Hmac.html
+//! [`reset()`]: struct.Hmac.html
+//! [`finalize()`]: struct.Hmac.html
+//! [`SecretKey::generate()`]: struct.SecretKey.html
 
 use crate::{
 	errors::UnknownCryptoError,
@@ -127,7 +127,7 @@ impl Hmac {
 			ipad[idx] ^= itm;
 		}
 
-		// Due to opad_hasher and ipad_hasher being initialized in init()
+		// Due to opad_hasher and ipad_hasher being initialized in new()
 		// and the size of input to update() is known to be acceptable size,
 		// .unwrap() here should not be able to panic
 		self.ipad_hasher.update(ipad.as_ref()).unwrap();
@@ -137,7 +137,20 @@ impl Hmac {
 		opad.zeroize();
 	}
 
-	/// Reset to `init()` state.
+	/// Initialize `Hmac` struct with a given key.
+	pub fn new(secret_key: &SecretKey) -> Self {
+		let mut state = Self {
+			working_hasher: sha512::Sha512::new(),
+			opad_hasher: sha512::Sha512::new(),
+			ipad_hasher: sha512::Sha512::new(),
+			is_finalized: false,
+		};
+
+		state.pad_key_io(secret_key);
+		state
+	}
+
+	/// Reset to `new()` state.
 	pub fn reset(&mut self) {
 		self.working_hasher = self.ipad_hasher.clone();
 		self.is_finalized = false;
@@ -169,24 +182,10 @@ impl Hmac {
 	}
 }
 
-#[must_use]
-/// Initialize `Hmac` struct with a given key.
-pub fn init(secret_key: &SecretKey) -> Hmac {
-	let mut state = Hmac {
-		working_hasher: sha512::init(),
-		opad_hasher: sha512::init(),
-		ipad_hasher: sha512::init(),
-		is_finalized: false,
-	};
-
-	state.pad_key_io(secret_key);
-	state
-}
-
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// One-shot function for generating an HMAC-SHA512 tag of `data`.
 pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	let mut hmac_state = init(secret_key);
+	let mut hmac_state = Hmac::new(secret_key);
 	hmac_state.update(data)?;
 	hmac_state.finalize()
 }
@@ -197,12 +196,12 @@ pub fn verify(
 	expected: &Tag,
 	secret_key: &SecretKey,
 	data: &[u8],
-) -> Result<bool, UnknownCryptoError> {
-	let mut hmac_state = init(secret_key);
+) -> Result<(), UnknownCryptoError> {
+	let mut hmac_state = Hmac::new(secret_key);
 	hmac_state.update(data)?;
 
 	if expected == &hmac_state.finalize()? {
-		Ok(true)
+		Ok(())
 	} else {
 		Err(UnknownCryptoError)
 	}
@@ -213,41 +212,9 @@ pub fn verify(
 mod public {
 	use super::*;
 
-	use crate::hazardous::hash::sha512::compare_sha512_states;
-
-	// One function tested per submodule.
-
-	/// Compare two HMAC state objects to check if their fields
-	/// are the same.
-	fn compare_hmac_states(state_1: &Hmac, state_2: &Hmac) {
-		compare_sha512_states(&state_1.opad_hasher, &state_2.opad_hasher);
-		compare_sha512_states(&state_1.ipad_hasher, &state_2.ipad_hasher);
-		compare_sha512_states(&state_1.working_hasher, &state_2.working_hasher);
-
-		assert_eq!(state_1.is_finalized, state_2.is_finalized);
-	}
-
+	#[cfg(feature = "safe_api")]
 	mod test_verify {
 		use super::*;
-
-		#[test]
-		fn finalize_and_verify_true() {
-			let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut tag = init(&secret_key);
-			tag.update(data).unwrap();
-
-			assert_eq!(
-				verify(
-					&tag.finalize().unwrap(),
-					&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
-					data
-				)
-				.unwrap(),
-				true
-			);
-		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
@@ -255,264 +222,70 @@ mod public {
 			use super::*;
 
 			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
-				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate();
-
-					let mut state = init(&sk);
-					state.update(&data[..]).unwrap();
-					let tag = state.finalize().unwrap();
-					// Failed verification on Err so res is not needed.
-					let _res = verify(&tag, &sk, &data[..]).unwrap();
-
-					true
-				}
-			}
-
-			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
+				/// When using a different key, verify() should always yield an error.
+				/// NOTE: Using different and same input data is tested with TestableStreamingContext.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
-					let mut state = init(&sk);
+					let mut state = Hmac::new(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
-
 					let bad_sk = SecretKey::generate();
 
-					let res = if verify(&tag, &bad_sk, &data[..]).is_err() {
-						true
-					} else {
-						false
-					};
-
-					res
+					verify(&tag, &bad_sk, &data[..]).is_err()
 				}
 			}
 		}
-	}
-
-	mod test_reset {
-		use super::*;
-
-		#[test]
-		fn test_double_reset_ok() {
-			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			state.reset();
-		}
-	}
-
-	mod test_update {
-		use super::*;
-
-		#[test]
-		fn test_update_after_finalize_with_reset_ok() {
-			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			state.update(data).unwrap();
-		}
-
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/28
-		fn test_update_after_finalize_err() {
-			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.update(data).is_err());
-		}
-	}
-
-	mod test_finalize {
-		use super::*;
-
-		#[test]
-		fn test_double_finalize_with_reset_no_update_ok() {
-			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			let _ = state.finalize().unwrap();
-		}
-
-		#[test]
-		fn test_double_finalize_with_reset_ok() {
-			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init(&sk);
-			state.update(data).unwrap();
-			let one = state.finalize().unwrap();
-			state.reset();
-			state.update(data).unwrap();
-			let two = state.finalize().unwrap();
-			assert_eq!(one, two);
-		}
-
-		#[test]
-		fn test_double_finalize_err() {
-			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.finalize().is_err());
-		}
-
 	}
 
 	mod test_streaming_interface {
 		use super::*;
+		use crate::hazardous::hash::sha512::compare_sha512_states;
+		use crate::test_framework::incremental_interface::*;
 
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
-		/// finalize() and reset() produce the same Digest.
-		fn produces_same_hash(sk: &SecretKey, data: &[u8]) {
-			// init(), update(), finalize()
-			let mut state_1 = init(&sk);
-			state_1.update(data).unwrap();
-			let res_1 = state_1.finalize().unwrap();
+		const KEY: [u8; 32] = [0u8; 32];
 
-			// init(), reset(), update(), finalize()
-			let mut state_2 = init(&sk);
-			state_2.reset();
-			state_2.update(data).unwrap();
-			let res_2 = state_2.finalize().unwrap();
+		impl TestableStreamingContext<Tag> for Hmac {
+			fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+				Ok(self.reset())
+			}
 
-			// init(), update(), reset(), update(), finalize()
-			let mut state_3 = init(&sk);
-			state_3.update(data).unwrap();
-			state_3.reset();
-			state_3.update(data).unwrap();
-			let res_3 = state_3.finalize().unwrap();
+			fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				self.update(input)
+			}
 
-			// init(), update(), finalize(), reset(), update(), finalize()
-			let mut state_4 = init(&sk);
-			state_4.update(data).unwrap();
-			let _ = state_4.finalize().unwrap();
-			state_4.reset();
-			state_4.update(data).unwrap();
-			let res_4 = state_4.finalize().unwrap();
+			fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
+				self.finalize()
+			}
 
-			assert_eq!(res_1, res_2);
-			assert_eq!(res_2, res_3);
-			assert_eq!(res_3, res_4);
+			fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
+				hmac(&SecretKey::from_slice(&KEY).unwrap(), input)
+			}
 
-			// Tests for the assumption that returning Ok() on empty update() calls
-			// with streaming API's, gives the correct result. This is done by testing
-			// the reasoning that if update() is empty, returns Ok(), it is the same as
-			// calling init() -> finalize(). i.e not calling update() at all.
-			if data.is_empty() {
-				// init(), finalize()
-				let mut state_5 = init(&sk);
-				let res_5 = state_5.finalize().unwrap();
+			fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				// This will only run verifcation tests on differing input. They do not
+				// include tests for different secret keys.
+				verify(expected, &SecretKey::from_slice(&KEY).unwrap(), input)
+			}
 
-				// init(), reset(), finalize()
-				let mut state_6 = init(&sk);
-				state_6.reset();
-				let res_6 = state_6.finalize().unwrap();
-
-				// init(), update(), reset(), finalize()
-				let mut state_7 = init(&sk);
-				state_7.update(b"Wrong data").unwrap();
-				state_7.reset();
-				let res_7 = state_7.finalize().unwrap();
-
-				assert_eq!(res_4, res_5);
-				assert_eq!(res_5, res_6);
-				assert_eq!(res_6, res_7);
+			fn compare_states(state_1: &Hmac, state_2: &Hmac) {
+				compare_sha512_states(&state_1.opad_hasher, &state_2.opad_hasher);
+				compare_sha512_states(&state_1.ipad_hasher, &state_2.ipad_hasher);
+				compare_sha512_states(&state_1.working_hasher, &state_2.working_hasher);
+				assert_eq!(state_1.is_finalized, state_2.is_finalized);
 			}
 		}
 
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
-		/// finalize() and reset() produce the same Digest.
-		fn produces_same_state(sk: &SecretKey, data: &[u8]) {
-			// init()
-			let state_1 = init(&sk);
-
-			// init(), reset()
-			let mut state_2 = init(&sk);
-			state_2.reset();
-
-			// init(), update(), reset()
-			let mut state_3 = init(&sk);
-			state_3.update(data).unwrap();
-			state_3.reset();
-
-			// init(), update(), finalize(), reset()
-			let mut state_4 = init(&sk);
-			state_4.update(data).unwrap();
-			let _ = state_4.finalize().unwrap();
-			state_4.reset();
-
-			compare_hmac_states(&state_1, &state_2);
-			compare_hmac_states(&state_2, &state_3);
-			compare_hmac_states(&state_3, &state_4);
-		}
-
 		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_produce_same_state() {
-			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			produces_same_state(&sk, b"Tests");
+		fn default_consistency_tests() {
+			let initial_state: Hmac = Hmac::new(&SecretKey::from_slice(&KEY).unwrap());
+
+			let test_runner = StreamingContextConsistencyTester::<Tag, Hmac>::new(
+				initial_state,
+				SHA512_BLOCKSIZE,
+			);
+			test_runner.run_all_tests();
 		}
 
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_produce_same_hash() {
-			let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			produces_same_hash(&sk, b"Tests");
-			produces_same_hash(&sk, b"");
-		}
-
-		#[test]
-		#[cfg(feature = "safe_api")]
-		// Test for issues when incrementally processing data.
-		fn test_streaming_consistency() {
-			for len in 0..SHA512_BLOCKSIZE * 4 {
-				let sk = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-				let data = vec![0u8; len];
-				let mut state = init(&sk);
-				let mut other_data: Vec<u8> = Vec::new();
-
-				other_data.extend_from_slice(&data);
-				state.update(&data).unwrap();
-
-				if data.len() > SHA512_BLOCKSIZE {
-					other_data.extend_from_slice(b"");
-					state.update(b"").unwrap();
-				}
-				if data.len() > SHA512_BLOCKSIZE * 2 {
-					other_data.extend_from_slice(b"Extra");
-					state.update(b"Extra").unwrap();
-				}
-				if data.len() > SHA512_BLOCKSIZE * 3 {
-					other_data.extend_from_slice(&[0u8; 256]);
-					state.update(&[0u8; 256]).unwrap();
-				}
-
-				let digest_one_shot = hmac(&sk, &other_data).unwrap();
-
-				assert!(state.finalize().unwrap() == digest_one_shot);
-			}
-		}
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
@@ -521,38 +294,15 @@ mod public {
 			quickcheck! {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
-				fn prop_same_hash_different_usage(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate();
-					// Will panic on incorrect results.
-					produces_same_hash(&sk, &data[..]);
+				fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+					let initial_state: Hmac = Hmac::new(&SecretKey::from_slice(&KEY).unwrap());
 
+					let test_runner = StreamingContextConsistencyTester::<Tag, Hmac>::new(
+						initial_state,
+						SHA512_BLOCKSIZE,
+					);
+					test_runner.run_all_tests_property(&data);
 					true
-				}
-			}
-
-			quickcheck! {
-				/// Related bug: https://github.com/brycx/orion/issues/46
-				/// Test different streaming state usage patterns.
-				fn prop_same_state_different_usage(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate();
-					// Will panic on incorrect results.
-					produces_same_state(&sk, &data[..]);
-
-					true
-				}
-			}
-
-			quickcheck! {
-				/// Using the one-shot function should always produce the
-				/// same result as when using the streaming interface.
-				fn prop_hmac_same_as_streaming(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate();
-					let mut state = init(&sk);
-					state.update(&data[..]).unwrap();
-					let stream = state.finalize().unwrap();
-					let one_shot = hmac(&sk, &data[..]).unwrap();
-
-					(one_shot == stream)
 				}
 			}
 		}

@@ -29,7 +29,6 @@
 /// default and secure length of random bytes.
 macro_rules! impl_default_trait (($name:ident, $size:expr) => (
     impl core::default::Default for $name {
-        #[must_use]
         #[cfg(feature = "safe_api")]
         /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
         fn default() -> $name {
@@ -55,6 +54,8 @@ macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
         }
     }
 
+    impl core::cmp::Eq for $name {}
+
     impl core::cmp::PartialEq<&[u8]> for $name {
         fn eq(&self, other: &&[u8]) -> bool {
             use subtle::ConstantTimeEq;
@@ -77,8 +78,6 @@ macro_rules! impl_omitted_debug_trait (($name:ident) => (
 ));
 
 /// Macro that implements the `Debug` trait on a object called `$name`.
-/// This `Debug` will omit any fields of object `$name` to avoid them being
-/// written to logs.
 macro_rules! impl_normal_debug_trait (($name:ident) => (
     impl core::fmt::Debug for $name {
         fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -96,7 +95,7 @@ macro_rules! impl_drop_trait (($name:ident) => (
     impl Drop for $name {
         fn drop(&mut self) {
             use zeroize::Zeroize;
-            self.value.zeroize();
+            self.value.iter_mut().zeroize();
         }
     }
 ));
@@ -120,6 +119,7 @@ macro_rules! impl_asref_trait (($name:ident) => (
 /// types which have a fixed-length.
 macro_rules! impl_from_trait (($name:ident, $size:expr) => (
     impl core::convert::From<[u8; $size]> for $name {
+        #[inline]
         /// Make an object from a byte array.
         fn from(bytes: [u8; $size]) -> $name {
             $name {
@@ -142,7 +142,7 @@ macro_rules! impl_from_trait (($name:ident, $size:expr) => (
 macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[allow(clippy::double_comparisons)]
-    /// Make an object from a given byte slice.
+    /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
 
         let slice_len = slice.len();
@@ -164,7 +164,7 @@ macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr
 macro_rules! func_from_slice_variable_size (($name:ident) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[cfg(feature = "safe_api")]
-    /// Make an object from a given byte slice.
+    /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
         if slice.is_empty() {
             return Err(UnknownCryptoError);
@@ -179,7 +179,6 @@ macro_rules! func_from_slice_variable_size (($name:ident) => (
 /// `Drop`, `Debug` and/or `PartialEq`.
 macro_rules! func_unprotected_as_bytes (() => (
     #[inline]
-    #[must_use]
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
     /// needed. This __**breaks protections**__ that the type implements.
     pub fn unprotected_as_bytes(&self) -> &[u8] {
@@ -190,6 +189,7 @@ macro_rules! func_unprotected_as_bytes (() => (
 /// Macro to implement a `get_length()` function which will return the objects'
 /// length of field `value`.
 macro_rules! func_get_length (() => (
+    #[inline]
     /// Return the length of the object.
     pub fn get_length(&self) -> usize {
         self.original_length
@@ -199,14 +199,14 @@ macro_rules! func_get_length (() => (
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a fixed length $size.
 macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) => (
-    #[must_use]
+
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> $name {
         use crate::util;
         let mut value = [0u8; $upper_bound];
         // This will not panic on size, unless the newtype has been initialized $upper_bound
-        // or $gen_length with 0, statically.
+        // or $gen_length with 0.
         util::secure_rand_bytes(&mut value[..$gen_length]).unwrap();
 
         $name { value: value, original_length: $gen_length }
@@ -380,16 +380,14 @@ macro_rules! test_generate_variable (($name:ident) => (
 ///   "test_$name").
 ///
 /// - $lower_bound/$upper_bound: An inclusive range that defines what length a
-///   secret value might be.
-///  Used to validate length of `slice` in from_slice(). $upper_bound also
-/// defines the `value` field array allocation size.
+///   secret value might be. Used to validate length of `slice` in from_slice().
+///   $upper_bound also defines the `value` field array allocation size.
 ///
 /// - $gen_length: The amount of data to be randomly generated when using
 ///   generate().
 macro_rules! construct_secret_key {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr, $gen_length:expr)) => (
-        #[must_use]
         $(#[$meta])*
         ///
         /// # Security:
@@ -459,18 +457,15 @@ macro_rules! construct_secret_key {
 ///   "test_$name").
 ///
 /// - $lower_bound/$upper_bound: An inclusive range that defines what length a
-///   secret value might be.
+///   public value might be. Used to validate length of `slice` in from_slice().
+///   $upper_bound also defines the `value` field array allocation size.
 ///
 /// - $gen_length: The amount of data to be randomly generated when using
 ///   generate(). If not supplied, the public newtype will not have a
 ///   `generate()` function available.
-///
-/// Used to validate length of `slice` in from_slice(). $upper_bound also
-/// defines the `value` field array allocation size.
 macro_rules! construct_public {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr)) => (
-        #[must_use]
         #[derive(Clone, Copy)]
         $(#[$meta])*
         ///
@@ -502,7 +497,6 @@ macro_rules! construct_public {
 
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr, $gen_length:expr)) => (
-        #[must_use]
         #[derive(Clone, Copy)]
         $(#[$meta])*
         ///
@@ -544,7 +538,6 @@ macro_rules! construct_public {
 macro_rules! construct_tag {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr)) => (
-        #[must_use]
         #[derive(Clone, Copy)]
         $(#[$meta])*
         ///
@@ -613,7 +606,6 @@ macro_rules! construct_tag {
 macro_rules! construct_hmac_key {
     ($(#[$meta:meta])*
     ($name:ident, $size:expr)) => (
-        #[must_use]
         $(#[$meta])*
         ///
         /// # Security:
@@ -648,7 +640,7 @@ macro_rules! construct_hmac_key {
 
         impl $name {
             #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-            /// Make an object from a given byte slice.
+            /// Construct from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
                 use crate::hazardous::hash::sha512::{self, SHA512_OUTSIZE};
 
@@ -728,7 +720,6 @@ macro_rules! construct_hmac_key {
 macro_rules! construct_secret_key_variable_size {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $default_size:expr)) => (
-        #[must_use]
         #[cfg(feature = "safe_api")]
         $(#[$meta])*
         ///
@@ -794,7 +785,6 @@ macro_rules! construct_secret_key_variable_size {
 macro_rules! construct_salt_variable_size {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $default_size:expr)) => (
-        #[must_use]
         #[cfg(feature = "safe_api")]
         $(#[$meta])*
         ///

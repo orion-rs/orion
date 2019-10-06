@@ -61,11 +61,11 @@
 //! let msg = "Some message.".as_bytes();
 //!
 //! let expected_tag = auth::authenticate(&key, msg)?;
-//! assert!(auth::authenticate_verify(&expected_tag, &key, &msg)?);
+//! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey`]: https://docs.rs/orion/latest/orion/auth/struct.SecretKey.html
-//! [`SecretKey::default()`]: https://docs.rs/orion/latest/orion/auth/struct.SecretKey.html
+//! [`SecretKey`]: struct.SecretKey.html
+//! [`SecretKey::default()`]: struct.SecretKey.html
 //! [`Tag`]: struct.Tag.html
 
 pub use crate::hltypes::{SecretKey, Tag};
@@ -95,7 +95,7 @@ pub fn authenticate_verify(
 	expected: &Tag,
 	secret_key: &SecretKey,
 	data: &[u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
 		return Err(UnknownCryptoError);
 	}
@@ -116,13 +116,9 @@ mod public {
 			let sec_key_correct = SecretKey::generate(64).unwrap();
 			let sec_key_false = SecretKey::default();
 			let msg = "what do ya want for nothing?".as_bytes().to_vec();
-
 			let mac_bob = authenticate(&sec_key_correct, &msg).unwrap();
 
-			assert_eq!(
-				authenticate_verify(&mac_bob, &sec_key_correct, &msg).unwrap(),
-				true
-			);
+			assert!(authenticate_verify(&mac_bob, &sec_key_correct, &msg).is_ok());
 			assert!(authenticate_verify(&mac_bob, &sec_key_false, &msg).is_err());
 		}
 
@@ -130,10 +126,9 @@ mod public {
 		fn test_authenticate_verify_bad_msg() {
 			let sec_key = SecretKey::generate(64).unwrap();
 			let msg = "what do ya want for nothing?".as_bytes().to_vec();
-
 			let mac_bob = authenticate(&sec_key, &msg).unwrap();
 
-			assert!(authenticate_verify(&mac_bob, &sec_key, &msg).unwrap());
+			assert!(authenticate_verify(&mac_bob, &sec_key, &msg).is_ok());
 			assert!(authenticate_verify(&mac_bob, &sec_key, b"bad msg").is_err());
 		}
 
@@ -149,7 +144,7 @@ mod public {
 		fn test_authenticate_verify_key_too_small() {
 			let sec_key = SecretKey::generate(31).unwrap();
 			let msg = "what do ya want for nothing?".as_bytes().to_vec();
-            let mac = Tag::from_slice(&[0u8; 32][..]).unwrap();
+      let mac = Tag::from_slice(&[0u8; 32][..]).unwrap();
 
 			assert!(authenticate_verify(&mac, &sec_key, &msg).is_err());
 		}
@@ -161,44 +156,35 @@ mod public {
 		use super::*;
 
 		quickcheck! {
-			/// Authentication and verifing that authentication with the same parameters
+			/// Authentication and verifying that authentication with the same parameters
 			/// should always be true.
 			fn prop_authenticate_verify(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
-
 				let tag = authenticate(&sk, &input[..]).unwrap();
-				authenticate_verify(&tag, &sk, &input[..]).unwrap()
+				authenticate_verify(&tag, &sk, &input[..]).is_ok()
 			}
 		}
 
 		quickcheck! {
-			/// Authentication and verifing that authentication with a different key should
+			/// Authentication and verifying that authentication with a different key should
 			/// never be true.
 			fn prop_verify_fail_diff_key(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
 				let sk2 = SecretKey::default();
-
 				let tag = authenticate(&sk, &input[..]).unwrap();
-				if authenticate_verify(&tag, &sk2, &input[..]).is_err() {
-					true
-				} else {
-					false
-				}
+
+				authenticate_verify(&tag, &sk2, &input[..]).is_err()
 			}
 		}
 
 		quickcheck! {
-			/// Authentication and verifing that authentication with different input should
+			/// Authentication and verifying that authentication with different input should
 			/// never be true.
 			fn prop_verify_fail_diff_input(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
-
 				let tag = authenticate(&sk, &input[..]).unwrap();
-				if authenticate_verify(&tag, &sk, b"Completely wrong input").is_err() {
-					true
-				} else {
-					false
-				}
+
+				authenticate_verify(&tag, &sk, b"Completely wrong input").is_err()
 			}
 		}
 

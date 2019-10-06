@@ -65,11 +65,11 @@
 //! 	&salt,
 //! 	10000,
 //! 	&mut dk_out
-//! )?);
+//! ).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`Password::generate()`]: https://docs.rs/orion/latest/orion/hazardous/kdf/pbkdf2/struct.Password.html
-//! [`util::secure_rand_bytes()`]: https://docs.rs/orion/latest/orion/util/fn.secure_rand_bytes.html
+//! [`Password::generate()`]: struct.Password.html#method.generate
+//! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::{
 	errors::UnknownCryptoError,
@@ -145,7 +145,7 @@ pub fn derive_key(
 		return Err(UnknownCryptoError);
 	}
 
-	let mut hmac = hmac::init(&hmac::SecretKey::from_slice(
+	let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(
 		&password.unprotected_as_bytes(),
 	)?);
 
@@ -175,7 +175,7 @@ pub fn verify(
 	salt: &[u8],
 	iterations: usize,
 	dst_out: &mut [u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	derive_key(password, salt, iterations, dst_out)?;
 	util::secure_cmp(&dst_out, expected)
 }
@@ -184,8 +184,6 @@ pub fn verify(
 #[cfg(test)]
 mod public {
 	use super::*;
-
-	// One function tested per submodule.
 
 	mod test_verify {
 		use super::*;

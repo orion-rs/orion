@@ -61,10 +61,10 @@
 //! 	"IKM".as_bytes(),
 //! 	None,
 //! 	&mut okm_out
-//! )?);
+//! ).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`util::secure_rand_bytes()`]: https://docs.rs/orion/latest/orion/util/fn.secure_rand_bytes.html
+//! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::{
 	errors::UnknownCryptoError,
@@ -78,7 +78,7 @@ use crate::{
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// The HKDF extract step.
 pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError> {
-	let mut prk = hmac::init(&SecretKey::from_slice(salt)?);
+	let mut prk = hmac::Hmac::new(&SecretKey::from_slice(salt)?);
 	prk.update(ikm)?;
 	prk.finalize()
 }
@@ -102,7 +102,7 @@ pub fn expand(
 		None => &[0u8; 0],
 	};
 
-	let mut hmac = hmac::init(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
+	let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
 	let okm_len = dst_out.len();
 
 	for (idx, hlen_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
@@ -143,7 +143,7 @@ pub fn verify(
 	ikm: &[u8],
 	info: Option<&[u8]>,
 	dst_out: &mut [u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	expand(&extract(salt, ikm)?, info, dst_out)?;
 	util::secure_cmp(&dst_out, expected)
 }

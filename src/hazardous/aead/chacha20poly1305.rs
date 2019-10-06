@@ -93,8 +93,8 @@
 //! assert_eq!(dst_out_pt.as_ref(), message.as_ref());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey::generate()`]: https://docs.rs/orion/latest/orion/hazardous/stream/chacha20/struct.SecretKey.html
-//! [XChaCha20Poly1305]: https://docs.rs/orion/latest/orion/hazardous/aead/xchacha20poly1305/index.html
+//! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
+//! [XChaCha20Poly1305]: ../xchacha20poly1305/index.html
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
 	errors::UnknownCryptoError,
@@ -107,14 +107,17 @@ use crate::{
 
 #[inline]
 /// Poly1305 key generation using IETF ChaCha20.
-fn poly1305_key_gen(key: &SecretKey, nonce: &Nonce) -> Result<OneTimeKey, UnknownCryptoError> {
+pub(crate) fn poly1305_key_gen(
+	key: &SecretKey,
+	nonce: &Nonce,
+) -> Result<OneTimeKey, UnknownCryptoError> {
 	OneTimeKey::from_slice(&chacha20::keystream_block(key, nonce, 0)?[..POLY1305_KEYSIZE])
 }
 
 #[inline]
 /// Padding size that gives the needed bytes to pad `input` to an integral
 /// multiple of 16.
-fn padding(input: &[u8]) -> usize {
+pub(crate) fn padding(input: &[u8]) -> usize {
 	if input.is_empty() {
 		return 0;
 	}
@@ -196,7 +199,7 @@ pub fn seal(
 	)?;
 
 	let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
-	let mut poly1305_state = poly1305::init(&poly1305_key);
+	let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 	process_authentication(&mut poly1305_state, optional_ad, &dst_out, plaintext.len())?;
 	dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
@@ -229,7 +232,7 @@ pub fn open(
 	let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
 
 	let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
-	let mut poly1305_state = poly1305::init(&poly1305_key);
+	let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 	process_authentication(
 		&mut poly1305_state,
 		optional_ad,
@@ -253,394 +256,23 @@ pub fn open(
 
 // Testing public functions in the module.
 #[cfg(test)]
+#[cfg(feature = "safe_api")]
 mod public {
 	use super::*;
-	// One function tested per submodule.
-
-	mod test_seal {
-		use super::*;
-
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/52
-		fn test_dst_out_length() {
-			let mut dst_out_ct = [0u8; 80]; // 64 + Poly1305TagLen
-			let mut dst_out_ct_less = [0u8; 79]; // 64 + Poly1305TagLen - 1
-			let mut dst_out_ct_more = [0u8; 81]; // 64 + Poly1305TagLen + 1
-			let mut dst_out_ct_more_2 = [0u8; 64 + (POLY1305_OUTSIZE * 2)];
-
-			assert!(seal(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; 64],
-				None,
-				&mut dst_out_ct,
-			)
-			.is_ok());
-
-			// Related bug: #52
-			assert!(seal(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; 64],
-				None,
-				&mut dst_out_ct_more,
-			)
-			.is_ok());
-
-			// Related bug: #52
-			assert!(seal(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; 64],
-				None,
-				&mut dst_out_ct_more_2,
-			)
-			.is_ok());
-
-			assert!(seal(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; 64],
-				None,
-				&mut dst_out_ct_less,
-			)
-			.is_err());
-		}
-
-		#[test]
-		fn test_plaintext_length() {
-			let mut dst_out_ct_0 = [0u8; 16]; // 0 + Poly1305TagLen
-			let mut dst_out_ct_1 = [0u8; 17]; // 1 + Poly1305TagLen
-			let mut dst_out_ct_128 = [0u8; 144]; // 128 + Poly1305TagLen
-
-			assert!(seal(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; 0],
-				None,
-				&mut dst_out_ct_0,
-			)
-			.is_err());
-
-			assert!(seal(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; 1],
-				None,
-				&mut dst_out_ct_1,
-			)
-			.is_ok());
-
-			assert!(seal(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; 128],
-				None,
-				&mut dst_out_ct_128,
-			)
-			.is_ok());
-		}
-	}
-
-	mod test_open {
-		use super::*;
-
-		#[test]
-		fn test_ciphertext_with_tag_length() {
-			let mut dst_out_pt = [0u8; 64];
-
-			assert!(open(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; 0],
-				None,
-				&mut dst_out_pt,
-			)
-			.is_err());
-
-			assert!(open(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; POLY1305_OUTSIZE],
-				None,
-				&mut dst_out_pt,
-			)
-			.is_err());
-
-			assert!(open(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; POLY1305_OUTSIZE - 1],
-				None,
-				&mut dst_out_pt,
-			)
-			.is_err());
-
-			let mut dst_out_ct = [0u8; 64 + 16];
-			seal(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; POLY1305_OUTSIZE + 1],
-				None,
-				&mut dst_out_ct,
-			)
-			.unwrap();
-
-			assert!(open(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&dst_out_ct[..(POLY1305_OUTSIZE + 1) + 16],
-				None,
-				&mut dst_out_pt,
-			)
-			.is_ok());
-		}
-
-		#[test]
-		fn test_dst_out_length() {
-			let mut dst_out_ct = [0u8; 64 + 16];
-			seal(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&[0u8; 64],
-				None,
-				&mut dst_out_ct,
-			)
-			.unwrap();
-
-			let mut dst_out_pt = [0u8; 64];
-			let mut dst_out_pt_0 = [0u8; 0];
-			let mut dst_out_pt_less = [0u8; 63];
-			let mut dst_out_pt_more = [0u8; 65];
-
-			assert!(open(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&dst_out_ct,
-				None,
-				&mut dst_out_pt,
-			)
-			.is_ok());
-
-			assert!(open(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&dst_out_ct,
-				None,
-				&mut dst_out_pt_0,
-			)
-			.is_err());
-
-			assert!(open(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&dst_out_ct,
-				None,
-				&mut dst_out_pt_less,
-			)
-			.is_err());
-
-			assert!(open(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				&dst_out_ct,
-				None,
-				&mut dst_out_pt_more,
-			)
-			.is_ok());
-		}
-	}
 
 	// Proptests. Only executed when NOT testing no_std.
 	#[cfg(feature = "safe_api")]
 	mod proptest {
 		use super::*;
-
-		// Only return true if both a and b are true.
-		fn check_all_true(a: bool, b: bool) -> bool {
-			(a == true) && (b == true)
-		}
+		use crate::test_framework::aead_interface::*;
 
 		quickcheck! {
-			// Sealing input, and then opening should always yield the same input.
-			fn prop_seal_open_same_input(input: Vec<u8>, ad: Vec<u8>) -> bool {
-				let pt = if input.is_empty() {
-					vec![1u8; 10]
-				} else {
-					input
-				};
+			fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
+				let secret_key = SecretKey::generate();
+				let nonce = Nonce::from_slice(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
+				AeadTestRunner(seal, open, secret_key, nonce, &input, None, POLY1305_OUTSIZE, &ad);
 
-				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
-				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
-
-				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
-				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
-
-				seal(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&pt[..],
-					None,
-					&mut dst_out_ct_no_ad,
-				).unwrap();
-
-				open(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&dst_out_ct_no_ad[..],
-					None,
-					&mut dst_out_pt_no_ad,
-				).unwrap();
-
-				seal(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&pt[..],
-					Some(&ad[..]),
-					&mut dst_out_ct_with_ad,
-				).unwrap();
-
-				open(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&dst_out_ct_with_ad[..],
-					Some(&ad[..]),
-					&mut dst_out_pt_with_ad,
-				).unwrap();
-
-				check_all_true(dst_out_pt_no_ad == pt, dst_out_pt_with_ad == pt)
-			}
-		}
-
-		quickcheck! {
-			// Sealing input, modifying the tag and then opening should
-			// always fail due to authentication.
-			fn prop_fail_on_bad_auth_tag(input: Vec<u8>, ad: Vec<u8>) -> bool {
-				let pt = if input.is_empty() {
-					vec![1u8; 10]
-				} else {
-					input
-				};
-
-				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
-				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
-
-				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
-				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
-
-				seal(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&pt[..],
-					None,
-					&mut dst_out_ct_no_ad,
-				).unwrap();
-
-				// Modify tags first byte
-				dst_out_ct_no_ad[pt.len() + 1] ^= 1;
-
-				let res0 = if open(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&dst_out_ct_no_ad[..],
-					None,
-					&mut dst_out_pt_no_ad,
-				).is_err() {
-					true
-				} else {
-					false
-				};
-
-				seal(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&pt[..],
-					Some(&ad[..]),
-					&mut dst_out_ct_with_ad,
-				).unwrap();
-
-				// Modify tags first byte
-				dst_out_ct_with_ad[pt.len() + 1] ^= 1;
-
-				let res1 = if open(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&dst_out_ct_with_ad[..],
-					Some(&ad[..]),
-					&mut dst_out_pt_with_ad,
-				).is_err() {
-					true
-				} else {
-					false
-				};
-
-				check_all_true(res0, res1)
-			}
-		}
-
-		quickcheck! {
-			// Sealing input, modifying the ciphertext and then opening should
-			// always fail due to authentication.
-			fn prop_fail_on_bad_ciphertext(input: Vec<u8>, ad: Vec<u8>) -> bool {
-				let pt = if input.is_empty() {
-					vec![1u8; 10]
-				} else {
-					input
-				};
-
-				let mut dst_out_ct_no_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
-				let mut dst_out_pt_no_ad = vec![0u8; pt.len()];
-
-				let mut dst_out_ct_with_ad = vec![0u8; pt.len() + POLY1305_OUTSIZE];
-				let mut dst_out_pt_with_ad = vec![0u8; pt.len()];
-
-				seal(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&pt[..],
-					None,
-					&mut dst_out_ct_no_ad,
-				).unwrap();
-
-				// Modify ciphertexts first byte
-				dst_out_ct_no_ad[0] ^= 1;
-
-				let res0 = if open(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&dst_out_ct_no_ad[..],
-					None,
-					&mut dst_out_pt_no_ad,
-				).is_err() {
-					true
-				} else {
-					false
-				};
-
-				seal(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&pt[..],
-					Some(&ad[..]),
-					&mut dst_out_ct_with_ad,
-				).unwrap();
-
-				// Modify tags first byte
-				dst_out_ct_with_ad[0] ^= 1;
-
-				let res1 = if open(
-					&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-					&Nonce::from_slice(&[0u8; 12]).unwrap(),
-					&dst_out_ct_with_ad[..],
-					Some(&ad[..]),
-					&mut dst_out_pt_with_ad,
-				).is_err() {
-					true
-				} else {
-					false
-				};
-
-				check_all_true(res0, res1)
+				true
 			}
 		}
 	}
@@ -650,7 +282,7 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-	// One function tested per submodule.
+
 	mod test_padding {
 		use super::*;
 		#[test]
@@ -711,7 +343,7 @@ mod private {
 			let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
 			let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-			let mut poly1305_state = poly1305::init(&poly1305_key);
+			let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 			process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 0).unwrap();
 		}
@@ -723,7 +355,7 @@ mod private {
 			let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
 			let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-			let mut poly1305_state = poly1305::init(&poly1305_key);
+			let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 			process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 0], 64).unwrap();
 		}
@@ -735,7 +367,7 @@ mod private {
 			let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
 			let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-			let mut poly1305_state = poly1305::init(&poly1305_key);
+			let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 			process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
 		}
@@ -746,14 +378,11 @@ mod private {
 			let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
 			let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-			let mut poly1305_state = poly1305::init(&poly1305_key);
+			let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
 
 			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).is_ok());
-
 			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 63).is_ok());
-
 			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 1).is_ok());
-
 			assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 1], 1).is_ok());
 		}
 	}

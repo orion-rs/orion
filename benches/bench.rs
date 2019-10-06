@@ -218,7 +218,7 @@ mod hash {
 		size: usize,
 		input: &[u8],
 	) -> Result<blake2b::Digest, orion::errors::UnknownCryptoError> {
-		let mut state = blake2b::init(sk, size).unwrap();
+		let mut state = blake2b::Blake2b::new(sk, size).unwrap();
 		state.update(input).unwrap();
 		state.finalize()
 	}

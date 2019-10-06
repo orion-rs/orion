@@ -74,11 +74,11 @@
 //! let decrypted_data = aead::open(&secret_key, &ciphertext)?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`seal`]: https://docs.rs/orion/latest/orion/aead/fn.seal.html
-//! [`open`]: https://docs.rs/orion/latest/orion/aead/fn.open.html
-//! [`POLY1305_OUTSIZE`]: https://docs.rs/orion/latest/orion/hazardous/mac/poly1305/constant.POLY1305_OUTSIZE.html
-//! [`XCHACHA_NONCESIZE`]: https://docs.rs/orion/latest/orion/hazardous/stream/xchacha20/constant.XCHACHA_NONCESIZE.html
-//! [`SecretKey::default()`]: https://docs.rs/orion/latest/orion/aead/struct.SecretKey.html
+//! [`seal`]: fn.seal.html
+//! [`open`]: fn.open.html
+//! [`POLY1305_OUTSIZE`]: ../hazardous/mac/poly1305/constant.POLY1305_OUTSIZE.html
+//! [`XCHACHA_NONCESIZE`]: ../hazardous/stream/xchacha20/constant.XCHACHA_NONCESIZE.html
+//! [`SecretKey::default()`]: struct.SecretKey.html
 
 pub use crate::hltypes::SecretKey;
 use crate::{
@@ -122,8 +122,8 @@ pub fn open(
 	secret_key: &SecretKey,
 	ciphertext_with_tag_and_nonce: &[u8],
 ) -> Result<Vec<u8>, UnknownCryptoError> {
-	// `+ 1` to avoid empty ciphertexts
-	if ciphertext_with_tag_and_nonce.len() < (XCHACHA_NONCESIZE + POLY1305_OUTSIZE + 1) {
+	// Avoid empty ciphertexts
+	if ciphertext_with_tag_and_nonce.len() <= (XCHACHA_NONCESIZE + POLY1305_OUTSIZE) {
 		return Err(UnknownCryptoError);
 	}
 
@@ -156,7 +156,6 @@ mod public {
 			let dst_ciphertext = seal(&key, &plaintext).unwrap();
 			assert!(dst_ciphertext.len() == plaintext.len() + (24 + 16));
 			let dst_plaintext = open(&key, &dst_ciphertext).unwrap();
-			assert!(dst_plaintext.len() == plaintext.len());
 			assert_eq!(plaintext, dst_plaintext);
 		}
 
@@ -171,7 +170,7 @@ mod public {
 		#[test]
 		fn test_auth_enc_ciphertext_less_than_41_err() {
 			let key = SecretKey::default();
-			let ciphertext = [0u8; 40];
+			let ciphertext = [0u8; XCHACHA_NONCESIZE + POLY1305_OUTSIZE];
 
 			assert!(open(&key, &ciphertext).is_err());
 		}
@@ -267,13 +266,9 @@ mod public {
 
 				let sk = SecretKey::default();
 				let sk2 = SecretKey::default();
-
 				let ct = seal(&sk, &pt).unwrap();
-				if open(&sk2, &ct).is_err() {
-					true
-				} else {
-					false
-				}
+
+				open(&sk2, &ct).is_err()
 			}
 		}
 	}

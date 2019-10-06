@@ -45,12 +45,12 @@
 //!
 //! More information about orion is available in the [wiki](https://github.com/brycx/orion/wiki).
 //!
-//! [`orion::aead`]: https://docs.rs/orion/latest/orion/aead/index.html
-//! [`orion::pwhash`]: https://docs.rs/orion/latest/orion/pwhash/index.html
-//! [`orion::kdf`]: https://docs.rs/orion/latest/orion/kdf/index.html
-//! [`orion::auth`]: https://docs.rs/orion/latest/orion/auth/index.html
-//! [`orion::hash`]: https://docs.rs/orion/latest/orion/hash/index.html
-//! [`orion::hazardous`]: https://docs.rs/orion/latest/orion/hazardous/index.html
+//! [`orion::aead`]: aead/index.html
+//! [`orion::pwhash`]: pwhash/index.html
+//! [`orion::kdf`]: kdf/index.html
+//! [`orion::auth`]: auth/index.html
+//! [`orion::hash`]: hash/index.html
+//! [`orion::hazardous`]: hazardous/index.html
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
@@ -101,3 +101,7 @@ pub mod kdf;
 
 #[cfg(feature = "safe_api")]
 mod hltypes;
+
+#[doc(hidden)]
+/// Testing framework.
+pub mod test_framework;

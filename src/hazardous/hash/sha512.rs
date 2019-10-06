@@ -44,7 +44,7 @@
 //! use orion::hazardous::hash::sha512;
 //!
 //! // Using the streaming interface
-//! let mut state = sha512::init();
+//! let mut state = sha512::Sha512::new();
 //! state.update(b"Hello world")?;
 //! let hash = state.finalize()?;
 //!
@@ -54,10 +54,10 @@
 //! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: https://docs.rs/orion/latest/orion/hazardous/hash/sha512/struct.Sha512.html
-//! [`reset()`]: https://docs.rs/orion/latest/orion/hazardous/hash/sha512/struct.Sha512.html
-//! [`finalize()`]: https://docs.rs/orion/latest/orion/hazardous/hash/sha512/struct.Sha512.html
-//! [BLAKE2b]: https://docs.rs/orion/latest/orion/hazardous/hash/blake2b/index.html
+//! [`update()`]: struct.Sha512.html
+//! [`reset()`]: struct.Sha512.html
+//! [`finalize()`]: struct.Sha512.html
+//! [BLAKE2b]: ../blake2b/index.html
 
 use crate::{
 	endianness::{load_u64_into_be, store_u64_into_be},
@@ -141,6 +141,12 @@ impl core::fmt::Debug for Sha512 {
 			 message_len: {:?}, is_finalized: {:?} }}",
 			self.leftover, self.message_len, self.is_finalized
 		)
+	}
+}
+
+impl Default for Sha512 {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 
@@ -230,7 +236,6 @@ impl Sha512 {
 				.wrapping_add(w[t - 16]);
 		}
 
-		// Initialize working variables
 		let mut a = self.working_state[0];
 		let mut b = self.working_state[1];
 		let mut c = self.working_state[2];
@@ -262,21 +267,13 @@ impl Sha512 {
 		self.working_state[7] = self.working_state[7].wrapping_add(h);
 	}
 
-	/// Reset to `init()` state.
-	pub fn reset(&mut self) {
-		self.working_state = H0;
-		self.buffer = [0u8; SHA512_BLOCKSIZE];
-		self.leftover = 0;
-		self.message_len = [0u64; 2];
-		self.is_finalized = false;
-	}
-
 	#[inline]
 	/// Increment the message length during processing of data.
 	fn increment_mlen(&mut self, length: u64) {
 		// The checked shift checks that the right-hand side is a legal shift.
 		// The result can still overflow if length > u64::max_value() / 8.
-		// Should be impossible for a user to trigger.
+		// Should be impossible for a user to trigger, becuase update() processes
+		// in SHA512_BLOCKSIZE chunks.
 		debug_assert!(length <= u64::max_value() / 8);
 
 		// left-shift to get bit-sized representation of length
@@ -289,6 +286,26 @@ impl Sha512 {
 			// If this panics size limit is reached.
 			self.message_len[0] = self.message_len[0].checked_add(1).unwrap();
 		}
+	}
+
+	/// Initialize a `Sha512` struct.
+	pub fn new() -> Self {
+		Self {
+			working_state: H0,
+			buffer: [0u8; SHA512_BLOCKSIZE],
+			leftover: 0,
+			message_len: [0u64; 2],
+			is_finalized: false,
+		}
+	}
+
+	/// Reset to `new()` state.
+	pub fn reset(&mut self) {
+		self.working_state = H0;
+		self.buffer = [0u8; SHA512_BLOCKSIZE];
+		self.leftover = 0;
+		self.message_len = [0u64; 2];
+		self.is_finalized = false;
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -315,7 +332,6 @@ impl Sha512 {
 				self.buffer[self.leftover + idx] = *itm;
 			}
 
-			// Reduce by slice
 			bytes = &bytes[want..];
 			self.leftover += want;
 			self.increment_mlen(want as u64);
@@ -329,16 +345,13 @@ impl Sha512 {
 		}
 
 		while bytes.len() >= SHA512_BLOCKSIZE {
-			// Process data
 			self.process(Some(bytes[..SHA512_BLOCKSIZE].as_ref()));
 			self.increment_mlen(SHA512_BLOCKSIZE as u64);
-			// Reduce by slice
 			bytes = &bytes[SHA512_BLOCKSIZE..];
 		}
 
 		if !bytes.is_empty() {
 			debug_assert!(self.leftover == 0);
-
 			self.buffer[..bytes.len()].copy_from_slice(bytes);
 			self.leftover = bytes.len();
 			self.increment_mlen(bytes.len() as u64);
@@ -356,7 +369,7 @@ impl Sha512 {
 
 		self.is_finalized = true;
 
-		// self.leftover should not be greater than SHA2_BLCOKSIZE
+		// self.leftover should not be greater than SHA512_BLCOKSIZE
 		// as that would have been processed in the update call
 		debug_assert!(self.leftover < SHA512_BLOCKSIZE);
 		self.buffer[self.leftover] = 0x80;
@@ -374,7 +387,6 @@ impl Sha512 {
 			}
 		}
 
-		// Pad with length
 		self.buffer[SHA512_BLOCKSIZE - 16..SHA512_BLOCKSIZE - 8]
 			.copy_from_slice(&self.message_len[0].to_be_bytes());
 		self.buffer[SHA512_BLOCKSIZE - 8..SHA512_BLOCKSIZE]
@@ -389,21 +401,10 @@ impl Sha512 {
 	}
 }
 
-/// Initialize a `Sha512` struct.
-pub fn init() -> Sha512 {
-	Sha512 {
-		working_state: H0,
-		buffer: [0u8; SHA512_BLOCKSIZE],
-		leftover: 0,
-		message_len: [0u64; 2],
-		is_finalized: false,
-	}
-}
-
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Calculate a SHA512 digest of some `data`.
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
-	let mut state = init();
+	let mut state = Sha512::new();
 	state.update(data)?;
 	state.finalize()
 }
@@ -424,221 +425,53 @@ pub fn compare_sha512_states(state_1: &Sha512, state_2: &Sha512) {
 mod public {
 	use super::*;
 
-	// One function tested per submodule.
-	mod test_reset {
-		use super::*;
-
-		#[test]
-		fn test_double_reset_ok() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			state.reset();
-		}
-	}
-
-	mod test_update {
-		use super::*;
-
-		#[test]
-		fn test_update_after_finalize_with_reset_ok() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			state.update(data).unwrap();
-		}
-
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/28
-		fn test_update_after_finalize_err() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.update(data).is_err());
-		}
-	}
-
-	mod test_finalize {
-		use super::*;
-
-		#[test]
-		fn test_double_finalize_with_reset_no_update_ok() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			let _ = state.finalize().unwrap();
-		}
-
-		#[test]
-		fn test_double_finalize_with_reset_ok() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init();
-			state.update(data).unwrap();
-			let one = state.finalize().unwrap();
-			state.reset();
-			state.update(data).unwrap();
-			let two = state.finalize().unwrap();
-			assert_eq!(one.as_ref(), two.as_ref());
-		}
-
-		#[test]
-		fn test_double_finalize_err() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = init();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.finalize().is_err());
-		}
-
-	}
-
 	mod test_streaming_interface {
 		use super::*;
+		use crate::test_framework::incremental_interface::*;
 
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
-		/// finalize() and reset() produce the same Digest.
-		fn produces_same_hash(data: &[u8]) {
-			// init(), update(), finalize()
-			let mut state_1 = init();
-			state_1.update(data).unwrap();
-			let res_1 = state_1.finalize().unwrap();
+		impl TestableStreamingContext<Digest> for Sha512 {
+			fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+				Ok(self.reset())
+			}
 
-			// init(), reset(), update(), finalize()
-			let mut state_2 = init();
-			state_2.reset();
-			state_2.update(data).unwrap();
-			let res_2 = state_2.finalize().unwrap();
+			fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				self.update(input)
+			}
 
-			// init(), update(), reset(), update(), finalize()
-			let mut state_3 = init();
-			state_3.update(data).unwrap();
-			state_3.reset();
-			state_3.update(data).unwrap();
-			let res_3 = state_3.finalize().unwrap();
+			fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
+				self.finalize()
+			}
 
-			// init(), update(), finalize(), reset(), update(), finalize()
-			let mut state_4 = init();
-			state_4.update(data).unwrap();
-			let _ = state_4.finalize().unwrap();
-			state_4.reset();
-			state_4.update(data).unwrap();
-			let res_4 = state_4.finalize().unwrap();
+			fn one_shot(input: &[u8]) -> Result<Digest, UnknownCryptoError> {
+				digest(input)
+			}
 
-			assert_eq!(res_1, res_2);
-			assert_eq!(res_2, res_3);
-			assert_eq!(res_3, res_4);
+			fn verify_result(expected: &Digest, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				let actual: Digest = Self::one_shot(input)?;
 
-			// Tests for the assumption that returning Ok() on empty update() calls
-			// with streaming API's, gives the correct result. This is done by testing
-			// the reasoning that if update() is empty, returns Ok(), it is the same as
-			// calling init() -> finalize(). i.e not calling update() at all.
-			if data.is_empty() {
-				// init(), finalize()
-				let mut state_5 = init();
-				let res_5 = state_5.finalize().unwrap();
+				if &actual == expected {
+					Ok(())
+				} else {
+					Err(UnknownCryptoError)
+				}
+			}
 
-				// init(), reset(), finalize()
-				let mut state_6 = init();
-				state_6.reset();
-				let res_6 = state_6.finalize().unwrap();
-
-				// init(), update(), reset(), finalize()
-				let mut state_7 = init();
-				state_7.update(b"Wrong data").unwrap();
-				state_7.reset();
-				let res_7 = state_7.finalize().unwrap();
-
-				assert_eq!(res_4, res_5);
-				assert_eq!(res_5, res_6);
-				assert_eq!(res_6, res_7);
+			fn compare_states(state_1: &Sha512, state_2: &Sha512) {
+				compare_sha512_states(state_1, state_2)
 			}
 		}
 
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of init(), update(),
-		/// finalize() and reset() produce the same Digest.
-		fn produces_same_state(data: &[u8]) {
-			// init()
-			let state_1 = init();
-
-			// init(), reset()
-			let mut state_2 = init();
-			state_2.reset();
-
-			// init(), update(), reset()
-			let mut state_3 = init();
-			state_3.update(data).unwrap();
-			state_3.reset();
-
-			// init(), update(), finalize(), reset()
-			let mut state_4 = init();
-			state_4.update(data).unwrap();
-			let _ = state_4.finalize().unwrap();
-			state_4.reset();
-
-			compare_sha512_states(&state_1, &state_2);
-			compare_sha512_states(&state_2, &state_3);
-			compare_sha512_states(&state_3, &state_4);
-		}
-
 		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_produce_same_state() {
-			produces_same_state(b"Tests");
+		fn default_consistency_tests() {
+			let initial_state: Sha512 = Sha512::new();
+
+			let test_runner = StreamingContextConsistencyTester::<Digest, Sha512>::new(
+				initial_state,
+				SHA512_BLOCKSIZE,
+			);
+			test_runner.run_all_tests();
 		}
 
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_produce_same_hash() {
-			produces_same_hash(b"Tests");
-			produces_same_hash(b"");
-		}
-
-		#[test]
-		#[cfg(feature = "safe_api")]
-		// Test for issues when incrementally processing data
-		// with leftover
-		fn test_streaming_consistency() {
-			for len in 0..SHA512_BLOCKSIZE * 4 {
-				let data = vec![0u8; len];
-				let mut state = init();
-				let mut other_data: Vec<u8> = Vec::new();
-
-				other_data.extend_from_slice(&data);
-				state.update(&data).unwrap();
-
-				if data.len() > SHA512_BLOCKSIZE {
-					other_data.extend_from_slice(b"");
-					state.update(b"").unwrap();
-				}
-				if data.len() > SHA512_BLOCKSIZE * 2 {
-					other_data.extend_from_slice(b"Extra");
-					state.update(b"Extra").unwrap();
-				}
-				if data.len() > SHA512_BLOCKSIZE * 3 {
-					other_data.extend_from_slice(&[0u8; 256]);
-					state.update(&[0u8; 256]).unwrap();
-				}
-
-				let digest_one_shot = digest(&other_data).unwrap();
-
-				assert!(state.finalize().unwrap().as_ref() == digest_one_shot.as_ref());
-			}
-		}
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
@@ -647,35 +480,15 @@ mod public {
 			quickcheck! {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
-				fn prop_same_hash_different_usage(data: Vec<u8>) -> bool {
-					// Will panic on incorrect results.
-					produces_same_hash(&data[..]);
+				fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+					let initial_state: Sha512 = Sha512::new();
 
+					let test_runner = StreamingContextConsistencyTester::<Digest, Sha512>::new(
+						initial_state,
+						SHA512_BLOCKSIZE,
+					);
+					test_runner.run_all_tests_property(&data);
 					true
-				}
-			}
-
-			quickcheck! {
-				/// Related bug: https://github.com/brycx/orion/issues/46
-				/// Test different streaming state usage patterns.
-				fn prop_same_state_different_usage(data: Vec<u8>) -> bool {
-					// Will panic on incorrect results.
-					produces_same_state(&data[..]);
-
-					true
-				}
-			}
-
-			quickcheck! {
-				/// Using the one-shot function should always produce the
-				/// same result as when using the streaming interface.
-				fn prop_digest_same_as_streaming(data: Vec<u8>) -> bool {
-					let mut state = init();
-					state.update(&data[..]).unwrap();
-					let stream = state.finalize().unwrap();
-					let one_shot = digest(&data[..]).unwrap();
-
-					(one_shot == stream)
 				}
 			}
 		}
@@ -686,7 +499,6 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-	// One function tested per submodule.
 
 	mod test_increment_mlen {
 		use super::*;
@@ -724,7 +536,6 @@ mod private {
 			};
 			// u64::max_value() - 7, to leave so that the length represented
 			// in bites should overflow by exactly one.
-
 			context.increment_mlen(1);
 		}
 	}

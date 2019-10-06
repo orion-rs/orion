@@ -20,41 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-extern crate core;
+/// Tests for a streaming context that offers incremental processing.
+pub mod incremental_interface;
 
-use self::core::fmt;
+/// Tests for AEAD interfaces such as `chacha20poly1305`.
+pub mod aead_interface;
 
-/// Opaque error.
-#[derive(PartialEq)]
-pub struct UnknownCryptoError;
-
-impl fmt::Display for UnknownCryptoError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "UnknownCryptoError")
-	}
-}
-
-impl fmt::Debug for UnknownCryptoError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "UnknownCryptoError")
-	}
-}
-
-#[cfg(feature = "safe_api")]
-impl From<getrandom::Error> for UnknownCryptoError {
-	fn from(_: getrandom::Error) -> Self {
-		UnknownCryptoError
-	}
-}
-
-#[test]
-#[cfg(feature = "safe_api")]
-// format! is only available with std
-fn test_unknown_crypto_error_debug_display() {
-	// Tests Debug impl though "{:?}"
-	let err = format!("{:?}", UnknownCryptoError);
-	assert_eq!(err, "UnknownCryptoError");
-	// Tests Display impl though "{}"
-	let err = format!("{}", UnknownCryptoError);
-	assert_eq!(err, "UnknownCryptoError");
-}
+/// Tests for stream ciphers such as `chacha20`.
+pub mod streamcipher_interface;

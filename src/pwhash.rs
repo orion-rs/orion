@@ -70,12 +70,12 @@
 //! let password = pwhash::Password::from_slice(b"Secret password")?;
 //!
 //! let hash = pwhash::hash_password(&password, 100000)?;
-//! assert!(pwhash::hash_password_verify(&hash, &password, 100000)?);
+//! assert!(pwhash::hash_password_verify(&hash, &password, 100000).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`PasswordHash`]: https://docs.rs/orion/latest/orion/pwhash/struct.PasswordHash.html
-//! [`pwhash::hash_password`]: https://docs.rs/orion/latest/orion/pwhash/fn.hash_password.html
-//! [`pwhash::hash_password_verify`]: https://docs.rs/orion/latest/orion/pwhash/fn.hash_password_verify.html
+//! [`PasswordHash`]: struct.PasswordHash.html
+//! [`pwhash::hash_password`]: fn.hash_password.html
+//! [`pwhash::hash_password_verify`]: fn.hash_password_verify.html
 
 pub use crate::hltypes::{Password, PasswordHash, Salt};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};
@@ -111,10 +111,10 @@ pub fn hash_password_verify(
 	expected_with_salt: &PasswordHash,
 	password: &Password,
 	iterations: usize,
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	let mut dk = [0u8; 64];
 
-	let is_good = pbkdf2::verify(
+	pbkdf2::verify(
 		&expected_with_salt.unprotected_as_bytes()[64..],
 		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
 		&expected_with_salt.unprotected_as_bytes()[..64],
@@ -124,7 +124,7 @@ pub fn hash_password_verify(
 
 	dk.zeroize();
 
-	Ok(is_good)
+	Ok(())
 }
 
 // Testing public functions in the module.
@@ -138,13 +138,9 @@ mod public {
 		#[test]
 		fn test_pbkdf2_verify() {
 			let password = Password::from_slice(&[0u8; 64]).unwrap();
-
 			let pbkdf2_dk = hash_password(&password, 100).unwrap();
 
-			assert_eq!(
-				hash_password_verify(&pbkdf2_dk, &password, 100).unwrap(),
-				true
-			);
+			assert!(hash_password_verify(&pbkdf2_dk, &password, 100).is_ok());
 		}
 
 		#[test]
@@ -208,11 +204,7 @@ mod public {
 				let pass = Password::from_slice(&passin[..]).unwrap();
 				let pass_hash = hash_password(&pass, 100).unwrap();
 
-				if hash_password_verify(&pass_hash, &pass, 100).is_ok() {
-					true
-				} else {
-					false
-				}
+				hash_password_verify(&pass_hash, &pass, 100).is_ok()
 			}
 		}
 
@@ -229,11 +221,7 @@ mod public {
 				let pass_hash = hash_password(&pass, 100).unwrap();
 				let bad_pass = Password::generate(32).unwrap();
 
-				if hash_password_verify(&pass_hash, &bad_pass, 100).is_err() {
-					true
-				} else {
-					false
-				}
+				hash_password_verify(&pass_hash, &bad_pass, 100).is_err()
 			}
 		}
 	}

@@ -53,7 +53,7 @@
 //! let hash: Digest = digest(b"Some data")?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`orion::pwhash`]: https://docs.rs/orion/latest/orion/pwhash/index.html
+//! [`orion::pwhash`]: ../pwhash/index.html
 
 pub use crate::hazardous::hash::blake2b::Digest;
 use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
@@ -65,16 +65,14 @@ pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 }
 
 // Testing public functions in the module.
+#[cfg(feature = "safe_api")]
 #[cfg(test)]
 mod public {
 	use super::*;
 
+	#[cfg(feature = "safe_api")]
 	mod test_digest {
 		use super::*;
-		#[test]
-		fn basic_test() {
-			let _digest = digest(b"Some data").unwrap();
-		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
