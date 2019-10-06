@@ -57,7 +57,7 @@
 //! poly1305_state.update(msg.as_bytes())?;
 //! let tag = poly1305_state.finalize()?;
 //!
-//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes())?);
+//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes()).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: struct.Poly1305.html
@@ -418,9 +418,9 @@ pub fn verify(
 	expected: &Tag,
 	one_time_key: &OneTimeKey,
 	data: &[u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	if &poly1305(one_time_key, data)? == expected {
-		Ok(true)
+		Ok(())
 	} else {
 		Err(UnknownCryptoError)
 	}

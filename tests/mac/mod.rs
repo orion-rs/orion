@@ -44,5 +44,5 @@ fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) {
 
 	assert!(tag_stream == output);
 	assert!(tag_one_shot == output);
-	assert!(poly1305::verify(&Tag::from_slice(&output).unwrap(), &sk, input).unwrap());
+	assert!(poly1305::verify(&Tag::from_slice(&output).unwrap(), &sk, input).is_ok());
 }

@@ -56,7 +56,7 @@
 //! let msg = "Some message.".as_bytes();
 //!
 //! let expected_tag = auth::authenticate(&key, msg)?;
-//! assert!(auth::authenticate_verify(&expected_tag, &key, &msg)?);
+//! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey`]: struct.SecretKey.html
@@ -82,7 +82,7 @@ pub fn authenticate_verify(
 	expected: &Tag,
 	secret_key: &SecretKey,
 	data: &[u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	let key = hmac::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
 	hmac::verify(expected, &key, data)
 }
@@ -127,7 +127,6 @@ mod public {
 			fn prop_authenticate_verify(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
 				let tag = authenticate(&sk, &input[..]).unwrap();
-
 				authenticate_verify(&tag, &sk, &input[..]).is_ok()
 			}
 		}

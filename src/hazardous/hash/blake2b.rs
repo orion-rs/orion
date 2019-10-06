@@ -67,7 +67,7 @@
 //! let mut state_keyed = blake2b::Blake2b::new(Some(&secret_key), 64)?;
 //! state_keyed.update(b"Some data")?;
 //! let mac = state_keyed.finalize()?;
-//! assert!(blake2b::verify(&mac, &secret_key, 64, b"Some data")?);
+//! assert!(blake2b::verify(&mac, &secret_key, 64, b"Some data").is_ok());
 //!
 //! // Using the `Hasher` for convenience functions.
 //! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data")?;
@@ -461,12 +461,12 @@ pub fn verify(
 	secret_key: &SecretKey,
 	size: usize,
 	data: &[u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	let mut state = Blake2b::new(Some(secret_key), size)?;
 	state.update(data)?;
 
 	if expected == &state.finalize()? {
-		Ok(true)
+		Ok(())
 	} else {
 		Err(UnknownCryptoError)
 	}
