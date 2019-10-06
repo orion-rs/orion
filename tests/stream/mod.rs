@@ -29,9 +29,10 @@ pub fn chacha_test_runner(
 		return;
 	}
 
+	let sk = SecretKey::from_slice(&key).unwrap();
+
 	// Selecting variant based on nonce size
 	if nonce.len() == IETF_CHACHA_NONCESIZE {
-		let sk = SecretKey::from_slice(&key).unwrap();
 		let n = chacha20::Nonce::from_slice(&nonce).unwrap();
 		StreamCipherTestRunner(
 			chacha20::encrypt,
@@ -43,7 +44,6 @@ pub fn chacha_test_runner(
 			Some(output),
 		);
 	} else if nonce.len() == XCHACHA_NONCESIZE {
-		let sk = SecretKey::from_slice(&key).unwrap();
 		let n = xchacha20::Nonce::from_slice(&nonce).unwrap();
 		StreamCipherTestRunner(
 			xchacha20::encrypt,
