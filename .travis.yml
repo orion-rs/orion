@@ -43,6 +43,8 @@ matrix:
         - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
 
+        - cargo clean
+
     - name: "[RELEASE + DEBUG]: Tests"
       rust: nightly
       script:
@@ -54,7 +56,7 @@ matrix:
         # Release:
         - cargo test --release
         - cargo test --release --no-default-features --tests
-        - cargo test --release --no-default-features --features nightly 
+        - cargo test --release --no-default-features --features nightly
 
     - name: "[RELEASE + DEBUG]: Tests + cargo-audit + clippy + fmt"
       rust: stable
