@@ -40,9 +40,10 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
 	output_with_tag[..output.len()].copy_from_slice(output);
 	output_with_tag[output.len()..].copy_from_slice(tag);
 
+	let sk = SecretKey::from_slice(&key).unwrap();
+
 	// Determine variant based on NONCE size
 	if nonce.len() == IETF_CHACHA_NONCESIZE {
-		let sk = SecretKey::from_slice(&key).unwrap();
 		let n = chacha20poly1305::Nonce::from_slice(&nonce).unwrap();
 
 		if tag.len() != POLY1305_OUTSIZE {
@@ -63,7 +64,6 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
 			aad,
 		);
 	} else if nonce.len() == XCHACHA_NONCESIZE {
-		let sk = SecretKey::from_slice(&key).unwrap();
 		let n = xchacha20poly1305::Nonce::from_slice(&nonce).unwrap();
 
 		if tag.len() != POLY1305_OUTSIZE {
