@@ -89,7 +89,7 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 /// use orion::util;
 ///
 /// let mut rnd_bytes = [0u8; 64];
-/// assert!(util::secure_cmp(&rnd_bytes, &[0u8; 64])?);
+/// assert!(util::secure_cmp(&rnd_bytes, &[0u8; 64]).is_ok());
 ///
 /// util::secure_rand_bytes(&mut rnd_bytes)?;
 /// assert!(util::secure_cmp(&rnd_bytes, &[0u8; 64]).is_err());
