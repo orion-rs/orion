@@ -53,7 +53,7 @@
 //! state.update(b"Some message.")?;
 //! let tag = state.finalize()?;
 //!
-//! assert!(hmac::verify(&tag, &key, b"Some message.")?);
+//! assert!(hmac::verify(&tag, &key, b"Some message.").is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: struct.Hmac.html
@@ -196,12 +196,12 @@ pub fn verify(
 	expected: &Tag,
 	secret_key: &SecretKey,
 	data: &[u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	let mut hmac_state = Hmac::new(secret_key);
 	hmac_state.update(data)?;
 
 	if expected == &hmac_state.finalize()? {
-		Ok(true)
+		Ok(())
 	} else {
 		Err(UnknownCryptoError)
 	}
@@ -237,15 +237,12 @@ mod public {
 			let mut tag = Hmac::new(&secret_key);
 			tag.update(data).unwrap();
 
-			assert_eq!(
-				verify(
-					&tag.finalize().unwrap(),
-					&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
-					data
-				)
-				.unwrap(),
-				true
-			);
+			assert!(verify(
+				&tag.finalize().unwrap(),
+				&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
+				data
+			)
+			.is_ok());
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.

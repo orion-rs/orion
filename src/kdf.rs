@@ -73,7 +73,7 @@
 //! 	&user_password,
 //! 	&salt,
 //! 	100000
-//! )?);
+//! ).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Salt`]: struct.Salt.html
@@ -117,10 +117,10 @@ pub fn derive_key_verify(
 	password: &Password,
 	salt: &Salt,
 	iterations: usize,
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	let mut buffer = vec![0u8; expected.get_length()];
 
-	let is_good = pbkdf2::verify(
+	pbkdf2::verify(
 		expected.unprotected_as_bytes(),
 		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
 		salt.as_ref(),
@@ -130,7 +130,7 @@ pub fn derive_key_verify(
 
 	buffer.zeroize();
 
-	Ok(is_good)
+	Ok(())
 }
 
 // Testing public functions in the module.
@@ -147,7 +147,7 @@ mod public {
 
 			let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
-			assert!(derive_key_verify(&dk, &password, &salt, 100).unwrap());
+			assert!(derive_key_verify(&dk, &password, &salt, 100).is_ok());
 		}
 
 		#[test]
