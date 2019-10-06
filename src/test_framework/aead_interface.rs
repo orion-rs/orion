@@ -33,34 +33,28 @@ pub fn AeadTestRunner<Sealer, Opener, Key, Nonce>(
 	key: Key,
 	nonce: Nonce,
 	input: &[u8],
-	expected_with_tag: Option<&[u8]>,
+	expected_ct_with_tag: Option<&[u8]>,
 	tag_size: usize,
 	aad: &[u8],
 ) where
 	Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 	Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-	// Skip tests that require non-empty input.
-	// The tests that check for behavior in empty and non-empty
-	// input do not take an input parameter.
 	if !input.is_empty() {
 		seal_dst_out_length(&sealer, &key, &nonce, input, tag_size, aad);
 		open_dst_out_length(&sealer, &opener, &key, &nonce, input, tag_size, aad);
-		seal_open_same_plaintext(&sealer, &opener, &key, &nonce, input, tag_size, aad);
 		open_modified_tag_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
 		open_modified_ciphertext_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
-		if let Some(expected_with_tag_result) = expected_with_tag {
-			seal_open_equals_expected(
-				&sealer,
-				&opener,
-				&key,
-				&nonce,
-				&input,
-				expected_with_tag_result,
-				tag_size,
-				aad,
-			);
-		}
+		seal_open_equals_expected(
+			&sealer,
+			&opener,
+			&key,
+			&nonce,
+			&input,
+			expected_ct_with_tag,
+			tag_size,
+			aad,
+		);
 	}
 	seal_plaintext_length(&sealer, &key, &nonce, tag_size, aad);
 	open_ciphertext_with_tag_length(&sealer, &opener, &key, &nonce, tag_size, aad);
@@ -222,32 +216,6 @@ fn open_ciphertext_with_tag_length<Sealer, Opener, Key, Nonce>(
 	.is_ok());
 }
 
-#[cfg(feature = "safe_api")]
-/// Test that sealing and opening produces the correct plaintext.
-fn seal_open_same_plaintext<Sealer, Opener, Key, Nonce>(
-	sealer: &Sealer,
-	opener: &Opener,
-	key: &Key,
-	nonce: &Nonce,
-	input: &[u8],
-	tag_size: usize,
-	aad: &[u8],
-) where
-	Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
-	Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-	assert!(!input.is_empty());
-	let default_aad = if aad.is_empty() { None } else { Some(aad) };
-
-	let mut dst_out_ct = vec![0u8; input.len() + tag_size];
-	sealer(&key, &nonce, input, default_aad, &mut dst_out_ct).unwrap();
-
-	let mut dst_out_pt = input.to_vec();
-	opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).unwrap();
-
-	assert_eq!(input, &dst_out_pt[..]);
-}
-
 #[allow(clippy::too_many_arguments)]
 #[cfg(feature = "safe_api")]
 /// Test that sealing and opening produces the expected ciphertext.
@@ -257,7 +225,7 @@ fn seal_open_equals_expected<Sealer, Opener, Key, Nonce>(
 	key: &Key,
 	nonce: &Nonce,
 	input: &[u8],
-	expected_with_tag: &[u8],
+	expected_ct_with_tag: Option<&[u8]>,
 	tag_size: usize,
 	aad: &[u8],
 ) where
@@ -269,11 +237,17 @@ fn seal_open_equals_expected<Sealer, Opener, Key, Nonce>(
 
 	let mut dst_out_ct = vec![0u8; input.len() + tag_size];
 	sealer(&key, &nonce, input, default_aad, &mut dst_out_ct).unwrap();
-	assert_eq!(expected_with_tag, &dst_out_ct[..]);
+	if let Some(expected) = expected_ct_with_tag {
+		assert_eq!(expected, &dst_out_ct[..]);
+	}
 
 	let mut dst_out_pt = input.to_vec();
 	opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).unwrap();
 	assert_eq!(input, &dst_out_pt[..]);
+	if let Some(expected) = expected_ct_with_tag {
+		opener(&key, &nonce, &expected, default_aad, &mut dst_out_pt).unwrap();
+		assert_eq!(input, &dst_out_pt[..]);
+	}
 }
 
 #[cfg(feature = "safe_api")]
