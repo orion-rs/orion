@@ -535,8 +535,6 @@ mod public {
 mod private {
 	use super::*;
 
-	// One function tested per submodule.
-
 	mod test_process_block {
 		use super::*;
 
