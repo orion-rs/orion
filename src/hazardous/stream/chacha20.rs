@@ -510,163 +510,24 @@ pub(super) fn hchacha20(
 #[cfg(test)]
 mod public {
 	use super::*;
-	// One function tested per submodule.
 
-	// encrypt()/decrypt() are tested together here
-	// since decrypt() is just a wrapper around encrypt()
-	// and so only the decrypt() function is called
+	#[cfg(feature = "safe_api")]
 	mod test_encrypt_decrypt {
 		use super::*;
-		#[test]
-		fn test_fail_on_initial_counter_overflow() {
-			let mut dst = [0u8; 65];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				u32::max_value(),
-				&[0u8; 65],
-				&mut dst,
-			)
-			.is_err());
-		}
-
-		#[test]
-		fn test_pass_on_one_iter_max_initial_counter() {
-			let mut dst = [0u8; 64];
-			// Should pass because only one iteration is completed, so block_counter will
-			// not increase
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				u32::max_value(),
-				&[0u8; 64],
-				&mut dst,
-			)
-			.is_ok());
-		}
-
-		#[test]
-		fn test_fail_on_empty_plaintext() {
-			let mut dst = [0u8; 64];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				0,
-				&[0u8; 0],
-				&mut dst,
-			)
-			.is_err());
-		}
-
-		#[test]
-		fn test_dst_out_length() {
-			let mut dst_small = [0u8; 64];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				0,
-				&[0u8; 128],
-				&mut dst_small,
-			)
-			.is_err());
-
-			let mut dst = [0u8; 64];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				0,
-				&[0u8; 64],
-				&mut dst,
-			)
-			.is_ok());
-
-			let mut dst_big = [0u8; 64];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 12]).unwrap(),
-				0,
-				&[0u8; 32],
-				&mut dst_big,
-			)
-			.is_ok());
-		}
+		use crate::test_framework::streamcipher_interface::*;
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
 
-			/// Given a input length `a` find out how many times
-			/// the initial counter on encrypt()/decrypt() would
-			/// increase.
-			fn counter_increase_times(a: f32) -> u32 {
-				// Otherwise a overvlowing subtration would happen
-				if a <= 64f32 {
-					return 0;
-				}
-
-				let check_with_floor = (a / 64f32).floor();
-				let actual = a / 64f32;
-
-				assert!(actual >= check_with_floor);
-				// Subtract one because the first 64 in length
-				// the counter does not increase
-				if actual > check_with_floor {
-					(actual.ceil() as u32) - 1
-				} else {
-					(actual as u32) - 1
-				}
-			}
-
 			quickcheck! {
-				// Encrypting input, and then decrypting should always yield the same input.
-				fn prop_encrypt_decrypt_same_input(input: Vec<u8>, block_counter: u32) -> bool {
-					let pt = if input.is_empty() {
-						vec![1u8; 10]
-					} else {
-						input
-					};
+				fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
+					let secret_key = SecretKey::generate();
+					let nonce = Nonce::from_slice(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
+					StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
 
-					let mut dst_out_ct = vec![0u8; pt.len()];
-					let mut dst_out_pt = vec![0u8; pt.len()];
-
-					// If `block_counter` is high enough check if it would overflow
-					if counter_increase_times(pt.len() as f32).checked_add(block_counter).is_none() {
-						// Overflow will occur and the operation should fail
-						let res = if encrypt(
-							&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-							&Nonce::from_slice(&[0u8; 12]).unwrap(),
-							block_counter,
-							&pt[..],
-							&mut dst_out_ct,
-						).is_err() { true } else { false };
-
-						return res;
-					} else {
-
-						encrypt(
-							&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-							&Nonce::from_slice(&[0u8; 12]).unwrap(),
-							block_counter,
-							&pt[..],
-							&mut dst_out_ct,
-						).unwrap();
-
-						decrypt(
-							&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-							&Nonce::from_slice(&[0u8; 12]).unwrap(),
-							block_counter,
-							&dst_out_ct[..],
-							&mut dst_out_pt,
-						).unwrap();
-
-						return dst_out_pt == pt;
-					}
+					true
 				}
 			}
 
@@ -890,7 +751,7 @@ mod public {
 		}
 	}
 
-	// hex crate used Vec<u8>, so we need std.
+	// hex crate uses Vec<u8>, so we need std.
 	#[cfg(feature = "safe_api")]
 	mod test_hchacha20 {
 		use super::*;
@@ -901,11 +762,8 @@ mod public {
 		#[test]
 		fn test_nonce_length() {
 			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16],).is_ok());
-
 			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 17],).is_err());
-
 			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15],).is_err());
-
 			assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 0],).is_err());
 		}
 
@@ -1352,20 +1210,27 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-	// One function tested per submodule.
 
 	mod test_init_state {
 		use super::*;
 
 		#[test]
 		fn test_nonce_length() {
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 15], true).is_err());
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 10], true).is_err());
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 12], true).is_ok());
+			assert!(InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 15], true).is_err());
+			assert!(InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 10], true).is_err());
+			assert!(InternalState::new(
+				&[0u8; CHACHA_KEYSIZE],
+				&[0u8; IETF_CHACHA_NONCESIZE],
+				true
+			)
+			.is_ok());
 
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 15], false).is_err());
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 17], false).is_err());
-			assert!(InternalState::new(&[0u8; 32], &[0u8; 16], false).is_ok());
+			assert!(InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 15], false).is_err());
+			assert!(InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 17], false).is_err());
+			assert!(
+				InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false)
+					.is_ok()
+			);
 		}
 
 		// Proptests. Only exectued when NOT testing no_std.
@@ -1374,27 +1239,11 @@ mod private {
 			use super::*;
 
 			quickcheck! {
-				// Always fail to intialize state while the nonce is not
-				// the correct length. If it is correct length, never panic.
 				fn prop_test_nonce_length_ietf(nonce: Vec<u8>) -> bool {
-					let sk = &[0u8; 32];
-
-					if nonce.len() != IETF_CHACHA_NONCESIZE {
-						let res = if InternalState::new(sk, &nonce[..], true).is_err() {
-							true
-						} else {
-							false
-						};
-
-						return res;
+					if nonce.len() == IETF_CHACHA_NONCESIZE {
+						InternalState::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_ok()
 					} else {
-						let res = if InternalState::new(sk, &nonce[..], true).is_ok() {
-							true
-						} else {
-							false
-						};
-
-						return res;
+						InternalState::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_err()
 					}
 				}
 			}
@@ -1403,24 +1252,10 @@ mod private {
 				// Always fail to intialize state while the nonce is not
 				// the correct length. If it is correct length, never panic.
 				fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
-					let sk = &[0u8; 32];
-
-					if nonce.len() != HCHACHA_NONCESIZE {
-						let res = if InternalState::new(sk, &nonce[..], false).is_err() {
-							true
-						} else {
-							false
-						};
-
-						return res;
+					if nonce.len() == HCHACHA_NONCESIZE {
+						InternalState::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_ok()
 					} else {
-						let res = if InternalState::new(sk, &nonce[..], false).is_ok() {
-							true
-						} else {
-							false
-						};
-
-						return res;
+						InternalState::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_err()
 					}
 				}
 			}
@@ -1431,9 +1266,12 @@ mod private {
 		use super::*;
 		#[test]
 		fn test_process_block_wrong_combination_of_variant_and_nonce() {
-			let mut chacha_state_ietf = InternalState::new(&[0u8; 32], &[0u8; 12], true).unwrap();
+			let mut chacha_state_ietf =
+				InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true)
+					.unwrap();
 			let mut chacha_state_hchacha =
-				InternalState::new(&[0u8; 32], &[0u8; 16], false).unwrap();
+				InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false)
+					.unwrap();
 
 			assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
 			assert!(chacha_state_ietf.process_block(None).is_err());

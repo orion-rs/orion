@@ -20,6 +20,7 @@ use self::{
 				xchacha20::XCHACHA_NONCESIZE,
 			},
 		},
+		test_framework::aead_interface::AeadTestRunner,
 	},
 };
 
@@ -32,9 +33,14 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
 		return;
 	}
 
-	let sk = SecretKey::from_slice(&key).unwrap();
 	let mut dst_ct_out = vec![0u8; input.len() + tag.len()];
 	let mut dst_pt_out = vec![0u8; input.len()];
+
+	let mut output_with_tag = vec![0u8; output.len() + tag.len()];
+	output_with_tag[..output.len()].copy_from_slice(output);
+	output_with_tag[output.len()..].copy_from_slice(tag);
+
+	let sk = SecretKey::from_slice(&key).unwrap();
 
 	// Determine variant based on NONCE size
 	if nonce.len() == IETF_CHACHA_NONCESIZE {
@@ -44,40 +50,18 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
 			dst_ct_out[..input.len()].copy_from_slice(output);
 			dst_ct_out[input.len()..].copy_from_slice(tag);
 			assert!(chacha20poly1305::open(&sk, &n, &output, Some(aad), &mut dst_pt_out,).is_err());
-
 			return;
 		}
 
-		chacha20poly1305::seal(&sk, &n, input, Some(aad), &mut dst_ct_out).unwrap();
-		chacha20poly1305::open(&sk, &n, &dst_ct_out, Some(aad), &mut dst_pt_out).unwrap();
-
-		assert!(dst_ct_out[..input.len()].as_ref() == output);
-		assert!(dst_ct_out[input.len()..].as_ref() == tag);
-		assert!(dst_pt_out[..].as_ref() == input);
-
-		// Fail on modified tag
-		let mut dst_ct_out_bad_tag = dst_ct_out.to_vec();
-		dst_ct_out_bad_tag[input.len() + 1] ^= 1;
-		assert!(
-			chacha20poly1305::open(&sk, &n, &dst_ct_out_bad_tag, Some(aad), &mut dst_pt_out)
-				.is_err()
-		);
-		// Fail on modified ciphertext
-		let mut dst_ct_out_bad_ct = dst_ct_out.to_vec();
-		dst_ct_out_bad_ct[input.len() - 1] ^= 1;
-		assert!(
-			chacha20poly1305::open(&sk, &n, &dst_ct_out_bad_ct, Some(aad), &mut dst_pt_out)
-				.is_err()
-		);
-		// Fail on modified AAD
-		let mut bad_aad = aad.to_vec();
-		if bad_aad.is_empty() {
-			bad_aad.extend_from_slice("Bad aad".as_bytes());
-		} else {
-			bad_aad[0] ^= 1;
-		}
-		assert!(
-			chacha20poly1305::open(&sk, &n, &dst_ct_out, Some(&bad_aad), &mut dst_pt_out).is_err()
+		AeadTestRunner(
+			chacha20poly1305::seal,
+			chacha20poly1305::open,
+			sk,
+			n,
+			input,
+			Some(&output_with_tag[..]),
+			tag.len(),
+			aad,
 		);
 	} else if nonce.len() == XCHACHA_NONCESIZE {
 		let n = xchacha20poly1305::Nonce::from_slice(&nonce).unwrap();
@@ -92,36 +76,15 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
 			return;
 		}
 
-		xchacha20poly1305::seal(&sk, &n, input, Some(aad), &mut dst_ct_out).unwrap();
-		xchacha20poly1305::open(&sk, &n, &dst_ct_out, Some(aad), &mut dst_pt_out).unwrap();
-
-		assert!(dst_ct_out[..input.len()].as_ref() == output);
-		assert!(dst_ct_out[input.len()..].as_ref() == tag);
-		assert!(dst_pt_out[..].as_ref() == input);
-
-		// Fail on modified tag
-		let mut dst_ct_out_bad_tag = dst_ct_out.to_vec();
-		dst_ct_out_bad_tag[input.len() + 1] ^= 1;
-		assert!(
-			xchacha20poly1305::open(&sk, &n, &dst_ct_out_bad_tag, Some(aad), &mut dst_pt_out)
-				.is_err()
-		);
-		// Fail on modified ciphertext
-		let mut dst_ct_out_bad_ct = dst_ct_out.to_vec();
-		dst_ct_out_bad_ct[input.len() - 1] ^= 1;
-		assert!(
-			xchacha20poly1305::open(&sk, &n, &dst_ct_out_bad_ct, Some(aad), &mut dst_pt_out)
-				.is_err()
-		);
-		// Fail on modified AAD
-		let mut bad_aad = aad.to_vec();
-		if bad_aad.is_empty() {
-			bad_aad.extend_from_slice("Bad aad".as_bytes());
-		} else {
-			bad_aad[0] ^= 1;
-		}
-		assert!(
-			xchacha20poly1305::open(&sk, &n, &dst_ct_out, Some(&bad_aad), &mut dst_pt_out).is_err()
+		AeadTestRunner(
+			xchacha20poly1305::seal,
+			xchacha20poly1305::open,
+			sk,
+			n,
+			input,
+			Some(&output_with_tag[..]),
+			tag.len(),
+			aad,
 		);
 	} else {
 		assert!(chacha20poly1305::Nonce::from_slice(&nonce).is_err());

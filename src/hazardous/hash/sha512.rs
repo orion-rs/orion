@@ -425,220 +425,53 @@ pub fn compare_sha512_states(state_1: &Sha512, state_2: &Sha512) {
 mod public {
 	use super::*;
 
-	// One function tested per submodule.
-	mod test_reset {
-		use super::*;
-
-		#[test]
-		fn test_double_reset_ok() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Sha512::new();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			state.reset();
-		}
-	}
-
-	mod test_update {
-		use super::*;
-
-		#[test]
-		fn test_update_after_finalize_with_reset_ok() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Sha512::new();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			state.update(data).unwrap();
-		}
-
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/28
-		fn test_update_after_finalize_err() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Sha512::new();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.update(data).is_err());
-		}
-	}
-
-	mod test_finalize {
-		use super::*;
-
-		#[test]
-		fn test_double_finalize_with_reset_no_update_ok() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Sha512::new();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			let _ = state.finalize().unwrap();
-		}
-
-		#[test]
-		fn test_double_finalize_with_reset_ok() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Sha512::new();
-			state.update(data).unwrap();
-			let one = state.finalize().unwrap();
-			state.reset();
-			state.update(data).unwrap();
-			let two = state.finalize().unwrap();
-			assert_eq!(one.as_ref(), two.as_ref());
-		}
-
-		#[test]
-		fn test_double_finalize_err() {
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Sha512::new();
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.finalize().is_err());
-		}
-	}
-
 	mod test_streaming_interface {
 		use super::*;
+		use crate::test_framework::incremental_interface::*;
 
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of new(), update(),
-		/// finalize() and reset() produce the same Digest.
-		fn produces_same_hash(data: &[u8]) {
-			// new(), update(), finalize()
-			let mut state_1 = Sha512::new();
-			state_1.update(data).unwrap();
-			let res_1 = state_1.finalize().unwrap();
+		impl TestableStreamingContext<Digest> for Sha512 {
+			fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+				Ok(self.reset())
+			}
 
-			// new(), reset(), update(), finalize()
-			let mut state_2 = Sha512::new();
-			state_2.reset();
-			state_2.update(data).unwrap();
-			let res_2 = state_2.finalize().unwrap();
+			fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				self.update(input)
+			}
 
-			// new(), update(), reset(), update(), finalize()
-			let mut state_3 = Sha512::new();
-			state_3.update(data).unwrap();
-			state_3.reset();
-			state_3.update(data).unwrap();
-			let res_3 = state_3.finalize().unwrap();
+			fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
+				self.finalize()
+			}
 
-			// new(), update(), finalize(), reset(), update(), finalize()
-			let mut state_4 = Sha512::new();
-			state_4.update(data).unwrap();
-			let _ = state_4.finalize().unwrap();
-			state_4.reset();
-			state_4.update(data).unwrap();
-			let res_4 = state_4.finalize().unwrap();
+			fn one_shot(input: &[u8]) -> Result<Digest, UnknownCryptoError> {
+				digest(input)
+			}
 
-			assert_eq!(res_1, res_2);
-			assert_eq!(res_2, res_3);
-			assert_eq!(res_3, res_4);
+			fn verify_result(expected: &Digest, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				let actual: Digest = Self::one_shot(input)?;
 
-			// Tests for the assumption that returning Ok() on empty update() calls
-			// with streaming API's, gives the correct result. This is done by testing
-			// the reasoning that if update() is empty, returns Ok(), it is the same as
-			// calling new() -> finalize(). i.e not calling update() at all.
-			if data.is_empty() {
-				// new(), finalize()
-				let mut state_5 = Sha512::new();
-				let res_5 = state_5.finalize().unwrap();
+				if &actual == expected {
+					Ok(())
+				} else {
+					Err(UnknownCryptoError)
+				}
+			}
 
-				// new(), reset(), finalize()
-				let mut state_6 = Sha512::new();
-				state_6.reset();
-				let res_6 = state_6.finalize().unwrap();
-
-				// new(), update(), reset(), finalize()
-				let mut state_7 = Sha512::new();
-				state_7.update(b"Wrong data").unwrap();
-				state_7.reset();
-				let res_7 = state_7.finalize().unwrap();
-
-				assert_eq!(res_4, res_5);
-				assert_eq!(res_5, res_6);
-				assert_eq!(res_6, res_7);
+			fn compare_states(state_1: &Sha512, state_2: &Sha512) {
+				compare_sha512_states(state_1, state_2)
 			}
 		}
 
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of new(), update(),
-		/// finalize() and reset() produce the same Digest.
-		fn produces_same_state(data: &[u8]) {
-			// new()
-			let state_1 = Sha512::new();
-
-			// new(), reset()
-			let mut state_2 = Sha512::new();
-			state_2.reset();
-
-			// new(), update(), reset()
-			let mut state_3 = Sha512::new();
-			state_3.update(data).unwrap();
-			state_3.reset();
-
-			// new(), update(), finalize(), reset()
-			let mut state_4 = Sha512::new();
-			state_4.update(data).unwrap();
-			let _ = state_4.finalize().unwrap();
-			state_4.reset();
-
-			compare_sha512_states(&state_1, &state_2);
-			compare_sha512_states(&state_2, &state_3);
-			compare_sha512_states(&state_3, &state_4);
-		}
-
 		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_produce_same_state() {
-			produces_same_state(b"Tests");
+		fn default_consistency_tests() {
+			let initial_state: Sha512 = Sha512::new();
+
+			let test_runner = StreamingContextConsistencyTester::<Digest, Sha512>::new(
+				initial_state,
+				SHA512_BLOCKSIZE,
+			);
+			test_runner.run_all_tests();
 		}
 
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_produce_same_hash() {
-			produces_same_hash(b"Tests");
-			produces_same_hash(b"");
-		}
-
-		#[test]
-		#[cfg(feature = "safe_api")]
-		// Test for issues when incrementally processing data
-		// with leftover
-		fn test_streaming_consistency() {
-			for len in 0..SHA512_BLOCKSIZE * 4 {
-				let data = vec![0u8; len];
-				let mut state = Sha512::new();
-				let mut other_data: Vec<u8> = Vec::new();
-
-				other_data.extend_from_slice(&data);
-				state.update(&data).unwrap();
-
-				if data.len() > SHA512_BLOCKSIZE {
-					other_data.extend_from_slice(b"");
-					state.update(b"").unwrap();
-				}
-				if data.len() > SHA512_BLOCKSIZE * 2 {
-					other_data.extend_from_slice(b"Extra");
-					state.update(b"Extra").unwrap();
-				}
-				if data.len() > SHA512_BLOCKSIZE * 3 {
-					other_data.extend_from_slice(&[0u8; 256]);
-					state.update(&[0u8; 256]).unwrap();
-				}
-
-				let digest_one_shot = digest(&other_data).unwrap();
-
-				assert!(state.finalize().unwrap().as_ref() == digest_one_shot.as_ref());
-			}
-		}
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
@@ -647,35 +480,15 @@ mod public {
 			quickcheck! {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
-				fn prop_same_hash_different_usage(data: Vec<u8>) -> bool {
-					// Will panic on incorrect results.
-					produces_same_hash(&data[..]);
+				fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+					let initial_state: Sha512 = Sha512::new();
 
+					let test_runner = StreamingContextConsistencyTester::<Digest, Sha512>::new(
+						initial_state,
+						SHA512_BLOCKSIZE,
+					);
+					test_runner.run_all_tests_property(&data);
 					true
-				}
-			}
-
-			quickcheck! {
-				/// Related bug: https://github.com/brycx/orion/issues/46
-				/// Test different streaming state usage patterns.
-				fn prop_same_state_different_usage(data: Vec<u8>) -> bool {
-					// Will panic on incorrect results.
-					produces_same_state(&data[..]);
-
-					true
-				}
-			}
-
-			quickcheck! {
-				/// Using the one-shot function should always produce the
-				/// same result as when using the streaming interface.
-				fn prop_digest_same_as_streaming(data: Vec<u8>) -> bool {
-					let mut state = Sha512::new();
-					state.update(&data[..]).unwrap();
-					let stream = state.finalize().unwrap();
-					let one_shot = digest(&data[..]).unwrap();
-
-					(one_shot == stream)
 				}
 			}
 		}
@@ -686,7 +499,6 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-	// One function tested per submodule.
 
 	mod test_increment_mlen {
 		use super::*;
@@ -724,7 +536,6 @@ mod private {
 			};
 			// u64::max_value() - 7, to leave so that the length represented
 			// in bites should overflow by exactly one.
-
 			context.increment_mlen(1);
 		}
 	}

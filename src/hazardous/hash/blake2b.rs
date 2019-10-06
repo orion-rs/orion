@@ -477,10 +477,6 @@ pub fn verify(
 mod public {
 	use super::*;
 
-	// One function tested per submodule.
-
-	/// Compare two Blake2b state objects to check if their fields
-	/// are the same.
 	fn compare_blake2b_states(state_1: &Blake2b, state_2: &Blake2b) {
 		assert_eq!(state_1.init_state, state_2.init_state);
 		assert_eq!(state_1.internal_state, state_2.internal_state);
@@ -493,6 +489,76 @@ mod public {
 		assert_eq!(state_1.size, state_2.size);
 	}
 
+	mod test_streaming_interface_no_key {
+		use super::*;
+		use crate::test_framework::incremental_interface::*;
+
+		impl TestableStreamingContext<Digest> for Blake2b {
+			fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+				self.reset(None)
+			}
+
+			fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				self.update(input)
+			}
+
+			fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
+				self.finalize()
+			}
+
+			fn one_shot(input: &[u8]) -> Result<Digest, UnknownCryptoError> {
+				// Blake2b512 is used since this is the same as BLAKE2B_OUTSIZE.
+				Hasher::Blake2b512.digest(input)
+			}
+
+			fn verify_result(expected: &Digest, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				let actual: Digest = Self::one_shot(input)?;
+
+				if &actual == expected {
+					Ok(())
+				} else {
+					Err(UnknownCryptoError)
+				}
+			}
+
+			fn compare_states(state_1: &Blake2b, state_2: &Blake2b) {
+				compare_blake2b_states(state_1, state_2)
+			}
+		}
+
+		#[test]
+		fn default_consistency_tests() {
+			let initial_state: Blake2b = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
+
+			let test_runner = StreamingContextConsistencyTester::<Digest, Blake2b>::new(
+				initial_state,
+				BLAKE2B_BLOCKSIZE,
+			);
+			test_runner.run_all_tests();
+		}
+
+		// Proptests. Only exectued when NOT testing no_std.
+		#[cfg(feature = "safe_api")]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				/// Related bug: https://github.com/brycx/orion/issues/46
+				/// Test different streaming state usage patterns.
+				fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+					let initial_state: Blake2b = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
+
+					let test_runner = StreamingContextConsistencyTester::<Digest, Blake2b>::new(
+						initial_state,
+						BLAKE2B_BLOCKSIZE,
+					);
+					test_runner.run_all_tests_property(&data);
+					true
+				}
+			}
+		}
+	}
+
 	mod test_new {
 		use super::*;
 
@@ -501,21 +567,9 @@ mod public {
 		/// incorrect Result is returned.
 		fn new_tester(sk: Option<&SecretKey>, size: usize) -> bool {
 			if size >= 1 && size <= BLAKE2B_OUTSIZE {
-				let res = if Blake2b::new(sk, size).is_ok() {
-					true
-				} else {
-					false
-				};
-
-				return res;
+				Blake2b::new(sk, size).is_ok()
 			} else {
-				let res = if Blake2b::new(sk, size).is_err() {
-					true
-				} else {
-					false
-				};
-
-				return res;
+				Blake2b::new(sk, size).is_err()
 			}
 		}
 
@@ -541,41 +595,20 @@ mod public {
 			quickcheck! {
 				/// Given a valid size parameter, new should always pass. If size
 				/// is invalid, then new should always fail.
-				fn prop_new_size_no_key(size: usize) -> bool {
-					new_tester(None, size)
-				}
-			}
-
-			quickcheck! {
-				/// Given a valid size parameter, new should always pass. If size
-				/// is invalid, then new should always fail.
-				fn prop_new_size_key(size: usize) -> bool {
+				fn prop_new_size(size: usize) -> bool {
+					let no_key = new_tester(None, size);
 					let sk = SecretKey::generate();
-					new_tester(Some(&sk), size)
+					let key = new_tester(Some(&sk), size);
+
+					no_key && key
 				}
 			}
 		}
 	}
 
+	#[cfg(feature = "safe_api")]
 	mod test_verify {
 		use super::*;
-
-		#[test]
-		fn finalize_and_verify_true() {
-			let secret_key = SecretKey::from_slice("Jefe".as_bytes()).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut tag = Blake2b::new(Some(&secret_key), 64).unwrap();
-			tag.update(data).unwrap();
-
-			assert!(verify(
-				&tag.finalize().unwrap(),
-				&SecretKey::from_slice("Jefe".as_bytes()).unwrap(),
-				64,
-				data
-			)
-			.is_ok());
-		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
@@ -583,37 +616,16 @@ mod public {
 			use super::*;
 
 			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
-				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = SecretKey::generate();
-
-					let mut state = Blake2b::new(Some(&sk), 64).unwrap();
-					state.update(&data[..]).unwrap();
-					let tag = state.finalize().unwrap();
-					// Failed verification on Err so res is not needed.
-					let _res = verify(&tag, &sk, 64, &data[..]).unwrap();
-
-					true
-				}
-			}
-
-			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
+				/// When using a different key, verify() should always yield an error.
+				/// NOTE: Using different and same input data is tested with TestableStreamingContext.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = SecretKey::generate();
 					let mut state = Blake2b::new(Some(&sk), 64).unwrap();
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
-
 					let bad_sk = SecretKey::generate();
 
-					let res = if verify(&tag, &bad_sk, 64, &data[..]).is_err() {
-						true
-					} else {
-						false
-					};
-
-					res
+					verify(&tag, &bad_sk, 64, &data[..]).is_err()
 				}
 			}
 		}
@@ -647,9 +659,9 @@ mod public {
 			use super::*;
 
 			quickcheck! {
-				/// Given some data, .digest() should never fail in practice and should
+				/// Given some data, digest() should never fail in practice and should
 				/// produce the same output on a second call.
-				/// Only if data is unreasonably large.
+				/// Only panics if data is unreasonably large.
 				fn prop_hasher_digest_no_panic_and_same_result(data: Vec<u8>) -> bool {
 					let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
 					let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
@@ -680,12 +692,12 @@ mod public {
 				/// Given some data, .digest() should produce the same output as when
 				/// calling with streaming state.
 				fn prop_hasher_digest_384_same_as_streaming(data: Vec<u8>) -> bool {
-					let d256 = Hasher::Blake2b384.digest(&data[..]).unwrap();
+					let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
 
 					let mut state = Blake2b::new(None, 48).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d256 == state.finalize().unwrap())
+					(d384 == state.finalize().unwrap())
 				}
 			}
 
@@ -693,18 +705,18 @@ mod public {
 				/// Given some data, .digest() should produce the same output as when
 				/// calling with streaming state.
 				fn prop_hasher_digest_512_same_as_streaming(data: Vec<u8>) -> bool {
-					let d256 = Hasher::Blake2b512.digest(&data[..]).unwrap();
+					let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
 
 					let mut state = Blake2b::new(None, 64).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d256 == state.finalize().unwrap())
+					(d512 == state.finalize().unwrap())
 				}
 			}
 
 			quickcheck! {
 				/// Given two different data, .digest() should never produce the
-				/// same output.ValidationCryptoError
+				/// same output.
 				fn prop_hasher_digest_diff_input_diff_result(data: Vec<u8>) -> bool {
 					let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
 					let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
@@ -719,7 +731,7 @@ mod public {
 			}
 
 			quickcheck! {
-				/// .new() should never fail.
+				/// .init() should never fail.
 				fn prop_hasher_init_no_panic() -> bool {
 					let _d256 = Hasher::Blake2b256.init().unwrap();
 					let _d384 = Hasher::Blake2b384.init().unwrap();
@@ -733,15 +745,6 @@ mod public {
 
 	mod test_reset {
 		use super::*;
-
-		#[test]
-		fn test_double_reset_ok() {
-			let mut state = Blake2b::new(None, 64).unwrap();
-			state.update(b"Tests").unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset(None).unwrap();
-			state.reset(None).unwrap();
-		}
 
 		#[test]
 		fn test_switching_keyed_modes_fails() {
@@ -758,58 +761,6 @@ mod public {
 			let _ = state_second.finalize().unwrap();
 			assert!(state_second.reset(Some(&secret_key)).is_err());
 			assert!(state_second.reset(None).is_ok());
-		}
-	}
-
-	mod test_update {
-		use super::*;
-
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/28
-		fn test_update_after_finalize_fail() {
-			let mut state = Blake2b::new(None, 64).unwrap();
-			state.update(b"Test").unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.update(b"Test").is_err());
-		}
-
-		#[test]
-		fn test_update_after_finalize_with_reset() {
-			let mut state = Blake2b::new(None, 64).unwrap();
-			state.update(b"Test").unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset(None).unwrap();
-			assert!(state.update(b"Test").is_ok());
-		}
-	}
-
-	mod test_finalize {
-		use super::*;
-
-		#[test]
-		fn test_double_finalize_fail() {
-			let mut state = Blake2b::new(None, 64).unwrap();
-			state.update(b"Test").unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.finalize().is_err());
-		}
-
-		#[test]
-		fn test_finalize_after_reset() {
-			let mut state = Blake2b::new(None, 64).unwrap();
-			state.update(b"Test").unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset(None).unwrap();
-			assert!(state.finalize().is_ok());
-		}
-
-		#[test]
-		fn test_double_finalize_with_reset_no_update() {
-			let mut state = Blake2b::new(None, 64).unwrap();
-			state.update(b"Test").unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset(None).unwrap();
-			let _ = state.finalize().unwrap();
 		}
 	}
 
@@ -943,37 +894,6 @@ mod public {
 			produces_same_hash(Some(&sk), 28, b"");
 		}
 
-		#[test]
-		#[cfg(feature = "safe_api")]
-		// Test for issues when incrementally processing data
-		// with leftover
-		fn test_streaming_consistency() {
-			for len in 0..BLAKE2B_BLOCKSIZE * 4 {
-				let data = vec![0u8; len];
-				let mut state = Blake2b::new(None, 64).unwrap();
-				let mut other_data: Vec<u8> = Vec::new();
-
-				other_data.extend_from_slice(&data);
-				state.update(&data).unwrap();
-
-				if data.len() > BLAKE2B_BLOCKSIZE {
-					other_data.extend_from_slice(b"");
-					state.update(b"").unwrap();
-				}
-				if data.len() > BLAKE2B_BLOCKSIZE * 2 {
-					other_data.extend_from_slice(b"Extra");
-					state.update(b"Extra").unwrap();
-				}
-				if data.len() > BLAKE2B_BLOCKSIZE * 3 {
-					other_data.extend_from_slice(&[0u8; 256]);
-					state.update(&[0u8; 256]).unwrap();
-				}
-
-				let digest_one_shot = Hasher::Blake2b512.digest(&other_data).unwrap();
-
-				assert!(state.finalize().unwrap().as_ref() == digest_one_shot.as_ref());
-			}
-		}
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
@@ -1016,7 +936,6 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-	// One function tested per submodule.
 
 	mod test_increment_offset {
 		use super::*;

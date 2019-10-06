@@ -143,173 +143,28 @@ pub fn decrypt(
 	encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
-//
-// The tests below are the same tests as the ones in `chacha20`
-// but with a bigger nonce. It's debatable whether this is needed, but right
-// now I'm keeping them as they don't seem to bring any disadvantages.
-//
-
 // Testing public functions in the module.
 #[cfg(test)]
+#[cfg(feature = "safe_api")]
 mod public {
 	use super::*;
-	// One function tested per submodule.
 
-	// encrypt()/decrypt() are tested together here
-	// since decrypt() is just a wrapper around encrypt()
-	// and so only the decrypt() function is called
 	mod test_encrypt_decrypt {
 		use super::*;
-		#[test]
-		fn test_fail_on_initial_counter_overflow() {
-			let mut dst = [0u8; 65];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				u32::max_value(),
-				&[0u8; 65],
-				&mut dst,
-			)
-			.is_err());
-		}
-
-		#[test]
-		fn test_pass_on_one_iter_max_initial_counter() {
-			let mut dst = [0u8; 64];
-			// Should pass because only one iteration is completed, so block_counter will
-			// not increase
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				u32::max_value(),
-				&[0u8; 64],
-				&mut dst,
-			)
-			.is_ok());
-		}
-
-		#[test]
-		fn test_fail_on_empty_plaintext() {
-			let mut dst = [0u8; 64];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				0,
-				&[0u8; 0],
-				&mut dst,
-			)
-			.is_err());
-		}
-
-		#[test]
-		fn test_dst_out_length() {
-			let mut dst_small = [0u8; 64];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				0,
-				&[0u8; 128],
-				&mut dst_small,
-			)
-			.is_err());
-
-			let mut dst = [0u8; 64];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				0,
-				&[0u8; 64],
-				&mut dst,
-			)
-			.is_ok());
-
-			let mut dst_big = [0u8; 64];
-
-			assert!(decrypt(
-				&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-				&Nonce::from_slice(&[0u8; 24]).unwrap(),
-				0,
-				&[0u8; 32],
-				&mut dst_big,
-			)
-			.is_ok());
-		}
+		use crate::test_framework::streamcipher_interface::*;
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
 
-			/// Given a input length `a` find out how many times
-			/// the initial counter on encrypt()/decrypt() would
-			/// increase.
-			fn counter_increase_times(a: f32) -> u32 {
-				// Otherwise a overflowing subtration would happen
-				if a <= 64f32 {
-					return 0;
-				}
-
-				let check_with_floor = (a / 64f32).floor();
-				let actual = a / 64f32;
-
-				assert!(actual >= check_with_floor);
-				// Subtract one because the first 64 in length
-				// the counter does not increase
-				if actual > check_with_floor {
-					(actual.ceil() as u32) - 1
-				} else {
-					(actual as u32) - 1
-				}
-			}
-
 			quickcheck! {
-				// Encrypting input, and then decrypting should always yield the same input.
-				fn prop_encrypt_decrypt_same_input(input: Vec<u8>, block_counter: u32) -> bool {
-					let pt = if input.is_empty() {
-						vec![1u8; 10]
-					} else {
-						input
-					};
+				fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
+					let secret_key = SecretKey::generate();
+					let nonce = Nonce::generate();
+					StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
 
-					let mut dst_out_ct = vec![0u8; pt.len()];
-					let mut dst_out_pt = vec![0u8; pt.len()];
-
-					// If `block_counter` is high enough check if it would overflow
-					if counter_increase_times(pt.len() as f32).checked_add(block_counter).is_none() {
-						// Overflow will occur and the operation should fail
-						let res = if encrypt(
-							&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-							&Nonce::from_slice(&[0u8; 24]).unwrap(),
-							block_counter,
-							&pt[..],
-							&mut dst_out_ct,
-						).is_err() { true } else { false };
-
-						return res;
-					} else {
-
-						encrypt(
-							&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-							&Nonce::from_slice(&[0u8; 24]).unwrap(),
-							block_counter,
-							&pt[..],
-							&mut dst_out_ct,
-						).unwrap();
-
-						decrypt(
-							&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-							&Nonce::from_slice(&[0u8; 24]).unwrap(),
-							block_counter,
-							&dst_out_ct[..],
-							&mut dst_out_pt,
-						).unwrap();
-
-						return dst_out_pt == pt;
-					}
+					true
 				}
 			}
 
