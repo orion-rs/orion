@@ -71,7 +71,7 @@
 pub use crate::hltypes::{SecretKey, Tag};
 use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 
-/// The recommended Tag size (bytes) to be output by BLAKE2b in keyed mode.
+/// The Tag size (bytes) to be output by BLAKE2b in keyed mode.
 const BLAKE2B_TAG_SIZE: usize = 32;
 /// The minimum `SecretKey` size (bytes) to be used by BLAKE2b in keyed mode.
 const BLAKE2B_MIN_KEY_SIZE: usize = 32;
@@ -156,7 +156,7 @@ mod public {
 		use super::*;
 
 		quickcheck! {
-			/// Authentication and verifying that tagn with the same parameters
+			/// Authentication and verifying that tag with the same parameters
 			/// should always be true.
 			fn prop_authenticate_verify(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
