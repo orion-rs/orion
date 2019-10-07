@@ -33,7 +33,7 @@
 //! [`orion::kdf`] offers key derivation using PBKDF2.
 //!
 //! ## Message authentication
-//! [`orion::auth`] offers message authentication and verification using HMAC.
+//! [`orion::auth`] offers message authentication and verification using BLAKE2b.
 //!
 //! ## Hashing
 //! [`orion::hash`] offers hashing using BLAKE2b.
