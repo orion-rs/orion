@@ -33,11 +33,10 @@
 //! [`orion::kdf`] offers key derivation using PBKDF2.
 //!
 //! ## Message authentication
-//! [`orion::auth`] offers message authentication and verification using HMAC.
+//! [`orion::auth`] offers message authentication and verification using BLAKE2b.
 //!
 //! ## Hashing
 //! [`orion::hash`] offers hashing using BLAKE2b.
-//!
 //!
 //! ### A note on `no_std`:
 //! When orion is used in a `no_std` context, access to nearly all functionality
@@ -102,3 +101,7 @@ pub mod kdf;
 
 #[cfg(feature = "safe_api")]
 mod hltypes;
+
+#[doc(hidden)]
+/// Testing framework.
+pub mod test_framework;

@@ -413,7 +413,7 @@ mod public {
 
 					(dst_store == src)
 				} else {
-					// if not, it panics
+					// Otherwise above functions panic.
 					true
 				}
 			}
@@ -430,7 +430,7 @@ mod public {
 
 					(dst_store == src)
 				} else {
-					// if not, it panics
+					// Otherwise above functions panic.
 					true
 				}
 			}
@@ -447,7 +447,7 @@ mod public {
 
 					(dst_store == src)
 				} else {
-					// if not, it panics
+					// Otherwise above functions panic.
 					true
 				}
 			}

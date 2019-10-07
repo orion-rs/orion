@@ -57,7 +57,7 @@
 //! poly1305_state.update(msg.as_bytes())?;
 //! let tag = poly1305_state.finalize()?;
 //!
-//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes())?);
+//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes()).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: struct.Poly1305.html
@@ -418,9 +418,9 @@ pub fn verify(
 	expected: &Tag,
 	one_time_key: &OneTimeKey,
 	data: &[u8],
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	if &poly1305(one_time_key, data)? == expected {
-		Ok(true)
+		Ok(())
 	} else {
 		Err(UnknownCryptoError)
 	}
@@ -431,64 +431,9 @@ pub fn verify(
 mod public {
 	use super::*;
 
-	// One function tested per submodule.
-
-	/// Compare two Poly1305 state objects to check if their fields
-	/// are the same.
-	fn compare_poly1305_states(state_1: &Poly1305, state_2: &Poly1305) {
-		assert_eq!(state_1.a, state_2.a);
-		assert_eq!(state_1.r, state_2.r);
-		assert_eq!(state_1.s, state_2.s);
-		assert_eq!(state_1.leftover, state_2.leftover);
-		assert_eq!(state_1.buffer[..], state_2.buffer[..]);
-		assert_eq!(state_1.is_finalized, state_2.is_finalized);
-	}
-
+	#[cfg(feature = "safe_api")]
 	mod test_verify {
 		use super::*;
-
-		#[test]
-		fn test_poly1305_verify_ok() {
-			let tag = poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
-			verify(
-				&tag,
-				&OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-			)
-			.unwrap();
-		}
-
-		#[test]
-		fn test_poly1305_verify_err() {
-			let mut tag =
-				poly1305(&OneTimeKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
-			tag.value[0] ^= 1;
-			assert!(verify(
-				&tag,
-				&OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
-				&[0u8; 16],
-			)
-			.is_err());
-		}
-
-		#[test]
-		fn finalize_and_verify_true() {
-			let secret_key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut tag = Poly1305::new(&secret_key);
-			tag.update(data).unwrap();
-
-			assert_eq!(
-				verify(
-					&tag.finalize().unwrap(),
-					&OneTimeKey::from_slice(&[0u8; 32]).unwrap(),
-					data
-				)
-				.unwrap(),
-				true
-			);
-		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
@@ -496,264 +441,75 @@ mod public {
 			use super::*;
 
 			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
-				fn prop_verify_same_params_true(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate();
-
-					let mut state = Poly1305::new(&sk);
-					state.update(&data[..]).unwrap();
-					let tag = state.finalize().unwrap();
-					// Failed verification on Err so res is not needed.
-					let _res = verify(&tag, &sk, &data[..]).unwrap();
-
-					true
-				}
-			}
-
-			quickcheck! {
-				/// When using the same parameters verify() should always yeild true.
+				/// When using a different key, verify() should always yield an error.
+				/// NOTE: Using different and same input data is tested with TestableStreamingContext.
 				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
 					let sk = OneTimeKey::generate();
 					let mut state = Poly1305::new(&sk);
 					state.update(&data[..]).unwrap();
 					let tag = state.finalize().unwrap();
-
 					let bad_sk = OneTimeKey::generate();
 
-					let res = if verify(&tag, &bad_sk, &data[..]).is_err() {
-						true
-					} else {
-						false
-					};
-
-					res
+					verify(&tag, &bad_sk, &data[..]).is_err()
 				}
 			}
-		}
-	}
-
-	mod test_reset {
-		use super::*;
-
-		#[test]
-		fn test_double_reset_ok() {
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Poly1305::new(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			state.reset();
-		}
-	}
-
-	mod test_update {
-		use super::*;
-
-		#[test]
-		fn test_update_after_finalize_with_reset_ok() {
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Poly1305::new(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			state.update(data).unwrap();
-		}
-
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/28
-		fn test_update_after_finalize_err() {
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Poly1305::new(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.update(data).is_err());
-		}
-	}
-
-	mod test_finalize {
-		use super::*;
-
-		#[test]
-		fn test_double_finalize_with_reset_no_update_ok() {
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Poly1305::new(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			state.reset();
-			let _ = state.finalize().unwrap();
-		}
-
-		#[test]
-		fn test_double_finalize_with_reset_ok() {
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Poly1305::new(&sk);
-			state.update(data).unwrap();
-			let one = state.finalize().unwrap();
-			state.reset();
-			state.update(data).unwrap();
-			let two = state.finalize().unwrap();
-			assert_eq!(one, two);
-		}
-
-		#[test]
-		fn test_double_finalize_err() {
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let data = "what do ya want for nothing?".as_bytes();
-
-			let mut state = Poly1305::new(&sk);
-			state.update(data).unwrap();
-			let _ = state.finalize().unwrap();
-			assert!(state.finalize().is_err());
 		}
 	}
 
 	mod test_streaming_interface {
 		use super::*;
+		use crate::test_framework::incremental_interface::{
+			StreamingContextConsistencyTester, TestableStreamingContext,
+		};
 
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of new(), update(),
-		/// finalize() and reset() produce the same Digest.
-		fn produces_same_hash(sk: &OneTimeKey, data: &[u8]) {
-			// new(), update(), finalize()
-			let mut state_1 = Poly1305::new(&sk);
-			state_1.update(data).unwrap();
-			let res_1 = state_1.finalize().unwrap();
+		// If a Poly1305 one-time key is all 0's then the tag will also be, regardless
+		// of which message data has been processed.
+		const KEY: [u8; 32] = [24u8; 32];
 
-			// new(), reset(), update(), finalize()
-			let mut state_2 = Poly1305::new(&sk);
-			state_2.reset();
-			state_2.update(data).unwrap();
-			let res_2 = state_2.finalize().unwrap();
+		impl TestableStreamingContext<Tag> for Poly1305 {
+			fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+				Ok(self.reset())
+			}
 
-			// new(), update(), reset(), update(), finalize()
-			let mut state_3 = Poly1305::new(&sk);
-			state_3.update(data).unwrap();
-			state_3.reset();
-			state_3.update(data).unwrap();
-			let res_3 = state_3.finalize().unwrap();
+			fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				self.update(input)
+			}
 
-			// new(), update(), finalize(), reset(), update(), finalize()
-			let mut state_4 = Poly1305::new(&sk);
-			state_4.update(data).unwrap();
-			let _ = state_4.finalize().unwrap();
-			state_4.reset();
-			state_4.update(data).unwrap();
-			let res_4 = state_4.finalize().unwrap();
+			fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
+				self.finalize()
+			}
 
-			assert_eq!(res_1, res_2);
-			assert_eq!(res_2, res_3);
-			assert_eq!(res_3, res_4);
+			fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
+				poly1305(&OneTimeKey::from_slice(&KEY).unwrap(), input)
+			}
 
-			// Tests for the assumption that returning Ok() on empty update() calls
-			// with streaming API's, gives the correct result. This is done by testing
-			// the reasoning that if update() is empty, returns Ok(), it is the same as
-			// calling new() -> finalize(). i.e not calling update() at all.
-			if data.is_empty() {
-				// new(), finalize()
-				let mut state_5 = Poly1305::new(&sk);
-				let res_5 = state_5.finalize().unwrap();
+			fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
+				// This will only run verifcation tests on differing input. They do not
+				// include tests for different secret keys.
+				verify(expected, &OneTimeKey::from_slice(&KEY).unwrap(), input)
+			}
 
-				// new(), reset(), finalize()
-				let mut state_6 = Poly1305::new(&sk);
-				state_6.reset();
-				let res_6 = state_6.finalize().unwrap();
-
-				// new(), update(), reset(), finalize()
-				let mut state_7 = Poly1305::new(&sk);
-				state_7.update(b"Wrong data").unwrap();
-				state_7.reset();
-				let res_7 = state_7.finalize().unwrap();
-
-				assert_eq!(res_4, res_5);
-				assert_eq!(res_5, res_6);
-				assert_eq!(res_6, res_7);
+			fn compare_states(state_1: &Poly1305, state_2: &Poly1305) {
+				assert_eq!(state_1.a, state_2.a);
+				assert_eq!(state_1.r, state_2.r);
+				assert_eq!(state_1.s, state_2.s);
+				assert_eq!(state_1.leftover, state_2.leftover);
+				assert_eq!(state_1.buffer[..], state_2.buffer[..]);
+				assert_eq!(state_1.is_finalized, state_2.is_finalized);
 			}
 		}
 
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		/// Testing different usage combinations of new(), update(),
-		/// finalize() and reset() produce the same Digest.
-		fn produces_same_state(sk: &OneTimeKey, data: &[u8]) {
-			// new()
-			let state_1 = Poly1305::new(&sk);
-
-			// new(), reset()
-			let mut state_2 = Poly1305::new(&sk);
-			state_2.reset();
-
-			// new(), update(), reset()
-			let mut state_3 = Poly1305::new(&sk);
-			state_3.update(data).unwrap();
-			state_3.reset();
-
-			// new(), update(), finalize(), reset()
-			let mut state_4 = Poly1305::new(&sk);
-			state_4.update(data).unwrap();
-			let _ = state_4.finalize().unwrap();
-			state_4.reset();
-
-			compare_poly1305_states(&state_1, &state_2);
-			compare_poly1305_states(&state_2, &state_3);
-			compare_poly1305_states(&state_3, &state_4);
-		}
-
 		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_produce_same_state() {
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			produces_same_state(&sk, b"Tests");
+		fn default_consistency_tests() {
+			let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
+
+			let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(
+				initial_state,
+				POLY1305_BLOCKSIZE,
+			);
+			test_runner.run_all_tests();
 		}
 
-		#[test]
-		/// Related bug: https://github.com/brycx/orion/issues/46
-		fn test_produce_same_hash() {
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			produces_same_hash(&sk, b"Tests");
-			produces_same_hash(&sk, b"");
-		}
-
-		#[test]
-		#[cfg(feature = "safe_api")]
-		// Test for issues when incrementally processing data
-		// with leftover
-		fn test_streaming_consistency() {
-			for len in 0..POLY1305_BLOCKSIZE * 4 {
-				let key = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-				let data = vec![0u8; len];
-				let mut state = Poly1305::new(&key);
-				let mut other_data: Vec<u8> = Vec::new();
-
-				other_data.extend_from_slice(&data);
-				state.update(&data).unwrap();
-
-				if data.len() > POLY1305_BLOCKSIZE {
-					other_data.extend_from_slice(b"");
-					state.update(b"").unwrap();
-				}
-				if data.len() > POLY1305_BLOCKSIZE * 2 {
-					other_data.extend_from_slice(b"Extra");
-					state.update(b"Extra").unwrap();
-				}
-				if data.len() > POLY1305_BLOCKSIZE * 3 {
-					other_data.extend_from_slice(&[0u8; 256]);
-					state.update(&[0u8; 256]).unwrap();
-				}
-
-				let digest_one_shot = poly1305(&key, &other_data).unwrap();
-
-				assert!(state.finalize().unwrap() == digest_one_shot);
-			}
-		}
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
@@ -762,38 +518,12 @@ mod public {
 			quickcheck! {
 				/// Related bug: https://github.com/brycx/orion/issues/46
 				/// Test different streaming state usage patterns.
-				fn prop_same_tag_different_usage(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate();
-					// Will panic on incorrect results.
-					produces_same_hash(&sk, &data[..]);
+				fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+					let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
 
+					let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(initial_state, POLY1305_BLOCKSIZE);
+					test_runner.run_all_tests_property(&data);
 					true
-				}
-			}
-
-			quickcheck! {
-				/// Related bug: https://github.com/brycx/orion/issues/46
-				/// Test different streaming state usage patterns.
-				fn prop_same_state_different_usage(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate();
-					// Will panic on incorrect results.
-					produces_same_state(&sk, &data[..]);
-
-					true
-				}
-			}
-
-			quickcheck! {
-				/// Using the one-shot function should always produce the
-				/// same result as when using the streaming interface.
-				fn prop_poly1305_same_as_streaming(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate();
-					let mut state = Poly1305::new(&sk);
-					state.update(&data[..]).unwrap();
-					let stream = state.finalize().unwrap();
-					let one_shot = poly1305(&sk, &data[..]).unwrap();
-
-					(one_shot == stream)
 				}
 			}
 		}
@@ -804,8 +534,6 @@ mod public {
 #[cfg(test)]
 mod private {
 	use super::*;
-
-	// One function tested per submodule.
 
 	mod test_process_block {
 		use super::*;

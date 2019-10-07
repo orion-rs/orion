@@ -11,7 +11,7 @@ mod draft_rfc_xchacha20 {
 		let key =
 			decode("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f").unwrap();
 		let nonce = decode("404142434445464748494a4b4c4d4e4f5051525354555658").unwrap();
-		let mut plaintext = decode(
+		let plaintext = decode(
 			"5468652064686f6c65202870726f6e6f756e6365642022646f6c652229206973\
 			 20616c736f206b6e6f776e2061732074686520417369617469632077696c6420\
 			 646f672c2072656420646f672c20616e642077686973746c696e6720646f672e\
@@ -24,7 +24,7 @@ mod draft_rfc_xchacha20 {
 			 2066616d696c792043616e696461652e",
 		)
 		.unwrap();
-		let mut expected = decode(
+		let expected = decode(
 			"4559abba4e48c16102e8bb2c05e6947f50a786de162f9b0b7e592a9b53d0d4e9\
 			 8d8d6410d540a1a6375b26d80dace4fab52384c731acbf16a5923c0c48d3575d\
 			 4d0d2c673b666faa731061277701093a6bf7a158a8864292a41c48e3a9b4c0da\
@@ -38,7 +38,7 @@ mod draft_rfc_xchacha20 {
 		)
 		.unwrap();
 
-		chacha_test_runner(&key, &nonce, 0, &mut plaintext, &mut expected);
+		chacha_test_runner(&key, &nonce, 0, &plaintext, &expected);
 	}
 
 	#[test]
@@ -46,7 +46,7 @@ mod draft_rfc_xchacha20 {
 		let key =
 			decode("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f").unwrap();
 		let nonce = decode("404142434445464748494a4b4c4d4e4f5051525354555658").unwrap();
-		let mut plaintext = decode(
+		let plaintext = decode(
 			"5468652064686f6c65202870726f6e6f756e6365642022646f6c652229206973\
 			 20616c736f206b6e6f776e2061732074686520417369617469632077696c6420\
 			 646f672c2072656420646f672c20616e642077686973746c696e6720646f672e\
@@ -59,7 +59,7 @@ mod draft_rfc_xchacha20 {
 			 2066616d696c792043616e696461652e",
 		)
 		.unwrap();
-		let mut expected = decode(
+		let expected = decode(
 			"7d0a2e6b7f7c65a236542630294e063b7ab9b555a5d5149aa21e4ae1e4fbce87\
 			 ecc8e08a8b5e350abe622b2ffa617b202cfad72032a3037e76ffdcdc4376ee05\
 			 3a190d7e46ca1de04144850381b9cb29f051915386b8a710b8ac4d027b8b050f\
@@ -73,6 +73,6 @@ mod draft_rfc_xchacha20 {
 		)
 		.unwrap();
 
-		chacha_test_runner(&key, &nonce, 1, &mut plaintext, &mut expected);
+		chacha_test_runner(&key, &nonce, 1, &plaintext, &expected);
 	}
 }

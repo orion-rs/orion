@@ -73,7 +73,7 @@
 //! 	&user_password,
 //! 	&salt,
 //! 	100000
-//! )?);
+//! ).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Salt`]: struct.Salt.html
@@ -117,10 +117,10 @@ pub fn derive_key_verify(
 	password: &Password,
 	salt: &Salt,
 	iterations: usize,
-) -> Result<bool, UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError> {
 	let mut buffer = vec![0u8; expected.get_length()];
 
-	let is_good = pbkdf2::verify(
+	pbkdf2::verify(
 		expected.unprotected_as_bytes(),
 		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
 		salt.as_ref(),
@@ -130,7 +130,7 @@ pub fn derive_key_verify(
 
 	buffer.zeroize();
 
-	Ok(is_good)
+	Ok(())
 }
 
 // Testing public functions in the module.
@@ -144,17 +144,15 @@ mod public {
 		fn test_derive_key_and_verify() {
 			let password = Password::from_slice(&[0u8; 64]).unwrap();
 			let salt = Salt::from_slice(&[0u8; 64]).unwrap();
-
 			let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
-			assert!(derive_key_verify(&dk, &password, &salt, 100).unwrap());
+			assert!(derive_key_verify(&dk, &password, &salt, 100).is_ok());
 		}
 
 		#[test]
 		fn test_derive_key_and_verify_err() {
 			let password = Password::from_slice(&[0u8; 64]).unwrap();
 			let salt = Salt::from_slice(&[0u8; 64]).unwrap();
-
 			let dk = derive_key(&password, &salt, 100, 64).unwrap();
 
 			assert!(derive_key_verify(&dk, &password, &salt, 50).is_err());
@@ -197,11 +195,7 @@ mod public {
 					103, 53, 255, 135, 17, 7, 62, 11, 12, 190, 214, 194, 57, 27, 168, 82, 50, 23, 49, 80, 80, 84, 212, 191]).unwrap();
 				let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
 
-				if derive_key_verify(&derived_key, &pass, &salt, 100).is_ok() {
-					true
-				} else {
-					false
-				}
+				derive_key_verify(&derived_key, &pass, &salt, 100).is_ok()
 			}
 		}
 
@@ -228,11 +222,7 @@ mod public {
 				let bad_pass = Password::from_slice(&[119, 56, 92, 141, 149, 150, 233, 171, 16, 88, 129, 93, 114, 154, 91,
 					118, 227, 98, 170, 53, 229, 140, 132, 83, 80, 192, 71, 208, 186, 34, 87, 112]).unwrap();
 
-				if derive_key_verify(&derived_key, &bad_pass, &salt, 100).is_err() {
-					true
-				} else {
-					false
-				}
+				derive_key_verify(&derived_key, &bad_pass, &salt, 100).is_err()
 			}
 		}
 
@@ -260,11 +250,7 @@ mod public {
 					232, 6, 105, 153, 83, 191, 31, 65, 164, 237, 40, 114, 70, 210, 20, 168, 59, 151, 101, 245, 141, 144, 49, 126,
 					68, 157, 82, 149, 142, 126, 48, 238, 36, 178, 172, 108, 75, 114, 215, 242, 107, 231, 115, 193, 51]).unwrap();
 
-				if derive_key_verify(&derived_key, &pass, &bad_salt, 100).is_err() {
-					true
-				} else {
-					false
-				}
+				derive_key_verify(&derived_key, &pass, &bad_salt, 100).is_err()
 			}
 		}
 	}

@@ -65,16 +65,14 @@ pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 }
 
 // Testing public functions in the module.
+#[cfg(feature = "safe_api")]
 #[cfg(test)]
 mod public {
 	use super::*;
 
+	#[cfg(feature = "safe_api")]
 	mod test_digest {
 		use super::*;
-		#[test]
-		fn basic_test() {
-			let _digest = digest(b"Some data").unwrap();
-		}
 
 		// Proptests. Only exectued when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
