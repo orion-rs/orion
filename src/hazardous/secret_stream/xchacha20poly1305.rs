@@ -45,7 +45,7 @@
 //! - The length of `dst_out` is less than `plaintext + 17` when encrypting.
 //! - The length of `dst_out` is less than `ciphertext - 17` when
 //!   decrypting.
-//! - The length of `ciphertext_with_tag` is not greater than `16`.
+//! - The length of `ciphertext` is not greater than `16`.
 //! - The received mac does not match the calculated mac when decrypting. (this can indicate
 //!   a dropped or reordered message )
 //!
@@ -238,17 +238,17 @@ impl SecretStreamXChaCha20Poly1305 {
 		chacha20_enc_in_place(&self.key, &self.get_nonce(), 1, &mut block)?;
 		dst_out[0] = block[0];
 
-		chacha20_enc(
-			&self.key,
-			&self.get_nonce(),
-			2,
-			plaintext,
-			&mut dst_out[cipherpos..],
-		)?;
+		if msglen != 0 {
+			chacha20_enc(
+				&self.key,
+				&self.get_nonce(),
+				2,
+				plaintext,
+				&mut dst_out[cipherpos..],
+			)?;
+		}
 
-		let mac = self
-			.generate_auth_tag(dst_out, ad, msglen, &block, adlen, cipherpos)
-			.unwrap();
+		let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, adlen, cipherpos)?;
 		debug_assert!(dst_out.len() >= macpos + mac.get_length());
 		dst_out[macpos..(macpos + mac.get_length())].copy_from_slice(mac.unprotected_as_bytes());
 		xor_buf8(self.inonce.as_mut(), &dst_out[macpos..macpos + 8]);
@@ -287,19 +287,19 @@ impl SecretStreamXChaCha20Poly1305 {
 		chacha20_enc_in_place(&self.key, &self.get_nonce(), 1, &mut block)?;
 		let tag = Tag::from_bits(block[0]).ok_or(UnknownCryptoError)?;
 		block[0] = ciphertext[0];
-		let mac = self
-			.generate_auth_tag(ciphertext, ad, msglen, &block, adlen, msgpos)
-			.unwrap();
+		let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, adlen, msgpos)?;
 		if !(mac == &ciphertext[macpos..macpos + mac.get_length()]) {
 			return Err(UnknownCryptoError);
 		}
-		chacha20_enc(
-			&self.key,
-			&self.get_nonce(),
-			2,
-			&ciphertext[msgpos..(msgpos + msglen)],
-			dst_out,
-		)?;
+		if msglen != 0 {
+			chacha20_enc(
+				&self.key,
+				&self.get_nonce(),
+				2,
+				&ciphertext[msgpos..(msgpos + msglen)],
+				dst_out,
+			)?;
+		}
 		xor_buf8(self.inonce.as_mut(), &mac.unprotected_as_bytes()[..8]);
 		self.counter = self.counter.wrapping_add(1);
 		if bool::from(tag.bits().ct_eq(&Tag::REKEY.bits()) | self.counter.ct_eq(&0u32)) {
@@ -351,9 +351,6 @@ mod public {
 
 		quickcheck! {
 		fn prop_encrypting_and_decrypting_with_fixed_key(input: Vec<u8>) -> bool {
-			if input.len() == 0 {
-				return true;
-			}
 			let mut cipher =
 				 vec![0u8; input.len() + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 			let mut msg =  vec![0u8; input.len()];
@@ -389,7 +386,6 @@ mod private {
 
 	//All test values generated with libsodium https://github.com/jedisct1/libsodium version 1.0.18
 
-	#[cfg(feature = "safe_api")]
 	#[test]
 	fn test_enc_and_dec_valid() {
 		let mut s = SecretStreamXChaCha20Poly1305::new(
@@ -884,5 +880,27 @@ mod private {
 		state
 			.encrypt_message(&text, None, &mut out, Tag::MESSAGE)
 			.unwrap();
+	}
+
+	#[test]
+	fn test_encrypt_and_decrypt_zero_length() {
+		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
+			&SecretKey::from_slice(&[0; 32]).unwrap(),
+			&Nonce::from_slice(&[0; 24]).unwrap(),
+		);
+		let text = [0u8; 0];
+		let mut out = [0u8; SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		state_enc
+			.encrypt_message(&text, None, &mut out, Tag::MESSAGE)
+			.unwrap();
+		let mut state_dec = SecretStreamXChaCha20Poly1305::new(
+			&SecretKey::from_slice(&[0; 32]).unwrap(),
+			&Nonce::from_slice(&[0; 24]).unwrap(),
+		);
+		let mut text_out = [0u8; 0];
+		state_dec
+			.decrypt_message(&out, None, &mut text_out)
+			.unwrap();
+		assert_eq!(text, text_out);
 	}
 }

@@ -685,10 +685,10 @@ mod private {
 			quickcheck! {
 				// The usize that padding() returns should always
 				// be what remains to make input a multiple of 16 in length.
-				fn prop_padding_result(input: Vec<u8>) -> bool {
-					let rem = padding(input[..].len());
+				fn prop_padding_result(input: usize) -> bool {
+					let rem = padding(input);
 
-					(((input.len() + rem) % 16) == 0)
+					(((input + rem) % 16) == 0)
 				}
 			}
 
