@@ -87,7 +87,7 @@ use crate::{
 /// The blocksize for the hash function BLAKE2b.
 const BLAKE2B_BLOCKSIZE: usize = 128;
 /// The maximum key size for the hash function BLAKE2b when used in keyed mode.
-const BLAKE2B_KEYSIZE: usize = 64;
+pub(crate) const BLAKE2B_KEYSIZE: usize = 64;
 /// The maximum output size for the hash function BLAKE2b.
 const BLAKE2B_OUTSIZE: usize = 64;
 

@@ -73,7 +73,7 @@ construct_tag! {
 impl_from_trait!(PasswordHash, 128);
 
 construct_tag! {
-	/// A type to represent the `Tag` output by BLAKE2b hash in keyed mode.
+	/// A type to represent the `Tag` output by BLAKE2b-256 in keyed mode.
 	///
 	/// # Errors:
 	/// An error will be returned if:

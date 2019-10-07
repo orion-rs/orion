@@ -36,12 +36,12 @@
 //! # Parameters:
 //! - `secret_key`: Secret key used to authenticate `data`.
 //! - `data`: Data to be authenticated.
-//! - `expected`: The expected authentication tag.
+//! - `expected`: The expected authentication [`Tag`].
 //!
 //! # Errors:
 //! An error will be returned if:
 //! - The calculated [`Tag`] does not match the expected.
-//! - The `SecretKey` supplied is greater than 64 bytes.
+//! - The [`SecretKey`] supplied is less than 32 bytes or greater than 64 bytes.
 //!
 //! # Panics:
 //! A panic will occur if:
@@ -83,7 +83,7 @@ pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownC
 		return Err(UnknownCryptoError);
 	}
 	let blake2b_secret_key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
-	let mut state = blake2b::init(Some(&blake2b_secret_key), BLAKE2B_TAG_SIZE)?;
+	let mut state = blake2b::Blake2b::new(Some(&blake2b_secret_key), BLAKE2B_TAG_SIZE)?;
 	state.update(data)?;
 	let blake2b_digest = state.finalize()?;
 	Tag::from_slice(blake2b_digest.as_ref())
@@ -144,7 +144,7 @@ mod public {
 		fn test_authenticate_verify_key_too_small() {
 			let sec_key = SecretKey::generate(31).unwrap();
 			let msg = "what do ya want for nothing?".as_bytes().to_vec();
-      let mac = Tag::from_slice(&[0u8; 32][..]).unwrap();
+			let mac = Tag::from_slice(&[0u8; 32][..]).unwrap();
 
 			assert!(authenticate_verify(&mac, &sec_key, &msg).is_err());
 		}
@@ -156,7 +156,7 @@ mod public {
 		use super::*;
 
 		quickcheck! {
-			/// Authentication and verifying that authentication with the same parameters
+			/// Authentication and verifying that tagn with the same parameters
 			/// should always be true.
 			fn prop_authenticate_verify(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
@@ -166,7 +166,7 @@ mod public {
 		}
 
 		quickcheck! {
-			/// Authentication and verifying that authentication with a different key should
+			/// Authentication and verifying that tag with a different key should
 			/// never be true.
 			fn prop_verify_fail_diff_key(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
@@ -178,7 +178,7 @@ mod public {
 		}
 
 		quickcheck! {
-			/// Authentication and verifying that authentication with different input should
+			/// Authentication and verifying that tag with different input should
 			/// never be true.
 			fn prop_verify_fail_diff_input(input: Vec<u8>) -> bool {
 				let sk = SecretKey::default();
@@ -188,23 +188,23 @@ mod public {
 			}
 		}
 
-        quickcheck!{
-            /// Verify the bounds of 32..=64 (inclusive) for the `SecretKey` used
-            /// in `authenticate`.
-            fn prop_authenticate_key_size(input: Vec<u8>) -> bool {
-                let sec_key_res = SecretKey::from_slice(&input);
-                if input.len() == 0 || input.len() >= u32::max_value() as usize {
-                    return sec_key_res.is_err();
-                }
-                let sec_key = sec_key_res.unwrap();
-			    let msg = "what do ya want for nothing?".as_bytes().to_vec();
-                let auth_res = authenticate(&sec_key, &msg);
-                if input.len() >= 32 && input.len() <= 64 {
-                    auth_res.is_ok()
-                } else {
-                    auth_res.is_err()
-                }
-            }
-        }
+		quickcheck! {
+			/// Verify the bounds of 32..=64 (inclusive) for the `SecretKey` used
+			/// in `authenticate/authenticate_verify`.
+			fn prop_authenticate_key_size(input: Vec<u8>) -> bool {
+				let sec_key_res = SecretKey::from_slice(&input);
+				if input.len() == 0 || input.len() >= u32::max_value() as usize {
+					return sec_key_res.is_err();
+				}
+				let sec_key = sec_key_res.unwrap();
+				let msg = "what do ya want for nothing?".as_bytes().to_vec();
+				let auth_res = authenticate(&sec_key, &msg);
+				if input.len() >= BLAKE2B_MIN_KEY_SIZE && input.len() <= blake2b::BLAKE2B_KEYSIZE {
+					auth_res.is_ok()
+				} else {
+					auth_res.is_err()
+				}
+			}
+		}
 	}
 }
