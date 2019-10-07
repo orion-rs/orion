@@ -38,10 +38,6 @@
 //! ## Hashing
 //! [`orion::hash`] offers hashing using BLAKE2b.
 //!
-//! ## Secure Stream
-//! [`orion::secret_stream`] offers authenticated secret-key encryption of as stream of
-//! messages based on XChaCha20Poly1305.
-//!
 //!
 //! ### A note on `no_std`:
 //! When orion is used in a `no_std` context, access to nearly all functionality
@@ -106,6 +102,3 @@ pub mod kdf;
 
 #[cfg(feature = "safe_api")]
 mod hltypes;
-
-#[cfg(feature = "safe_api")]
-pub mod secret_stream;

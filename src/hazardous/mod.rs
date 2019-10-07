@@ -41,6 +41,3 @@ pub mod kdf;
 
 /// Stream ciphers.
 pub mod stream;
-
-/// Encryption and authentication of a stream of messages or chunks
-pub mod secret_stream;

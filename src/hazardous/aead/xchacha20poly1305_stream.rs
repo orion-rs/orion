@@ -59,32 +59,32 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::secret_stream::xchacha20poly1305;
-//! let secret_key = &xchacha20poly1305::SecretKey::generate();
-//!	let nonce = &xchacha20poly1305::Nonce::generate();
+//! use orion::hazardous::aead::xchacha20poly1305_stream;
+//! let secret_key = &xchacha20poly1305_stream::SecretKey::generate();
+//!	let nonce = &xchacha20poly1305_stream::Nonce::generate();
 //!	let ad = "Additional data".as_bytes();
 //!	let message = "Data to protect".as_bytes();
 //!	let mut dst_out_cipher = [
 //!		0u8;
-//!		15 + xchacha20poly1305::SECRETSTREAM_XCHACHA20POLY1305_ABYTES
+//!		15 + xchacha20poly1305_stream::SECRETSTREAM_XCHACHA20POLY1305_ABYTES
 //!	];
 //!	let mut dst_out_pt = [0u8; 15];
 //!
 //!	let mut state_enc =
-//!		xchacha20poly1305::SecretStreamXChaCha20Poly1305::new(secret_key, nonce);
+//!		xchacha20poly1305_stream::SecretStreamXChaCha20Poly1305::new(secret_key, nonce);
 //!	//Encrypt message and place it with tag and mac in dst_out_cipher. Additionally authenticates ad
 //!	state_enc.encrypt_message(
 //!		message,
 //!		Some(&ad),
 //!		&mut dst_out_cipher,
-//!		xchacha20poly1305::Tag::MESSAGE,
+//!		xchacha20poly1305_stream::Tag::MESSAGE,
 //!	)?;
 //!
 //! let mut state_dec =
-//!		xchacha20poly1305::SecretStreamXChaCha20Poly1305::new(secret_key, nonce);
+//!		xchacha20poly1305_stream::SecretStreamXChaCha20Poly1305::new(secret_key, nonce);
 //!	let tag = state_dec.decrypt_message(&dst_out_cipher, Some(&ad), &mut dst_out_pt)?;
 //!
-//!	assert_eq!(tag, xchacha20poly1305::Tag::MESSAGE);
+//!	assert_eq!(tag, xchacha20poly1305_stream::Tag::MESSAGE);
 //!	assert_eq!(dst_out_pt.as_ref(), message.as_ref());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
@@ -344,7 +344,7 @@ mod public {
 	#[cfg(feature = "safe_api")]
 	mod proptest {
 		use crate::hazardous::aead::chacha20poly1305::SecretKey;
-		use crate::hazardous::secret_stream::xchacha20poly1305::{
+		use crate::hazardous::aead::xchacha20poly1305_stream::{
 			SecretStreamXChaCha20Poly1305, Tag, SECRETSTREAM_XCHACHA20POLY1305_ABYTES,
 		};
 		use crate::hazardous::stream::xchacha20::Nonce;

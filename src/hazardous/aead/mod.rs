@@ -25,3 +25,6 @@ pub mod chacha20poly1305;
 
 /// AEAD XChaCha20Poly1305 as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub mod xchacha20poly1305;
+
+/// Stream encryption based on `XChaCha20Poly1305`
+pub mod xchacha20poly1305_stream;
