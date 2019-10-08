@@ -100,10 +100,10 @@
 use crate::const_assert;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead::chacha20poly1305::{padding, poly1305_key_gen};
-use crate::hazardous::mac::poly1305::{Poly1305, Tag as PolyTag, POLY1305_OUTSIZE};
+use crate::hazardous::mac::poly1305::{Poly1305, Tag as Poly1305Tag, POLY1305_OUTSIZE};
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::hazardous::stream::chacha20::{
-	encrypt as chacha20_enc, encrypt_in_place as chacha20_enc_in_place, Nonce as chacha20Nonce,
+	encrypt as chacha20_enc, encrypt_in_place as chacha20_xor_stream, Nonce as IETFNonce,
 	CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
 };
 pub use crate::hazardous::stream::xchacha20::Nonce;
@@ -169,15 +169,18 @@ impl core::fmt::Debug for SecretStreamXChaCha20Poly1305 {
 }
 
 impl SecretStreamXChaCha20Poly1305 {
-	fn get_nonce(&self) -> chacha20Nonce {
-		let mut nonce = [0u8; 12];
+	/// Return a nonce used with ChaCha20Poly1305 based on the internal counter
+	/// and INonce.
+	fn get_nonce(&self) -> IETFNonce {
+		let mut nonce = [0u8; IETF_CHACHA_NONCESIZE];
 		nonce[..SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES]
 			.copy_from_slice(&self.counter.to_le_bytes());
 		nonce[SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES..].copy_from_slice(&self.inonce);
-		chacha20Nonce::from(nonce)
+
+		IETFNonce::from(nonce)
 	}
 
-	/// creates a new internal state
+	/// Initialize a `SecretStreamXChaCha20Poly1305` struct with a given secret key and nonce.
 	pub fn new(secret_key: &SecretKey, nonce: &Nonce) -> Self {
 		const_assert!(SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES == core::mem::size_of::<u32>());
 		const_assert!(SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES == core::mem::size_of::<INonce>());
@@ -186,38 +189,38 @@ impl SecretStreamXChaCha20Poly1305 {
 				+ SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES
 				== IETF_CHACHA_NONCESIZE
 		);
-		let mut state = Self {
+
+		let mut inonce = [0u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
+		inonce.copy_from_slice(&nonce.as_ref()[HCHACHA_NONCESIZE..]);
+
+		Self {
 			key: subkey_and_nonce(&secret_key, &nonce).0,
 			counter: 1,
-			inonce: [0u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES],
-		};
-		state
-			.inonce
-			.copy_from_slice(&nonce.as_ref()[HCHACHA_NONCESIZE..]);
-		state
+			inonce,
+		}
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// derives a new internal key used for encryption/decryption
+	/// Derives a new secret key used for encryption and decryption.
 	pub fn rekey(&mut self) -> Result<(), UnknownCryptoError> {
 		let mut new_key_and_inonce =
 			[0u8; CHACHA_KEYSIZE + SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
-
 		new_key_and_inonce[..CHACHA_KEYSIZE].copy_from_slice(self.key.unprotected_as_bytes());
 		new_key_and_inonce[CHACHA_KEYSIZE..].copy_from_slice(&self.inonce);
 
-		chacha20_enc_in_place(&self.key, &self.get_nonce(), 0, &mut new_key_and_inonce)?;
+		chacha20_xor_stream(&self.key, &self.get_nonce(), 0, &mut new_key_and_inonce)?;
 
 		self.key = SecretKey::from_slice(&new_key_and_inonce[..CHACHA_KEYSIZE]).unwrap();
 		self.inonce
 			.copy_from_slice(&new_key_and_inonce[CHACHA_KEYSIZE..]);
 
 		self.counter = 1;
+
 		Ok(())
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// Encrypts a message
+	/// Encrypts a message.
 	pub fn encrypt_message(
 		&mut self,
 		plaintext: &[u8],
@@ -235,12 +238,11 @@ impl SecretStreamXChaCha20Poly1305 {
 			Some(v) => v,
 			None => &[0u8; 0],
 		};
-		let adlen = ad.len();
 		let cipherpos = core::mem::size_of::<Tag>();
 		let macpos = cipherpos + msglen;
 
 		block[0] = tag.bits();
-		chacha20_enc_in_place(&self.key, &self.get_nonce(), 1, &mut block)?;
+		chacha20_xor_stream(&self.key, &self.get_nonce(), 1, &mut block)?;
 		dst_out[0] = block[0];
 
 		if msglen != 0 {
@@ -253,19 +255,23 @@ impl SecretStreamXChaCha20Poly1305 {
 			)?;
 		}
 
-		let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, adlen, cipherpos)?;
+		let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, cipherpos)?;
+
 		debug_assert!(dst_out.len() >= macpos + mac.get_length());
 		dst_out[macpos..(macpos + mac.get_length())].copy_from_slice(mac.unprotected_as_bytes());
+
 		xor_buf8(self.inonce.as_mut(), &dst_out[macpos..macpos + 8]);
 		self.counter = self.counter.wrapping_add(1);
+
 		if bool::from(tag.bits().ct_eq(&Tag::REKEY.bits()) | self.counter.ct_eq(&0u32)) {
 			self.rekey()?;
 		}
+
 		Ok(())
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// Decrypts a message
+	/// Decrypts a message.
 	pub fn decrypt_message(
 		&mut self,
 		ciphertext: &[u8],
@@ -275,24 +281,26 @@ impl SecretStreamXChaCha20Poly1305 {
 		if ciphertext.len() < SECRETSTREAM_XCHACHA20POLY1305_ABYTES {
 			return Err(UnknownCryptoError);
 		}
+
 		let msglen = ciphertext.len() - SECRETSTREAM_XCHACHA20POLY1305_ABYTES;
 		if dst_out.len() < msglen {
 			return Err(UnknownCryptoError);
 		}
+
 		let mut block = [0u8; CHACHA_BLOCKSIZE];
 		let ad = match ad {
 			Some(v) => v,
 			None => &[0u8; 0],
 		};
-		let adlen = ad.len();
+
 		let msgpos = core::mem::size_of::<Tag>();
 		let macpos = msgpos + msglen;
 
 		block[0] = ciphertext[0];
-		chacha20_enc_in_place(&self.key, &self.get_nonce(), 1, &mut block)?;
+		chacha20_xor_stream(&self.key, &self.get_nonce(), 1, &mut block)?;
 		let tag = Tag::from_bits(block[0]).ok_or(UnknownCryptoError)?;
 		block[0] = ciphertext[0];
-		let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, adlen, msgpos)?;
+		let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, msgpos)?;
 		if !(mac == &ciphertext[macpos..macpos + mac.get_length()]) {
 			return Err(UnknownCryptoError);
 		}
@@ -310,38 +318,38 @@ impl SecretStreamXChaCha20Poly1305 {
 		if bool::from(tag.bits().ct_eq(&Tag::REKEY.bits()) | self.counter.ct_eq(&0u32)) {
 			self.rekey()?;
 		}
+
 		Ok(tag)
 	}
 
-	/// Generates the poly1305 tag for a message
+	/// Generates a Poly1305 tag for a message.
 	fn generate_auth_tag(
 		&mut self,
 		text: &[u8],
 		ad: &[u8],
 		msglen: usize,
 		block: &[u8],
-		adlen: usize,
 		textpos: usize,
-	) -> Result<PolyTag, UnknownCryptoError> {
+	) -> Result<Poly1305Tag, UnknownCryptoError> {
 		debug_assert!(text.len() >= textpos + msglen);
 
 		let mut pad = [0u8; 16];
 		let mut poly = Poly1305::new(&poly1305_key_gen(&self.key, &self.get_nonce())?);
 
-		if adlen > 0 {
+		if !ad.is_empty() {
 			poly.update(ad)?;
 			poly.update(&pad[..padding(ad.len())])?;
 		}
-		poly.update(&block)?;
+		poly.update(block)?;
 		poly.update(&text[textpos..(textpos + msglen)])?;
 		poly.update(&pad[..padding(CHACHA_BLOCKSIZE.wrapping_sub(msglen))])?;
-		pad[..8].copy_from_slice(&(adlen as u64).to_le_bytes());
+		pad[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
 		// TODO: How likely is it for users to trigger panic on this .unwrap()?
 		pad[8..16]
 			.copy_from_slice(&(CHACHA_BLOCKSIZE.checked_add(msglen).unwrap() as u64).to_le_bytes());
 		poly.update(&pad)?;
 
-		Ok(poly.finalize()?)
+		poly.finalize()
 	}
 }
 
