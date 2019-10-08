@@ -97,7 +97,6 @@
 //! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
 //! [`Tag`]: struct.Tag.html
 
-use crate::const_assert;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead::chacha20poly1305::{padding, poly1305_key_gen};
 use crate::hazardous::mac::poly1305::{Poly1305, Tag as Poly1305Tag, POLY1305_OUTSIZE};

@@ -103,21 +103,6 @@ pub fn secure_cmp(a: &[u8], b: &[u8]) -> Result<(), errors::UnknownCryptoError> 
 	}
 }
 
-/// This marco is used to check one or more conditions at compile time
-/// ```
-/// # use orion::const_assert;
-/// # fn main() {
-/// const_assert!(2 >= 2);
-/// # }
-/// ```
-/// Code is from https://github.com/nvzqz/static-assertions-rs
-#[macro_export()]
-macro_rules! const_assert {
-    ($($xs:expr),+ $(,)*) =>
-     { let _ = [(); 0 - /*An error here shows that the assertion does not hold*/ !
-     ($({ const B: bool = $xs; B })&&+) as usize];};
-}
-
 #[cfg(feature = "safe_api")]
 #[test]
 fn rand_key_len_ok() {
