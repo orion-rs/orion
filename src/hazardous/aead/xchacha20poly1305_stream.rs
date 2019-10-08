@@ -148,14 +148,14 @@ fn xor_buf8(out: &mut [u8], input: &[u8]) {
 	}
 }
 
-type INonceType = [u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
-type CounterType = u32;
+/// Internal nonce used to derive IETF nonces.
+type INonce = [u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
 
-/// Secret Stream State
+/// Secret stream state.
 pub struct SecretStreamXChaCha20Poly1305 {
 	key: SecretKey,
-	counter: CounterType,
-	inonce: INonceType,
+	counter: u32,
+	inonce: INonce,
 }
 
 impl core::fmt::Debug for SecretStreamXChaCha20Poly1305 {
@@ -179,12 +179,8 @@ impl SecretStreamXChaCha20Poly1305 {
 
 	/// creates a new internal state
 	pub fn new(secret_key: &SecretKey, nonce: &Nonce) -> Self {
-		const_assert!(
-			SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES == core::mem::size_of::<CounterType>()
-		);
-		const_assert!(
-			SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES == core::mem::size_of::<INonceType>()
-		);
+		const_assert!(SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES == core::mem::size_of::<u32>());
+		const_assert!(SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES == core::mem::size_of::<INonce>());
 		const_assert!(
 			SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES
 				+ SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES
