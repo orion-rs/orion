@@ -323,10 +323,8 @@ mod private {
 			quickcheck! {
 				// padding() should never return a usize above 15.
 				// The usize must always be in range of 0..=15.
-				fn prop_result_never_above_15(input: Vec<u8>) -> bool {
-					let rem: usize = padding(input[..].len());
-
-					(rem < 16)
+				fn prop_result_never_above_15(input: usize) -> bool {
+					padding(input) < 16
 				}
 			}
 		}
