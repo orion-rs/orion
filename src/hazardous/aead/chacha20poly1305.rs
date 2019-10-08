@@ -24,10 +24,9 @@
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
 //! - `ad`: Additional data to authenticate (this is not encrypted and can be
-//!   `None`).
+//!   `None`.  This data is also not a part of `dst_out`).
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 16 byte
-//!   Poly1305 tag
-//! appended to it.
+//!   Poly1305 tag appended to it.
 //! - `plaintext`: The data to be encrypted.
 //! - `dst_out`: Destination array that will hold the
 //!   `ciphertext_with_tag`/`plaintext` after encryption/decryption.

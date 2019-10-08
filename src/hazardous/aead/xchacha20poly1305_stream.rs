@@ -20,25 +20,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Based on the implementation used by libsodium
-// https://download.libsodium.org/doc/secret-key_cryptography/secretstream
-// https://github.com/jedisct1/libsodium/blob/stable/src/libsodium/crypto_secretstream/xchacha20poly1305/secretstream_xchacha20poly1305.c
-
 //! # About:
-//! Stream encryption based on XChaCha20Poly1305
-//! This algorithm and implementation is based on the [secretstream API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
-//! of Libsodium
+//! Stream encryption based on XChaCha20Poly1305.
+//!
+//! This implementation is based on and compatible with the [secretstream API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
+//! of libsodium.
 //!
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
 //! - `ad`: Additional data to authenticate (this is not encrypted and can be
-//!   `None`. This data is also not contained in the output).
+//!   `None`. This data is also not a part of `dst_out`).
 //! - `plaintext`: The data to be encrypted.
-//! - `ciphertext`: The encrypted data with Poly1305 mac and tag indicating its function
+//! - `ciphertext`: The encrypted data with a Poly1305 tag and a [`Tag`] indicating its function.
 //! - `dst_out`: Destination array that will hold the
 //!   `ciphertext`/`plaintext` after encryption/decryption.
-//! - `tag`: Indicates the type of message
+//! - `tag`: Indicates the type of message.
 //!
 //! # Errors:
 //! An error will be returned if:
@@ -46,50 +43,59 @@
 //! - The length of `dst_out` is less than `ciphertext - 17` when
 //!   decrypting.
 //! - The length of `ciphertext` is not greater than `16`.
-//! - The received mac does not match the calculated mac when decrypting. (this can indicate
-//!   a dropped or reordered message )
+//! - The received mac does not match the calculated mac when decrypting. This can indicate
+//!   a dropped or reordered message within the stream.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
 //!   key.
-//! -The nonce can be  randomly generated using a CSPRNG.
+//! - The nonce can be  randomly generated using a CSPRNG.
 //! [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
-//! - The length of messages is leaked.
+//! - The length of the messages is leaked.
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::aead::xchacha20poly1305_stream;
-//! let secret_key = &xchacha20poly1305_stream::SecretKey::generate();
-//!	let nonce = &xchacha20poly1305_stream::Nonce::generate();
-//!	let ad = "Additional data".as_bytes();
-//!	let message = "Data to protect".as_bytes();
-//!	let mut dst_out_cipher = [
-//!		0u8;
-//!		15 + xchacha20poly1305_stream::SECRETSTREAM_XCHACHA20POLY1305_ABYTES
-//!	];
-//!	let mut dst_out_pt = [0u8; 15];
+//! use orion::hazardous::aead::xchacha20poly1305_stream::*;
 //!
-//!	let mut state_enc =
-//!		xchacha20poly1305_stream::SecretStreamXChaCha20Poly1305::new(secret_key, nonce);
-//!	//Encrypt message and place it with tag and mac in dst_out_cipher. Additionally authenticates ad
-//!	state_enc.encrypt_message(
+//! let secret_key = SecretKey::generate();
+//!	let nonce = Nonce::generate();
+//!	let ad = "Additional data".as_bytes();
+//! let message = "Data to protect".as_bytes();
+//!
+//! // Length of above message is 15 and then we accomodate 17
+//! // for the mac and tag.
+//!
+//! let mut dst_out_ct = [
+//!		0u8;
+//!		15 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES
+//!	];
+//! let mut dst_out_pt = [0u8; 15];
+//!
+//!	let mut ctx_enc =
+//! 	SecretStreamXChaCha20Poly1305::new(&secret_key, &nonce);
+//!
+//! // Encrypt and place tag + ciphertext + mac in dst_out_ct
+//!	ctx_enc.encrypt_message(
 //!		message,
-//!		Some(&ad),
-//!		&mut dst_out_cipher,
-//!		xchacha20poly1305_stream::Tag::MESSAGE,
+//!		Some(ad),
+//!		&mut dst_out_ct,
+//!		Tag::MESSAGE,
 //!	)?;
 //!
-//! let mut state_dec =
-//!		xchacha20poly1305_stream::SecretStreamXChaCha20Poly1305::new(secret_key, nonce);
-//!	let tag = state_dec.decrypt_message(&dst_out_cipher, Some(&ad), &mut dst_out_pt)?;
+//! let mut ctx_dec =
+//!		SecretStreamXChaCha20Poly1305::new(&secret_key, &nonce);
 //!
-//!	assert_eq!(tag, xchacha20poly1305_stream::Tag::MESSAGE);
-//!	assert_eq!(dst_out_pt.as_ref(), message.as_ref());
+//! // Decrypt and save the tag the message was encrypted with.
+//! let tag = ctx_dec.decrypt_message(&dst_out_ct, Some(ad), &mut dst_out_pt)?;
+//!
+//!	assert_eq!(tag, Tag::MESSAGE);
+//!	assert_eq!(dst_out_pt.as_ref(), message);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
 //! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
+//! [`Tag`]: struct.Tag.html
 
 use crate::const_assert;
 use crate::errors::UnknownCryptoError;
