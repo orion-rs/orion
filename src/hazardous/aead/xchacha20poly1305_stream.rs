@@ -46,6 +46,10 @@
 //! - The received mac does not match the calculated mac when decrypting. This can indicate
 //!   a dropped or reordered message within the stream.
 //!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2^32-1 * 64 bytes of data are processed when encrypting/decrypting a single `message`.
+//!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
 //!   key.
