@@ -328,9 +328,10 @@ impl SecretStreamXChaCha20Poly1305 {
 		textpos: usize,
 	) -> Result<PolyTag, UnknownCryptoError> {
 		debug_assert!(text.len() >= textpos + msglen);
-		let mut slen = [0u8; 8];
-		let pad = [0u8; 16];
+
+		let mut pad = [0u8; 16];
 		let mut poly = Poly1305::new(&poly1305_key_gen(&self.key, &self.get_nonce())?);
+
 		if adlen > 0 {
 			poly.update(ad)?;
 			poly.update(&pad[..padding(ad.len())])?;
@@ -338,10 +339,12 @@ impl SecretStreamXChaCha20Poly1305 {
 		poly.update(&block)?;
 		poly.update(&text[textpos..(textpos + msglen)])?;
 		poly.update(&pad[..padding(CHACHA_BLOCKSIZE.wrapping_sub(msglen))])?;
-		slen.copy_from_slice(&(adlen as u64).to_le_bytes());
-		poly.update(&slen)?;
-		slen.copy_from_slice(&(CHACHA_BLOCKSIZE as u64 + msglen as u64).to_le_bytes());
-		poly.update(&slen)?;
+		pad[..8].copy_from_slice(&(adlen as u64).to_le_bytes());
+		// TODO: How likely is it for users to trigger panic on this .unwrap()?
+		pad[8..16]
+			.copy_from_slice(&(CHACHA_BLOCKSIZE.checked_add(msglen).unwrap() as u64).to_le_bytes());
+		poly.update(&pad)?;
+
 		Ok(poly.finalize()?)
 	}
 }
