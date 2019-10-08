@@ -104,7 +104,7 @@ use crate::hazardous::mac::poly1305::{Poly1305, Tag as PolyTag, POLY1305_OUTSIZE
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::hazardous::stream::chacha20::{
 	encrypt as chacha20_enc, encrypt_in_place as chacha20_enc_in_place, Nonce as chacha20Nonce,
-	CHACHA_KEYSIZE, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
+	CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
 };
 pub use crate::hazardous::stream::xchacha20::Nonce;
 use crate::hazardous::stream::xchacha20::{subkey_and_nonce, XCHACHA_NONCESIZE};
@@ -113,18 +113,22 @@ use bitflags::bitflags;
 use subtle::ConstantTimeEq;
 
 bitflags! {
-	/// Tag that indicates the type of message
+	/// Tag that indicates the type of message.
 	pub struct Tag: u8 {
-		/// A  message with no special meaning
-		const MESSAGE = 0b0000_0000;
-		/// Marks that the message is the end of a set of messages. Allows the decrypting site to
-		/// start working with this data
-		const PUSH = 0b0000_0001;
-		/// derives a new secret key and forgets the one used for earlier encryption/decryption
-		const REKEY = 0b0000_0010;
-		/// Indicates the end of a stream. Also does an rekey.
-		const FINISH = Self::PUSH.bits | Self::REKEY.bits;
 
+		/// A message with no special meaning.
+		const MESSAGE = 0b0000_0000;
+
+		/// Marks that the message is the end of a set of messages. Allows the decrypting site to
+		/// start working with this data.
+		const PUSH = 0b0000_0001;
+
+		/// Derives a new secret key and forgets the one used for earlier encryption/decryption
+		/// operations.
+		const REKEY = 0b0000_0010;
+
+		/// Indicates the end of a stream. Also does a rekey.
+		const FINISH = Self::PUSH.bits | Self::REKEY.bits;
 	}
 }
 
@@ -135,7 +139,6 @@ const SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES: usize = 8;
 /// Size of additional data appended to each message
 pub const SECRETSTREAM_XCHACHA20POLY1305_ABYTES: usize =
 	POLY1305_OUTSIZE + core::mem::size_of::<Tag>();
-const BLOCKSIZE: usize = 64;
 
 fn xor_buf8(out: &mut [u8], input: &[u8]) {
 	debug_assert_eq!(out.len(), 8);
@@ -231,7 +234,7 @@ impl SecretStreamXChaCha20Poly1305 {
 			return Err(UnknownCryptoError);
 		}
 
-		let mut block = [0u8; BLOCKSIZE];
+		let mut block = [0u8; CHACHA_BLOCKSIZE];
 		let ad = match ad {
 			Some(v) => v,
 			None => &[0u8; 0],
@@ -280,7 +283,7 @@ impl SecretStreamXChaCha20Poly1305 {
 		if dst_out.len() < msglen {
 			return Err(UnknownCryptoError);
 		}
-		let mut block = [0u8; BLOCKSIZE];
+		let mut block = [0u8; CHACHA_BLOCKSIZE];
 		let ad = match ad {
 			Some(v) => v,
 			None => &[0u8; 0],
@@ -334,10 +337,10 @@ impl SecretStreamXChaCha20Poly1305 {
 		}
 		poly.update(&block)?;
 		poly.update(&text[textpos..(textpos + msglen)])?;
-		poly.update(&pad[..padding(BLOCKSIZE.wrapping_sub(msglen))])?;
+		poly.update(&pad[..padding(CHACHA_BLOCKSIZE.wrapping_sub(msglen))])?;
 		slen.copy_from_slice(&(adlen as u64).to_le_bytes());
 		poly.update(&slen)?;
-		slen.copy_from_slice(&(BLOCKSIZE as u64 + msglen as u64).to_le_bytes());
+		slen.copy_from_slice(&(CHACHA_BLOCKSIZE as u64 + msglen as u64).to_le_bytes());
 		poly.update(&slen)?;
 		Ok(poly.finalize()?)
 	}
