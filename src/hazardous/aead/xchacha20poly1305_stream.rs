@@ -45,10 +45,11 @@
 //! - The length of `ciphertext` is not greater than `16`.
 //! - The received mac does not match the calculated mac when decrypting. This can indicate
 //!   a dropped or reordered message within the stream.
+//! - More than 2^32-3 * 64 bytes of data are processed when encrypting/decrypting a single chunk.
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - More than 2^32-1 * 64 bytes of data are processed when encrypting/decrypting a single `message`.
+//! - More than 2^32-1 * 64 bytes of data are processed when encrypting/decrypting a single chunk.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -233,6 +234,14 @@ impl SecretStreamXChaCha20Poly1305 {
 		dst_out: &mut [u8],
 		tag: Tag,
 	) -> Result<(), UnknownCryptoError> {
+		// The largest addition done on length
+		// of plaintext. Other non-checked additions
+		// should not be able to overflow if this
+		// does not panic.
+		assert!((CHACHA_BLOCKSIZE as u64)
+			.checked_add(plaintext.len() as u64)
+			.is_some());
+
 		let msglen = plaintext.len();
 		if dst_out.len() < SECRETSTREAM_XCHACHA20POLY1305_ABYTES + msglen {
 			return Err(UnknownCryptoError);
@@ -291,6 +300,14 @@ impl SecretStreamXChaCha20Poly1305 {
 		}
 
 		let msglen = ciphertext.len() - SECRETSTREAM_XCHACHA20POLY1305_ABYTES;
+		// The largest addition done on length
+		// of plaintext. Other non-checked additions
+		// should not be able to overflow if this
+		// does not panic.
+		assert!((CHACHA_BLOCKSIZE as u64)
+			.checked_add(msglen as u64)
+			.is_some());
+
 		if dst_out.len() < msglen {
 			return Err(UnknownCryptoError);
 		}
@@ -339,6 +356,11 @@ impl SecretStreamXChaCha20Poly1305 {
 		block: &[u8],
 		textpos: usize,
 	) -> Result<Poly1305Tag, UnknownCryptoError> {
+		// Debug assertion because `seal_chunk` and `open_chunk`
+		// perform non-debug assertions.
+		debug_assert!((CHACHA_BLOCKSIZE as u64)
+			.checked_add(msglen as u64)
+			.is_some());
 		debug_assert!(text.len() >= textpos + msglen);
 
 		let mut pad = [0u8; 16];
@@ -352,9 +374,7 @@ impl SecretStreamXChaCha20Poly1305 {
 		poly.update(&text[textpos..(textpos + msglen)])?;
 		poly.update(&pad[..padding(CHACHA_BLOCKSIZE.wrapping_sub(msglen))])?;
 		pad[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
-		// TODO: How likely is it for users to trigger panic on this .unwrap()?
-		pad[8..16]
-			.copy_from_slice(&(CHACHA_BLOCKSIZE.checked_add(msglen).unwrap() as u64).to_le_bytes());
+		pad[8..16].copy_from_slice(&((CHACHA_BLOCKSIZE as u64) + (msglen as u64)).to_le_bytes());
 		poly.update(&pad)?;
 
 		poly.finalize()
