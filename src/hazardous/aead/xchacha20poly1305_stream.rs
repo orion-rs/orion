@@ -280,7 +280,7 @@ impl SecretStreamXChaCha20Poly1305 {
 		);
 		self.counter = self.counter.wrapping_add(1);
 
-		if bool::from(tag.bits().ct_eq(&Tag::REKEY.bits()) | self.counter.ct_eq(&0u32)) {
+		if bool::from(!(tag.bits() & Tag::REKEY.bits()).ct_eq(&0u8) | self.counter.ct_eq(&0u32)) {
 			self.rekey()?;
 		}
 
@@ -340,7 +340,7 @@ impl SecretStreamXChaCha20Poly1305 {
 		}
 		xor_slices_8(self.inonce.as_mut(), &mac.unprotected_as_bytes()[..8]);
 		self.counter = self.counter.wrapping_add(1);
-		if bool::from(tag.bits().ct_eq(&Tag::REKEY.bits()) | self.counter.ct_eq(&0u32)) {
+		if bool::from(!(tag.bits() & Tag::REKEY.bits()).ct_eq(&0u8) | self.counter.ct_eq(&0u32)) {
 			self.rekey()?;
 		}
 
