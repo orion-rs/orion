@@ -436,6 +436,20 @@ mod public {
 				true
 			}
 		}
+
+		quickcheck! {
+			fn prop_same_input_twice_diff_output(input: Vec<u8>, ad: Vec<u8>) -> bool {
+				let mut ctx = SecretStreamXChaCha20Poly1305::new(&SecretKey::generate(), &Nonce::generate());
+
+				let mut ct1 = vec![0u8; input.len() + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+				let mut ct2 = ct1.clone();
+
+				ctx.seal_chunk(&input, Some(&ad), &mut ct1, Tag::MESSAGE).unwrap();
+				ctx.seal_chunk(&input, Some(&ad), &mut ct2, Tag::MESSAGE).unwrap();
+
+				ct1 != ct2
+			}
+		}
 	}
 }
 
@@ -445,45 +459,47 @@ mod private {
 
 	// All test values generated with libsodium https://github.com/jedisct1/libsodium version 1.0.18
 
+	const KEY: [u8; 32] = [
+		49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8, 101u8,
+		102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8, 113u8, 114u8,
+		115u8, 116u8, 117u8, 118u8, 0u8,
+	];
+	const NONCE: [u8; 24] = [
+		97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8,
+		98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+	];
+
 	#[test]
 	fn test_enc_and_dec_valid() {
-		let mut s = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[
-				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
-				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
-				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
-			])
-			.unwrap(),
-			&Nonce::from_slice(&[
-				97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
-				97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
-			])
-			.unwrap(),
-		);
+		// Encrypt stream
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
 		assert_eq!(
-			s.key.unprotected_as_bytes(),
+			s.key,
 			[
 				23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8,
 				116u8, 179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8,
 				219u8, 33u8, 44u8, 68u8, 91u8, 135u8,
 			]
+			.as_ref()
 		);
 		assert_eq!(
 			s.get_nonce(),
 			[1u8, 0u8, 0u8, 0u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,].as_ref()
 		);
-		//MSg 1
-		let plaintext1 = [116u8, 101u8, 115u8, 116u8, 49u8, 0u8];
+
+		// 1st Tag::MESSAGE
+		let plaintext1: [u8; 6] = [116u8, 101u8, 115u8, 116u8, 49u8, 0u8];
 		let mut out1 = [0u8; 6 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		s.seal_chunk(&plaintext1, None, &mut out1, Tag::MESSAGE)
 			.unwrap();
 		assert_eq!(
-			s.key.unprotected_as_bytes(),
+			s.key,
 			[
 				23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8,
 				116u8, 179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8,
 				219u8, 33u8, 44u8, 68u8, 91u8, 135u8,
 			]
+			.as_ref()
 		);
 		assert_eq!(
 			s.get_nonce(),
@@ -497,8 +513,8 @@ mod private {
 			]
 		);
 
-		//MSg 2
-		let plaintext2 = [
+		// 2nd Tag::MESSAGE
+		let plaintext2: [u8; 20] = [
 			116u8, 104u8, 105u8, 115u8, 32u8, 105u8, 115u8, 32u8, 108u8, 111u8, 110u8, 103u8,
 			101u8, 114u8, 32u8, 116u8, 101u8, 120u8, 116u8, 0u8,
 		];
@@ -506,12 +522,13 @@ mod private {
 		s.seal_chunk(&plaintext2, None, &mut out2, Tag::MESSAGE)
 			.unwrap();
 		assert_eq!(
-			s.key.unprotected_as_bytes(),
+			s.key,
 			[
 				23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8,
 				116u8, 179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8,
 				219u8, 33u8, 44u8, 68u8, 91u8, 135u8,
 			]
+			.as_ref()
 		);
 		assert_eq!(
 			s.get_nonce(),
@@ -528,18 +545,19 @@ mod private {
 			.as_ref()
 		);
 
-		//MSg 3
-		let plaintext3 = [49u8, 0u8];
+		// 3rd Tag::MESSAGE
+		let plaintext3: [u8; 2] = [49u8, 0u8];
 		let mut out3 = [0u8; 2 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		s.seal_chunk(&plaintext3, None, &mut out3, Tag::MESSAGE)
 			.unwrap();
 		assert_eq!(
-			s.key.unprotected_as_bytes(),
+			s.key,
 			[
 				23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8,
 				116u8, 179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8,
 				219u8, 33u8, 44u8, 68u8, 91u8, 135u8,
 			]
+			.as_ref()
 		);
 		assert_eq!(
 			s.get_nonce(),
@@ -554,23 +572,24 @@ mod private {
 			.as_ref()
 		);
 
-		//rekey
+		// Explicit rekey
 		s.rekey().unwrap();
 		assert_eq!(
-			s.key.unprotected_as_bytes(),
+			s.key,
 			[
 				55u8, 213u8, 132u8, 57u8, 116u8, 28u8, 19u8, 214u8, 59u8, 159u8, 188u8, 185u8,
 				201u8, 153u8, 70u8, 17u8, 149u8, 199u8, 55u8, 34u8, 164u8, 54u8, 200u8, 241u8,
 				157u8, 71u8, 218u8, 62u8, 37u8, 37u8, 8u8, 126u8,
 			]
+			.as_ref()
 		);
 		assert_eq!(
 			s.get_nonce(),
 			[1u8, 0u8, 0u8, 0u8, 250u8, 25u8, 191u8, 166u8, 103u8, 98u8, 187u8, 196u8,].as_ref()
 		);
 
-		//MSg 4
-		let plaintext4 = [
+		// 4th Tag::MESSAGE
+		let plaintext4: [u8; 23] = [
 			102u8, 105u8, 114u8, 115u8, 116u8, 32u8, 116u8, 101u8, 120u8, 116u8, 32u8, 97u8, 102u8,
 			116u8, 101u8, 114u8, 32u8, 114u8, 101u8, 107u8, 101u8, 121u8, 0u8,
 		];
@@ -578,12 +597,13 @@ mod private {
 		s.seal_chunk(&plaintext4, None, &mut out4, Tag::MESSAGE)
 			.unwrap();
 		assert_eq!(
-			s.key.unprotected_as_bytes(),
+			s.key,
 			[
 				55u8, 213u8, 132u8, 57u8, 116u8, 28u8, 19u8, 214u8, 59u8, 159u8, 188u8, 185u8,
 				201u8, 153u8, 70u8, 17u8, 149u8, 199u8, 55u8, 34u8, 164u8, 54u8, 200u8, 241u8,
 				157u8, 71u8, 218u8, 62u8, 37u8, 37u8, 8u8, 126u8,
 			]
+			.as_ref()
 		);
 		assert_eq!(
 			s.get_nonce(),
@@ -600,8 +620,8 @@ mod private {
 			.as_ref()
 		);
 
-		//MSg 5
-		let plaintext5 = [
+		// 5th Tag::MESSAGE
+		let plaintext5: [u8; 36] = [
 			116u8, 104u8, 105u8, 115u8, 32u8, 105u8, 115u8, 32u8, 116u8, 104u8, 101u8, 32u8, 115u8,
 			101u8, 99u8, 111u8, 110u8, 100u8, 32u8, 116u8, 101u8, 120u8, 116u8, 32u8, 97u8, 102u8,
 			116u8, 101u8, 114u8, 32u8, 114u8, 101u8, 107u8, 101u8, 121u8, 0u8,
@@ -610,12 +630,13 @@ mod private {
 		s.seal_chunk(&plaintext5, None, &mut out5, Tag::MESSAGE)
 			.unwrap();
 		assert_eq!(
-			s.key.unprotected_as_bytes(),
+			s.key,
 			[
 				55u8, 213u8, 132u8, 57u8, 116u8, 28u8, 19u8, 214u8, 59u8, 159u8, 188u8, 185u8,
 				201u8, 153u8, 70u8, 17u8, 149u8, 199u8, 55u8, 34u8, 164u8, 54u8, 200u8, 241u8,
 				157u8, 71u8, 218u8, 62u8, 37u8, 37u8, 8u8, 126u8,
 			]
+			.as_ref()
 		);
 		assert_eq!(
 			s.get_nonce(),
@@ -633,20 +654,8 @@ mod private {
 			.as_ref()
 		);
 
-		//decrypt
-		let mut s = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[
-				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
-				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
-				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
-			])
-			.unwrap(),
-			&Nonce::from_slice(&[
-				97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
-				97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
-			])
-			.unwrap(),
-		);
+		// Decrypt stream
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
 
 		let mut plain_out1 = [0u8; 6];
 		assert_eq!(
@@ -654,12 +663,14 @@ mod private {
 			Tag::MESSAGE
 		);
 		assert_eq!(plain_out1.as_ref(), plaintext1.as_ref());
+
 		let mut plain_out2 = [0u8; 20];
 		assert_eq!(
 			s.open_chunk(&out2, None, &mut plain_out2).unwrap(),
 			Tag::MESSAGE
 		);
 		assert_eq!(plain_out2.as_ref(), plaintext2.as_ref());
+
 		let mut plain_out3 = [0u8; 2];
 		assert_eq!(
 			s.open_chunk(&out3, None, &mut plain_out3).unwrap(),
@@ -675,6 +686,7 @@ mod private {
 			Tag::MESSAGE
 		);
 		assert_eq!(plain_out4.as_ref(), plaintext4.as_ref());
+
 		let mut plain_out5 = [0u8; 36];
 		assert_eq!(
 			s.open_chunk(&out5, None, &mut plain_out5).unwrap(),
@@ -685,19 +697,8 @@ mod private {
 
 	#[test]
 	fn test_reorder_or_drop_msg() {
-		let mut s = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[
-				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
-				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
-				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
-			])
-			.unwrap(),
-			&Nonce::from_slice(&[
-				97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
-				97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
-			])
-			.unwrap(),
-		);
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
 		let plaintext1 = [116u8, 101u8, 115u8, 116u8, 49u8, 0u8];
 		let plaintext2 = [
 			116u8, 104u8, 105u8, 115u8, 32u8, 105u8, 115u8, 32u8, 108u8, 111u8, 110u8, 103u8,
@@ -719,109 +720,100 @@ mod private {
 		];
 		let mut plain_out1 = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		assert_eq!(
-			s.open_chunk(&cipher1, None, &mut plain_out1).unwrap(),
+			ctx.open_chunk(&cipher1, None, &mut plain_out1).unwrap(),
 			Tag::MESSAGE
 		);
 		assert_eq!(&plain_out1, &plaintext1);
 
 		let mut plain_out3 = [0u8; 19 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
-		assert!(s.open_chunk(&cipher3, None, &mut plain_out3).is_err());
+		assert!(ctx.open_chunk(&cipher3, None, &mut plain_out3).is_err());
 
 		let mut plain_out2 = [0u8; 37 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		assert_eq!(
-			s.open_chunk(&cipher2, None, &mut plain_out2).unwrap(),
+			ctx.open_chunk(&cipher2, None, &mut plain_out2).unwrap(),
 			Tag::MESSAGE
 		);
 		assert_eq!(&plain_out2, &plaintext2);
 	}
 
 	#[test]
-	fn test_modified_tag() {
-		let mut s = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[
-				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
-				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
-				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
-			])
-			.unwrap(),
-			&Nonce::from_slice(&[
-				97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
-				97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
-			])
-			.unwrap(),
-		);
-
-		//This cipher text can be decrypted
-		let mut cipher1 = [
+	fn test_err_on_modified_message_tag() {
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		let mut cipher1: [u8; 23] = [
 			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
 			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
 		];
-		cipher1[0] = 0b1010_1010 | cipher1[0]; //Change tag
 		let mut plain_out1 = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_ok());
+
+		// Reset state
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		// Change tag
+		cipher1[0] = 0b1010_1010 | cipher1[0];
 		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
 	}
 
 	#[test]
-	fn test_modified_mac() {
-		let mut s = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[
-				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
-				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
-				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
-			])
-			.unwrap(),
-			&Nonce::from_slice(&[
-				97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
-				97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
-			])
-			.unwrap(),
-		);
-
-		//This cipher text can be decrypted
-		let mut cipher1 = [
+	fn test_err_on_modified_mac() {
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		let mut cipher1: [u8; 23] = [
 			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
 			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
 		];
+		let mut plain_out1 = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_ok());
+
+		// Reset state
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		// Change MAC
 		let macpos = cipher1.len() - 1;
-		cipher1[macpos] = 0b1010_1010 | cipher1[macpos]; //Change mac
-		let mut plain_out1 = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		cipher1[macpos] = 0b1010_1010 | cipher1[macpos];
 		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
 	}
 
 	#[test]
-	fn test_modified_cipher() {
-		let mut s = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[
-				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
-				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
-				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
-			])
-			.unwrap(),
-			&Nonce::from_slice(&[
-				97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
-				97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
-			])
-			.unwrap(),
-		);
-
-		//This cipher text can be decrypted
-		let mut cipher1 = [
+	fn test_err_on_modified_cipher() {
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		let mut cipher1: [u8; 23] = [
 			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
 			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
 		];
-		cipher1[5] = 0b1010_1010 | cipher1[5]; //Change something in the cipher
 		let mut plain_out1 = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_ok());
+
+		// Reset state
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		// Change something in the ciphertext
+		cipher1[5] = 0b1010_1010 | cipher1[5];
 		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
 	}
 
 	#[test]
-	fn test_encrypting_same_message() {
+	fn test_err_on_diff_ad() {
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		// This ciphertext was constructed without AD
+		let cipher1: [u8; 23] = [
+			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
+			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
+		];
+		let mut plain_out1 = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_ok());
+
+		// Reset state
+		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert!(s
+			.open_chunk(&cipher1, Some(&[1u8; 1]), &mut plain_out1)
+			.is_err());
+	}
+
+	#[test]
+	fn test_encrypting_same_message_different_output() {
 		let input = [0u8, 1u8, 2u8, 3u8];
 		let mut cipher = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		let mut cipher2 = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[0; 32]).unwrap(),
-			&Nonce::from_slice(&[0; 24]).unwrap(),
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
 		);
 		state_enc
 			.seal_chunk(&input, None, &mut cipher, Tag::MESSAGE)
@@ -838,15 +830,15 @@ mod private {
 		let mut cipher = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		let mut cipher2 = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[0; 32]).unwrap(),
-			&Nonce::from_slice(&[0; 24]).unwrap(),
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
 		);
 		state_enc
 			.seal_chunk(&input, None, &mut cipher, Tag::MESSAGE)
 			.unwrap();
 		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[0; 32]).unwrap(),
-			&Nonce::from_slice(&[0; 24]).unwrap(),
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
 		);
 		state_enc.rekey().unwrap();
 		state_enc
@@ -858,31 +850,20 @@ mod private {
 	#[test]
 	fn test_decrypt_cipher_too_short() {
 		let mut state = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[0; 32]).unwrap(),
-			&Nonce::from_slice(&[0; 24]).unwrap(),
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
 		);
-		let cipher = [0u8; 16];
+		let cipher = [0u8; SECRETSTREAM_XCHACHA20POLY1305_ABYTES - 1];
 		let mut out = [0u8; 50];
 		assert!(state.open_chunk(&cipher, None, &mut out).is_err());
 	}
 
 	#[test]
 	fn test_decrypt_buffer_too_short() {
-		let mut state = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[
-				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
-				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
-				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
-			])
-			.unwrap(),
-			&Nonce::from_slice(&[
-				97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
-				97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
-			])
-			.unwrap(),
-		);
+		let mut state =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
 
-		let cipher = [
+		let cipher: [u8; 23] = [
 			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
 			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
 		];
@@ -892,34 +873,23 @@ mod private {
 
 	#[test]
 	fn test_decrypt_buffer_exact() {
-		let mut state = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[
-				49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8,
-				101u8, 102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8,
-				113u8, 114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
-			])
-			.unwrap(),
-			&Nonce::from_slice(&[
-				97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
-				97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
-			])
-			.unwrap(),
-		);
+		let mut state =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
 
-		let cipher = [
+		let cipher: [u8; 23] = [
 			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
 			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
 		];
 
 		let mut out = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
-		state.open_chunk(&cipher, None, &mut out).unwrap();
+		assert!(state.open_chunk(&cipher, None, &mut out).is_ok());
 	}
 
 	#[test]
 	fn test_encrypt_buffer_too_short() {
 		let mut state = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[0; 32]).unwrap(),
-			&Nonce::from_slice(&[0; 24]).unwrap(),
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
 		);
 		let text = [0u8; 16];
 		let mut out = [0u8; 16 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES - 1];
@@ -931,21 +901,21 @@ mod private {
 	#[test]
 	fn test_encrypt_buffer_exact() {
 		let mut state = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[0; 32]).unwrap(),
-			&Nonce::from_slice(&[0; 24]).unwrap(),
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
 		);
 		let text = [0u8; 16];
 		let mut out = [0u8; 16 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
-		state
+		assert!(state
 			.seal_chunk(&text, None, &mut out, Tag::MESSAGE)
-			.unwrap();
+			.is_ok());
 	}
 
 	#[test]
-	fn test_encrypt_and_decrypt_zero_length() {
+	fn test_seal_open_zero_length() {
 		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[0; 32]).unwrap(),
-			&Nonce::from_slice(&[0; 24]).unwrap(),
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
 		);
 		let text = [0u8; 0];
 		let mut out = [0u8; SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
@@ -953,8 +923,8 @@ mod private {
 			.seal_chunk(&text, None, &mut out, Tag::MESSAGE)
 			.unwrap();
 		let mut state_dec = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from_slice(&[0; 32]).unwrap(),
-			&Nonce::from_slice(&[0; 24]).unwrap(),
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
 		);
 		let mut text_out = [0u8; 0];
 		state_dec.open_chunk(&out, None, &mut text_out).unwrap();
