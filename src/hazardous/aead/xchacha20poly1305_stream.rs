@@ -385,7 +385,7 @@ impl SecretStreamXChaCha20Poly1305 {
 mod public {
 
 	#[cfg(feature = "safe_api")]
-	mod proptest2 {
+	mod proptest {
 		use crate::errors::UnknownCryptoError;
 		use crate::hazardous::aead::xchacha20poly1305_stream::{
 			Nonce, SecretKey, SecretStreamXChaCha20Poly1305, Tag,
@@ -457,7 +457,7 @@ mod public {
 mod private {
 	use super::*;
 
-	// All test values generated with libsodium https://github.com/jedisct1/libsodium version 1.0.18
+	// Test values were generated using libsodium. See /tests/test_generation/
 
 	const KEY: [u8; 32] = [
 		49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8, 101u8,
@@ -469,8 +469,23 @@ mod private {
 		98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
 	];
 
+	const DEFAULT_MSG: [u8; 51] = [
+		68u8, 101u8, 102u8, 97u8, 117u8, 108u8, 116u8, 32u8, 109u8, 101u8, 115u8, 115u8, 97u8,
+		103u8, 101u8, 32u8, 116u8, 111u8, 32u8, 116u8, 101u8, 115u8, 116u8, 32u8, 115u8, 116u8,
+		114u8, 101u8, 97u8, 109u8, 105u8, 110u8, 103u8, 32u8, 65u8, 69u8, 65u8, 68u8, 32u8, 101u8,
+		110u8, 99u8, 114u8, 121u8, 112u8, 116u8, 105u8, 111u8, 110u8, 46u8, 0u8,
+	];
+
 	#[test]
-	fn test_enc_and_dec_valid() {
+	fn test_tag() {
+		assert!(Tag::MESSAGE.bits() == 0u8);
+		assert!(Tag::PUSH.bits() == 1u8);
+		assert!(Tag::REKEY.bits() == 2u8);
+		assert!(Tag::FINISH.bits() == 3u8);
+	}
+
+	#[test]
+	fn test_seal_open_with_explicit_rekey() {
 		// Encrypt stream
 		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
 		assert_eq!(
@@ -929,5 +944,418 @@ mod private {
 		let mut text_out = [0u8; 0];
 		state_dec.open_chunk(&out, None, &mut text_out).unwrap();
 		assert_eq!(text, text_out);
+	}
+
+	#[test]
+	fn test_new_to_msg_with_tag_final() {
+		let before_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let before_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+		];
+		let before_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let after_internal_key: [u8; 32] = [
+			168u8, 19u8, 24u8, 25u8, 196u8, 239u8, 73u8, 251u8, 36u8, 135u8, 89u8, 117u8, 2u8,
+			50u8, 208u8, 173u8, 177u8, 61u8, 147u8, 201u8, 97u8, 47u8, 74u8, 149u8, 21u8, 166u8,
+			227u8, 53u8, 24u8, 101u8, 251u8, 201u8,
+		];
+		let after_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 149u8, 246u8, 165u8, 228u8, 252u8, 41u8, 183u8, 89u8,
+		];
+		let after_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let out: [u8; 68] = [
+			255u8, 148u8, 0u8, 209u8, 14u8, 130u8, 100u8, 227u8, 231u8, 72u8, 231u8, 21u8, 186u8,
+			18u8, 26u8, 148u8, 110u8, 96u8, 90u8, 46u8, 114u8, 110u8, 169u8, 51u8, 16u8, 116u8,
+			48u8, 34u8, 119u8, 48u8, 212u8, 203u8, 18u8, 137u8, 21u8, 223u8, 114u8, 94u8, 129u8,
+			255u8, 198u8, 22u8, 78u8, 206u8, 9u8, 223u8, 135u8, 107u8, 224u8, 192u8, 4u8, 94u8,
+			100u8, 12u8, 28u8, 232u8, 44u8, 133u8, 81u8, 145u8, 176u8, 153u8, 17u8, 215u8, 180u8,
+			79u8, 24u8, 79u8,
+		];
+
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
+
+		let mut actual = [0u8; 68];
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::FINISH)
+			.unwrap();
+
+		assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
+		assert_eq!(actual.as_ref(), out.as_ref());
+	}
+
+	#[test]
+	fn test_new_to_msg_with_tag_rekey() {
+		let before_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let before_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+		];
+		let before_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let after_internal_key: [u8; 32] = [
+			39u8, 159u8, 44u8, 102u8, 206u8, 161u8, 116u8, 119u8, 163u8, 187u8, 45u8, 209u8, 172u8,
+			224u8, 237u8, 93u8, 9u8, 197u8, 138u8, 242u8, 195u8, 183u8, 253u8, 169u8, 86u8, 46u8,
+			161u8, 32u8, 71u8, 244u8, 51u8, 222u8,
+		];
+		let after_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 161u8, 222u8, 206u8, 42u8, 195u8, 117u8, 85u8, 88u8,
+		];
+		let after_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let out: [u8; 68] = [
+			254u8, 148u8, 0u8, 209u8, 14u8, 130u8, 100u8, 227u8, 231u8, 72u8, 231u8, 21u8, 186u8,
+			18u8, 26u8, 148u8, 110u8, 96u8, 90u8, 46u8, 114u8, 110u8, 169u8, 51u8, 16u8, 116u8,
+			48u8, 34u8, 119u8, 48u8, 212u8, 203u8, 18u8, 137u8, 21u8, 223u8, 114u8, 94u8, 129u8,
+			255u8, 198u8, 22u8, 78u8, 206u8, 9u8, 223u8, 135u8, 107u8, 224u8, 192u8, 4u8, 94u8,
+			187u8, 26u8, 216u8, 136u8, 169u8, 121u8, 52u8, 215u8, 102u8, 180u8, 177u8, 255u8, 69u8,
+			135u8, 172u8, 22u8,
+		];
+
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
+
+		let mut actual = [0u8; 68];
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::REKEY)
+			.unwrap();
+
+		assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
+		assert_eq!(actual.as_ref(), out.as_ref());
+	}
+
+	#[test]
+	fn test_new_to_msg_with_tag_final_twice() {
+		let before_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let before_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+		];
+		let before_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let after_internal_key: [u8; 32] = [
+			162u8, 54u8, 231u8, 162u8, 170u8, 199u8, 53u8, 228u8, 224u8, 121u8, 138u8, 154u8, 17u8,
+			252u8, 83u8, 49u8, 52u8, 25u8, 105u8, 51u8, 112u8, 3u8, 62u8, 217u8, 163u8, 194u8,
+			15u8, 113u8, 155u8, 17u8, 7u8, 250u8,
+		];
+		let after_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 107u8, 7u8, 226u8, 104u8, 227u8, 227u8, 7u8, 100u8,
+		];
+		let after_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let out: [u8; 68] = [
+			119u8, 255u8, 30u8, 46u8, 10u8, 174u8, 158u8, 45u8, 225u8, 116u8, 158u8, 172u8, 175u8,
+			198u8, 241u8, 34u8, 87u8, 52u8, 80u8, 230u8, 175u8, 133u8, 217u8, 132u8, 169u8, 75u8,
+			68u8, 249u8, 86u8, 87u8, 86u8, 68u8, 33u8, 250u8, 148u8, 117u8, 43u8, 10u8, 22u8,
+			125u8, 198u8, 6u8, 231u8, 5u8, 86u8, 199u8, 29u8, 214u8, 215u8, 74u8, 71u8, 244u8,
+			194u8, 50u8, 98u8, 209u8, 136u8, 235u8, 79u8, 113u8, 54u8, 101u8, 105u8, 14u8, 178u8,
+			146u8, 23u8, 229u8,
+		];
+
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
+
+		let mut actual = [0u8; 68];
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::FINISH)
+			.unwrap();
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::FINISH)
+			.unwrap();
+
+		assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
+		assert_eq!(actual.as_ref(), out.as_ref());
+	}
+
+	#[test]
+	fn test_new_to_msg_with_tag_rekey_twice() {
+		let before_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let before_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+		];
+		let before_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let after_internal_key: [u8; 32] = [
+			35u8, 207u8, 156u8, 185u8, 84u8, 18u8, 253u8, 160u8, 229u8, 242u8, 126u8, 247u8, 235u8,
+			193u8, 36u8, 121u8, 42u8, 247u8, 85u8, 108u8, 107u8, 143u8, 210u8, 194u8, 109u8, 46u8,
+			107u8, 47u8, 186u8, 127u8, 123u8, 46u8,
+		];
+		let after_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 198u8, 222u8, 225u8, 73u8, 93u8, 233u8, 75u8, 181u8,
+		];
+		let after_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let out: [u8; 68] = [
+			1u8, 171u8, 81u8, 78u8, 97u8, 128u8, 134u8, 65u8, 126u8, 237u8, 31u8, 59u8, 6u8, 76u8,
+			85u8, 119u8, 69u8, 183u8, 129u8, 184u8, 101u8, 246u8, 151u8, 0u8, 92u8, 171u8, 38u8,
+			164u8, 215u8, 120u8, 75u8, 169u8, 254u8, 207u8, 198u8, 138u8, 118u8, 68u8, 89u8, 231u8,
+			38u8, 220u8, 26u8, 210u8, 220u8, 102u8, 8u8, 245u8, 205u8, 152u8, 39u8, 155u8, 36u8,
+			115u8, 127u8, 79u8, 54u8, 246u8, 154u8, 2u8, 24u8, 208u8, 83u8, 232u8, 143u8, 234u8,
+			51u8, 194u8,
+		];
+
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
+
+		let mut actual = [0u8; 68];
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::REKEY)
+			.unwrap();
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::REKEY)
+			.unwrap();
+
+		assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
+		assert_eq!(actual.as_ref(), out.as_ref());
+	}
+
+	#[test]
+	fn test_new_to_msg_with_tag_push() {
+		let before_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let before_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+		];
+		let before_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let after_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let after_internal_nonce: [u8; 12] = [
+			2u8, 0u8, 0u8, 0u8, 118u8, 75u8, 245u8, 72u8, 68u8, 15u8, 117u8, 29u8,
+		];
+		let after_internal_counter: [u8; 4] = [2u8, 0u8, 0u8, 0u8];
+		let out: [u8; 68] = [
+			253u8, 148u8, 0u8, 209u8, 14u8, 130u8, 100u8, 227u8, 231u8, 72u8, 231u8, 21u8, 186u8,
+			18u8, 26u8, 148u8, 110u8, 96u8, 90u8, 46u8, 114u8, 110u8, 169u8, 51u8, 16u8, 116u8,
+			48u8, 34u8, 119u8, 48u8, 212u8, 203u8, 18u8, 137u8, 21u8, 223u8, 114u8, 94u8, 129u8,
+			255u8, 198u8, 22u8, 78u8, 206u8, 9u8, 223u8, 135u8, 107u8, 224u8, 192u8, 4u8, 94u8,
+			23u8, 41u8, 148u8, 41u8, 38u8, 110u8, 23u8, 29u8, 29u8, 207u8, 81u8, 40u8, 215u8,
+			190u8, 64u8, 222u8,
+		];
+
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert_eq!(ctx.key, before_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce().as_ref(), before_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
+
+		let mut actual = [0u8; 68];
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::PUSH)
+			.unwrap();
+
+		assert_eq!(ctx.key, after_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce().as_ref(), after_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
+		assert_eq!(actual.as_ref(), out.as_ref());
+	}
+
+	#[test]
+	fn test_counter_overflow_with_tag_msg() {
+		let before_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let before_internal_nonce: [u8; 12] = [
+			255u8, 255u8, 255u8, 255u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+		];
+		let before_internal_counter: [u8; 4] = [255u8, 255u8, 255u8, 255u8];
+		let after_internal_key: [u8; 32] = [
+			48u8, 109u8, 58u8, 2u8, 7u8, 92u8, 20u8, 239u8, 137u8, 218u8, 220u8, 62u8, 74u8, 47u8,
+			118u8, 162u8, 61u8, 234u8, 35u8, 242u8, 40u8, 2u8, 243u8, 149u8, 188u8, 249u8, 180u8,
+			242u8, 228u8, 139u8, 163u8, 76u8,
+		];
+		let after_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 36u8, 9u8, 22u8, 61u8, 226u8, 117u8, 46u8, 156u8,
+		];
+		let after_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let out: [u8; 68] = [
+			131u8, 93u8, 90u8, 220u8, 186u8, 163u8, 161u8, 113u8, 238u8, 31u8, 49u8, 63u8, 12u8,
+			101u8, 64u8, 221u8, 255u8, 190u8, 206u8, 20u8, 155u8, 140u8, 72u8, 180u8, 4u8, 199u8,
+			170u8, 178u8, 21u8, 212u8, 238u8, 60u8, 110u8, 233u8, 44u8, 24u8, 105u8, 216u8, 234u8,
+			132u8, 103u8, 31u8, 222u8, 244u8, 214u8, 180u8, 224u8, 206u8, 148u8, 114u8, 100u8,
+			161u8, 57u8, 6u8, 49u8, 199u8, 242u8, 58u8, 28u8, 253u8, 199u8, 16u8, 246u8, 86u8,
+			116u8, 22u8, 66u8, 91u8,
+		];
+
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		ctx.counter = u32::max_value();
+		assert_eq!(ctx.key, before_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
+
+		let mut actual = [0u8; 68];
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::MESSAGE)
+			.unwrap();
+
+		assert_eq!(ctx.key, after_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
+		assert_eq!(actual.as_ref(), out.as_ref());
+	}
+
+	#[test]
+	fn test_counter_overflow_with_tag_rekey() {
+		let before_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let before_internal_nonce: [u8; 12] = [
+			255u8, 255u8, 255u8, 255u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+		];
+		let before_internal_counter: [u8; 4] = [255u8, 255u8, 255u8, 255u8];
+		let after_internal_key: [u8; 32] = [
+			115u8, 83u8, 132u8, 174u8, 130u8, 252u8, 214u8, 242u8, 239u8, 140u8, 231u8, 231u8,
+			111u8, 228u8, 182u8, 88u8, 124u8, 109u8, 210u8, 61u8, 48u8, 22u8, 215u8, 232u8, 180u8,
+			174u8, 180u8, 216u8, 174u8, 209u8, 222u8, 8u8,
+		];
+		let after_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 188u8, 188u8, 116u8, 239u8, 177u8, 113u8, 89u8, 218u8,
+		];
+		let after_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let out: [u8; 68] = [
+			129u8, 93u8, 90u8, 220u8, 186u8, 163u8, 161u8, 113u8, 238u8, 31u8, 49u8, 63u8, 12u8,
+			101u8, 64u8, 221u8, 255u8, 190u8, 206u8, 20u8, 155u8, 140u8, 72u8, 180u8, 4u8, 199u8,
+			170u8, 178u8, 21u8, 212u8, 238u8, 60u8, 110u8, 233u8, 44u8, 24u8, 105u8, 216u8, 234u8,
+			132u8, 103u8, 31u8, 222u8, 244u8, 214u8, 180u8, 224u8, 206u8, 148u8, 114u8, 100u8,
+			161u8, 107u8, 212u8, 93u8, 14u8, 123u8, 181u8, 233u8, 248u8, 139u8, 61u8, 100u8, 73u8,
+			40u8, 14u8, 226u8, 118u8,
+		];
+
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		ctx.counter = u32::max_value();
+		assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
+
+		let mut actual = [0u8; 68];
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::REKEY)
+			.unwrap();
+
+		assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
+		assert_eq!(actual.as_ref(), out.as_ref());
+	}
+
+	#[test]
+	fn test_counter_overflow_with_tag_final() {
+		let before_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let before_internal_nonce: [u8; 12] = [
+			255u8, 255u8, 255u8, 255u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+		];
+		let before_internal_counter: [u8; 4] = [255u8, 255u8, 255u8, 255u8];
+		let after_internal_key: [u8; 32] = [
+			181u8, 99u8, 219u8, 38u8, 136u8, 29u8, 61u8, 72u8, 122u8, 0u8, 111u8, 182u8, 254u8,
+			74u8, 225u8, 183u8, 250u8, 200u8, 34u8, 169u8, 252u8, 92u8, 107u8, 85u8, 144u8, 12u8,
+			203u8, 19u8, 166u8, 41u8, 168u8, 26u8,
+		];
+		let after_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 230u8, 194u8, 178u8, 201u8, 13u8, 110u8, 57u8, 106u8,
+		];
+		let after_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let out: [u8; 68] = [
+			128u8, 93u8, 90u8, 220u8, 186u8, 163u8, 161u8, 113u8, 238u8, 31u8, 49u8, 63u8, 12u8,
+			101u8, 64u8, 221u8, 255u8, 190u8, 206u8, 20u8, 155u8, 140u8, 72u8, 180u8, 4u8, 199u8,
+			170u8, 178u8, 21u8, 212u8, 238u8, 60u8, 110u8, 233u8, 44u8, 24u8, 105u8, 216u8, 234u8,
+			132u8, 103u8, 31u8, 222u8, 244u8, 214u8, 180u8, 224u8, 206u8, 148u8, 114u8, 100u8,
+			161u8, 137u8, 59u8, 244u8, 49u8, 191u8, 114u8, 208u8, 246u8, 237u8, 83u8, 155u8, 66u8,
+			2u8, 10u8, 178u8, 132u8,
+		];
+
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		ctx.counter = u32::max_value();
+		assert_eq!(ctx.key, before_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
+
+		let mut actual = [0u8; 68];
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::FINISH)
+			.unwrap();
+
+		assert_eq!(ctx.key, after_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
+		assert_eq!(actual.as_ref(), out.as_ref());
+	}
+
+	#[test]
+	fn test_counter_overflow_with_tag_push() {
+		let before_internal_key: [u8; 32] = [
+			23u8, 45u8, 143u8, 75u8, 14u8, 65u8, 110u8, 208u8, 6u8, 34u8, 38u8, 33u8, 64u8, 116u8,
+			179u8, 244u8, 8u8, 121u8, 32u8, 23u8, 87u8, 135u8, 147u8, 246u8, 88u8, 52u8, 219u8,
+			33u8, 44u8, 68u8, 91u8, 135u8,
+		];
+		let before_internal_nonce: [u8; 12] = [
+			255u8, 255u8, 255u8, 255u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+		];
+		let before_internal_counter: [u8; 4] = [255u8, 255u8, 255u8, 255u8];
+		let after_internal_key: [u8; 32] = [
+			251u8, 165u8, 61u8, 114u8, 68u8, 126u8, 68u8, 202u8, 143u8, 101u8, 78u8, 242u8, 164u8,
+			171u8, 209u8, 209u8, 227u8, 5u8, 181u8, 244u8, 141u8, 167u8, 137u8, 0u8, 228u8, 122u8,
+			149u8, 109u8, 129u8, 240u8, 174u8, 128u8,
+		];
+		let after_internal_nonce: [u8; 12] = [
+			1u8, 0u8, 0u8, 0u8, 228u8, 204u8, 203u8, 245u8, 146u8, 107u8, 101u8, 124u8,
+		];
+		let after_internal_counter: [u8; 4] = [1u8, 0u8, 0u8, 0u8];
+		let out: [u8; 68] = [
+			130u8, 93u8, 90u8, 220u8, 186u8, 163u8, 161u8, 113u8, 238u8, 31u8, 49u8, 63u8, 12u8,
+			101u8, 64u8, 221u8, 255u8, 190u8, 206u8, 20u8, 155u8, 140u8, 72u8, 180u8, 4u8, 199u8,
+			170u8, 178u8, 21u8, 212u8, 238u8, 60u8, 110u8, 233u8, 44u8, 24u8, 105u8, 216u8, 234u8,
+			132u8, 103u8, 31u8, 222u8, 244u8, 214u8, 180u8, 224u8, 206u8, 148u8, 114u8, 100u8,
+			161u8, 82u8, 109u8, 199u8, 234u8, 54u8, 248u8, 2u8, 251u8, 41u8, 39u8, 45u8, 80u8,
+			78u8, 18u8, 18u8, 105u8,
+		];
+
+		let mut ctx =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		ctx.counter = u32::max_value();
+		assert_eq!(ctx.key, before_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
+
+		let mut actual = [0u8; 68];
+		ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, Tag::PUSH)
+			.unwrap();
+
+		assert_eq!(ctx.key, after_internal_key.as_ref());
+		assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
+		assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
+		assert_eq!(actual.as_ref(), out.as_ref());
 	}
 }
