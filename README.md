@@ -58,7 +58,7 @@ cargo test
 
 Fuzzing is done using [honggfuzz-rs](https://github.com/rust-fuzz/honggfuzz-rs) in [orion-fuzz](https://github.com/brycx/orion-fuzz). See [orion-fuzz](https://github.com/brycx/orion-fuzz) on how to start fuzzing orion.
 
-Constant-time execution tests can be found at [orion-dudect](https://github.com/brycx/orion-dudect).
+Constant-time execution tests can be found at [orion-dudect](https://github.com/brycx/orion-dudect) and [orion-sidefuzz](https://github.com/brycx/orion-sidefuzz).
 
 ### Benchmarks
 The library can be benchmarked with [Criterion](https://github.com/bheisler/criterion.rs) as below. All benchmarking tests are located in `benches/`.
