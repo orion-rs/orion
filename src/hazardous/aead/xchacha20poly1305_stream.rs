@@ -864,13 +864,15 @@ mod private {
 			&Nonce::from([0u8; 24]),
 		);
 		let mut cipher = [0u8; SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
-		state_enc.seal_chunk(&[0u8; 0], None, &mut cipher, Tag::MESSAGE).unwrap();
-		
+		state_enc
+			.seal_chunk(&[0u8; 0], None, &mut cipher, Tag::MESSAGE)
+			.unwrap();
+
 		let mut state_dec = SecretStreamXChaCha20Poly1305::new(
 			&SecretKey::from([0u8; 32]),
 			&Nonce::from([0u8; 24]),
 		);
-		
+
 		let mut out = [0u8; SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		assert!(state_dec.open_chunk(&cipher, None, &mut out).is_ok());
 	}
