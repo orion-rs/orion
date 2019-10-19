@@ -35,7 +35,7 @@
 //! - `ciphertext`: The encrypted data with a Poly1305 tag and a [`Tag`] indicating its function.
 //! - `dst_out`: Destination array that will hold the
 //!   `ciphertext`/`plaintext` after encryption/decryption.
-//! - `tag`: Indicates the type of message. The `tag` is a part of the output when sealing. It
+//! - `tag`: Indicates the type of message. The `tag` is a part of the output when encrypting. It
 //! is encrypted and authenticated.
 //!
 //! # Errors:
@@ -50,7 +50,8 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - More than 2^32-1 * 64 bytes of data are processed when encrypting/decrypting a single chunk.
+//! - [`SECRETSTREAM_XCHACHA20POLY1305_ABYTES`] + `plaintext.len()` overflows when encrypting. 
+//! - 64 + (`ciphertext.len()` - [`SECRETSTREAM_XCHACHA20POLY1305_ABYTES`]) overflows when decrypting. 
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -102,6 +103,7 @@
 //! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
 //! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
 //! [`Tag`]: struct.Tag.html
+//! [`SECRETSTREAM_XCHACHA20POLY1305_ABYTES`]: constant.SECRETSTREAM_XCHACHA20POLY1305_ABYTES.html
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead::chacha20poly1305::{padding, poly1305_key_gen};
