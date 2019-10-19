@@ -762,6 +762,30 @@ mod private {
 	}
 
 	#[test]
+	fn test_err_on_diff_secret_key() {
+		let mut s =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from([0u8; 32]), &Nonce::from(NONCE));
+		let cipher1: [u8; 23] = [
+			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
+			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
+		];
+		let mut plain_out1 = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
+	}
+
+	#[test]
+	fn test_err_on_diff_nonce() {
+		let mut s =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from([0u8; 24]));
+		let cipher1: [u8; 23] = [
+			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
+			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
+		];
+		let mut plain_out1 = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
+	}
+
+	#[test]
 	fn test_err_on_modified_mac() {
 		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
 		let mut cipher1: [u8; 23] = [
