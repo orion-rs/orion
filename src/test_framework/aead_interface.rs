@@ -46,6 +46,7 @@ pub fn AeadTestRunner<Sealer, Opener, Key, Nonce>(
 		open_modified_tag_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
 		open_modified_ciphertext_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
 		open_modified_aad_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
+		none_or_empty_some_aad_same_result(&sealer, &opener, &key, &nonce, input, tag_size);
 		seal_open_equals_expected(
 			&sealer,
 			&opener,
@@ -325,4 +326,46 @@ fn open_modified_aad_err<Sealer, Opener, Key, Nonce>(
 
 	let mut dst_out_pt = input.to_vec();
 	assert!(opener(&key, &nonce, &dst_out_ct, Some(b"BAD AAD"), &mut dst_out_pt).is_err());
+}
+
+#[cfg(feature = "safe_api")]
+/// Using None or Some with empty slice should produce the exact same result.
+fn none_or_empty_some_aad_same_result<Sealer, Opener, Key, Nonce>(
+	sealer: &Sealer,
+	opener: &Opener,
+	key: &Key,
+	nonce: &Nonce,
+	input: &[u8],
+	tag_size: usize,
+) where
+	Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
+	Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
+{
+	assert!(!input.is_empty());
+
+	let mut dst_out_ct_none = vec![0u8; input.len() + tag_size];
+	let mut dst_out_ct_some_empty = vec![0u8; input.len() + tag_size];
+
+	sealer(&key, &nonce, input, None, &mut dst_out_ct_none).unwrap();
+	sealer(
+		&key,
+		&nonce,
+		input,
+		Some(&[0u8; 0]),
+		&mut dst_out_ct_some_empty,
+	)
+	.unwrap();
+
+	assert_eq!(dst_out_ct_none, dst_out_ct_some_empty);
+
+	let mut dst_out_pt = vec![0u8; input.len()];
+	assert!(opener(
+		&key,
+		&nonce,
+		&dst_out_ct_none,
+		Some(&[0u8; 0]),
+		&mut dst_out_pt
+	)
+	.is_ok());
+	assert!(opener(&key, &nonce, &dst_out_ct_some_empty, None, &mut dst_out_pt).is_ok());
 }
