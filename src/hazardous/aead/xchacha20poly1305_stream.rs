@@ -35,7 +35,8 @@
 //! - `ciphertext`: The encrypted data with a Poly1305 tag and a [`Tag`] indicating its function.
 //! - `dst_out`: Destination array that will hold the
 //!   `ciphertext`/`plaintext` after encryption/decryption.
-//! - `tag`: Indicates the type of message.
+//! - `tag`: Indicates the type of message. The `tag` is a part of the output when sealing. It
+//! is encrypted and authenticated.
 //!
 //! # Errors:
 //! An error will be returned if:
