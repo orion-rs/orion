@@ -396,9 +396,7 @@ mod public {
 				return Err(UnknownCryptoError);
 			}
 			let mut state = SecretStreamXChaCha20Poly1305::new(sk, nonce);
-			state.seal_chunk(input, ad, output, Tag::MESSAGE)?;
-
-			Ok(())
+			state.seal_chunk(input, ad, output, Tag::MESSAGE)
 		}
 
 		fn open(
@@ -730,7 +728,7 @@ mod private {
 			Tag::MESSAGE
 		);
 		assert_eq!(&plain_out1, &plaintext1);
-
+		// Out of order decryption happens here
 		let mut plain_out3 = [0u8; 19 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		assert!(ctx.open_chunk(&cipher3, None, &mut plain_out3).is_err());
 
@@ -831,7 +829,7 @@ mod private {
 	}
 
 	#[test]
-	fn test_encrypting_same_message_rekey() {
+	fn test_encrypting_same_message_explicit_rekey() {
 		let input = [0u8, 1u8, 2u8, 3u8];
 		let mut cipher = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		let mut cipher2 = [0u8; 4 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
@@ -892,6 +890,20 @@ mod private {
 	}
 
 	#[test]
+	fn test_decrypt_buffer_longer() {
+		let mut state =
+			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+
+		let cipher: [u8; 23] = [
+			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
+			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
+		];
+
+		let mut out = [0u8; (23 * 2) - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		assert!(state.open_chunk(&cipher, None, &mut out).is_ok());
+	}
+
+	#[test]
 	fn test_encrypt_buffer_too_short() {
 		let mut state = SecretStreamXChaCha20Poly1305::new(
 			&SecretKey::from([0u8; 32]),
@@ -912,6 +924,19 @@ mod private {
 		);
 		let text = [0u8; 16];
 		let mut out = [0u8; 16 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		assert!(state
+			.seal_chunk(&text, None, &mut out, Tag::MESSAGE)
+			.is_ok());
+	}
+
+	#[test]
+	fn test_encrypt_buffer_longer() {
+		let mut state = SecretStreamXChaCha20Poly1305::new(
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
+		);
+		let text = [0u8; 16];
+		let mut out = [0u8; (16 * 2) + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		assert!(state
 			.seal_chunk(&text, None, &mut out, Tag::MESSAGE)
 			.is_ok());
