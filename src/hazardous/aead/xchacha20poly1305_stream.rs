@@ -23,7 +23,7 @@
 //! # About:
 //! Stream encryption based on XChaCha20Poly1305.
 //!
-//! This implementation is based on and compatible with the [secretstream API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
+//! This implementation is based on and compatible with the ["secretstream" API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
 //! of libsodium.
 //!
 //! # Parameters:
@@ -70,7 +70,7 @@
 //!	let ad = "Additional data".as_bytes();
 //! let message = "Data to protect".as_bytes();
 //!
-//! // Length of above message is 15 and then we accomodate 17
+//! // Length of the above message is 15 and then we accommodate 17
 //! // for the mac and tag.
 //!
 //! let mut dst_out_ct = [

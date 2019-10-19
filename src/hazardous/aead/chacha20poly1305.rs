@@ -79,7 +79,7 @@
 //! let ad = "Additional data".as_bytes();
 //! let message = "Data to protect".as_bytes();
 //!
-//! // Length of above message is 15 and then we accomodate 16 for the Poly1305
+//! // Length of the above message is 15 and then we accommodate 16 for the Poly1305
 //! // tag.
 //!
 //! let mut dst_out_ct = [0u8; 15 + 16];
