@@ -50,8 +50,8 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - [`SECRETSTREAM_XCHACHA20POLY1305_ABYTES`] + `plaintext.len()` overflows when encrypting. 
-//! - 64 + (`ciphertext.len()` - [`SECRETSTREAM_XCHACHA20POLY1305_ABYTES`]) overflows when decrypting. 
+//! - [`SECRETSTREAM_XCHACHA20POLY1305_ABYTES`] + `plaintext.len()` overflows when encrypting.
+//! - 64 + (`ciphertext.len()` - [`SECRETSTREAM_XCHACHA20POLY1305_ABYTES`]) overflows when decrypting.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
