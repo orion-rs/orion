@@ -391,7 +391,8 @@ mod public {
 			ad: Option<&[u8]>,
 			output: &mut [u8],
 		) -> Result<(), UnknownCryptoError> {
-			// TODO: Hack to pass zero test.
+			// NOTE: AeadTestRunner assumes that input must be at least
+			// 1. `seal_chunk` accepts 0 which is tested further down.
 			if input.len() == 0 {
 				return Err(UnknownCryptoError);
 			}
@@ -406,7 +407,10 @@ mod public {
 			ad: Option<&[u8]>,
 			output: &mut [u8],
 		) -> Result<(), UnknownCryptoError> {
-			// TODO: Hack to pass zero test.
+			// NOTE: AeadTestRunner assumes that input must be at least
+			// SECRETSTREAM_XCHACHA20POLY1305_ABYTES + 1. `open_chunk` accepts
+			// SECRETSTREAM_XCHACHA20POLY1305_ABYTES exactly which is tested
+			// further down.
 			if input.len() == SECRETSTREAM_XCHACHA20POLY1305_ABYTES {
 				return Err(UnknownCryptoError);
 			}
@@ -852,114 +856,48 @@ mod private {
 	}
 
 	#[test]
-	fn test_decrypt_cipher_too_short() {
-		let mut state = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from([0u8; 32]),
-			&Nonce::from([0u8; 24]),
-		);
-		let cipher = [0u8; SECRETSTREAM_XCHACHA20POLY1305_ABYTES - 1];
-		let mut out = [0u8; 50];
-		assert!(state.open_chunk(&cipher, None, &mut out).is_err());
-	}
-
-	#[test]
-	fn test_decrypt_buffer_too_short() {
-		let mut state =
-			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-
-		let cipher: [u8; 23] = [
-			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
-			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
-		];
-		let mut out = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES - 1];
-		assert!(state.open_chunk(&cipher, None, &mut out).is_err());
-	}
-
-	#[test]
-	fn test_decrypt_buffer_exact() {
-		let mut state =
-			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-
-		let cipher: [u8; 23] = [
-			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
-			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
-		];
-
-		let mut out = [0u8; 23 - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
-		assert!(state.open_chunk(&cipher, None, &mut out).is_ok());
-	}
-
-	#[test]
-	fn test_decrypt_buffer_longer() {
-		let mut state =
-			SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-
-		let cipher: [u8; 23] = [
-			252u8, 164u8, 0u8, 196u8, 27u8, 198u8, 8u8, 57u8, 216u8, 118u8, 134u8, 104u8, 156u8,
-			45u8, 71u8, 161u8, 199u8, 28u8, 79u8, 145u8, 19u8, 239u8, 4u8,
-		];
-
-		let mut out = [0u8; (23 * 2) - SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
-		assert!(state.open_chunk(&cipher, None, &mut out).is_ok());
-	}
-
-	#[test]
-	fn test_encrypt_buffer_too_short() {
-		let mut state = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from([0u8; 32]),
-			&Nonce::from([0u8; 24]),
-		);
-		let text = [0u8; 16];
-		let mut out = [0u8; 16 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES - 1];
-		assert!(state
-			.seal_chunk(&text, None, &mut out, Tag::MESSAGE)
-			.is_err());
-	}
-
-	#[test]
-	fn test_encrypt_buffer_exact() {
-		let mut state = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from([0u8; 32]),
-			&Nonce::from([0u8; 24]),
-		);
-		let text = [0u8; 16];
-		let mut out = [0u8; 16 + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
-		assert!(state
-			.seal_chunk(&text, None, &mut out, Tag::MESSAGE)
-			.is_ok());
-	}
-
-	#[test]
-	fn test_encrypt_buffer_longer() {
-		let mut state = SecretStreamXChaCha20Poly1305::new(
-			&SecretKey::from([0u8; 32]),
-			&Nonce::from([0u8; 24]),
-		);
-		let text = [0u8; 16];
-		let mut out = [0u8; (16 * 2) + SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
-		assert!(state
-			.seal_chunk(&text, None, &mut out, Tag::MESSAGE)
-			.is_ok());
-	}
-
-	#[test]
-	fn test_seal_open_zero_length() {
+	// This cannot be tested in AeadTestRunner as it assumes empty
+	// ciphertext to be invalid.
+	fn test_seal_empty_and_open() {
 		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
 			&SecretKey::from([0u8; 32]),
 			&Nonce::from([0u8; 24]),
 		);
-		let text = [0u8; 0];
+		let mut cipher = [0u8; SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		state_enc.seal_chunk(&[0u8; 0], None, &mut cipher, Tag::MESSAGE).unwrap();
+		
+		let mut state_dec = SecretStreamXChaCha20Poly1305::new(
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
+		);
+		
+		let mut out = [0u8; SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
+		assert!(state_dec.open_chunk(&cipher, None, &mut out).is_ok());
+	}
+
+	#[test]
+	// This cannot be tested in AeadTestRunner as it assumes empty
+	// ciphertext to be invalid. This also tests that input to open_chunk
+	// requires the tagsize only, and not tagsize + 1.
+	fn test_seal_open_zero_length_both() {
+		let mut state_enc = SecretStreamXChaCha20Poly1305::new(
+			&SecretKey::from([0u8; 32]),
+			&Nonce::from([0u8; 24]),
+		);
 		let mut out = [0u8; SECRETSTREAM_XCHACHA20POLY1305_ABYTES];
 		state_enc
-			.seal_chunk(&text, None, &mut out, Tag::MESSAGE)
+			.seal_chunk(&[0u8; 0], None, &mut out, Tag::MESSAGE)
 			.unwrap();
 		let mut state_dec = SecretStreamXChaCha20Poly1305::new(
 			&SecretKey::from([0u8; 32]),
 			&Nonce::from([0u8; 24]),
 		);
-		let mut text_out = [0u8; 0];
-		state_dec.open_chunk(&out, None, &mut text_out).unwrap();
-		assert_eq!(text, text_out);
+		let mut dst_out = [0u8; 0];
+		// Only the attached tag is decrypted and authenticated. But it is
+		// not placed in dst_out.
+		assert!(state_dec.open_chunk(&out, None, &mut dst_out).is_ok());
+		assert!(dst_out.is_empty());
+		assert!(dst_out == [0u8; 0]);
 	}
 
 	#[test]
