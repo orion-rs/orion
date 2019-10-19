@@ -164,9 +164,6 @@ matrix:
       script:
         - cargo test
         - cargo test --no-default-features --tests
-        - cargo test --no-default-features --features no_std --tests
-        - cargo test --no-default-features --features nightly
-    
 
 install:
   - cargo install cross || true
