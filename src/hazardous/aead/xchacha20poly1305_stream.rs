@@ -415,6 +415,7 @@ mod public {
 			SECRETSTREAM_XCHACHA20POLY1305_ABYTES,
 		};
 		use crate::test_framework::aead_interface::*;
+		use core::convert::TryFrom;
 
 		fn seal(
 			sk: &SecretKey,
@@ -475,6 +476,18 @@ mod public {
 				ct1 != ct2
 			}
 		}
+
+		quickcheck! {
+			fn prop_tag(byte: u8) -> bool {
+				match byte {
+					0u8 => Tag::try_from(byte).unwrap() == Tag::MESSAGE,
+					1u8 => Tag::try_from(byte).unwrap() == Tag::PUSH,
+					2u8 => Tag::try_from(byte).unwrap() == Tag::REKEY,
+					3u8 => Tag::try_from(byte).unwrap() == Tag::FINISH,
+					_ => Tag::try_from(byte).is_err(),
+				}
+			}
+		}
 	}
 }
 
@@ -507,6 +520,7 @@ mod private {
 		assert!(Tag::PUSH.as_byte() == 1u8);
 		assert!(Tag::REKEY.as_byte() == 2u8);
 		assert!(Tag::FINISH.as_byte() == 3u8);
+		assert!(Tag::try_from(4u8).is_err());
 	}
 
 	#[test]
