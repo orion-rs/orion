@@ -21,7 +21,6 @@
 // SOFTWARE.
 
 //! # About:
-//! Streaming AEAD encryption based on XChaCha20Poly1305.
 //!
 //! This implementation is based on and compatible with the ["secretstream" API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
 //! of libsodium.
@@ -72,11 +71,7 @@
 //!
 //! // Length of the above message is 15 and then we accommodate 17
 //! // for the mac and tag.
-//!
-//! let mut dst_out_ct = [
-//!		0u8;
-//!		15 + ABYTES
-//!	];
+//! let mut dst_out_ct = [0u8; 15 + ABYTES];
 //! let mut dst_out_pt = [0u8; 15];
 //!
 //!	let mut ctx_enc =
@@ -115,7 +110,6 @@ use crate::hazardous::stream::chacha20::{
 };
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::xchacha20::Nonce;
-pub use crate::hazardous::stream::xchacha20::XCHACHA_NONCESIZE;
 use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
 
