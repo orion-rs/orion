@@ -759,6 +759,70 @@ mod private {
 	}
 
 	#[test]
+	fn test_err_on_diff_tag() {
+		// Crate 4 different sealed chunks, sealed with the same input except for
+		// the StreamTag.
+		let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		let mut dst_out_msg = [0u8; 51 + ABYTES];
+		ctx.seal_chunk(
+			DEFAULT_MSG.as_ref(),
+			None,
+			&mut dst_out_msg,
+			StreamTag::MESSAGE,
+		)
+		.unwrap();
+
+		ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		let mut dst_out_push = [0u8; 51 + ABYTES];
+		ctx.seal_chunk(
+			DEFAULT_MSG.as_ref(),
+			None,
+			&mut dst_out_push,
+			StreamTag::PUSH,
+		)
+		.unwrap();
+
+		ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		let mut dst_out_rekey = [0u8; 51 + ABYTES];
+		ctx.seal_chunk(
+			DEFAULT_MSG.as_ref(),
+			None,
+			&mut dst_out_rekey,
+			StreamTag::REKEY,
+		)
+		.unwrap();
+
+		ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		let mut dst_out_finish = [0u8; 51 + ABYTES];
+		ctx.seal_chunk(
+			DEFAULT_MSG.as_ref(),
+			None,
+			&mut dst_out_finish,
+			StreamTag::FINISH,
+		)
+		.unwrap();
+
+		// Swap the StreamTags, which should decrypt successfully but fail authentication as
+		// it does not match the Poly1305 Tag calculated.
+		let mut dst_out_pt = [0u8; 51];
+
+		ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert!(ctx.open_chunk(&dst_out_msg, None, &mut dst_out_pt).is_ok());
+
+		dst_out_msg[0] = dst_out_push[0];
+		ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert!(ctx.open_chunk(&dst_out_msg, None, &mut dst_out_pt).is_err());
+
+		dst_out_msg[0] = dst_out_rekey[0];
+		ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert!(ctx.open_chunk(&dst_out_msg, None, &mut dst_out_pt).is_err());
+
+		dst_out_msg[0] = dst_out_finish[0];
+		ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
+		assert!(ctx.open_chunk(&dst_out_msg, None, &mut dst_out_pt).is_err());
+	}
+
+	#[test]
 	fn test_err_on_modified_message_tag() {
 		let mut s = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
 		let mut cipher1: [u8; 23] = [
@@ -770,7 +834,7 @@ mod private {
 
 		// Reset state
 		let mut s = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-		// Change tag to PUSH. Originally was MESSAGE.
+		// Change tag to PUSH plaintext. Originally was MESSAGE and encrypted.
 		cipher1[0] = StreamTag::PUSH.as_byte();
 		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
 	}
