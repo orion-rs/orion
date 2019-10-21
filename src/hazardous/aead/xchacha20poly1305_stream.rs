@@ -176,8 +176,6 @@ const SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES: usize = 8;
 /// Size of additional data appended to each message.
 pub const SECRETSTREAM_XCHACHA20POLY1305_ABYTES: usize =
 	POLY1305_OUTSIZE + core::mem::size_of::<u8>();
-/// Internal nonce used to derive IETF nonces.
-type INonce = [u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
 
 /// XOR two slices that are 8 bytes in size.
 fn xor_slices_8(out: &mut [u8], input: &[u8]) {
@@ -193,7 +191,7 @@ fn xor_slices_8(out: &mut [u8], input: &[u8]) {
 pub struct SecretStreamXChaCha20Poly1305 {
 	key: SecretKey,
 	counter: u32,
-	inonce: INonce,
+	inonce: [u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES],
 }
 
 impl core::fmt::Debug for SecretStreamXChaCha20Poly1305 {
@@ -220,14 +218,6 @@ impl SecretStreamXChaCha20Poly1305 {
 
 	/// Initialize a `SecretStreamXChaCha20Poly1305` struct with a given secret key and nonce.
 	pub fn new(secret_key: &SecretKey, nonce: &Nonce) -> Self {
-		const_assert!(SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES == core::mem::size_of::<u32>());
-		const_assert!(SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES == core::mem::size_of::<INonce>());
-		const_assert!(
-			SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES
-				+ SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES
-				== IETF_CHACHA_NONCESIZE
-		);
-
 		let mut inonce = [0u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
 		inonce.copy_from_slice(&nonce.as_ref()[HCHACHA_NONCESIZE..]);
 

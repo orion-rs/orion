@@ -70,9 +70,6 @@ extern crate zeroize;
 extern crate quickcheck;
 
 #[macro_use]
-extern crate static_assertions;
-
-#[macro_use]
 mod typedefs;
 
 /// Endianness conversion functions.
