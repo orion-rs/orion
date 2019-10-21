@@ -788,8 +788,8 @@ mod private {
 
 		// Reset state
 		let mut s = SecretStreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-		// Change tag
-		cipher1[0] = 0b1010_1010 | cipher1[0];
+		// Change tag to PUSH. Originally was MESSAGE.
+		cipher1[0] = Tag::PUSH.as_byte();
 		assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
 	}
 
