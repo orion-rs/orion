@@ -345,7 +345,7 @@ void stream_with_explicit_rekey(unsigned char *header, const unsigned char *key)
 
 int main() {
 
-  if (sodium_init() == -1)
+  if (sodium_init() != 0)
   {
     printf("[FATAL]: libsodium could not be initialized.");
     return 1;
