@@ -274,8 +274,6 @@ impl StreamXChaCha20Poly1305 {
 		}
 
 		let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, TAG_SIZE)?;
-
-		debug_assert!(dst_out.len() >= macpos + mac.get_length());
 		dst_out[macpos..(macpos + POLY1305_OUTSIZE)].copy_from_slice(mac.unprotected_as_bytes());
 
 		xor_slices_8(self.inonce.as_mut(), &dst_out[macpos..macpos + INONCEBYTES]);
