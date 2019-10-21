@@ -116,26 +116,54 @@ use crate::hazardous::stream::chacha20::{
 pub use crate::hazardous::stream::xchacha20::Nonce;
 use crate::hazardous::stream::xchacha20::{subkey_and_nonce, XCHACHA_NONCESIZE};
 
-use bitflags::bitflags;
+use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
 
-bitflags! {
-	/// Tag that indicates the type of message.
-	pub struct Tag: u8 {
+#[derive(Debug)]
+/// Tag that indicates the type of message.
+pub enum Tag {
+	/// A message with no special meaning.
+	MESSAGE,
+	/// Marks that the message is the end of a set of messages. Allows the decrypting site to
+	/// start working with this data.
+	PUSH,
+	/// Derives a new secret key and forgets the one used for earlier encryption/decryption
+	/// operations.
+	REKEY,
+	/// Indicates the end of a stream. Also does a rekey.
+	FINISH,
+}
 
-		/// A message with no special meaning.
-		const MESSAGE = 0b0000_0000;
+impl Tag {
+	#[inline(always)]
+	/// Return the tag as a byte.
+	pub fn as_byte(&self) -> u8 {
+		match *self {
+			Tag::MESSAGE => 0b0000_0000,
+			Tag::PUSH => 0b0000_0001,
+			Tag::REKEY => 0b0000_0010,
+			Tag::FINISH => 0b0000_0011, // Tag::PUSH.as_byte() | Tag::REKEY.as_bytes()
+		}
+	}
+}
 
-		/// Marks that the message is the end of a set of messages. Allows the decrypting site to
-		/// start working with this data.
-		const PUSH = 0b0000_0001;
+impl TryFrom<u8> for Tag {
+	type Error = UnknownCryptoError;
 
-		/// Derives a new secret key and forgets the one used for earlier encryption/decryption
-		/// operations.
-		const REKEY = 0b0000_0010;
+	fn try_from(byte: u8) -> Result<Self, Self::Error> {
+		match byte {
+			0b0000_0000 => Ok(Self::MESSAGE),
+			0b0000_0001 => Ok(Self::PUSH),
+			0b0000_0010 => Ok(Self::REKEY),
+			0b0000_0011 => Ok(Self::FINISH),
+			_ => Err(UnknownCryptoError),
+		}
+	}
+}
 
-		/// Indicates the end of a stream. Also does a rekey.
-		const FINISH = Self::PUSH.bits | Self::REKEY.bits;
+impl core::cmp::PartialEq<Tag> for Tag {
+	fn eq(&self, other: &Tag) -> bool {
+		(self.as_byte().ct_eq(&other.as_byte())).into()
 	}
 }
 
@@ -147,7 +175,7 @@ const SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES: usize = 4;
 const SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES: usize = 8;
 /// Size of additional data appended to each message.
 pub const SECRETSTREAM_XCHACHA20POLY1305_ABYTES: usize =
-	POLY1305_OUTSIZE + core::mem::size_of::<Tag>();
+	POLY1305_OUTSIZE + core::mem::size_of::<u8>();
 /// Internal nonce used to derive IETF nonces.
 type INonce = [u8; SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES];
 
@@ -251,10 +279,10 @@ impl SecretStreamXChaCha20Poly1305 {
 			Some(v) => v,
 			None => &[0u8; 0],
 		};
-		let cipherpos = core::mem::size_of::<Tag>();
+		let cipherpos = core::mem::size_of::<u8>();
 		let macpos = cipherpos + msglen;
 
-		block[0] = tag.bits();
+		block[0] = tag.as_byte();
 		chacha20_xor_stream(&self.key, &self.get_nonce(), 1, &mut block)?;
 		dst_out[0] = block[0];
 
@@ -279,7 +307,9 @@ impl SecretStreamXChaCha20Poly1305 {
 		);
 		self.counter = self.counter.wrapping_add(1);
 
-		if bool::from(!(tag.bits() & Tag::REKEY.bits()).ct_eq(&0u8) | self.counter.ct_eq(&0u32)) {
+		if bool::from(
+			!(tag.as_byte() & Tag::REKEY.as_byte()).ct_eq(&0u8) | self.counter.ct_eq(&0u32),
+		) {
 			self.rekey()?;
 		}
 
@@ -314,7 +344,7 @@ impl SecretStreamXChaCha20Poly1305 {
 
 		block[0] = ciphertext[0];
 		chacha20_xor_stream(&self.key, &self.get_nonce(), 1, &mut block)?;
-		let tag = Tag::from_bits(block[0]).ok_or(UnknownCryptoError)?;
+		let tag = Tag::try_from(block[0])?;
 		block[0] = ciphertext[0];
 		let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, msgpos)?;
 		if !(mac == &ciphertext[macpos..macpos + mac.get_length()]) {
@@ -331,7 +361,9 @@ impl SecretStreamXChaCha20Poly1305 {
 		}
 		xor_slices_8(self.inonce.as_mut(), &mac.unprotected_as_bytes()[..8]);
 		self.counter = self.counter.wrapping_add(1);
-		if bool::from(!(tag.bits() & Tag::REKEY.bits()).ct_eq(&0u8) | self.counter.ct_eq(&0u32)) {
+		if bool::from(
+			!(tag.as_byte() & Tag::REKEY.as_byte()).ct_eq(&0u8) | self.counter.ct_eq(&0u32),
+		) {
 			self.rekey()?;
 		}
 
@@ -471,10 +503,10 @@ mod private {
 
 	#[test]
 	fn test_tag() {
-		assert!(Tag::MESSAGE.bits() == 0u8);
-		assert!(Tag::PUSH.bits() == 1u8);
-		assert!(Tag::REKEY.bits() == 2u8);
-		assert!(Tag::FINISH.bits() == 3u8);
+		assert!(Tag::MESSAGE.as_byte() == 0u8);
+		assert!(Tag::PUSH.as_byte() == 1u8);
+		assert!(Tag::REKEY.as_byte() == 2u8);
+		assert!(Tag::FINISH.as_byte() == 3u8);
 	}
 
 	#[test]
