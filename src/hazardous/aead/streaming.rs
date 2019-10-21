@@ -258,19 +258,14 @@ impl StreamXChaCha20Poly1305 {
 		};
 
 		let macpos = TAG_SIZE + msglen;
+		let nonce = self.get_nonce();
 
 		block[0] = tag.as_byte();
-		chacha20_xor_stream(&self.key, &self.get_nonce(), 1, &mut block)?;
+		chacha20_xor_stream(&self.key, &nonce, 1, &mut block)?;
 		dst_out[0] = block[0];
 
 		if msglen != 0 {
-			chacha20_enc(
-				&self.key,
-				&self.get_nonce(),
-				2,
-				plaintext,
-				&mut dst_out[TAG_SIZE..],
-			)?;
+			chacha20_enc(&self.key, &nonce, 2, plaintext, &mut dst_out[TAG_SIZE..])?;
 		}
 
 		let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, TAG_SIZE)?;
@@ -312,9 +307,10 @@ impl StreamXChaCha20Poly1305 {
 		};
 
 		let macpos = TAG_SIZE + msglen;
+		let nonce = self.get_nonce();
 
 		block[0] = ciphertext[0];
-		chacha20_xor_stream(&self.key, &self.get_nonce(), 1, &mut block)?;
+		chacha20_xor_stream(&self.key, &nonce, 1, &mut block)?;
 		let tag = StreamTag::try_from(block[0])?;
 		block[0] = ciphertext[0];
 		let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, TAG_SIZE)?;
@@ -324,7 +320,7 @@ impl StreamXChaCha20Poly1305 {
 		if msglen != 0 {
 			chacha20_enc(
 				&self.key,
-				&self.get_nonce(),
+				&nonce,
 				2,
 				&ciphertext[TAG_SIZE..(TAG_SIZE + msglen)],
 				dst_out,
