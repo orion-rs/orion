@@ -199,7 +199,7 @@ impl core::fmt::Debug for StreamXChaCha20Poly1305 {
 
 impl StreamXChaCha20Poly1305 {
 	/// Return a nonce used with ChaCha20Poly1305 based on the internal counter
-	/// and INonce.
+	/// and inonce.
 	fn get_nonce(&self) -> IETFNonce {
 		let mut nonce = [0u8; IETF_CHACHA_NONCESIZE];
 		nonce[..COUNTERBYTES].copy_from_slice(&self.counter.to_le_bytes());
