@@ -102,7 +102,7 @@
 //! ```
 //! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
 //! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
-//! [`Tag`]: struct.Tag.html
+//! [`Tag`]: enum.Tag.html
 //! [`SECRETSTREAM_XCHACHA20POLY1305_ABYTES`]: constant.SECRETSTREAM_XCHACHA20POLY1305_ABYTES.html
 
 use crate::errors::UnknownCryptoError;
@@ -173,9 +173,10 @@ pub const SECRETSTREAM_XCHACHA20POLY1305_NONCESIZE: usize = XCHACHA_NONCESIZE;
 const SECRETSTREAM_XCHACHA20POLY1305_COUNTERBYTES: usize = 4;
 /// The size of the internal nonce.
 const SECRETSTREAM_XCHACHA20POLY1305_INONCEBYTES: usize = 8;
+/// The size of a Tag.
+const SECRETSTREAM_TAG_SIZE: usize = 1;
 /// Size of additional data appended to each message.
-pub const SECRETSTREAM_XCHACHA20POLY1305_ABYTES: usize =
-	POLY1305_OUTSIZE + core::mem::size_of::<u8>();
+pub const SECRETSTREAM_XCHACHA20POLY1305_ABYTES: usize = POLY1305_OUTSIZE + SECRETSTREAM_TAG_SIZE;
 
 /// XOR two slices that are 8 bytes in size.
 fn xor_slices_8(out: &mut [u8], input: &[u8]) {
@@ -269,8 +270,8 @@ impl SecretStreamXChaCha20Poly1305 {
 			Some(v) => v,
 			None => &[0u8; 0],
 		};
-		let cipherpos = core::mem::size_of::<u8>();
-		let macpos = cipherpos + msglen;
+
+		let macpos = SECRETSTREAM_TAG_SIZE + msglen;
 
 		block[0] = tag.as_byte();
 		chacha20_xor_stream(&self.key, &self.get_nonce(), 1, &mut block)?;
@@ -282,11 +283,11 @@ impl SecretStreamXChaCha20Poly1305 {
 				&self.get_nonce(),
 				2,
 				plaintext,
-				&mut dst_out[cipherpos..],
+				&mut dst_out[SECRETSTREAM_TAG_SIZE..],
 			)?;
 		}
 
-		let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, cipherpos)?;
+		let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, SECRETSTREAM_TAG_SIZE)?;
 
 		debug_assert!(dst_out.len() >= macpos + mac.get_length());
 		dst_out[macpos..(macpos + POLY1305_OUTSIZE)].copy_from_slice(mac.unprotected_as_bytes());
@@ -329,14 +330,13 @@ impl SecretStreamXChaCha20Poly1305 {
 			None => &[0u8; 0],
 		};
 
-		let msgpos = core::mem::size_of::<Tag>();
-		let macpos = msgpos + msglen;
+		let macpos = SECRETSTREAM_TAG_SIZE + msglen;
 
 		block[0] = ciphertext[0];
 		chacha20_xor_stream(&self.key, &self.get_nonce(), 1, &mut block)?;
 		let tag = Tag::try_from(block[0])?;
 		block[0] = ciphertext[0];
-		let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, msgpos)?;
+		let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, SECRETSTREAM_TAG_SIZE)?;
 		if !(mac == &ciphertext[macpos..macpos + mac.get_length()]) {
 			return Err(UnknownCryptoError);
 		}
@@ -345,7 +345,7 @@ impl SecretStreamXChaCha20Poly1305 {
 				&self.key,
 				&self.get_nonce(),
 				2,
-				&ciphertext[msgpos..(msgpos + msglen)],
+				&ciphertext[SECRETSTREAM_TAG_SIZE..(SECRETSTREAM_TAG_SIZE + msglen)],
 				dst_out,
 			)?;
 		}
