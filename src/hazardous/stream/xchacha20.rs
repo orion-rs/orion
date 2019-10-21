@@ -93,7 +93,7 @@ pub const XCHACHA_NONCESIZE: usize = 24;
 
 construct_public! {
 	/// A type that represents a `Nonce` that XChaCha20, XChaCha20Poly1305 and
-	/// SecretStreamXChaCha20Poly1305 use.
+	/// StreamXChaCha20Poly1305 use.
 	///
 	/// # Errors:
 	/// An error will be returned if:
