@@ -41,15 +41,15 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::hash::sha512;
+//! use orion::hazardous::hash::sha512::Sha512;
 //!
 //! // Using the streaming interface
-//! let mut state = sha512::Sha512::new();
+//! let mut state = Sha512::new();
 //! state.update(b"Hello world")?;
 //! let hash = state.finalize()?;
 //!
 //! // Using the one-shot function
-//! let hash_one_shot = sha512::digest(b"Hello world")?;
+//! let hash_one_shot = Sha512::digest(b"Hello world")?;
 //!
 //! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
@@ -399,14 +399,14 @@ impl Sha512 {
 
 		Ok(Digest::from(digest))
 	}
-}
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Calculate a SHA512 digest of some `data`.
-pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
-	let mut state = Sha512::new();
-	state.update(data)?;
-	state.finalize()
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// Calculate a SHA512 digest of some `data`.
+	pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
+		let mut state = Self::new();
+		state.update(data)?;
+		state.finalize()
+	}
 }
 
 #[cfg(test)]
@@ -443,7 +443,7 @@ mod public {
 			}
 
 			fn one_shot(input: &[u8]) -> Result<Digest, UnknownCryptoError> {
-				digest(input)
+				Sha512::digest(input)
 			}
 
 			fn verify_result(expected: &Digest, input: &[u8]) -> Result<(), UnknownCryptoError> {

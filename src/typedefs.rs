@@ -642,14 +642,14 @@ macro_rules! construct_hmac_key {
             #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
             /// Construct from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-                use crate::hazardous::hash::sha512::{self, SHA512_OUTSIZE};
+                use crate::hazardous::hash::sha512::{Sha512, SHA512_OUTSIZE};
 
                 let mut secret_key = [0u8; $size];
 
                 let slice_len = slice.len();
 
                 if slice_len > $size {
-                    secret_key[..SHA512_OUTSIZE].copy_from_slice(&sha512::digest(slice)?.as_ref());
+                    secret_key[..SHA512_OUTSIZE].copy_from_slice(&Sha512::digest(slice)?.as_ref());
                 } else {
                     secret_key[..slice_len].copy_from_slice(slice);
                 }

@@ -49,7 +49,9 @@ mod mac {
 			group.bench_with_input(
 				BenchmarkId::new("compute mac", *size),
 				&input,
-				|b, input_message| b.iter(|| poly1305::poly1305(&key, &input_message).unwrap()),
+				|b, input_message| {
+					b.iter(|| poly1305::Poly1305::poly1305(&key, &input_message).unwrap())
+				},
 			);
 		}
 	}
@@ -67,7 +69,7 @@ mod mac {
 			group.bench_with_input(
 				BenchmarkId::new("compute mac", *size),
 				&input,
-				|b, input_message| b.iter(|| hmac::hmac(&key, &input_message).unwrap()),
+				|b, input_message| b.iter(|| hmac::Hmac::hmac(&key, &input_message).unwrap()),
 			);
 		}
 	}
@@ -156,7 +158,7 @@ mod hash {
 			group.bench_with_input(
 				BenchmarkId::new("compute hash", *size),
 				&input,
-				|b, input_message| b.iter(|| sha512::digest(&input_message).unwrap()),
+				|b, input_message| b.iter(|| sha512::Sha512::digest(&input_message).unwrap()),
 			);
 		}
 	}
