@@ -16,7 +16,7 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 
 	state.update(input).unwrap();
 	let digest = state.finalize().unwrap();
-	assert!(digest.get_length() == output.len());
+	assert!(digest.len() == output.len());
 	assert!(digest.as_ref() == &output[..]);
 }
 

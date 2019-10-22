@@ -118,7 +118,7 @@ pub fn derive_key_verify(
 	salt: &Salt,
 	iterations: usize,
 ) -> Result<(), UnknownCryptoError> {
-	let mut buffer = vec![0u8; expected.get_length()];
+	let mut buffer = vec![0u8; expected.len()];
 
 	pbkdf2::verify(
 		expected.unprotected_as_bytes(),

@@ -186,12 +186,12 @@ macro_rules! func_unprotected_as_bytes (() => (
     }
 ));
 
-/// Macro to implement a `get_length()` function which will return the objects'
+/// Macro to implement a `len()` function which will return the objects'
 /// length of field `value`.
-macro_rules! func_get_length (() => (
+macro_rules! func_len (() => (
     #[inline]
     /// Return the length of the object.
-    pub fn get_length(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.original_length
     }
 ));
@@ -288,22 +288,22 @@ macro_rules! test_as_bytes_and_get_length (($name:ident, $lower_bound:expr, $upp
         let test_upper = $name::from_slice(&[0u8; $upper_bound]).unwrap();
         let test_lower = $name::from_slice(&[0u8; $lower_bound]).unwrap();
 
-        assert!(test_upper.$bytes_function().len() == test_upper.get_length());
-        assert!(test_upper.get_length() == $upper_bound);
+        assert!(test_upper.$bytes_function().len() == test_upper.len());
+        assert!(test_upper.len() == $upper_bound);
 
-        assert!(test_lower.$bytes_function().len() == test_lower.get_length());
-        assert!(test_lower.get_length() == $lower_bound);
+        assert!(test_lower.$bytes_function().len() == test_lower.len());
+        assert!(test_lower.len() == $lower_bound);
 
         // Test non-fixed-length definitions
         if $lower_bound != $upper_bound {
             let test_upper = $name::from_slice(&[0u8; $upper_bound - 1]).unwrap();
             let test_lower = $name::from_slice(&[0u8; $lower_bound + 1]).unwrap();
 
-            assert!(test_upper.$bytes_function().len() == test_upper.get_length());
-            assert!(test_upper.get_length() == $upper_bound - 1);
+            assert!(test_upper.$bytes_function().len() == test_upper.len());
+            assert!(test_upper.len() == $upper_bound - 1);
 
-            assert!(test_lower.$bytes_function().len() == test_lower.get_length());
-            assert!(test_lower.get_length() == $lower_bound + 1);
+            assert!(test_lower.$bytes_function().len() == test_lower.len());
+            assert!(test_lower.len() == $lower_bound + 1);
         }
     }
 ));
@@ -319,7 +319,7 @@ macro_rules! test_generate (($name:ident, $gen_length:expr) => (
         let test_rand = $name::generate();
         assert!(test_zero != test_rand);
         // A random generated one should always be $gen_length in length.
-        assert!(test_rand.get_length() == $gen_length);
+        assert!(test_rand.len() == $gen_length);
     }
 ));
 
@@ -364,7 +364,7 @@ macro_rules! test_generate_variable (($name:ident) => (
         // A random one should never be all 0's.
         let test_rand = $name::generate(128).unwrap();
         assert!(test_zero != test_rand);
-        assert!(test_rand.get_length() == 128);
+        assert!(test_rand.len() == 128);
     }
 ));
 
@@ -424,7 +424,7 @@ macro_rules! construct_secret_key {
             func_from_slice!($name, $lower_bound, $upper_bound);
             func_unprotected_as_bytes!();
             func_generate!($name, $upper_bound, $gen_length);
-            func_get_length!();
+            func_len!();
         }
 
         #[cfg(test)]
@@ -480,7 +480,7 @@ macro_rules! construct_public {
 
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
-            func_get_length!();
+            func_len!();
         }
 
         #[cfg(test)]
@@ -512,7 +512,7 @@ macro_rules! construct_public {
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
             func_generate!($name, $upper_bound, $gen_length);
-            func_get_length!();
+            func_len!();
         }
 
         #[cfg(test)]
@@ -577,7 +577,7 @@ macro_rules! construct_tag {
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
             func_unprotected_as_bytes!();
-            func_get_length!();
+            func_len!();
         }
 
         #[cfg(test)]
@@ -659,7 +659,7 @@ macro_rules! construct_hmac_key {
 
             func_unprotected_as_bytes!();
             func_generate!($name, $size, $size);
-            func_get_length!();
+            func_len!();
         }
 
         #[test]
@@ -688,8 +688,8 @@ macro_rules! construct_hmac_key {
         #[test]
         fn test_get_length_hmac_key() {
             let test = $name::from_slice(&[0u8; $size]).unwrap();
-            assert!(test.unprotected_as_bytes().len() == test.get_length());
-            assert!($size == test.get_length());
+            assert!(test.unprotected_as_bytes().len() == test.len());
+            assert!($size == test.len());
         }
 
         #[test]
@@ -700,7 +700,7 @@ macro_rules! construct_hmac_key {
             let test_rand = $name::generate();
             assert!(test_zero != test_rand);
             // A random generated one should always be $size in length.
-            assert!(test_rand.get_length() == $size);
+            assert!(test_rand.len() == $size);
         }
 
         #[test]
@@ -762,7 +762,7 @@ macro_rules! construct_secret_key_variable_size {
         impl $name {
             func_from_slice_variable_size!($name);
             func_unprotected_as_bytes!();
-            func_get_length!();
+            func_len!();
             func_generate_variable_size!($name);
         }
 
@@ -800,7 +800,7 @@ macro_rules! construct_salt_variable_size {
 
         impl $name {
             func_from_slice_variable_size!($name);
-            func_get_length!();
+            func_len!();
             func_generate_variable_size!($name);
         }
 

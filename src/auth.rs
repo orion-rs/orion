@@ -79,7 +79,7 @@ const BLAKE2B_MIN_KEY_SIZE: usize = 32;
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Authenticate a message using BLAKE2b-256 in keyed mode.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
+	if secret_key.len() < BLAKE2B_MIN_KEY_SIZE {
 		return Err(UnknownCryptoError);
 	}
 	let blake2b_secret_key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
@@ -96,7 +96,7 @@ pub fn authenticate_verify(
 	secret_key: &SecretKey,
 	data: &[u8],
 ) -> Result<(), UnknownCryptoError> {
-	if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
+	if secret_key.len() < BLAKE2B_MIN_KEY_SIZE {
 		return Err(UnknownCryptoError);
 	}
 	let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;

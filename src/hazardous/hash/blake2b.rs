@@ -335,7 +335,7 @@ impl Blake2b {
 		match secret_key {
 			Some(sk) => {
 				context.is_keyed = true;
-				let klen = sk.get_length();
+				let klen = sk.len();
 				context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
 				context.init_state.copy_from_slice(&context.internal_state);
 				context.update(sk.unprotected_as_bytes())?;
@@ -376,7 +376,7 @@ impl Blake2b {
 				self.update(sk.unprotected_as_bytes())?;
 				// The state needs updating with the secret key padded to blocksize length
 				let pad = [0u8; BLAKE2B_BLOCKSIZE];
-				let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
+				let rem = BLAKE2B_BLOCKSIZE - sk.len();
 				self.update(pad[..rem].as_ref())
 			}
 			None => Ok(()),
