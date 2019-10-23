@@ -24,7 +24,7 @@
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
 //! - `ad`: Additional data to authenticate (this is not encrypted and can be
-//!   `None`).
+//!   `None`. This data is also not a part of `dst_out`).
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 16 byte
 //!   Poly1305 tag
 //! appended to it.
@@ -71,7 +71,7 @@
 //! let ad = "Additional data".as_bytes();
 //! let message = "Data to protect".as_bytes();
 //!
-//! // Length of above message is 15 and then we accomodate 16 for the Poly1305
+//! // Length of the above message is 15 and then we accommodate 16 for the Poly1305
 //! // tag.
 //!
 //! let mut dst_out_ct = [0u8; 15 + 16];

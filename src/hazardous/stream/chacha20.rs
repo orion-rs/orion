@@ -109,11 +109,11 @@ pub const CHACHA_KEYSIZE: usize = 32;
 /// The nonce size for IETF ChaCha20.
 pub const IETF_CHACHA_NONCESIZE: usize = 12;
 /// The blocksize which ChaCha20 operates on.
-const CHACHA_BLOCKSIZE: usize = 64;
+pub(crate) const CHACHA_BLOCKSIZE: usize = 64;
 /// The size of the subkey that HChaCha20 returns.
 const HCHACHA_OUTSIZE: usize = 32;
 /// The nonce size for HChaCha20.
-const HCHACHA_NONCESIZE: usize = 16;
+pub(crate) const HCHACHA_NONCESIZE: usize = 16;
 
 construct_secret_key! {
 	/// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and
@@ -401,7 +401,7 @@ impl Serialize {
 }
 
 /// In-place IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-fn encrypt_in_place(
+pub(crate) fn encrypt_in_place(
 	secret_key: &SecretKey,
 	nonce: &Nonce,
 	initial_counter: u32,
