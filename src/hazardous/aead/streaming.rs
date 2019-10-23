@@ -165,7 +165,7 @@ impl core::cmp::PartialEq<StreamTag> for StreamTag {
 const COUNTERBYTES: usize = 4;
 /// The size of the internal nonce.
 const INONCEBYTES: usize = 8;
-/// The size of a Stream.
+/// The size of a StreamTag.
 const TAG_SIZE: usize = 1;
 /// Size of additional data appended to each message.
 pub const ABYTES: usize = POLY1305_OUTSIZE + TAG_SIZE;
