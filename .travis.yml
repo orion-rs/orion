@@ -159,6 +159,11 @@ matrix:
       script:
         - cargo doc --no-deps
     
+    - name: "Minimum Supported Rust Version"
+      rust: 1.36.0
+      script:
+        - cargo test
+        - cargo test --no-default-features --tests
 
 install:
   - cargo install cross || true
