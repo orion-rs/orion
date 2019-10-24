@@ -208,6 +208,60 @@ impl StreamXChaCha20Poly1305 {
 		IETFNonce::from(nonce)
 	}
 
+	/// Generates a Poly1305 tag for a message.
+	fn generate_auth_tag(
+		&mut self,
+		text: &[u8],
+		ad: &[u8],
+		msglen: usize,
+		block: &[u8],
+		textpos: usize,
+	) -> Result<Poly1305Tag, UnknownCryptoError> {
+		debug_assert!(text.len() >= textpos + msglen);
+
+		let mut pad = [0u8; 16];
+		let mut poly = Poly1305::new(&poly1305_key_gen(&self.key, &self.get_nonce())?);
+
+		if !ad.is_empty() {
+			poly.update(ad)?;
+			poly.update(&pad[..padding(ad.len())])?;
+		}
+		poly.update(block)?;
+		poly.update(&text[textpos..(textpos + msglen)])?;
+		poly.update(&pad[..padding(CHACHA_BLOCKSIZE.wrapping_sub(msglen))])?;
+		pad[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
+		pad[8..16].copy_from_slice(
+			&((CHACHA_BLOCKSIZE as u64)
+				.checked_add(msglen as u64)
+				.unwrap())
+			.to_le_bytes(),
+		);
+		poly.update(&pad)?;
+
+		poly.finalize()
+	}
+
+	/// Update internal inonce and counter. Performs rekey on overflowing counter and
+	/// designated tags.
+	fn advance_state(
+		&mut self,
+		mac: &Poly1305Tag,
+		tag: &StreamTag,
+	) -> Result<(), UnknownCryptoError> {
+		xor_slices_8(
+			self.inonce.as_mut(),
+			&mac.unprotected_as_bytes()[..INONCEBYTES],
+		);
+		self.counter = self.counter.wrapping_add(1);
+		if bool::from(
+			!(tag.as_byte() & StreamTag::REKEY.as_byte()).ct_eq(&0u8) | self.counter.ct_eq(&0u32),
+		) {
+			self.rekey()?;
+		};
+
+		Ok(())
+	}
+
 	/// Initialize a `StreamXChaCha20Poly1305` struct with a given secret key and nonce.
 	pub fn new(secret_key: &SecretKey, nonce: &Nonce) -> Self {
 		let mut inonce = [0u8; INONCEBYTES];
@@ -271,16 +325,7 @@ impl StreamXChaCha20Poly1305 {
 		let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, TAG_SIZE)?;
 		dst_out[macpos..(macpos + POLY1305_OUTSIZE)].copy_from_slice(mac.unprotected_as_bytes());
 
-		xor_slices_8(self.inonce.as_mut(), &dst_out[macpos..macpos + INONCEBYTES]);
-		self.counter = self.counter.wrapping_add(1);
-
-		if bool::from(
-			!(tag.as_byte() & StreamTag::REKEY.as_byte()).ct_eq(&0u8) | self.counter.ct_eq(&0u32),
-		) {
-			self.rekey()?;
-		}
-
-		Ok(())
+		self.advance_state(&mac, &tag)
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -326,48 +371,9 @@ impl StreamXChaCha20Poly1305 {
 				dst_out,
 			)?;
 		}
-		xor_slices_8(self.inonce.as_mut(), &mac.unprotected_as_bytes()[..8]);
-		self.counter = self.counter.wrapping_add(1);
-		if bool::from(
-			!(tag.as_byte() & StreamTag::REKEY.as_byte()).ct_eq(&0u8) | self.counter.ct_eq(&0u32),
-		) {
-			self.rekey()?;
-		}
+		self.advance_state(&mac, &tag)?;
 
 		Ok(tag)
-	}
-
-	/// Generates a Poly1305 tag for a message.
-	fn generate_auth_tag(
-		&mut self,
-		text: &[u8],
-		ad: &[u8],
-		msglen: usize,
-		block: &[u8],
-		textpos: usize,
-	) -> Result<Poly1305Tag, UnknownCryptoError> {
-		debug_assert!(text.len() >= textpos + msglen);
-
-		let mut pad = [0u8; 16];
-		let mut poly = Poly1305::new(&poly1305_key_gen(&self.key, &self.get_nonce())?);
-
-		if !ad.is_empty() {
-			poly.update(ad)?;
-			poly.update(&pad[..padding(ad.len())])?;
-		}
-		poly.update(block)?;
-		poly.update(&text[textpos..(textpos + msglen)])?;
-		poly.update(&pad[..padding(CHACHA_BLOCKSIZE.wrapping_sub(msglen))])?;
-		pad[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
-		pad[8..16].copy_from_slice(
-			&((CHACHA_BLOCKSIZE as u64)
-				.checked_add(msglen as u64)
-				.unwrap())
-			.to_le_bytes(),
-		);
-		poly.update(&pad)?;
-
-		poly.finalize()
 	}
 }
 
