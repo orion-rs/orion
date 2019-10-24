@@ -67,7 +67,7 @@ fn test_unknown_crypto_from_getrandom() {
 	// Choose some random error code.
 	let err_code = NonZeroU32::new(12).unwrap();
 	let err_foreign: getrandom::Error = getrandom::Error::from(err_code);
-	
+
 	// Tests Debug impl though "{:?}"
 	let err = format!("{:?}", UnknownCryptoError::from(err_foreign));
 	assert_eq!(err, "UnknownCryptoError");
