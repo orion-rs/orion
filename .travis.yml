@@ -160,7 +160,7 @@ matrix:
         - cargo doc --no-deps
     
     - name: "Minimum Supported Rust Version"
-      rust: 1.36.0
+      rust: 1.37.0
       script:
         - cargo test
         - cargo test --no-default-features --tests
