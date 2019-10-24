@@ -99,10 +99,7 @@ pub fn hash_password(
 		&mut buffer[64..],
 	)?;
 
-	let dk = PasswordHash::from_slice(&buffer)?;
-	buffer.zeroize();
-
-	Ok(dk)
+	Ok(PasswordHash::from(buffer))
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
