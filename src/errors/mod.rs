@@ -58,3 +58,20 @@ fn test_unknown_crypto_error_debug_display() {
 	let err = format!("{}", UnknownCryptoError);
 	assert_eq!(err, "UnknownCryptoError");
 }
+
+#[test]
+#[cfg(feature = "safe_api")]
+// format! is only available with std
+fn test_unknown_crypto_from_getrandom() {
+	use core::num::NonZeroU32;
+	// Choose some random error code.
+	let err_code = NonZeroU32::new(12).unwrap();
+	let err_foreign: getrandom::Error = getrandom::Error::from(err_code);
+	
+	// Tests Debug impl though "{:?}"
+	let err = format!("{:?}", UnknownCryptoError::from(err_foreign));
+	assert_eq!(err, "UnknownCryptoError");
+	// Tests Display impl though "{}"
+	let err = format!("{}", UnknownCryptoError::from(err_foreign));
+	assert_eq!(err, "UnknownCryptoError");
+}
