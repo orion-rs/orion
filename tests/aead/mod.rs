@@ -161,7 +161,7 @@ fn wycheproof_test_runner(
 
 		// Test case results may be invalid, but this does not mean both seal() and
 		// open() fails. We use a match arm to allow failure combinations, with
-		// possible successfull calls, but never a combination of two successfull
+		// possible successful calls, but never a combination of two successful
 		// calls where the output matches the expected values.
 		match (encryption, decryption) {
 			(Ok(_), Err(_)) => (),

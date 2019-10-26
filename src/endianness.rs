@@ -395,7 +395,7 @@ mod public {
 		assert_eq!(load_u32_le(&input_0), expected_0);
 	}
 
-	// Proptests. Only exectued when NOT testing no_std.
+	// Proptests. Only executed when NOT testing no_std.
 	#[cfg(feature = "safe_api")]
 	mod proptest {
 		use super::*;

@@ -135,7 +135,7 @@ pub(crate) fn padding(input: usize) -> usize {
 #[inline]
 /// Process data to be authenticated using a `Poly1305` struct initialized with
 /// a one-time-key. Up to `buf_in_len` data in `buf` get's authenticated. The
-/// indexing is needed because authentication happens on different input lenghts
+/// indexing is needed because authentication happens on different input lengths
 /// in seal()/open().
 fn process_authentication(
 	poly1305_state: &mut poly1305::Poly1305,
@@ -307,7 +307,7 @@ mod private {
 			assert_eq!(padding(16), 0);
 		}
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;

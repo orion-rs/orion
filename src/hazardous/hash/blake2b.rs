@@ -537,7 +537,7 @@ mod public {
 			test_runner.run_all_tests();
 		}
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
@@ -587,7 +587,7 @@ mod public {
 			assert!(new_tester(Some(&sk), 1));
 		}
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
@@ -610,7 +610,7 @@ mod public {
 	mod test_verify {
 		use super::*;
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
@@ -653,7 +653,7 @@ mod public {
 			let _state_512 = Hasher::Blake2b512.init().unwrap();
 		}
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
@@ -894,7 +894,7 @@ mod public {
 			produces_same_hash(Some(&sk), 28, b"");
 		}
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;

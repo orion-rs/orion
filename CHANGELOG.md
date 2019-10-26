@@ -59,7 +59,7 @@ __Changelog:__
 - [Automated testing in CI, for constant-time execution](https://github.com/brycx/orion-dudect).
 - Added `From<[u8; C]>` trait implementations for C-length fixed-sized newtypes, so that the caller may avoid using `Result` when not working with slices.
 - [Breaking change] Module `hazardous::constants` has been removed and all types made private. Only a select number of constants have been re-exported in their respective modules. See [here for more information](https://github.com/brycx/orion/pull/72).
-- It is now strictly advised agianst using orion in debug mode, for what is meant to be production use. Using `opt-level = 0` with orion, is also advised against. See [security section](https://github.com/brycx/orion/wiki/Security#release-and-codegen-options).
+- It is now strictly advised against using orion in debug mode, for what is meant to be production use. Using `opt-level = 0` with orion, is also advised against. See [security section](https://github.com/brycx/orion/wiki/Security#release-and-codegen-options).
 - `rand_os` has been replaced with `getrandom`.
 - Improvements to documentation examples as they no longer use `.unwrap()` but `?` instead.
 
@@ -257,7 +257,7 @@ __Date:__ October 7, 2018.
 __Changelog:__
 
 - Added AEAD ChaCha20Poly1305 from [RFC 8439](https://tools.ietf.org/html/rfc8439)
-- Added `keystream_block()` public function to retreive a keystream from `chacha20`
+- Added `keystream_block()` public function to retrieve a keystream from `chacha20`
 - Added Poly1305 from [RFC 8439](https://tools.ietf.org/html/rfc8439)
 - `default::encrypt` and `default::decrypt` removed until orion offers XChaCha20 with Poly1305
 - Documentation improvement

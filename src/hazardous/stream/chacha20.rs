@@ -516,7 +516,7 @@ mod public {
 		use super::*;
 		use crate::test_framework::streamcipher_interface::*;
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
@@ -726,7 +726,7 @@ mod public {
 			assert!(keystream1[..] != keystream2[..]);
 		}
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
@@ -1232,7 +1232,7 @@ mod private {
 			);
 		}
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;

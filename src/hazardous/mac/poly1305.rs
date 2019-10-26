@@ -435,7 +435,7 @@ mod public {
 	mod test_verify {
 		use super::*;
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
@@ -510,7 +510,7 @@ mod public {
 			test_runner.run_all_tests();
 		}
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;

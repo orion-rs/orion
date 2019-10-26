@@ -272,7 +272,7 @@ impl Sha512 {
 	fn increment_mlen(&mut self, length: u64) {
 		// The checked shift checks that the right-hand side is a legal shift.
 		// The result can still overflow if length > u64::max_value() / 8.
-		// Should be impossible for a user to trigger, becuase update() processes
+		// Should be impossible for a user to trigger, because update() processes
 		// in SHA512_BLOCKSIZE chunks.
 		debug_assert!(length <= u64::max_value() / 8);
 
@@ -472,7 +472,7 @@ mod public {
 			test_runner.run_all_tests();
 		}
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;

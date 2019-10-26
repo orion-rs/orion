@@ -197,15 +197,15 @@ mod public {
 	mod test_derive_key {
 		use super::*;
 
-		// Proptests. Only exectued when NOT testing no_std.
+		// Proptests. Only executed when NOT testing no_std.
 		#[cfg(feature = "safe_api")]
 		mod proptest {
 			use super::*;
 
 			quickcheck! {
 				/// Using derive_key() should always yield the same result
-				/// as using extract and expand seperately.
-				fn prop_test_derive_key_same_seperate(salt: Vec<u8>, ikm: Vec<u8>, info: Vec<u8>, outsize: usize) -> bool {
+				/// as using extract and expand separately.
+				fn prop_test_derive_key_same_separate(salt: Vec<u8>, ikm: Vec<u8>, info: Vec<u8>, outsize: usize) -> bool {
 
 					let outsize_checked = if outsize == 0 || outsize > 16320 {
 						64
