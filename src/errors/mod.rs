@@ -20,22 +20,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-extern crate core;
-
-use self::core::fmt;
+use core::fmt;
 
 /// Opaque error.
 #[derive(PartialEq)]
 pub struct UnknownCryptoError;
 
 impl fmt::Display for UnknownCryptoError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "UnknownCryptoError")
 	}
 }
 
 impl fmt::Debug for UnknownCryptoError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "UnknownCryptoError")
 	}
 }

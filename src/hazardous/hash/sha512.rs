@@ -134,7 +134,7 @@ impl Drop for Sha512 {
 }
 
 impl core::fmt::Debug for Sha512 {
-	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(
 			f,
 			"Sha512 {{ working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: {:?}, \

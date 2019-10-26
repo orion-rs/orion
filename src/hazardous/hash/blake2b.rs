@@ -205,7 +205,7 @@ impl Drop for Blake2b {
 }
 
 impl core::fmt::Debug for Blake2b {
-	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(
 			f,
 			"Blake2b {{ init_state: [***OMITTED***], internal_state: [***OMITTED***], buffer: \

@@ -54,15 +54,15 @@
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
-#![deny(overflowing_literals)]
-#![deny(missing_docs)]
 #![deny(warnings)]
+#![warn(
+	missing_docs,
+	rust_2018_idioms,
+	trivial_casts,
+	unused_qualifications,
+	overflowing_literals
+)]
 #![doc(html_root_url = "https://docs.rs/orion/0.14.4")]
-
-#[cfg(feature = "safe_api")]
-extern crate getrandom;
-extern crate subtle;
-extern crate zeroize;
 
 #[cfg(test)]
 #[cfg(feature = "safe_api")]

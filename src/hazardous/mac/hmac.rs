@@ -104,7 +104,7 @@ pub struct Hmac {
 }
 
 impl core::fmt::Debug for Hmac {
-	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(
 			f,
 			"Hmac {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***],

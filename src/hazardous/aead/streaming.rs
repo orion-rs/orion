@@ -156,7 +156,7 @@ impl TryFrom<u8> for StreamTag {
 	}
 }
 
-impl core::cmp::PartialEq<StreamTag> for StreamTag {
+impl PartialEq<StreamTag> for StreamTag {
 	fn eq(&self, other: &StreamTag) -> bool {
 		(self.as_byte().ct_eq(&other.as_byte())).into()
 	}
@@ -189,7 +189,7 @@ pub struct StreamXChaCha20Poly1305 {
 }
 
 impl core::fmt::Debug for StreamXChaCha20Poly1305 {
-	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(
 			f,
 			"StreamXChaCha20Poly1305  {{ key: [***OMITTED***], counter: [***OMITTED***],\

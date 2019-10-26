@@ -756,7 +756,6 @@ mod public {
 	mod test_hchacha20 {
 		use super::*;
 
-		extern crate hex;
 		use hex::decode;
 
 		#[test]
@@ -1326,7 +1325,7 @@ mod test_vectors {
 
 	// NOTE: These PartialEq implementation should only be available in testing.
 	#[cfg(test)]
-	impl core::cmp::PartialEq for U32x4 {
+	impl PartialEq for U32x4 {
 		fn eq(&self, other: &Self) -> bool {
 			(self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3)
 		}

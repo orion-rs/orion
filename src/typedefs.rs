@@ -28,7 +28,7 @@
 /// needs secure default methods like CSPRNG generation, return itself with a
 /// default and secure length of random bytes.
 macro_rules! impl_default_trait (($name:ident, $size:expr) => (
-    impl core::default::Default for $name {
+    impl Default for $name {
         #[cfg(feature = "safe_api")]
         /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
         fn default() -> $name {
@@ -45,7 +45,7 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
 /// provides a given $bytes_function to return a slice. This `PartialEq` will
 /// perform in constant time.
 macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
-    impl core::cmp::PartialEq<$name> for $name {
+    impl PartialEq<$name> for $name {
         fn eq(&self, other: &$name) -> bool {
             use subtle::ConstantTimeEq;
 
@@ -54,9 +54,9 @@ macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
         }
     }
 
-    impl core::cmp::Eq for $name {}
+    impl Eq for $name {}
 
-    impl core::cmp::PartialEq<&[u8]> for $name {
+    impl PartialEq<&[u8]> for $name {
         fn eq(&self, other: &&[u8]) -> bool {
             use subtle::ConstantTimeEq;
 
@@ -71,7 +71,7 @@ macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
 /// written to logs.
 macro_rules! impl_omitted_debug_trait (($name:ident) => (
     impl core::fmt::Debug for $name {
-        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             write!(f, "{} {{***OMITTED***}}", stringify!($name))
         }
     }
@@ -80,7 +80,7 @@ macro_rules! impl_omitted_debug_trait (($name:ident) => (
 /// Macro that implements the `Debug` trait on a object called `$name`.
 macro_rules! impl_normal_debug_trait (($name:ident) => (
     impl core::fmt::Debug for $name {
-        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             write!(f, "{} {:?}", stringify!($name), &self.value[..])
         }
     }
@@ -105,7 +105,7 @@ macro_rules! impl_drop_trait (($name:ident) => (
 /// `value` as a byte slice, and should only be implemented on public types
 /// which don't have any special protections.
 macro_rules! impl_asref_trait (($name:ident) => (
-    impl core::convert::AsRef<[u8]> for $name {
+    impl AsRef<[u8]> for $name {
         #[inline]
         fn as_ref(&self) -> &[u8] {
             self.value[..self.original_length].as_ref()
@@ -118,7 +118,7 @@ macro_rules! impl_asref_trait (($name:ident) => (
 /// based on `$size` and this macro should, in most cases, only be used for
 /// types which have a fixed-length.
 macro_rules! impl_from_trait (($name:ident, $size:expr) => (
-    impl core::convert::From<[u8; $size]> for $name {
+    impl From<[u8; $size]> for $name {
         #[inline]
         /// Make an object from a byte array.
         fn from(bytes: [u8; $size]) -> $name {

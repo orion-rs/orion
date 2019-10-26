@@ -65,7 +65,7 @@
 //! [`finalize()`]: struct.Poly1305.html
 //! [`OneTimeKey::generate()`]: struct.OneTimeKey.html
 
-extern crate core;
+use core;
 
 use crate::{
 	endianness::{load_u32_le, store_u32_into_le},
@@ -129,7 +129,7 @@ impl Drop for Poly1305 {
 }
 
 impl core::fmt::Debug for Poly1305 {
-	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(
 			f,
 			"Poly1305 {{ a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***],
