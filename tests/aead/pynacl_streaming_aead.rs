@@ -1,5 +1,6 @@
 // Testing against PyNaCl test vectors
 // Latest commit when these test vectors were pulled: https://github.com/pyca/pynacl/commit/3bb12aef959c92f9042c150deec42cf104c40dfa
+// The generated test vectors have been generated the 26th October 2019.
 extern crate hex;
 extern crate orion;
 extern crate serde_json;
@@ -66,4 +67,6 @@ fn run_tests_from_json(path_to_vectors: &str) {
 #[test]
 fn test_pynacl() {
 	run_tests_from_json("./tests/test_data/original/pynacl_secretstream_test_vectors.json");
+	run_tests_from_json("./tests/test_data/pynacl_generated.json");
+	run_tests_from_json("./tests/test_data/pynacl_generated_with_rekey.json");
 }
