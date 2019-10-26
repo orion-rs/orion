@@ -57,6 +57,7 @@
 //! A panic will occur if:
 //! - More than 2^32-1 * 64 bytes of data are processed.
 //! - Failure to generate random bytes securely.
+//! - `plaintext.len()` + [`XCHACHA_NONCESIZE`] + [`POLY1305_OUTSIZE`] overflows when calling [`seal`].
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -102,7 +103,13 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 
 	let nonce = Nonce::generate();
 
-	let mut dst_out = vec![0u8; plaintext.len() + (XCHACHA_NONCESIZE + POLY1305_OUTSIZE)];
+	let mut dst_out = vec![
+		0u8;
+		plaintext
+			.len()
+			.checked_add(XCHACHA_NONCESIZE + POLY1305_OUTSIZE)
+			.unwrap()
+	];
 	dst_out[..XCHACHA_NONCESIZE].copy_from_slice(nonce.as_ref());
 
 	aead::xchacha20poly1305::seal(
