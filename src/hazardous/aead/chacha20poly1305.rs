@@ -251,7 +251,7 @@ pub fn open(
 		nonce,
 		1,
 		&ciphertext_with_tag[..ciphertext_len],
-		dst_out,
+		&mut dst_out[..ciphertext_len],
 	)
 }
 
