@@ -54,6 +54,7 @@
 //! # Panics:
 //! A panic will occur if:
 //! - More than 2^32-1 * 64 bytes of data are processed.
+//! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when encrypting.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -94,6 +95,7 @@
 //! ```
 //! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
 //! [XChaCha20Poly1305]: ../xchacha20poly1305/index.html
+//! [`POLY1305_OUTSIZE`]: ../../mac/poly1305/constant.POLY1305_OUTSIZE.html
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
 	errors::UnknownCryptoError,
@@ -177,7 +179,7 @@ pub fn seal(
 	ad: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	if dst_out.len() < plaintext.len() + POLY1305_OUTSIZE {
+	if dst_out.len() < plaintext.len().checked_add(POLY1305_OUTSIZE).unwrap() {
 		return Err(UnknownCryptoError);
 	}
 	if plaintext.is_empty() {
