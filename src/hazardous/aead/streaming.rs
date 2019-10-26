@@ -112,6 +112,7 @@ use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::xchacha20::Nonce;
 use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
+use zeroize::Zeroize;
 
 #[derive(Debug)]
 /// Tag that indicates the type of message.
@@ -287,6 +288,7 @@ impl StreamXChaCha20Poly1305 {
 		self.inonce
 			.copy_from_slice(&new_key_and_inonce[CHACHA_KEYSIZE..]);
 		self.counter = 1;
+		new_key_and_inonce.zeroize();
 
 		Ok(())
 	}
