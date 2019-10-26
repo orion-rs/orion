@@ -186,8 +186,8 @@ macro_rules! func_unprotected_as_bytes (() => (
     }
 ));
 
-/// Macro to implement a `len()` function which will return the objects'
-/// length of field `value`.
+/// Macro to implement a `len()` function which will return the original_length
+/// field. Meaning the amount of bytes the newtype was created from.
 macro_rules! func_len (() => (
     #[inline]
     /// Return the length of the object.
