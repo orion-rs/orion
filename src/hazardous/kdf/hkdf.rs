@@ -157,16 +157,25 @@ mod public {
 		use super::*;
 
 		#[test]
-		fn hkdf_maximum_length() {
+		fn hkdf_above_maximum_length_err() {
 			// Max allowed length here is 16320
-			let mut okm_out = [0u8; 17000];
+			let mut okm_out = [0u8; 16321];
 			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
 
 			assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
 		}
 
 		#[test]
-		fn hkdf_zero_length() {
+		fn hkdf_exact_maximum_length_ok() {
+			// Max allowed length here is 16320
+			let mut okm_out = [0u8; 16320];
+			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+
+			assert!(expand(&prk, Some(b""), &mut okm_out).is_ok());
+		}
+
+		#[test]
+		fn hkdf_zero_length_err() {
 			let mut okm_out = [0u8; 0];
 			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
 
