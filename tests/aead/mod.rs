@@ -1,6 +1,7 @@
 pub mod boringssl_chacha20_poly1305;
 pub mod boringssl_xchacha20_poly1305;
 pub mod other_xchacha20_poly1305;
+pub mod pynacl_streaming_aead;
 pub mod rfc_chacha20_poly1305;
 pub mod wycheproof_chacha20_poly1305;
 
