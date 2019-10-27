@@ -21,7 +21,7 @@ fn hmac_test_runner(secret_key: &[u8], data: &[u8], expected: &[u8], trunc: Opti
 		None => 64,
 	};
 
-	let one_shot = hmac::hmac(&key, data).unwrap();
+	let one_shot = hmac::Hmac::hmac(&key, data).unwrap();
 
 	assert_eq!(
 		res.unprotected_as_bytes()[..len].as_ref(),
@@ -40,9 +40,9 @@ fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) {
 	state.update(input).unwrap();
 	let tag_stream = state.finalize().unwrap();
 
-	let tag_one_shot = poly1305::poly1305(&sk, input).unwrap();
+	let tag_one_shot = poly1305::Poly1305::poly1305(&sk, input).unwrap();
 
 	assert!(tag_stream == output);
 	assert!(tag_one_shot == output);
-	assert!(poly1305::verify(&Tag::from_slice(&output).unwrap(), &sk, input).is_ok());
+	assert!(poly1305::Poly1305::verify(&Tag::from_slice(&output).unwrap(), &sk, input).is_ok());
 }

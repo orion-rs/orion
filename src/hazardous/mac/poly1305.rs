@@ -48,16 +48,16 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::mac::poly1305;
+//! use orion::hazardous::mac::poly1305::{OneTimeKey, Poly1305};
 //!
-//! let one_time_key = poly1305::OneTimeKey::generate();
+//! let one_time_key = OneTimeKey::generate();
 //! let msg = "Some message.";
 //!
-//! let mut poly1305_state = poly1305::Poly1305::new(&one_time_key);
+//! let mut poly1305_state = Poly1305::new(&one_time_key);
 //! poly1305_state.update(msg.as_bytes())?;
 //! let tag = poly1305_state.finalize()?;
 //!
-//! assert!(poly1305::verify(&tag, &one_time_key, msg.as_bytes()).is_ok());
+//! assert!(Poly1305::verify(&tag, &one_time_key, msg.as_bytes()).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: struct.Poly1305.html
@@ -402,27 +402,27 @@ impl Poly1305 {
 
 		Ok(Tag::from(local_buffer))
 	}
-}
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// One-shot function for generating a Poly1305 tag of `data`.
-pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	let mut poly_1305_state = Poly1305::new(one_time_key);
-	poly_1305_state.update(data)?;
-	poly_1305_state.finalize()
-}
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// One-shot function for generating a Poly1305 tag of `data`.
+	pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
+		let mut poly_1305_state = Self::new(one_time_key);
+		poly_1305_state.update(data)?;
+		poly_1305_state.finalize()
+	}
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Verify a Poly1305 tag in constant time.
-pub fn verify(
-	expected: &Tag,
-	one_time_key: &OneTimeKey,
-	data: &[u8],
-) -> Result<(), UnknownCryptoError> {
-	if &poly1305(one_time_key, data)? == expected {
-		Ok(())
-	} else {
-		Err(UnknownCryptoError)
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// Verify a Poly1305 tag in constant time.
+	pub fn verify(
+		expected: &Tag,
+		one_time_key: &OneTimeKey,
+		data: &[u8],
+	) -> Result<(), UnknownCryptoError> {
+		if &Self::poly1305(one_time_key, data)? == expected {
+			Ok(())
+		} else {
+			Err(UnknownCryptoError)
+		}
 	}
 }
 
@@ -450,7 +450,7 @@ mod public {
 					let tag = state.finalize().unwrap();
 					let bad_sk = OneTimeKey::generate();
 
-					verify(&tag, &bad_sk, &data[..]).is_err()
+					Poly1305::verify(&tag, &bad_sk, &data[..]).is_err()
 				}
 			}
 		}
@@ -480,13 +480,13 @@ mod public {
 			}
 
 			fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
-				poly1305(&OneTimeKey::from_slice(&KEY).unwrap(), input)
+				Poly1305::poly1305(&OneTimeKey::from_slice(&KEY).unwrap(), input)
 			}
 
 			fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
 				// This will only run verifcation tests on differing input. They do not
 				// include tests for different secret keys.
-				verify(expected, &OneTimeKey::from_slice(&KEY).unwrap(), input)
+				Poly1305::verify(expected, &OneTimeKey::from_slice(&KEY).unwrap(), input)
 			}
 
 			fn compare_states(state_1: &Poly1305, state_2: &Poly1305) {

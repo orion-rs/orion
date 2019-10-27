@@ -55,22 +55,22 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::hash::blake2b;
+//! use orion::hazardous::hash::blake2b::{Hasher, SecretKey, Blake2b};
 //!
 //! // Using the streaming interface without a key.
-//! let mut state = blake2b::Blake2b::new(None, 64)?;
+//! let mut state = Blake2b::new(None, 64)?;
 //! state.update(b"Some data")?;
 //! let digest = state.finalize()?;
 //!
 //! // Using the streaming interface with a key.
-//! let secret_key = blake2b::SecretKey::generate();
-//! let mut state_keyed = blake2b::Blake2b::new(Some(&secret_key), 64)?;
+//! let secret_key = SecretKey::generate();
+//! let mut state_keyed = Blake2b::new(Some(&secret_key), 64)?;
 //! state_keyed.update(b"Some data")?;
 //! let mac = state_keyed.finalize()?;
-//! assert!(blake2b::verify(&mac, &secret_key, 64, b"Some data").is_ok());
+//! assert!(Blake2b::verify(&mac, &secret_key, 64, b"Some data").is_ok());
 //!
 //! // Using the `Hasher` for convenience functions.
-//! let digest = blake2b::Hasher::Blake2b512.digest(b"Some data")?;
+//! let digest = Hasher::Blake2b512.digest(b"Some data")?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: struct.Blake2b.html
@@ -335,7 +335,7 @@ impl Blake2b {
 		match secret_key {
 			Some(sk) => {
 				context.is_keyed = true;
-				let klen = sk.get_length();
+				let klen = sk.len();
 				context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
 				context.init_state.copy_from_slice(&context.internal_state);
 				context.update(sk.unprotected_as_bytes())?;
@@ -376,7 +376,7 @@ impl Blake2b {
 				self.update(sk.unprotected_as_bytes())?;
 				// The state needs updating with the secret key padded to blocksize length
 				let pad = [0u8; BLAKE2B_BLOCKSIZE];
-				let rem = BLAKE2B_BLOCKSIZE - sk.get_length();
+				let rem = BLAKE2B_BLOCKSIZE - sk.len();
 				self.update(pad[..rem].as_ref())
 			}
 			None => Ok(()),
@@ -452,23 +452,23 @@ impl Blake2b {
 
 		Digest::from_slice(&digest[..self.size])
 	}
-}
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Verify a Blake2b Digest in constant time.
-pub fn verify(
-	expected: &Digest,
-	secret_key: &SecretKey,
-	size: usize,
-	data: &[u8],
-) -> Result<(), UnknownCryptoError> {
-	let mut state = Blake2b::new(Some(secret_key), size)?;
-	state.update(data)?;
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// Verify a Blake2b Digest in constant time.
+	pub fn verify(
+		expected: &Digest,
+		secret_key: &SecretKey,
+		size: usize,
+		data: &[u8],
+	) -> Result<(), UnknownCryptoError> {
+		let mut state = Self::new(Some(secret_key), size)?;
+		state.update(data)?;
 
-	if expected == &state.finalize()? {
-		Ok(())
-	} else {
-		Err(UnknownCryptoError)
+		if expected == &state.finalize()? {
+			Ok(())
+		} else {
+			Err(UnknownCryptoError)
+		}
 	}
 }
 
@@ -625,7 +625,7 @@ mod public {
 					let tag = state.finalize().unwrap();
 					let bad_sk = SecretKey::generate();
 
-					verify(&tag, &bad_sk, 64, &data[..]).is_err()
+					Blake2b::verify(&tag, &bad_sk, 64, &data[..]).is_err()
 				}
 			}
 		}

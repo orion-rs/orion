@@ -16,7 +16,7 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 
 	state.update(input).unwrap();
 	let digest = state.finalize().unwrap();
-	assert!(digest.get_length() == output.len());
+	assert!(digest.len() == output.len());
 	assert!(digest.as_ref() == &output[..]);
 }
 
@@ -25,7 +25,7 @@ fn sha512_test_runner(data: &[u8], output: &[u8]) {
 	state.update(data).unwrap();
 	let digest = state.finalize().unwrap();
 
-	let digest_one_shot = sha512::digest(data).unwrap();
+	let digest_one_shot = sha512::Sha512::digest(data).unwrap();
 
 	assert!(digest.as_ref() == digest_one_shot.as_ref());
 	assert!(digest.as_ref() == output);

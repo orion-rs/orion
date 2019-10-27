@@ -69,7 +69,10 @@
 //! [`Tag`]: struct.Tag.html
 
 pub use crate::hltypes::{SecretKey, Tag};
-use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
+use crate::{
+	errors::UnknownCryptoError,
+	hazardous::hash::blake2b::{self, Blake2b, Digest},
+};
 
 /// The Tag size (bytes) to be output by BLAKE2b in keyed mode.
 const BLAKE2B_TAG_SIZE: usize = 32;
@@ -79,11 +82,11 @@ const BLAKE2B_MIN_KEY_SIZE: usize = 32;
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Authenticate a message using BLAKE2b-256 in keyed mode.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
+	if secret_key.len() < BLAKE2B_MIN_KEY_SIZE {
 		return Err(UnknownCryptoError);
 	}
 	let blake2b_secret_key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
-	let mut state = blake2b::Blake2b::new(Some(&blake2b_secret_key), BLAKE2B_TAG_SIZE)?;
+	let mut state = Blake2b::new(Some(&blake2b_secret_key), BLAKE2B_TAG_SIZE)?;
 	state.update(data)?;
 	let blake2b_digest = state.finalize()?;
 	Tag::from_slice(blake2b_digest.as_ref())
@@ -96,12 +99,12 @@ pub fn authenticate_verify(
 	secret_key: &SecretKey,
 	data: &[u8],
 ) -> Result<(), UnknownCryptoError> {
-	if secret_key.get_length() < BLAKE2B_MIN_KEY_SIZE {
+	if secret_key.len() < BLAKE2B_MIN_KEY_SIZE {
 		return Err(UnknownCryptoError);
 	}
 	let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
-	let expected_digest = blake2b::Digest::from_slice(expected.unprotected_as_bytes())?;
-	blake2b::verify(&expected_digest, &key, BLAKE2B_TAG_SIZE, data)
+	let expected_digest = Digest::from_slice(expected.unprotected_as_bytes())?;
+	Blake2b::verify(&expected_digest, &key, BLAKE2B_TAG_SIZE, data)
 }
 
 // Testing public functions in the module.

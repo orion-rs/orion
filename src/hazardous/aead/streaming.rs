@@ -361,7 +361,7 @@ impl StreamXChaCha20Poly1305 {
 		let tag = StreamTag::try_from(block[0])?;
 		block[0] = ciphertext[0];
 		let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, TAG_SIZE)?;
-		if !(mac == &ciphertext[macpos..macpos + mac.get_length()]) {
+		if !(mac == &ciphertext[macpos..macpos + mac.len()]) {
 			return Err(UnknownCryptoError);
 		}
 		if msglen != 0 {

@@ -45,15 +45,15 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::mac::hmac;
+//! use orion::hazardous::mac::hmac::{Hmac, SecretKey};
 //!
-//! let key = hmac::SecretKey::generate();
+//! let key = SecretKey::generate();
 //!
-//! let mut state = hmac::Hmac::new(&key);
+//! let mut state = Hmac::new(&key);
 //! state.update(b"Some message.")?;
 //! let tag = state.finalize()?;
 //!
-//! assert!(hmac::verify(&tag, &key, b"Some message.").is_ok());
+//! assert!(Hmac::verify(&tag, &key, b"Some message.").is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: struct.Hmac.html
@@ -180,30 +180,27 @@ impl Hmac {
 
 		Ok(tag)
 	}
-}
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// One-shot function for generating an HMAC-SHA512 tag of `data`.
-pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-	let mut hmac_state = Hmac::new(secret_key);
-	hmac_state.update(data)?;
-	hmac_state.finalize()
-}
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// One-shot function for generating an HMAC-SHA512 tag of `data`.
+	pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
+		let mut state = Self::new(secret_key);
+		state.update(data)?;
+		state.finalize()
+	}
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Verify a HMAC-SHA512 Tag in constant time.
-pub fn verify(
-	expected: &Tag,
-	secret_key: &SecretKey,
-	data: &[u8],
-) -> Result<(), UnknownCryptoError> {
-	let mut hmac_state = Hmac::new(secret_key);
-	hmac_state.update(data)?;
-
-	if expected == &hmac_state.finalize()? {
-		Ok(())
-	} else {
-		Err(UnknownCryptoError)
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// Verify a HMAC-SHA512 Tag in constant time.
+	pub fn verify(
+		expected: &Tag,
+		secret_key: &SecretKey,
+		data: &[u8],
+	) -> Result<(), UnknownCryptoError> {
+		if &Self::hmac(secret_key, data)? == expected {
+			Ok(())
+		} else {
+			Err(UnknownCryptoError)
+		}
 	}
 }
 
@@ -231,7 +228,7 @@ mod public {
 					let tag = state.finalize().unwrap();
 					let bad_sk = SecretKey::generate();
 
-					verify(&tag, &bad_sk, &data[..]).is_err()
+					Hmac::verify(&tag, &bad_sk, &data[..]).is_err()
 				}
 			}
 		}
@@ -258,13 +255,13 @@ mod public {
 			}
 
 			fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
-				hmac(&SecretKey::from_slice(&KEY).unwrap(), input)
+				Hmac::hmac(&SecretKey::from_slice(&KEY).unwrap(), input)
 			}
 
 			fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
 				// This will only run verifcation tests on differing input. They do not
 				// include tests for different secret keys.
-				verify(expected, &SecretKey::from_slice(&KEY).unwrap(), input)
+				Hmac::verify(expected, &SecretKey::from_slice(&KEY).unwrap(), input)
 			}
 
 			fn compare_states(state_1: &Hmac, state_2: &Hmac) {
