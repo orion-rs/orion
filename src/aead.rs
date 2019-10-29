@@ -81,6 +81,7 @@
 //! [`XCHACHA_NONCESIZE`]: ../hazardous/stream/xchacha20/constant.XCHACHA_NONCESIZE.html
 //! [`SecretKey::default()`]: struct.SecretKey.html
 
+pub use crate::hazardous::aead::streaming::StreamTag;
 pub use crate::hltypes::SecretKey;
 use crate::{
 	errors::UnknownCryptoError,
@@ -149,6 +150,171 @@ pub fn open(
 	Ok(dst_out)
 }
 
+/// Stream based authenticated secret-key encryption.
+///
+/// # Use case:
+///  `StreamSealer` can be used to encrypt and authenticate a stream of data. It prevents the
+///  modification, reordering, dropping or duplicating of messages. Nonce management is handled automatically
+///
+///  An example of this could be the encryption of files which are too large to encrypt in one piece.
+///
+/// # About:
+///
+/// This implementation is based on and compatible with the ["secretstream" API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
+/// of libsodium.
+///
+/// # Parameters:
+/// - `secret_key`: The secret key.
+/// - `nonce`: The nonce value.
+/// - `ad`: Additional data to authenticate (this is not encrypted and can be
+///   `None`. This data is also not a part of the output).
+/// - `plaintext`: The data to be encrypted.
+/// - `ciphertext`: The encrypted data with a Poly1305 tag and a [`StreamTag`](./hazardous/aead/streaming/enum.StreamTag.html) indicating its function.
+/// - `tag`: Indicates the type of message. The `tag` is a part of the output when encrypting. It
+/// is encrypted and authenticated.
+///
+/// # Errors:
+/// An error will be returned if:
+/// - The length of `ciphertext` is not greater than `16`.
+/// - The received mac does not match the calculated mac when decrypting. This can indicate
+///   a dropped or reordered message within the stream.
+/// - More than 2^32-3 * 64 bytes of data are processed when encrypting/decrypting a single chunk.
+///
+/// # Panics:
+/// A panic will occur if:
+/// - [`ABYTES`](../hazardous/aead/streaming/constant.ABYTES.html) + `plaintext.len()` overflows when encrypting.
+/// - 64 + (`ciphertext.len()` - [`ABYTES`](../hazardous/aead/streaming/constant.ABYTES.html)) overflows when decrypting.
+/// - Failure to generate random bytes securely.
+///
+/// # Security:
+/// - To securely generate a strong key, use [`SecretKey::generate()`](struct.SecretKey.html).
+/// - The length of the messages is leaked.
+/// - It is recommended to use `StreamTag::FINISH` as tag for the last message. This allows the
+///   decrypting side to detect if messages at the end of the stream are lost.
+///
+/// # Example:
+/// ```rust
+/// use orion::aead::*;
+///
+/// let key = SecretKey::default();
+///	let mut sealer = StreamSealer::new(&key).unwrap();
+///	let nonce = sealer.get_nonce();
+/// let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+///
+/// //Message 1
+///	let plaintext1 = "Secret message 1".as_bytes().to_vec();
+/// let cipher1 = sealer
+///		.seal_chunk(&plaintext1, None, StreamTag::MESSAGE)
+///		.unwrap();
+/// let (dec1, tag1) = opener.open_chunk(&cipher1, None).unwrap();
+/// assert_eq!(plaintext1, dec1);
+/// assert_eq!(tag1, StreamTag::MESSAGE);
+///
+/// //Message 2
+/// let plaintext2 = "Secret message 2".as_bytes().to_vec();
+/// let cipher2 = sealer
+///		.seal_chunk(&plaintext2, None, StreamTag::MESSAGE)
+///		.unwrap();
+/// let (dec2, tag2) = opener.open_chunk(&cipher2, None).unwrap();
+/// assert_eq!(plaintext2, dec2);
+/// assert_eq!(tag2, StreamTag::MESSAGE);
+///
+/// //Message 3 (Last message of this stream, using the FINISH tag)
+/// let plaintext3 = "Secret message 3".as_bytes().to_vec();
+/// let cipher3 = sealer
+///		.seal_chunk(&plaintext3, None, StreamTag::FINISH)
+///		.unwrap();
+/// let (dec3, tag3) = opener.open_chunk(&cipher3, None).unwrap();
+/// assert_eq!(plaintext3, dec3);
+/// assert_eq!(tag3, StreamTag::FINISH);
+///
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
+/// ```
+pub struct StreamSealer {
+	internal_sealer: aead::streaming::StreamXChaCha20Poly1305,
+	nonce: Nonce,
+}
+
+impl StreamSealer {
+	/// Returns the [`Nonce`](../hazardous/stream/xchacha20/struct.Nonce.html) used.
+	/// The nonce does not need to be kept secret
+	pub fn get_nonce(&self) -> Nonce {
+		self.nonce
+	}
+
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// Initialize a `StreamSealer` struct with a given key.
+	pub fn new(secret_key: &SecretKey) -> Result<Self, UnknownCryptoError> {
+		let nonce = Nonce::generate();
+		let sk = &aead::streaming::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
+
+		Ok(Self {
+			internal_sealer: aead::streaming::StreamXChaCha20Poly1305::new(&sk, &nonce),
+			nonce,
+		})
+	}
+
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// Encrypts `plaintext` and additionally authenticates `ad`. The [`StreamTag`](../hazardous/aead/streaming/enum.StreamTag.html)
+	/// indicates the type of message.
+	pub fn seal_chunk(
+		&mut self,
+		plaintext: &[u8],
+		ad: Option<&[u8]>,
+		tag: StreamTag,
+	) -> Result<Vec<u8>, UnknownCryptoError> {
+		let sealed_chunk_len = plaintext.len().checked_add(aead::streaming::ABYTES);
+		if sealed_chunk_len.is_none() {
+			return Err(UnknownCryptoError);
+		}
+
+		let mut sealed_chunk = vec![0u8; sealed_chunk_len.unwrap()];
+		self.internal_sealer
+			.seal_chunk(plaintext, ad, &mut sealed_chunk, tag)?;
+
+		Ok(sealed_chunk)
+	}
+}
+
+/// TODO: Link does not work on index site
+/// Decrypts messages encrypted by a `StreamSealer`.
+/// See [`StreamSealer`](struct.StreamSealer.html) for documentation
+pub struct StreamOpener {
+	internal_sealer: aead::streaming::StreamXChaCha20Poly1305,
+}
+
+impl StreamOpener {
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// Initialize a `StreamOpener` struct with a given key and nonce
+	pub fn new(secret_key: &SecretKey, nonce: &Nonce) -> Result<Self, UnknownCryptoError> {
+		let sk = &chacha20::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
+
+		Ok(Self {
+			internal_sealer: aead::streaming::StreamXChaCha20Poly1305::new(&sk, &nonce),
+		})
+	}
+	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+	/// Decrypts `ciphertext` and additionally authenticates `ad`. Returns the decrypted data and a
+	/// [`StreamTag`](../hazardous/aead/streaming/enum.StreamTag.html)
+	/// indicating the type of message.
+	pub fn open_chunk(
+		&mut self,
+		ciphertext: &[u8],
+		ad: Option<&[u8]>,
+	) -> Result<(Vec<u8>, StreamTag), UnknownCryptoError> {
+		if ciphertext.len() < aead::streaming::ABYTES {
+			return Err(UnknownCryptoError);
+		}
+
+		let mut opened_chunk = vec![0u8; ciphertext.len() - aead::streaming::ABYTES];
+		let tag = self
+			.internal_sealer
+			.open_chunk(ciphertext, ad, &mut opened_chunk)?;
+
+		Ok((opened_chunk, tag))
+	}
+}
+
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -156,6 +322,7 @@ mod public {
 
 	mod test_seal_open {
 		use super::*;
+
 		#[test]
 		fn test_auth_enc_encryption_decryption() {
 			let key = SecretKey::default();
@@ -237,13 +404,76 @@ mod public {
 			assert!(seal(&key, &plaintext).is_err());
 			assert!(open(&key, &plaintext).is_err());
 		}
+
+		#[test]
+		fn test_stream_seal_and_open() {
+			let key = SecretKey::default();
+			let mut sealer = StreamSealer::new(&key).unwrap();
+			let nonce = sealer.get_nonce();
+			let plaintext1 = "Secret message 1".as_bytes().to_vec();
+			let plaintext2 = "Secret message 2".as_bytes().to_vec();
+			let ad2 = "ad".as_bytes().to_vec();
+			let plaintext3 = "Secret message 3".as_bytes().to_vec();
+			let cipher1 = sealer
+				.seal_chunk(&plaintext1, None, StreamTag::MESSAGE)
+				.unwrap();
+			let cipher2 = sealer
+				.seal_chunk(&plaintext2, Some(&ad2), StreamTag::FINISH)
+				.unwrap();
+			let cipher3 = sealer
+				.seal_chunk(&plaintext3, None, StreamTag::MESSAGE)
+				.unwrap();
+
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let (dec1, tag1) = opener.open_chunk(&cipher1, None).unwrap();
+			let (dec2, tag2) = opener.open_chunk(&cipher2, Some(&ad2)).unwrap();
+			let (dec3, tag3) = opener.open_chunk(&cipher3, None).unwrap();
+			assert_eq!(plaintext1, dec1);
+			assert_eq!(plaintext2, dec2);
+			assert_eq!(plaintext3, dec3);
+			assert_eq!(tag1, StreamTag::MESSAGE);
+			assert_eq!(tag2, StreamTag::FINISH);
+			assert_eq!(tag3, StreamTag::MESSAGE);
+		}
+
+		#[test]
+		fn test_stream_seal_and_open_wrong_key() {
+			let key = SecretKey::default();
+			let mut sealer = StreamSealer::new(&key).unwrap();
+			let nonce = sealer.get_nonce();
+			let plaintext = "Secret message 1".as_bytes().to_vec();
+			let cipher = sealer
+				.seal_chunk(&plaintext, None, StreamTag::MESSAGE)
+				.unwrap();
+			let key = SecretKey::default();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			assert!(opener.open_chunk(&cipher, None).is_err());
+		}
 	}
 
-	// Proptests. Only executed when NOT testing no_std.
-	#[cfg(feature = "safe_api")]
 	mod proptest {
 		use super::*;
 
+		quickcheck! {
+				fn prop_stream_seal_open_same_input(input: Vec<u8>) -> bool {
+					let pt = if input.is_empty() {
+						vec![1u8; 10]
+					} else {
+						input
+					};
+
+					let key = SecretKey::default();
+
+					let mut sealer = StreamSealer::new(&key).unwrap();
+					let nonce = sealer.get_nonce();
+					let ct = sealer.seal_chunk(&pt, None, StreamTag::MESSAGE).unwrap();
+
+					let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+					let (pt_decrypted, tag) = opener.open_chunk(&ct, None).unwrap();
+
+					(pt == pt_decrypted && tag == StreamTag::MESSAGE)
+				}
+		}
 		quickcheck! {
 			// Sealing input, and then opening should always yield the same input.
 			fn prop_seal_open_same_input(input: Vec<u8>) -> bool {
