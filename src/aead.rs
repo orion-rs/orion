@@ -395,23 +395,132 @@ mod public {
 			assert!(seal(&key, &plaintext).is_err());
 			assert!(open(&key, &plaintext).is_err());
 		}
+	}
+
+	mod test_stream_seal_open {
+		use super::*;
+
+		#[test]
+		fn test_auth_enc_encryption_decryption() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let plaintext = "Secret message".as_bytes().to_vec();
+
+			let dst_ciphertext = sealer.seal_chunk(&plaintext, StreamTag::MESSAGE).unwrap();
+			assert!(dst_ciphertext.len() == plaintext.len() + 17);
+			let (dst_plaintext, tag) = opener.open_chunk(&dst_ciphertext).unwrap();
+			assert_eq!(plaintext, dst_plaintext);
+			assert_eq!(tag, StreamTag::MESSAGE);
+		}
+
+		/* TODO, decision about empty ciphertext
+		#[test]
+		fn test_auth_enc_plaintext_empty_err() {
+			let key = SecretKey::default();
+			let plaintext = "".as_bytes().to_vec();
+
+			assert!(seal(&key, &plaintext).is_err());
+		}*/
+
+		//TODO, decision about empty ciphertext
+		#[test]
+		fn test_auth_enc_ciphertext_less_than_41_err() {
+			let key = SecretKey::default();
+			let ciphertext = [0u8; 16];
+			let (_, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+
+			assert!(opener.open_chunk(&ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_modified_tag_err() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let plaintext = "Secret message".as_bytes().to_vec();
+
+			let mut dst_ciphertext = sealer.seal_chunk(&plaintext, StreamTag::MESSAGE).unwrap();
+			// Modify nonce
+			dst_ciphertext[0] ^= 1;
+			assert!(opener.open_chunk(&dst_ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_modified_ciphertext_err() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let plaintext = "Secret message".as_bytes().to_vec();
+
+			let mut dst_ciphertext = sealer.seal_chunk(&plaintext, StreamTag::MESSAGE).unwrap();
+			// Modify ciphertext
+			dst_ciphertext[1] ^= 1;
+			assert!(opener.open_chunk(&dst_ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_modified_mac_err() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let plaintext = "Secret message".as_bytes().to_vec();
+
+			let mut dst_ciphertext = sealer.seal_chunk(&plaintext, StreamTag::MESSAGE).unwrap();
+			// Modify mac
+			let macpos = dst_ciphertext.len() - 1;
+			dst_ciphertext[macpos] ^= 1;
+			assert!(opener.open_chunk(&dst_ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_diff_secret_key_err() {
+			let key = SecretKey::default();
+			let plaintext = "Secret message".as_bytes().to_vec();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let bad_key = SecretKey::default();
+			let mut opener = StreamOpener::new(&bad_key, &nonce).unwrap();
+
+			let dst_ciphertext = sealer.seal_chunk(&plaintext, StreamTag::MESSAGE).unwrap();
+
+			assert!(opener.open_chunk(&dst_ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_secret_length_err() {
+			let key = SecretKey::generate(31).unwrap();
+			assert!(StreamSealer::new(&key).is_err());
+		}
+
+		#[test]
+		fn same_input_generates_different_cipher() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let plaintext = "Secret message 1".as_bytes().to_vec();
+			let cipher1 = sealer.seal_chunk(&plaintext, StreamTag::MESSAGE).unwrap();
+			let cipher2 = sealer.seal_chunk(&plaintext, StreamTag::MESSAGE).unwrap();
+			assert!(cipher1 != cipher2);
+
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let (dec1, tag1) = opener.open_chunk(&cipher1).unwrap();
+			let (dec2, tag2) = opener.open_chunk(&cipher2).unwrap();
+			assert_eq!(plaintext, dec1);
+			assert_eq!(plaintext, dec2);
+			assert_eq!(tag1, StreamTag::MESSAGE);
+			assert_eq!(tag2, StreamTag::MESSAGE);
+		}
 
 		#[test]
 		fn test_stream_seal_and_open() {
 			let key = SecretKey::default();
-			let( mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
 			let plaintext1 = "Secret message 1".as_bytes().to_vec();
 			let plaintext2 = "Secret message 2".as_bytes().to_vec();
 			let plaintext3 = "Secret message 3".as_bytes().to_vec();
-			let cipher1 = sealer
-				.seal_chunk(&plaintext1, StreamTag::MESSAGE)
-				.unwrap();
-			let cipher2 = sealer
-				.seal_chunk(&plaintext2, StreamTag::FINISH)
-				.unwrap();
-			let cipher3 = sealer
-				.seal_chunk(&plaintext3,  StreamTag::MESSAGE)
-				.unwrap();
+			let cipher1 = sealer.seal_chunk(&plaintext1, StreamTag::MESSAGE).unwrap();
+			let cipher2 = sealer.seal_chunk(&plaintext2, StreamTag::FINISH).unwrap();
+			let cipher3 = sealer.seal_chunk(&plaintext3, StreamTag::MESSAGE).unwrap();
 
 			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
 			let (dec1, tag1) = opener.open_chunk(&cipher1).unwrap();
@@ -423,19 +532,6 @@ mod public {
 			assert_eq!(tag1, StreamTag::MESSAGE);
 			assert_eq!(tag2, StreamTag::FINISH);
 			assert_eq!(tag3, StreamTag::MESSAGE);
-		}
-
-		#[test]
-		fn test_stream_seal_and_open_wrong_key() {
-			let key = SecretKey::default();
-			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
-			let plaintext = "Secret message 1".as_bytes().to_vec();
-			let cipher = sealer
-				.seal_chunk(&plaintext, StreamTag::MESSAGE)
-				.unwrap();
-			let key = SecretKey::default();
-			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
-			assert!(opener.open_chunk(&cipher).is_err());
 		}
 	}
 
