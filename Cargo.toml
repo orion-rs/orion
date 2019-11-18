@@ -18,15 +18,13 @@ exclude = [
 ]
 
 [dependencies]
-subtle = { version = "2.1.1", default-features = false }
+subtle = { version = "^2.2.1", default-features = false }
 zeroize = { version = "1.0.0", default-features = false }
 getrandom = { version = "0.1.12", optional = true }
 
 [features]
 default = [ "safe_api" ]
 safe_api = [ "getrandom" ]
-nightly = [ "subtle/nightly", "safe_api" ]
-no_std = [ "subtle/nightly" ]
 
 [dev-dependencies]
 hex = "0.4.0"
