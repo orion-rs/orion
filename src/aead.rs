@@ -490,6 +490,7 @@ mod public {
 		fn test_secret_length_err() {
 			let key = SecretKey::generate(31).unwrap();
 			assert!(StreamSealer::new(&key).is_err());
+			assert!(StreamOpener::new(&key, &Nonce::generate()).is_err());
 		}
 
 		#[test]
