@@ -82,7 +82,7 @@ matrix:
       rust: stable
       install:
         - cargo install xargo || true
-        - rustup target install armv7-unknown-linux-gnueabihf
+        - rustup target add $TARGET
         - rustup component add rust-src
       script:
         # Debug:
@@ -90,12 +90,13 @@ matrix:
           
         # Release:
         - xargo build --release --no-default-features --verbose --target $TARGET
+
     - name: "[RELEASE + DEBUG (nightly)]: Build no_std"
       env: TARGET=thumbv7em-none-eabi
       rust: nightly
       install:
         - cargo install xargo || true
-        - rustup target install armv7-unknown-linux-gnueabihf
+        - rustup target add $TARGET
         - rustup component add rust-src
       script:
         # Debug:
