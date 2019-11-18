@@ -511,6 +511,25 @@ mod public {
 		}
 
 		#[test]
+		fn same_input_on_same_init_different_ct() {
+			// Two sealers initialized that encrypt the same plaintext
+			// should produce different ciphertexts because the nonce
+			// is randomly generated.
+			let key = SecretKey::default();
+			let (mut sealer_first, _) = StreamSealer::new(&key).unwrap();
+			let (mut sealer_second, _) = StreamSealer::new(&key).unwrap();
+			let plaintext = "Secret message 1".as_bytes();
+
+			let cipher1 = sealer_first
+				.seal_chunk(plaintext, StreamTag::MESSAGE)
+				.unwrap();
+			let cipher2 = sealer_second
+				.seal_chunk(plaintext, StreamTag::MESSAGE)
+				.unwrap();
+			assert!(cipher1 != cipher2);
+		}
+
+		#[test]
 		fn test_stream_seal_and_open() {
 			let key = SecretKey::default();
 			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
