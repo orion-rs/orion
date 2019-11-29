@@ -100,8 +100,9 @@
 //! [`SecretKey::generate()`]: struct.SecretKey.html
 //! [`aead`]: ../../aead/index.html
 //! [XChaCha20Poly1305]: ../../aead/xchacha20poly1305/index.html
-use crate::endianness::load_u32_le;
 use crate::errors::UnknownCryptoError;
+use crate::util::endianness::load_u32_le;
+use crate::util::u32x4::U32x4;
 use zeroize::Zeroize;
 
 /// The key size for ChaCha20.
@@ -141,66 +142,6 @@ construct_public! {
 }
 
 impl_from_trait!(Nonce, IETF_CHACHA_NONCESIZE);
-
-#[derive(Clone, Copy)]
-struct U32x4(u32, u32, u32, u32);
-
-impl core::ops::BitXor for U32x4 {
-	type Output = Self;
-
-	#[must_use]
-	#[inline(always)]
-	fn bitxor(self, _rhs: Self) -> Self::Output {
-		Self(
-			self.0 ^ _rhs.0,
-			self.1 ^ _rhs.1,
-			self.2 ^ _rhs.2,
-			self.3 ^ _rhs.3,
-		)
-	}
-}
-
-impl U32x4 {
-	#[must_use]
-	#[inline(always)]
-	pub const fn wrapping_add(self, _rhs: Self) -> Self {
-		Self(
-			self.0.wrapping_add(_rhs.0),
-			self.1.wrapping_add(_rhs.1),
-			self.2.wrapping_add(_rhs.2),
-			self.3.wrapping_add(_rhs.3),
-		)
-	}
-
-	#[must_use]
-	#[inline(always)]
-	pub const fn shl_1(self) -> Self {
-		Self(self.1, self.2, self.3, self.0)
-	}
-
-	#[must_use]
-	#[inline(always)]
-	pub const fn shl_2(self) -> Self {
-		Self(self.2, self.3, self.0, self.1)
-	}
-
-	#[must_use]
-	#[inline(always)]
-	pub const fn shl_3(self) -> Self {
-		Self(self.3, self.0, self.1, self.2)
-	}
-
-	#[must_use]
-	#[inline(always)]
-	pub const fn rotate_left(self, n: u32) -> Self {
-		Self(
-			self.0.rotate_left(n),
-			self.1.rotate_left(n),
-			self.2.rotate_left(n),
-			self.3.rotate_left(n),
-		)
-	}
-}
 
 /// ChaCha quarter round.
 fn round(r0: &mut U32x4, r1: &mut U32x4, r2: &mut U32x4, r3: &mut U32x4) {

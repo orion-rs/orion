@@ -23,6 +23,9 @@
 use crate::errors;
 use subtle::ConstantTimeEq;
 
+pub(crate) mod endianness;
+pub(crate) mod u32x4;
+
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 #[cfg(feature = "safe_api")]
 /// Generate random bytes using a CSPRNG. Not available in `no_std` context.

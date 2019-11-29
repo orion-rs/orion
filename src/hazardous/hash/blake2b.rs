@@ -80,8 +80,8 @@
 //! [`verify()`]: fn.verify.html
 //! [`as_ref()`]: struct.Digest.html
 use crate::{
-	endianness::{load_u64_into_le, store_u64_into_le},
 	errors::UnknownCryptoError,
+	util::endianness::{load_u64_into_le, store_u64_into_le},
 };
 
 /// The blocksize for the hash function BLAKE2b.

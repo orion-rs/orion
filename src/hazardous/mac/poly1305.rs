@@ -68,8 +68,8 @@
 use core;
 
 use crate::{
-	endianness::{load_u32_le, store_u32_into_le},
 	errors::UnknownCryptoError,
+	util::endianness::{load_u32_le, store_u32_into_le},
 };
 
 /// The blocksize which Poly1305 operates on.

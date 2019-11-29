@@ -60,8 +60,8 @@
 //! [BLAKE2b]: ../blake2b/index.html
 
 use crate::{
-	endianness::{load_u64_into_be, store_u64_into_be},
 	errors::UnknownCryptoError,
+	util::endianness::{load_u64_into_be, store_u64_into_be},
 };
 
 /// The blocksize for the hash function SHA512.
