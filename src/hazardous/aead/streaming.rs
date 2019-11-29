@@ -330,6 +330,7 @@ impl StreamXChaCha20Poly1305 {
 		self.advance_state(&mac, &tag)
 	}
 
+	#[allow(clippy::range_plus_one)]
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 	/// Authenticate and decrypt a single message and tag.
 	pub fn open_chunk(
