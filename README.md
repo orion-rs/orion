@@ -13,7 +13,7 @@ Currently supports:
 * **Hashing**: BLAKE2b, SHA512.
 
 ### Security
-This library is **not suitable for production code** and **usage is at own risk**.
+This library has **not undergone any third-party security audit**. Usage is at **own risk**.
 
 More information about security regarding orion is available in the [wiki](https://github.com/brycx/orion/wiki/Security).
 
