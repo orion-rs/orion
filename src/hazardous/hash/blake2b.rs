@@ -79,11 +79,7 @@
 //! [`SecretKey::generate()`]: struct.SecretKey.html
 //! [`verify()`]: fn.verify.html
 //! [`as_ref()`]: struct.Digest.html
-use crate::{
-	errors::UnknownCryptoError,
-	util::endianness::{load_u64_into_le, store_u64_into_le},
-	util::u64x4::U64x4,
-};
+use crate::{errors::UnknownCryptoError, util::endianness::load_u64_into_le, util::u64x4::U64x4};
 
 /// The blocksize for the hash function BLAKE2b.
 const BLAKE2B_BLOCKSIZE: usize = 128;
@@ -118,15 +114,19 @@ construct_public! {
 
 #[allow(clippy::unreadable_literal)]
 /// The BLAKE2b initialization vector (IV) as defined in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
-const IV: [u64; 8] = [
-	0x6a09e667f3bcc908,
-	0xbb67ae8584caa73b,
-	0x3c6ef372fe94f82b,
-	0xa54ff53a5f1d36f1,
-	0x510e527fade682d1,
-	0x9b05688c2b3e6c1f,
-	0x1f83d9abfb41bd6b,
-	0x5be0cd19137e2179,
+const IV: [U64x4; 2] = [
+	U64x4(
+		0x6a09e667f3bcc908,
+		0xbb67ae8584caa73b,
+		0x3c6ef372fe94f82b,
+		0xa54ff53a5f1d36f1,
+	),
+	U64x4(
+		0x510e527fade682d1,
+		0x9b05688c2b3e6c1f,
+		0x1f83d9abfb41bd6b,
+		0x5be0cd19137e2179,
+	),
 ];
 
 /// BLAKE2b SGIMA as defined in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
@@ -185,8 +185,8 @@ impl Hasher {
 #[derive(Clone)]
 /// BLAKE2b streaming state.
 pub struct Blake2b {
-	init_state: [u64; 8],
-	internal_state: [u64; 8],
+	init_state: [U64x4; 2],
+	internal_state: [U64x4; 2],
 	buffer: [u8; BLAKE2B_BLOCKSIZE],
 	leftover: usize,
 	t: [u64; 2],
@@ -199,8 +199,18 @@ pub struct Blake2b {
 impl Drop for Blake2b {
 	fn drop(&mut self) {
 		use zeroize::Zeroize;
-		self.init_state.zeroize();
-		self.internal_state.zeroize();
+		for row in self.init_state.iter_mut() {
+			row.0.zeroize();
+			row.1.zeroize();
+			row.2.zeroize();
+			row.3.zeroize();
+		}
+		for row in self.internal_state.iter_mut() {
+			row.0.zeroize();
+			row.1.zeroize();
+			row.2.zeroize();
+			row.3.zeroize();
+		}
 		self.buffer.zeroize();
 	}
 }
@@ -271,24 +281,14 @@ impl Blake2b {
 			None => load_u64_into_le(&self.buffer, &mut m_vec),
 		}
 
-		let v0 = U64x4(
-			self.internal_state[0],
-			self.internal_state[1],
-			self.internal_state[2],
-			self.internal_state[3],
-		);
-		let v1 = U64x4(
-			self.internal_state[4],
-			self.internal_state[5],
-			self.internal_state[6],
-			self.internal_state[7],
-		);
-		let v2 = U64x4(IV[0], IV[1], IV[2], IV[3]);
+		let v0 = self.internal_state[0];
+		let v1 = self.internal_state[1];
+		let v2 = IV[0];
 		let v3 = U64x4(
-			self.t[0] ^ IV[4],
-			self.t[1] ^ IV[5],
-			self.f[0] ^ IV[6],
-			self.f[1] ^ IV[7],
+			self.t[0] ^ IV[1].0,
+			self.t[1] ^ IV[1].1,
+			self.f[0] ^ IV[1].2,
+			self.f[1] ^ IV[1].3,
 		);
 
 		let mut w_vec: [U64x4; 4] = [v0, v1, v2, v3];
@@ -306,15 +306,8 @@ impl Blake2b {
 		Self::round(&SIGMA[10], &m_vec, &mut w_vec);
 		Self::round(&SIGMA[11], &m_vec, &mut w_vec);
 
-		self.internal_state[0] ^= w_vec[0].0 ^ w_vec[2].0;
-		self.internal_state[1] ^= w_vec[0].1 ^ w_vec[2].1;
-		self.internal_state[2] ^= w_vec[0].2 ^ w_vec[2].2;
-		self.internal_state[3] ^= w_vec[0].3 ^ w_vec[2].3;
-
-		self.internal_state[4] ^= w_vec[1].0 ^ w_vec[3].0;
-		self.internal_state[5] ^= w_vec[1].1 ^ w_vec[3].1;
-		self.internal_state[6] ^= w_vec[1].2 ^ w_vec[3].2;
-		self.internal_state[7] ^= w_vec[1].3 ^ w_vec[3].3;
+		self.internal_state[0] ^= w_vec[0] ^ w_vec[2];
+		self.internal_state[1] ^= w_vec[1] ^ w_vec[3];
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -326,7 +319,7 @@ impl Blake2b {
 		}
 
 		let mut context = Self {
-			init_state: [0u64; 8],
+			init_state: [U64x4::default(); 2],
 			internal_state: IV,
 			buffer: [0u8; BLAKE2B_BLOCKSIZE],
 			leftover: 0,
@@ -341,7 +334,7 @@ impl Blake2b {
 			Some(sk) => {
 				context.is_keyed = true;
 				let klen = sk.len();
-				context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
+				context.internal_state[0].0 ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
 				context.init_state.copy_from_slice(&context.internal_state);
 				context.update(sk.unprotected_as_bytes())?;
 				// The state needs updating with the secret key padded to blocksize length
@@ -350,7 +343,7 @@ impl Blake2b {
 				context.update(pad[..rem].as_ref())?;
 			}
 			None => {
-				context.internal_state[0] ^= 0x01010000 ^ (size as u64);
+				context.internal_state[0].0 ^= 0x01010000 ^ (size as u64);
 				context.init_state.copy_from_slice(&context.internal_state);
 			}
 		}
@@ -453,7 +446,8 @@ impl Blake2b {
 		self.compress_f(None);
 
 		let mut digest = [0u8; 64];
-		store_u64_into_le(&self.internal_state, &mut digest);
+		self.internal_state[0].store_into_le(&mut digest[..32]);
+		self.internal_state[1].store_into_le(&mut digest[32..]);
 
 		Digest::from_slice(&digest[..self.size])
 	}
@@ -483,8 +477,8 @@ mod public {
 	use super::*;
 
 	fn compare_blake2b_states(state_1: &Blake2b, state_2: &Blake2b) {
-		assert_eq!(state_1.init_state, state_2.init_state);
-		assert_eq!(state_1.internal_state, state_2.internal_state);
+		assert!(state_1.init_state == state_2.init_state);
+		assert!(state_1.internal_state == state_2.internal_state);
 		assert_eq!(state_1.buffer[..], state_2.buffer[..]);
 		assert_eq!(state_1.leftover, state_2.leftover);
 		assert_eq!(state_1.t, state_2.t);
@@ -948,7 +942,7 @@ mod private {
 		#[test]
 		fn test_offset_increase_values() {
 			let mut context = Blake2b {
-				init_state: [0u64; 8],
+				init_state: [U64x4::default(); 2],
 				internal_state: IV,
 				buffer: [0u8; BLAKE2B_BLOCKSIZE],
 				leftover: 0,
@@ -974,7 +968,7 @@ mod private {
 		#[should_panic]
 		fn test_panic_on_second_overflow() {
 			let mut context = Blake2b {
-				init_state: [0u64; 8],
+				init_state: [U64x4::default(); 2],
 				internal_state: IV,
 				buffer: [0u8; BLAKE2B_BLOCKSIZE],
 				leftover: 0,

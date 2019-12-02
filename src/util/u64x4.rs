@@ -43,6 +43,30 @@ impl core::ops::BitXor for U64x4 {
 	}
 }
 
+impl core::ops::BitXorAssign for U64x4 {
+	#[must_use]
+	#[inline(always)]
+	fn bitxor_assign(&mut self, _rhs: Self) {
+		self.0 ^= _rhs.0;
+		self.1 ^= _rhs.1;
+		self.2 ^= _rhs.2;
+		self.3 ^= _rhs.3;
+	}
+}
+
+impl Default for U64x4 {
+	fn default() -> Self {
+		Self(0, 0, 0, 0)
+	}
+}
+
+#[cfg(test)]
+impl PartialEq<U64x4> for U64x4 {
+	fn eq(&self, other: &Self) -> bool {
+		(self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3)
+	}
+}
+
 impl U64x4 {
 	#[must_use]
 	#[inline(always)]
@@ -82,5 +106,14 @@ impl U64x4 {
 			self.2.rotate_right(n),
 			self.3.rotate_right(n),
 		)
+	}
+
+	#[inline(always)]
+	pub(crate) fn store_into_le(self, dst: &mut [u8]) {
+		debug_assert!(dst.len() == core::mem::size_of::<u64>() * 4);
+		dst[0..8].copy_from_slice(&self.0.to_le_bytes());
+		dst[8..16].copy_from_slice(&self.1.to_le_bytes());
+		dst[16..24].copy_from_slice(&self.2.to_le_bytes());
+		dst[24..32].copy_from_slice(&self.3.to_le_bytes());
 	}
 }
