@@ -82,6 +82,7 @@
 use crate::{
 	errors::UnknownCryptoError,
 	util::endianness::{load_u64_into_le, store_u64_into_le},
+	util::u64x4::U64x4,
 };
 
 /// The blocksize for the hash function BLAKE2b.
@@ -229,35 +230,34 @@ impl Blake2b {
 	}
 
 	#[inline(always)]
-	#[allow(clippy::many_single_char_names)]
-	#[allow(clippy::too_many_arguments)]
-	/// The primitive mixing function G as defined in the RFC.
-	fn prim_mix_g(x: u64, y: u64, a: usize, b: usize, c: usize, d: usize, w: &mut [u64]) {
-		w[a] = w[a].wrapping_add(w[b]).wrapping_add(x);
-		w[d] ^= w[a];
-		w[d] = (w[d]).rotate_right(32u32);
-		w[c] = w[c].wrapping_add(w[d]);
-		w[b] ^= w[c];
-		w[b] = (w[b]).rotate_right(24u32);
-		w[a] = w[a].wrapping_add(w[b]).wrapping_add(y);
-		w[d] ^= w[a];
-		w[d] = (w[d]).rotate_right(16u32);
-		w[c] = w[c].wrapping_add(w[d]);
-		w[b] ^= w[c];
-		w[b] = (w[b]).rotate_right(63u32);
+	/// Quarter round on the BLAKE2b internal matrix.
+	fn blake_qround(v: &mut [U64x4; 4], s_idx: &U64x4, r1: u32, r2: u32) {
+		v[0] = v[0].wrapping_add(v[1]).wrapping_add(*s_idx);
+		v[3] = (v[3] ^ v[0]).rotate_right(r1);
+		v[2] = v[2].wrapping_add(v[3]);
+		v[1] = (v[1] ^ v[2]).rotate_right(r2);
 	}
 
 	#[inline(always)]
 	/// Perform a single round based on a message schedule selection.
-	fn round(ri: usize, m: &mut [u64; 16], w: &mut [u64; 16]) {
-		Self::prim_mix_g(m[SIGMA[ri][0]], m[SIGMA[ri][1]], 0, 4, 8, 12, w);
-		Self::prim_mix_g(m[SIGMA[ri][2]], m[SIGMA[ri][3]], 1, 5, 9, 13, w);
-		Self::prim_mix_g(m[SIGMA[ri][4]], m[SIGMA[ri][5]], 2, 6, 10, 14, w);
-		Self::prim_mix_g(m[SIGMA[ri][6]], m[SIGMA[ri][7]], 3, 7, 11, 15, w);
-		Self::prim_mix_g(m[SIGMA[ri][8]], m[SIGMA[ri][9]], 0, 5, 10, 15, w);
-		Self::prim_mix_g(m[SIGMA[ri][10]], m[SIGMA[ri][11]], 1, 6, 11, 12, w);
-		Self::prim_mix_g(m[SIGMA[ri][12]], m[SIGMA[ri][13]], 2, 7, 8, 13, w);
-		Self::prim_mix_g(m[SIGMA[ri][14]], m[SIGMA[ri][15]], 3, 4, 9, 14, w);
+	fn round(s_idx: &[usize; 16], m: &[u64; 16], v: &mut [U64x4; 4]) {
+		let s_indexed = U64x4(m[s_idx[0]], m[s_idx[2]], m[s_idx[4]], m[s_idx[6]]);
+		Self::blake_qround(v, &s_indexed, 32, 24);
+		let s_indexed = U64x4(m[s_idx[1]], m[s_idx[3]], m[s_idx[5]], m[s_idx[7]]);
+		Self::blake_qround(v, &s_indexed, 16, 63);
+
+		v[1] = v[1].shl_1();
+		v[2] = v[2].shl_2();
+		v[3] = v[3].shl_3();
+
+		let s_indexed = U64x4(m[s_idx[8]], m[s_idx[10]], m[s_idx[12]], m[s_idx[14]]);
+		Self::blake_qround(v, &s_indexed, 32, 24);
+		let s_indexed = U64x4(m[s_idx[9]], m[s_idx[11]], m[s_idx[13]], m[s_idx[15]]);
+		Self::blake_qround(v, &s_indexed, 16, 63);
+
+		v[1] = v[1].shl_3();
+		v[2] = v[2].shl_2();
+		v[3] = v[3].shl_1();
 	}
 
 	/// The compression function f as defined in the RFC.
@@ -270,46 +270,51 @@ impl Blake2b {
 			}
 			None => load_u64_into_le(&self.buffer, &mut m_vec),
 		}
-		let mut w_vec = [
+
+		let v0 = U64x4(
 			self.internal_state[0],
 			self.internal_state[1],
 			self.internal_state[2],
 			self.internal_state[3],
+		);
+		let v1 = U64x4(
 			self.internal_state[4],
 			self.internal_state[5],
 			self.internal_state[6],
 			self.internal_state[7],
-			IV[0],
-			IV[1],
-			IV[2],
-			IV[3],
+		);
+		let v2 = U64x4(IV[0], IV[1], IV[2], IV[3]);
+		let v3 = U64x4(
 			self.t[0] ^ IV[4],
 			self.t[1] ^ IV[5],
 			self.f[0] ^ IV[6],
 			self.f[1] ^ IV[7],
-		];
+		);
 
-		Self::round(0, &mut m_vec, &mut w_vec);
-		Self::round(1, &mut m_vec, &mut w_vec);
-		Self::round(2, &mut m_vec, &mut w_vec);
-		Self::round(3, &mut m_vec, &mut w_vec);
-		Self::round(4, &mut m_vec, &mut w_vec);
-		Self::round(5, &mut m_vec, &mut w_vec);
-		Self::round(6, &mut m_vec, &mut w_vec);
-		Self::round(7, &mut m_vec, &mut w_vec);
-		Self::round(8, &mut m_vec, &mut w_vec);
-		Self::round(9, &mut m_vec, &mut w_vec);
-		Self::round(10, &mut m_vec, &mut w_vec);
-		Self::round(11, &mut m_vec, &mut w_vec);
+		let mut w_vec: [U64x4; 4] = [v0, v1, v2, v3];
 
-		self.internal_state[0] ^= w_vec[0] ^ w_vec[8];
-		self.internal_state[1] ^= w_vec[1] ^ w_vec[9];
-		self.internal_state[2] ^= w_vec[2] ^ w_vec[10];
-		self.internal_state[3] ^= w_vec[3] ^ w_vec[11];
-		self.internal_state[4] ^= w_vec[4] ^ w_vec[12];
-		self.internal_state[5] ^= w_vec[5] ^ w_vec[13];
-		self.internal_state[6] ^= w_vec[6] ^ w_vec[14];
-		self.internal_state[7] ^= w_vec[7] ^ w_vec[15];
+		Self::round(&SIGMA[0], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[1], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[2], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[3], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[4], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[5], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[6], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[7], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[8], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[9], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[10], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[11], &m_vec, &mut w_vec);
+
+		self.internal_state[0] ^= w_vec[0].0 ^ w_vec[2].0;
+		self.internal_state[1] ^= w_vec[0].1 ^ w_vec[2].1;
+		self.internal_state[2] ^= w_vec[0].2 ^ w_vec[2].2;
+		self.internal_state[3] ^= w_vec[0].3 ^ w_vec[2].3;
+
+		self.internal_state[4] ^= w_vec[1].0 ^ w_vec[3].0;
+		self.internal_state[5] ^= w_vec[1].1 ^ w_vec[3].1;
+		self.internal_state[6] ^= w_vec[1].2 ^ w_vec[3].2;
+		self.internal_state[7] ^= w_vec[1].3 ^ w_vec[3].3;
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
