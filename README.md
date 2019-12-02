@@ -31,9 +31,7 @@ orion = { version = "*", default-features = false }
 # Replace * with the most recent version
 ```
 
-When orion is used in a `no_std` context, access to nearly all functionality, except for that in
-`hazardous`, is not available. This is because the high-level functionality depends on the systems random generator,
-which is not available in `no_std`.
+When orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator.
 
 ### Documentation
 Can be viewed [here](https://docs.rs/orion) or built with:
