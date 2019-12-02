@@ -28,9 +28,6 @@ matrix:
         # No default features
         - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --tests --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --tests --target x86_64-unknown-linux-gnu
-        # Nightly features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
-        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --target x86_64-unknown-linux-gnu
         
         # Release:
         # Sanitizers with default features
@@ -39,9 +36,6 @@ matrix:
         # No default features
         - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --tests --release --target x86_64-unknown-linux-gnu
         - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --tests --release --target x86_64-unknown-linux-gnu
-        # Nightly features
-        - RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS="detect_odr_violation=0" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
-        - RUSTFLAGS="-Z sanitizer=leak" cargo test --no-default-features --features nightly --tests --release --target x86_64-unknown-linux-gnu
 
         - cargo clean
 
@@ -51,12 +45,10 @@ matrix:
         # Debug:
         - cargo test
         - cargo test --no-default-features --tests
-        - cargo test --no-default-features --features nightly
         
         # Release:
         - cargo test --release
         - cargo test --release --no-default-features --tests
-        - cargo test --release --no-default-features --features nightly
 
     - name: "[RELEASE + DEBUG]: Tests + cargo-audit + clippy + fmt"
       rust: stable
@@ -85,19 +77,33 @@ matrix:
         - cargo test --release
         - cargo test --release --no-default-features --tests
 
-    - name: "[RELEASE + DEBUG]: Build no_std"
+    - name: "[RELEASE + DEBUG (stable)]: Build no_std"
+      env: TARGET=thumbv7em-none-eabi
+      rust: stable
+      install:
+        - cargo install xargo || true
+        - rustup target add $TARGET
+        - rustup component add rust-src
+      script:
+        # Debug:
+        - xargo build --no-default-features --verbose --target $TARGET
+          
+        # Release:
+        - xargo build --release --no-default-features --verbose --target $TARGET
+
+    - name: "[RELEASE + DEBUG (nightly)]: Build no_std"
       env: TARGET=thumbv7em-none-eabi
       rust: nightly
       install:
         - cargo install xargo || true
-        - rustup target install armv7-unknown-linux-gnueabihf
+        - rustup target add $TARGET
         - rustup component add rust-src
       script:
         # Debug:
-        - xargo build --no-default-features --features no_std --verbose --target $TARGET
+        - xargo build --no-default-features --verbose --target $TARGET
           
         # Release:
-        - xargo build --release --no-default-features --features no_std --verbose --target $TARGET
+        - xargo build --release --no-default-features --verbose --target $TARGET
     
     - name: "[RELEASE + DEBUG]: 32-bit architecture"
       env: TARGET=i686-unknown-linux-gnu
@@ -143,7 +149,7 @@ matrix:
         - rustup target add wasm32-unknown-unknown
       script:
         # Release:
-        - cargo check --target wasm32-unknown-unknown
+        - cargo check --no-default-features --target wasm32-unknown-unknown
 
     - name: "[RELEASE (nightly)]: WebAssembly"
       env: TARGET=wasm32-unknown-unknown
@@ -152,7 +158,7 @@ matrix:
         - rustup target add wasm32-unknown-unknown
       script:
         # Release:
-        - cargo check --no-default-features --features no_std --target wasm32-unknown-unknown
+        - cargo check --no-default-features --target wasm32-unknown-unknown
     
     - name: "Documentation"
       rust: stable
