@@ -256,6 +256,7 @@ impl Blake2b {
 		let s_indexed = U64x4(m[s_idx[1]], m[s_idx[3]], m[s_idx[5]], m[s_idx[7]]);
 		Self::blake_qround(v, &s_indexed, 16, 63);
 
+		// Shuffle
 		v[1] = v[1].shl_1();
 		v[2] = v[2].shl_2();
 		v[3] = v[3].shl_3();
@@ -265,6 +266,7 @@ impl Blake2b {
 		let s_indexed = U64x4(m[s_idx[9]], m[s_idx[11]], m[s_idx[13]], m[s_idx[15]]);
 		Self::blake_qround(v, &s_indexed, 16, 63);
 
+		// Unshuffle
 		v[1] = v[1].shl_3();
 		v[2] = v[2].shl_2();
 		v[3] = v[3].shl_1();
@@ -281,9 +283,6 @@ impl Blake2b {
 			None => load_u64_into_le(&self.buffer, &mut m_vec),
 		}
 
-		let v0 = self.internal_state[0];
-		let v1 = self.internal_state[1];
-		let v2 = IV[0];
 		let v3 = U64x4(
 			self.t[0] ^ IV[1].0,
 			self.t[1] ^ IV[1].1,
@@ -291,7 +290,7 @@ impl Blake2b {
 			self.f[1] ^ IV[1].3,
 		);
 
-		let mut w_vec: [U64x4; 4] = [v0, v1, v2, v3];
+		let mut w_vec: [U64x4; 4] = [self.internal_state[0], self.internal_state[1], IV[0], v3];
 
 		Self::round(&SIGMA[0], &m_vec, &mut w_vec);
 		Self::round(&SIGMA[1], &m_vec, &mut w_vec);
