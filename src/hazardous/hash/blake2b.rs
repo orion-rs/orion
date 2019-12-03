@@ -79,10 +79,7 @@
 //! [`SecretKey::generate()`]: struct.SecretKey.html
 //! [`verify()`]: fn.verify.html
 //! [`as_ref()`]: struct.Digest.html
-use crate::{
-	errors::UnknownCryptoError,
-	util::endianness::{load_u64_into_le, store_u64_into_le},
-};
+use crate::{errors::UnknownCryptoError, util::endianness::load_u64_into_le, util::u64x4::U64x4};
 
 /// The blocksize for the hash function BLAKE2b.
 const BLAKE2B_BLOCKSIZE: usize = 128;
@@ -117,15 +114,19 @@ construct_public! {
 
 #[allow(clippy::unreadable_literal)]
 /// The BLAKE2b initialization vector (IV) as defined in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
-const IV: [u64; 8] = [
-	0x6a09e667f3bcc908,
-	0xbb67ae8584caa73b,
-	0x3c6ef372fe94f82b,
-	0xa54ff53a5f1d36f1,
-	0x510e527fade682d1,
-	0x9b05688c2b3e6c1f,
-	0x1f83d9abfb41bd6b,
-	0x5be0cd19137e2179,
+const IV: [U64x4; 2] = [
+	U64x4(
+		0x6a09e667f3bcc908,
+		0xbb67ae8584caa73b,
+		0x3c6ef372fe94f82b,
+		0xa54ff53a5f1d36f1,
+	),
+	U64x4(
+		0x510e527fade682d1,
+		0x9b05688c2b3e6c1f,
+		0x1f83d9abfb41bd6b,
+		0x5be0cd19137e2179,
+	),
 ];
 
 /// BLAKE2b SGIMA as defined in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
@@ -184,8 +185,8 @@ impl Hasher {
 #[derive(Clone)]
 /// BLAKE2b streaming state.
 pub struct Blake2b {
-	init_state: [u64; 8],
-	internal_state: [u64; 8],
+	init_state: [U64x4; 2],
+	internal_state: [U64x4; 2],
 	buffer: [u8; BLAKE2B_BLOCKSIZE],
 	leftover: usize,
 	t: [u64; 2],
@@ -198,8 +199,18 @@ pub struct Blake2b {
 impl Drop for Blake2b {
 	fn drop(&mut self) {
 		use zeroize::Zeroize;
-		self.init_state.zeroize();
-		self.internal_state.zeroize();
+		for row in self.init_state.iter_mut() {
+			row.0.zeroize();
+			row.1.zeroize();
+			row.2.zeroize();
+			row.3.zeroize();
+		}
+		for row in self.internal_state.iter_mut() {
+			row.0.zeroize();
+			row.1.zeroize();
+			row.2.zeroize();
+			row.3.zeroize();
+		}
 		self.buffer.zeroize();
 	}
 }
@@ -229,35 +240,36 @@ impl Blake2b {
 	}
 
 	#[inline(always)]
-	#[allow(clippy::many_single_char_names)]
-	#[allow(clippy::too_many_arguments)]
-	/// The primitive mixing function G as defined in the RFC.
-	fn prim_mix_g(x: u64, y: u64, a: usize, b: usize, c: usize, d: usize, w: &mut [u64]) {
-		w[a] = w[a].wrapping_add(w[b]).wrapping_add(x);
-		w[d] ^= w[a];
-		w[d] = (w[d]).rotate_right(32u32);
-		w[c] = w[c].wrapping_add(w[d]);
-		w[b] ^= w[c];
-		w[b] = (w[b]).rotate_right(24u32);
-		w[a] = w[a].wrapping_add(w[b]).wrapping_add(y);
-		w[d] ^= w[a];
-		w[d] = (w[d]).rotate_right(16u32);
-		w[c] = w[c].wrapping_add(w[d]);
-		w[b] ^= w[c];
-		w[b] = (w[b]).rotate_right(63u32);
+	/// Quarter round on the BLAKE2b internal matrix.
+	fn blake_qround(v: &mut [U64x4; 4], s_idx: &U64x4, r1: u32, r2: u32) {
+		v[0] = v[0].wrapping_add(v[1]).wrapping_add(*s_idx);
+		v[3] = (v[3] ^ v[0]).rotate_right(r1);
+		v[2] = v[2].wrapping_add(v[3]);
+		v[1] = (v[1] ^ v[2]).rotate_right(r2);
 	}
 
 	#[inline(always)]
 	/// Perform a single round based on a message schedule selection.
-	fn round(ri: usize, m: &mut [u64; 16], w: &mut [u64; 16]) {
-		Self::prim_mix_g(m[SIGMA[ri][0]], m[SIGMA[ri][1]], 0, 4, 8, 12, w);
-		Self::prim_mix_g(m[SIGMA[ri][2]], m[SIGMA[ri][3]], 1, 5, 9, 13, w);
-		Self::prim_mix_g(m[SIGMA[ri][4]], m[SIGMA[ri][5]], 2, 6, 10, 14, w);
-		Self::prim_mix_g(m[SIGMA[ri][6]], m[SIGMA[ri][7]], 3, 7, 11, 15, w);
-		Self::prim_mix_g(m[SIGMA[ri][8]], m[SIGMA[ri][9]], 0, 5, 10, 15, w);
-		Self::prim_mix_g(m[SIGMA[ri][10]], m[SIGMA[ri][11]], 1, 6, 11, 12, w);
-		Self::prim_mix_g(m[SIGMA[ri][12]], m[SIGMA[ri][13]], 2, 7, 8, 13, w);
-		Self::prim_mix_g(m[SIGMA[ri][14]], m[SIGMA[ri][15]], 3, 4, 9, 14, w);
+	fn round(s_idx: &[usize; 16], m: &[u64; 16], v: &mut [U64x4; 4]) {
+		let s_indexed = U64x4(m[s_idx[0]], m[s_idx[2]], m[s_idx[4]], m[s_idx[6]]);
+		Self::blake_qround(v, &s_indexed, 32, 24);
+		let s_indexed = U64x4(m[s_idx[1]], m[s_idx[3]], m[s_idx[5]], m[s_idx[7]]);
+		Self::blake_qround(v, &s_indexed, 16, 63);
+
+		// Shuffle
+		v[1] = v[1].shl_1();
+		v[2] = v[2].shl_2();
+		v[3] = v[3].shl_3();
+
+		let s_indexed = U64x4(m[s_idx[8]], m[s_idx[10]], m[s_idx[12]], m[s_idx[14]]);
+		Self::blake_qround(v, &s_indexed, 32, 24);
+		let s_indexed = U64x4(m[s_idx[9]], m[s_idx[11]], m[s_idx[13]], m[s_idx[15]]);
+		Self::blake_qround(v, &s_indexed, 16, 63);
+
+		// Unshuffle
+		v[1] = v[1].shl_3();
+		v[2] = v[2].shl_2();
+		v[3] = v[3].shl_1();
 	}
 
 	/// The compression function f as defined in the RFC.
@@ -270,46 +282,31 @@ impl Blake2b {
 			}
 			None => load_u64_into_le(&self.buffer, &mut m_vec),
 		}
-		let mut w_vec = [
-			self.internal_state[0],
-			self.internal_state[1],
-			self.internal_state[2],
-			self.internal_state[3],
-			self.internal_state[4],
-			self.internal_state[5],
-			self.internal_state[6],
-			self.internal_state[7],
-			IV[0],
-			IV[1],
-			IV[2],
-			IV[3],
-			self.t[0] ^ IV[4],
-			self.t[1] ^ IV[5],
-			self.f[0] ^ IV[6],
-			self.f[1] ^ IV[7],
-		];
 
-		Self::round(0, &mut m_vec, &mut w_vec);
-		Self::round(1, &mut m_vec, &mut w_vec);
-		Self::round(2, &mut m_vec, &mut w_vec);
-		Self::round(3, &mut m_vec, &mut w_vec);
-		Self::round(4, &mut m_vec, &mut w_vec);
-		Self::round(5, &mut m_vec, &mut w_vec);
-		Self::round(6, &mut m_vec, &mut w_vec);
-		Self::round(7, &mut m_vec, &mut w_vec);
-		Self::round(8, &mut m_vec, &mut w_vec);
-		Self::round(9, &mut m_vec, &mut w_vec);
-		Self::round(10, &mut m_vec, &mut w_vec);
-		Self::round(11, &mut m_vec, &mut w_vec);
+		let v3 = U64x4(
+			self.t[0] ^ IV[1].0,
+			self.t[1] ^ IV[1].1,
+			self.f[0] ^ IV[1].2,
+			self.f[1] ^ IV[1].3,
+		);
 
-		self.internal_state[0] ^= w_vec[0] ^ w_vec[8];
-		self.internal_state[1] ^= w_vec[1] ^ w_vec[9];
-		self.internal_state[2] ^= w_vec[2] ^ w_vec[10];
-		self.internal_state[3] ^= w_vec[3] ^ w_vec[11];
-		self.internal_state[4] ^= w_vec[4] ^ w_vec[12];
-		self.internal_state[5] ^= w_vec[5] ^ w_vec[13];
-		self.internal_state[6] ^= w_vec[6] ^ w_vec[14];
-		self.internal_state[7] ^= w_vec[7] ^ w_vec[15];
+		let mut w_vec: [U64x4; 4] = [self.internal_state[0], self.internal_state[1], IV[0], v3];
+
+		Self::round(&SIGMA[0], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[1], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[2], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[3], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[4], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[5], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[6], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[7], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[8], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[9], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[10], &m_vec, &mut w_vec);
+		Self::round(&SIGMA[11], &m_vec, &mut w_vec);
+
+		self.internal_state[0] ^= w_vec[0] ^ w_vec[2];
+		self.internal_state[1] ^= w_vec[1] ^ w_vec[3];
 	}
 
 	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -321,7 +318,7 @@ impl Blake2b {
 		}
 
 		let mut context = Self {
-			init_state: [0u64; 8],
+			init_state: [U64x4::default(); 2],
 			internal_state: IV,
 			buffer: [0u8; BLAKE2B_BLOCKSIZE],
 			leftover: 0,
@@ -336,7 +333,7 @@ impl Blake2b {
 			Some(sk) => {
 				context.is_keyed = true;
 				let klen = sk.len();
-				context.internal_state[0] ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
+				context.internal_state[0].0 ^= 0x01010000 ^ ((klen as u64) << 8) ^ (size as u64);
 				context.init_state.copy_from_slice(&context.internal_state);
 				context.update(sk.unprotected_as_bytes())?;
 				// The state needs updating with the secret key padded to blocksize length
@@ -345,7 +342,7 @@ impl Blake2b {
 				context.update(pad[..rem].as_ref())?;
 			}
 			None => {
-				context.internal_state[0] ^= 0x01010000 ^ (size as u64);
+				context.internal_state[0].0 ^= 0x01010000 ^ (size as u64);
 				context.init_state.copy_from_slice(&context.internal_state);
 			}
 		}
@@ -448,7 +445,8 @@ impl Blake2b {
 		self.compress_f(None);
 
 		let mut digest = [0u8; 64];
-		store_u64_into_le(&self.internal_state, &mut digest);
+		self.internal_state[0].store_into_le(&mut digest[..32]);
+		self.internal_state[1].store_into_le(&mut digest[32..]);
 
 		Digest::from_slice(&digest[..self.size])
 	}
@@ -478,8 +476,8 @@ mod public {
 	use super::*;
 
 	fn compare_blake2b_states(state_1: &Blake2b, state_2: &Blake2b) {
-		assert_eq!(state_1.init_state, state_2.init_state);
-		assert_eq!(state_1.internal_state, state_2.internal_state);
+		assert!(state_1.init_state == state_2.init_state);
+		assert!(state_1.internal_state == state_2.internal_state);
 		assert_eq!(state_1.buffer[..], state_2.buffer[..]);
 		assert_eq!(state_1.leftover, state_2.leftover);
 		assert_eq!(state_1.t, state_2.t);
@@ -943,7 +941,7 @@ mod private {
 		#[test]
 		fn test_offset_increase_values() {
 			let mut context = Blake2b {
-				init_state: [0u64; 8],
+				init_state: [U64x4::default(); 2],
 				internal_state: IV,
 				buffer: [0u8; BLAKE2B_BLOCKSIZE],
 				leftover: 0,
@@ -969,7 +967,7 @@ mod private {
 		#[should_panic]
 		fn test_panic_on_second_overflow() {
 			let mut context = Blake2b {
-				init_state: [0u64; 8],
+				init_state: [U64x4::default(); 2],
 				internal_state: IV,
 				buffer: [0u8; BLAKE2B_BLOCKSIZE],
 				leftover: 0,
