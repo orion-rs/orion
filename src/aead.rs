@@ -30,6 +30,7 @@
 //! confidentiality and authenticity of these messages is required.
 //!
 //! # About:
+//! - Both one-shot functions and a [`streaming API`] are provided.
 //! - The nonce is automatically generated.
 //! - Returns a vector where the first 24 bytes are the nonce and the rest is
 //!   the authenticated
@@ -80,6 +81,7 @@
 //! [`POLY1305_OUTSIZE`]: ../hazardous/mac/poly1305/constant.POLY1305_OUTSIZE.html
 //! [`XCHACHA_NONCESIZE`]: ../hazardous/stream/xchacha20/constant.XCHACHA_NONCESIZE.html
 //! [`SecretKey::default()`]: struct.SecretKey.html
+//! [`streaming API`]: streaming/index.html
 
 pub use crate::hltypes::SecretKey;
 use crate::{
@@ -149,6 +151,169 @@ pub fn open(
 	Ok(dst_out)
 }
 
+pub mod streaming {
+	//! Streaming AEAD based on XChaCha20Poly1305.
+	//!
+	//! # Use case:
+	//!  This can be used to encrypt and authenticate a stream of data. It prevents the
+	//!  modification, reordering, dropping or duplication of messages. Nonce management is handled automatically.
+	//!
+	//!  An example of this could be the encryption of files which are too large to encrypt in one piece.
+	//!
+	//! # About:
+	//! This implementation is based on and compatible with the ["secretstream" API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
+	//! of libsodium.
+	//!
+	//! # Parameters:
+	//! - `secret_key`: The secret key.
+	//! - `nonce`: The nonce value.
+	//! - `plaintext`: The data to be encrypted.
+	//! - `ciphertext`: The encrypted data with a Poly1305 tag and a [`StreamTag`] indicating its function.
+	//! - `tag`: Indicates the type of message. The `tag` is a part of the output when encrypting. It
+	//! is encrypted and authenticated.
+	//!
+	//! # Errors:
+	//! An error will be returned if:
+	//! - `secret_key` is not 32 bytes.
+	//! - The length of `ciphertext` is not at least [`ABYTES`].
+	//! - The received mac does not match the calculated mac when decrypting. This can indicate
+	//!   a dropped or reordered message within the stream.
+	//! - More than 2^32-3 * 64 bytes of data are processed when encrypting/decrypting a single chunk.
+	//! - [`ABYTES`] + `plaintext.len()` overflows when encrypting.
+	//!
+	//! # Panics:
+	//! A panic will occur if:
+	//! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows when decrypting.
+	//! - Failure to generate random bytes securely.
+	//!
+	//! # Security:
+	//! - It is critical for security that a given nonce is not re-used with a given
+	//!   key.
+	//! - To securely generate a strong key, use [`SecretKey::generate()`].
+	//! - The length of the messages is leaked.
+	//! - It is recommended to use `StreamTag::FINISH` as tag for the last message. This allows the
+	//!   decrypting side to detect if messages at the end of the stream are lost.
+	//!
+	//! # Example:
+	//! ```rust
+	//! use orion::aead::SecretKey;
+	//! use orion::aead::streaming::*;
+	//!
+	//! let key = SecretKey::default();
+	//!	let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+	//! let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+	//!
+	//! // Message 1
+	//!	let plaintext1 = "Secret message 1".as_bytes().to_vec();
+	//! let cipher1 = sealer
+	//!		.seal_chunk(&plaintext1, StreamTag::MESSAGE)
+	//!		.unwrap();
+	//! let (dec1, tag1) = opener.open_chunk(&cipher1).unwrap();
+	//! assert_eq!(plaintext1, dec1);
+	//! assert_eq!(tag1, StreamTag::MESSAGE);
+	//!
+	//! // Message 2
+	//! let plaintext2 = "Secret message 2".as_bytes().to_vec();
+	//! let cipher2 = sealer
+	//!		.seal_chunk(&plaintext2, StreamTag::MESSAGE)
+	//!		.unwrap();
+	//! let (dec2, tag2) = opener.open_chunk(&cipher2).unwrap();
+	//! assert_eq!(plaintext2, dec2);
+	//! assert_eq!(tag2, StreamTag::MESSAGE);
+	//!
+	//! // Message 3 (Last message of this stream, using the FINISH tag)
+	//! let plaintext3 = "Secret message 3".as_bytes().to_vec();
+	//! let cipher3 = sealer
+	//!		.seal_chunk(&plaintext3, StreamTag::FINISH)
+	//!		.unwrap();
+	//! let (dec3, tag3) = opener.open_chunk(&cipher3).unwrap();
+	//! assert_eq!(plaintext3, dec3);
+	//! assert_eq!(tag3, StreamTag::FINISH);
+	//!
+	//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+	//! ```
+	//! [`ABYTES`]: ../../hazardous/aead/streaming/constant.ABYTES.html
+	//! [`StreamTag`]: ../../hazardous/aead/streaming/enum.StreamTag.html
+	//! [`SecretKey::generate()`]: ../struct.SecretKey.html
+
+	use super::*;
+	pub use crate::hazardous::aead::streaming::StreamTag;
+
+	#[derive(Debug)]
+	/// Streaming authenticated encryption.
+	pub struct StreamSealer {
+		internal_sealer: aead::streaming::StreamXChaCha20Poly1305,
+	}
+
+	impl StreamSealer {
+		#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+		/// Initialize a `StreamSealer` struct with a given key.
+		pub fn new(secret_key: &SecretKey) -> Result<(Self, Nonce), UnknownCryptoError> {
+			let nonce = Nonce::generate();
+			let sk = &aead::streaming::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
+
+			let sealer = Self {
+				internal_sealer: aead::streaming::StreamXChaCha20Poly1305::new(sk, &nonce),
+			};
+			Ok((sealer, nonce))
+		}
+
+		#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+		/// Encrypts `plaintext`. The `StreamTag` indicates the type of message.
+		pub fn seal_chunk(
+			&mut self,
+			plaintext: &[u8],
+			tag: StreamTag,
+		) -> Result<Vec<u8>, UnknownCryptoError> {
+			let sealed_chunk_len = plaintext.len().checked_add(aead::streaming::ABYTES);
+			if sealed_chunk_len.is_none() {
+				return Err(UnknownCryptoError);
+			}
+
+			let mut sealed_chunk = vec![0u8; sealed_chunk_len.unwrap()];
+			self.internal_sealer
+				.seal_chunk(plaintext, None, &mut sealed_chunk, tag)?;
+
+			Ok(sealed_chunk)
+		}
+	}
+
+	#[derive(Debug)]
+	/// Streaming authenticated decryption.
+	pub struct StreamOpener {
+		internal_sealer: aead::streaming::StreamXChaCha20Poly1305,
+	}
+
+	impl StreamOpener {
+		#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+		/// Initialize a `StreamOpener` struct with a given key and nonce.
+		pub fn new(secret_key: &SecretKey, nonce: &Nonce) -> Result<Self, UnknownCryptoError> {
+			let sk = &chacha20::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
+
+			Ok(Self {
+				internal_sealer: aead::streaming::StreamXChaCha20Poly1305::new(sk, nonce),
+			})
+		}
+		#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+		/// Decrypts `ciphertext`. Returns the decrypted data and the `StreamTag` indicating the type of message.
+		pub fn open_chunk(
+			&mut self,
+			ciphertext: &[u8],
+		) -> Result<(Vec<u8>, StreamTag), UnknownCryptoError> {
+			if ciphertext.len() < aead::streaming::ABYTES {
+				return Err(UnknownCryptoError);
+			}
+
+			let mut opened_chunk = vec![0u8; ciphertext.len() - aead::streaming::ABYTES];
+			let tag = self
+				.internal_sealer
+				.open_chunk(ciphertext, None, &mut opened_chunk)?;
+
+			Ok((opened_chunk, tag))
+		}
+	}
+}
+
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -156,23 +321,24 @@ mod public {
 
 	mod test_seal_open {
 		use super::*;
+
 		#[test]
 		fn test_auth_enc_encryption_decryption() {
 			let key = SecretKey::default();
-			let plaintext = "Secret message".as_bytes().to_vec();
+			let plaintext = "Secret message".as_bytes();
 
-			let dst_ciphertext = seal(&key, &plaintext).unwrap();
+			let dst_ciphertext = seal(&key, plaintext).unwrap();
 			assert!(dst_ciphertext.len() == plaintext.len() + (24 + 16));
 			let dst_plaintext = open(&key, &dst_ciphertext).unwrap();
-			assert_eq!(plaintext, dst_plaintext);
+			assert_eq!(plaintext, &dst_plaintext[..]);
 		}
 
 		#[test]
 		fn test_auth_enc_plaintext_empty_err() {
 			let key = SecretKey::default();
-			let plaintext = "".as_bytes().to_vec();
+			let plaintext = "".as_bytes();
 
-			assert!(seal(&key, &plaintext).is_err());
+			assert!(seal(&key, plaintext).is_err());
 		}
 
 		#[test]
@@ -186,9 +352,9 @@ mod public {
 		#[test]
 		fn test_modified_nonce_err() {
 			let key = SecretKey::default();
-			let plaintext = "Secret message".as_bytes().to_vec();
+			let plaintext = "Secret message".as_bytes();
 
-			let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
+			let mut dst_ciphertext = seal(&key, plaintext).unwrap();
 			// Modify nonce
 			dst_ciphertext[10] ^= 1;
 			assert!(open(&key, &dst_ciphertext).is_err());
@@ -197,9 +363,9 @@ mod public {
 		#[test]
 		fn test_modified_ciphertext_err() {
 			let key = SecretKey::default();
-			let plaintext = "Secret message".as_bytes().to_vec();
+			let plaintext = "Secret message".as_bytes();
 
-			let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
+			let mut dst_ciphertext = seal(&key, plaintext).unwrap();
 			// Modify ciphertext
 			dst_ciphertext[25] ^= 1;
 			assert!(open(&key, &dst_ciphertext).is_err());
@@ -208,9 +374,9 @@ mod public {
 		#[test]
 		fn test_modified_tag_err() {
 			let key = SecretKey::default();
-			let plaintext = "Secret message".as_bytes().to_vec();
+			let plaintext = "Secret message".as_bytes();
 
-			let mut dst_ciphertext = seal(&key, &plaintext).unwrap();
+			let mut dst_ciphertext = seal(&key, plaintext).unwrap();
 			let dst_ciphertext_len = dst_ciphertext.len();
 			// Modify tag
 			dst_ciphertext[dst_ciphertext_len - 6] ^= 1;
@@ -220,9 +386,9 @@ mod public {
 		#[test]
 		fn test_diff_secret_key_err() {
 			let key = SecretKey::default();
-			let plaintext = "Secret message".as_bytes().to_vec();
+			let plaintext = "Secret message".as_bytes();
 
-			let dst_ciphertext = seal(&key, &plaintext).unwrap();
+			let dst_ciphertext = seal(&key, plaintext).unwrap();
 			let bad_key = SecretKey::default();
 			assert!(open(&bad_key, &dst_ciphertext).is_err());
 		}
@@ -230,20 +396,202 @@ mod public {
 		#[test]
 		fn test_secret_length_err() {
 			let key = SecretKey::generate(31).unwrap();
-			let plaintext = "Secret message Secret message Secret message Secret message "
-				.as_bytes()
-				.to_vec();
+			let plaintext = "Secret message".as_bytes();
 
-			assert!(seal(&key, &plaintext).is_err());
-			assert!(open(&key, &plaintext).is_err());
+			assert!(seal(&key, plaintext).is_err());
+			assert!(open(&key, plaintext).is_err());
 		}
 	}
 
-	// Proptests. Only executed when NOT testing no_std.
-	#[cfg(feature = "safe_api")]
-	mod proptest {
+	mod test_stream_seal_open {
+		use super::streaming::*;
 		use super::*;
 
+		#[test]
+		fn test_auth_enc_encryption_decryption() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let plaintext = "Secret message".as_bytes();
+
+			let dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+			assert!(dst_ciphertext.len() == plaintext.len() + 17);
+			let (dst_plaintext, tag) = opener.open_chunk(&dst_ciphertext).unwrap();
+			assert_eq!(plaintext, &dst_plaintext[..]);
+			assert_eq!(tag, StreamTag::MESSAGE);
+		}
+
+		#[test]
+		fn test_seal_chunk_plaintext_empty_ok() {
+			let key = SecretKey::default();
+			let (mut sealer, _) = StreamSealer::new(&key).unwrap();
+			let plaintext = "".as_bytes();
+
+			assert!(sealer.seal_chunk(plaintext, StreamTag::MESSAGE).is_ok());
+		}
+
+		#[test]
+		fn test_open_chunk_less_than_abytes_err() {
+			let key = SecretKey::default();
+			let ciphertext = [0u8; aead::streaming::ABYTES - 1];
+			let (_, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+
+			assert!(opener.open_chunk(&ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_open_chunk_abytes_exact_ok() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let ciphertext = sealer
+				.seal_chunk("".as_bytes(), StreamTag::MESSAGE)
+				.unwrap();
+			let (pt, tag) = opener.open_chunk(&ciphertext).unwrap();
+
+			assert!(pt.is_empty());
+			assert!(tag.as_byte() == 0u8);
+		}
+
+		#[test]
+		fn test_modified_tag_err() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let plaintext = "Secret message".as_bytes();
+
+			let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+			// Modify tag
+			dst_ciphertext[0] ^= 1;
+			assert!(opener.open_chunk(&dst_ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_modified_ciphertext_err() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let plaintext = "Secret message".as_bytes();
+
+			let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+			// Modify ciphertext
+			dst_ciphertext[1] ^= 1;
+			assert!(opener.open_chunk(&dst_ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_modified_mac_err() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let plaintext = "Secret message".as_bytes();
+
+			let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+			// Modify mac
+			let macpos = dst_ciphertext.len() - 1;
+			dst_ciphertext[macpos] ^= 1;
+			assert!(opener.open_chunk(&dst_ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_diff_secret_key_err() {
+			let key = SecretKey::default();
+			let plaintext = "Secret message".as_bytes();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let bad_key = SecretKey::default();
+			let mut opener = StreamOpener::new(&bad_key, &nonce).unwrap();
+
+			let dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+
+			assert!(opener.open_chunk(&dst_ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_secret_length_err() {
+			let key = SecretKey::generate(31).unwrap();
+			assert!(StreamSealer::new(&key).is_err());
+			assert!(StreamOpener::new(&key, &Nonce::generate()).is_err());
+		}
+
+		#[test]
+		fn same_input_generates_different_ciphertext() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let plaintext = "Secret message 1".as_bytes();
+			let cipher1 = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+			let cipher2 = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+			assert!(cipher1 != cipher2);
+
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let (dec1, tag1) = opener.open_chunk(&cipher1).unwrap();
+			let (dec2, tag2) = opener.open_chunk(&cipher2).unwrap();
+			assert_eq!(plaintext, &dec1[..]);
+			assert_eq!(plaintext, &dec2[..]);
+			assert_eq!(tag1, StreamTag::MESSAGE);
+			assert_eq!(tag2, StreamTag::MESSAGE);
+		}
+
+		#[test]
+		fn same_input_on_same_init_different_ct() {
+			// Two sealers initialized that encrypt the same plaintext
+			// should produce different ciphertexts because the nonce
+			// is randomly generated.
+			let key = SecretKey::default();
+			let (mut sealer_first, _) = StreamSealer::new(&key).unwrap();
+			let (mut sealer_second, _) = StreamSealer::new(&key).unwrap();
+			let plaintext = "Secret message 1".as_bytes();
+
+			let cipher1 = sealer_first
+				.seal_chunk(plaintext, StreamTag::MESSAGE)
+				.unwrap();
+			let cipher2 = sealer_second
+				.seal_chunk(plaintext, StreamTag::MESSAGE)
+				.unwrap();
+			assert!(cipher1 != cipher2);
+		}
+
+		#[test]
+		fn test_stream_seal_and_open() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let plaintext1 = "Secret message 1".as_bytes();
+			let plaintext2 = "Secret message 2".as_bytes();
+			let plaintext3 = "Secret message 3".as_bytes();
+			let cipher1 = sealer.seal_chunk(plaintext1, StreamTag::MESSAGE).unwrap();
+			let cipher2 = sealer.seal_chunk(plaintext2, StreamTag::FINISH).unwrap();
+			let cipher3 = sealer.seal_chunk(plaintext3, StreamTag::MESSAGE).unwrap();
+
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let (dec1, tag1) = opener.open_chunk(&cipher1).unwrap();
+			let (dec2, tag2) = opener.open_chunk(&cipher2).unwrap();
+			let (dec3, tag3) = opener.open_chunk(&cipher3).unwrap();
+			assert_eq!(plaintext1, &dec1[..]);
+			assert_eq!(plaintext2, &dec2[..]);
+			assert_eq!(plaintext3, &dec3[..]);
+			assert_eq!(tag1, StreamTag::MESSAGE);
+			assert_eq!(tag2, StreamTag::FINISH);
+			assert_eq!(tag3, StreamTag::MESSAGE);
+		}
+	}
+
+	mod proptest {
+		use super::streaming::*;
+		use super::*;
+
+		quickcheck! {
+				fn prop_stream_seal_open_same_input(input: Vec<u8>) -> bool {
+					let key = SecretKey::default();
+
+					let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+					let ct = sealer.seal_chunk(&input[..],StreamTag::MESSAGE).unwrap();
+
+					let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+					let (pt_decrypted, tag) = opener.open_chunk(&ct).unwrap();
+
+					(input == pt_decrypted && tag == StreamTag::MESSAGE)
+				}
+		}
 		quickcheck! {
 			// Sealing input, and then opening should always yield the same input.
 			fn prop_seal_open_same_input(input: Vec<u8>) -> bool {

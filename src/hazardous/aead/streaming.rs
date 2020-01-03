@@ -59,6 +59,8 @@
 //! [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
 //! - The length of the messages is leaked.
+//! - It is recommended to use `StreamTag::FINISH` as tag for the last message. This allows the
+//!   decrypting side to detect if messages at the end of the stream are lost.
 //!
 //! # Example:
 //! ```rust
