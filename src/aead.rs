@@ -173,6 +173,7 @@ pub fn open(
 ///
 /// # Errors:
 /// An error will be returned if:
+/// - `secret_key` is not 32 bytes.
 /// - The length of `ciphertext` is not greater than `16`.
 /// - The received mac does not match the calculated mac when decrypting. This can indicate
 ///   a dropped or reordered message within the stream.
@@ -185,6 +186,8 @@ pub fn open(
 /// - Failure to generate random bytes securely.
 ///
 /// # Security:
+/// - It is critical for security that a given nonce is not re-used with a given
+///   key.
 /// - To securely generate a strong key, use [`SecretKey::generate()`](struct.SecretKey.html).
 /// - The length of the messages is leaked.
 /// - It is recommended to use `StreamTag::FINISH` as tag for the last message. This allows the
@@ -413,24 +416,37 @@ mod public {
 			assert_eq!(tag, StreamTag::MESSAGE);
 		}
 
-		/* TODO, decision about empty ciphertext
 		#[test]
-		fn test_auth_enc_plaintext_empty_err() {
+		fn test_seal_chunk_plaintext_empty_ok() {
 			let key = SecretKey::default();
-			let plaintext = "".as_bytes().to_vec();
+			let (mut sealer, _) = StreamSealer::new(&key).unwrap();
+			let plaintext = "".as_bytes();
 
-			assert!(seal(&key, &plaintext).is_err());
-		}*/
+			assert!(sealer.seal_chunk(plaintext, StreamTag::MESSAGE).is_ok());
+		}
 
-		//TODO, decision about empty ciphertext
 		#[test]
-		fn test_auth_enc_ciphertext_less_than_41_err() {
+		fn test_open_chunk_less_than_abytes_err() {
 			let key = SecretKey::default();
-			let ciphertext = [0u8; 16];
+			let ciphertext = [0u8; aead::streaming::ABYTES - 1];
 			let (_, nonce) = StreamSealer::new(&key).unwrap();
 			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
 
 			assert!(opener.open_chunk(&ciphertext).is_err());
+		}
+
+		#[test]
+		fn test_open_chunk_abytes_exact_ok() {
+			let key = SecretKey::default();
+			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+			let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+			let ciphertext = sealer
+				.seal_chunk("".as_bytes(), StreamTag::MESSAGE)
+				.unwrap();
+			let (pt, tag) = opener.open_chunk(&ciphertext).unwrap();
+
+			assert!(pt.is_empty());
+			assert!(tag.as_byte() == 0u8);
 		}
 
 		#[test]
