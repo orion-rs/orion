@@ -243,7 +243,6 @@ pub mod streaming {
 	/// Streaming authenticated encryption.
 	pub struct StreamSealer {
 		internal_sealer: aead::streaming::StreamXChaCha20Poly1305,
-		nonce: Nonce,
 	}
 
 	impl StreamSealer {
@@ -255,7 +254,6 @@ pub mod streaming {
 
 			let sealer = Self {
 				internal_sealer: aead::streaming::StreamXChaCha20Poly1305::new(sk, &nonce),
-				nonce,
 			};
 			Ok((sealer, nonce))
 		}
