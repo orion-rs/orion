@@ -101,7 +101,6 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 		return Err(UnknownCryptoError);
 	}
 
-	let nonce = Nonce::generate();
 	let out_len = match plaintext
 		.len()
 		.checked_add(XCHACHA_NONCESIZE + POLY1305_OUTSIZE)
@@ -111,6 +110,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
 	};
 
 	let mut dst_out = vec![0u8; out_len];
+	let nonce = Nonce::generate();
 	dst_out[..XCHACHA_NONCESIZE].copy_from_slice(nonce.as_ref());
 
 	aead::xchacha20poly1305::seal(
