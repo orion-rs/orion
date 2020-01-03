@@ -156,12 +156,11 @@ pub mod streaming {
 	//!
 	//! # Use case:
 	//!  This can be used to encrypt and authenticate a stream of data. It prevents the
-	//!  modification, reordering, dropping or duplicating of messages. Nonce management is handled automatically
+	//!  modification, reordering, dropping or duplication of messages. Nonce management is handled automatically.
 	//!
 	//!  An example of this could be the encryption of files which are too large to encrypt in one piece.
 	//!
 	//! # About:
-	//!
 	//! This implementation is based on and compatible with the ["secretstream" API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
 	//! of libsodium.
 	//!
@@ -176,14 +175,14 @@ pub mod streaming {
 	//! # Errors:
 	//! An error will be returned if:
 	//! - `secret_key` is not 32 bytes.
-	//! - The length of `ciphertext` is not greater than `16`.
+	//! - The length of `ciphertext` is not at least [`ABYTES`].
 	//! - The received mac does not match the calculated mac when decrypting. This can indicate
 	//!   a dropped or reordered message within the stream.
 	//! - More than 2^32-3 * 64 bytes of data are processed when encrypting/decrypting a single chunk.
+	//! - [`ABYTES`] + `plaintext.len()` overflows when encrypting.
 	//!
 	//! # Panics:
 	//! A panic will occur if:
-	//! - [`ABYTES`] + `plaintext.len()` overflows when encrypting.
 	//! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows when decrypting.
 	//! - Failure to generate random bytes securely.
 	//!
