@@ -44,7 +44,6 @@ impl core::ops::BitXor for U64x4 {
 }
 
 impl core::ops::BitXorAssign for U64x4 {
-	#[must_use]
 	#[inline(always)]
 	fn bitxor_assign(&mut self, _rhs: Self) {
 		self.0 ^= _rhs.0;
