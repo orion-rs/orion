@@ -396,8 +396,7 @@ mod public {
 		#[test]
 		fn test_secret_length_err() {
 			let key = SecretKey::generate(31).unwrap();
-			let plaintext =
-				"Secret message Secret message Secret message Secret message ".as_bytes();
+			let plaintext = "Secret message".as_bytes();
 
 			assert!(seal(&key, plaintext).is_err());
 			assert!(open(&key, plaintext).is_err());
@@ -463,7 +462,7 @@ mod public {
 			let plaintext = "Secret message".as_bytes();
 
 			let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
-			// Modify nonce
+			// Modify tag
 			dst_ciphertext[0] ^= 1;
 			assert!(opener.open_chunk(&dst_ciphertext).is_err());
 		}
@@ -516,7 +515,7 @@ mod public {
 		}
 
 		#[test]
-		fn same_input_generates_different_cipher() {
+		fn same_input_generates_different_ciphertext() {
 			let key = SecretKey::default();
 			let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
 			let plaintext = "Secret message 1".as_bytes();
@@ -582,21 +581,15 @@ mod public {
 
 		quickcheck! {
 				fn prop_stream_seal_open_same_input(input: Vec<u8>) -> bool {
-					let pt = if input.is_empty() {
-						vec![1u8; 10]
-					} else {
-						input
-					};
-
 					let key = SecretKey::default();
 
 					let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
-					let ct = sealer.seal_chunk(&pt,StreamTag::MESSAGE).unwrap();
+					let ct = sealer.seal_chunk(&input[..],StreamTag::MESSAGE).unwrap();
 
 					let mut opener = StreamOpener::new(&key, &nonce).unwrap();
 					let (pt_decrypted, tag) = opener.open_chunk(&ct).unwrap();
 
-					(pt == pt_decrypted && tag == StreamTag::MESSAGE)
+					(input == pt_decrypted && tag == StreamTag::MESSAGE)
 				}
 		}
 		quickcheck! {
