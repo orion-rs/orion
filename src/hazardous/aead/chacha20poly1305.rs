@@ -50,11 +50,11 @@
 //! - The length of `ciphertext_with_tag` is not greater than `16`.
 //! - `plaintext` or `ciphertext_with_tag` are empty.
 //! - The received tag does not match the calculated tag when decrypting.
+//! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when encrypting.
 //!
 //! # Panics:
 //! A panic will occur if:
 //! - More than 2^32-1 * 64 bytes of data are processed.
-//! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when encrypting.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -179,9 +179,15 @@ pub fn seal(
 	ad: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	if dst_out.len() < plaintext.len().checked_add(POLY1305_OUTSIZE).unwrap() {
-		return Err(UnknownCryptoError);
-	}
+	match plaintext.len().checked_add(POLY1305_OUTSIZE) {
+		Some(out_min_len) => {
+			if dst_out.len() < out_min_len {
+				return Err(UnknownCryptoError);
+			}
+		}
+		None => return Err(UnknownCryptoError),
+	};
+
 	if plaintext.is_empty() {
 		return Err(UnknownCryptoError);
 	}

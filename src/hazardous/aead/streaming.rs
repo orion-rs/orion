@@ -46,11 +46,11 @@
 //! - The received mac does not match the calculated mac when decrypting. This can indicate
 //!   a dropped or reordered message within the stream.
 //! - More than 2^32-3 * 64 bytes of data are processed when encrypting/decrypting a single chunk.
+//! - [`ABYTES`] + `plaintext.len()` overflows when encrypting.
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - [`ABYTES`] + `plaintext.len()` overflows when encrypting.
-//! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows when decrypting.
+//! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows `u64::max_value()` when decrypting.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -303,9 +303,14 @@ impl StreamXChaCha20Poly1305 {
 		tag: StreamTag,
 	) -> Result<(), UnknownCryptoError> {
 		let msglen = plaintext.len();
-		if dst_out.len() < ABYTES.checked_add(msglen).unwrap() {
-			return Err(UnknownCryptoError);
-		}
+		match ABYTES.checked_add(msglen) {
+			Some(out_min_len) => {
+				if dst_out.len() < out_min_len {
+					return Err(UnknownCryptoError);
+				}
+			}
+			None => return Err(UnknownCryptoError),
+		};
 
 		let mut block = [0u8; CHACHA_BLOCKSIZE];
 		let ad = match ad {

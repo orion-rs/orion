@@ -44,11 +44,11 @@
 //! - The length of `ciphertext_with_tag` is not greater than `16`.
 //! - `plaintext` or `ciphertext_with_tag` are empty.
 //! - The received tag does not match the calculated tag when decrypting.
+//! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when encrypting.
 //!
 //! # Panics:
 //! A panic will occur if:
 //! - More than 2^32-1 * 64 bytes of data are processed.
-//! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when encrypting.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
