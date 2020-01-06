@@ -119,7 +119,7 @@ fn permutation_p(bytes: &mut [u64]) {
 }
 
 /// H0 as defined in the specification.
-fn h0(
+fn initial_hash(
 	lanes: u32,
 	hash_length: u32,
 	memory_kib: u32,
@@ -155,6 +155,45 @@ fn h0(
 	h_0[0..BLAKE2B_OUTSIZE].copy_from_slice(hasher.finalize().unwrap().as_ref());
 
 	h_0
+}
+
+/// H' as defined in the specification.
+fn extended_hash(input: &[u8], dst: &mut [u8]) {
+	debug_assert!(!dst.is_empty());
+
+	let outlen = dst.len() as u32;
+
+	if dst.len() <= BLAKE2B_OUTSIZE {
+		let mut ctx = Blake2b::new(None, dst.len()).unwrap();
+		ctx.update(&outlen.to_le_bytes()).unwrap();
+		ctx.update(input).unwrap();
+		dst.copy_from_slice(ctx.finalize().unwrap().as_ref());
+	} else {
+		let mut ctx = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
+		ctx.update(&outlen.to_le_bytes()).unwrap();
+		ctx.update(input).unwrap();
+
+		let mut tmp = ctx.finalize().unwrap();
+		dst[..BLAKE2B_OUTSIZE].copy_from_slice(tmp.as_ref());
+
+		let mut pos = BLAKE2B_OUTSIZE / 2;
+		let mut toproduce = dst.len() - BLAKE2B_OUTSIZE / 2;
+
+		while toproduce > BLAKE2B_OUTSIZE {
+			ctx.reset(None).unwrap();
+			ctx.update(tmp.as_ref()).unwrap();
+			tmp = ctx.finalize().unwrap();
+
+			dst[pos..(pos + BLAKE2B_OUTSIZE)].copy_from_slice(tmp.as_ref());
+			pos += BLAKE2B_OUTSIZE / 2;
+			toproduce -= BLAKE2B_OUTSIZE / 2;
+		}
+
+		ctx.reset(None).unwrap();
+		ctx.update(tmp.as_ref()).unwrap();
+		tmp = ctx.finalize().unwrap();
+		dst[pos..outlen as usize].copy_from_slice(tmp.as_ref());
+	}
 }
 
 ///
