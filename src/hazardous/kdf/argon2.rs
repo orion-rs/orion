@@ -71,51 +71,32 @@ fn g(a: &mut u64, b: &mut u64, c: &mut u64, d: &mut u64) {
 }
 
 ///
-fn permutation_p(bytes: &mut [u64]) {
-	debug_assert!(bytes.len() == 16);
-
-	let mut v0 = bytes[0];
-	let mut v1 = bytes[1];
-	let mut v2 = bytes[2];
-	let mut v3 = bytes[3];
-	let mut v4 = bytes[4];
-	let mut v5 = bytes[5];
-	let mut v6 = bytes[6];
-	let mut v7 = bytes[7];
-	let mut v8 = bytes[8];
-	let mut v9 = bytes[9];
-	let mut v10 = bytes[10];
-	let mut v11 = bytes[11];
-	let mut v12 = bytes[12];
-	let mut v13 = bytes[13];
-	let mut v14 = bytes[14];
-	let mut v15 = bytes[15];
-
-	g(&mut v0, &mut v4, &mut v8, &mut v12);
-	g(&mut v1, &mut v5, &mut v9, &mut v13);
-	g(&mut v2, &mut v6, &mut v10, &mut v14);
-	g(&mut v3, &mut v7, &mut v11, &mut v15);
-	g(&mut v0, &mut v5, &mut v10, &mut v15);
-	g(&mut v1, &mut v6, &mut v11, &mut v12);
-	g(&mut v2, &mut v7, &mut v8, &mut v13);
-	g(&mut v3, &mut v4, &mut v9, &mut v14);
-
-	bytes[0] = v0;
-	bytes[1] = v1;
-	bytes[2] = v2;
-	bytes[3] = v3;
-	bytes[4] = v4;
-	bytes[5] = v5;
-	bytes[6] = v6;
-	bytes[7] = v7;
-	bytes[8] = v8;
-	bytes[9] = v9;
-	bytes[10] = v10;
-	bytes[11] = v11;
-	bytes[12] = v12;
-	bytes[13] = v13;
-	bytes[14] = v14;
-	bytes[15] = v15;
+fn permutation_p(
+	v0: &mut u64,
+	v1: &mut u64,
+	v2: &mut u64,
+	v3: &mut u64,
+	v4: &mut u64,
+	v5: &mut u64,
+	v6: &mut u64,
+	v7: &mut u64,
+	v8: &mut u64,
+	v9: &mut u64,
+	v10: &mut u64,
+	v11: &mut u64,
+	v12: &mut u64,
+	v13: &mut u64,
+	v14: &mut u64,
+	v15: &mut u64,
+) {
+	g(v0, v4, v8, v12);
+	g(v1, v5, v9, v13);
+	g(v2, v6, v10, v14);
+	g(v3, v7, v11, v15);
+	g(v0, v5, v10, v15);
+	g(v1, v6, v11, v12);
+	g(v2, v7, v8, v13);
+	g(v3, v4, v9, v14);
 }
 
 /// H0 as defined in the specification.
@@ -196,6 +177,135 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) {
 	}
 }
 
+#[rustfmt::skip]
+///
+fn fill_block(w: &mut [u64]) {
+	
+	let mut v0: u64; let mut v1: u64; let mut v2: u64; let mut v3: u64;
+	let mut v4: u64; let mut v5: u64; let mut v6: u64; let mut v7: u64; 
+	let mut v8: u64; let mut v9: u64; let mut v10: u64; let mut v11: u64;
+	let mut v12: u64; let mut v13: u64; let mut v14: u64; let mut v15: u64;
+
+	let mut idx = 0;
+	
+	// Columns.
+	while idx < 128 {
+		v0 = w[idx];
+		v1 = w[idx + 1];
+		v2 = w[idx + 2];
+		v3 = w[idx + 3];
+		v4 = w[idx + 4];
+		v5 = w[idx + 5];
+		v6 = w[idx + 6];
+		v7 = w[idx + 7];
+		v8 = w[idx + 8];
+		v9 = w[idx + 9];
+		v10 = w[idx + 10];
+		v11 = w[idx + 11];
+		v12 = w[idx + 12];
+		v13 = w[idx + 13];
+		v14 = w[idx + 14];
+		v15 = w[idx + 15];
+
+		permutation_p(
+			&mut v0, &mut v1, &mut v2, &mut v3, 
+			&mut v4, &mut v5, &mut v6, &mut v7, 
+			&mut v8, &mut v9, &mut v10, &mut v11, 
+			&mut v12, &mut v13, &mut v14, &mut v15
+		);
+
+		w[idx] = v0;
+		w[idx + 1] = v1;
+		w[idx + 2] = v2;
+		w[idx + 3] = v3;
+		w[idx + 4] = v4;
+		w[idx + 5] = v5;
+		w[idx + 6] = v6;
+		w[idx + 7] = v7;
+		w[idx + 8] = v8;
+		w[idx + 9] = v9;
+		w[idx + 10] = v10;
+		w[idx + 11] = v11;
+		w[idx + 12] = v12;
+		w[idx + 13] = v13;
+		w[idx + 14] = v14;
+		w[idx + 15] = v15;
+
+		idx += 16;
+	}
+
+	// Rows.
+	idx = 0;
+	while idx < 16 {
+		v0 = w[idx];
+		v1 = w[idx + 1];
+		v2 = w[idx + 16];
+		v3 = w[idx + 17];
+		v4 = w[idx + 32];
+		v5 = w[idx + 33];
+		v6 = w[idx + 48];
+		v7 = w[idx + 49];
+		v8 = w[idx + 64];
+		v9 = w[idx + 65];
+		v10 = w[idx + 80];
+		v11 = w[idx + 81];
+		v12 = w[idx + 96];
+		v13 = w[idx + 97];
+		v14 = w[idx + 112];
+		v15 = w[idx + 113];
+
+		permutation_p(
+			&mut v0, &mut v1, &mut v2, &mut v3, 
+			&mut v4, &mut v5, &mut v6, &mut v7, 
+			&mut v8, &mut v9, &mut v10, &mut v11, 
+			&mut v12, &mut v13, &mut v14, &mut v15
+		);
+
+		w[idx] = v0;
+		w[idx + 1] = v1;
+		w[idx + 16] = v2;
+		w[idx + 17] = v3;
+		w[idx + 32] = v4;
+		w[idx + 33] = v5;
+		w[idx + 48] = v6;
+		w[idx + 49] = v7;
+		w[idx + 64] = v8;
+		w[idx + 65] = v9;
+		w[idx + 80] = v10;
+		w[idx + 81] = v11;
+		w[idx + 96] = v12;
+		w[idx + 97] = v13;
+		w[idx + 112] = v14;
+		w[idx + 113] = v15;
+
+		idx += 2;
+	}
+}
+
+///
+pub fn g_two(block: &[u64], out: &mut [u64]) {
+	let mut working_block = [0u64; 128];
+	working_block.copy_from_slice(block);
+	fill_block(&mut working_block);
+
+	for (el_out, &el_src) in working_block.iter_mut().zip(block.iter()) {
+		*el_out ^= el_src;
+	}
+
+	let mut tmp_block = [0u64; 128];
+	tmp_block.copy_from_slice(&working_block);
+
+	fill_block(&mut working_block);
+
+	// `out` = Z ^ R
+	for (el_out, (el_z, el_tmp)) in out
+		.iter_mut()
+		.zip(working_block.iter().zip(tmp_block.iter()))
+	{
+		*el_out = el_z ^ el_tmp;
+	}
+}
+
 ///
 pub struct Argon2i {
 	working_block: [u64; 128],
@@ -242,57 +352,6 @@ impl Argon2i {
 	}
 
 	///
-	fn fill_block(&mut self) {
-		// Columns.
-		for col in self.working_block.chunks_mut(16) {
-			permutation_p(col);
-		}
-
-		// Rows.
-		let mut idx = 0;
-		let mut tmp = [0u64; 16];
-		while idx < 16 {
-			tmp[0] = self.working_block[idx];
-			tmp[1] = self.working_block[idx + 1];
-			tmp[2] = self.working_block[idx + 16];
-			tmp[3] = self.working_block[idx + 17];
-			tmp[4] = self.working_block[idx + 32];
-			tmp[5] = self.working_block[idx + 33];
-			tmp[6] = self.working_block[idx + 48];
-			tmp[7] = self.working_block[idx + 49];
-			tmp[8] = self.working_block[idx + 64];
-			tmp[9] = self.working_block[idx + 65];
-			tmp[10] = self.working_block[idx + 80];
-			tmp[11] = self.working_block[idx + 81];
-			tmp[12] = self.working_block[idx + 96];
-			tmp[13] = self.working_block[idx + 97];
-			tmp[14] = self.working_block[idx + 112];
-			tmp[15] = self.working_block[idx + 113];
-
-			permutation_p(&mut tmp);
-
-			self.working_block[idx] = tmp[0];
-			self.working_block[idx + 1] = tmp[1];
-			self.working_block[idx + 16] = tmp[2];
-			self.working_block[idx + 17] = tmp[3];
-			self.working_block[idx + 32] = tmp[4];
-			self.working_block[idx + 33] = tmp[5];
-			self.working_block[idx + 48] = tmp[6];
-			self.working_block[idx + 49] = tmp[7];
-			self.working_block[idx + 64] = tmp[8];
-			self.working_block[idx + 65] = tmp[9];
-			self.working_block[idx + 80] = tmp[10];
-			self.working_block[idx + 81] = tmp[11];
-			self.working_block[idx + 96] = tmp[12];
-			self.working_block[idx + 97] = tmp[13];
-			self.working_block[idx + 112] = tmp[14];
-			self.working_block[idx + 113] = tmp[15];
-
-			idx += 2;
-		}
-	}
-
-	///
 	pub fn g_xor(&mut self, block_x: &[u64], block_y: &[u64], out: &mut [u64]) {
 		// R = X ^ Y
 		for idx in 0..128 {
@@ -300,34 +359,11 @@ impl Argon2i {
 			out[idx] ^= self.working_block[idx];
 		}
 
-		self.fill_block();
+		fill_block(&mut self.working_block);
 
 		// `out` = Z ^ R
 		for (el_out, el_z) in out.iter_mut().zip(self.working_block.iter()) {
 			*el_out ^= el_z;
-		}
-	}
-
-	///
-	pub fn g_two(&mut self, block: &[u64], out: &mut [u64]) {
-		self.working_block.copy_from_slice(block);
-		self.fill_block();
-
-		for (el_out, &el_src) in self.working_block.iter_mut().zip(block.iter()) {
-			*el_out ^= el_src;
-		}
-
-		let mut tmp_block = [0u64; 128];
-		tmp_block.copy_from_slice(&self.working_block);
-
-		self.fill_block();
-
-		// `out` = Z ^ R
-		for (el_out, (el_z, el_tmp)) in out
-			.iter_mut()
-			.zip(self.working_block.iter().zip(tmp_block.iter()))
-		{
-			*el_out = el_z ^ el_tmp;
 		}
 	}
 }
@@ -354,45 +390,61 @@ fn g_test() {
 
 #[test]
 fn p_test() {
-	let mut input: [u64; 16] = [
-		862185360016812330,
-		9264562855185177247,
-		17733520444968542606,
-		13219822890422175473,
-		6801067205434763034,
-		10578543507696639262,
-		10108704228654865903,
-		2299791359568756431,
-		15201093463674093404,
-		13723714563716750079,
-		9719717710557384967,
-		1845563056782807427,
-		1829242492466781631,
-		17659944659119723559,
-		14852831888916040100,
-		12286853237524317048,
-	];
-	let res: [u64; 16] = [
-		560590257705063197,
-		9520578903939690713,
-		3436672759520932446,
-		14405027955696943046,
-		17277966793721620420,
-		3246848157586690114,
-		13237761561989265024,
-		9829692378347117758,
-		1155007077473720963,
-		10252695060491707233,
-		10189249967016125740,
-		14693238843422479195,
-		13413025648622208818,
-		16791374424966705294,
-		11596653054387906253,
-		12616166200637387407,
-	];
+	let mut v0: u64 = 862185360016812330;
+	let mut v1: u64 = 9264562855185177247;
+	let mut v2: u64 = 17733520444968542606;
+	let mut v3: u64 = 13219822890422175473;
+	let mut v4: u64 = 6801067205434763034;
+	let mut v5: u64 = 10578543507696639262;
+	let mut v6: u64 = 10108704228654865903;
+	let mut v7: u64 = 2299791359568756431;
+	let mut v8: u64 = 15201093463674093404;
+	let mut v9: u64 = 13723714563716750079;
+	let mut v10: u64 = 9719717710557384967;
+	let mut v11: u64 = 1845563056782807427;
+	let mut v12: u64 = 1829242492466781631;
+	let mut v13: u64 = 17659944659119723559;
+	let mut v14: u64 = 14852831888916040100;
+	let mut v15: u64 = 12286853237524317048;
 
-	permutation_p(&mut input);
-	assert_eq!(res, input);
+	let r0: u64 = 560590257705063197;
+	let r1: u64 = 9520578903939690713;
+	let r2: u64 = 3436672759520932446;
+	let r3: u64 = 14405027955696943046;
+	let r4: u64 = 17277966793721620420;
+	let r5: u64 = 3246848157586690114;
+	let r6: u64 = 13237761561989265024;
+	let r7: u64 = 9829692378347117758;
+	let r8: u64 = 1155007077473720963;
+	let r9: u64 = 10252695060491707233;
+	let r10: u64 = 10189249967016125740;
+	let r11: u64 = 14693238843422479195;
+	let r12: u64 = 13413025648622208818;
+	let r13: u64 = 16791374424966705294;
+	let r14: u64 = 11596653054387906253;
+	let r15: u64 = 12616166200637387407;
+
+	permutation_p(
+		&mut v0, &mut v1, &mut v2, &mut v3, &mut v4, &mut v5, &mut v6, &mut v7, &mut v8, &mut v9,
+		&mut v10, &mut v11, &mut v12, &mut v13, &mut v14, &mut v15,
+	);
+
+	assert_eq!(v0, r0);
+	assert_eq!(v1, r1);
+	assert_eq!(v2, r2);
+	assert_eq!(v3, r3);
+	assert_eq!(v4, r4);
+	assert_eq!(v5, r5);
+	assert_eq!(v6, r6);
+	assert_eq!(v7, r7);
+	assert_eq!(v8, r8);
+	assert_eq!(v9, r9);
+	assert_eq!(v10, r10);
+	assert_eq!(v11, r11);
+	assert_eq!(v12, r12);
+	assert_eq!(v13, r13);
+	assert_eq!(v14, r14);
+	assert_eq!(v15, r15);
 }
 
 #[test]
