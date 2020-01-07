@@ -181,102 +181,54 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) {
 ///
 fn fill_block(w: &mut [u64]) {
 	
-	let mut v0: u64; let mut v1: u64; let mut v2: u64; let mut v3: u64;
-	let mut v4: u64; let mut v5: u64; let mut v6: u64; let mut v7: u64; 
-	let mut v8: u64; let mut v9: u64; let mut v10: u64; let mut v11: u64;
+	let mut v0:  u64; let mut v1:  u64; let mut v2:  u64; let mut v3:  u64;
+	let mut v4:  u64; let mut v5:  u64; let mut v6:  u64; let mut v7:  u64; 
+	let mut v8:  u64; let mut v9:  u64; let mut v10: u64; let mut v11: u64;
 	let mut v12: u64; let mut v13: u64; let mut v14: u64; let mut v15: u64;
 
 	let mut idx = 0;
 	
-	// Columns.
+	// Operate on columns.
 	while idx < 128 {
-		v0 = w[idx];
-		v1 = w[idx + 1];
-		v2 = w[idx + 2];
-		v3 = w[idx + 3];
-		v4 = w[idx + 4];
-		v5 = w[idx + 5];
-		v6 = w[idx + 6];
-		v7 = w[idx + 7];
-		v8 = w[idx + 8];
-		v9 = w[idx + 9];
-		v10 = w[idx + 10];
-		v11 = w[idx + 11];
-		v12 = w[idx + 12];
-		v13 = w[idx + 13];
-		v14 = w[idx + 14];
-		v15 = w[idx + 15];
+		v0  = w[idx      ]; v1  = w[idx +  1]; v2  = w[idx +  2]; v3  = w[idx +  3];
+		v4  = w[idx +   4]; v5  = w[idx +  5]; v6  = w[idx +  6]; v7  = w[idx +  7];
+		v8  = w[idx +   8]; v9  = w[idx +  9]; v10 = w[idx + 10]; v11 = w[idx + 11];
+		v12 = w[idx +  12]; v13 = w[idx + 13]; v14 = w[idx + 14]; v15 = w[idx + 15];
 
 		permutation_p(
-			&mut v0, &mut v1, &mut v2, &mut v3, 
-			&mut v4, &mut v5, &mut v6, &mut v7, 
-			&mut v8, &mut v9, &mut v10, &mut v11, 
+			&mut v0,  &mut v1,  &mut v2,  &mut v3, 
+			&mut v4,  &mut v5,  &mut v6,  &mut v7, 
+			&mut v8,  &mut v9,  &mut v10, &mut v11, 
 			&mut v12, &mut v13, &mut v14, &mut v15
 		);
 
-		w[idx] = v0;
-		w[idx + 1] = v1;
-		w[idx + 2] = v2;
-		w[idx + 3] = v3;
-		w[idx + 4] = v4;
-		w[idx + 5] = v5;
-		w[idx + 6] = v6;
-		w[idx + 7] = v7;
-		w[idx + 8] = v8;
-		w[idx + 9] = v9;
-		w[idx + 10] = v10;
-		w[idx + 11] = v11;
-		w[idx + 12] = v12;
-		w[idx + 13] = v13;
-		w[idx + 14] = v14;
-		w[idx + 15] = v15;
+		w[idx     ] =  v0; w[idx +  1] =  v1; w[idx +  2] =  v2; w[idx +  3] =  v3;
+		w[idx +  4] =  v4; w[idx +  5] =  v5; w[idx +  6] =  v6; w[idx +  7] =  v7;
+		w[idx +  8] =  v8; w[idx +  9] =  v9; w[idx + 10] = v10; w[idx + 11] = v11;
+		w[idx + 12] = v12; w[idx + 13] = v13; w[idx + 14] = v14; w[idx + 15] = v15;
 
 		idx += 16;
 	}
 
-	// Rows.
 	idx = 0;
+	// Operate on rows.
 	while idx < 16 {
-		v0 = w[idx];
-		v1 = w[idx + 1];
-		v2 = w[idx + 16];
-		v3 = w[idx + 17];
-		v4 = w[idx + 32];
-		v5 = w[idx + 33];
-		v6 = w[idx + 48];
-		v7 = w[idx + 49];
-		v8 = w[idx + 64];
-		v9 = w[idx + 65];
-		v10 = w[idx + 80];
-		v11 = w[idx + 81];
-		v12 = w[idx + 96];
-		v13 = w[idx + 97];
-		v14 = w[idx + 112];
-		v15 = w[idx + 113];
+		v0  = w[idx     ]; v1  = w[idx +  1]; v2  = w[idx +  16]; v3  = w[idx +  17];
+		v4  = w[idx + 32]; v5  = w[idx + 33]; v6  = w[idx +  48]; v7  = w[idx +  49];
+		v8  = w[idx + 64]; v9  = w[idx + 65]; v10 = w[idx +  80]; v11 = w[idx +  81];
+		v12 = w[idx + 96]; v13 = w[idx + 97]; v14 = w[idx + 112]; v15 = w[idx + 113];
 
 		permutation_p(
-			&mut v0, &mut v1, &mut v2, &mut v3, 
-			&mut v4, &mut v5, &mut v6, &mut v7, 
-			&mut v8, &mut v9, &mut v10, &mut v11, 
+			&mut v0,  &mut v1,  &mut v2,  &mut v3, 
+			&mut v4,  &mut v5,  &mut v6,  &mut v7, 
+			&mut v8,  &mut v9,  &mut v10, &mut v11, 
 			&mut v12, &mut v13, &mut v14, &mut v15
 		);
 
-		w[idx] = v0;
-		w[idx + 1] = v1;
-		w[idx + 16] = v2;
-		w[idx + 17] = v3;
-		w[idx + 32] = v4;
-		w[idx + 33] = v5;
-		w[idx + 48] = v6;
-		w[idx + 49] = v7;
-		w[idx + 64] = v8;
-		w[idx + 65] = v9;
-		w[idx + 80] = v10;
-		w[idx + 81] = v11;
-		w[idx + 96] = v12;
-		w[idx + 97] = v13;
-		w[idx + 112] = v14;
-		w[idx + 113] = v15;
+		w[idx     ] =  v0; w[idx +  1] =  v1; w[idx +  16] =  v2; w[idx +  17] =  v3;
+		w[idx + 32] =  v4; w[idx + 33] =  v5; w[idx +  48] =  v6; w[idx +  49] =  v7;
+		w[idx + 64] =  v8; w[idx + 65] =  v9; w[idx +  80] = v10; w[idx +  81] = v11;
+		w[idx + 96] = v12; w[idx + 97] = v13; w[idx + 112] = v14; w[idx + 113] = v15;
 
 		idx += 2;
 	}
