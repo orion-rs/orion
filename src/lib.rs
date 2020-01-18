@@ -39,9 +39,7 @@
 //! [`orion::hash`] offers hashing using BLAKE2b.
 //!
 //! ### A note on `no_std`:
-//! When orion is used in a `no_std` context, access to nearly all functionality
-//! outside of [`orion::hazardous`], is not available.
-//!
+//! When orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator.
 //!
 //! More information about orion is available in the [wiki](https://github.com/brycx/orion/wiki).
 //!
@@ -50,7 +48,6 @@
 //! [`orion::kdf`]: kdf/index.html
 //! [`orion::auth`]: auth/index.html
 //! [`orion::hash`]: hash/index.html
-//! [`orion::hazardous`]: hazardous/index.html
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
