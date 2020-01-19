@@ -40,12 +40,15 @@
 //! ```
 
 use crate::hazardous::hash::blake2b::{Blake2b, BLAKE2B_OUTSIZE};
+use zeroize::Zeroize;
 
 /// The Argon2 version.
 pub const ARGON2_VERSION: u32 = 0x13;
 
 /// The Argon2 variant (i).
 pub const ARGON2_VARIANT: u32 = 1;
+
+const SEGMENTS_PER_LANE: usize = 4;
 
 #[must_use]
 #[inline(always)]
@@ -102,6 +105,8 @@ fn permutation_p(
 /// H0 as defined in the specification.
 fn initial_hash(
 	lanes: u32,
+	// TODO: Remove lanes param as we always only need one.
+	// Keep until new test vectors generated or not needed anymore.
 	hash_length: u32,
 	memory_kib: u32,
 	passes: u32,
@@ -358,6 +363,109 @@ impl Gidx {
 			(self.segment_length * (segment_n + 1) + ref_pos as u32) % n_blocks
 		}
 	}
+}
+
+fn load_into(src: &[u8], dst: &mut [u64; 128]) {
+	debug_assert!(src.len() == 1024);
+	use core::convert::TryInto;
+
+	for (src_chunk, dst_elem) in src
+		.chunks_exact(core::mem::size_of::<u64>())
+		.zip(dst.iter_mut())
+	{
+		*dst_elem = u64::from_le_bytes(src_chunk.try_into().unwrap());
+	}
+}
+
+fn store_into(src: &[u64], dst: &mut [u8; 1024]) {
+	debug_assert!(src.len() == 128);
+
+	for (src_elem, dst_chunk) in src
+		.iter()
+		.zip(dst.chunks_exact_mut(core::mem::size_of::<u64>()))
+	{
+		dst_chunk.copy_from_slice(&src_elem.to_le_bytes());
+	}
+}
+
+pub fn derive_key(
+	passes: u32,
+	mem: u32,
+	hash_length: u32,
+	p: &[u8],
+	s: &[u8],
+	k: &[u8],
+	x: &[u8],
+) -> Vec<u8> {
+	// Round down to 4 * p threads
+	let n_blocks = mem - (mem & 3);
+	// Divide by 4 (SEGMENTS_PER_LANE)
+	let segment_length = n_blocks >> 2;
+
+	let mut blocks = vec![[0u64; 128]; n_blocks as usize];
+
+	// Fill first two blocks
+	let mut h0 = initial_hash(1, hash_length, mem, passes, p, s, k, x);
+	let mut tmp = [0u8; 1024];
+	debug_assert!(h0.len() == ((core::mem::size_of::<u32>() * 2) + BLAKE2B_OUTSIZE));
+	debug_assert!(
+		h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + core::mem::size_of::<u32>())]
+			== [0u8; core::mem::size_of::<u32>()]
+	); // Block 0
+	debug_assert!(
+		h0[BLAKE2B_OUTSIZE + core::mem::size_of::<u32>()..] == [0u8; core::mem::size_of::<u32>()]
+	); // Lane
+
+	// H' into the first two blocks
+	extended_hash(&h0, &mut tmp);
+	load_into(&tmp, &mut blocks[0]);
+	h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + core::mem::size_of::<u32>())]
+		.copy_from_slice(&1u32.to_le_bytes()); // Block 1
+	extended_hash(&h0, &mut tmp);
+	load_into(&tmp, &mut blocks[1]);
+
+	let mut gidx = Gidx::new(n_blocks, passes, segment_length);
+
+	for pass_n in 0..passes as usize {
+		for segment_n in 0..SEGMENTS_PER_LANE {
+			let offset = match (pass_n, segment_n) {
+				(0, 0) => 2, // The first two blocks have already been processed
+				_ => 0,
+			};
+
+			gidx.init(pass_n as u32, segment_n as u32, offset);
+
+			for segment_idx in offset..segment_length {
+				let reference_idx = gidx.get_next(segment_idx);
+				let current_idx = segment_n as u32 * segment_length + segment_idx as u32;
+				let previous_idx = if current_idx > 0 {
+					current_idx - 1
+				} else {
+					n_blocks - 1
+				};
+
+				let mut prev_b = [0u64; 128];
+				let mut ref_b = [0u64; 128];
+
+				prev_b.copy_from_slice(&blocks[previous_idx as usize]);
+				ref_b.copy_from_slice(&blocks[reference_idx as usize]);
+
+				g_xor(&prev_b, &ref_b, &mut blocks[current_idx as usize]);
+			}
+		}
+	}
+
+	store_into(&blocks[n_blocks as usize - 1], &mut tmp);
+	let mut out = vec![0u8; hash_length as usize];
+	extended_hash(&tmp, &mut out);
+
+	tmp.as_mut().zeroize();
+	h0.as_mut().zeroize();
+	for block in blocks.iter_mut() {
+		block.zeroize();
+	}
+
+	out
 }
 
 ///
@@ -2697,4 +2805,129 @@ fn test_g_two() {
 
 	g_two(&src_block, &mut out);
 	assert_eq!(out.as_ref(), expected.as_ref());
+}
+
+#[test]
+fn test_hash_1() {
+	let hlen = 32;
+	let mem = 4096;
+	let passes = 3;
+	let p = [
+		191, 68, 49, 232, 45, 162, 83, 188, 177, 167, 232, 149, 172, 236, 153, 8, 237, 115, 232,
+		128, 171, 254, 47, 84, 192, 208, 196, 121, 127, 221, 93, 126,
+	];
+	let s = [
+		52, 225, 42, 12, 59, 186, 118, 248, 198, 12, 16, 189, 191, 167, 211, 42, 89, 170, 108, 9,
+		172, 4, 138, 232, 239, 58, 189, 238, 250, 33, 230, 130,
+	];
+	let k = [
+		124, 169, 187, 230, 55, 69, 29, 225, 228, 147, 41, 248, 255, 98, 195, 221, 202, 40, 58, 17,
+		93, 122, 37, 57, 169, 9, 80, 64, 170, 177, 33, 89,
+	];
+	let x = [
+		129, 251, 22, 14, 88, 173, 198, 8, 123, 139, 94, 203, 61, 50, 174, 20, 153, 43, 109, 154,
+		46, 8, 71, 4, 208, 83, 157, 133, 143, 171, 78, 195,
+	];
+
+	let expected = [
+		234, 181, 45, 90, 214, 219, 1, 146, 196, 60, 104, 29, 152, 103, 82, 77, 65, 214, 212, 55,
+		121, 228, 57, 189, 202, 44, 100, 103, 180, 24, 125, 50,
+	];
+	let actual = derive_key(passes, mem, hlen, &p, &s, &k, &x);
+
+	assert_eq!(expected.len(), actual.len());
+	assert_eq!(expected.as_ref(), &actual[..]);
+}
+
+#[test]
+fn test_hash_2() {
+	let hlen = 64;
+	let mem = 4096;
+	let passes = 3;
+	let p = [
+		99, 137, 197, 238, 38, 112, 35, 125, 195, 31, 121, 180, 52, 30, 19, 20, 198, 227, 198, 9,
+		66, 209, 130, 225, 200, 43, 50, 221, 47, 59, 169, 160, 220, 64, 54, 202, 55, 244, 226, 8,
+		225, 183, 155, 186, 56, 162, 30, 15, 12, 176, 15, 182, 243, 175, 24, 142, 80, 247, 2, 210,
+		208, 57, 28, 59,
+	];
+	let s = [
+		94, 32, 63, 147, 115, 103, 179, 120, 17, 232, 110, 157, 92, 70, 77, 157, 82, 46, 79, 122,
+		29, 191, 104, 146, 125, 208, 48, 24, 6, 8, 94, 196, 65, 238, 136, 255, 180, 172, 187, 23,
+		214, 55, 18, 84, 171, 217, 253, 6, 51, 89, 173, 55, 222, 190, 71, 183, 135, 156, 229, 77,
+		67, 78, 96, 90,
+	];
+	let k = [
+		18, 85, 39, 122, 166, 85, 120, 191, 243, 15, 174, 215, 32, 185, 255, 88, 134, 238, 227,
+		159, 77, 121, 149, 134, 255, 105, 240, 88, 150, 252, 94, 158,
+	];
+	let x = [
+		240, 249, 197, 139, 242, 216, 12, 130, 192, 73, 44, 189, 130, 17, 225, 223, 135, 30, 139,
+		255, 164, 168, 69, 140, 216, 121, 225, 194, 107, 123, 143, 120, 30, 131, 216, 196, 200, 81,
+		71, 203, 26, 66, 171, 118, 236, 26, 18, 105, 100, 35, 227, 184, 16, 108, 224, 222, 186,
+		255, 32, 112, 189, 13, 151, 22,
+	];
+
+	let expected = [
+		233, 201, 213, 214, 244, 141, 73, 220, 67, 19, 106, 102, 181, 1, 197, 122, 20, 147, 99,
+		245, 236, 160, 3, 213, 22, 219, 155, 217, 194, 24, 65, 204, 239, 56, 34, 160, 140, 114, 3,
+		191, 247, 48, 64, 79, 125, 154, 52, 185, 0, 69, 102, 85, 183, 242, 167, 198, 170, 1, 124,
+		235, 235, 3, 184, 75,
+	];
+	let actual = derive_key(passes, mem, hlen, &p, &s, &k, &x);
+
+	assert_eq!(expected.len(), actual.len());
+	assert_eq!(expected.as_ref(), &actual[..]);
+}
+
+#[test]
+fn test_hash_3() {
+	let hlen = 128;
+	let mem = 4096;
+	let passes = 3;
+	let p = [
+		175, 90, 106, 212, 141, 72, 174, 254, 80, 27, 64, 221, 238, 102, 191, 242, 3, 221, 202,
+		111, 10, 217, 92, 143, 15, 200, 215, 210, 199, 59, 200, 59, 98, 141, 106, 228, 166, 184, 5,
+		212, 172, 114, 32, 229, 179, 111, 227, 116, 216, 95, 164, 35, 31, 204, 132, 215, 116, 156,
+		32, 7, 165, 15, 231, 148, 124, 95, 115, 150, 82, 168, 34, 154, 52, 166, 104, 28, 207, 61,
+		162, 198, 228, 72, 196, 200, 228, 251, 124, 231, 44, 151, 44, 44, 24, 70, 103, 169, 44,
+		240, 248, 75, 208, 142, 112, 36, 25, 49, 252, 196, 121, 203, 74, 155, 220, 58, 89, 106, 82,
+		9, 177, 66, 30, 12, 245, 153, 116, 72, 233, 233,
+	];
+	let s = [
+		205, 79, 28, 236, 67, 87, 187, 158, 25, 126, 159, 75, 129, 34, 145, 131, 219, 240, 243, 73,
+		42, 223, 247, 12, 223, 190, 218, 212, 26, 109, 15, 151, 118, 77, 210, 18, 171, 176, 224,
+		127, 48, 189, 216, 225, 175, 45, 205, 3, 196, 231, 185, 203, 127, 210, 185, 238, 122, 197,
+		147, 147, 35, 231, 182, 42, 254, 104, 201, 72, 213, 122, 46, 24, 21, 80, 26, 221, 252, 117,
+		51, 208, 107, 147, 24, 3, 72, 222, 32, 95, 20, 107, 111, 47, 21, 43, 174, 153, 57, 154,
+		199, 208, 182, 89, 36, 91, 111, 117, 1, 254, 254, 178, 239, 204, 146, 170, 34, 121, 126,
+		143, 63, 88, 94, 7, 155, 2, 126, 79, 43, 183,
+	];
+	let k = [
+		196, 222, 200, 1, 157, 90, 55, 246, 173, 195, 253, 212, 118, 186, 31, 189, 35, 154, 202,
+		137, 60, 32, 56, 89, 179, 44, 105, 140, 185, 225, 111, 242,
+	];
+	let x = [
+		28, 43, 133, 219, 80, 24, 121, 131, 89, 41, 81, 230, 215, 79, 73, 60, 59, 206, 46, 22, 241,
+		113, 205, 178, 219, 91, 159, 220, 225, 106, 152, 3, 187, 167, 148, 23, 143, 89, 43, 253,
+		188, 87, 150, 154, 249, 44, 189, 0, 77, 237, 69, 112, 56, 71, 131, 235, 63, 141, 7, 202,
+		20, 247, 110, 221, 28, 72, 38, 209, 210, 171, 163, 51, 42, 6, 54, 121, 208, 125, 160, 105,
+		81, 196, 237, 22, 206, 140, 35, 89, 160, 102, 214, 22, 105, 14, 113, 54, 96, 33, 68, 149,
+		253, 82, 1, 222, 90, 224, 99, 228, 219, 230, 5, 103, 235, 206, 183, 230, 163, 177, 51, 187,
+		200, 207, 244, 203, 197, 56, 24, 132,
+	];
+
+	let expected = [
+		37, 212, 93, 127, 114, 22, 107, 220, 94, 83, 173, 159, 101, 143, 232, 110, 49, 192, 93,
+		236, 251, 92, 209, 91, 145, 162, 48, 21, 140, 49, 59, 155, 48, 116, 129, 197, 223, 12, 34,
+		240, 209, 200, 152, 9, 112, 175, 206, 35, 166, 229, 230, 13, 110, 89, 211, 60, 28, 174,
+		248, 142, 43, 38, 87, 72, 175, 177, 244, 186, 81, 55, 111, 238, 151, 206, 243, 145, 247,
+		255, 50, 126, 9, 250, 28, 80, 194, 144, 17, 173, 42, 222, 251, 125, 11, 130, 169, 17, 17,
+		112, 45, 66, 129, 118, 96, 67, 36, 252, 61, 156, 239, 121, 204, 210, 74, 162, 220, 212, 33,
+		239, 201, 77, 80, 231, 7, 238, 92, 151, 51, 17,
+	];
+
+	let actual = derive_key(passes, mem, hlen, &p, &s, &k, &x);
+
+	assert_eq!(expected.len(), actual.len());
+	assert_eq!(expected.as_ref(), &actual[..]);
 }
