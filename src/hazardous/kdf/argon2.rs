@@ -41,6 +41,7 @@
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2b::{Blake2b, BLAKE2B_OUTSIZE};
+use crate::util;
 use zeroize::Zeroize;
 
 /// The Argon2 version (0x13).
@@ -384,6 +385,8 @@ fn store_into(src: &[u64], dst: &mut [u8; 1024]) {
 	}
 }
 
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+/// Argon2i password hashing function as described in the [draft RFC](https://datatracker.ietf.org/doc/draft-irtf-cfrg-argon2/).
 pub fn derive_key(
 	passes: u32,
 	mem: u32,
@@ -493,6 +496,30 @@ pub fn derive_key(
 	Ok(())
 }
 
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+/// Verify Argon2i derived key in constant time.
+pub fn verify(
+	expected: &[u8],
+	passes: u32,
+	mem: u32,
+	password: &[u8],
+	salt: &[u8],
+	secret_value: &[u8],
+	associated_data: &[u8],
+	dst_out: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+	derive_key(
+		passes,
+		mem,
+		password,
+		salt,
+		secret_value,
+		associated_data,
+		dst_out,
+	)?;
+	util::secure_cmp(&dst_out, expected)
+}
+
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -500,10 +527,78 @@ mod public {
 
 	mod test_verify {
 		use super::*;
+
+		// Proptests. Only executed when NOT testing no_std.
+		#[cfg(feature = "safe_api")]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				fn prop_test_same_input_verify_true(hlen: u32, kib: u32, p: Vec<u8>, s: Vec<u8>, k: Vec<u8>, x: Vec<u8>) -> bool {
+
+					let passes = 1;
+					let mem = if kib < 8 || kib > 4096 {
+						1024
+					} else {
+						kib
+					};
+					let salt = if s.len() < 8 {
+						vec![37u8; 8]
+					} else {
+						s
+					};
+
+					let mut dst_out = if hlen < 4 || hlen > 512 {
+						vec![0u8; 32]
+					} else {
+						vec![0u8; hlen as usize]
+					};
+
+					let mut dst_out_verify = dst_out.clone();
+					derive_key(passes, mem, &p, &salt, &k, &x, &mut dst_out).unwrap();
+
+					verify(&dst_out, passes, mem, &p, &salt, &k, &x, &mut dst_out_verify).is_ok()
+				}
+			}
+		}
 	}
 
 	mod test_derive_key {
 		use super::*;
+
+		#[test]
+		fn test_invalid_mem() {
+			// mem must be at least 8p, where p == threads (1)
+			let mut dst_out = [0u8; 32];
+			assert!(derive_key(1, 9, &[], &[0u8; 8], &[], &[], &mut dst_out).is_ok());
+			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out).is_ok());
+			assert!(derive_key(1, 7, &[], &[0u8; 8], &[], &[], &mut dst_out).is_err());
+		}
+
+		#[test]
+		fn test_invalid_passes() {
+			let mut dst_out = [0u8; 32];
+			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out).is_ok());
+			assert!(derive_key(0, 8, &[], &[0u8; 8], &[], &[], &mut dst_out).is_err());
+		}
+
+		#[test]
+		fn test_dst_out() {
+			let mut dst_out_less = [0u8; 3];
+			let mut dst_out_exact = [0u8; 4];
+			let mut dst_out_above = [0u8; 5];
+			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out_less).is_err());
+			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out_exact).is_ok());
+			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out_above).is_ok());
+		}
+
+		#[test]
+		fn test_invalid_salt() {
+			let mut dst_out = [0u8; 32];
+			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out).is_ok());
+			assert!(derive_key(1, 8, &[], &[0u8; 9], &[], &[], &mut dst_out).is_ok());
+			assert!(derive_key(1, 8, &[], &[0u8; 7], &[], &[], &mut dst_out).is_err());
+		}
 
 		#[test]
 		fn test_hash_1() {
