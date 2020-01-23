@@ -39,6 +39,7 @@
 //!
 //! ```
 
+use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2b::{Blake2b, BLAKE2B_OUTSIZE};
 use zeroize::Zeroize;
 
@@ -113,11 +114,11 @@ fn initial_hash(
 	s: &[u8],
 	k: &[u8],
 	x: &[u8],
-) -> [u8; 72] {
+) -> Result<[u8; 72], UnknownCryptoError> {
 	// We save additional 8 bytes in H0 for when the first two blocks are processed,
 	// so that this may contain two little-endian integers.
 	let mut h0 = [0u8; 72];
-	let mut hasher = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
+	let mut hasher = Blake2b::new(None, BLAKE2B_OUTSIZE)?;
 
 	// Collect the first part to reduce times we update the hasher state.
 	h0[0..4].copy_from_slice(&LANES.to_le_bytes());
@@ -128,22 +129,24 @@ fn initial_hash(
 	h0[20..24].copy_from_slice(&ARGON2_VARIANT.to_le_bytes());
 	h0[24..28].copy_from_slice(&(p.len() as u32).to_le_bytes());
 
-	hasher.update(&h0[..28]).unwrap();
-	hasher.update(p).unwrap();
-	hasher.update(&(s.len() as u32).to_le_bytes()).unwrap();
-	hasher.update(s).unwrap();
-	hasher.update(&(k.len() as u32).to_le_bytes()).unwrap();
-	hasher.update(k).unwrap();
-	hasher.update(&(x.len() as u32).to_le_bytes()).unwrap();
-	hasher.update(x).unwrap();
-	h0[0..BLAKE2B_OUTSIZE].copy_from_slice(hasher.finalize().unwrap().as_ref());
+	hasher.update(&h0[..28])?;
+	hasher.update(p)?;
+	hasher.update(&(s.len() as u32).to_le_bytes())?;
+	hasher.update(s)?;
+	hasher.update(&(k.len() as u32).to_le_bytes())?;
+	hasher.update(k)?;
+	hasher.update(&(x.len() as u32).to_le_bytes())?;
+	hasher.update(x)?;
+	h0[0..BLAKE2B_OUTSIZE].copy_from_slice(hasher.finalize()?.as_ref());
 
-	h0
+	Ok(h0)
 }
 
 /// H' as defined in the specification.
-fn extended_hash(input: &[u8], dst: &mut [u8]) {
-	debug_assert!(!dst.is_empty());
+fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
+	if dst.is_empty() {
+		return Err(UnknownCryptoError);
+	}
 
 	let outlen = dst.len() as u32;
 
@@ -178,6 +181,8 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) {
 		tmp = ctx.finalize().unwrap();
 		dst[pos..outlen as usize].copy_from_slice(&tmp.as_ref()[..toproduce]);
 	}
+
+	Ok(())
 }
 
 #[rustfmt::skip]
@@ -284,7 +289,6 @@ struct Gidx {
 }
 
 impl Gidx {
-	///
 	fn new(blocks: u32, passes: u32, segment_length: u32) -> Self {
 		let mut block = [0u64; 128];
 		block[1] = 0u64; // Lane number, we only support one (0u64).
@@ -300,7 +304,6 @@ impl Gidx {
 		}
 	}
 
-	///
 	fn init(&mut self, pass_n: u32, segment_n: u32, offset: u32) {
 		self.block[0] = u64::from(pass_n);
 		self.block[2] = u64::from(segment_n);
@@ -314,14 +317,12 @@ impl Gidx {
 		// do not have to zero it out.
 	}
 
-	///
 	fn next_addresses(&mut self) {
 		// TODO: Is this .unwrap() OK?
 		self.block[6] = self.block[6].checked_add(1).unwrap();
 		g_two(&self.block, &mut self.addresses);
 	}
 
-	///
 	fn get_next(&mut self, segment_idx: u32) -> u32 {
 		// We get J1 and discard J2, as J2 is only relevant if we had more than
 		// a single lane.
@@ -391,7 +392,7 @@ pub fn derive_key(
 	s: &[u8],
 	k: &[u8],
 	x: &[u8],
-) -> Vec<u8> {
+) -> Result<Vec<u8>, UnknownCryptoError> {
 	// Round down to 4 * p threads
 	let n_blocks = mem - (mem & 3);
 	// Divide by 4 (SEGMENTS_PER_LANE)
@@ -400,7 +401,7 @@ pub fn derive_key(
 	let mut blocks = vec![[0u64; 128]; n_blocks as usize];
 
 	// Fill first two blocks
-	let mut h0 = initial_hash(hash_length, mem, passes, p, s, k, x);
+	let mut h0 = initial_hash(hash_length, mem, passes, p, s, k, x)?;
 	let mut tmp = [0u8; 1024];
 	debug_assert!(h0.len() == ((core::mem::size_of::<u32>() * 2) + BLAKE2B_OUTSIZE));
 	debug_assert!(
@@ -412,11 +413,11 @@ pub fn derive_key(
 	); // Lane
 
 	// H' into the first two blocks
-	extended_hash(&h0, &mut tmp);
+	extended_hash(&h0, &mut tmp)?;
 	load_into(&tmp, &mut blocks[0]);
 	h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + core::mem::size_of::<u32>())]
 		.copy_from_slice(&1u32.to_le_bytes()); // Block 1
-	extended_hash(&h0, &mut tmp);
+	extended_hash(&h0, &mut tmp)?;
 	load_into(&tmp, &mut blocks[1]);
 
 	let mut gidx = Gidx::new(n_blocks, passes, segment_length);
@@ -452,7 +453,7 @@ pub fn derive_key(
 
 	store_into(&blocks[n_blocks as usize - 1], &mut tmp);
 	let mut out = vec![0u8; hash_length as usize];
-	extended_hash(&tmp, &mut out);
+	extended_hash(&tmp, &mut out)?;
 
 	tmp.as_mut().zeroize();
 	h0.as_mut().zeroize();
@@ -460,7 +461,7 @@ pub fn derive_key(
 		block.zeroize();
 	}
 
-	out
+	Ok(out)
 }
 
 // Testing public functions in the module.
@@ -501,7 +502,7 @@ mod public {
 				234, 181, 45, 90, 214, 219, 1, 146, 196, 60, 104, 29, 152, 103, 82, 77, 65, 214,
 				212, 55, 121, 228, 57, 189, 202, 44, 100, 103, 180, 24, 125, 50,
 			];
-			let actual = derive_key(passes, mem, hlen, &p, &s, &k, &x);
+			let actual = derive_key(passes, mem, hlen, &p, &s, &k, &x).unwrap();
 
 			assert_eq!(expected.len(), actual.len());
 			assert_eq!(expected.as_ref(), &actual[..]);
@@ -541,7 +542,7 @@ mod public {
 				140, 114, 3, 191, 247, 48, 64, 79, 125, 154, 52, 185, 0, 69, 102, 85, 183, 242,
 				167, 198, 170, 1, 124, 235, 235, 3, 184, 75,
 			];
-			let actual = derive_key(passes, mem, hlen, &p, &s, &k, &x);
+			let actual = derive_key(passes, mem, hlen, &p, &s, &k, &x).unwrap();
 
 			assert_eq!(expected.len(), actual.len());
 			assert_eq!(expected.as_ref(), &actual[..]);
@@ -598,7 +599,7 @@ mod public {
 				51, 17,
 			];
 
-			let actual = derive_key(passes, mem, hlen, &p, &s, &k, &x);
+			let actual = derive_key(passes, mem, hlen, &p, &s, &k, &x).unwrap();
 
 			assert_eq!(expected.len(), actual.len());
 			assert_eq!(expected.as_ref(), &actual[..]);
@@ -642,7 +643,7 @@ mod private {
 				17, 49, 11, 228, 22, 128, 161, 57, 188, 136, 75, 96, 197, 3, 206, 224, 204, 65,
 				149, 190, 101, 231, 161, 232, 35, 87, 64, 0, 0, 0, 0, 0, 0, 0, 0,
 			];
-			let actual = initial_hash(hlen, kib, passes, &p, &s, &k, &x);
+			let actual = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
 			assert_eq!(expected.as_ref(), actual.as_ref());
 		}
 
@@ -680,7 +681,7 @@ mod private {
 				15, 239, 64, 239, 203, 191, 226, 71, 213, 149, 238, 65, 124, 102, 1, 150, 230, 41,
 				132, 23, 176, 221, 217, 237, 150, 154, 249, 0, 0, 0, 0, 0, 0, 0, 0,
 			];
-			let actual = initial_hash(hlen, kib, passes, &p, &s, &k, &x);
+			let actual = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
 			assert_eq!(expected.as_ref(), actual.as_ref());
 		}
 
@@ -730,13 +731,37 @@ mod private {
 				236, 58, 237, 193, 139, 30, 191, 244, 2, 176, 123, 134, 44, 251, 101, 255, 220,
 				218, 109, 249, 231, 200, 45, 232, 240, 155, 10, 93, 111, 0, 0, 0, 0, 0, 0, 0, 0,
 			];
-			let actual = initial_hash(hlen, kib, passes, &p, &s, &k, &x);
+			let actual = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
 			assert_eq!(expected.as_ref(), actual.as_ref());
+		}
+
+		// Proptests. Only executed when NOT testing no_std.
+		#[cfg(feature = "safe_api")]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				fn prop_test_same_result(hlen: u32, kib: u32, passes: u32, p: Vec<u8>, s: Vec<u8>, k: Vec<u8>, x: Vec<u8>) -> bool {
+
+					let first = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
+					let second = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
+
+					first.as_ref() == second.as_ref()
+				}
+			}
 		}
 	}
 
 	mod test_extended_hash {
 		use super::*;
+
+		#[test]
+		fn err_on_empty_dst() {
+			let mut out = [0u8; 0];
+			let input = [255u8; 256];
+
+			assert!(extended_hash(&input, &mut out).is_err());
+		}
 
 		#[test]
 		fn extended_hash_test_1() {
@@ -754,7 +779,7 @@ mod private {
 				23, 122, 170, 179, 137, 61, 145, 86, 70, 228, 124, 82, 24, 135, 208, 96, 33, 127,
 				145, 136, 189, 60, 123, 34, 55, 118, 245, 41, 197, 229, 209, 3,
 			];
-			extended_hash(&input, &mut out);
+			extended_hash(&input, &mut out).unwrap();
 			assert_eq!(expected.as_ref(), out.as_ref());
 		}
 
@@ -782,7 +807,7 @@ mod private {
 				222, 212, 217, 233, 173, 84, 38, 188, 102, 165, 73, 137, 64, 18, 214, 51, 167, 180,
 				113, 50, 196, 175, 138, 96, 109, 95, 61,
 			];
-			extended_hash(&input, &mut out);
+			extended_hash(&input, &mut out).unwrap();
 			assert_eq!(expected.as_ref(), out.as_ref());
 		}
 
@@ -824,7 +849,7 @@ mod private {
 				233, 63, 85, 225, 162, 85, 179, 166, 250, 222, 5, 10, 139, 187, 172, 105, 171, 171,
 				140, 253,
 			];
-			extended_hash(&input, &mut out);
+			extended_hash(&input, &mut out).unwrap();
 			assert_eq!(expected.as_ref(), out.as_ref());
 		}
 
@@ -846,7 +871,7 @@ mod private {
 				232, 151, 33, 76, 158, 96, 170, 104, 200, 127, 55, 239, 145, 241, 224, 146, 0, 11,
 				64, 16, 212, 151, 227, 7, 65, 234, 92, 45,
 			];
-			extended_hash(&input, &mut out);
+			extended_hash(&input, &mut out).unwrap();
 			assert_eq!(expected.as_ref(), out.as_ref());
 		}
 
@@ -877,7 +902,7 @@ mod private {
 				210, 25, 239, 0, 229, 47, 200, 219, 202, 0, 39, 195, 197, 148, 15, 32, 211, 167,
 				196, 128,
 			];
-			extended_hash(&input, &mut out);
+			extended_hash(&input, &mut out).unwrap();
 			assert_eq!(expected.as_ref(), out.as_ref());
 		}
 
@@ -927,8 +952,47 @@ mod private {
 				68, 206, 127, 130, 174, 252, 254, 135, 37, 160, 144, 108, 29, 86, 108, 159, 148,
 				221, 54, 153, 234, 194, 103,
 			];
-			extended_hash(&input, &mut out);
+			extended_hash(&input, &mut out).unwrap();
 			assert_eq!(expected.as_ref(), out.as_ref());
+		}
+
+		// Proptests. Only executed when NOT testing no_std.
+		#[cfg(feature = "safe_api")]
+		mod proptest {
+			use super::*;
+
+			quickcheck! {
+				fn prop_test_same_result(input: Vec<u8>, out: Vec<u8>) -> bool {
+					let mut first = out.clone();
+					let mut second = out.clone();
+
+					if out.is_empty() && extended_hash(&input, &mut first).is_err() {
+						return true;
+					}
+
+					extended_hash(&input, &mut first).unwrap();
+					extended_hash(&input, &mut second).unwrap();
+
+					first == second
+				}
+			}
+
+			quickcheck! {
+				fn prop_test_diff_result(input: Vec<u8>, out: Vec<u8>) -> bool {
+					let mut first = out.clone();
+					let mut second = out.clone();
+
+
+					if out.is_empty() && extended_hash(&input, &mut first).is_err() {
+						return true;
+					}
+
+					extended_hash(&input, &mut first).unwrap();
+					extended_hash(&first, &mut second).unwrap();
+
+					first != second
+				}
+			}
 		}
 	}
 
