@@ -486,4 +486,78 @@ mod custom_hkdf {
 		)
 		.is_ok());
 	}
+
+	#[test]
+	fn test_case_13() {
+		let mem: u32 = 7604;
+		let passes: u32 = 3;
+		let password = decode("314f716af9c22022fa159dbb4b4d3153").unwrap();
+		let salt = decode("f999b20ab4769eb1d01c057c5295ed04").unwrap();
+		let secret_value = &[0u8; 0];
+		let associated_data = &[0u8; 0];
+		let expected_hash =
+			decode("ccc31784ebeae41d4c46c24dd67ef384b9764ff5ac487d760cf6ca86e6019b792fdfcd4b44599f7d0bb8dc3e48ed870198c76abdad9bc234b7192072e98f6862b9a60c92d72154f04cff3b0206fe57ac124eb1b86a711ae1f10b13c6b985").unwrap();
+
+		let mut actual_hash = vec![0u8; expected_hash.len()];
+
+		argon2::derive_key(
+			passes,
+			mem,
+			&password,
+			&salt,
+			secret_value,
+			associated_data,
+			&mut actual_hash,
+		)
+		.unwrap();
+		assert_eq!(expected_hash, actual_hash);
+		assert!(argon2::verify(
+			&expected_hash,
+			passes,
+			mem,
+			&password,
+			&salt,
+			secret_value,
+			associated_data,
+			&mut actual_hash
+		)
+		.is_ok());
+	}
+
+	#[test]
+	fn test_case_14() {
+		let mem: u32 = 7604;
+		let passes: u32 = 3;
+		let password = decode("2b4536561dce32478b113adb5b605cac").unwrap();
+		let salt = decode("75bcfcacb5e3e811b78e72e398fdd118").unwrap();
+		let secret_value = &[0u8; 0];
+		let associated_data = &[0u8; 0];
+		let expected_hash =
+			decode("9f555315bd086935c5a3830f907a02faf3e423f3cb8591b6a83c52ba20717ec5000eb3f2aeade0cd881443aa6292f4eedbc36d27e914ae1befe26820b6f9ceb3e71cbc8a58d8825511076d89d33054b8356aa063e499fd89557b75c68d7224c199").unwrap();
+
+		let mut actual_hash = vec![0u8; expected_hash.len()];
+
+		argon2::derive_key(
+			passes,
+			mem,
+			&password,
+			&salt,
+			secret_value,
+			associated_data,
+			&mut actual_hash,
+		)
+		.unwrap();
+		assert_eq!(expected_hash, actual_hash);
+		assert!(argon2::verify(
+			&expected_hash,
+			passes,
+			mem,
+			&password,
+			&salt,
+			secret_value,
+			associated_data,
+			&mut actual_hash
+		)
+		.is_ok());
+	}
 }

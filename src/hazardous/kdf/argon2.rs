@@ -177,7 +177,7 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError>
 			toproduce -= BLAKE2B_OUTSIZE / 2;
 		}
 
-		ctx.reset(None).unwrap();
+		ctx = Blake2b::new(None, toproduce).unwrap();
 		ctx.update(tmp.as_ref()).unwrap();
 		tmp = ctx.finalize().unwrap();
 		dst[pos..outlen as usize].copy_from_slice(&tmp.as_ref()[..toproduce]);
