@@ -20,24 +20,59 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # About:
+//! Argon2i version 1.3. __Not__ available with `no_std`.
+//!
 //! # Parameters:
-//! - `PLACEHOLDER`: PLACEHOLDER.
+//! - `expected`: The expected derived key.
+//! - `password`: Password.
+//! - `salt`: Salt value.
+//! - `iterations`: Iteration count.
+//! - `memory`: Memory size in kibibytes (KiB).
+//! - `secret`: Optional secret value used for hashing.
+//! - `ad`: Optional associated data used for hashing.
+//! - `dst_out`: Destination buffer for the derived key. The length of the
+//!   derived key is implied by the length of `dst_out`.
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - PLACEHOLDER
+//! - The length of `password` is greater than `u32::max_value()`.
+//! - The length of `salt` is greater than `u32::max_value()` or less than `8`.
+//! - The length of `secret` is greater than `u32::max_value()`.
+//! - The length of `ad` is greater than `u32::max_value()`.
+//! - The length of `dst_out` is greater than `u32::max_value()` or less than `4`.
+//! - `iterations` is less than `1`.
+//! - `memory` is less than `8`.
+//! - The hashed password does not match the expected when verifying.
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - PLACEHOLDER
 //!
 //! # Security:
-//! - PLACEHOLDER
+//! - Salts should always be generated using a CSPRNG.
+//!   [`util::secure_rand_bytes()`] can be used for this.
+//! - The recommended length for a salt is `16` bytes.
+//! - The minimum recommended size for a hashed password is `32` bytes.
+//! - The minimum recommended is `3`.
+//! - Password hashes should always be compared in constant-time.
 //!
 //! # Example:
 //! ```rust
+//! use orion::{hazardous::kdf::argon2, util};
 //!
+//! let mut salt = [0u8; 16];
+//! util::secure_rand_bytes(&mut salt)?;
+//! let password = b"Secret password";
+//! let mut dst_out = [0u8; 64];
+//!
+//! argon2::derive_key(password, &salt, 5, 4096, None, None, &mut dst_out)?;
+//!
+//! let expected_dk = dst_out;
+//!
+//! assert!(argon2::verify(&expected_dk, password, &salt, 5, 4096, None, None, &mut dst_out).is_ok());
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2b::{Blake2b, BLAKE2B_OUTSIZE};
@@ -987,7 +1022,7 @@ mod public {
 	}
 }
 
-// Testing public functions in the module.
+// Testing private functions in the module.
 #[cfg(test)]
 mod private {
 	use super::*;
