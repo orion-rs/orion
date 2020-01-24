@@ -390,12 +390,12 @@ fn store_into(src: &[u64], dst: &mut [u8; 1024]) {
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Argon2i password hashing function as described in the [draft RFC](https://datatracker.ietf.org/doc/draft-irtf-cfrg-argon2/).
 pub fn derive_key(
-	passes: u32,
-	mem: u32,
 	password: &[u8],
 	salt: &[u8],
-	secret_value: &[u8],
-	associated_data: &[u8],
+	iterations: u32,
+	memory: u32,
+	secret: Option<&[u8]>,
+	ad: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
 	if password.len() > 0xFFFFFFFF {
@@ -404,24 +404,41 @@ pub fn derive_key(
 	if salt.len() > 0xFFFFFFFF || salt.len() < 8 {
 		return Err(UnknownCryptoError);
 	}
-	if passes < 1 {
+	if iterations < 1 {
 		return Err(UnknownCryptoError);
 	}
-	if mem < 8 * LANES {
+	if memory < 8 * LANES {
 		return Err(UnknownCryptoError);
 	}
-	if secret_value.len() > 0xFFFFFFFF {
-		return Err(UnknownCryptoError);
-	}
-	if associated_data.len() > 0xFFFFFFFF {
-		return Err(UnknownCryptoError);
-	}
-	if dst_out.len() > 0xFFFFFFFF || dst_out.len() < 4 {
+
+	let k = match secret {
+		Some(n_val) => {
+			if n_val.len() > 0xFFFF_FFFF {
+				return Err(UnknownCryptoError);
+			}
+
+			n_val
+		}
+		None => &[0u8; 0],
+	};
+
+	let x = match ad {
+		Some(n_val) => {
+			if n_val.len() > 0xFFFF_FFFF {
+				return Err(UnknownCryptoError);
+			}
+
+			n_val
+		}
+		None => &[0u8; 0],
+	};
+
+	if dst_out.len() > 0xFFFF_FFFF || dst_out.len() < 4 {
 		return Err(UnknownCryptoError);
 	}
 
 	// Round down to 4 * p threads
-	let n_blocks = mem - (mem & 3);
+	let n_blocks = memory - (memory & 3);
 	// Divide by 4 (SEGMENTS_PER_LANE)
 	let segment_length = n_blocks >> 2;
 
@@ -430,12 +447,12 @@ pub fn derive_key(
 	// Fill first two blocks
 	let mut h0 = initial_hash(
 		dst_out.len() as u32,
-		mem,
-		passes,
+		memory,
+		iterations,
 		password,
 		salt,
-		secret_value,
-		associated_data,
+		k,
+		x,
 	)?;
 	let mut tmp = [0u8; 1024];
 	debug_assert!(h0.len() == ((core::mem::size_of::<u32>() * 2) + BLAKE2B_OUTSIZE));
@@ -455,9 +472,9 @@ pub fn derive_key(
 	extended_hash(&h0, &mut tmp)?;
 	load_into(&tmp, &mut blocks[1]);
 
-	let mut gidx = Gidx::new(n_blocks, passes, segment_length);
+	let mut gidx = Gidx::new(n_blocks, iterations, segment_length);
 
-	for pass_n in 0..passes as usize {
+	for pass_n in 0..iterations as usize {
 		for segment_n in 0..SEGMENTS_PER_LANE {
 			let offset = match (pass_n, segment_n) {
 				(0, 0) => 2, // The first two blocks have already been processed
@@ -502,23 +519,15 @@ pub fn derive_key(
 /// Verify Argon2i derived key in constant time.
 pub fn verify(
 	expected: &[u8],
-	passes: u32,
-	mem: u32,
 	password: &[u8],
 	salt: &[u8],
-	secret_value: &[u8],
-	associated_data: &[u8],
+	iterations: u32,
+	memory: u32,
+	secret: Option<&[u8]>,
+	ad: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	derive_key(
-		passes,
-		mem,
-		password,
-		salt,
-		secret_value,
-		associated_data,
-		dst_out,
-	)?;
+	derive_key(password, salt, iterations, memory, secret, ad, dst_out)?;
 	util::secure_cmp(&dst_out, expected)
 }
 
@@ -557,9 +566,9 @@ mod public {
 					};
 
 					let mut dst_out_verify = dst_out.clone();
-					derive_key(passes, mem, &p, &salt, &k, &x, &mut dst_out).unwrap();
+					derive_key(&p, &salt, passes, mem, Some(&k), Some(&x), &mut dst_out).unwrap();
 
-					verify(&dst_out, passes, mem, &p, &salt, &k, &x, &mut dst_out_verify).is_ok()
+					verify(&dst_out, &p, &salt, passes, mem, Some(&k), Some(&x), &mut dst_out_verify).is_ok()
 				}
 			}
 		}
@@ -572,16 +581,16 @@ mod public {
 		fn test_invalid_mem() {
 			// mem must be at least 8p, where p == threads (1)
 			let mut dst_out = [0u8; 32];
-			assert!(derive_key(1, 9, &[], &[0u8; 8], &[], &[], &mut dst_out).is_ok());
-			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out).is_ok());
-			assert!(derive_key(1, 7, &[], &[0u8; 8], &[], &[], &mut dst_out).is_err());
+			assert!(derive_key(&[], &[0u8; 8], 1, 9, None, None, &mut dst_out).is_ok());
+			assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out).is_ok());
+			assert!(derive_key(&[], &[0u8; 8], 1, 7, None, None, &mut dst_out).is_err());
 		}
 
 		#[test]
 		fn test_invalid_passes() {
 			let mut dst_out = [0u8; 32];
-			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out).is_ok());
-			assert!(derive_key(0, 8, &[], &[0u8; 8], &[], &[], &mut dst_out).is_err());
+			assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out).is_ok());
+			assert!(derive_key(&[], &[0u8; 8], 0, 8, None, None, &mut dst_out).is_err());
 		}
 
 		#[test]
@@ -589,17 +598,35 @@ mod public {
 			let mut dst_out_less = [0u8; 3];
 			let mut dst_out_exact = [0u8; 4];
 			let mut dst_out_above = [0u8; 5];
-			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out_less).is_err());
-			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out_exact).is_ok());
-			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out_above).is_ok());
+			assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out_less).is_err());
+			assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out_exact).is_ok());
+			assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out_above).is_ok());
 		}
 
 		#[test]
 		fn test_invalid_salt() {
 			let mut dst_out = [0u8; 32];
-			assert!(derive_key(1, 8, &[], &[0u8; 8], &[], &[], &mut dst_out).is_ok());
-			assert!(derive_key(1, 8, &[], &[0u8; 9], &[], &[], &mut dst_out).is_ok());
-			assert!(derive_key(1, 8, &[], &[0u8; 7], &[], &[], &mut dst_out).is_err());
+			assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out).is_ok());
+			assert!(derive_key(&[], &[0u8; 9], 1, 8, None, None, &mut dst_out).is_ok());
+			assert!(derive_key(&[], &[0u8; 7], 1, 8, None, None, &mut dst_out).is_err());
+		}
+
+		#[test]
+		fn test_some_or_none_same_result() {
+			let mut dst_one = [0u8; 32];
+			let mut dst_two = [0u8; 32];
+
+			derive_key(&[255u8; 16], &[1u8; 16], 1, 8, None, None, &mut dst_one).unwrap();
+			derive_key(
+				&[255u8; 16],
+				&[1u8; 16],
+				1,
+				8,
+				Some(&[]),
+				Some(&[]),
+				&mut dst_two,
+			)
+			.unwrap();
 		}
 
 		#[test]
@@ -629,7 +656,7 @@ mod public {
 			];
 
 			let mut actual = [0u8; 32];
-			derive_key(passes, mem, &p, &s, &k, &x, &mut actual).unwrap();
+			derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
 
 			assert_eq!(expected.len(), actual.len());
 			assert_eq!(expected.as_ref(), &actual[..]);
@@ -669,7 +696,7 @@ mod public {
 				167, 198, 170, 1, 124, 235, 235, 3, 184, 75,
 			];
 			let mut actual = [0u8; 64];
-			derive_key(passes, mem, &p, &s, &k, &x, &mut actual).unwrap();
+			derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
 
 			assert_eq!(expected.len(), actual.len());
 			assert_eq!(expected.as_ref(), &actual[..]);
@@ -726,7 +753,7 @@ mod public {
 			];
 
 			let mut actual = [0u8; 128];
-			derive_key(passes, mem, &p, &s, &k, &x, &mut actual).unwrap();
+			derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
 
 			assert_eq!(expected.len(), actual.len());
 			assert_eq!(expected.as_ref(), &actual[..]);
@@ -811,7 +838,7 @@ mod public {
 			];
 
 			let mut actual = [0u8; 256];
-			derive_key(passes, mem, &p, &s, &k, &x, &mut actual).unwrap();
+			derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
 
 			assert_eq!(expected.len(), actual.len());
 			assert_eq!(expected.as_ref(), &actual[..]);
@@ -951,7 +978,7 @@ mod public {
 				224, 142, 214, 25, 81, 9, 42, 248, 39, 148,
 			];
 			let mut actual = [0u8; 512];
-			derive_key(passes, mem, &p, &s, &k, &x, &mut actual).unwrap();
+			derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
 
 			assert_eq!(expected.len(), actual.len());
 			assert_eq!(expected.as_ref(), &actual[..]);

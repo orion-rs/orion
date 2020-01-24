@@ -22,24 +22,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -59,24 +59,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -96,24 +96,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -133,24 +133,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -170,24 +170,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -207,24 +207,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -244,24 +244,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -281,24 +281,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -317,24 +317,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -353,24 +353,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -390,24 +390,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -427,24 +427,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -464,24 +464,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -501,24 +501,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
@@ -538,24 +538,24 @@ mod custom_hkdf {
 		let mut actual_hash = vec![0u8; expected_hash.len()];
 
 		argon2::derive_key(
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash,
 		)
 		.unwrap();
 		assert_eq!(expected_hash, actual_hash);
 		assert!(argon2::verify(
 			&expected_hash,
-			passes,
-			mem,
 			&password,
 			&salt,
-			secret_value,
-			associated_data,
+			passes,
+			mem,
+			Some(secret_value),
+			Some(associated_data),
 			&mut actual_hash
 		)
 		.is_ok());
