@@ -53,7 +53,7 @@
 //!   [`util::secure_rand_bytes()`] can be used for this.
 //! - The recommended length for a salt is `16` bytes.
 //! - The minimum recommended size for a hashed password is `32` bytes.
-//! - The minimum recommended is `3`.
+//! - The minimum recommended iteration count is `3`.
 //! - Password hashes should always be compared in constant-time.
 //!
 //! # Example:
