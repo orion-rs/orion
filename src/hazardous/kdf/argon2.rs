@@ -113,6 +113,7 @@ fn g(a: &mut u64, b: &mut u64, c: &mut u64, d: &mut u64) {
 	*b = (*b ^ *c).rotate_right(63);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn permutation_p(
 	v0: &mut u64,
 	v1: &mut u64,
@@ -422,6 +423,7 @@ fn store_into(src: &[u64], dst: &mut [u8; 1024]) {
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Argon2i password hashing function as described in the [draft RFC](https://datatracker.ietf.org/doc/draft-irtf-cfrg-argon2/).
 pub fn derive_key(
@@ -433,10 +435,10 @@ pub fn derive_key(
 	ad: Option<&[u8]>,
 	dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	if password.len() > 0xFFFFFFFF {
+	if password.len() > 0xFFFF_FFFF {
 		return Err(UnknownCryptoError);
 	}
-	if salt.len() > 0xFFFFFFFF || salt.len() < 8 {
+	if salt.len() > 0xFFFF_FFFF || salt.len() < 8 {
 		return Err(UnknownCryptoError);
 	}
 	if iterations < 1 {
@@ -551,6 +553,7 @@ pub fn derive_key(
 	Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Verify Argon2i derived key in constant time.
 pub fn verify(
