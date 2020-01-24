@@ -2,9 +2,9 @@ pub mod custom_hkdf;
 pub mod custom_pbkdf2;
 #[cfg(feature = "safe_api")]
 pub mod other_argon2;
+pub mod other_hkdf;
 #[cfg(feature = "safe_api")]
 pub mod pynacl_argon2i;
-pub mod other_hkdf;
 
 extern crate orion;
 use self::orion::hazardous::{kdf::hkdf::*, mac::hmac};
