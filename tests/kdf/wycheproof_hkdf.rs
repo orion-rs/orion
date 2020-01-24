@@ -6,7 +6,7 @@ extern crate serde_json;
 use self::hex::decode;
 
 use self::serde_json::{Deserializer, Value};
-use crate::mac::wycheproof_hmac_test_runner;
+use crate::kdf::wycheproof_hkdf_test_runner;
 use std::{fs::File, io::BufReader};
 
 fn wycheproof_runner(path: &str) {
@@ -18,15 +18,17 @@ fn wycheproof_runner(path: &str) {
 		for test_groups in test_file.unwrap().get("testGroups") {
 			for test_group_collection in test_groups.as_array() {
 				for test_group in test_group_collection {
-					let tag_len = test_group.get("tagSize").unwrap().as_u64().unwrap();
 					for test_vectors in test_group.get("tests").unwrap().as_array() {
 						for test_case in test_vectors {
-							let key =
-								decode(test_case.get("key").unwrap().as_str().unwrap()).unwrap();
-							let msg =
-								decode(test_case.get("msg").unwrap().as_str().unwrap()).unwrap();
-							let tag =
-								decode(test_case.get("tag").unwrap().as_str().unwrap()).unwrap();
+							let ikm =
+								decode(test_case.get("ikm").unwrap().as_str().unwrap()).unwrap();
+							let salt =
+								decode(test_case.get("salt").unwrap().as_str().unwrap()).unwrap();
+							let info =
+								decode(test_case.get("info").unwrap().as_str().unwrap()).unwrap();
+							let okm_len = test_case.get("size").unwrap().as_u64().unwrap();
+							let okm =
+								decode(test_case.get("okm").unwrap().as_str().unwrap()).unwrap();
 							let result: bool =
 								match test_case.get("result").unwrap().as_str().unwrap() {
 									"valid" => true,
@@ -34,13 +36,14 @@ fn wycheproof_runner(path: &str) {
 									_ => panic!("Unrecognized result detected!"),
 								};
 							let tcid = test_case.get("tcId").unwrap().as_u64().unwrap();
-							println!("tcId: {}, len: {}", tcid, tag_len);
+							println!("tcId: {}, okm_len: {}", tcid, okm_len);
 
-							wycheproof_hmac_test_runner(
-								&key[..],
-								&msg[..],
-								&tag[..],
-								tag_len as usize,
+							wycheproof_hkdf_test_runner(
+								&okm[..],
+								&salt[..],
+								&ikm[..],
+								&info[..],
+								okm_len as usize,
 								result,
 							);
 						}
@@ -52,6 +55,6 @@ fn wycheproof_runner(path: &str) {
 }
 
 #[test]
-fn test_wycheproof_hmac() {
-	wycheproof_runner("./tests/test_data/original/wycheproof_hmac_sha512_test.json");
+fn test_wycheproof_hkdf() {
+	wycheproof_runner("./tests/test_data/original/wycheproof_hkdf_sha512_test.json");
 }
