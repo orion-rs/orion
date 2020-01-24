@@ -1,5 +1,6 @@
 pub mod custom_hkdf;
 pub mod custom_pbkdf2;
+pub mod other_argon2;
 pub mod other_hkdf;
 
 extern crate orion;
