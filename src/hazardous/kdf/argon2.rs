@@ -370,6 +370,8 @@ fn load_into(src: &[u8], dst: &mut [u64; 128]) {
 		.chunks_exact(core::mem::size_of::<u64>())
 		.zip(dst.iter_mut())
 	{
+		// src will be 1024 and thereby evenly divisable by 8 making
+		// and so this unwrap() should not be able to panic.
 		*dst_elem = u64::from_le_bytes(src_chunk.try_into().unwrap());
 	}
 }
