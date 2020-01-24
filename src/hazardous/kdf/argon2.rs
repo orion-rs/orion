@@ -473,6 +473,8 @@ pub fn derive_key(
 	load_into(&tmp, &mut blocks[1]);
 
 	let mut gidx = Gidx::new(n_blocks, iterations, segment_length);
+	let mut prev_b = [0u64; 128];
+	let mut ref_b = [0u64; 128];
 
 	for pass_n in 0..iterations as usize {
 		for segment_n in 0..SEGMENTS_PER_LANE {
@@ -492,9 +494,6 @@ pub fn derive_key(
 					n_blocks - 1
 				};
 
-				let mut prev_b = [0u64; 128];
-				let mut ref_b = [0u64; 128];
-
 				prev_b.copy_from_slice(&blocks[previous_idx as usize]);
 				ref_b.copy_from_slice(&blocks[reference_idx as usize]);
 
@@ -506,6 +505,8 @@ pub fn derive_key(
 	store_into(&blocks[n_blocks as usize - 1], &mut tmp);
 	extended_hash(&tmp, dst_out)?;
 
+	prev_b.zeroize();
+	ref_b.zeroize();
 	tmp.as_mut().zeroize();
 	h0.as_mut().zeroize();
 	for block in blocks.iter_mut() {
