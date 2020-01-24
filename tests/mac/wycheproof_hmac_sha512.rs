@@ -6,10 +6,10 @@ extern crate serde_json;
 use self::hex::decode;
 
 use self::serde_json::{Deserializer, Value};
-use crate::aead::{wycheproof_test_runner_ietf, wycheproof_test_runner_x};
+use crate::mac::wycheproof_hmac_test_runner;
 use std::{fs::File, io::BufReader};
 
-fn wycheproof_runner(path: &str, is_ietf: bool) {
+fn wycheproof_runner(path: &str) {
 	let file = File::open(path).unwrap();
 	let reader = BufReader::new(file);
 	let stream = Deserializer::from_reader(reader).into_iter::<Value>();
@@ -18,18 +18,13 @@ fn wycheproof_runner(path: &str, is_ietf: bool) {
 		for test_groups in test_file.unwrap().get("testGroups") {
 			for test_group_collection in test_groups.as_array() {
 				for test_group in test_group_collection {
+					let tag_len = test_group.get("tagSize").unwrap().as_u64().unwrap();
 					for test_vectors in test_group.get("tests").unwrap().as_array() {
 						for test_case in test_vectors {
 							let key =
 								decode(test_case.get("key").unwrap().as_str().unwrap()).unwrap();
-							let iv =
-								decode(test_case.get("iv").unwrap().as_str().unwrap()).unwrap();
-							let aad =
-								decode(test_case.get("aad").unwrap().as_str().unwrap()).unwrap();
 							let msg =
 								decode(test_case.get("msg").unwrap().as_str().unwrap()).unwrap();
-							let ct =
-								decode(test_case.get("ct").unwrap().as_str().unwrap()).unwrap();
 							let tag =
 								decode(test_case.get("tag").unwrap().as_str().unwrap()).unwrap();
 							let result: bool =
@@ -39,19 +34,15 @@ fn wycheproof_runner(path: &str, is_ietf: bool) {
 									_ => panic!("Unrecognized result detected!"),
 								};
 							let tcid = test_case.get("tcId").unwrap().as_u64().unwrap();
-							println!("tcId: {}, is_ietf: {}", tcid, is_ietf);
+							println!("tcId: {}, len: {}", tcid, tag_len);
 
-							if is_ietf {
-								wycheproof_test_runner_ietf(
-									&key, &iv, &aad, &tag, &msg, &ct, result, tcid,
-								)
-								.unwrap();
-							} else {
-								wycheproof_test_runner_x(
-									&key, &iv, &aad, &tag, &msg, &ct, result, tcid,
-								)
-								.unwrap();
-							}
+							wycheproof_hmac_test_runner(
+								&key[..],
+								&msg[..],
+								&tag[..],
+								tag_len as usize,
+								result,
+							);
 						}
 					}
 				}
@@ -62,12 +53,5 @@ fn wycheproof_runner(path: &str, is_ietf: bool) {
 
 #[test]
 fn test_wycheproof() {
-	wycheproof_runner(
-		"./tests/test_data/original/wycheproof_chacha20_poly1305_test.json",
-		true,
-	);
-	wycheproof_runner(
-		"./tests/test_data/original/wycheproof_xchacha20_poly1305_test.json",
-		false,
-	);
+	wycheproof_runner("./tests/test_data/original/wycheproof_hmac_sha512_test.json");
 }

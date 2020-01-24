@@ -2,6 +2,7 @@ pub mod nist_cavp_hmac;
 pub mod other_poly1305;
 pub mod rfc_hmac;
 pub mod rfc_poly1305;
+pub mod wycheproof_hmac_sha512;
 
 extern crate orion;
 
@@ -31,6 +32,37 @@ fn hmac_test_runner(secret_key: &[u8], data: &[u8], expected: &[u8], trunc: Opti
         one_shot.unprotected_as_bytes()[..len].as_ref(),
         expected[..len].as_ref()
     );
+}
+
+fn wycheproof_hmac_test_runner(
+	secret_key: &[u8],
+	data: &[u8],
+	expected: &[u8],
+	len_bits: usize,
+	result: bool,
+) {
+	let key = hmac::SecretKey::from_slice(secret_key).unwrap();
+	let mut ctx = hmac::Hmac::new(&key);
+	ctx.update(data).unwrap();
+	let actual = ctx.finalize().unwrap();
+
+	let len = len_bits / 8;
+
+	if result {
+		if len == 64 {
+			let expected_tag = hmac::Tag::from_slice(expected).unwrap();
+			assert!(hmac::Hmac::verify(&expected_tag, &key, data).is_ok());
+		} else {
+			assert_eq!(expected, actual.unprotected_as_bytes()[..len].as_ref());
+		}
+	} else {
+		if len == 64 {
+			let expected_tag = hmac::Tag::from_slice(expected).unwrap();
+			assert!(hmac::Hmac::verify(&expected_tag, &key, data).is_err());
+		} else {
+			assert_ne!(expected, actual.unprotected_as_bytes()[..len].as_ref());
+		}
+	}
 }
 
 fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) {
