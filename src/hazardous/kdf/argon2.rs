@@ -152,34 +152,34 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError>
 	let outlen = dst.len() as u32;
 
 	if dst.len() <= BLAKE2B_OUTSIZE {
-		let mut ctx = Blake2b::new(None, dst.len()).unwrap();
-		ctx.update(&outlen.to_le_bytes()).unwrap();
-		ctx.update(input).unwrap();
-		dst.copy_from_slice(ctx.finalize().unwrap().as_ref());
+		let mut ctx = Blake2b::new(None, dst.len())?;
+		ctx.update(&outlen.to_le_bytes())?;
+		ctx.update(input)?;
+		dst.copy_from_slice(ctx.finalize()?.as_ref());
 	} else {
-		let mut ctx = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
-		ctx.update(&outlen.to_le_bytes()).unwrap();
-		ctx.update(input).unwrap();
+		let mut ctx = Blake2b::new(None, BLAKE2B_OUTSIZE)?;
+		ctx.update(&outlen.to_le_bytes())?;
+		ctx.update(input)?;
 
-		let mut tmp = ctx.finalize().unwrap();
+		let mut tmp = ctx.finalize()?;
 		dst[..BLAKE2B_OUTSIZE].copy_from_slice(tmp.as_ref());
 
 		let mut pos = BLAKE2B_OUTSIZE / 2;
 		let mut toproduce = dst.len() - BLAKE2B_OUTSIZE / 2;
 
 		while toproduce > BLAKE2B_OUTSIZE {
-			ctx.reset(None).unwrap();
-			ctx.update(tmp.as_ref()).unwrap();
-			tmp = ctx.finalize().unwrap();
+			ctx.reset(None)?;
+			ctx.update(tmp.as_ref())?;
+			tmp = ctx.finalize()?;
 
 			dst[pos..(pos + BLAKE2B_OUTSIZE)].copy_from_slice(tmp.as_ref());
 			pos += BLAKE2B_OUTSIZE / 2;
 			toproduce -= BLAKE2B_OUTSIZE / 2;
 		}
 
-		ctx = Blake2b::new(None, toproduce).unwrap();
-		ctx.update(tmp.as_ref()).unwrap();
-		tmp = ctx.finalize().unwrap();
+		ctx = Blake2b::new(None, toproduce)?;
+		ctx.update(tmp.as_ref())?;
+		tmp = ctx.finalize()?;
 		dst[pos..outlen as usize].copy_from_slice(&tmp.as_ref()[..toproduce]);
 	}
 
