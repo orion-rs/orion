@@ -589,7 +589,7 @@ mod public {
 					let mut opener = StreamOpener::new(&key, &nonce).unwrap();
 					let (pt_decrypted, tag) = opener.open_chunk(&ct).unwrap();
 
-					(input == pt_decrypted && tag == StreamTag::MESSAGE)
+					input == pt_decrypted && tag == StreamTag::MESSAGE
 				}
 		}
 		quickcheck! {
@@ -606,7 +606,7 @@ mod public {
 				let ct = seal(&sk, &pt).unwrap();
 				let pt_decrypted = open(&sk, &ct).unwrap();
 
-				(pt == pt_decrypted)
+				pt == pt_decrypted
 			}
 		}
 

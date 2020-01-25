@@ -324,7 +324,7 @@ mod private {
 				fn prop_padding_result(input: usize) -> bool {
 					let rem = padding(input);
 
-					(((input + rem) % 16) == 0)
+					((input + rem) % 16) == 0
 				}
 			}
 

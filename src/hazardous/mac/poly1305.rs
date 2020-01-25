@@ -154,7 +154,7 @@ impl Poly1305 {
         let hibit: u32 = if self.is_finalized {
             0
         } else {
-            (1 << 24)
+            1 << 24
         };
 
         let r0: u32 = self.r[0];

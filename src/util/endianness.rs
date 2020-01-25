@@ -412,7 +412,7 @@ mod public {
 					let mut dst_store = src.clone();
 					store_u32_into_le(&dst_load[..], &mut dst_store);
 
-					(dst_store == src)
+					dst_store == src
 				} else {
 					// Otherwise above functions panic.
 					true
@@ -429,7 +429,7 @@ mod public {
 					let mut dst_store = src.clone();
 					store_u64_into_le(&dst_load[..], &mut dst_store);
 
-					(dst_store == src)
+					dst_store == src
 				} else {
 					// Otherwise above functions panic.
 					true
@@ -446,7 +446,7 @@ mod public {
 					let mut dst_store = src.clone();
 					store_u64_into_be(&dst_load[..], &mut dst_store);
 
-					(dst_store == src)
+					dst_store == src
 				} else {
 					// Otherwise above functions panic.
 					true
@@ -467,7 +467,7 @@ mod public {
 					dst_load[0] = load_u32_le(&dst_store[..4]);
 				}
 
-				(dst_load == src)
+				dst_load == src
 			}
 		}
 
@@ -480,7 +480,7 @@ mod public {
 				let mut dst_load = src.clone();
 				load_u64_into_le(&dst_store[..], &mut dst_load);
 
-				(dst_load == src)
+				dst_load == src
 			}
 		}
 
@@ -493,7 +493,7 @@ mod public {
 				let mut dst_load = src.clone();
 				load_u64_into_be(&dst_store[..], &mut dst_load);
 
-				(dst_load == src)
+				dst_load == src
 			}
 		}
 	}

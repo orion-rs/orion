@@ -201,7 +201,7 @@ mod public {
 						&mut dst_out_pt,
 					).unwrap();
 
-					(dst_out_pt != pt)
+					dst_out_pt != pt
 				}
 			}
 
@@ -237,7 +237,7 @@ mod public {
 						&mut dst_out_pt,
 					).unwrap();
 
-					(dst_out_pt != pt)
+					dst_out_pt != pt
 				}
 			}
 
@@ -273,7 +273,7 @@ mod public {
 						&mut dst_out_pt,
 					).unwrap();
 
-					(dst_out_pt != pt)
+					dst_out_pt != pt
 				}
 			}
 		}

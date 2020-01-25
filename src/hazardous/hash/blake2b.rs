@@ -682,7 +682,7 @@ mod public {
 					let mut state = Blake2b::new(None, 32).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d256 == state.finalize().unwrap())
+					d256 == state.finalize().unwrap()
 				}
 			}
 
@@ -695,7 +695,7 @@ mod public {
 					let mut state = Blake2b::new(None, 48).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d384 == state.finalize().unwrap())
+					d384 == state.finalize().unwrap()
 				}
 			}
 
@@ -708,7 +708,7 @@ mod public {
 					let mut state = Blake2b::new(None, 64).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d512 == state.finalize().unwrap())
+					d512 == state.finalize().unwrap()
 				}
 			}
 
