@@ -6,7 +6,7 @@ extern crate serde_json;
 use self::hex::decode;
 
 use self::serde_json::{Deserializer, Value};
-use crate::mac::wycheproof_hmac_test_runner;
+use crate::mac::hmac_test_runner;
 use std::{fs::File, io::BufReader};
 
 fn wycheproof_runner(path: &str) {
@@ -36,11 +36,11 @@ fn wycheproof_runner(path: &str) {
 							let tcid = test_case.get("tcId").unwrap().as_u64().unwrap();
 							println!("tcId: {}, len: {}", tcid, tag_len);
 
-							wycheproof_hmac_test_runner(
+							hmac_test_runner(
+								&tag[..],
 								&key[..],
 								&msg[..],
-								&tag[..],
-								tag_len as usize,
+								Some(tag_len as usize / 8), // Wychproof sets tag length in bits, we need bytes
 								result,
 							);
 						}

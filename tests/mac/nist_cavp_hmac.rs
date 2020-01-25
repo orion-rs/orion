@@ -758,12 +758,13 @@ fn test_nist_cavp() {
 ["f78343071f61ee7d9f791bd53132e6d557928bcfe4b214bebf6f3592e46374c7ab148c3c4d6a1443a4675cf4321298c865b440631947b6b05f2c2a337d1cbb9b3661de974b4604eb41cc77c3659e85470e47e16f22a34619db935d59cbf5e1101ed401c020db069eff1035e9d1bff77bd8b3379e05ac0c20bc0e98aad7d7304dedd3bc5ed4136184649b5e0f7e5b", "d63b50b54e1536e35d5f3c6e29f1e49a78ca43fa22b31232c71f0300bd56517e4cd29ba11ee9f206f1ad31ee8f118c87004d6c6dfe837b70a9a2fa987c8b5b6680720c5dbf8791c1fcd6d59fa16cc20df9bc0fb39f41598a376476e45b9f06add8e34af01b373a9ce6a3d189484cacb6cbe0d3d5ef34d709d72c1dee43dc79da", "086f674d778db491e73b6fbc5126233c6b6e1f066963356d49ea386d9c0868ad25bf6edad0371cde87cea94a18c6dba47535dfce2e40d2246ab17980495d656c", "64"],
 
 ];
-    for test_case in test_vectors.iter() {
-        hmac_test_runner(
-            &decode(test_case[0]).unwrap(),
-            &decode(test_case[1]).unwrap(),
-            &decode(test_case[2]).unwrap(),
-            Some(test_case[3].parse::<usize>().unwrap()),
-        );
-    }
+	for test_case in test_vectors.iter() {
+		hmac_test_runner(
+			&decode(test_case[2]).unwrap(),
+			&decode(test_case[0]).unwrap(),
+			&decode(test_case[1]).unwrap(),
+			Some(test_case[3].parse::<usize>().unwrap()),
+			true,
+		);
+	}
 }
