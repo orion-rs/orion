@@ -84,14 +84,14 @@ mod public {
 			quickcheck! {
 				/// Hashing twice with same input should always produce same output.
 				fn prop_digest_same_result(input: Vec<u8>) -> bool {
-					(digest(&input[..]).unwrap() ==  digest(&input[..]).unwrap())
+					digest(&input[..]).unwrap() ==  digest(&input[..]).unwrap()
 				}
 			}
 
 			quickcheck! {
 				/// Hashing twice with different input should never produce same output.
 				fn prop_digest_diff_result(input: Vec<u8>) -> bool {
-					(digest(&input[..]).unwrap() !=  digest(b"Completely wrong input").unwrap())
+					digest(&input[..]).unwrap() !=  digest(b"Completely wrong input").unwrap()
 				}
 			}
 		}

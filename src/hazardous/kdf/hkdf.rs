@@ -216,7 +216,7 @@ mod public {
 					let mut out_one_shot = vec![0u8; outsize_checked];
 					derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
 
-					(out == out_one_shot)
+					out == out_one_shot
 				}
 			}
 		}

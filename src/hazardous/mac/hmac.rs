@@ -553,7 +553,7 @@ mod public {
 					let stream = state.finalize().unwrap();
 					let one_shot = hmac(&sk, &data[..]).unwrap();
 
-					(one_shot == stream)
+					one_shot == stream
 				}
 			}
 		}

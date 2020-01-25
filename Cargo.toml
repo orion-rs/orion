@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.14.4" # Update html_root_url in lib.rs along with this.
+version = "0.14.5" # Update html_root_url in lib.rs along with this.
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Easy and usable rust crypto"
 keywords = [ "cryptography", "crypto", "aead", "hash", "mac" ]

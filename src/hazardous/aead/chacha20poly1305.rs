@@ -688,7 +688,7 @@ mod private {
 				fn prop_padding_result(input: Vec<u8>) -> bool {
 					let rem = padding(&input[..]);
 
-					(((input.len() + rem) % 16) == 0)
+					((input.len() + rem) % 16) == 0
 				}
 			}
 
@@ -698,7 +698,7 @@ mod private {
 				fn prop_result_never_above_15(input: Vec<u8>) -> bool {
 					let rem: usize = padding(&input[..]);
 
-					(rem < 16)
+					rem < 16
 				}
 			}
 		}

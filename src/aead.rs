@@ -251,7 +251,7 @@ mod public {
 				let ct = seal(&sk, &pt).unwrap();
 				let pt_decrypted = open(&sk, &ct).unwrap();
 
-				(pt == pt_decrypted)
+				pt == pt_decrypted
 			}
 		}
 

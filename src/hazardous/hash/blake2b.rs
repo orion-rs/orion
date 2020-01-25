@@ -675,7 +675,7 @@ mod public {
 					let mut state = init(None, 32).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d256 == state.finalize().unwrap())
+					d256 == state.finalize().unwrap()
 				}
 			}
 
@@ -688,7 +688,7 @@ mod public {
 					let mut state = init(None, 48).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d256 == state.finalize().unwrap())
+					d256 == state.finalize().unwrap()
 				}
 			}
 
@@ -701,7 +701,7 @@ mod public {
 					let mut state = init(None, 64).unwrap();
 					state.update(&data[..]).unwrap();
 
-					(d256 == state.finalize().unwrap())
+					d256 == state.finalize().unwrap()
 				}
 			}
 

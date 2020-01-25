@@ -703,7 +703,7 @@ mod public {
 						&mut dst_out_pt,
 					).unwrap();
 
-					(dst_out_pt != pt)
+					dst_out_pt != pt
 				}
 			}
 
@@ -739,7 +739,7 @@ mod public {
 						&mut dst_out_pt,
 					).unwrap();
 
-					(dst_out_pt != pt)
+					dst_out_pt != pt
 				}
 			}
 
@@ -775,7 +775,7 @@ mod public {
 						&mut dst_out_pt,
 					).unwrap();
 
-					(dst_out_pt != pt)
+					dst_out_pt != pt
 				}
 			}
 		}
@@ -885,7 +885,7 @@ mod public {
 						counter,
 					).unwrap();
 
-					(keystream1[..] == keystream2[..])
+					keystream1[..] == keystream2[..]
 				}
 			}
 		}
@@ -1073,7 +1073,7 @@ mod test_vectors {
 		#[must_use]
 		#[inline(always)]
 		fn eq(&self, other: &Self) -> bool {
-			(self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3)
+			self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3
 		}
 	}
 

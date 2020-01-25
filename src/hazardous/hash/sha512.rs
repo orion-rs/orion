@@ -676,7 +676,7 @@ mod public {
 					let stream = state.finalize().unwrap();
 					let one_shot = digest(&data[..]).unwrap();
 
-					(one_shot == stream)
+					one_shot == stream
 				}
 			}
 		}

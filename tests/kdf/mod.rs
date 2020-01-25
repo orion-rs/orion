@@ -24,5 +24,5 @@ pub fn hkdf_test_runner(
 	let mut okm_one_shot_dst = okm_out.to_vec();
 	derive_key(salt, ikm, Some(&info), &mut okm_one_shot_dst).unwrap();
 
-	((okm_out == excp_okm) == (okm_one_shot_dst == excp_okm))
+	(okm_out == excp_okm) == (okm_one_shot_dst == excp_okm)
 }

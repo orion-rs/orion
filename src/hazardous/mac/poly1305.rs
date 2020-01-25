@@ -173,7 +173,7 @@ impl Poly1305 {
         let hibit: u32 = if self.is_finalized {
             0
         } else {
-            (1 << 24)
+            1 << 24
         };
 
         let r0: u32 = self.r[0];
@@ -806,7 +806,7 @@ mod public {
 					let stream = state.finalize().unwrap();
 					let one_shot = poly1305(&sk, &data[..]).unwrap();
 
-					(one_shot == stream)
+					one_shot == stream
 				}
 			}
 		}
