@@ -1,7 +1,7 @@
 // Testing against test vectors generated with Monocypher.
 
 #[cfg(test)]
-mod custom_hkdf {
+mod other_argon2 {
 
     extern crate hex;
     extern crate orion;

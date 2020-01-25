@@ -59,7 +59,7 @@
 //!
 //! let expected_dk = dst_out;
 //!
-//! assert!(pbkdf2::verify(&exp_dk, &password, &salt, 10000, &mut dk_out).is_ok());
+//! assert!(pbkdf2::verify(&expected_dk, &password, &salt, 10000, &mut dst_out).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Password::generate()`]: struct.Password.html#method.generate
