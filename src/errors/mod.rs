@@ -23,7 +23,7 @@
 use core::fmt;
 
 /// Opaque error.
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct UnknownCryptoError;
 
 impl fmt::Display for UnknownCryptoError {
@@ -35,6 +35,13 @@ impl fmt::Display for UnknownCryptoError {
 impl fmt::Debug for UnknownCryptoError {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "UnknownCryptoError")
+	}
+}
+
+#[cfg(feature = "safe_api")]
+impl std::error::Error for UnknownCryptoError {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		None
 	}
 }
 
@@ -72,4 +79,11 @@ fn test_unknown_crypto_from_getrandom() {
 	// Tests Display impl though "{}"
 	let err = format!("{}", UnknownCryptoError::from(err_foreign));
 	assert_eq!(err, "UnknownCryptoError");
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+fn test_source() {
+	use std::error::Error;
+	assert!(UnknownCryptoError.source().is_none());
 }
