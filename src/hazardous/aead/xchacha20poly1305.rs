@@ -95,52 +95,52 @@ use crate::{errors::UnknownCryptoError, hazardous::aead::chacha20poly1305};
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// AEAD XChaCha20Poly1305 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn seal(
-	secret_key: &SecretKey,
-	nonce: &Nonce,
-	plaintext: &[u8],
-	ad: Option<&[u8]>,
-	dst_out: &mut [u8],
+    secret_key: &SecretKey,
+    nonce: &Nonce,
+    plaintext: &[u8],
+    ad: Option<&[u8]>,
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
+    let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
 
-	chacha20poly1305::seal(&subkey, &ietf_nonce, plaintext, ad, dst_out)
+    chacha20poly1305::seal(&subkey, &ietf_nonce, plaintext, ad, dst_out)
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// AEAD XChaCha20Poly1305 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn open(
-	secret_key: &SecretKey,
-	nonce: &Nonce,
-	ciphertext_with_tag: &[u8],
-	ad: Option<&[u8]>,
-	dst_out: &mut [u8],
+    secret_key: &SecretKey,
+    nonce: &Nonce,
+    ciphertext_with_tag: &[u8],
+    ad: Option<&[u8]>,
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
+    let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
 
-	chacha20poly1305::open(&subkey, &ietf_nonce, ciphertext_with_tag, ad, dst_out)
+    chacha20poly1305::open(&subkey, &ietf_nonce, ciphertext_with_tag, ad, dst_out)
 }
 
 // Testing public functions in the module.
 #[cfg(test)]
 #[cfg(feature = "safe_api")]
 mod public {
-	use super::*;
+    use super::*;
 
-	// Proptests. Only executed when NOT testing no_std.
-	#[cfg(feature = "safe_api")]
-	mod proptest {
-		use super::*;
-		use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
-		use crate::test_framework::aead_interface::*;
+    // Proptests. Only executed when NOT testing no_std.
+    #[cfg(feature = "safe_api")]
+    mod proptest {
+        use super::*;
+        use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
+        use crate::test_framework::aead_interface::*;
 
-		quickcheck! {
-			fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
-				let secret_key = SecretKey::generate();
-				let nonce = Nonce::generate();
-				AeadTestRunner(seal, open, secret_key, nonce, &input, None, POLY1305_OUTSIZE, &ad);
+        quickcheck! {
+            fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
+                let secret_key = SecretKey::generate();
+                let nonce = Nonce::generate();
+                AeadTestRunner(seal, open, secret_key, nonce, &input, None, POLY1305_OUTSIZE, &ad);
 
-				true
-			}
-		}
-	}
+                true
+            }
+        }
+    }
 }

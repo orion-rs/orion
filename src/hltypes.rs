@@ -25,77 +25,77 @@
 use crate::errors::UnknownCryptoError;
 
 construct_secret_key_variable_size! {
-	/// A type to represent a secret key.
-	///
-	/// As default it will randomly generate a `SecretKey` of 32 bytes.
-	///
-	/// # Errors:
-	/// An error will be returned if:
-	/// - `slice` is empty.
-	/// - `length` is 0.
-	/// - `length` is not less than `u32::max_value()`.
-	///
-	/// # Panics:
-	/// A panic will occur if:
-	/// - Failure to generate random bytes securely.
-	(SecretKey, test_secret_key, 32)
+    /// A type to represent a secret key.
+    ///
+    /// As default it will randomly generate a `SecretKey` of 32 bytes.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is empty.
+    /// - `length` is 0.
+    /// - `length` is not less than `u32::max_value()`.
+    ///
+    /// # Panics:
+    /// A panic will occur if:
+    /// - Failure to generate random bytes securely.
+    (SecretKey, test_secret_key, 32)
 }
 
 construct_salt_variable_size! {
-	/// A type to represent the `Salt` that PBKDF2 uses during key derivation.
-	///
-	/// As default it will randomly generate a `Salt` of 64 bytes.
-	///
-	/// # Errors:
-	/// An error will be returned if:
-	/// - `slice` is empty.
-	/// - `length` is 0.
-	/// - `length` is not less than `u32::max_value()`.
-	///
-	/// # Panics:
-	/// A panic will occur if:
-	/// - Failure to generate random bytes securely.
-	(Salt, test_salt, 64)
+    /// A type to represent the `Salt` that PBKDF2 uses during key derivation.
+    ///
+    /// As default it will randomly generate a `Salt` of 64 bytes.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is empty.
+    /// - `length` is 0.
+    /// - `length` is not less than `u32::max_value()`.
+    ///
+    /// # Panics:
+    /// A panic will occur if:
+    /// - Failure to generate random bytes securely.
+    (Salt, test_salt, 64)
 }
 
 construct_tag! {
-	/// A type to represent the `PasswordHash` that PBKDF2 returns when used for password hashing.
-	///
-	/// A `PasswordHash`'s first 64 bytes are the salt used to hash the password, and the last 64
-	/// bytes are the actual password hash.
-	///
-	/// # Errors:
-	/// An error will be returned if:
-	/// - `slice` is not 128 bytes.
-	(PasswordHash, test_password_hash, 128, 128)
+    /// A type to represent the `PasswordHash` that PBKDF2 returns when used for password hashing.
+    ///
+    /// A `PasswordHash`'s first 64 bytes are the salt used to hash the password, and the last 64
+    /// bytes are the actual password hash.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 128 bytes.
+    (PasswordHash, test_password_hash, 128, 128)
 }
 
 impl_from_trait!(PasswordHash, 128);
 
 construct_tag! {
-	/// A type to represent the `Tag` output by BLAKE2b-256 in keyed mode.
-	///
-	/// # Errors:
-	/// An error will be returned if:
-	/// - `slice` is not 32 bytes.
-	(Tag, test_tag, 32, 32)
+    /// A type to represent the `Tag` output by BLAKE2b-256 in keyed mode.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 32 bytes.
+    (Tag, test_tag, 32, 32)
 }
 
 impl_from_trait!(Tag, 32);
 
 construct_secret_key_variable_size! {
-	/// A type to represent the `Password` that PBKDF2 hashes and uses for key derivation.
-	///
-	/// As default it will randomly generate a `Password` of 32 bytes.
-	///
-	/// # Errors:
-	/// An error will be returned if:
-	/// - `slice` is empty.
-	/// - `length` is 0.
-	/// - `length` is not less than `u32::max_value()`.
-	///
-	/// # Panics:
-	/// A panic will occur if:
-	/// - Failure to generate random bytes securely.
-	(Password, test_password, 32)
+    /// A type to represent the `Password` that PBKDF2 hashes and uses for key derivation.
+    ///
+    /// As default it will randomly generate a `Password` of 32 bytes.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is empty.
+    /// - `length` is 0.
+    /// - `length` is not less than `u32::max_value()`.
+    ///
+    /// # Panics:
+    /// A panic will occur if:
+    /// - Failure to generate random bytes securely.
+    (Password, test_password, 32)
 }

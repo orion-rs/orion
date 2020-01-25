@@ -84,198 +84,198 @@
 //! [XChaCha20Poly1305]: ../../aead/xchacha20poly1305/index.html
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{
-	errors::UnknownCryptoError,
-	hazardous::stream::chacha20::{self, Nonce as IETFNonce, IETF_CHACHA_NONCESIZE},
+    errors::UnknownCryptoError,
+    hazardous::stream::chacha20::{self, Nonce as IETFNonce, IETF_CHACHA_NONCESIZE},
 };
 
 /// The nonce size for XChaCha20.
 pub const XCHACHA_NONCESIZE: usize = 24;
 
 construct_public! {
-	/// A type that represents a `Nonce` that XChaCha20, XChaCha20Poly1305 and
-	/// StreamXChaCha20Poly1305 use.
-	///
-	/// # Errors:
-	/// An error will be returned if:
-	/// - `slice` is not 24 bytes.
-	///
-	/// # Panics:
-	/// A panic will occur if:
-	/// - Failure to generate random bytes securely.
-	(Nonce, test_nonce, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE)
+    /// A type that represents a `Nonce` that XChaCha20, XChaCha20Poly1305 and
+    /// StreamXChaCha20Poly1305 use.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 24 bytes.
+    ///
+    /// # Panics:
+    /// A panic will occur if:
+    /// - Failure to generate random bytes securely.
+    (Nonce, test_nonce, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE)
 }
 
 impl_from_trait!(Nonce, XCHACHA_NONCESIZE);
 
 /// Generate a subkey using HChaCha20 for XChaCha20 and corresponding nonce.
 pub(crate) fn subkey_and_nonce(secret_key: &SecretKey, nonce: &Nonce) -> (SecretKey, IETFNonce) {
-	// .unwrap() should not be able to panic because we pass a 16-byte nonce.
-	let subkey: SecretKey =
-		SecretKey::from(chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16]).unwrap());
-	let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
-	prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
+    // .unwrap() should not be able to panic because we pass a 16-byte nonce.
+    let subkey: SecretKey =
+        SecretKey::from(chacha20::hchacha20(secret_key, &nonce.as_ref()[0..16]).unwrap());
+    let mut prefixed_nonce = [0u8; IETF_CHACHA_NONCESIZE];
+    prefixed_nonce[4..IETF_CHACHA_NONCESIZE].copy_from_slice(&nonce.as_ref()[16..24]);
 
-	(subkey, IETFNonce::from(prefixed_nonce))
+    (subkey, IETFNonce::from(prefixed_nonce))
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn encrypt(
-	secret_key: &SecretKey,
-	nonce: &Nonce,
-	initial_counter: u32,
-	plaintext: &[u8],
-	dst_out: &mut [u8],
+    secret_key: &SecretKey,
+    nonce: &Nonce,
+    initial_counter: u32,
+    plaintext: &[u8],
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
+    let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
 
-	chacha20::encrypt(&subkey, &ietf_nonce, initial_counter, plaintext, dst_out)
+    chacha20::encrypt(&subkey, &ietf_nonce, initial_counter, plaintext, dst_out)
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
 pub fn decrypt(
-	secret_key: &SecretKey,
-	nonce: &Nonce,
-	initial_counter: u32,
-	ciphertext: &[u8],
-	dst_out: &mut [u8],
+    secret_key: &SecretKey,
+    nonce: &Nonce,
+    initial_counter: u32,
+    ciphertext: &[u8],
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
+    encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
 // Testing public functions in the module.
 #[cfg(test)]
 #[cfg(feature = "safe_api")]
 mod public {
-	use super::*;
+    use super::*;
 
-	mod test_encrypt_decrypt {
-		use super::*;
-		use crate::test_framework::streamcipher_interface::*;
+    mod test_encrypt_decrypt {
+        use super::*;
+        use crate::test_framework::streamcipher_interface::*;
 
-		// Proptests. Only executed when NOT testing no_std.
-		#[cfg(feature = "safe_api")]
-		mod proptest {
-			use super::*;
+        // Proptests. Only executed when NOT testing no_std.
+        #[cfg(feature = "safe_api")]
+        mod proptest {
+            use super::*;
 
-			quickcheck! {
-				fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
-					let secret_key = SecretKey::generate();
-					let nonce = Nonce::generate();
-					StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
+            quickcheck! {
+                fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
+                    let secret_key = SecretKey::generate();
+                    let nonce = Nonce::generate();
+                    StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
 
-					true
-				}
-			}
+                    true
+                }
+            }
 
-			quickcheck! {
-				// Encrypting and decrypting using two different secret keys and the same nonce
-				// should never yield the same input.
-				fn prop_encrypt_decrypt_diff_keys_diff_input(input: Vec<u8>) -> bool {
-					let pt = if input.is_empty() {
-						vec![1u8; 10]
-					} else {
-						input
-					};
+            quickcheck! {
+                // Encrypting and decrypting using two different secret keys and the same nonce
+                // should never yield the same input.
+                fn prop_encrypt_decrypt_diff_keys_diff_input(input: Vec<u8>) -> bool {
+                    let pt = if input.is_empty() {
+                        vec![1u8; 10]
+                    } else {
+                        input
+                    };
 
-					let sk1 = SecretKey::from_slice(&[0u8; 32]).unwrap();
-					let sk2 = SecretKey::from_slice(&[1u8; 32]).unwrap();
+                    let sk1 = SecretKey::from_slice(&[0u8; 32]).unwrap();
+                    let sk2 = SecretKey::from_slice(&[1u8; 32]).unwrap();
 
-					let mut dst_out_ct = vec![0u8; pt.len()];
-					let mut dst_out_pt = vec![0u8; pt.len()];
+                    let mut dst_out_ct = vec![0u8; pt.len()];
+                    let mut dst_out_pt = vec![0u8; pt.len()];
 
-					encrypt(
-						&sk1,
-						&Nonce::from_slice(&[0u8; 24]).unwrap(),
-						0,
-						&pt[..],
-						&mut dst_out_ct,
-					).unwrap();
+                    encrypt(
+                        &sk1,
+                        &Nonce::from_slice(&[0u8; 24]).unwrap(),
+                        0,
+                        &pt[..],
+                        &mut dst_out_ct,
+                    ).unwrap();
 
-					decrypt(
-						&sk2,
-						&Nonce::from_slice(&[0u8; 24]).unwrap(),
-						0,
-						&dst_out_ct[..],
-						&mut dst_out_pt,
-					).unwrap();
+                    decrypt(
+                        &sk2,
+                        &Nonce::from_slice(&[0u8; 24]).unwrap(),
+                        0,
+                        &dst_out_ct[..],
+                        &mut dst_out_pt,
+                    ).unwrap();
 
-					dst_out_pt != pt
-				}
-			}
+                    dst_out_pt != pt
+                }
+            }
 
-			quickcheck! {
-				// Encrypting and decrypting using two different nonces and the same secret key
-				// should never yield the same input.
-				fn prop_encrypt_decrypt_diff_nonces_diff_input(input: Vec<u8>) -> bool {
-					let pt = if input.is_empty() {
-						vec![1u8; 10]
-					} else {
-						input
-					};
+            quickcheck! {
+                // Encrypting and decrypting using two different nonces and the same secret key
+                // should never yield the same input.
+                fn prop_encrypt_decrypt_diff_nonces_diff_input(input: Vec<u8>) -> bool {
+                    let pt = if input.is_empty() {
+                        vec![1u8; 10]
+                    } else {
+                        input
+                    };
 
-					let n1 = Nonce::from_slice(&[0u8; 24]).unwrap();
-					let n2 = Nonce::from_slice(&[1u8; 24]).unwrap();
+                    let n1 = Nonce::from_slice(&[0u8; 24]).unwrap();
+                    let n2 = Nonce::from_slice(&[1u8; 24]).unwrap();
 
-					let mut dst_out_ct = vec![0u8; pt.len()];
-					let mut dst_out_pt = vec![0u8; pt.len()];
+                    let mut dst_out_ct = vec![0u8; pt.len()];
+                    let mut dst_out_pt = vec![0u8; pt.len()];
 
-					encrypt(
-						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-						&n1,
-						0,
-						&pt[..],
-						&mut dst_out_ct,
-					).unwrap();
+                    encrypt(
+                        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+                        &n1,
+                        0,
+                        &pt[..],
+                        &mut dst_out_ct,
+                    ).unwrap();
 
-					decrypt(
-						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-						&n2,
-						0,
-						&dst_out_ct[..],
-						&mut dst_out_pt,
-					).unwrap();
+                    decrypt(
+                        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+                        &n2,
+                        0,
+                        &dst_out_ct[..],
+                        &mut dst_out_pt,
+                    ).unwrap();
 
-					dst_out_pt != pt
-				}
-			}
+                    dst_out_pt != pt
+                }
+            }
 
-			quickcheck! {
-				// Encrypting and decrypting using two different initial counters
-				// should never yield the same input.
-				fn prop_encrypt_decrypt_diff_init_counter_diff_input(input: Vec<u8>) -> bool {
-					let pt = if input.is_empty() {
-						vec![1u8; 10]
-					} else {
-						input
-					};
+            quickcheck! {
+                // Encrypting and decrypting using two different initial counters
+                // should never yield the same input.
+                fn prop_encrypt_decrypt_diff_init_counter_diff_input(input: Vec<u8>) -> bool {
+                    let pt = if input.is_empty() {
+                        vec![1u8; 10]
+                    } else {
+                        input
+                    };
 
-					let init_counter1 = 32;
-					let init_counter2 = 64;
+                    let init_counter1 = 32;
+                    let init_counter2 = 64;
 
-					let mut dst_out_ct = vec![0u8; pt.len()];
-					let mut dst_out_pt = vec![0u8; pt.len()];
+                    let mut dst_out_ct = vec![0u8; pt.len()];
+                    let mut dst_out_pt = vec![0u8; pt.len()];
 
-					encrypt(
-						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-						&Nonce::from_slice(&[0u8; 24]).unwrap(),
-						init_counter1,
-						&pt[..],
-						&mut dst_out_ct,
-					).unwrap();
+                    encrypt(
+                        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+                        &Nonce::from_slice(&[0u8; 24]).unwrap(),
+                        init_counter1,
+                        &pt[..],
+                        &mut dst_out_ct,
+                    ).unwrap();
 
-					decrypt(
-						&SecretKey::from_slice(&[0u8; 32]).unwrap(),
-						&Nonce::from_slice(&[0u8; 24]).unwrap(),
-						init_counter2,
-						&dst_out_ct[..],
-						&mut dst_out_pt,
-					).unwrap();
+                    decrypt(
+                        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
+                        &Nonce::from_slice(&[0u8; 24]).unwrap(),
+                        init_counter2,
+                        &dst_out_ct[..],
+                        &mut dst_out_pt,
+                    ).unwrap();
 
-					dst_out_pt != pt
-				}
-			}
-		}
-	}
+                    dst_out_pt != pt
+                }
+            }
+        }
+    }
 }

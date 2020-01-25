@@ -55,230 +55,224 @@
 //!
 //! let exp_okm = okm_out;
 //!
-//! assert!(hkdf::verify(
-//! 	&exp_okm,
-//! 	&salt,
-//! 	"IKM".as_bytes(),
-//! 	None,
-//! 	&mut okm_out
-//! ).is_ok());
+//! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), None, &mut okm_out).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::{
-	errors::UnknownCryptoError,
-	hazardous::{
-		hash::sha512::SHA512_OUTSIZE,
-		mac::hmac::{self, SecretKey},
-	},
-	util,
+    errors::UnknownCryptoError,
+    hazardous::{
+        hash::sha512::SHA512_OUTSIZE,
+        mac::hmac::{self, SecretKey},
+    },
+    util,
 };
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// The HKDF extract step.
 pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError> {
-	let mut prk = hmac::Hmac::new(&SecretKey::from_slice(salt)?);
-	prk.update(ikm)?;
-	prk.finalize()
+    let mut prk = hmac::Hmac::new(&SecretKey::from_slice(salt)?);
+    prk.update(ikm)?;
+    prk.finalize()
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// The HKDF expand step.
 pub fn expand(
-	prk: &hmac::Tag,
-	info: Option<&[u8]>,
-	dst_out: &mut [u8],
+    prk: &hmac::Tag,
+    info: Option<&[u8]>,
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	if dst_out.len() > 16320 {
-		return Err(UnknownCryptoError);
-	}
-	if dst_out.is_empty() {
-		return Err(UnknownCryptoError);
-	}
+    if dst_out.len() > 16320 {
+        return Err(UnknownCryptoError);
+    }
+    if dst_out.is_empty() {
+        return Err(UnknownCryptoError);
+    }
 
-	let optional_info = match info {
-		Some(ref n_val) => *n_val,
-		None => &[0u8; 0],
-	};
+    let optional_info = match info {
+        Some(ref n_val) => *n_val,
+        None => &[0u8; 0],
+    };
 
-	let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
-	let okm_len = dst_out.len();
+    let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
+    let okm_len = dst_out.len();
 
-	for (idx, hlen_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
-		let block_len = hlen_block.len();
+    for (idx, hlen_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
+        let block_len = hlen_block.len();
 
-		hmac.update(optional_info)?;
-		hmac.update(&[idx as u8 + 1_u8])?;
-		hlen_block.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes()[..block_len]);
+        hmac.update(optional_info)?;
+        hmac.update(&[idx as u8 + 1_u8])?;
+        hlen_block.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes()[..block_len]);
 
-		// Check if it's the last iteration, if yes don't process anything
-		if block_len < SHA512_OUTSIZE || (block_len * (idx + 1) == okm_len) {
-			break;
-		} else {
-			hmac.reset();
-			hmac.update(&hlen_block)?;
-		}
-	}
+        // Check if it's the last iteration, if yes don't process anything
+        if block_len < SHA512_OUTSIZE || (block_len * (idx + 1) == okm_len) {
+            break;
+        } else {
+            hmac.reset();
+            hmac.update(&hlen_block)?;
+        }
+    }
 
-	Ok(())
+    Ok(())
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Combine `extract` and `expand` to return a derived key.
 pub fn derive_key(
-	salt: &[u8],
-	ikm: &[u8],
-	info: Option<&[u8]>,
-	dst_out: &mut [u8],
+    salt: &[u8],
+    ikm: &[u8],
+    info: Option<&[u8]>,
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	expand(&extract(salt, ikm)?, info, dst_out)
+    expand(&extract(salt, ikm)?, info, dst_out)
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Verify a derived key in constant time.
 pub fn verify(
-	expected: &[u8],
-	salt: &[u8],
-	ikm: &[u8],
-	info: Option<&[u8]>,
-	dst_out: &mut [u8],
+    expected: &[u8],
+    salt: &[u8],
+    ikm: &[u8],
+    info: Option<&[u8]>,
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	expand(&extract(salt, ikm)?, info, dst_out)?;
-	util::secure_cmp(&dst_out, expected)
+    expand(&extract(salt, ikm)?, info, dst_out)?;
+    util::secure_cmp(&dst_out, expected)
 }
 
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
-	use super::*;
+    use super::*;
 
-	mod test_expand {
-		use super::*;
+    mod test_expand {
+        use super::*;
 
-		#[test]
-		fn hkdf_above_maximum_length_err() {
-			// Max allowed length here is 16320
-			let mut okm_out = [0u8; 16321];
-			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+        #[test]
+        fn hkdf_above_maximum_length_err() {
+            // Max allowed length here is 16320
+            let mut okm_out = [0u8; 16321];
+            let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
 
-			assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
-		}
+            assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
+        }
 
-		#[test]
-		fn hkdf_exact_maximum_length_ok() {
-			// Max allowed length here is 16320
-			let mut okm_out = [0u8; 16320];
-			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+        #[test]
+        fn hkdf_exact_maximum_length_ok() {
+            // Max allowed length here is 16320
+            let mut okm_out = [0u8; 16320];
+            let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
 
-			assert!(expand(&prk, Some(b""), &mut okm_out).is_ok());
-		}
+            assert!(expand(&prk, Some(b""), &mut okm_out).is_ok());
+        }
 
-		#[test]
-		fn hkdf_zero_length_err() {
-			let mut okm_out = [0u8; 0];
-			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+        #[test]
+        fn hkdf_zero_length_err() {
+            let mut okm_out = [0u8; 0];
+            let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
 
-			assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
-		}
+            assert!(expand(&prk, Some(b""), &mut okm_out).is_err());
+        }
 
-		#[test]
-		fn hkdf_info_param() {
-			let mut okm_out = [0u8; 32];
-			let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
+        #[test]
+        fn hkdf_info_param() {
+            let mut okm_out = [0u8; 32];
+            let prk = extract("".as_bytes(), "".as_bytes()).unwrap();
 
-			assert!(expand(&prk, Some(b""), &mut okm_out).is_ok());
-			assert!(expand(&prk, None, &mut okm_out).is_ok());
-		}
-	}
+            assert!(expand(&prk, Some(b""), &mut okm_out).is_ok());
+            assert!(expand(&prk, None, &mut okm_out).is_ok());
+        }
+    }
 
-	#[cfg(feature = "safe_api")]
-	// Mark safe_api because currently it only contains proptests.
-	mod test_derive_key {
-		use super::*;
+    #[cfg(feature = "safe_api")]
+    // Mark safe_api because currently it only contains proptests.
+    mod test_derive_key {
+        use super::*;
 
-		// Proptests. Only executed when NOT testing no_std.
-		#[cfg(feature = "safe_api")]
-		mod proptest {
-			use super::*;
+        // Proptests. Only executed when NOT testing no_std.
+        #[cfg(feature = "safe_api")]
+        mod proptest {
+            use super::*;
 
-			quickcheck! {
-				/// Using derive_key() should always yield the same result
-				/// as using extract and expand separately.
-				fn prop_test_derive_key_same_separate(salt: Vec<u8>, ikm: Vec<u8>, info: Vec<u8>, outsize: usize) -> bool {
+            quickcheck! {
+                /// Using derive_key() should always yield the same result
+                /// as using extract and expand separately.
+                fn prop_test_derive_key_same_separate(salt: Vec<u8>, ikm: Vec<u8>, info: Vec<u8>, outsize: usize) -> bool {
 
-					let outsize_checked = if outsize == 0 || outsize > 16320 {
-						64
-					} else {
-						outsize
-					};
+                    let outsize_checked = if outsize == 0 || outsize > 16320 {
+                        64
+                    } else {
+                        outsize
+                    };
 
-					let prk = extract(&salt[..], &ikm[..]).unwrap();
-					let mut out = vec![0u8; outsize_checked];
-					expand(&prk, Some(&info[..]), &mut out).unwrap();
+                    let prk = extract(&salt[..], &ikm[..]).unwrap();
+                    let mut out = vec![0u8; outsize_checked];
+                    expand(&prk, Some(&info[..]), &mut out).unwrap();
 
-					let mut out_one_shot = vec![0u8; outsize_checked];
-					derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
+                    let mut out_one_shot = vec![0u8; outsize_checked];
+                    derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
 
-					out == out_one_shot
-				}
-			}
-		}
-	}
+                    out == out_one_shot
+                }
+            }
+        }
+    }
 
-	mod test_verify {
-		use super::*;
+    mod test_verify {
+        use super::*;
 
-		#[test]
-		fn hkdf_verify_true() {
-			let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
-			let salt = b"000102030405060708090a0b0c";
-			let info = b"f0f1f2f3f4f5f6f7f8f9";
-			let mut okm_out = [0u8; 42];
-			let mut okm_out_verify = [0u8; 42];
+        #[test]
+        fn hkdf_verify_true() {
+            let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+            let salt = b"000102030405060708090a0b0c";
+            let info = b"f0f1f2f3f4f5f6f7f8f9";
+            let mut okm_out = [0u8; 42];
+            let mut okm_out_verify = [0u8; 42];
 
-			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+            derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-			assert!(verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_ok());
-		}
+            assert!(verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_ok());
+        }
 
-		#[test]
-		fn hkdf_verify_wrong_salt() {
-			let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
-			let salt = b"000102030405060708090a0b0c";
-			let info = b"f0f1f2f3f4f5f6f7f8f9";
-			let mut okm_out = [0u8; 42];
-			let mut okm_out_verify = [0u8; 42];
+        #[test]
+        fn hkdf_verify_wrong_salt() {
+            let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+            let salt = b"000102030405060708090a0b0c";
+            let info = b"f0f1f2f3f4f5f6f7f8f9";
+            let mut okm_out = [0u8; 42];
+            let mut okm_out_verify = [0u8; 42];
 
-			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+            derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-			assert!(verify(&okm_out, b"", ikm, Some(info), &mut okm_out_verify).is_err());
-		}
+            assert!(verify(&okm_out, b"", ikm, Some(info), &mut okm_out_verify).is_err());
+        }
 
-		#[test]
-		fn hkdf_verify_wrong_ikm() {
-			let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
-			let salt = b"000102030405060708090a0b0c";
-			let info = b"f0f1f2f3f4f5f6f7f8f9";
-			let mut okm_out = [0u8; 42];
-			let mut okm_out_verify = [0u8; 42];
+        #[test]
+        fn hkdf_verify_wrong_ikm() {
+            let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+            let salt = b"000102030405060708090a0b0c";
+            let info = b"f0f1f2f3f4f5f6f7f8f9";
+            let mut okm_out = [0u8; 42];
+            let mut okm_out_verify = [0u8; 42];
 
-			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+            derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-			assert!(verify(&okm_out, salt, b"", Some(info), &mut okm_out_verify).is_err());
-		}
+            assert!(verify(&okm_out, salt, b"", Some(info), &mut okm_out_verify).is_err());
+        }
 
-		#[test]
-		fn verify_diff_length() {
-			let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
-			let salt = b"000102030405060708090a0b0c";
-			let info = b"f0f1f2f3f4f5f6f7f8f9";
-			let mut okm_out = [0u8; 42];
-			let mut okm_out_verify = [0u8; 43];
+        #[test]
+        fn verify_diff_length() {
+            let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+            let salt = b"000102030405060708090a0b0c";
+            let info = b"f0f1f2f3f4f5f6f7f8f9";
+            let mut okm_out = [0u8; 42];
+            let mut okm_out_verify = [0u8; 43];
 
-			derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+            derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
 
-			assert!(verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_err());
-		}
-	}
+            assert!(verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_err());
+        }
+    }
 }

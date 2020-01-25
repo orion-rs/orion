@@ -61,37 +61,37 @@ use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hashing using BLAKE2b-256.
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
-	blake2b::Hasher::Blake2b256.digest(data)
+    blake2b::Hasher::Blake2b256.digest(data)
 }
 
 // Testing public functions in the module.
 #[cfg(feature = "safe_api")]
 #[cfg(test)]
 mod public {
-	use super::*;
+    use super::*;
 
-	#[cfg(feature = "safe_api")]
-	mod test_digest {
-		use super::*;
+    #[cfg(feature = "safe_api")]
+    mod test_digest {
+        use super::*;
 
-		// Proptests. Only executed when NOT testing no_std.
-		#[cfg(feature = "safe_api")]
-		mod proptest {
-			use super::*;
+        // Proptests. Only executed when NOT testing no_std.
+        #[cfg(feature = "safe_api")]
+        mod proptest {
+            use super::*;
 
-			quickcheck! {
-				/// Hashing twice with same input should always produce same output.
-				fn prop_digest_same_result(input: Vec<u8>) -> bool {
-					digest(&input[..]).unwrap() ==  digest(&input[..]).unwrap()
-				}
-			}
+            quickcheck! {
+                /// Hashing twice with same input should always produce same output.
+                fn prop_digest_same_result(input: Vec<u8>) -> bool {
+                    digest(&input[..]).unwrap() ==  digest(&input[..]).unwrap()
+                }
+            }
 
-			quickcheck! {
-				/// Hashing twice with different input should never produce same output.
-				fn prop_digest_diff_result(input: Vec<u8>) -> bool {
-					digest(&input[..]).unwrap() !=  digest(b"Completely wrong input").unwrap()
-				}
-			}
-		}
-	}
+            quickcheck! {
+                /// Hashing twice with different input should never produce same output.
+                fn prop_digest_diff_result(input: Vec<u8>) -> bool {
+                    digest(&input[..]).unwrap() !=  digest(b"Completely wrong input").unwrap()
+                }
+            }
+        }
+    }
 }

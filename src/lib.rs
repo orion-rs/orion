@@ -53,11 +53,11 @@
 #![forbid(unsafe_code)]
 #![deny(warnings)]
 #![warn(
-	missing_docs,
-	rust_2018_idioms,
-	trivial_casts,
-	unused_qualifications,
-	overflowing_literals
+    missing_docs,
+    rust_2018_idioms,
+    trivial_casts,
+    unused_qualifications,
+    overflowing_literals
 )]
 #![doc(html_root_url = "https://docs.rs/orion/0.14.4")]
 

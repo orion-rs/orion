@@ -22,65 +22,65 @@
 
 #[derive(Clone, Copy)]
 pub(crate) struct U32x4(
-	pub(crate) u32,
-	pub(crate) u32,
-	pub(crate) u32,
-	pub(crate) u32,
+    pub(crate) u32,
+    pub(crate) u32,
+    pub(crate) u32,
+    pub(crate) u32,
 );
 
 impl core::ops::BitXor for U32x4 {
-	type Output = Self;
+    type Output = Self;
 
-	#[must_use]
-	#[inline(always)]
-	fn bitxor(self, _rhs: Self) -> Self::Output {
-		Self(
-			self.0 ^ _rhs.0,
-			self.1 ^ _rhs.1,
-			self.2 ^ _rhs.2,
-			self.3 ^ _rhs.3,
-		)
-	}
+    #[must_use]
+    #[inline(always)]
+    fn bitxor(self, _rhs: Self) -> Self::Output {
+        Self(
+            self.0 ^ _rhs.0,
+            self.1 ^ _rhs.1,
+            self.2 ^ _rhs.2,
+            self.3 ^ _rhs.3,
+        )
+    }
 }
 
 impl U32x4 {
-	#[must_use]
-	#[inline(always)]
-	pub const fn wrapping_add(self, _rhs: Self) -> Self {
-		Self(
-			self.0.wrapping_add(_rhs.0),
-			self.1.wrapping_add(_rhs.1),
-			self.2.wrapping_add(_rhs.2),
-			self.3.wrapping_add(_rhs.3),
-		)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub const fn wrapping_add(self, _rhs: Self) -> Self {
+        Self(
+            self.0.wrapping_add(_rhs.0),
+            self.1.wrapping_add(_rhs.1),
+            self.2.wrapping_add(_rhs.2),
+            self.3.wrapping_add(_rhs.3),
+        )
+    }
 
-	#[must_use]
-	#[inline(always)]
-	pub const fn shl_1(self) -> Self {
-		Self(self.1, self.2, self.3, self.0)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub const fn shl_1(self) -> Self {
+        Self(self.1, self.2, self.3, self.0)
+    }
 
-	#[must_use]
-	#[inline(always)]
-	pub const fn shl_2(self) -> Self {
-		Self(self.2, self.3, self.0, self.1)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub const fn shl_2(self) -> Self {
+        Self(self.2, self.3, self.0, self.1)
+    }
 
-	#[must_use]
-	#[inline(always)]
-	pub const fn shl_3(self) -> Self {
-		Self(self.3, self.0, self.1, self.2)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub const fn shl_3(self) -> Self {
+        Self(self.3, self.0, self.1, self.2)
+    }
 
-	#[must_use]
-	#[inline(always)]
-	pub const fn rotate_left(self, n: u32) -> Self {
-		Self(
-			self.0.rotate_left(n),
-			self.1.rotate_left(n),
-			self.2.rotate_left(n),
-			self.3.rotate_left(n),
-		)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub const fn rotate_left(self, n: u32) -> Self {
+        Self(
+            self.0.rotate_left(n),
+            self.1.rotate_left(n),
+            self.2.rotate_left(n),
+            self.3.rotate_left(n),
+        )
+    }
 }

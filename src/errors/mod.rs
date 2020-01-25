@@ -27,63 +27,63 @@ use core::fmt;
 pub struct UnknownCryptoError;
 
 impl fmt::Display for UnknownCryptoError {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "UnknownCryptoError")
-	}
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "UnknownCryptoError")
+    }
 }
 
 impl fmt::Debug for UnknownCryptoError {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "UnknownCryptoError")
-	}
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "UnknownCryptoError")
+    }
 }
 
 #[cfg(feature = "safe_api")]
 impl std::error::Error for UnknownCryptoError {
-	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-		None
-	}
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
 }
 
 #[cfg(feature = "safe_api")]
 impl From<getrandom::Error> for UnknownCryptoError {
-	fn from(_: getrandom::Error) -> Self {
-		UnknownCryptoError
-	}
+    fn from(_: getrandom::Error) -> Self {
+        UnknownCryptoError
+    }
 }
 
 #[test]
 #[cfg(feature = "safe_api")]
 // format! is only available with std
 fn test_unknown_crypto_error_debug_display() {
-	// Tests Debug impl though "{:?}"
-	let err = format!("{:?}", UnknownCryptoError);
-	assert_eq!(err, "UnknownCryptoError");
-	// Tests Display impl though "{}"
-	let err = format!("{}", UnknownCryptoError);
-	assert_eq!(err, "UnknownCryptoError");
+    // Tests Debug impl though "{:?}"
+    let err = format!("{:?}", UnknownCryptoError);
+    assert_eq!(err, "UnknownCryptoError");
+    // Tests Display impl though "{}"
+    let err = format!("{}", UnknownCryptoError);
+    assert_eq!(err, "UnknownCryptoError");
 }
 
 #[test]
 #[cfg(feature = "safe_api")]
 // format! is only available with std
 fn test_unknown_crypto_from_getrandom() {
-	use core::num::NonZeroU32;
-	// Choose some random error code.
-	let err_code = NonZeroU32::new(12).unwrap();
-	let err_foreign: getrandom::Error = getrandom::Error::from(err_code);
+    use core::num::NonZeroU32;
+    // Choose some random error code.
+    let err_code = NonZeroU32::new(12).unwrap();
+    let err_foreign: getrandom::Error = getrandom::Error::from(err_code);
 
-	// Tests Debug impl though "{:?}"
-	let err = format!("{:?}", UnknownCryptoError::from(err_foreign));
-	assert_eq!(err, "UnknownCryptoError");
-	// Tests Display impl though "{}"
-	let err = format!("{}", UnknownCryptoError::from(err_foreign));
-	assert_eq!(err, "UnknownCryptoError");
+    // Tests Debug impl though "{:?}"
+    let err = format!("{:?}", UnknownCryptoError::from(err_foreign));
+    assert_eq!(err, "UnknownCryptoError");
+    // Tests Display impl though "{}"
+    let err = format!("{}", UnknownCryptoError::from(err_foreign));
+    assert_eq!(err, "UnknownCryptoError");
 }
 
 #[test]
 #[cfg(feature = "safe_api")]
 fn test_source() {
-	use std::error::Error;
-	assert!(UnknownCryptoError.source().is_none());
+    use std::error::Error;
+    assert!(UnknownCryptoError.source().is_none());
 }

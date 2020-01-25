@@ -59,228 +59,222 @@
 //!
 //! let exp_dk = dk_out;
 //!
-//! assert!(pbkdf2::verify(
-//! 	&exp_dk,
-//! 	&password,
-//! 	&salt,
-//! 	10000,
-//! 	&mut dk_out
-//! ).is_ok());
+//! assert!(pbkdf2::verify(&exp_dk, &password, &salt, 10000, &mut dk_out).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Password::generate()`]: struct.Password.html#method.generate
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::{
-	errors::UnknownCryptoError,
-	hazardous::{
-		hash::sha512::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
-		mac::hmac,
-	},
-	util,
+    errors::UnknownCryptoError,
+    hazardous::{
+        hash::sha512::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
+        mac::hmac,
+    },
+    util,
 };
 
 construct_hmac_key! {
-	/// A type to represent the `Password` that PBKDF2 hashes.
-	///
-	/// # Note:
-	/// Because `Password` is used as a `SecretKey` for HMAC during hashing, `Password` already
-	/// pads the given password to a length of 128, for use in HMAC, when initialized.
-	///
-	/// Using `unprotected_as_bytes()` will return the password with padding.
-	///
-	/// Using `get_length()` will return the length with padding (always 128).
-	///
-	/// # Panics:
-	/// A panic will occur if:
-	/// - Failure to generate random bytes securely.
-	(Password, SHA512_BLOCKSIZE)
+    /// A type to represent the `Password` that PBKDF2 hashes.
+    ///
+    /// # Note:
+    /// Because `Password` is used as a `SecretKey` for HMAC during hashing, `Password` already
+    /// pads the given password to a length of 128, for use in HMAC, when initialized.
+    ///
+    /// Using `unprotected_as_bytes()` will return the password with padding.
+    ///
+    /// Using `get_length()` will return the length with padding (always 128).
+    ///
+    /// # Panics:
+    /// A panic will occur if:
+    /// - Failure to generate random bytes securely.
+    (Password, SHA512_BLOCKSIZE)
 }
 
 #[inline]
 /// The F function as described in the RFC.
 fn function_f(
-	salt: &[u8],
-	iterations: usize,
-	index: u32,
-	dk_block: &mut [u8],
-	block_len: usize,
-	hmac: &mut hmac::Hmac,
+    salt: &[u8],
+    iterations: usize,
+    index: u32,
+    dk_block: &mut [u8],
+    block_len: usize,
+    hmac: &mut hmac::Hmac,
 ) -> Result<(), UnknownCryptoError> {
-	let mut u_step: [u8; SHA512_OUTSIZE] = [0u8; 64];
-	hmac.update(salt)?;
-	hmac.update(&index.to_be_bytes())?;
+    let mut u_step: [u8; SHA512_OUTSIZE] = [0u8; 64];
+    hmac.update(salt)?;
+    hmac.update(&index.to_be_bytes())?;
 
-	u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
-	dk_block.copy_from_slice(&u_step[..block_len]);
+    u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
+    dk_block.copy_from_slice(&u_step[..block_len]);
 
-	if iterations > 1 {
-		for _ in 1..iterations {
-			hmac.reset();
-			hmac.update(&u_step)?;
-			u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
-			dk_block
-				.iter_mut()
-				.zip(u_step.iter())
-				.for_each(|(a, b)| *a ^= b);
-		}
-	}
+    if iterations > 1 {
+        for _ in 1..iterations {
+            hmac.reset();
+            hmac.update(&u_step)?;
+            u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
+            dk_block
+                .iter_mut()
+                .zip(u_step.iter())
+                .for_each(|(a, b)| *a ^= b);
+        }
+    }
 
-	Ok(())
+    Ok(())
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// PBKDF2-SHA512 (Password-Based Key Derivation Function 2) as specified in the
 /// [RFC 8018](https://tools.ietf.org/html/rfc8018).
 pub fn derive_key(
-	password: &Password,
-	salt: &[u8],
-	iterations: usize,
-	dst_out: &mut [u8],
+    password: &Password,
+    salt: &[u8],
+    iterations: usize,
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	if iterations < 1 {
-		return Err(UnknownCryptoError);
-	}
-	if dst_out.is_empty() {
-		return Err(UnknownCryptoError);
-	}
+    if iterations < 1 {
+        return Err(UnknownCryptoError);
+    }
+    if dst_out.is_empty() {
+        return Err(UnknownCryptoError);
+    }
 
-	let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(
-		&password.unprotected_as_bytes(),
-	)?);
+    let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(
+        &password.unprotected_as_bytes(),
+    )?);
 
-	for (idx, dk_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
-		// If this panics, then the size limit for PBKDF2 is reached.
-		let block_idx = (1u32).checked_add(idx as u32).unwrap();
+    for (idx, dk_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
+        // If this panics, then the size limit for PBKDF2 is reached.
+        let block_idx = (1u32).checked_add(idx as u32).unwrap();
 
-		function_f(
-			salt,
-			iterations,
-			block_idx,
-			dk_block,
-			dk_block.len(),
-			&mut hmac,
-		)?;
-		hmac.reset();
-	}
+        function_f(
+            salt,
+            iterations,
+            block_idx,
+            dk_block,
+            dk_block.len(),
+            &mut hmac,
+        )?;
+        hmac.reset();
+    }
 
-	Ok(())
+    Ok(())
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
 pub fn verify(
-	expected: &[u8],
-	password: &Password,
-	salt: &[u8],
-	iterations: usize,
-	dst_out: &mut [u8],
+    expected: &[u8],
+    password: &Password,
+    salt: &[u8],
+    iterations: usize,
+    dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-	derive_key(password, salt, iterations, dst_out)?;
-	util::secure_cmp(&dst_out, expected)
+    derive_key(password, salt, iterations, dst_out)?;
+    util::secure_cmp(&dst_out, expected)
 }
 
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
-	use super::*;
+    use super::*;
 
-	mod test_verify {
-		use super::*;
+    mod test_verify {
+        use super::*;
 
-		#[test]
-		fn verify_true() {
-			let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
-			let salt = "sa\0lt".as_bytes();
-			let iterations: usize = 4096;
-			let mut okm_out = [0u8; 16];
-			let mut okm_out_verify = [0u8; 16];
+        #[test]
+        fn verify_true() {
+            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let salt = "sa\0lt".as_bytes();
+            let iterations: usize = 4096;
+            let mut okm_out = [0u8; 16];
+            let mut okm_out_verify = [0u8; 16];
 
-			derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
+            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
 
-			assert!(verify(&okm_out, &password, salt, iterations, &mut okm_out_verify).is_ok());
-		}
+            assert!(verify(&okm_out, &password, salt, iterations, &mut okm_out_verify).is_ok());
+        }
 
-		#[test]
-		fn verify_false_wrong_salt() {
-			let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
-			let salt = "sa\0lt".as_bytes();
-			let iterations: usize = 4096;
-			let mut okm_out = [0u8; 16];
-			let mut okm_out_verify = [0u8; 16];
+        #[test]
+        fn verify_false_wrong_salt() {
+            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let salt = "sa\0lt".as_bytes();
+            let iterations: usize = 4096;
+            let mut okm_out = [0u8; 16];
+            let mut okm_out_verify = [0u8; 16];
 
-			derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
+            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
 
-			assert!(verify(&okm_out, &password, b"", iterations, &mut okm_out_verify).is_err());
-		}
-		#[test]
-		fn verify_false_wrong_password() {
-			let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
-			let salt = "sa\0lt".as_bytes();
-			let iterations: usize = 4096;
-			let mut okm_out = [0u8; 16];
-			let mut okm_out_verify = [0u8; 16];
+            assert!(verify(&okm_out, &password, b"", iterations, &mut okm_out_verify).is_err());
+        }
+        #[test]
+        fn verify_false_wrong_password() {
+            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let salt = "sa\0lt".as_bytes();
+            let iterations: usize = 4096;
+            let mut okm_out = [0u8; 16];
+            let mut okm_out_verify = [0u8; 16];
 
-			derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
+            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
 
-			assert!(verify(
-				&okm_out,
-				&Password::from_slice(b"").unwrap(),
-				salt,
-				iterations,
-				&mut okm_out_verify
-			)
-			.is_err());
-		}
+            assert!(verify(
+                &okm_out,
+                &Password::from_slice(b"").unwrap(),
+                salt,
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_err());
+        }
 
-		#[test]
-		fn verify_diff_dklen_error() {
-			let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
-			let salt = "sa\0lt".as_bytes();
-			let iterations: usize = 4096;
-			let mut okm_out = [0u8; 16];
-			let mut okm_out_verify = [0u8; 32];
+        #[test]
+        fn verify_diff_dklen_error() {
+            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let salt = "sa\0lt".as_bytes();
+            let iterations: usize = 4096;
+            let mut okm_out = [0u8; 16];
+            let mut okm_out_verify = [0u8; 32];
 
-			derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
+            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
 
-			assert!(verify(&okm_out, &password, salt, iterations, &mut okm_out_verify).is_err());
-		}
+            assert!(verify(&okm_out, &password, salt, iterations, &mut okm_out_verify).is_err());
+        }
 
-		#[test]
-		fn verify_diff_iter_error() {
-			let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
-			let salt = "sa\0lt".as_bytes();
-			let iterations: usize = 4096;
-			let mut okm_out = [0u8; 16];
-			let mut okm_out_verify = [0u8; 16];
+        #[test]
+        fn verify_diff_iter_error() {
+            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let salt = "sa\0lt".as_bytes();
+            let iterations: usize = 4096;
+            let mut okm_out = [0u8; 16];
+            let mut okm_out_verify = [0u8; 16];
 
-			derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
+            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
 
-			assert!(verify(&okm_out, &password, salt, 1024, &mut okm_out_verify).is_err());
-		}
-	}
+            assert!(verify(&okm_out, &password, salt, 1024, &mut okm_out_verify).is_err());
+        }
+    }
 
-	mod test_derive_key {
-		use super::*;
+    mod test_derive_key {
+        use super::*;
 
-		#[test]
-		fn zero_iterations_err() {
-			let password = Password::from_slice("password".as_bytes()).unwrap();
-			let salt = "salt".as_bytes();
-			let iterations: usize = 0;
-			let mut okm_out = [0u8; 15];
+        #[test]
+        fn zero_iterations_err() {
+            let password = Password::from_slice("password".as_bytes()).unwrap();
+            let salt = "salt".as_bytes();
+            let iterations: usize = 0;
+            let mut okm_out = [0u8; 15];
 
-			assert!(derive_key(&password, salt, iterations, &mut okm_out).is_err());
-		}
+            assert!(derive_key(&password, salt, iterations, &mut okm_out).is_err());
+        }
 
-		#[test]
-		fn zero_dklen_err() {
-			let password = Password::from_slice("password".as_bytes()).unwrap();
-			let salt = "salt".as_bytes();
-			let iterations: usize = 1;
-			let mut okm_out = [0u8; 0];
+        #[test]
+        fn zero_dklen_err() {
+            let password = Password::from_slice("password".as_bytes()).unwrap();
+            let salt = "salt".as_bytes();
+            let iterations: usize = 1;
+            let mut okm_out = [0u8; 0];
 
-			assert!(derive_key(&password, salt, iterations, &mut okm_out).is_err());
-		}
-	}
+            assert!(derive_key(&password, salt, iterations, &mut okm_out).is_err());
+        }
+    }
 }

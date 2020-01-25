@@ -68,8 +68,8 @@
 use core;
 
 use crate::{
-	errors::UnknownCryptoError,
-	util::endianness::{load_u32_le, store_u32_into_le},
+    errors::UnknownCryptoError,
+    util::endianness::{load_u32_le, store_u32_into_le},
 };
 
 /// The blocksize which Poly1305 operates on.
@@ -82,27 +82,27 @@ pub const POLY1305_KEYSIZE: usize = 32;
 type Poly1305Tag = [u8; POLY1305_OUTSIZE];
 
 construct_secret_key! {
-	/// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
-	///
-	/// # Errors:
-	/// An error will be returned if:
-	/// - `slice` is not 32 bytes.
-	///
-	/// # Panics:
-	/// A panic will occur if:
-	/// - Failure to generate random bytes securely.
-	(OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
+    /// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 32 bytes.
+    ///
+    /// # Panics:
+    /// A panic will occur if:
+    /// - Failure to generate random bytes securely.
+    (OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
 }
 
 impl_from_trait!(OneTimeKey, POLY1305_KEYSIZE);
 
 construct_tag! {
-	/// A type to represent the `Tag` that Poly1305 returns.
-	///
-	/// # Errors:
-	/// An error will be returned if:
-	/// - `slice` is not 16 bytes.
-	(Tag, test_tag, POLY1305_OUTSIZE, POLY1305_OUTSIZE)
+    /// A type to represent the `Tag` that Poly1305 returns.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 16 bytes.
+    (Tag, test_tag, POLY1305_OUTSIZE, POLY1305_OUTSIZE)
 }
 
 impl_from_trait!(Tag, POLY1305_OUTSIZE);
@@ -110,37 +110,37 @@ impl_from_trait!(Tag, POLY1305_OUTSIZE);
 #[derive(Clone)]
 /// Poly1305 streaming state.
 pub struct Poly1305 {
-	a: [u32; 5],
-	r: [u32; 5],
-	s: [u32; 4],
-	leftover: usize,
-	buffer: [u8; POLY1305_BLOCKSIZE],
-	is_finalized: bool,
+    a: [u32; 5],
+    r: [u32; 5],
+    s: [u32; 4],
+    leftover: usize,
+    buffer: [u8; POLY1305_BLOCKSIZE],
+    is_finalized: bool,
 }
 
 impl Drop for Poly1305 {
-	fn drop(&mut self) {
-		use zeroize::Zeroize;
-		self.a.zeroize();
-		self.r.zeroize();
-		self.s.zeroize();
-		self.buffer.zeroize();
-	}
+    fn drop(&mut self) {
+        use zeroize::Zeroize;
+        self.a.zeroize();
+        self.r.zeroize();
+        self.s.zeroize();
+        self.buffer.zeroize();
+    }
 }
 
 impl core::fmt::Debug for Poly1305 {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		write!(
-			f,
-			"Poly1305 {{ a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***],
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Poly1305 {{ a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***],
             leftover: ***OMITTED***, buffer: [***OMITTED***], is_finalized: {:?} }}",
-			self.is_finalized
-		)
-	}
+            self.is_finalized
+        )
+    }
 }
 
 impl Poly1305 {
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
     #[allow(clippy::unreadable_literal)]
@@ -231,7 +231,7 @@ impl Poly1305 {
         Ok(())
     }
 
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
     #[allow(clippy::unreadable_literal)]
@@ -292,288 +292,288 @@ impl Poly1305 {
         self.a[3] = h3;
     }
 
-	#[allow(clippy::unreadable_literal)]
-	/// Initialize a `Poly1305` struct with a given one-time key.
-	pub fn new(one_time_key: &OneTimeKey) -> Self {
-		let mut state = Self {
-			a: [0u32; 5],
-			r: [0u32; 5],
-			s: [0u32; 4],
-			leftover: 0,
-			buffer: [0u8; POLY1305_BLOCKSIZE],
-			is_finalized: false,
-		};
+    #[allow(clippy::unreadable_literal)]
+    /// Initialize a `Poly1305` struct with a given one-time key.
+    pub fn new(one_time_key: &OneTimeKey) -> Self {
+        let mut state = Self {
+            a: [0u32; 5],
+            r: [0u32; 5],
+            s: [0u32; 4],
+            leftover: 0,
+            buffer: [0u8; POLY1305_BLOCKSIZE],
+            is_finalized: false,
+        };
 
-		state.r[0] = (load_u32_le(&one_time_key.unprotected_as_bytes()[0..4])) & 0x3ffffff;
-		state.r[1] = (load_u32_le(&one_time_key.unprotected_as_bytes()[3..7]) >> 2) & 0x3ffff03;
-		state.r[2] = (load_u32_le(&one_time_key.unprotected_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
-		state.r[3] = (load_u32_le(&one_time_key.unprotected_as_bytes()[9..13]) >> 6) & 0x3f03fff;
-		state.r[4] = (load_u32_le(&one_time_key.unprotected_as_bytes()[12..16]) >> 8) & 0x00fffff;
+        state.r[0] = (load_u32_le(&one_time_key.unprotected_as_bytes()[0..4])) & 0x3ffffff;
+        state.r[1] = (load_u32_le(&one_time_key.unprotected_as_bytes()[3..7]) >> 2) & 0x3ffff03;
+        state.r[2] = (load_u32_le(&one_time_key.unprotected_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
+        state.r[3] = (load_u32_le(&one_time_key.unprotected_as_bytes()[9..13]) >> 6) & 0x3f03fff;
+        state.r[4] = (load_u32_le(&one_time_key.unprotected_as_bytes()[12..16]) >> 8) & 0x00fffff;
 
-		state.s[0] = load_u32_le(&one_time_key.unprotected_as_bytes()[16..20]);
-		state.s[1] = load_u32_le(&one_time_key.unprotected_as_bytes()[20..24]);
-		state.s[2] = load_u32_le(&one_time_key.unprotected_as_bytes()[24..28]);
-		state.s[3] = load_u32_le(&one_time_key.unprotected_as_bytes()[28..32]);
+        state.s[0] = load_u32_le(&one_time_key.unprotected_as_bytes()[16..20]);
+        state.s[1] = load_u32_le(&one_time_key.unprotected_as_bytes()[20..24]);
+        state.s[2] = load_u32_le(&one_time_key.unprotected_as_bytes()[24..28]);
+        state.s[3] = load_u32_le(&one_time_key.unprotected_as_bytes()[28..32]);
 
-		state
-	}
+        state
+    }
 
-	/// Reset to `new()` state.
-	pub fn reset(&mut self) {
-		self.a = [0u32; 5];
-		self.leftover = 0;
-		self.is_finalized = false;
-		self.buffer = [0u8; POLY1305_BLOCKSIZE];
-	}
+    /// Reset to `new()` state.
+    pub fn reset(&mut self) {
+        self.a = [0u32; 5];
+        self.leftover = 0;
+        self.is_finalized = false;
+        self.buffer = [0u8; POLY1305_BLOCKSIZE];
+    }
 
-	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// Update state with a `data`. This can be called multiple times.
-	pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-		if self.is_finalized {
-			return Err(UnknownCryptoError);
-		}
-		if data.is_empty() {
-			return Ok(());
-		}
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Update state with a `data`. This can be called multiple times.
+    pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+        if data.is_empty() {
+            return Ok(());
+        }
 
-		let mut bytes = data;
+        let mut bytes = data;
 
-		if self.leftover != 0 {
-			debug_assert!(self.leftover <= POLY1305_BLOCKSIZE);
+        if self.leftover != 0 {
+            debug_assert!(self.leftover <= POLY1305_BLOCKSIZE);
 
-			let mut want = POLY1305_BLOCKSIZE - self.leftover;
-			if want > bytes.len() {
-				want = bytes.len();
-			}
+            let mut want = POLY1305_BLOCKSIZE - self.leftover;
+            if want > bytes.len() {
+                want = bytes.len();
+            }
 
-			for (idx, itm) in bytes.iter().enumerate().take(want) {
-				self.buffer[self.leftover + idx] = *itm;
-			}
+            for (idx, itm) in bytes.iter().enumerate().take(want) {
+                self.buffer[self.leftover + idx] = *itm;
+            }
 
-			bytes = &bytes[want..];
-			self.leftover += want;
-			if self.leftover < POLY1305_BLOCKSIZE {
-				return Ok(());
-			}
+            bytes = &bytes[want..];
+            self.leftover += want;
+            if self.leftover < POLY1305_BLOCKSIZE {
+                return Ok(());
+            }
 
-			let tmp = self.buffer;
-			self.process_block(&tmp)?;
-			self.leftover = 0;
-		}
+            let tmp = self.buffer;
+            self.process_block(&tmp)?;
+            self.leftover = 0;
+        }
 
-		while bytes.len() >= POLY1305_BLOCKSIZE {
-			self.process_block(&bytes[0..POLY1305_BLOCKSIZE])?;
-			bytes = &bytes[POLY1305_BLOCKSIZE..];
-		}
+        while bytes.len() >= POLY1305_BLOCKSIZE {
+            self.process_block(&bytes[0..POLY1305_BLOCKSIZE])?;
+            bytes = &bytes[POLY1305_BLOCKSIZE..];
+        }
 
-		self.buffer[..bytes.len()].copy_from_slice(&bytes);
-		self.leftover = bytes.len();
+        self.buffer[..bytes.len()].copy_from_slice(&bytes);
+        self.leftover = bytes.len();
 
-		Ok(())
-	}
+        Ok(())
+    }
 
-	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// Return a Poly1305 tag.
-	pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
-		if self.is_finalized {
-			return Err(UnknownCryptoError);
-		}
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Return a Poly1305 tag.
+    pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
 
-		self.is_finalized = true;
+        self.is_finalized = true;
 
-		let mut local_buffer: Poly1305Tag = self.buffer;
+        let mut local_buffer: Poly1305Tag = self.buffer;
 
-		if self.leftover != 0 {
-			local_buffer[self.leftover] = 1;
-			// Pad the last block with zeroes before processing it
-			for buf_itm in local_buffer
-				.iter_mut()
-				.take(POLY1305_BLOCKSIZE)
-				.skip(self.leftover + 1)
-			{
-				*buf_itm = 0u8;
-			}
+        if self.leftover != 0 {
+            local_buffer[self.leftover] = 1;
+            // Pad the last block with zeroes before processing it
+            for buf_itm in local_buffer
+                .iter_mut()
+                .take(POLY1305_BLOCKSIZE)
+                .skip(self.leftover + 1)
+            {
+                *buf_itm = 0u8;
+            }
 
-			self.process_block(&local_buffer)?;
-		}
+            self.process_block(&local_buffer)?;
+        }
 
-		self.process_end_of_stream();
-		store_u32_into_le(&self.a[0..4], &mut local_buffer);
+        self.process_end_of_stream();
+        store_u32_into_le(&self.a[0..4], &mut local_buffer);
 
-		Ok(Tag::from(local_buffer))
-	}
+        Ok(Tag::from(local_buffer))
+    }
 
-	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// One-shot function for generating a Poly1305 tag of `data`.
-	pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-		let mut poly_1305_state = Self::new(one_time_key);
-		poly_1305_state.update(data)?;
-		poly_1305_state.finalize()
-	}
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// One-shot function for generating a Poly1305 tag of `data`.
+    pub fn poly1305(one_time_key: &OneTimeKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
+        let mut poly_1305_state = Self::new(one_time_key);
+        poly_1305_state.update(data)?;
+        poly_1305_state.finalize()
+    }
 
-	#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-	/// Verify a Poly1305 tag in constant time.
-	pub fn verify(
-		expected: &Tag,
-		one_time_key: &OneTimeKey,
-		data: &[u8],
-	) -> Result<(), UnknownCryptoError> {
-		if &Self::poly1305(one_time_key, data)? == expected {
-			Ok(())
-		} else {
-			Err(UnknownCryptoError)
-		}
-	}
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Verify a Poly1305 tag in constant time.
+    pub fn verify(
+        expected: &Tag,
+        one_time_key: &OneTimeKey,
+        data: &[u8],
+    ) -> Result<(), UnknownCryptoError> {
+        if &Self::poly1305(one_time_key, data)? == expected {
+            Ok(())
+        } else {
+            Err(UnknownCryptoError)
+        }
+    }
 }
 
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
-	use super::*;
+    use super::*;
 
-	#[cfg(feature = "safe_api")]
-	mod test_verify {
-		use super::*;
+    #[cfg(feature = "safe_api")]
+    mod test_verify {
+        use super::*;
 
-		// Proptests. Only executed when NOT testing no_std.
-		#[cfg(feature = "safe_api")]
-		mod proptest {
-			use super::*;
+        // Proptests. Only executed when NOT testing no_std.
+        #[cfg(feature = "safe_api")]
+        mod proptest {
+            use super::*;
 
-			quickcheck! {
-				/// When using a different key, verify() should always yield an error.
-				/// NOTE: Using different and same input data is tested with TestableStreamingContext.
-				fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-					let sk = OneTimeKey::generate();
-					let mut state = Poly1305::new(&sk);
-					state.update(&data[..]).unwrap();
-					let tag = state.finalize().unwrap();
-					let bad_sk = OneTimeKey::generate();
+            quickcheck! {
+                /// When using a different key, verify() should always yield an error.
+                /// NOTE: Using different and same input data is tested with TestableStreamingContext.
+                fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
+                    let sk = OneTimeKey::generate();
+                    let mut state = Poly1305::new(&sk);
+                    state.update(&data[..]).unwrap();
+                    let tag = state.finalize().unwrap();
+                    let bad_sk = OneTimeKey::generate();
 
-					Poly1305::verify(&tag, &bad_sk, &data[..]).is_err()
-				}
-			}
-		}
-	}
+                    Poly1305::verify(&tag, &bad_sk, &data[..]).is_err()
+                }
+            }
+        }
+    }
 
-	mod test_streaming_interface {
-		use super::*;
-		use crate::test_framework::incremental_interface::{
-			StreamingContextConsistencyTester, TestableStreamingContext,
-		};
+    mod test_streaming_interface {
+        use super::*;
+        use crate::test_framework::incremental_interface::{
+            StreamingContextConsistencyTester, TestableStreamingContext,
+        };
 
-		// If a Poly1305 one-time key is all 0's then the tag will also be, regardless
-		// of which message data has been processed.
-		const KEY: [u8; 32] = [24u8; 32];
+        // If a Poly1305 one-time key is all 0's then the tag will also be, regardless
+        // of which message data has been processed.
+        const KEY: [u8; 32] = [24u8; 32];
 
-		impl TestableStreamingContext<Tag> for Poly1305 {
-			fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-				Ok(self.reset())
-			}
+        impl TestableStreamingContext<Tag> for Poly1305 {
+            fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+                Ok(self.reset())
+            }
 
-			fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
-				self.update(input)
-			}
+            fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+                self.update(input)
+            }
 
-			fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
-				self.finalize()
-			}
+            fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
+                self.finalize()
+            }
 
-			fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
-				Poly1305::poly1305(&OneTimeKey::from_slice(&KEY).unwrap(), input)
-			}
+            fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
+                Poly1305::poly1305(&OneTimeKey::from_slice(&KEY).unwrap(), input)
+            }
 
-			fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
-				// This will only run verifcation tests on differing input. They do not
-				// include tests for different secret keys.
-				Poly1305::verify(expected, &OneTimeKey::from_slice(&KEY).unwrap(), input)
-			}
+            fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
+                // This will only run verifcation tests on differing input. They do not
+                // include tests for different secret keys.
+                Poly1305::verify(expected, &OneTimeKey::from_slice(&KEY).unwrap(), input)
+            }
 
-			fn compare_states(state_1: &Poly1305, state_2: &Poly1305) {
-				assert_eq!(state_1.a, state_2.a);
-				assert_eq!(state_1.r, state_2.r);
-				assert_eq!(state_1.s, state_2.s);
-				assert_eq!(state_1.leftover, state_2.leftover);
-				assert_eq!(state_1.buffer[..], state_2.buffer[..]);
-				assert_eq!(state_1.is_finalized, state_2.is_finalized);
-			}
-		}
+            fn compare_states(state_1: &Poly1305, state_2: &Poly1305) {
+                assert_eq!(state_1.a, state_2.a);
+                assert_eq!(state_1.r, state_2.r);
+                assert_eq!(state_1.s, state_2.s);
+                assert_eq!(state_1.leftover, state_2.leftover);
+                assert_eq!(state_1.buffer[..], state_2.buffer[..]);
+                assert_eq!(state_1.is_finalized, state_2.is_finalized);
+            }
+        }
 
-		#[test]
-		fn default_consistency_tests() {
-			let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
+        #[test]
+        fn default_consistency_tests() {
+            let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
 
-			let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(
-				initial_state,
-				POLY1305_BLOCKSIZE,
-			);
-			test_runner.run_all_tests();
-		}
+            let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(
+                initial_state,
+                POLY1305_BLOCKSIZE,
+            );
+            test_runner.run_all_tests();
+        }
 
-		// Proptests. Only executed when NOT testing no_std.
-		#[cfg(feature = "safe_api")]
-		mod proptest {
-			use super::*;
+        // Proptests. Only executed when NOT testing no_std.
+        #[cfg(feature = "safe_api")]
+        mod proptest {
+            use super::*;
 
-			quickcheck! {
-				/// Related bug: https://github.com/brycx/orion/issues/46
-				/// Test different streaming state usage patterns.
-				fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-					let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
+            quickcheck! {
+                /// Related bug: https://github.com/brycx/orion/issues/46
+                /// Test different streaming state usage patterns.
+                fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+                    let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
 
-					let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(initial_state, POLY1305_BLOCKSIZE);
-					test_runner.run_all_tests_property(&data);
-					true
-				}
-			}
-		}
-	}
+                    let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(initial_state, POLY1305_BLOCKSIZE);
+                    test_runner.run_all_tests_property(&data);
+                    true
+                }
+            }
+        }
+    }
 }
 
 // Testing private functions in the module.
 #[cfg(test)]
 mod private {
-	use super::*;
+    use super::*;
 
-	mod test_process_block {
-		use super::*;
+    mod test_process_block {
+        use super::*;
 
-		#[test]
-		fn test_process_block_len() {
-			let block_0 = [0u8; 0];
-			let block_1 = [0u8; 15];
-			let block_2 = [0u8; 17];
-			let block_3 = [0u8; 16];
+        #[test]
+        fn test_process_block_len() {
+            let block_0 = [0u8; 0];
+            let block_1 = [0u8; 15];
+            let block_2 = [0u8; 17];
+            let block_3 = [0u8; 16];
 
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let mut state = Poly1305::new(&sk);
+            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let mut state = Poly1305::new(&sk);
 
-			assert!(state.process_block(&block_0).is_err());
-			assert!(state.process_block(&block_1).is_err());
-			assert!(state.process_block(&block_2).is_err());
-			assert!(state.process_block(&block_3).is_ok());
-		}
-	}
+            assert!(state.process_block(&block_0).is_err());
+            assert!(state.process_block(&block_1).is_err());
+            assert!(state.process_block(&block_2).is_err());
+            assert!(state.process_block(&block_3).is_ok());
+        }
+    }
 
-	mod test_process_end_of_stream {
-		use super::*;
+    mod test_process_end_of_stream {
+        use super::*;
 
-		#[test]
-		fn test_process_no_panic() {
-			let block = [0u8; 16];
-			let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
-			let mut state = Poly1305::new(&sk);
-			// Should not panic
-			state.process_end_of_stream();
-			state.reset();
-			state.process_end_of_stream();
+        #[test]
+        fn test_process_no_panic() {
+            let block = [0u8; 16];
+            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let mut state = Poly1305::new(&sk);
+            // Should not panic
+            state.process_end_of_stream();
+            state.reset();
+            state.process_end_of_stream();
 
-			let mut state = Poly1305::new(&sk);
-			state.process_block(&block).unwrap();
-			// Should not panic
-			state.process_end_of_stream();
-			state.reset();
-			state.process_end_of_stream();
-		}
-	}
+            let mut state = Poly1305::new(&sk);
+            state.process_block(&block).unwrap();
+            // Should not panic
+            state.process_end_of_stream();
+            state.reset();
+            state.process_end_of_stream();
+        }
+    }
 }

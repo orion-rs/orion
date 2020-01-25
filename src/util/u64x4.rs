@@ -22,97 +22,97 @@
 
 #[derive(Clone, Copy)]
 pub(crate) struct U64x4(
-	pub(crate) u64,
-	pub(crate) u64,
-	pub(crate) u64,
-	pub(crate) u64,
+    pub(crate) u64,
+    pub(crate) u64,
+    pub(crate) u64,
+    pub(crate) u64,
 );
 
 impl core::ops::BitXor for U64x4 {
-	type Output = Self;
+    type Output = Self;
 
-	#[must_use]
-	#[inline(always)]
-	fn bitxor(self, _rhs: Self) -> Self::Output {
-		Self(
-			self.0 ^ _rhs.0,
-			self.1 ^ _rhs.1,
-			self.2 ^ _rhs.2,
-			self.3 ^ _rhs.3,
-		)
-	}
+    #[must_use]
+    #[inline(always)]
+    fn bitxor(self, _rhs: Self) -> Self::Output {
+        Self(
+            self.0 ^ _rhs.0,
+            self.1 ^ _rhs.1,
+            self.2 ^ _rhs.2,
+            self.3 ^ _rhs.3,
+        )
+    }
 }
 
 impl core::ops::BitXorAssign for U64x4 {
-	#[inline(always)]
-	fn bitxor_assign(&mut self, _rhs: Self) {
-		self.0 ^= _rhs.0;
-		self.1 ^= _rhs.1;
-		self.2 ^= _rhs.2;
-		self.3 ^= _rhs.3;
-	}
+    #[inline(always)]
+    fn bitxor_assign(&mut self, _rhs: Self) {
+        self.0 ^= _rhs.0;
+        self.1 ^= _rhs.1;
+        self.2 ^= _rhs.2;
+        self.3 ^= _rhs.3;
+    }
 }
 
 impl Default for U64x4 {
-	fn default() -> Self {
-		Self(0, 0, 0, 0)
-	}
+    fn default() -> Self {
+        Self(0, 0, 0, 0)
+    }
 }
 
 #[cfg(test)]
 impl PartialEq<U64x4> for U64x4 {
-	fn eq(&self, other: &Self) -> bool {
-		self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3
-	}
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && self.1 == other.1 && self.2 == other.2 && self.3 == other.3
+    }
 }
 
 impl U64x4 {
-	#[must_use]
-	#[inline(always)]
-	pub(crate) const fn wrapping_add(self, _rhs: Self) -> Self {
-		Self(
-			self.0.wrapping_add(_rhs.0),
-			self.1.wrapping_add(_rhs.1),
-			self.2.wrapping_add(_rhs.2),
-			self.3.wrapping_add(_rhs.3),
-		)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub(crate) const fn wrapping_add(self, _rhs: Self) -> Self {
+        Self(
+            self.0.wrapping_add(_rhs.0),
+            self.1.wrapping_add(_rhs.1),
+            self.2.wrapping_add(_rhs.2),
+            self.3.wrapping_add(_rhs.3),
+        )
+    }
 
-	#[must_use]
-	#[inline(always)]
-	pub(crate) const fn shl_1(self) -> Self {
-		Self(self.1, self.2, self.3, self.0)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub(crate) const fn shl_1(self) -> Self {
+        Self(self.1, self.2, self.3, self.0)
+    }
 
-	#[must_use]
-	#[inline(always)]
-	pub(crate) const fn shl_2(self) -> Self {
-		Self(self.2, self.3, self.0, self.1)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub(crate) const fn shl_2(self) -> Self {
+        Self(self.2, self.3, self.0, self.1)
+    }
 
-	#[must_use]
-	#[inline(always)]
-	pub(crate) const fn shl_3(self) -> Self {
-		Self(self.3, self.0, self.1, self.2)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub(crate) const fn shl_3(self) -> Self {
+        Self(self.3, self.0, self.1, self.2)
+    }
 
-	#[must_use]
-	#[inline(always)]
-	pub(crate) const fn rotate_right(self, n: u32) -> Self {
-		Self(
-			self.0.rotate_right(n),
-			self.1.rotate_right(n),
-			self.2.rotate_right(n),
-			self.3.rotate_right(n),
-		)
-	}
+    #[must_use]
+    #[inline(always)]
+    pub(crate) const fn rotate_right(self, n: u32) -> Self {
+        Self(
+            self.0.rotate_right(n),
+            self.1.rotate_right(n),
+            self.2.rotate_right(n),
+            self.3.rotate_right(n),
+        )
+    }
 
-	#[inline(always)]
-	pub(crate) fn store_into_le(self, dst: &mut [u8]) {
-		debug_assert!(dst.len() == core::mem::size_of::<u64>() * 4);
-		dst[0..8].copy_from_slice(&self.0.to_le_bytes());
-		dst[8..16].copy_from_slice(&self.1.to_le_bytes());
-		dst[16..24].copy_from_slice(&self.2.to_le_bytes());
-		dst[24..32].copy_from_slice(&self.3.to_le_bytes());
-	}
+    #[inline(always)]
+    pub(crate) fn store_into_le(self, dst: &mut [u8]) {
+        debug_assert!(dst.len() == core::mem::size_of::<u64>() * 4);
+        dst[0..8].copy_from_slice(&self.0.to_le_bytes());
+        dst[8..16].copy_from_slice(&self.1.to_le_bytes());
+        dst[16..24].copy_from_slice(&self.2.to_le_bytes());
+        dst[24..32].copy_from_slice(&self.3.to_le_bytes());
+    }
 }

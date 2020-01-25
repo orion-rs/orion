@@ -84,142 +84,142 @@ use zeroize::Zeroize;
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hash a password using PBKDF2-HMAC-SHA512.
 pub fn hash_password(
-	password: &Password,
-	iterations: usize,
+    password: &Password,
+    iterations: usize,
 ) -> Result<PasswordHash, UnknownCryptoError> {
-	let mut buffer = [0u8; 128];
-	// Cannot panic as this is a valid size.
-	let salt = Salt::generate(64).unwrap();
+    let mut buffer = [0u8; 128];
+    // Cannot panic as this is a valid size.
+    let salt = Salt::generate(64).unwrap();
 
-	buffer[..64].copy_from_slice(salt.as_ref());
-	pbkdf2::derive_key(
-		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
-		salt.as_ref(),
-		iterations,
-		&mut buffer[64..],
-	)?;
+    buffer[..64].copy_from_slice(salt.as_ref());
+    pbkdf2::derive_key(
+        &pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
+        salt.as_ref(),
+        iterations,
+        &mut buffer[64..],
+    )?;
 
-	Ok(PasswordHash::from(buffer))
+    Ok(PasswordHash::from(buffer))
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hash and verify a password using PBKDF2-HMAC-SHA512.
 pub fn hash_password_verify(
-	expected_with_salt: &PasswordHash,
-	password: &Password,
-	iterations: usize,
+    expected_with_salt: &PasswordHash,
+    password: &Password,
+    iterations: usize,
 ) -> Result<(), UnknownCryptoError> {
-	let mut dk = [0u8; 64];
+    let mut dk = [0u8; 64];
 
-	pbkdf2::verify(
-		&expected_with_salt.unprotected_as_bytes()[64..],
-		&pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
-		&expected_with_salt.unprotected_as_bytes()[..64],
-		iterations,
-		&mut dk,
-	)?;
+    pbkdf2::verify(
+        &expected_with_salt.unprotected_as_bytes()[64..],
+        &pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
+        &expected_with_salt.unprotected_as_bytes()[..64],
+        iterations,
+        &mut dk,
+    )?;
 
-	dk.zeroize();
+    dk.zeroize();
 
-	Ok(())
+    Ok(())
 }
 
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
-	use super::*;
+    use super::*;
 
-	mod test_pwhash_and_verify {
-		use super::*;
+    mod test_pwhash_and_verify {
+        use super::*;
 
-		#[test]
-		fn test_pbkdf2_verify() {
-			let password = Password::from_slice(&[0u8; 64]).unwrap();
-			let pbkdf2_dk = hash_password(&password, 100).unwrap();
+        #[test]
+        fn test_pbkdf2_verify() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let pbkdf2_dk = hash_password(&password, 100).unwrap();
 
-			assert!(hash_password_verify(&pbkdf2_dk, &password, 100).is_ok());
-		}
+            assert!(hash_password_verify(&pbkdf2_dk, &password, 100).is_ok());
+        }
 
-		#[test]
-		fn test_pbkdf2_verify_err_modified_salt() {
-			let password = Password::from_slice(&[0u8; 64]).unwrap();
+        #[test]
+        fn test_pbkdf2_verify_err_modified_salt() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
 
-			let pbkdf2_dk = hash_password(&password, 100).unwrap();
-			let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
-			pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
-			let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
+            let pbkdf2_dk = hash_password(&password, 100).unwrap();
+            let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
+            pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
+            let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-			assert!(hash_password_verify(&modified, &password, 100).is_err());
-		}
+            assert!(hash_password_verify(&modified, &password, 100).is_err());
+        }
 
-		#[test]
-		fn test_pbkdf2_verify_err_modified_password() {
-			let password = Password::from_slice(&[0u8; 64]).unwrap();
+        #[test]
+        fn test_pbkdf2_verify_err_modified_password() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
 
-			let pbkdf2_dk = hash_password(&password, 100).unwrap();
-			let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
-			pwd_mod[120..128].copy_from_slice(&[0u8; 8]);
-			let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
+            let pbkdf2_dk = hash_password(&password, 100).unwrap();
+            let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
+            pwd_mod[120..128].copy_from_slice(&[0u8; 8]);
+            let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-			assert!(hash_password_verify(&modified, &password, 100).is_err());
-		}
+            assert!(hash_password_verify(&modified, &password, 100).is_err());
+        }
 
-		#[test]
-		fn test_pbkdf2_verify_err_modified_salt_and_password() {
-			let password = Password::from_slice(&[0u8; 64]).unwrap();
+        #[test]
+        fn test_pbkdf2_verify_err_modified_salt_and_password() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
 
-			let pbkdf2_dk = hash_password(&password, 100).unwrap();
-			let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
-			pwd_mod[64..96].copy_from_slice(&[0u8; 32]);
-			let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
+            let pbkdf2_dk = hash_password(&password, 100).unwrap();
+            let mut pwd_mod = pbkdf2_dk.unprotected_as_bytes().to_vec();
+            pwd_mod[64..96].copy_from_slice(&[0u8; 32]);
+            let modified = PasswordHash::from_slice(&pwd_mod).unwrap();
 
-			assert!(hash_password_verify(&modified, &password, 100).is_err());
-		}
+            assert!(hash_password_verify(&modified, &password, 100).is_err());
+        }
 
-		#[test]
-		fn test_pbkdf2_zero_iterations() {
-			let password = Password::from_slice(&[0u8; 64]).unwrap();
+        #[test]
+        fn test_pbkdf2_zero_iterations() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
 
-			assert!(hash_password(&password, 0).is_err());
-		}
-	}
+            assert!(hash_password(&password, 0).is_err());
+        }
+    }
 
-	// Proptests. Only executed when NOT testing no_std.
-	#[cfg(feature = "safe_api")]
-	mod proptest {
-		use super::*;
+    // Proptests. Only executed when NOT testing no_std.
+    #[cfg(feature = "safe_api")]
+    mod proptest {
+        use super::*;
 
-		quickcheck! {
-			/// Hashing and verifying the same password should always be true.
-			fn prop_pwhash_verify(input: Vec<u8>) -> bool {
-				let passin = if input.is_empty() {
-					vec![1u8; 10]
-				} else {
-					input
-				};
+        quickcheck! {
+            /// Hashing and verifying the same password should always be true.
+            fn prop_pwhash_verify(input: Vec<u8>) -> bool {
+                let passin = if input.is_empty() {
+                    vec![1u8; 10]
+                } else {
+                    input
+                };
 
-				let pass = Password::from_slice(&passin[..]).unwrap();
-				let pass_hash = hash_password(&pass, 100).unwrap();
+                let pass = Password::from_slice(&passin[..]).unwrap();
+                let pass_hash = hash_password(&pass, 100).unwrap();
 
-				hash_password_verify(&pass_hash, &pass, 100).is_ok()
-			}
-		}
+                hash_password_verify(&pass_hash, &pass, 100).is_ok()
+            }
+        }
 
-		quickcheck! {
-			/// Hashing and verifying different passwords should always be false.
-			fn prop_pwhash_verify_false(input: Vec<u8>) -> bool {
-				let passin = if input.is_empty() {
-					vec![1u8; 10]
-				} else {
-					input
-				};
+        quickcheck! {
+            /// Hashing and verifying different passwords should always be false.
+            fn prop_pwhash_verify_false(input: Vec<u8>) -> bool {
+                let passin = if input.is_empty() {
+                    vec![1u8; 10]
+                } else {
+                    input
+                };
 
-				let pass = Password::from_slice(&passin[..]).unwrap();
-				let pass_hash = hash_password(&pass, 100).unwrap();
-				let bad_pass = Password::generate(32).unwrap();
+                let pass = Password::from_slice(&passin[..]).unwrap();
+                let pass_hash = hash_password(&pass, 100).unwrap();
+                let bad_pass = Password::generate(32).unwrap();
 
-				hash_password_verify(&pass_hash, &bad_pass, 100).is_err()
-			}
-		}
-	}
+                hash_password_verify(&pass_hash, &bad_pass, 100).is_err()
+            }
+        }
+    }
 }
