@@ -1,12 +1,12 @@
 // Testing against test vectors generated with Monocypher.
 
 #[cfg(test)]
-mod other_argon2 {
+mod other_argon2i {
 
     extern crate hex;
     extern crate orion;
 
-    use self::{hex::decode, orion::hazardous::kdf::argon2};
+    use self::{hex::decode, orion::hazardous::kdf::argon2i};
 
     #[test]
     fn test_case_0() {
@@ -21,7 +21,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -32,7 +32,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -58,7 +58,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -69,7 +69,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -95,7 +95,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -106,7 +106,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -132,7 +132,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -143,7 +143,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -169,7 +169,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -180,7 +180,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -206,7 +206,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -217,7 +217,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -243,7 +243,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -254,7 +254,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -280,7 +280,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -291,7 +291,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -316,7 +316,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -327,7 +327,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -352,7 +352,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -363,7 +363,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -389,7 +389,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -400,7 +400,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -426,7 +426,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -437,7 +437,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -463,7 +463,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -474,7 +474,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -500,7 +500,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -511,7 +511,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,
@@ -537,7 +537,7 @@ mod other_argon2 {
 
         let mut actual_hash = vec![0u8; expected_hash.len()];
 
-        argon2::derive_key(
+        argon2i::derive_key(
             &password,
             &salt,
             passes,
@@ -548,7 +548,7 @@ mod other_argon2 {
         )
         .unwrap();
         assert_eq!(expected_hash, actual_hash);
-        assert!(argon2::verify(
+        assert!(argon2i::verify(
             &expected_hash,
             &password,
             &salt,

@@ -58,18 +58,18 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::{hazardous::kdf::argon2, util};
+//! use orion::{hazardous::kdf::argon2i, util};
 //!
 //! let mut salt = [0u8; 16];
 //! util::secure_rand_bytes(&mut salt)?;
 //! let password = b"Secret password";
 //! let mut dst_out = [0u8; 64];
 //!
-//! argon2::derive_key(password, &salt, 5, 4096, None, None, &mut dst_out)?;
+//! argon2i::derive_key(password, &salt, 5, 4096, None, None, &mut dst_out)?;
 //!
 //! let expected_dk = dst_out;
 //!
-//! assert!(argon2::verify(
+//! assert!(argon2i::verify(
 //!     &expected_dk,
 //!     password,
 //!     &salt,

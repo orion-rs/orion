@@ -10,7 +10,7 @@ use self::hex::decode;
 use self::serde_json::{Deserializer, Value};
 use std::{fs::File, io::BufReader};
 
-use orion::hazardous::kdf::argon2;
+use orion::hazardous::kdf::argon2i;
 
 fn run_tests_from_json(path_to_vectors: &str) {
     let file = File::open(path_to_vectors).unwrap();
@@ -34,7 +34,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
                 let memory = test_case.get("maxmem").unwrap().as_u64().unwrap();
 
                 let mut dst_out = vec![0u8; outsize as usize];
-                assert!(argon2::verify(
+                assert!(argon2i::verify(
                     &expected_hash[..],
                     password,
                     salt,
