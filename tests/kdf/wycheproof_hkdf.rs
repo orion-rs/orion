@@ -6,7 +6,7 @@ extern crate serde_json;
 use self::hex::decode;
 
 use self::serde_json::{Deserializer, Value};
-use crate::kdf::wycheproof_hkdf_test_runner;
+use crate::kdf::hkdf_test_runner;
 use std::{fs::File, io::BufReader};
 
 fn wycheproof_runner(path: &str) {
@@ -38,11 +38,12 @@ fn wycheproof_runner(path: &str) {
 							let tcid = test_case.get("tcId").unwrap().as_u64().unwrap();
 							println!("tcId: {}, okm_len: {}", tcid, okm_len);
 
-							wycheproof_hkdf_test_runner(
-								&okm[..],
-								&salt[..],
-								&ikm[..],
-								&info[..],
+							hkdf_test_runner(
+								None,
+								&okm,
+								&salt,
+								&ikm,
+								&info,
 								okm_len as usize,
 								result,
 							);
