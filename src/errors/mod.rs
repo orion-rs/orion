@@ -52,14 +52,26 @@ impl From<getrandom::Error> for UnknownCryptoError {
     }
 }
 
+impl From<base64::DecodeError> for UnknownCryptoError {
+    fn from(_: base64::DecodeError) -> Self {
+        UnknownCryptoError
+    }
+}
+
+impl From<core::num::ParseIntError> for UnknownCryptoError {
+    fn from(_: core::num::ParseIntError) -> Self {
+        UnknownCryptoError
+    }
+}
+
 #[test]
 #[cfg(feature = "safe_api")]
 // format! is only available with std
 fn test_unknown_crypto_error_debug_display() {
-    // Tests Debug impl though "{:?}"
+    // Tests Debug impl through "{:?}"
     let err = format!("{:?}", UnknownCryptoError);
     assert_eq!(err, "UnknownCryptoError");
-    // Tests Display impl though "{}"
+    // Tests Display impl through "{}"
     let err = format!("{}", UnknownCryptoError);
     assert_eq!(err, "UnknownCryptoError");
 }
@@ -73,10 +85,10 @@ fn test_unknown_crypto_from_getrandom() {
     let err_code = NonZeroU32::new(12).unwrap();
     let err_foreign: getrandom::Error = getrandom::Error::from(err_code);
 
-    // Tests Debug impl though "{:?}"
+    // Tests Debug impl through "{:?}"
     let err = format!("{:?}", UnknownCryptoError::from(err_foreign));
     assert_eq!(err, "UnknownCryptoError");
-    // Tests Display impl though "{}"
+    // Tests Display impl through "{}"
     let err = format!("{}", UnknownCryptoError::from(err_foreign));
     assert_eq!(err, "UnknownCryptoError");
 }
@@ -86,4 +98,48 @@ fn test_unknown_crypto_from_getrandom() {
 fn test_source() {
     use std::error::Error;
     assert!(UnknownCryptoError.source().is_none());
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+fn test_unknown_crypto_from_decode_error() {
+    use base64::DecodeError;
+
+    let err_one = DecodeError::InvalidByte(0, 0);
+    let err_two = DecodeError::InvalidLastSymbol(0, 0);
+    let err_three = DecodeError::InvalidLength;
+
+    // Tests Debug impl through "{:?}" and Display impl though "{}"
+    let err = format!(
+        "{:?}{}",
+        UnknownCryptoError::from(err_one.clone()),
+        UnknownCryptoError::from(err_one)
+    );
+    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
+    let err = format!(
+        "{:?}{}",
+        UnknownCryptoError::from(err_two.clone()),
+        UnknownCryptoError::from(err_two)
+    );
+    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
+    let err = format!(
+        "{:?}{}",
+        UnknownCryptoError::from(err_three.clone()),
+        UnknownCryptoError::from(err_three)
+    );
+    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+fn test_unknown_crypto_from_parseint_error() {
+    let err_foreign = "j".parse::<u32>().unwrap_err();
+
+    // Tests Debug impl through "{:?}" and Display impl though "{}"
+    let err = format!(
+        "{:?}{}",
+        UnknownCryptoError::from(err_foreign.clone()),
+        UnknownCryptoError::from(err_foreign)
+    );
+    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
 }

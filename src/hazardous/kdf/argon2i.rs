@@ -99,7 +99,13 @@ pub const ARGON2_VARIANT: u32 = 1;
 const SEGMENTS_PER_LANE: usize = 4;
 
 /// The amount of lanes supported.
-const LANES: u32 = 1;
+pub(crate) const LANES: u32 = 1;
+
+/// The minimum amount of memory.
+pub(crate) const MIN_MEMORY: u32 = 8 * LANES;
+
+/// The minimum amount of iterations.
+pub(crate) const MIN_ITERATIONS: u32 = 1;
 
 #[must_use]
 #[inline(always)]
@@ -451,10 +457,10 @@ pub fn derive_key(
     if salt.len() > 0xFFFF_FFFF || salt.len() < 8 {
         return Err(UnknownCryptoError);
     }
-    if iterations < 1 {
+    if iterations < MIN_ITERATIONS {
         return Err(UnknownCryptoError);
     }
-    if memory < 8 * LANES {
+    if memory < MIN_MEMORY {
         return Err(UnknownCryptoError);
     }
 

@@ -66,6 +66,8 @@
 #[macro_use]
 extern crate quickcheck;
 
+extern crate base64;
+
 #[macro_use]
 mod typedefs;
 
