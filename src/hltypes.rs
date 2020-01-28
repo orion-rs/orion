@@ -59,20 +59,6 @@ construct_salt_variable_size! {
 }
 
 construct_tag! {
-    /// A type to represent the `PasswordHash` that PBKDF2 returns when used for password hashing.
-    ///
-    /// A `PasswordHash`'s first 64 bytes are the salt used to hash the password, and the last 64
-    /// bytes are the actual password hash.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 128 bytes.
-    (PasswordHash, test_password_hash, 128, 128)
-}
-
-impl_from_trait!(PasswordHash, 128);
-
-construct_tag! {
     /// A type to represent the `Tag` output by BLAKE2b-256 in keyed mode.
     ///
     /// # Errors:

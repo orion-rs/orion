@@ -51,7 +51,7 @@
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
-#![deny(warnings)]
+//#![deny(warnings)]
 #![warn(
     missing_docs,
     rust_2018_idioms,
@@ -65,8 +65,6 @@
 #[cfg(feature = "safe_api")]
 #[macro_use]
 extern crate quickcheck;
-
-extern crate base64;
 
 #[macro_use]
 mod typedefs;

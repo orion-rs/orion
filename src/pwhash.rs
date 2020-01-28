@@ -81,11 +81,12 @@
 //! [`pwhash::hash_password`]: fn.hash_password.html
 //! [`pwhash::hash_password_verify`]: fn.hash_password_verify.html
 
-use crate::hazardous::kdf::argon2i::*;
 pub use crate::hltypes::{Password, Salt};
-use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};
+use crate::{
+    errors::UnknownCryptoError,
+    hazardous::kdf::argon2i::{self, LANES, MIN_ITERATIONS, MIN_MEMORY},
+};
 use base64::{decode_config, encode_config, STANDARD_NO_PAD};
-use zeroize::Zeroize;
 
 /// The length of the salt used for password hashing.
 pub const SALT_LENGTH: usize = 16;
@@ -215,7 +216,7 @@ impl PasswordHash {
             return Err(UnknownCryptoError);
         }
         // .parse::<u32>() automatically checks for overflow.
-        // Both in debug and release builds. RE-CHECK THIS
+        // Both in debug and release builds.
         let memory = param_parts.next().unwrap().parse::<u32>()?;
         if memory < MIN_MEMORY {
             return Err(UnknownCryptoError);
@@ -270,7 +271,7 @@ impl PasswordHash {
     }
 
     #[inline]
-    /// Return the length of the object.
+    /// Return the length of the password hash.
     pub fn len(&self) -> usize {
         self.password_hash.len()
     }
@@ -319,7 +320,7 @@ pub fn hash_password(
     let salt = Salt::generate(SALT_LENGTH).unwrap();
     let mut buffer = vec![0u8; PWHASH_LENGTH];
 
-    derive_key(
+    argon2i::derive_key(
         password.unprotected_as_bytes(),
         salt.as_ref(),
         iterations,
@@ -347,7 +348,7 @@ pub fn hash_password_verify(
 ) -> Result<(), UnknownCryptoError> {
     let mut buffer = vec![0u8; PWHASH_LENGTH];
 
-    verify(
+    argon2i::verify(
         expected.unprotected_as_bytes(),
         password.unprotected_as_bytes(),
         expected.salt.as_ref(),
@@ -365,6 +366,196 @@ pub fn hash_password_verify(
 #[cfg(test)]
 mod public {
     use super::*;
+
+    mod test_password_hash {
+        use super::*;
+
+        #[test]
+        fn test_password_hash() {
+            let password_hash =
+                PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 1 << 16).unwrap();
+            assert_eq!(password_hash.len(), 32);
+            assert_eq!(password_hash.unprotected_as_bytes(), &[0u8; 32]);
+
+            let password_hash_again =
+                PasswordHash::from_encoded(password_hash.unprotected_as_encoded()).unwrap();
+            assert_eq!(password_hash, password_hash_again);
+        }
+
+        #[test]
+        fn test_valid_encoded_password() {
+            let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            assert!(PasswordHash::from_encoded(valid).is_ok());
+        }
+
+        #[test]
+        fn test_bad_encoding_missing_dollar() {
+            let first_missing = "argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let second_missing = "$argon2iv=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let third_missing = "$argon2i$v=19m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let fourth_missing = "$argon2i$v=19$m=65536,t=3,p=1cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let fifth_missing = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(first_missing).is_err());
+            assert!(PasswordHash::from_encoded(second_missing).is_err());
+            assert!(PasswordHash::from_encoded(third_missing).is_err());
+            assert!(PasswordHash::from_encoded(fourth_missing).is_err());
+            assert!(PasswordHash::from_encoded(fifth_missing).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_missing_comma() {
+            let first_missing = "$argon2i$v=19$m=65536t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let second_missing = "$argon2i$v=19$m=65536,t=3p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(first_missing).is_err());
+            assert!(PasswordHash::from_encoded(second_missing).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_missing_equals() {
+            let first_missing = "$argon2i$v19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let second_missing = "$argon2$iv=19$m65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let third_missing = "$argon2i$v=19$m=65536,t3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let fourth_missing = "$argon2i$v=19$m=65536,t=3,p1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(first_missing).is_err());
+            assert!(PasswordHash::from_encoded(second_missing).is_err());
+            assert!(PasswordHash::from_encoded(third_missing).is_err());
+            assert!(PasswordHash::from_encoded(fourth_missing).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_whitespace() {
+            let first = "$argon2i$v=19$m=65536,t=3, p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let second = " $argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let third = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA ";
+
+            assert!(PasswordHash::from_encoded(first).is_err());
+            assert!(PasswordHash::from_encoded(second).is_err());
+            assert!(PasswordHash::from_encoded(third).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_invalid_threads() {
+            let one = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let zero = "$argon2i$v=19$m=65536,t=3,p=0$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let two = "$argon2i$v=19$m=65536,t=3,p=2$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(one).is_ok());
+            assert!(PasswordHash::from_encoded(zero).is_err());
+            assert!(PasswordHash::from_encoded(two).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_invalid_memory() {
+            let exact_min = "$argon2i$v=19$m=8,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let less = "$argon2i$v=19$m=7,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            // Throws error during parsing as u32
+            let u32_overflow = format!("$argon2i$v=19$m={},t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA", u64::max_value());
+
+            assert!(PasswordHash::from_encoded(exact_min).is_ok());
+            assert!(PasswordHash::from_encoded(less).is_err());
+            assert!(PasswordHash::from_encoded(&u32_overflow).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_invalid_iterations() {
+            let exact_min = "$argon2i$v=19$m=65536,t=1,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let less = "$argon2i$v=19$m=65536,t=0,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            // Throws error during parsing as u32
+            let u32_overflow = format!("$argon2i$v=19$m=65536,t={},p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA", u64::max_value());
+
+            assert!(PasswordHash::from_encoded(exact_min).is_ok());
+            assert!(PasswordHash::from_encoded(less).is_err());
+            assert!(PasswordHash::from_encoded(&u32_overflow).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_invalid_algo() {
+            let argon2id = "$argon2id$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let argon2d = "$argon2d$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let nothing = "$$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(argon2d).is_err());
+            assert!(PasswordHash::from_encoded(argon2id).is_err());
+            assert!(PasswordHash::from_encoded(nothing).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_invalid_version() {
+            let v13 = "$argon2i$v=13$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let v0 = "$argon2i$v=0$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let nothing = "$argon2i$v=$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(v13).is_err());
+            assert!(PasswordHash::from_encoded(v0).is_err());
+            assert!(PasswordHash::from_encoded(nothing).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_invalid_order() {
+            let version_first = "$v=19$argon2i$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let t_beofre_m = "$argon2i$v=19$t=3,m=65536,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let p_before_t = "$argon2i$v=19$m=65536,p=1,t=3$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let p_before_m = "$argon2i$v=19$p=1,m=65536,t=3$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let pass_before_salt = "$argon2i$v=19$m=65536,t=3,p=1$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA$cHBwcHBwcHBwcHBwcHBwcA";
+            let salt_first = "$cHBwcHBwcHBwcHBwcHBwcA$argon2i$v=19$m=65536,t=3,p=1$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let pass_first = "$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA";
+
+            assert!(PasswordHash::from_encoded(version_first).is_err());
+            assert!(PasswordHash::from_encoded(t_beofre_m).is_err());
+            assert!(PasswordHash::from_encoded(p_before_t).is_err());
+            assert!(PasswordHash::from_encoded(p_before_m).is_err());
+            assert!(PasswordHash::from_encoded(pass_before_salt).is_err());
+            assert!(PasswordHash::from_encoded(salt_first).is_err());
+            assert!(PasswordHash::from_encoded(pass_first).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_invalid_salt() {
+            let exact = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let nothing =
+                "$argon2i$v=19$m=65536,t=3,p=1$$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let above = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcAA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(exact).is_ok());
+            assert!(PasswordHash::from_encoded(nothing).is_err());
+            assert!(PasswordHash::from_encoded(above).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_invalid_password() {
+            let exact = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let nothing = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$";
+            let above = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAA";
+
+            assert!(PasswordHash::from_encoded(exact).is_ok());
+            assert!(PasswordHash::from_encoded(nothing).is_err());
+            assert!(PasswordHash::from_encoded(above).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_bad_parsing_integers() {}
+
+        // Proptests. Only executed when NOT testing no_std.
+        #[cfg(feature = "safe_api")]
+        mod proptest {
+            use super::*;
+
+            quickcheck! {
+                /// If valid params then it's always valid to encode/decode.
+                fn prop_always_produce_valid_encoding(password: Vec<u8>, salt: Vec<u8>, iterations: u32, memory: u32) -> bool {
+                    let res = PasswordHash::from_slice(&password[..], &salt[..], iterations, memory);
+                    if res.is_ok() {
+                        assert!(PasswordHash::from_encoded(res.unwrap().unprotected_as_encoded()).is_ok());
+                    }
+
+                    true
+                }
+            }
+        }
+    }
 
     mod test_pwhash_and_verify {
         use super::*;
