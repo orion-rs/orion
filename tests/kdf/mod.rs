@@ -5,23 +5,31 @@ pub mod other_argon2;
 pub mod other_hkdf;
 #[cfg(feature = "safe_api")]
 pub mod pynacl_argon2i;
+pub mod wycheproof_hkdf;
 
 extern crate orion;
 use self::orion::hazardous::{kdf::hkdf::*, mac::hmac};
 
 pub fn hkdf_test_runner(
-    excp_prk: Option<&[u8]>,
-    excp_okm: &[u8],
+    expected_prk: Option<&[u8]>,
+    expected_okm: &[u8],
     salt: &[u8],
     ikm: &[u8],
     info: &[u8],
-    okm_out: &mut [u8],
-) -> bool {
-    if excp_prk.is_some() {
+    okm_len: usize,
+    valid_result: bool,
+) {
+    if expected_prk.is_some() {
         let actual_prk = extract(salt, &ikm).unwrap();
-        assert!(actual_prk == hmac::Tag::from_slice(excp_prk.unwrap()).unwrap());
+        assert!(actual_prk == hmac::Tag::from_slice(expected_prk.unwrap()).unwrap());
     }
 
+    let mut okm_out = vec![0u8; okm_len];
+
     // verify() also runs derive_key()
-    verify(excp_okm, salt, ikm, Some(&info), &mut okm_out.to_vec()).is_ok()
+    if valid_result {
+        assert!(verify(expected_okm, salt, ikm, Some(&info), &mut okm_out).is_ok());
+    } else {
+        assert!(verify(expected_okm, salt, ikm, Some(&info), &mut okm_out).is_err());
+    }
 }

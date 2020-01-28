@@ -15,19 +15,18 @@ mod custom_hkdf {
         let ikm = decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap();
         let salt = decode("000102030405060708090a0b0c").unwrap();
         let info = decode("").unwrap();
-        let mut okm = [0u8; 32];
-
         let expected_okm =
             decode("f81b87481a18b664936daeb222f58cba0ebc55f5c85996b9f1cb396c327b70bb").unwrap();
 
-        assert!(hkdf_test_runner(
+        hkdf_test_runner(
             None,
             &expected_okm,
             &salt,
             &ikm,
             &info,
-            &mut okm
-        ));
+            expected_okm.len(),
+            true,
+        );
     }
 
     #[test]
@@ -40,8 +39,6 @@ mod custom_hkdf {
         .unwrap();
         let salt = "salt".as_bytes();
         let info = "random InF\0".as_bytes();
-        let mut okm = [0u8; 128];
-
         let expected_okm = decode(
             "a246ef99f6a0f783fc004682508e6f288f036469788f004fcbac9414caa889fa175e746ee663914d\
              678c155d510fa536f7d49b1054e85e7751d9745ea02079a78608eec9aacdd82fa9421d6223c158c71\
@@ -50,14 +47,15 @@ mod custom_hkdf {
         )
         .unwrap();
 
-        assert!(hkdf_test_runner(
+        hkdf_test_runner(
             None,
             &expected_okm,
             &salt,
             &ikm,
             &info,
-            &mut okm
-        ));
+            expected_okm.len(),
+            true,
+        );
     }
 
     #[test]
@@ -70,8 +68,6 @@ mod custom_hkdf {
         )
         .unwrap();
         let info = decode("").unwrap();
-        let mut okm = [0u8; 256];
-
         let expected_okm = decode(
             "245d63179146a61ca1a25f92c38391d406bb52da4b773714fb0e43ce90\
              84ce430f43e1980a8817cf0af320fb684776d81f674d2b187449d62200d3e39cb51ab7a444f7964944895\
@@ -83,14 +79,15 @@ mod custom_hkdf {
         )
         .unwrap();
 
-        assert!(hkdf_test_runner(
+        hkdf_test_runner(
             None,
             &expected_okm,
             &salt,
             &ikm,
             &info,
-            &mut okm
-        ));
+            expected_okm.len(),
+            true,
+        );
     }
 
     #[test]
@@ -98,8 +95,6 @@ mod custom_hkdf {
         let ikm = decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap();
         let salt = "s$#$#%$#SBGHWE@#W#lt".as_bytes();
         let info = "random InF\0".as_bytes();
-        let mut okm = [0u8; 256];
-
         let expected_okm = decode(
             "e93182a8af74a1e70a6202075759bbbceb1926a18aa9f9ee31796557\
              0b507cea7ef11f94d83760bb6f8a2f6031edb581c1ae43f45ead820223d34c6ffadab43d3cfaf9cd782\
@@ -110,14 +105,16 @@ mod custom_hkdf {
              7e9fbf127ff88d33b984582ced74fa029b50f441e",
         )
         .unwrap();
-        assert!(hkdf_test_runner(
+
+        hkdf_test_runner(
             None,
             &expected_okm,
             &salt,
             &ikm,
             &info,
-            &mut okm
-        ));
+            expected_okm.len(),
+            true,
+        );
     }
 
     #[test]
@@ -125,19 +122,18 @@ mod custom_hkdf {
         let ikm = "passwordPASSWORDpassword".as_bytes();
         let salt = "salt".as_bytes();
         let info = decode("").unwrap();
-        let mut okm = [0u8; 32];
-
         let expected_okm =
             decode("1ef9dccc02d5786f0d7133da824afe212547f2d8c97e9299345db86814dcb9b8").unwrap();
 
-        assert!(hkdf_test_runner(
+        hkdf_test_runner(
             None,
             &expected_okm,
             &salt,
             &ikm,
             &info,
-            &mut okm
-        ));
+            expected_okm.len(),
+            true,
+        );
     }
 
     #[test]
@@ -150,17 +146,16 @@ mod custom_hkdf {
              3f4f5f6f7f8f9fafbfcfdfeff",
         )
         .unwrap();
-        let mut okm = [0u8; 16];
-
         let expected_okm = decode("8ae15623215eaaa156bad552f411c4ad").unwrap();
 
-        assert!(hkdf_test_runner(
+        hkdf_test_runner(
             None,
             &expected_okm,
             &salt,
             &ikm,
             &info,
-            &mut okm
-        ));
+            expected_okm.len(),
+            true,
+        );
     }
 }
