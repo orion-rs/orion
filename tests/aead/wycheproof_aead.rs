@@ -6,7 +6,7 @@ extern crate serde_json;
 use self::hex::decode;
 
 use self::serde_json::{Deserializer, Value};
-use crate::aead::{wycheproof_test_runner_ietf, wycheproof_test_runner_x};
+use crate::aead::wycheproof_test_runner;
 use std::{fs::File, io::BufReader};
 
 fn wycheproof_runner(path: &str, is_ietf: bool) {
@@ -41,17 +41,10 @@ fn wycheproof_runner(path: &str, is_ietf: bool) {
                             let tcid = test_case.get("tcId").unwrap().as_u64().unwrap();
                             println!("tcId: {}, is_ietf: {}", tcid, is_ietf);
 
-                            if is_ietf {
-                                wycheproof_test_runner_ietf(
-                                    &key, &iv, &aad, &tag, &msg, &ct, result, tcid,
-                                )
-                                .unwrap();
-                            } else {
-                                wycheproof_test_runner_x(
-                                    &key, &iv, &aad, &tag, &msg, &ct, result, tcid,
-                                )
-                                .unwrap();
-                            }
+                            wycheproof_test_runner(
+                                &key, &iv, &aad, &tag, &msg, &ct, result, tcid, is_ietf,
+                            )
+                            .unwrap();
                         }
                     }
                 }
