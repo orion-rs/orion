@@ -21,7 +21,10 @@
 // SOFTWARE.
 
 //! # About:
-//! Argon2i version 1.3. __Not__ available with `no_std`.
+//! Argon2i version 1.3. This implementation is __not__ available with `no_std`.
+//!
+//! # Note:
+//! This implementation only supports a single thread/lane.
 //!
 //! # Parameters:
 //! - `expected`: The expected derived key.
@@ -52,7 +55,7 @@
 //! - Salts should always be generated using a CSPRNG.
 //!   [`util::secure_rand_bytes()`] can be used for this.
 //! - The recommended length for a salt is `16` bytes.
-//! - The minimum recommended size for a hashed password is `32` bytes.
+//! - The minimum recommended length for a hashed password is `16` bytes.
 //! - The minimum recommended iteration count is `3`.
 //! - Password hashes should always be compared in constant-time.
 //!
@@ -65,7 +68,7 @@
 //! let password = b"Secret password";
 //! let mut dst_out = [0u8; 64];
 //!
-//! argon2i::derive_key(password, &salt, 5, 4096, None, None, &mut dst_out)?;
+//! argon2i::derive_key(password, &salt, 3, 1<<16, None, None, &mut dst_out)?;
 //!
 //! let expected_dk = dst_out;
 //!
@@ -73,8 +76,8 @@
 //!     &expected_dk,
 //!     password,
 //!     &salt,
-//!     5,
-//!     4096,
+//!     3,
+//!     1<<16,
 //!     None,
 //!     None,
 //!     &mut dst_out

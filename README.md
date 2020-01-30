@@ -8,7 +8,7 @@ orion is a cryptography library written in pure Rust. It aims to provide easy an
 Currently supports:
 * **AEAD**: (X)ChaCha20Poly1305.
 * **Stream ciphers**: (X)ChaCha20.
-* **KDF**: HKDF-HMAC-SHA512, PBKDF2-HMAC-SHA512.
+* **KDF**: HKDF-HMAC-SHA512, PBKDF2-HMAC-SHA512, Argon2i.
 * **MAC**: HMAC-SHA512, Poly1305.
 * **Hashing**: BLAKE2b, SHA512.
 

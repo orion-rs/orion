@@ -27,7 +27,7 @@
 //! XChaCha20Poly1305.
 //!
 //! ## Password hashing and verification
-//! [`orion::pwhash`] offers password hashing and verification using PBKDF2.
+//! [`orion::pwhash`] offers password hashing and verification using Argon2i.
 //!
 //! ## Key derivation
 //! [`orion::kdf`] offers key derivation using PBKDF2.
@@ -51,7 +51,7 @@
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
-//#![deny(warnings)]
+#![deny(warnings)]
 #![warn(
     missing_docs,
     rust_2018_idioms,

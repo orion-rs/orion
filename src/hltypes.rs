@@ -42,7 +42,7 @@ construct_secret_key_variable_size! {
 }
 
 construct_salt_variable_size! {
-    /// A type to represent the `Salt` that PBKDF2 uses during key derivation.
+    /// A type to represent the `Salt` that Argon2i uses during key derivation.
     ///
     /// As default it will randomly generate a `Salt` of 64 bytes.
     ///
@@ -70,7 +70,7 @@ construct_tag! {
 impl_from_trait!(Tag, 32);
 
 construct_secret_key_variable_size! {
-    /// A type to represent the `Password` that PBKDF2 hashes and uses for key derivation.
+    /// A type to represent the `Password` that Argon2i hashes and uses for key derivation.
     ///
     /// As default it will randomly generate a `Password` of 32 bytes.
     ///

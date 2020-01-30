@@ -31,41 +31,48 @@
 //! in the user's actual passwords being disclosed as well.
 //!
 //! # About:
-//! - Uses PBKDF2-HMAC-SHA512.
-//! - A salt of 64 bytes is automatically generated.
-//! - The password hash length is set to 64.
+//! - Uses Argon2i.
+//! - A salt of 16 bytes is automatically generated.
+//! - The password hash length is set to 32.
 //!
-//! The first 64 bytes of the [`PasswordHash`] returned by
-//! [`pwhash::hash_password`] is the salt used to hash the password and the last
-//! 64 bytes is the actual hashed password. When using this function with
-//! [`pwhash::hash_password_verify`], then the separation of the salt and the
-//! password hash is automatically handled.
+//! [`PasswordHash`] provides two ways of retrieving the hashed password:
+//! - [`unprotected_as_encoded()`] returns the hashed password in an encoded form.
+//! The encoding specifies the settings used to hash the password.
+//! - [`unprotected_as_bytes()`] returns only the hashed password in raw bytes.
+//!
+//! The following is an example of how the encoded password hash might look:
+//! ```text
+//! $argon2i$v=19$m=8192,t=3,p=1$c21hbGxzYWx0$lmO1aPPy3x0CcvrKpFLi1TL/uSVJ/eO5hPHiWZFaWvY
+//! ```
+//!
+//! See a more detailed descrption of the encoding format [here](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md).
+//!
+//! # Note:
+//! This implementation only supports a single thread/lane.
 //!
 //! # Parameters:
 //! - `password`: The password to be hashed.
-//! - `expected_with_salt`: The expected password hash with the corresponding
-//!   salt prepended.
-//! - `iterations`: The number of iterations performed by PBKDF2, i.e. the cost
-//!   parameter.
+//! - `expected`: The expected password hash.
+//! - `iterations`: Iterations cost parameter for Argon2i.
+//! - `memory`: Memory (in kibibytes (KiB)) cost parameter for Argon2i.
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `iterations` is 0.
-//! - The `expected_with_salt` is not constructed exactly as in
-//!   [`pwhash::hash_password`].
-//! - The password hash does not match `expected_with_salt`.
-//! - The encoded password hash contains whitespaces.
-//! - The encoded password hash has a parellism count other than 1.
+//! - `memory` is less than 8.
+//! - `iterations` is less than 3.
+//! - The password hash does not match `expected`.
 //!
 //! # Panics:
 //! A panic will occur if:
 //! - Failure to generate random bytes securely.
-//! - If the password or salt cannot be encoded to valid UTF-8 when using `AsRef<str>`.
-//! - The encoded password hash contains whitespaces.
 //!
 //! # Security:
-//! - The iteration count should be set as high as feasible. The recommended
-//!   minimum is 100000.
+//! - [`unprotected_as_encoded()`] and [`unprotected_as_bytes()`] should never
+//! be used to compare password hashes, as these will not run in constant-time.
+//! Either use [`pwhash::hash_password_verify`] or compare two [`PasswordHash`]es.
+//! - Choosing the correct cost parameters is important for security. Please refer to
+//! [libsodium's docs](https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters)
+//! for a description on how to do this.
 //!
 //! # Example:
 //! ```rust
@@ -73,18 +80,21 @@
 //!
 //! let password = pwhash::Password::from_slice(b"Secret password")?;
 //!
-//! let hash = pwhash::hash_password(&password, 100000)?;
-//! assert!(pwhash::hash_password_verify(&hash, &password, 100000).is_ok());
+//! let hash = pwhash::hash_password(&password, 3, 1<<16)?;
+//! assert!(pwhash::hash_password_verify(&hash, &password, 3, 1<<16).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`PasswordHash`]: struct.PasswordHash.html
+//! [`unprotected_as_encoded()`]: struct.PasswordHash.html#method.unprotected_as_encoded
+//! [`unprotected_as_bytes()`]: struct.PasswordHash.html#method.unprotected_as_bytes
 //! [`pwhash::hash_password`]: fn.hash_password.html
 //! [`pwhash::hash_password_verify`]: fn.hash_password_verify.html
 
-pub use crate::hltypes::{Password, Salt};
+pub use crate::hltypes::Password;
 use crate::{
     errors::UnknownCryptoError,
-    hazardous::kdf::argon2i::{self, LANES, MIN_ITERATIONS, MIN_MEMORY},
+    hazardous::kdf::argon2i::{self, LANES, MIN_MEMORY},
+    hltypes::Salt,
 };
 use base64::{decode_config, encode_config, STANDARD_NO_PAD};
 
@@ -94,19 +104,35 @@ pub const SALT_LENGTH: usize = 16;
 /// The length of the hashed password.
 pub const PWHASH_LENGTH: usize = 32;
 
+/// Minimum amount of iterations.
+const MIN_ITERATIONS: u32 = 3;
+
 /// A type to represent the `PasswordHash` that Argon2i returns when used for password hashing.
 ///
-/// The password hash can be retrieved in two different ways:
-/// - `unprotected_as_bytes()`: Get the password hash as bytes
-/// - `unprotected_as_encoded()`: Get the encoded password hash, along with specified parameters and salt
-///
+///  
 /// # Errors:
 /// An error will be returned if:
-/// - `slice` is not 128 bytes.
+/// - The encoded password hash contains whitespaces.
+/// - The encoded password hash has a parallelism count other than 1.
+/// - The encoded password contains any other fields than: The algorithm name,
+/// version, m, t, p and the salt and password hash.
+/// - The encoded password hash contains invalid Base64 encoding.
+/// - `iterations` is less than 3.
+/// - `memory` is less than 8.
+/// - `password` is not 32 bytes.
+/// - `salt` is not 16 bytes.
+/// - The encoded password hash contains numerical values that cannot
+/// be represented as a `u32`.
+///
+/// # Panics:
+/// A panic will occur if:
+/// - Overflowing calculations happen on `usize` when decoding the password and salt from Base64.
 ///
 /// # Security:
 /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
 /// that the type implements.
+/// - Never use `unprotected_as_bytes()` or `unprotected_as_encoded()` to compare password hashes,
+/// as that will not run in constant-time. Compare `PasswordHash`es directly using `==` instead.
 ///
 /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
 /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
@@ -264,7 +290,7 @@ impl PasswordHash {
         self.encoded_password_hash.as_ref()
     }
 
-    /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
+    /// Return the password hash as byte slice. __**Warning**__: Should not be used unless strictly
     /// needed. This __**breaks protections**__ that the type implements.
     pub fn unprotected_as_bytes(&self) -> &[u8] {
         self.password_hash.as_ref()
@@ -316,6 +342,10 @@ pub fn hash_password(
     iterations: u32,
     memory: u32,
 ) -> Result<PasswordHash, UnknownCryptoError> {
+    if iterations < MIN_ITERATIONS {
+        return Err(UnknownCryptoError);
+    }
+
     // Cannot panic as this is a valid size.
     let salt = Salt::generate(SALT_LENGTH).unwrap();
     let mut buffer = vec![0u8; PWHASH_LENGTH];
@@ -346,6 +376,10 @@ pub fn hash_password_verify(
     iterations: u32,
     memory: u32,
 ) -> Result<(), UnknownCryptoError> {
+    if iterations < MIN_ITERATIONS {
+        return Err(UnknownCryptoError);
+    }
+
     let mut buffer = vec![0u8; PWHASH_LENGTH];
 
     argon2i::verify(
@@ -461,8 +495,8 @@ mod public {
 
         #[test]
         fn test_bad_encoding_invalid_iterations() {
-            let exact_min = "$argon2i$v=19$m=65536,t=1,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-            let less = "$argon2i$v=19$m=65536,t=0,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let exact_min = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let less = "$argon2i$v=19$m=65536,t=2,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             // Throws error during parsing as u32
             let u32_overflow = format!("$argon2i$v=19$m=65536,t={},p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA", u64::max_value());
 
@@ -637,9 +671,9 @@ mod public {
                 };
 
                 let pass = Password::from_slice(&passin[..]).unwrap();
-                let pass_hash = hash_password(&pass, 1, 1024).unwrap();
+                let pass_hash = hash_password(&pass, 3, 1024).unwrap();
 
-                hash_password_verify(&pass_hash, &pass, 1, 1024).is_ok()
+                hash_password_verify(&pass_hash, &pass, 3, 1024).is_ok()
             }
         }
 
@@ -653,10 +687,10 @@ mod public {
                 };
 
                 let pass = Password::from_slice(&passin[..]).unwrap();
-                let pass_hash = hash_password(&pass, 1, 1024).unwrap();
+                let pass_hash = hash_password(&pass, 3, 1024).unwrap();
                 let bad_pass = Password::generate(32).unwrap();
 
-                hash_password_verify(&pass_hash, &bad_pass,  1, 1024).is_err()
+                hash_password_verify(&pass_hash, &bad_pass,  3, 1024).is_err()
             }
         }
     }
