@@ -302,6 +302,7 @@ impl PasswordHash {
     }
 }
 
+// TODO: Missing test
 impl core::fmt::Debug for PasswordHash {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
@@ -324,8 +325,10 @@ impl PartialEq<PasswordHash> for PasswordHash {
     }
 }
 
+// TODO: Missing test
 impl Eq for PasswordHash {}
 
+// TODO: Missing test
 impl PartialEq<&[u8]> for PasswordHash {
     fn eq(&self, other: &&[u8]) -> bool {
         use subtle::ConstantTimeEq;
@@ -569,7 +572,39 @@ mod public {
         }
 
         #[test]
-        fn test_bad_encoding_bad_parsing_integers() {}
+        fn test_bad_encoding_bad_parsing_integers() {
+            let j_instead_of_mem = "$argon2i$v=19$m=j,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(j_instead_of_mem).is_err());
+        }
+
+        #[test]
+        fn test_from_slice_password() {
+            assert!(PasswordHash::from_slice(&[0u8; 31], &[0u8; 16], 3, 1 << 16).is_err());
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 1 << 16).is_ok());
+            assert!(PasswordHash::from_slice(&[0u8; 33], &[0u8; 16], 3, 1 << 16).is_err());
+        }
+
+        #[test]
+        fn test_from_slice_salt() {
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 15], 3, 1 << 16).is_err());
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 1 << 16).is_ok());
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 17], 3, 1 << 16).is_err());
+        }
+
+        #[test]
+        fn test_from_slice_mem() {
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 7).is_err());
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 8).is_ok());
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 9).is_ok());
+        }
+
+        #[test]
+        fn test_from_slice_bad_iter() {
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 2, 1 << 16).is_err());
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 1 << 16).is_ok());
+            assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 4, 1 << 16).is_ok());
+        }
 
         // Proptests. Only executed when NOT testing no_std.
         #[cfg(feature = "safe_api")]
