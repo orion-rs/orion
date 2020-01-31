@@ -54,7 +54,7 @@
 //! # Security:
 //! - Salts should always be generated using a CSPRNG.
 //!   [`util::secure_rand_bytes()`] can be used for this.
-//! - The recommended length for a salt is `16` bytes.
+//! - The minimum recommended length for a salt is `16` bytes.
 //! - The minimum recommended length for a hashed password is `16` bytes.
 //! - The minimum recommended iteration count is `3`.
 //! - Password hashes should always be compared in constant-time.
@@ -318,6 +318,9 @@ fn g_two(block: &[u64], out: &mut [u64]) {
     {
         *el_out = el_z ^ el_tmp;
     }
+
+    working_block.zeroize();
+    tmp_block.zeroize();
 }
 
 fn g_xor(block_x: &[u64], block_y: &[u64], out: &mut [u64]) {
@@ -334,6 +337,8 @@ fn g_xor(block_x: &[u64], block_y: &[u64], out: &mut [u64]) {
     for (el_out, el_z) in out.iter_mut().zip(working_block.iter()) {
         *el_out ^= el_z;
     }
+
+    working_block.zeroize();
 }
 
 /// Data-independent indexing.
@@ -416,6 +421,7 @@ impl Gidx {
     }
 }
 
+/// Copy a 1024*u8 block into dst.
 fn load_into(src: &[u8], dst: &mut [u64; 128]) {
     debug_assert!(src.len() == 1024);
     use core::convert::TryInto;
@@ -430,6 +436,7 @@ fn load_into(src: &[u8], dst: &mut [u64; 128]) {
     }
 }
 
+/// Copy a 128*u64 block into dst.
 fn store_into(src: &[u64], dst: &mut [u8; 1024]) {
     debug_assert!(src.len() == 128);
 
