@@ -760,10 +760,11 @@ fn test_nist_cavp() {
 ];
     for test_case in test_vectors.iter() {
         hmac_test_runner(
+            &decode(test_case[2]).unwrap(),
             &decode(test_case[0]).unwrap(),
             &decode(test_case[1]).unwrap(),
-            &decode(test_case[2]).unwrap(),
             Some(test_case[3].parse::<usize>().unwrap()),
+            true,
         );
     }
 }
