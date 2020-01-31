@@ -374,8 +374,7 @@ impl Gidx {
     }
 
     fn next_addresses(&mut self) {
-        // TODO: Is this .unwrap() OK?
-        self.block[6] = self.block[6].checked_add(1).unwrap();
+        self.block[6] += 1;
         g_two(&self.block, &mut self.addresses);
     }
 
