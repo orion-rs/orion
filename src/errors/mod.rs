@@ -52,6 +52,7 @@ impl From<getrandom::Error> for UnknownCryptoError {
     }
 }
 
+#[cfg(feature = "safe_api")]
 impl From<base64::DecodeError> for UnknownCryptoError {
     fn from(_: base64::DecodeError) -> Self {
         UnknownCryptoError
