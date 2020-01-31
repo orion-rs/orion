@@ -47,7 +47,6 @@
 //! An error will be returned if:
 //! - `iterations` is less than 3.
 //! - `length` is less than 4.
-//! - `length` is not less than `u32::max_value()`.
 //! - `memory` is less than 8.
 //! - The `expected` does not match the derived key.
 //!
@@ -176,7 +175,7 @@ mod public {
 
             assert!(derive_key(&password, &salt, 3, 1024, 3).is_err());
             assert!(derive_key(&password, &salt, 3, 1024, 4).is_ok());
-            assert!(derive_key(&password, &salt, 3, 1024, u32::max_value()).is_err());
+            assert!(derive_key(&password, &salt, 3, 1024, 5).is_ok());
         }
 
         #[test]
