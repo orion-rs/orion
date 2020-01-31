@@ -85,13 +85,12 @@ mod rfc_aead_chacha20_poly1305 {
             0x6c, 0x6f, 0x2c, 0x29, 0xa6, 0xad, 0x5c, 0xb4, 0x02, 0x2b, 0x02, 0x70, 0x9b,
         ];
 
-        let plaintext =
-            "\
+        let plaintext = "\
              Internet-Drafts are draft documents valid for a maximum of six months and may be \
              updated, replaced, or obsoleted by other documents at any time. It is \
              inappropriate to use Internet-Drafts as reference material or to cite \
              them other than as /\u{201c}work in progress./\u{201d}"
-                .as_bytes();
+            .as_bytes();
 
         let mut ct_plus_tag = Vec::from(ciphertext.as_ref());
         ct_plus_tag.extend_from_slice(&tag);

@@ -30,7 +30,7 @@
 //! [`orion::pwhash`] offers password hashing and verification using Argon2i.
 //!
 //! ## Key derivation
-//! [`orion::kdf`] offers key derivation using PBKDF2.
+//! [`orion::kdf`] offers key derivation using Argon2i.
 //!
 //! ## Message authentication
 //! [`orion::auth`] offers message authentication and verification using BLAKE2b.

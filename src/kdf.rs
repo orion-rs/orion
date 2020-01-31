@@ -27,37 +27,39 @@
 //! keys. Also known as key stretching.
 //!
 //! An example of this could be deriving a key from a user-submitted password
-//! and using this derived key in disk encryption. The disk encryption software VeraCrypt [uses](https://www.veracrypt.fr/en/Header%20Key%20Derivation.html)
-//! PBKDF2-HMAC-SHA512 to derive header keys, which in turn are used to
-//! encrypt/decrypt the master keys responsible for encrypting the data in a
-//! VeraCrypt volume.
-//!
+//! and using this derived key in disk encryption.
 //!
 //! # About:
-//! - Uses PBKDF2-HMAC-SHA512.
+//! - Uses Argon2i.
+//!
+//! # Note:
+//! This implementation only supports a single thread/lane.
 //!
 //! # Parameters:
 //! - `password`: The low-entropy input key to be used in key derivation.
 //! - `expected`: The expected derived key.
 //! - `salt`: The salt used for the key derivation.
-//! - `iterations`: The number of iterations performed by PBKDF2, i.e. the cost
-//!   parameter.
+//! - `iterations`: Iterations cost parameter for Argon2i.
+//! - `memory`: Memory (in kibibytes (KiB)) cost parameter for Argon2i.
 //! - `length`: The desired length of the derived key.
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `iterations` is 0.
-//! - `length` is 0.
+//! - `iterations` is less than 3.
+//! - `length` is less than 4.
 //! - `length` is not less than `u32::max_value()`.
+//! - `memory` is less than 8.
 //! - The `expected` does not match the derived key.
 //!
 //!
 //! # Security:
-//! - The iteration count should be set as high as feasible. The recommended
-//!   minimum is 100000.
+//! - Choosing the correct cost parameters is important for security. Please refer to
+//!   [libsodium's docs](https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters)
+//! for a description on how to do this.
 //! - The salt should always be generated using a CSPRNG. [`Salt::default()`]
-//!   can be used for
-//! this, it will generate a [`Salt`] of 64 bytes.
+//!   can be used for this, it will generate a [`Salt`] of 16 bytes.
+//! - The recommended minimum size for a salt is 16 bytes.
+//! - The recommended minimum size for a derived key is 16 bytes.
 //!
 //! # Example:
 //! ```rust
@@ -66,66 +68,70 @@
 //! let user_password = kdf::Password::from_slice(b"User password")?;
 //! let salt = kdf::Salt::default();
 //!
-//! let derived_key = kdf::derive_key(&user_password, &salt, 100000, 64)?;
+//! let derived_key = kdf::derive_key(&user_password, &salt, 3, 1<<16, 32)?;
 //!
-//! assert!(kdf::derive_key_verify(&derived_key, &user_password, &salt, 100000).is_ok());
+//! assert!(kdf::derive_key_verify(&derived_key, &user_password, &salt, 3, 1<<16).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Salt`]: struct.Salt.html
 //! [`Salt::default()`]: struct.Salt.html
 
 pub use crate::hltypes::{Password, Salt, SecretKey};
-use crate::{errors::UnknownCryptoError, hazardous::kdf::pbkdf2};
-use zeroize::Zeroize;
+use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2i, pwhash::MIN_ITERATIONS};
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Derive a key using PBKDF2-HMAC-SHA512.
+/// Derive a key using Argon2i.
 pub fn derive_key(
     password: &Password,
     salt: &Salt,
-    iterations: usize,
-    length: usize,
+    iterations: u32,
+    memory: u32,
+    length: u32,
 ) -> Result<SecretKey, UnknownCryptoError> {
-    if length < 1 || length >= (u32::max_value() as usize) {
+    if iterations < MIN_ITERATIONS {
         return Err(UnknownCryptoError);
     }
 
-    let mut buffer = vec![0u8; length];
+    let mut dk = SecretKey::from_slice(&vec![0u8; length as usize])?;
 
-    pbkdf2::derive_key(
-        &pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
+    argon2i::derive_key(
+        password.unprotected_as_bytes(),
         salt.as_ref(),
         iterations,
-        &mut buffer,
+        memory,
+        None,
+        None,
+        &mut dk.value,
     )?;
-
-    let dk = SecretKey::from_slice(&buffer)?;
-    buffer.zeroize();
 
     Ok(dk)
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Derive and verify a key using PBKDF2-HMAC-SHA512.
+/// Derive and verify a key using Argon2i.
 pub fn derive_key_verify(
     expected: &SecretKey,
     password: &Password,
     salt: &Salt,
-    iterations: usize,
+    iterations: u32,
+    memory: u32,
 ) -> Result<(), UnknownCryptoError> {
-    let mut buffer = vec![0u8; expected.len()];
+    if iterations < MIN_ITERATIONS {
+        return Err(UnknownCryptoError);
+    }
 
-    pbkdf2::verify(
+    let mut dk = SecretKey::from_slice(&vec![0u8; expected.len()])?;
+
+    argon2i::verify(
         expected.unprotected_as_bytes(),
-        &pbkdf2::Password::from_slice(password.unprotected_as_bytes())?,
+        password.unprotected_as_bytes(),
         salt.as_ref(),
         iterations,
-        &mut buffer,
-    )?;
-
-    buffer.zeroize();
-
-    Ok(())
+        memory,
+        None,
+        None,
+        &mut dk.value,
+    )
 }
 
 // Testing public functions in the module.
@@ -138,19 +144,28 @@ mod public {
         #[test]
         fn test_derive_key_and_verify() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
-            let dk = derive_key(&password, &salt, 100, 64).unwrap();
+            let salt = Salt::from_slice(&[0u8; 16]).unwrap();
+            let dk = derive_key(&password, &salt, 3, 4096, 32).unwrap();
 
-            assert!(derive_key_verify(&dk, &password, &salt, 100).is_ok());
+            assert!(derive_key_verify(&dk, &password, &salt, 3, 4096).is_ok());
         }
 
         #[test]
-        fn test_derive_key_and_verify_err() {
+        fn test_derive_key_and_verify_err_bad_iter() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
             let salt = Salt::from_slice(&[0u8; 64]).unwrap();
-            let dk = derive_key(&password, &salt, 100, 64).unwrap();
+            let dk = derive_key(&password, &salt, 3, 4096, 32).unwrap();
 
-            assert!(derive_key_verify(&dk, &password, &salt, 50).is_err());
+            assert!(derive_key_verify(&dk, &password, &salt, 4, 4096).is_err());
+        }
+
+        #[test]
+        fn test_derive_key_and_verify_err_bad_mem() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let dk = derive_key(&password, &salt, 3, 4096, 32).unwrap();
+
+            assert!(derive_key_verify(&dk, &password, &salt, 3, 1024).is_err());
         }
 
         #[test]
@@ -158,95 +173,9 @@ mod public {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
             let salt = Salt::from_slice(&[0u8; 64]).unwrap();
 
-            assert!(derive_key(&password, &salt, 100, 0).is_err());
-            assert!(derive_key(&password, &salt, 100, 1).is_ok());
-            assert!(derive_key(&password, &salt, 100, usize::max_value()).is_err());
-        }
-    }
-
-    // Proptests. Only executed when NOT testing no_std.
-    #[cfg(feature = "safe_api")]
-    mod proptest {
-        use super::*;
-
-        quickcheck! {
-            /// Deriving a key and verifying with the same parameters should always be true.
-            fn prop_derive_key_verify(input: Vec<u8>, size: usize) -> bool {
-                let passin = if input.is_empty() {
-                    vec![1u8; 10]
-                } else {
-                    input
-                };
-
-                let size_checked = if size < 5 {
-                    32
-                } else {
-                    size
-                };
-
-                let pass = Password::from_slice(&passin[..]).unwrap();
-                let salt = Salt::from_slice(&[192, 251, 70, 48, 200, 151, 170, 100, 177, 86, 7, 16, 143, 23, 38, 197, 108,
-                    242, 204, 54, 98, 204, 77, 28, 249, 83, 164, 183, 255, 33, 151, 109, 103, 17, 226, 74, 163, 26, 120, 151,
-                    103, 53, 255, 135, 17, 7, 62, 11, 12, 190, 214, 194, 57, 27, 168, 82, 50, 23, 49, 80, 80, 84, 212, 191]).unwrap();
-                let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
-
-                derive_key_verify(&derived_key, &pass, &salt, 100).is_ok()
-            }
-        }
-
-        quickcheck! {
-            /// Deriving a key and verifying with a different password should always be false.
-            fn prop_derive_key_verify_false_bad_password(input: Vec<u8>, size: usize) -> bool {
-                let passin = if input.is_empty() {
-                    vec![1u8; 10]
-                } else {
-                    input
-                };
-
-                let size_checked = if size < 5 {
-                    32
-                } else {
-                    size
-                };
-
-                let pass = Password::from_slice(&passin[..]).unwrap();
-                let salt = Salt::from_slice(&[192, 251, 70, 48, 200, 151, 170, 100, 177, 86, 7, 16, 143, 23, 38, 197, 108,
-                    242, 204, 54, 98, 204, 77, 28, 249, 83, 164, 183, 255, 33, 151, 109, 103, 17, 226, 74, 163, 26, 120, 151,
-                    103, 53, 255, 135, 17, 7, 62, 11, 12, 190, 214, 194, 57, 27, 168, 82, 50, 23, 49, 80, 80, 84, 212, 191]).unwrap();
-                let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
-                let bad_pass = Password::from_slice(&[119, 56, 92, 141, 149, 150, 233, 171, 16, 88, 129, 93, 114, 154, 91,
-                    118, 227, 98, 170, 53, 229, 140, 132, 83, 80, 192, 71, 208, 186, 34, 87, 112]).unwrap();
-
-                derive_key_verify(&derived_key, &bad_pass, &salt, 100).is_err()
-            }
-        }
-
-        quickcheck! {
-            /// Deriving a key and verifying with a different salt should always be false.
-            fn prop_derive_key_verify_false_bad_salt(input: Vec<u8>, size: usize) -> bool {
-                let passin = if input.is_empty() {
-                    vec![1u8; 10]
-                } else {
-                    input
-                };
-
-                let size_checked = if size < 5 {
-                    32
-                } else {
-                    size
-                };
-
-                let pass = Password::from_slice(&passin[..]).unwrap();
-                let salt = Salt::from_slice(&[192, 251, 70, 48, 200, 151, 170, 100, 177, 86, 7, 16, 143, 23, 38, 197, 108, 242,
-                    204, 54, 98, 204, 77, 28, 249, 83, 164, 183, 255, 33, 151, 109, 103, 17, 226, 74, 163, 26, 120, 151, 103, 53,
-                    255, 135, 17, 7, 62, 11, 12, 190, 214, 194, 57, 27, 168, 82, 50, 23, 49, 80, 80, 84, 212, 191]).unwrap();
-                let derived_key = derive_key(&pass, &salt, 100, size_checked).unwrap();
-                let bad_salt = Salt::from_slice(&[169, 110, 7, 6, 17, 74, 70, 22, 26, 1, 37, 22, 44, 7, 141, 67, 246, 208, 151,
-                    232, 6, 105, 153, 83, 191, 31, 65, 164, 237, 40, 114, 70, 210, 20, 168, 59, 151, 101, 245, 141, 144, 49, 126,
-                    68, 157, 82, 149, 142, 126, 48, 238, 36, 178, 172, 108, 75, 114, 215, 242, 107, 231, 115, 193, 51]).unwrap();
-
-                derive_key_verify(&derived_key, &pass, &bad_salt, 100).is_err()
-            }
+            assert!(derive_key(&password, &salt, 3, 4096, 3).is_err());
+            assert!(derive_key(&password, &salt, 3, 4096, 4).is_ok());
+            assert!(derive_key(&password, &salt, 3, 4096, u32::max_value()).is_err());
         }
     }
 }

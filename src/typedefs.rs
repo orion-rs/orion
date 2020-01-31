@@ -166,7 +166,7 @@ macro_rules! func_from_slice_variable_size (($name:ident) => (
     #[cfg(feature = "safe_api")]
     /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-        if slice.is_empty() {
+        if slice.is_empty() || slice.len() >= 0xFFFF_FFFF {
             return Err(UnknownCryptoError);
         }
 
@@ -750,7 +750,7 @@ macro_rules! construct_secret_key_variable_size {
         /// # }
         /// ```
         pub struct $name {
-            value: Vec<u8>,
+            pub(crate) value: Vec<u8>,
             original_length: usize,
         }
 

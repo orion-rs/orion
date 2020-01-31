@@ -105,7 +105,7 @@ pub const SALT_LENGTH: usize = 16;
 pub const PWHASH_LENGTH: usize = 32;
 
 /// Minimum amount of iterations.
-const MIN_ITERATIONS: u32 = 3;
+pub(crate) const MIN_ITERATIONS: u32 = 3;
 
 /// A type to represent the `PasswordHash` that Argon2i returns when used for password hashing.
 ///
@@ -163,6 +163,7 @@ pub struct PasswordHash {
     memory: u32,
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl PasswordHash {
     /// Encode password hash, salt and parameters for storage.
     fn encode(password_hash: &[u8], salt: &[u8], iterations: u32, memory: u32) -> String {
@@ -208,11 +209,11 @@ impl PasswordHash {
 
     /// Construct from encoded password hash.
     pub fn from_encoded(password_hash: &str) -> Result<Self, UnknownCryptoError> {
-        if password_hash.contains(" ") {
+        if password_hash.contains(' ') {
             return Err(UnknownCryptoError);
         }
 
-        let parts_split = password_hash.split("$").collect::<Vec<&str>>();
+        let parts_split = password_hash.split('$').collect::<Vec<&str>>();
         if parts_split.len() != 6 {
             return Err(UnknownCryptoError);
         }
@@ -263,14 +264,12 @@ impl PasswordHash {
         if lanes != LANES {
             return Err(UnknownCryptoError);
         }
-        debug_assert!(param_parts.next() == None);
 
         let salt = decode_config(parts.next().unwrap(), STANDARD_NO_PAD)?;
         if salt.len() != SALT_LENGTH {
             return Err(UnknownCryptoError);
         }
         let password_hash_raw = decode_config(&parts.next().unwrap(), STANDARD_NO_PAD)?;
-        debug_assert!(parts.next() == None);
         if password_hash_raw.len() != PWHASH_LENGTH {
             return Err(UnknownCryptoError);
         }
@@ -653,45 +652,6 @@ mod public {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
 
             assert!(hash_password(&password, 3, MIN_MEMORY - 1).is_err());
-        }
-    }
-
-    // Proptests. Only executed when NOT testing no_std.
-    #[cfg(feature = "safe_api")]
-    mod proptest {
-        use super::*;
-
-        quickcheck! {
-            /// Hashing and verifying the same password should always be true.
-            fn prop_pwhash_verify(input: Vec<u8>) -> bool {
-                let passin = if input.is_empty() {
-                    vec![1u8; 10]
-                } else {
-                    input
-                };
-
-                let pass = Password::from_slice(&passin[..]).unwrap();
-                let pass_hash = hash_password(&pass, 3, 1024).unwrap();
-
-                hash_password_verify(&pass_hash, &pass, 3, 1024).is_ok()
-            }
-        }
-
-        quickcheck! {
-            /// Hashing and verifying different passwords should always be false.
-            fn prop_pwhash_verify_false(input: Vec<u8>) -> bool {
-                let passin = if input.is_empty() {
-                    vec![1u8; 10]
-                } else {
-                    input
-                };
-
-                let pass = Password::from_slice(&passin[..]).unwrap();
-                let pass_hash = hash_password(&pass, 3, 1024).unwrap();
-                let bad_pass = Password::generate(32).unwrap();
-
-                hash_password_verify(&pass_hash, &bad_pass,  3, 1024).is_err()
-            }
         }
     }
 }

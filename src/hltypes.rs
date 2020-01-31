@@ -44,7 +44,7 @@ construct_secret_key_variable_size! {
 construct_salt_variable_size! {
     /// A type to represent the `Salt` that Argon2i uses during key derivation.
     ///
-    /// As default it will randomly generate a `Salt` of 64 bytes.
+    /// As default it will randomly generate a `Salt` of 16 bytes.
     ///
     /// # Errors:
     /// An error will be returned if:
@@ -55,7 +55,7 @@ construct_salt_variable_size! {
     /// # Panics:
     /// A panic will occur if:
     /// - Failure to generate random bytes securely.
-    (Salt, test_salt, 64)
+    (Salt, test_salt, 16)
 }
 
 construct_tag! {
