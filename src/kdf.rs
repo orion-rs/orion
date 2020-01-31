@@ -91,6 +91,9 @@ pub fn derive_key(
     if iterations < MIN_ITERATIONS {
         return Err(UnknownCryptoError);
     }
+    if length >= 0xFFFF_FFFF {
+        return Err(UnknownCryptoError);
+    }
 
     let mut dk = SecretKey::from_slice(&vec![0u8; length as usize])?;
 

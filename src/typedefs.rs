@@ -160,13 +160,13 @@ macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr
 
 #[cfg(feature = "safe_api")]
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
-/// if the slice is not of length `$size`.
+/// if the slice is empty.
 macro_rules! func_from_slice_variable_size (($name:ident) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[cfg(feature = "safe_api")]
     /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-        if slice.is_empty() || slice.len() >= 0xFFFF_FFFF {
+        if slice.is_empty() {
             return Err(UnknownCryptoError);
         }
 

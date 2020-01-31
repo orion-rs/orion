@@ -302,7 +302,6 @@ impl PasswordHash {
     }
 }
 
-// TODO: Missing test
 impl core::fmt::Debug for PasswordHash {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
@@ -325,10 +324,8 @@ impl PartialEq<PasswordHash> for PasswordHash {
     }
 }
 
-// TODO: Missing test
 impl Eq for PasswordHash {}
 
-// TODO: Missing test
 impl PartialEq<&[u8]> for PasswordHash {
     fn eq(&self, other: &&[u8]) -> bool {
         use subtle::ConstantTimeEq;
@@ -407,7 +404,7 @@ mod public {
         use super::*;
 
         #[test]
-        fn test_password_hash() {
+        fn test_password_hash_eq() {
             let password_hash =
                 PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 1 << 16).unwrap();
             assert_eq!(password_hash.len(), 32);
@@ -416,6 +413,19 @@ mod public {
             let password_hash_again =
                 PasswordHash::from_encoded(password_hash.unprotected_as_encoded()).unwrap();
             assert_eq!(password_hash, password_hash_again);
+        }
+
+        #[test]
+        fn test_password_hash_ne() {
+            let password_hash =
+                PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 1 << 16).unwrap();
+            assert_eq!(password_hash.len(), 32);
+            assert_eq!(password_hash.unprotected_as_bytes(), &[0u8; 32]);
+
+            let password_hash_again =
+                PasswordHash::from_slice(&[1u8; 32], &[0u8; 16], 3, 1 << 16).unwrap();
+
+            assert_ne!(password_hash, password_hash_again);
         }
 
         #[test]
