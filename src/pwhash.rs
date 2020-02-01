@@ -60,6 +60,7 @@
 //! An error will be returned if:
 //! - `memory` is less than 8.
 //! - `iterations` is less than 3.
+//! - The length of `password` or `expected` is greater than `u32::max_value()`.
 //! - The password hash does not match `expected`.
 //!
 //! # Panics:
