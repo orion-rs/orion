@@ -691,6 +691,8 @@ mod public {
                 &mut dst_two,
             )
             .unwrap();
+
+            assert_eq!(dst_one, dst_two);
         }
 
         #[test]
