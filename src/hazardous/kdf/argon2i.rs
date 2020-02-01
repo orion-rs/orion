@@ -569,8 +569,8 @@ pub fn derive_key(
 
     prev_b.zeroize();
     ref_b.zeroize();
-    tmp.as_mut().zeroize();
-    h0.as_mut().zeroize();
+    tmp.zeroize();
+    h0.zeroize();
     for block in blocks.iter_mut() {
         block.zeroize();
     }
