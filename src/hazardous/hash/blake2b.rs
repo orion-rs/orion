@@ -77,7 +77,7 @@
 //! [`reset()`]: struct.Blake2b.html
 //! [`finalize()`]: struct.Blake2b.html
 //! [`SecretKey::generate()`]: struct.SecretKey.html
-//! [`verify()`]: fn.verify.html
+//! [`verify()`]: struct.Blake2b.html
 //! [`as_ref()`]: struct.Digest.html
 use crate::{errors::UnknownCryptoError, util::endianness::load_u64_into_le, util::u64x4::U64x4};
 
