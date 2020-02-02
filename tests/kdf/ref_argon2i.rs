@@ -2,7 +2,7 @@
 // These are the only test vectors that include associated data and secret value.
 
 #[cfg(test)]
-mod other_argon2i {
+mod ref_argon2i {
 
     extern crate hex;
     extern crate orion;
