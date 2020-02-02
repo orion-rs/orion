@@ -5,6 +5,8 @@ pub mod other_argon2i;
 pub mod other_hkdf;
 #[cfg(feature = "safe_api")]
 pub mod pynacl_argon2i;
+#[cfg(feature = "safe_api")]
+pub mod ref_argon2i;
 pub mod wycheproof_hkdf;
 
 extern crate orion;
