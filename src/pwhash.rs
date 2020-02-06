@@ -166,6 +166,17 @@ pub struct PasswordHash {
 
 #[allow(clippy::len_without_is_empty)]
 impl PasswordHash {
+    /// Parse a decimal parameter value to a u32. Returns and error on overflow
+    /// and if the value has leading zeroes.
+    fn parse_decimal_value(value: &str) -> Result<u32, UnknownCryptoError> {
+        if value.len() > 1 && value.starts_with('0') {
+            return Err(UnknownCryptoError);
+        }
+        // .parse::<T>() detects overflows (in debug and release builds)
+        // and rejects empty strings.
+        Ok(value.parse::<u32>()?)
+    }
+
     /// Encode password hash, salt and parameters for storage.
     fn encode(password_hash: &[u8], salt: &[u8], iterations: u32, memory: u32) -> String {
         format!(
@@ -243,9 +254,8 @@ impl PasswordHash {
         if param_parts.next() != Some("m") {
             return Err(UnknownCryptoError);
         }
-        // .parse::<u32>() automatically checks for overflow.
-        // Both in debug and release builds.
-        let memory = param_parts.next().unwrap().parse::<u32>()?;
+
+        let memory = Self::parse_decimal_value(&param_parts.next().unwrap())?;
         if memory < MIN_MEMORY {
             return Err(UnknownCryptoError);
         }
@@ -253,7 +263,7 @@ impl PasswordHash {
         if param_parts.next() != Some("t") {
             return Err(UnknownCryptoError);
         }
-        let iterations = param_parts.next().unwrap().parse::<u32>()?;
+        let iterations = Self::parse_decimal_value(&param_parts.next().unwrap())?;
         if iterations < MIN_ITERATIONS {
             return Err(UnknownCryptoError);
         }
@@ -261,7 +271,7 @@ impl PasswordHash {
         if param_parts.next() != Some("p") {
             return Err(UnknownCryptoError);
         }
-        let lanes = param_parts.next().unwrap().parse::<u32>()?;
+        let lanes = Self::parse_decimal_value(&param_parts.next().unwrap())?;
         if lanes != LANES {
             return Err(UnknownCryptoError);
         }
@@ -673,7 +683,7 @@ mod public {
         }
 
         #[test]
-        fn test_decimal_longer_than_one_char_first_not_0() {
+        fn test_decimal_value_reject_leading_zeroes() {
             // https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
             // According to the specification, the decimal parameters may not start with 0, if there is more than
             // one character in the string. .parse::<u32>() will ignore leading 0's, so it will parse "0032" -> 32u32.
