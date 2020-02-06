@@ -60,7 +60,7 @@
 //! An error will be returned if:
 //! - `memory` is less than 8.
 //! - `iterations` is less than 3.
-//! - The length of `password` or `expected` is greater than `u32::max_value()`.
+//! - The length of `password` is greater than `u32::max_value()`.
 //! - The password hash does not match `expected`.
 //!
 //! # Panics:
@@ -126,6 +126,7 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// - `salt` is not 16 bytes.
 /// - The encoded password hash contains numerical values that cannot
 /// be represented as a `u32`.
+/// - The encoded password hash length is less than [`MIN_ENCODED_LEN`] or greater than [`MAX_ENCODED_LEN`].
 ///
 /// # Panics:
 /// A panic will occur if:
@@ -158,6 +159,8 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// # Ok(())
 /// # }
 /// ```
+/// [`MIN_ENCODED_LEN`]: struct.PasswordHash.html#associatedconstant.MIN_ENCODED_LEN
+/// [`MAX_ENCODED_LEN`]: struct.PasswordHash.html#associatedconstant.MAX_ENCODED_LEN
 pub struct PasswordHash {
     encoded_password_hash: String,
     password_hash: Vec<u8>,
@@ -168,6 +171,14 @@ pub struct PasswordHash {
 
 #[allow(clippy::len_without_is_empty)]
 impl PasswordHash {
+    /// Given a 16-byte salt (22 characters encoded) and 32-byte password hash (43 characters encoded),
+    /// and parameters (m, t) in decimal representation of 1..10 in length, 92 is the minimum length for an encoded password hash.
+    pub const MIN_ENCODED_LEN: usize = 92;
+
+    /// Given a 16-byte salt (22 characters encoded) and 32-byte password hash (43 characters encoded),
+    /// and parameters (m, t) in decimal representation of 1..10 in length, 110 is the maximum length for an encoded password hash.
+    pub const MAX_ENCODED_LEN: usize = 110;
+
     /// Parse a decimal parameter value to a u32. Returns and error on overflow
     /// and if the value has leading zeroes.
     fn parse_decimal_value(value: &str) -> Result<u32, UnknownCryptoError> {
@@ -223,6 +234,12 @@ impl PasswordHash {
 
     /// Construct from encoded password hash.
     pub fn from_encoded(password_hash: &str) -> Result<Self, UnknownCryptoError> {
+        if password_hash.len() > Self::MAX_ENCODED_LEN
+            || password_hash.len() < Self::MIN_ENCODED_LEN
+        {
+            return Err(UnknownCryptoError);
+        }
+
         if password_hash.contains(' ') {
             return Err(UnknownCryptoError);
         }
@@ -701,6 +718,26 @@ mod public {
             assert!(PasswordHash::from_encoded(invalid1).is_err());
             assert!(PasswordHash::from_encoded(invalid2).is_err());
             assert!(PasswordHash::from_encoded(invalid3).is_err());
+        }
+
+        #[test]
+        fn test_bounds_max_min_encoded_len() {
+            let minimum = "$argon2i$v=19$m=8,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            assert_eq!(minimum.len(), PasswordHash::MIN_ENCODED_LEN);
+            let maximum = "$argon2i$v=19$m=1111111111,t=1111111111,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            assert_eq!(maximum.len(), PasswordHash::MAX_ENCODED_LEN);
+
+            // salt removed one char
+            let less = "$argon2i$v=19$m=8,t=3,p=1$cHBwcHBwcHBwcHBwcHBwc$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            assert_eq!(less.len(), PasswordHash::MIN_ENCODED_LEN - 1);
+            // salt added one char
+            let more = "$argon2i$v=19$m=1111111111,t=1111111111,p=1$cHBwcHBwcHBwcHBwcHBwcAA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            assert_eq!(more.len(), PasswordHash::MAX_ENCODED_LEN + 1);
+
+            assert!(PasswordHash::from_encoded(minimum).is_ok());
+            assert!(PasswordHash::from_encoded(maximum).is_ok());
+            assert!(PasswordHash::from_encoded(less).is_err());
+            assert!(PasswordHash::from_encoded(more).is_err());
         }
 
         #[test]
