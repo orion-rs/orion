@@ -127,7 +127,10 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// - The encoded password hash contains numerical values that cannot
 /// be represented as a `u32`.
 /// - The encoded password hash length is less than [`MIN_ENCODED_LEN`] or greater than [`MAX_ENCODED_LEN`].
-///
+/// - The parameters in the encoded password hash are not correctly ordered. The ordering must be:
+/// ```
+/// $argon2i$v=19$m=<value>,t=<value>,p=<value>$<salt>$<hash>
+/// ```
 /// # Panics:
 /// A panic will occur if:
 /// - Overflowing calculations happen on `usize` when decoding the password and salt from Base64.
