@@ -25,7 +25,7 @@
 //! - `salt`: Salt value.
 //! - `iterations`: Iteration count.
 //! - `dst_out`: Destination buffer for the derived key. The length of the
-//!   derived key is implied by the length of `dk_out`.
+//!   derived key is implied by the length of `dst_out`.
 //! - `expected`: The expected derived key.
 //!
 //! # Errors:
@@ -53,13 +53,13 @@
 //! let mut salt = [0u8; 64];
 //! util::secure_rand_bytes(&mut salt)?;
 //! let password = pbkdf2::Password::from_slice("Secret password".as_bytes())?;
-//! let mut dk_out = [0u8; 64];
+//! let mut dst_out = [0u8; 64];
 //!
-//! pbkdf2::derive_key(&password, &salt, 10000, &mut dk_out)?;
+//! pbkdf2::derive_key(&password, &salt, 10000, &mut dst_out)?;
 //!
-//! let exp_dk = dk_out;
+//! let expected_dk = dst_out;
 //!
-//! assert!(pbkdf2::verify(&exp_dk, &password, &salt, 10000, &mut dk_out).is_ok());
+//! assert!(pbkdf2::verify(&expected_dk, &password, &salt, 10000, &mut dst_out).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Password::generate()`]: struct.Password.html#method.generate

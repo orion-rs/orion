@@ -160,7 +160,7 @@ macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr
 
 #[cfg(feature = "safe_api")]
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
-/// if the slice is not of length `$size`.
+/// if the slice is empty.
 macro_rules! func_from_slice_variable_size (($name:ident) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[cfg(feature = "safe_api")]
@@ -750,7 +750,7 @@ macro_rules! construct_secret_key_variable_size {
         /// # }
         /// ```
         pub struct $name {
-            value: Vec<u8>,
+            pub(crate) value: Vec<u8>,
             original_length: usize,
         }
 

@@ -15,7 +15,7 @@ matrix:
       install:
         - RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force cargo-tarpaulin
       script:
-        - cargo tarpaulin --out Xml -- --test-threads=1
+        - cargo tarpaulin -t 120 --out Xml -- --test-threads=1
         - bash <(curl -s https://codecov.io/bash)
     - name: "[RELEASE + DEBUG]: Tests w. sanitizers"
       rust: nightly
