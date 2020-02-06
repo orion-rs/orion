@@ -128,9 +128,7 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// be represented as a `u32`.
 /// - The encoded password hash length is less than [`MIN_ENCODED_LEN`] or greater than [`MAX_ENCODED_LEN`].
 /// - The parameters in the encoded password hash are not correctly ordered. The ordering must be:
-/// ```
-/// $argon2i$v=19$m=<value>,t=<value>,p=<value>$<salt>$<hash>
-/// ```
+/// `$argon2i$v=19$m=<value>,t=<value>,p=<value>$<salt>$<hash>`
 /// # Panics:
 /// A panic will occur if:
 /// - Overflowing calculations happen on `usize` when decoding the password and salt from Base64.
@@ -182,14 +180,15 @@ impl PasswordHash {
     /// and parameters (m, t) in decimal representation of 1..10 in length, 110 is the maximum length for an encoded password hash.
     pub const MAX_ENCODED_LEN: usize = 110;
 
-    /// Parse a decimal parameter value to a u32. Returns and error on overflow
+    /// Parse a decimal parameter value to a u32. Returns an error on overflow
     /// and if the value has leading zeroes.
     fn parse_decimal_value(value: &str) -> Result<u32, UnknownCryptoError> {
         if value.len() > 1 && value.starts_with('0') {
             return Err(UnknownCryptoError);
         }
         // .parse::<T>() detects overflows (in debug and release builds)
-        // and rejects empty strings.
+        // and rejects empty strings. If the value contains spaces, parsing
+        // also fails.
         Ok(value.parse::<u32>()?)
     }
 
