@@ -118,6 +118,8 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// - The encoded password contains any other fields than: The algorithm name,
 /// version, m, t, p and the salt and password hash.
 /// - The encoded password hash contains invalid Base64 encoding.
+/// - Any decimal parameter value, such as m, contains leading zeroes and is longer
+/// than a single character.
 /// - `iterations` is less than 3.
 /// - `memory` is less than 8.
 /// - `password` is not 32 bytes.
