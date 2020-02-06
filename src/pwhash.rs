@@ -673,6 +673,25 @@ mod public {
         }
 
         #[test]
+        fn test_decimal_longer_than_one_char_first_not_0() {
+            // https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
+            // According to the specification, the decimal parameters may not start with 0, if there is more than
+            // one character in the string. .parse::<u32>() will ignore leading 0's, so it will parse "0032" -> 32u32.
+            // Test here that these cases are detected and rejected by returning an error.
+            let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let invalid0 = "$argon2i$v=019$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let invalid1 = "$argon2i$v=19$m=065536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let invalid2 = "$argon2i$v=19$m=65536,t=03,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let invalid3 = "$argon2i$v=19$m=65536,t=3,p=01$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(valid).is_ok());
+            assert!(PasswordHash::from_encoded(invalid0).is_err());
+            assert!(PasswordHash::from_encoded(invalid1).is_err());
+            assert!(PasswordHash::from_encoded(invalid2).is_err());
+            assert!(PasswordHash::from_encoded(invalid3).is_err());
+        }
+
+        #[test]
         fn test_from_slice_password() {
             assert!(PasswordHash::from_slice(&[0u8; 31], &[0u8; 16], 3, 1 << 16).is_err());
             assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 1 << 16).is_ok());
