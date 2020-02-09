@@ -28,7 +28,7 @@ use criterion::*;
 use orion::hazardous::{
     aead::{chacha20poly1305, xchacha20poly1305},
     hash::*,
-    kdf::{hkdf, pbkdf2},
+    kdf::{argon2i, hkdf, pbkdf2},
     mac::{hmac, poly1305},
     stream::*,
 };
@@ -399,10 +399,37 @@ mod kdf {
         }
     }
 
+    pub fn bench_argon2i(c: &mut Criterion) {
+        let mut group = c.benchmark_group("Argon2i");
+
+        let iter = 3;
+        let mem = 512;
+        let password = [0u8; 16];
+        let salt = [0u8; 16];
+        let mut dk_out = [0u8; 32];
+
+        group.throughput(Throughput::Bytes(mem as u64));
+
+        group.bench_with_input(
+            BenchmarkId::new(
+                "derive bytes",
+                format!("iter: {}, mem (KiB): {}", iter, mem),
+            ),
+            &salt,
+            |b, _input_param| {
+                b.iter(|| {
+                    argon2i::derive_key(&password, &salt, iter, mem, None, None, &mut dk_out)
+                        .unwrap()
+                })
+            },
+        );
+    }
+
     criterion_group! {
         name = kdf_benches;
         config = Criterion::default();
         targets =
+        bench_argon2i,
         bench_hkdf,
         bench_pbkdf2,
     }

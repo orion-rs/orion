@@ -110,8 +110,6 @@ pub(crate) const MIN_MEMORY: u32 = 8 * LANES;
 /// The minimum amount of iterations.
 pub(crate) const MIN_ITERATIONS: u32 = 1;
 
-#[must_use]
-#[inline(always)]
 const fn lower_mult_add(x: u64, y: u64) -> u64 {
     let mask = 0xFFFF_FFFFu64;
     let x_l = x & mask;
@@ -242,7 +240,7 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError>
 }
 
 #[rustfmt::skip]
-fn fill_block(w: &mut [u64]) {
+fn fill_block(w: &mut [u64; 128]) {
 	
 	let mut v0:  u64; let mut v1:  u64; let mut v2:  u64; let mut v3:  u64;
 	let mut v4:  u64; let mut v5:  u64; let mut v6:  u64; let mut v7:  u64; 
@@ -556,15 +554,19 @@ pub fn derive_key(
                     n_blocks - 1
                 };
 
-                prev_b.copy_from_slice(&blocks[previous_idx as usize]);
-                ref_b.copy_from_slice(&blocks[reference_idx as usize]);
+                prev_b.copy_from_slice(blocks.get(previous_idx as usize).unwrap());
+                ref_b.copy_from_slice(blocks.get(reference_idx as usize).unwrap());
 
-                g_xor(&prev_b, &ref_b, &mut blocks[current_idx as usize]);
+                g_xor(
+                    &prev_b,
+                    &ref_b,
+                    blocks.get_mut(current_idx as usize).unwrap(),
+                );
             }
         }
     }
 
-    store_into(&blocks[n_blocks as usize - 1], &mut tmp);
+    store_into(blocks.get(n_blocks as usize - 1).unwrap(), &mut tmp);
     extended_hash(&tmp, dst_out)?;
 
     prev_b.zeroize();
