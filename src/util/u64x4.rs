@@ -108,11 +108,12 @@ impl U64x4 {
     }
 
     #[inline(always)]
-    pub(crate) fn store_into_le(self, dst: &mut [u8]) {
-        debug_assert!(dst.len() == core::mem::size_of::<u64>() * 4);
-        dst[0..8].copy_from_slice(&self.0.to_le_bytes());
-        dst[8..16].copy_from_slice(&self.1.to_le_bytes());
-        dst[16..24].copy_from_slice(&self.2.to_le_bytes());
-        dst[24..32].copy_from_slice(&self.3.to_le_bytes());
+    pub(crate) fn store_into_le(self, slice_in: &mut [u8]) {
+        debug_assert!(slice_in.len() == core::mem::size_of::<u64>() * 4);
+        let mut iter = slice_in.chunks_exact_mut(core::mem::size_of::<u64>());
+        iter.next().unwrap().copy_from_slice(&self.0.to_le_bytes());
+        iter.next().unwrap().copy_from_slice(&self.1.to_le_bytes());
+        iter.next().unwrap().copy_from_slice(&self.2.to_le_bytes());
+        iter.next().unwrap().copy_from_slice(&self.3.to_le_bytes());
     }
 }

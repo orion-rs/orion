@@ -24,6 +24,8 @@ use crate::errors;
 use subtle::ConstantTimeEq;
 
 /// xor_slices!(src, destination): XOR $src into $destination slice.
+/// Uses iter() and .zip(), so it short-circuits on the slice that has
+/// the smallest length.
 macro_rules! xor_slices {
     ($src:expr, $destination:expr) => {
         for (inplace, _src_elem) in $destination.iter_mut().zip($src.iter()) {
