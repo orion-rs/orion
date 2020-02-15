@@ -143,38 +143,39 @@ construct_public! {
 
 impl_from_trait!(Nonce, IETF_CHACHA_NONCESIZE);
 
-/// ChaCha quarter round.
-fn round(r0: &mut U32x4, r1: &mut U32x4, r2: &mut U32x4, r3: &mut U32x4) {
-    *r0 = r0.wrapping_add(*r1);
-    *r3 = (*r3 ^ *r0).rotate_left(16);
-
-    *r2 = r2.wrapping_add(*r3);
-    *r1 = (*r1 ^ *r2).rotate_left(12);
-
-    *r0 = r0.wrapping_add(*r1);
-    *r3 = (*r3 ^ *r0).rotate_left(8);
-
-    *r2 = r2.wrapping_add(*r3);
-    *r1 = (*r1 ^ *r2).rotate_left(7);
+macro_rules! ROUND {
+    ($r0:expr, $r1:expr, $r2:expr, $r3:expr) => (
+        $r0 = $r0.wrapping_add($r1);
+        $r3 = ($r3 ^ $r0).rotate_left(16);
+    
+        $r2 = $r2.wrapping_add($r3);
+        $r1 = ($r1 ^ $r2).rotate_left(12);
+    
+        $r0 = $r0.wrapping_add($r1);
+        $r3 = ($r3 ^ $r0).rotate_left(8);
+    
+        $r2 = $r2.wrapping_add($r3);
+        $r1 = ($r1 ^ $r2).rotate_left(7);
+    );
 }
 
-/// Double round operation with shuffle.
-fn double_round(r0: &mut U32x4, r1: &mut U32x4, r2: &mut U32x4, r3: &mut U32x4) {
-    round(r0, r1, r2, r3);
+macro_rules! DOUBLE_ROUND {
+    ($r0:expr, $r1:expr, $r2:expr, $r3:expr) => (
+        ROUND!($r0, $r1, $r2, $r3);
 
-    // Shuffle
-    *r1 = r1.shl_1();
-    *r2 = r2.shl_2();
-    *r3 = r3.shl_3();
+        // Shuffle
+        $r1 = $r1.shl_1();
+        $r2 = $r2.shl_2();
+        $r3 = $r3.shl_3();
 
-    round(r0, r1, r2, r3);
+        ROUND!($r0, $r1, $r2, $r3);
 
-    // Unshuffle
-    *r1 = r1.shl_3();
-    *r2 = r2.shl_2();
-    *r3 = r3.shl_1();
+        // Unshuffle
+        $r1 = $r1.shl_3();
+        $r2 = $r2.shl_2();
+        $r3 = $r3.shl_1();
+    );
 }
-
 struct InternalState {
     state: [U32x4; 4],
     internal_counter: u32,
@@ -270,16 +271,16 @@ impl InternalState {
         let mut wr2 = self.state[2];
         let mut wr3 = self.state[3];
 
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
-        double_round(&mut wr0, &mut wr1, &mut wr2, &mut wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
+        DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
 
         let mut iter = inplace.chunks_exact_mut(16);
 
