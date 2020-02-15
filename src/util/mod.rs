@@ -23,6 +23,15 @@
 use crate::errors;
 use subtle::ConstantTimeEq;
 
+/// xor_slices!(src, destination): XOR $src into $destination slice.
+macro_rules! xor_slices {
+    ($src:expr, $destination:expr) => {
+        for (inplace, _src_elem) in $destination.iter_mut().zip($src.iter()) {
+            *inplace ^= _src_elem;
+        }
+    };
+}
+
 pub(crate) mod endianness;
 pub(crate) mod u32x4;
 pub(crate) mod u64x4;

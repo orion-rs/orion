@@ -249,12 +249,12 @@ impl InternalState {
         })
     }
 
-    #[inline(always)]
-    /// Process either a ChaCha20 or HChaCha20 block.
-    fn process_block(
+    /// Process the next keystream and XOR into destination array.
+    fn xor_keystream_block(
         &mut self,
         block_counter: Option<u32>,
-    ) -> Result<[U32x4; 4], UnknownCryptoError> {
+        inplace: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
         if self.is_ietf {
             match block_counter {
                 Some(counter) => self.state[3].0 = counter,
@@ -290,54 +290,23 @@ impl InternalState {
             wr1 = wr1.wrapping_add(self.state[1]);
             wr2 = wr2.wrapping_add(self.state[2]);
             wr3 = wr3.wrapping_add(self.state[3]);
+
+            debug_assert!(inplace.len() == CHACHA_BLOCKSIZE);
+
+            let mut iter = inplace.chunks_exact_mut(16);
+            wr0.xor_row_into(iter.next().unwrap());
+            wr1.xor_row_into(iter.next().unwrap());
+            wr2.xor_row_into(iter.next().unwrap());
+            wr3.xor_row_into(iter.next().unwrap());
+        } else {
+            debug_assert!(inplace.len() == HCHACHA_OUTSIZE);
+
+            let mut iter = inplace.chunks_exact_mut(16);
+            wr0.xor_row_into(iter.next().unwrap());
+            wr3.xor_row_into(iter.next().unwrap());
         }
 
-        Ok([wr0, wr1, wr2, wr3])
-    }
-}
-
-macro_rules! xor_slices {
-    ($destination:expr, $other:expr) => {
-        for (inplace, _other) in $destination.iter_mut().zip($other.iter()) {
-            *inplace ^= _other;
-        }
-    };
-}
-
-/// Read a ChaCha state matrix row as bytes and XOR with 16-byte block.
-fn xor_row_into(row: &U32x4, slice_in: &mut [u8]) {
-    debug_assert!(slice_in.len() == 16);
-
-    xor_slices!(slice_in[0..4], row.0.to_le_bytes().as_ref());
-    xor_slices!(slice_in[4..8], row.1.to_le_bytes().as_ref());
-    xor_slices!(slice_in[8..12], row.2.to_le_bytes().as_ref());
-    xor_slices!(slice_in[12..16], row.3.to_le_bytes().as_ref());
-}
-
-enum Serialize {
-    IetfChaCha,
-    HChaCha,
-}
-
-impl Serialize {
-    #[inline]
-    fn xor_in_place(self, ks: &[U32x4; 4], inplace: &mut [u8]) {
-        match self {
-            Serialize::IetfChaCha => {
-                debug_assert!(inplace.len() == CHACHA_BLOCKSIZE);
-
-                for (vector_counter, inplace_block) in inplace.chunks_exact_mut(16).enumerate() {
-                    debug_assert!(vector_counter < 4);
-                    xor_row_into(&ks[vector_counter], inplace_block);
-                }
-            }
-            Serialize::HChaCha => {
-                debug_assert!(inplace.len() == HCHACHA_OUTSIZE);
-
-                xor_row_into(&ks[0], &mut inplace[0..16]);
-                xor_row_into(&ks[3], &mut inplace[16..32]);
-            }
-        }
+        Ok(())
     }
 }
 
@@ -358,17 +327,13 @@ pub(crate) fn encrypt_in_place(
         let block_counter = initial_counter.checked_add(counter as u32);
 
         if block_counter.is_some() {
-            let keystream_state = state.process_block(block_counter)?;
-
             if bytes_block.len() == CHACHA_BLOCKSIZE {
-                Serialize::IetfChaCha.xor_in_place(&keystream_state, bytes_block);
+                state.xor_keystream_block(block_counter, bytes_block)?;
             } else {
-                let block_len = bytes_block.len();
                 let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
-
-                keystream_block[..block_len].copy_from_slice(bytes_block);
-                Serialize::IetfChaCha.xor_in_place(&keystream_state, &mut keystream_block);
-                bytes_block.copy_from_slice(keystream_block[..block_len].as_ref());
+                keystream_block[..bytes_block.len()].copy_from_slice(bytes_block);
+                state.xor_keystream_block(block_counter, &mut keystream_block)?;
+                bytes_block.copy_from_slice(keystream_block[..bytes_block.len()].as_ref());
                 keystream_block.zeroize();
             }
         } else {
@@ -426,10 +391,7 @@ pub fn keystream_block(
     let mut chacha_state =
         InternalState::new(secret_key.unprotected_as_bytes(), &nonce.as_ref(), true)?;
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
-    Serialize::IetfChaCha.xor_in_place(
-        &chacha_state.process_block(Some(counter))?,
-        &mut keystream_block,
-    );
+    chacha_state.xor_keystream_block(Some(counter), &mut keystream_block)?;
 
     Ok(keystream_block)
 }
@@ -442,7 +404,7 @@ pub(super) fn hchacha20(
 ) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
     let mut chacha_state = InternalState::new(secret_key.unprotected_as_bytes(), nonce, false)?;
     let mut keystream_block = [0u8; HCHACHA_OUTSIZE];
-    Serialize::HChaCha.xor_in_place(&chacha_state.process_block(None)?, &mut keystream_block);
+    chacha_state.xor_keystream_block(None, &mut keystream_block)?;
 
     Ok(keystream_block)
 }
@@ -1202,10 +1164,10 @@ mod private {
         }
     }
 
-    mod test_process_block {
+    mod test_xor_keystream {
         use super::*;
         #[test]
-        fn test_process_block_wrong_combination_of_variant_and_nonce() {
+        fn test_xor_keystream_wrong_combination_of_variant_and_nonce() {
             let mut chacha_state_ietf =
                 InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true)
                     .unwrap();
@@ -1213,15 +1175,64 @@ mod private {
                 InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false)
                     .unwrap();
 
-            assert!(chacha_state_hchacha.process_block(Some(1)).is_err());
-            assert!(chacha_state_ietf.process_block(None).is_err());
-            assert!(chacha_state_hchacha.process_block(None).is_ok());
-            assert!(chacha_state_ietf.process_block(Some(1)).is_ok());
+            let mut ietf_keystream_block = [0u8; CHACHA_BLOCKSIZE];
+            let mut hchacha_keystream_block = [0u8; HCHACHA_OUTSIZE];
+
+            assert!(chacha_state_hchacha
+                .xor_keystream_block(Some(1), &mut hchacha_keystream_block)
+                .is_err());
+            assert!(chacha_state_ietf
+                .xor_keystream_block(None, &mut ietf_keystream_block)
+                .is_err());
+            assert!(chacha_state_hchacha
+                .xor_keystream_block(None, &mut hchacha_keystream_block)
+                .is_ok());
+            assert!(chacha_state_ietf
+                .xor_keystream_block(Some(1), &mut ietf_keystream_block)
+                .is_ok());
+        }
+
+        #[cfg(debug_assertions)]
+        #[test]
+        #[should_panic]
+        fn test_xor_keystream_block_invalid_blocksize_ietf() {
+            let mut chacha_state_ietf =
+                InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true)
+                    .unwrap();
+
+            let mut ietf_keystream_block = [0u8; CHACHA_BLOCKSIZE];
+            let mut hchacha_keystream_block = [0u8; HCHACHA_OUTSIZE];
+
+            assert!(chacha_state_ietf
+                .xor_keystream_block(Some(0), &mut ietf_keystream_block)
+                .is_ok());
+            chacha_state_ietf
+                .xor_keystream_block(Some(1), &mut hchacha_keystream_block)
+                .unwrap();
+        }
+
+        #[cfg(debug_assertions)]
+        #[test]
+        #[should_panic]
+        fn test_xor_keystream_block_invalid_blocksize_hchacha() {
+            let mut chacha_state_hchacha =
+                InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false)
+                    .unwrap();
+
+            let mut ietf_keystream_block = [0u8; CHACHA_BLOCKSIZE];
+            let mut hchacha_keystream_block = [0u8; HCHACHA_OUTSIZE];
+
+            assert!(chacha_state_hchacha
+                .xor_keystream_block(None, &mut hchacha_keystream_block)
+                .is_ok());
+            chacha_state_hchacha
+                .xor_keystream_block(None, &mut ietf_keystream_block)
+                .unwrap();
         }
 
         #[test]
         #[should_panic]
-        fn test_process_block_panic_on_too_much_keystream_data_ietf() {
+        fn test_xor_keystream_panic_on_too_much_keystream_data_ietf() {
             let mut chacha_state_ietf = InternalState {
                 state: [
                     U32x4(0, 0, 0, 0),
@@ -1233,14 +1244,18 @@ mod private {
                 is_ietf: true,
             };
 
+            let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
+
             for amount in 0..(128 + 1) {
-                let _keystream_block = chacha_state_ietf.process_block(Some(amount as u32));
+                chacha_state_ietf
+                    .xor_keystream_block(Some(amount), &mut keystream_block)
+                    .unwrap();
             }
         }
 
         #[test]
         #[should_panic]
-        fn test_process_block_panic_on_too_much_keystream_data_hchacha() {
+        fn test_xor_keystream_panic_on_too_much_keystream_data_hchacha() {
             let mut chacha_state_ietf = InternalState {
                 state: [
                     U32x4(0, 0, 0, 0),
@@ -1252,8 +1267,12 @@ mod private {
                 is_ietf: false,
             };
 
+            let mut keystream_block = [0u8; HCHACHA_OUTSIZE];
+
             for _ in 0..(128 + 1) {
-                let _keystream_block = chacha_state_ietf.process_block(None);
+                chacha_state_ietf
+                    .xor_keystream_block(None, &mut keystream_block)
+                    .unwrap();
             }
         }
     }
@@ -1306,9 +1325,8 @@ mod test_vectors {
         state.state[3].0 = 1;
         assert!(state.state[..] == expected_init[..]);
 
-        let keystream_block_from_state = state.process_block(Some(1)).unwrap();
-        let mut ser_block = [0u8; 64];
-        Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
+        let mut kb = [0u8; 64];
+        state.xor_keystream_block(Some(1), &mut kb).unwrap();
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1317,8 +1335,8 @@ mod test_vectors {
         )
         .unwrap();
 
-        assert_eq!(ser_block[..], expected[..]);
-        assert_eq!(ser_block[..], keystream_block_only[..]);
+        assert_eq!(kb[..], expected[..]);
+        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1338,20 +1356,10 @@ mod test_vectors {
             0xe0, 0x3f, 0xb8, 0xd8, 0x4a, 0x37, 0x6a, 0x43, 0xb8, 0xf4, 0x15, 0x18, 0xa1, 0x1c,
             0xc3, 0x87, 0xb6, 0x69, 0xb2, 0xee, 0x65, 0x86,
         ];
-        // Unserialized state
-        let expected_state = [
-            U32x4(0xade0b876, 0x903df1a0, 0xe56a5d40, 0x28bd8653),
-            U32x4(0xb819d2bd, 0x1aed8da0, 0xccef36a8, 0xc70d778b),
-            U32x4(0x7c5941da, 0x8d485751, 0x3fe02477, 0x374ad8b8),
-            U32x4(0xf4b8436a, 0x1ca11815, 0x69b687c3, 0x8665eeb2),
-        ];
 
         let mut state = init(&key, &nonce).unwrap();
-        let keystream_block_from_state = state.process_block(Some(0)).unwrap();
-        assert!(keystream_block_from_state[..] == expected_state[..]);
-
-        let mut ser_block = [0u8; 64];
-        Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
+        let mut kb = [0u8; 64];
+        state.xor_keystream_block(Some(0), &mut kb).unwrap();
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1360,8 +1368,8 @@ mod test_vectors {
         )
         .unwrap();
 
-        assert_eq!(ser_block[..], expected[..]);
-        assert_eq!(ser_block[..], keystream_block_only[..]);
+        assert_eq!(kb[..], expected[..]);
+        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1381,20 +1389,10 @@ mod test_vectors {
             0x33, 0xb0, 0x74, 0xd8, 0x39, 0xd5, 0x31, 0xed, 0x1f, 0x28, 0x51, 0x0a, 0xfb, 0x45,
             0xac, 0xe1, 0x0a, 0x1f, 0x4b, 0x79, 0x4d, 0x6f,
         ];
-        // Unserialized state
-        let expected_state = [
-            U32x4(0xbee7079f, 0x7a385155, 0x7c97ba98, 0x0d082d73),
-            U32x4(0xa0290fcb, 0x6965e348, 0x3e53c612, 0xed7aee32),
-            U32x4(0x7621b729, 0x434ee69c, 0xb03371d5, 0xd539d874),
-            U32x4(0x281fed31, 0x45fb0a51, 0x1f0ae1ac, 0x6f4d794b),
-        ];
 
         let mut state = init(&key, &nonce).unwrap();
-        let keystream_block_from_state = state.process_block(Some(1)).unwrap();
-        assert!(keystream_block_from_state[..] == expected_state[..]);
-
-        let mut ser_block = [0u8; 64];
-        Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
+        let mut kb = [0u8; 64];
+        state.xor_keystream_block(Some(1), &mut kb).unwrap();
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1403,8 +1401,8 @@ mod test_vectors {
         )
         .unwrap();
 
-        assert_eq!(ser_block[..], expected[..]);
-        assert_eq!(ser_block[..], keystream_block_only[..]);
+        assert_eq!(kb[..], expected[..]);
+        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1424,20 +1422,10 @@ mod test_vectors {
             0xb5, 0xc4, 0x2f, 0x73, 0xf2, 0xfd, 0x4e, 0x27, 0x36, 0x44, 0xc8, 0xb3, 0x61, 0x25,
             0xa6, 0x4a, 0xdd, 0xeb, 0x00, 0x6c, 0x13, 0xa0,
         ];
-        // Unserialized state
-        let expected_state = [
-            U32x4(0x2452eb3a, 0x9249f8ec, 0x8d829d9b, 0xddd4ceb1),
-            U32x4(0xe8252083, 0x60818b01, 0xf38422b8, 0x5aaa49c9),
-            U32x4(0xbb00ca8e, 0xda3ba7b4, 0xc4b592d1, 0xfdf2732f),
-            U32x4(0x4436274e, 0x2561b3c8, 0xebdd4aa6, 0xa0136c00),
-        ];
 
         let mut state = init(&key, &nonce).unwrap();
-        let keystream_block_from_state = state.process_block(Some(1)).unwrap();
-        assert!(keystream_block_from_state[..] == expected_state[..]);
-
-        let mut ser_block = [0u8; 64];
-        Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
+        let mut kb = [0u8; 64];
+        state.xor_keystream_block(Some(1), &mut kb).unwrap();
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1446,8 +1434,8 @@ mod test_vectors {
         )
         .unwrap();
 
-        assert_eq!(ser_block[..], expected[..]);
-        assert_eq!(ser_block[..], keystream_block_only[..]);
+        assert_eq!(kb[..], expected[..]);
+        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1467,20 +1455,10 @@ mod test_vectors {
             0x9d, 0x1b, 0xe6, 0x5b, 0x2c, 0x09, 0x24, 0xa6, 0x6c, 0x54, 0xd5, 0x45, 0xec, 0x1b,
             0x73, 0x74, 0xf4, 0x87, 0x2e, 0x99, 0xf0, 0x96,
         ];
-        // Unserialized state
-        let expected_state = [
-            U32x4(0xfb4dd572, 0x4bc42ef1, 0xdf922636, 0x327f1394),
-            U32x4(0xa78dea8f, 0x5e269039, 0xa1bebbc1, 0xcaf09aae),
-            U32x4(0xa25ab213, 0x48a6b46c, 0x1b9d9bcb, 0x092c5be6),
-            U32x4(0x546ca624, 0x1bec45d5, 0x87f47473, 0x96f0992e),
-        ];
 
         let mut state = init(&key, &nonce).unwrap();
-        let keystream_block_from_state = state.process_block(Some(2)).unwrap();
-        assert!(keystream_block_from_state[..] == expected_state[..]);
-
-        let mut ser_block = [0u8; 64];
-        Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
+        let mut kb = [0u8; 64];
+        state.xor_keystream_block(Some(2), &mut kb).unwrap();
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1489,8 +1467,8 @@ mod test_vectors {
         )
         .unwrap();
 
-        assert_eq!(ser_block[..], expected[..]);
-        assert_eq!(ser_block[..], keystream_block_only[..]);
+        assert_eq!(kb[..], expected[..]);
+        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1510,20 +1488,10 @@ mod test_vectors {
             0x74, 0x1b, 0x97, 0xc2, 0x86, 0xf7, 0x5f, 0x8f, 0xc2, 0x99, 0xe8, 0x14, 0x83, 0x62,
             0xfa, 0x19, 0x8a, 0x39, 0x53, 0x1b, 0xed, 0x6d,
         ];
-        // Unserialized state
-        let expected_state = [
-            U32x4(0x374dc6c2, 0x3736d58c, 0xb904e24a, 0xcd3f93ef),
-            U32x4(0x88228b1a, 0x96a4dfb3, 0x5b76ab72, 0xc727ee54),
-            U32x4(0x0e0e978a, 0xf3145c95, 0x1b748ea8, 0xf786c297),
-            U32x4(0x99c28f5f, 0x628314e8, 0x398a19fa, 0x6ded1b53),
-        ];
 
         let mut state = init(&key, &nonce).unwrap();
-        let keystream_block_from_state = state.process_block(Some(0)).unwrap();
-        assert!(keystream_block_from_state[..] == expected_state[..]);
-
-        let mut ser_block = [0u8; 64];
-        Serialize::IetfChaCha.xor_in_place(&keystream_block_from_state, &mut ser_block);
+        let mut kb = [0u8; 64];
+        state.xor_keystream_block(Some(0), &mut kb).unwrap();
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1532,105 +1500,7 @@ mod test_vectors {
         )
         .unwrap();
 
-        assert_eq!(ser_block[..], expected[..]);
-        assert_eq!(ser_block[..], keystream_block_only[..]);
-    }
-
-    #[test]
-    fn rfc8439_key_schedule() {
-        let key = [
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
-            0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b,
-            0x1c, 0x1d, 0x1e, 0x1f,
-        ];
-        let nonce = [
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00,
-        ];
-        // First block setup expected
-        let first_state = [
-            U32x4(0x61707865, 0x3320646e, 0x79622d32, 0x6b206574),
-            U32x4(0x03020100, 0x07060504, 0x0b0a0908, 0x0f0e0d0c),
-            U32x4(0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c),
-            U32x4(0x00000001, 0x00000000, 0x4a000000, 0x00000000),
-        ];
-        // Second block setup expected
-        let second_state = [
-            U32x4(0x61707865, 0x3320646e, 0x79622d32, 0x6b206574),
-            U32x4(0x03020100, 0x07060504, 0x0b0a0908, 0x0f0e0d0c),
-            U32x4(0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c),
-            U32x4(0x00000002, 0x00000000, 0x4a000000, 0x00000000),
-        ];
-
-        // First block operation expected
-        let first_block = [
-            U32x4(0xf3514f22, 0xe1d91b40, 0x6f27de2f, 0xed1d63b8),
-            U32x4(0x821f138c, 0xe2062c3d, 0xecca4f7e, 0x78cff39e),
-            U32x4(0xa30a3b8a, 0x920a6072, 0xcd7479b5, 0x34932bed),
-            U32x4(0x40ba4c79, 0xcd343ec6, 0x4c2c21ea, 0xb7417df0),
-        ];
-        // Second block operation expected
-        let second_block = [
-            U32x4(0x9f74a669, 0x410f633f, 0x28feca22, 0x7ec44dec),
-            U32x4(0x6d34d426, 0x738cb970, 0x3ac5e9f3, 0x45590cc4),
-            U32x4(0xda6e8b39, 0x892c831a, 0xcdea67c1, 0x2b7e1d90),
-            U32x4(0x037463f3, 0xa11a2073, 0xe8bcfb88, 0xedc49139),
-        ];
-
-        // Expected keystream
-        let expected_keystream = [
-            0x22, 0x4f, 0x51, 0xf3, 0x40, 0x1b, 0xd9, 0xe1, 0x2f, 0xde, 0x27, 0x6f, 0xb8, 0x63,
-            0x1d, 0xed, 0x8c, 0x13, 0x1f, 0x82, 0x3d, 0x2c, 0x06, 0xe2, 0x7e, 0x4f, 0xca, 0xec,
-            0x9e, 0xf3, 0xcf, 0x78, 0x8a, 0x3b, 0x0a, 0xa3, 0x72, 0x60, 0x0a, 0x92, 0xb5, 0x79,
-            0x74, 0xcd, 0xed, 0x2b, 0x93, 0x34, 0x79, 0x4c, 0xba, 0x40, 0xc6, 0x3e, 0x34, 0xcd,
-            0xea, 0x21, 0x2c, 0x4c, 0xf0, 0x7d, 0x41, 0xb7, 0x69, 0xa6, 0x74, 0x9f, 0x3f, 0x63,
-            0x0f, 0x41, 0x22, 0xca, 0xfe, 0x28, 0xec, 0x4d, 0xc4, 0x7e, 0x26, 0xd4, 0x34, 0x6d,
-            0x70, 0xb9, 0x8c, 0x73, 0xf3, 0xe9, 0xc5, 0x3a, 0xc4, 0x0c, 0x59, 0x45, 0x39, 0x8b,
-            0x6e, 0xda, 0x1a, 0x83, 0x2c, 0x89, 0xc1, 0x67, 0xea, 0xcd, 0x90, 0x1d, 0x7e, 0x2b,
-            0xf3, 0x63,
-        ];
-
-        let mut state = init(&key, &nonce).unwrap();
-        // Block call with initial counter
-        let first_block_state = state.process_block(Some(1)).unwrap();
-        assert!(first_block_state == first_block);
-        // Test first internal state
-        assert!(first_state == state.state);
-
-        // Next iteration call, increase counter
-        let second_block_state = state.process_block(Some(1 + 1)).unwrap();
-        assert!(second_block_state == second_block);
-        // Test second internal state
-        assert!(second_state == state.state);
-
-        let mut actual_keystream = [0u8; 128];
-        // Append first keystream block
-        Serialize::IetfChaCha.xor_in_place(&first_block_state, &mut actual_keystream[..64]);
-        Serialize::IetfChaCha.xor_in_place(&second_block_state, &mut actual_keystream[64..]);
-        assert_eq!(
-            actual_keystream[..expected_keystream.len()].as_ref(),
-            expected_keystream.as_ref()
-        );
-
-        actual_keystream[..64].copy_from_slice(
-            &keystream_block(
-                &SecretKey::from_slice(&key).unwrap(),
-                &Nonce::from_slice(&nonce).unwrap(),
-                1,
-            )
-            .unwrap(),
-        );
-        actual_keystream[64..].copy_from_slice(
-            &keystream_block(
-                &SecretKey::from_slice(&key).unwrap(),
-                &Nonce::from_slice(&nonce).unwrap(),
-                1 + 1,
-            )
-            .unwrap(),
-        );
-
-        assert_eq!(
-            actual_keystream[..expected_keystream.len()].as_ref(),
-            expected_keystream.as_ref()
-        );
+        assert_eq!(kb[..], expected[..]);
+        assert_eq!(kb[..], keystream_block_only[..]);
     }
 }

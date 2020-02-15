@@ -83,4 +83,14 @@ impl U32x4 {
             self.3.rotate_left(n),
         )
     }
+
+    #[inline(always)]
+    pub fn xor_row_into(&self, slice_in: &mut [u8]) {
+        debug_assert!(slice_in.len() == 16);
+        let mut iter = slice_in.chunks_exact_mut(core::mem::size_of::<u32>());
+        xor_slices!(self.0.to_le_bytes(), iter.next().unwrap());
+        xor_slices!(self.1.to_le_bytes(), iter.next().unwrap());
+        xor_slices!(self.2.to_le_bytes(), iter.next().unwrap());
+        xor_slices!(self.3.to_le_bytes(), iter.next().unwrap());
+    }
 }
