@@ -250,22 +250,16 @@ impl InternalState {
     }
 
     /// Process the next keystream and XOR into destination array.
-    fn xor_keystream_block(&mut self, block_counter: Option<u32>, inplace: &mut [u8]) {
-        debug_assert!(if self.is_ietf {
-            block_counter.is_some()
-        } else {
-            block_counter.is_none()
-        });
+    fn xor_keystream_block(&mut self, block_counter: u32, inplace: &mut [u8]) {
         debug_assert!(if self.is_ietf {
             inplace.len() == CHACHA_BLOCKSIZE
         } else {
             inplace.len() == HCHACHA_OUTSIZE
         });
 
-        match block_counter {
-            Some(counter) => self.state[3].0 = counter,
-            None => (),
-        };
+        if self.is_ietf {
+            self.state[3].0 = block_counter;
+        }
 
         // If this panics, max amount of keystream blocks
         // have been retrieved.
@@ -317,23 +311,22 @@ pub(crate) fn encrypt_in_place(
         return Err(UnknownCryptoError);
     }
 
-    let mut state = InternalState::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true)?;
+    let mut ctx = InternalState::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true)?;
 
-    for (counter, bytes_block) in bytes.chunks_mut(CHACHA_BLOCKSIZE).enumerate() {
-        let block_counter = initial_counter.checked_add(counter as u32);
-
-        if block_counter.is_some() {
-            if bytes_block.len() == CHACHA_BLOCKSIZE {
-                state.xor_keystream_block(block_counter, bytes_block);
-            } else {
-                let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
-                keystream_block[..bytes_block.len()].copy_from_slice(bytes_block);
-                state.xor_keystream_block(block_counter, &mut keystream_block);
-                bytes_block.copy_from_slice(keystream_block[..bytes_block.len()].as_ref());
-                keystream_block.zeroize();
+    for (ctr, bytes_block) in bytes.chunks_mut(CHACHA_BLOCKSIZE).enumerate() {
+        match initial_counter.checked_add(ctr as u32) {
+            Some(counter) => {
+                if bytes_block.len() == CHACHA_BLOCKSIZE {
+                    ctx.xor_keystream_block(counter, bytes_block);
+                } else {
+                    let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
+                    keystream_block[..bytes_block.len()].copy_from_slice(bytes_block);
+                    ctx.xor_keystream_block(counter, &mut keystream_block);
+                    bytes_block.copy_from_slice(keystream_block[..bytes_block.len()].as_ref());
+                    keystream_block.zeroize();
+                }
             }
-        } else {
-            return Err(UnknownCryptoError);
+            None => return Err(UnknownCryptoError),
         }
     }
 
@@ -387,7 +380,7 @@ pub fn keystream_block(
     let mut chacha_state =
         InternalState::new(secret_key.unprotected_as_bytes(), &nonce.as_ref(), true)?;
     let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
-    chacha_state.xor_keystream_block(Some(counter), &mut keystream_block);
+    chacha_state.xor_keystream_block(counter, &mut keystream_block);
 
     Ok(keystream_block)
 }
@@ -400,7 +393,7 @@ pub(super) fn hchacha20(
 ) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
     let mut chacha_state = InternalState::new(secret_key.unprotected_as_bytes(), nonce, false)?;
     let mut keystream_block = [0u8; HCHACHA_OUTSIZE];
-    chacha_state.xor_keystream_block(None, &mut keystream_block);
+    chacha_state.xor_keystream_block(0, &mut keystream_block);
 
     Ok(keystream_block)
 }
@@ -1163,32 +1156,20 @@ mod private {
     mod test_xor_keystream {
         use super::*;
 
-        #[cfg(debug_assertions)]
         #[test]
-        #[should_panic]
-        fn test_xor_keystream_block_wrong_combination_of_variant_and_counter_ietf() {
-            let mut chacha_state_ietf =
-                InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true)
-                    .unwrap();
-
-            let mut ietf_keystream_block = [0u8; CHACHA_BLOCKSIZE];
-
-            chacha_state_ietf.xor_keystream_block(Some(0), &mut ietf_keystream_block);
-            chacha_state_ietf.xor_keystream_block(None, &mut ietf_keystream_block);
-        }
-
-        #[cfg(debug_assertions)]
-        #[test]
-        #[should_panic]
-        fn test_xor_keystream_block_wrong_combination_of_variant_and_counter_hchacha() {
+        fn test_xor_keystream_block_ignore_counter_when_hchacha() {
             let mut chacha_state_hchacha =
                 InternalState::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false)
                     .unwrap();
 
-            let mut hchacha_keystream_block = [0u8; HCHACHA_OUTSIZE];
+            let mut hchacha_keystream_block_zero = [0u8; HCHACHA_OUTSIZE];
+            let mut hchacha_keystream_block_max = [0u8; HCHACHA_OUTSIZE];
 
-            chacha_state_hchacha.xor_keystream_block(None, &mut hchacha_keystream_block);
-            chacha_state_hchacha.xor_keystream_block(Some(0), &mut hchacha_keystream_block);
+            chacha_state_hchacha.xor_keystream_block(0, &mut hchacha_keystream_block_zero);
+            chacha_state_hchacha
+                .xor_keystream_block(u32::max_value(), &mut hchacha_keystream_block_max);
+
+            assert_eq!(hchacha_keystream_block_zero, hchacha_keystream_block_max);
         }
 
         #[cfg(debug_assertions)]
@@ -1202,8 +1183,8 @@ mod private {
             let mut ietf_keystream_block = [0u8; CHACHA_BLOCKSIZE];
             let mut hchacha_keystream_block = [0u8; HCHACHA_OUTSIZE];
 
-            chacha_state_ietf.xor_keystream_block(Some(0), &mut ietf_keystream_block);
-            chacha_state_ietf.xor_keystream_block(Some(1), &mut hchacha_keystream_block);
+            chacha_state_ietf.xor_keystream_block(0, &mut ietf_keystream_block);
+            chacha_state_ietf.xor_keystream_block(0, &mut hchacha_keystream_block);
         }
 
         #[cfg(debug_assertions)]
@@ -1217,8 +1198,8 @@ mod private {
             let mut ietf_keystream_block = [0u8; CHACHA_BLOCKSIZE];
             let mut hchacha_keystream_block = [0u8; HCHACHA_OUTSIZE];
 
-            chacha_state_hchacha.xor_keystream_block(None, &mut hchacha_keystream_block);
-            chacha_state_hchacha.xor_keystream_block(None, &mut ietf_keystream_block);
+            chacha_state_hchacha.xor_keystream_block(0, &mut hchacha_keystream_block);
+            chacha_state_hchacha.xor_keystream_block(0, &mut ietf_keystream_block);
         }
 
         #[test]
@@ -1238,7 +1219,7 @@ mod private {
             let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
 
             for amount in 0..(128 + 1) {
-                chacha_state_ietf.xor_keystream_block(Some(amount), &mut keystream_block);
+                chacha_state_ietf.xor_keystream_block(amount, &mut keystream_block);
             }
         }
 
@@ -1259,7 +1240,7 @@ mod private {
             let mut keystream_block = [0u8; HCHACHA_OUTSIZE];
 
             for _ in 0..(128 + 1) {
-                chacha_state_ietf.xor_keystream_block(None, &mut keystream_block);
+                chacha_state_ietf.xor_keystream_block(0, &mut keystream_block);
             }
         }
     }
@@ -1313,7 +1294,7 @@ mod test_vectors {
         assert!(state.state[..] == expected_init[..]);
 
         let mut kb = [0u8; 64];
-        state.xor_keystream_block(Some(1), &mut kb);
+        state.xor_keystream_block(1, &mut kb);
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1346,7 +1327,7 @@ mod test_vectors {
 
         let mut state = init(&key, &nonce).unwrap();
         let mut kb = [0u8; 64];
-        state.xor_keystream_block(Some(0), &mut kb);
+        state.xor_keystream_block(0, &mut kb);
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1379,7 +1360,7 @@ mod test_vectors {
 
         let mut state = init(&key, &nonce).unwrap();
         let mut kb = [0u8; 64];
-        state.xor_keystream_block(Some(1), &mut kb);
+        state.xor_keystream_block(1, &mut kb);
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1412,7 +1393,7 @@ mod test_vectors {
 
         let mut state = init(&key, &nonce).unwrap();
         let mut kb = [0u8; 64];
-        state.xor_keystream_block(Some(1), &mut kb);
+        state.xor_keystream_block(1, &mut kb);
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1445,7 +1426,7 @@ mod test_vectors {
 
         let mut state = init(&key, &nonce).unwrap();
         let mut kb = [0u8; 64];
-        state.xor_keystream_block(Some(2), &mut kb);
+        state.xor_keystream_block(2, &mut kb);
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
@@ -1478,7 +1459,7 @@ mod test_vectors {
 
         let mut state = init(&key, &nonce).unwrap();
         let mut kb = [0u8; 64];
-        state.xor_keystream_block(Some(0), &mut kb);
+        state.xor_keystream_block(0, &mut kb);
 
         let keystream_block_only = keystream_block(
             &SecretKey::from_slice(&key).unwrap(),
