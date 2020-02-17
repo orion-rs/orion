@@ -215,10 +215,7 @@ impl StreamXChaCha20Poly1305 {
         let mut pad = [0u8; 16];
         let mut poly = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block));
 
-        if !ad.is_empty() {
-            poly.update(ad)?;
-            poly.update(&pad[..padding(ad.len())])?;
-        }
+        poly.process_pad_to_blocksize(ad)?;
         poly.update(block)?;
         poly.update(&text[textpos..(textpos + msglen)])?;
         poly.update(&pad[..padding(CHACHA_BLOCKSIZE.wrapping_sub(msglen))])?;

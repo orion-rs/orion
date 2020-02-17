@@ -51,6 +51,7 @@
 //! - `plaintext` or `ciphertext_with_tag` are empty.
 //! - The received tag does not match the calculated tag when decrypting.
 //! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when encrypting.
+//! - The length of
 //!
 //! # Panics:
 //! A panic will occur if:
@@ -105,14 +106,21 @@ use crate::{
     },
     util,
 };
+use core::convert::TryInto;
 use zeroize::Zeroizing;
+
+/// The initial counter used for encryption and decryption.
+const ENC_CTR: u32 = 1;
+
+/// The initial counter used for Poly1305 key generation.
+const AUTH_CTR: u32 = 0;
 
 /// Poly1305 key generation using IETF ChaCha20.
 pub(crate) fn poly1305_key_gen(
     ctx: &mut ChaCha20,
     tmp_buffer: &mut Zeroizing<[u8; CHACHA_BLOCKSIZE]>,
 ) -> OneTimeKey {
-    ctx.keystream_block(0, tmp_buffer.as_mut());
+    ctx.keystream_block(AUTH_CTR, tmp_buffer.as_mut());
     OneTimeKey::from_slice(&tmp_buffer[..POLY1305_KEYSIZE]).unwrap()
 }
 
@@ -143,9 +151,14 @@ fn process_authentication(
     auth_ctx.process_pad_to_blocksize(ad)?;
     auth_ctx.process_pad_to_blocksize(ciphertext)?;
 
+    let (ad_len, ct_len): (u64, u64) = match (ad.len().try_into(), ciphertext.len().try_into()) {
+        (Ok(alen), Ok(clen)) => (alen, clen),
+        _ => return Err(UnknownCryptoError),
+    };
+
     let mut tmp_pad = [0u8; 16];
-    tmp_pad[0..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
-    tmp_pad[8..16].copy_from_slice(&(ciphertext.len() as u64).to_le_bytes());
+    tmp_pad[0..8].copy_from_slice(&ad_len.to_le_bytes());
+    tmp_pad[8..16].copy_from_slice(&ct_len.to_le_bytes());
     auth_ctx.update(tmp_pad.as_ref())
 }
 
@@ -160,39 +173,29 @@ pub fn seal(
 ) -> Result<(), UnknownCryptoError> {
     match plaintext.len().checked_add(POLY1305_OUTSIZE) {
         Some(out_min_len) => {
-            if dst_out.len() < out_min_len {
+            if dst_out.len() < out_min_len || out_min_len == POLY1305_OUTSIZE {
                 return Err(UnknownCryptoError);
             }
         }
         None => return Err(UnknownCryptoError),
     };
 
-    if plaintext.is_empty() {
-        return Err(UnknownCryptoError);
-    }
+    let pt_len = plaintext.len();
+    dst_out[..pt_len].copy_from_slice(plaintext);
 
-    let mut chacha20_ctx =
+    let mut enc_ctx =
         ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
-    let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    chacha20::xor_keystream(&mut enc_ctx, ENC_CTR, tmp.as_mut(), &mut dst_out[..pt_len])?;
 
-    dst_out[..plaintext.len()].copy_from_slice(plaintext);
-    chacha20::xor_keystream(
-        &mut chacha20_ctx,
-        1,
-        tmp_block.as_mut(),
-        &mut dst_out[..plaintext.len()],
-    )?;
-
-    chacha20_ctx.keystream_block(0, tmp_block.as_mut());
-    let mut poly_ctx = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block));
-
-    let optional_ad = match ad {
-        Some(n_val) => n_val,
-        None => &[0u8; 0],
+    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut enc_ctx, &mut tmp));
+    let ad = match ad {
+        Some(val) => val,
+        None => &[],
     };
-    process_authentication(&mut poly_ctx, optional_ad, &dst_out[..plaintext.len()])?;
-    dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
-        .copy_from_slice(poly_ctx.finalize()?.unprotected_as_bytes());
+    process_authentication(&mut auth_ctx, ad, &dst_out[..pt_len])?;
+    dst_out[pt_len..(pt_len + POLY1305_OUTSIZE)]
+        .copy_from_slice(auth_ctx.finalize()?.unprotected_as_bytes());
 
     Ok(())
 }
@@ -213,34 +216,27 @@ pub fn open(
         return Err(UnknownCryptoError);
     }
 
-    let mut chacha20_ctx =
+    let mut dec_ctx =
         ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
-    let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
-
-    chacha20_ctx.keystream_block(0, tmp_block.as_mut());
-    let mut poly_ctx = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block));
+    let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
-    let optional_ad = match ad {
-        Some(n_val) => n_val,
-        None => &[0u8; 0],
+    let ad = match ad {
+        Some(val) => val,
+        None => &[],
     };
-    process_authentication(
-        &mut poly_ctx,
-        optional_ad,
-        &ciphertext_with_tag[..ciphertext_len],
-    )?;
-
+    process_authentication(&mut auth_ctx, ad, &ciphertext_with_tag[..ciphertext_len])?;
     util::secure_cmp(
-        poly_ctx.finalize()?.unprotected_as_bytes(),
+        auth_ctx.finalize()?.unprotected_as_bytes(),
         &ciphertext_with_tag[ciphertext_len..],
     )?;
 
     dst_out[..ciphertext_len].copy_from_slice(&ciphertext_with_tag[..ciphertext_len]);
     chacha20::xor_keystream(
-        &mut chacha20_ctx,
-        1,
-        tmp_block.as_mut(),
+        &mut dec_ctx,
+        ENC_CTR,
+        tmp.as_mut(),
         &mut dst_out[..ciphertext_len],
     )
 }
