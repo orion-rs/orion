@@ -133,42 +133,20 @@ pub(crate) fn padding(input: usize) -> usize {
     }
 }
 
-#[inline]
-/// Process data to be authenticated using a `Poly1305` struct initialized with
-/// a one-time-key. Up to `buf_in_len` data in `buf` get's authenticated. The
-/// indexing is needed because authentication happens on different input lengths
-/// in seal()/open().
+/// Authenticates the ciphertext, ad and their lengths.
 fn process_authentication(
-    poly1305_state: &mut Poly1305,
+    auth_ctx: &mut Poly1305,
     ad: &[u8],
-    buf: &[u8],
-    buf_in_len: usize,
+    ciphertext: &[u8],
 ) -> Result<(), UnknownCryptoError> {
-    // If buf_in_len is 0, then NO ciphertext gets authenticated.
-    // Because of this, buf may never be empty either.
-    debug_assert!(!buf.is_empty());
-    debug_assert!(buf_in_len <= buf.len());
-    assert!(buf_in_len > 0);
+    debug_assert!(!ciphertext.is_empty());
+    auth_ctx.process_pad_to_blocksize(ad)?;
+    auth_ctx.process_pad_to_blocksize(ciphertext)?;
 
-    let mut padding_max = [0u8; 16];
-
-    if !ad.is_empty() {
-        poly1305_state.update(ad)?;
-        poly1305_state.update(&padding_max[..padding(ad.len())])?;
-    }
-
-    poly1305_state.update(&buf[..buf_in_len])?;
-    poly1305_state.update(&padding_max[..padding(buf[..buf_in_len].len())])?;
-
-    // Using the 16 bytes from padding template to store length information
-    if !ad.is_empty() {
-        // If ad is empty then padding_max[..8] already reflects its 0-length
-        // since it was initialized with 0's.
-        padding_max[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
-    }
-
-    padding_max[8..16].copy_from_slice(&(buf_in_len as u64).to_le_bytes());
-    poly1305_state.update(padding_max.as_ref())
+    let mut tmp_pad = [0u8; 16];
+    tmp_pad[0..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
+    tmp_pad[8..16].copy_from_slice(&(ciphertext.len() as u64).to_le_bytes());
+    auth_ctx.update(tmp_pad.as_ref())
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -212,7 +190,7 @@ pub fn seal(
         Some(n_val) => n_val,
         None => &[0u8; 0],
     };
-    process_authentication(&mut poly_ctx, optional_ad, &dst_out, plaintext.len())?;
+    process_authentication(&mut poly_ctx, optional_ad, &dst_out[..plaintext.len()])?;
     dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
         .copy_from_slice(poly_ctx.finalize()?.unprotected_as_bytes());
 
@@ -250,8 +228,7 @@ pub fn open(
     process_authentication(
         &mut poly_ctx,
         optional_ad,
-        ciphertext_with_tag,
-        ciphertext_len,
+        &ciphertext_with_tag[..ciphertext_len],
     )?;
 
     util::secure_cmp(
@@ -350,22 +327,6 @@ mod private {
 
         #[test]
         #[should_panic]
-        fn test_panic_index_0() {
-            let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
-            let n = Nonce::from_slice(&[0u8; 12]).unwrap();
-
-            let mut chacha20_ctx =
-                ChaCha20::new(sk.unprotected_as_bytes(), n.as_ref(), true).unwrap();
-            let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
-
-            let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
-            let mut poly1305_state = Poly1305::new(&poly1305_key);
-
-            process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 0).unwrap();
-        }
-
-        #[test]
-        #[should_panic]
         fn test_panic_empty_buf() {
             let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
             let n = Nonce::from_slice(&[0u8; 12]).unwrap();
@@ -377,41 +338,7 @@ mod private {
             let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
             let mut poly1305_state = Poly1305::new(&poly1305_key);
 
-            process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 0], 64).unwrap();
-        }
-
-        #[test]
-        #[should_panic]
-        fn test_panic_above_length_index() {
-            let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
-            let n = Nonce::from_slice(&[0u8; 12]).unwrap();
-
-            let mut chacha20_ctx =
-                ChaCha20::new(sk.unprotected_as_bytes(), n.as_ref(), true).unwrap();
-            let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
-
-            let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
-            let mut poly1305_state = Poly1305::new(&poly1305_key);
-
-            process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
-        }
-
-        #[test]
-        fn test_length_index() {
-            let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
-            let n = Nonce::from_slice(&[0u8; 12]).unwrap();
-
-            let mut chacha20_ctx =
-                ChaCha20::new(sk.unprotected_as_bytes(), n.as_ref(), true).unwrap();
-            let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
-
-            let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
-            let mut poly1305_state = Poly1305::new(&poly1305_key);
-
-            assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).is_ok());
-            assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 63).is_ok());
-            assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 1).is_ok());
-            assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 1], 1).is_ok());
+            process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 0]).unwrap();
         }
     }
 }

@@ -318,6 +318,34 @@ impl Poly1305 {
         state
     }
 
+    /// Update state with a `data` and pad it to blocksize with 0, if not
+    /// evenly divisible by blocksize.
+    pub(crate) fn process_pad_to_blocksize(
+        &mut self,
+        data: &[u8],
+    ) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+        if data.is_empty() {
+            return Ok(());
+        }
+
+        let mut blocksize_iter = data.chunks_exact(POLY1305_BLOCKSIZE);
+        for block in &mut blocksize_iter {
+            self.process_block(block).unwrap();
+        }
+
+        let remaining = blocksize_iter.remainder();
+        if !remaining.is_empty() {
+            let mut pad = [0u8; POLY1305_BLOCKSIZE];
+            pad[..remaining.len()].copy_from_slice(remaining);
+            self.process_block(&pad).unwrap();
+        }
+
+        Ok(())
+    }
+
     /// Reset to `new()` state.
     pub fn reset(&mut self) {
         self.a = [0u32; 5];
