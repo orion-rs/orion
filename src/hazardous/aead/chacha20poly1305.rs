@@ -23,8 +23,7 @@
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
-//! - `ad`: Additional data to authenticate (this is not encrypted and can be
-//!   `None`.  This data is also not a part of `dst_out`).
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`).
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 16 byte
 //!   Poly1305 tag appended to it.
 //! - `plaintext`: The data to be encrypted.
@@ -44,29 +43,30 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - The length of `dst_out` is less than `plaintext + 16` when encrypting.
-//! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when
-//!   decrypting.
-//! - The length of `ciphertext_with_tag` is not greater than `16`.
-//! - `plaintext` or `ciphertext_with_tag` are empty.
-//! - The received tag does not match the calculated tag when decrypting.
-//! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when encrypting.
+//! - The length of `dst_out` is less than `plaintext` + [`POLY1305_OUTSIZE`] when calling [`seal()`].
+//! - The length of `dst_out` is less than `ciphertext_with_tag` - [`POLY1305_OUTSIZE`] when
+//!   calling [`open()`].
+//! - The length of `ciphertext_with_tag` is not greater than [`POLY1305_OUTSIZE`].
+//! - `plaintext` is empty.
+//! - The received tag does not match the calculated tag when  calling [`open()`].
+//! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when  calling [`seal()`].
+//! - Converting `usize` to `u64` would be a lossy conversion.
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - More than 2^32-1 * 64 bytes of data are processed.
+//! - More than `2^32-1 * 64` bytes of data are processed.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
-//!   key. Should this happen,
-//! the security of all data that has been encrypted with that given key is
-//! compromised.
+//!   key. Should this happen, the security of all data that has been encrypted
+//!   with that given key is compromised.
 //! - Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated
 //!   using a CSPRNG.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
+//! - The length of `plaintext` is not hidden, only its contents.
 //!
 //! # Recommendation:
-//! - It is recommended to use [XChaCha20Poly1305] when possible.
+//! - It is recommended to use [`XChaCha20Poly1305`] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -74,9 +74,9 @@
 //!
 //! let secret_key = aead::chacha20poly1305::SecretKey::generate();
 //!
-//! let nonce = aead::chacha20poly1305::Nonce::from_slice(&[
-//!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
-//! ])?;
+//! // WARNING: This nonce is only meant for demonstration and should not
+//! // be repeated. Please read the security section.
+//! let nonce = aead::chacha20poly1305::Nonce::from([0u8; 12]);
 //! let ad = "Additional data".as_bytes();
 //! let message = "Data to protect".as_bytes();
 //!
@@ -94,80 +94,56 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
-//! [XChaCha20Poly1305]: ../xchacha20poly1305/index.html
+//! [`XChaCha20Poly1305`]: ../xchacha20poly1305/index.html
 //! [`POLY1305_OUTSIZE`]: ../../mac/poly1305/constant.POLY1305_OUTSIZE.html
+//! [`seal()`]: fn.seal.html
+//! [`open()`]: fn.open.html
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
     errors::UnknownCryptoError,
     hazardous::{
-        mac::poly1305::{self, OneTimeKey, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
-        stream::chacha20,
+        mac::poly1305::{OneTimeKey, Poly1305, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
+        stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE},
     },
     util,
 };
+use core::convert::TryInto;
+use zeroize::Zeroizing;
 
-#[inline]
+/// The initial counter used for encryption and decryption.
+const ENC_CTR: u32 = 1;
+
+/// The initial counter used for Poly1305 key generation.
+const AUTH_CTR: u32 = 0;
+
 /// Poly1305 key generation using IETF ChaCha20.
 pub(crate) fn poly1305_key_gen(
-    key: &SecretKey,
-    nonce: &Nonce,
-) -> Result<OneTimeKey, UnknownCryptoError> {
-    OneTimeKey::from_slice(&chacha20::keystream_block(key, nonce, 0)?[..POLY1305_KEYSIZE])
+    ctx: &mut ChaCha20,
+    tmp_buffer: &mut Zeroizing<[u8; CHACHA_BLOCKSIZE]>,
+) -> OneTimeKey {
+    ctx.keystream_block(AUTH_CTR, tmp_buffer.as_mut());
+    OneTimeKey::from_slice(&tmp_buffer[..POLY1305_KEYSIZE]).unwrap()
 }
 
-#[inline]
-/// Padding size that gives the needed bytes to pad `input` to an integral
-/// multiple of 16.
-pub(crate) fn padding(input: usize) -> usize {
-    if input == 0 {
-        return 0;
-    }
-
-    let rem = input % 16;
-
-    if rem != 0 {
-        16 - rem
-    } else {
-        0
-    }
-}
-
-#[inline]
-/// Process data to be authenticated using a `Poly1305` struct initialized with
-/// a one-time-key. Up to `buf_in_len` data in `buf` get's authenticated. The
-/// indexing is needed because authentication happens on different input lengths
-/// in seal()/open().
+/// Authenticates the ciphertext, ad and their lengths.
 fn process_authentication(
-    poly1305_state: &mut poly1305::Poly1305,
+    auth_ctx: &mut Poly1305,
     ad: &[u8],
-    buf: &[u8],
-    buf_in_len: usize,
+    ciphertext: &[u8],
 ) -> Result<(), UnknownCryptoError> {
-    // If buf_in_len is 0, then NO ciphertext gets authenticated.
-    // Because of this, buf may never be empty either.
-    debug_assert!(!buf.is_empty());
-    debug_assert!(buf_in_len <= buf.len());
-    assert!(buf_in_len > 0);
+    debug_assert!(!ciphertext.is_empty());
+    auth_ctx.process_pad_to_blocksize(ad)?;
+    auth_ctx.process_pad_to_blocksize(ciphertext)?;
 
-    let mut padding_max = [0u8; 16];
+    let (ad_len, ct_len): (u64, u64) = match (ad.len().try_into(), ciphertext.len().try_into()) {
+        (Ok(alen), Ok(clen)) => (alen, clen),
+        _ => return Err(UnknownCryptoError),
+    };
 
-    if !ad.is_empty() {
-        poly1305_state.update(ad)?;
-        poly1305_state.update(&padding_max[..padding(ad.len())])?;
-    }
-
-    poly1305_state.update(&buf[..buf_in_len])?;
-    poly1305_state.update(&padding_max[..padding(buf[..buf_in_len].len())])?;
-
-    // Using the 16 bytes from padding template to store length information
-    if !ad.is_empty() {
-        // If ad is empty then padding_max[..8] already reflects its 0-length
-        // since it was initialized with 0's.
-        padding_max[..8].copy_from_slice(&(ad.len() as u64).to_le_bytes());
-    }
-
-    padding_max[8..16].copy_from_slice(&(buf_in_len as u64).to_le_bytes());
-    poly1305_state.update(padding_max.as_ref())
+    let mut tmp_pad = [0u8; 16];
+    tmp_pad[0..8].copy_from_slice(&ad_len.to_le_bytes());
+    tmp_pad[8..16].copy_from_slice(&ct_len.to_le_bytes());
+    auth_ctx.update(tmp_pad.as_ref())
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -181,36 +157,29 @@ pub fn seal(
 ) -> Result<(), UnknownCryptoError> {
     match plaintext.len().checked_add(POLY1305_OUTSIZE) {
         Some(out_min_len) => {
-            if dst_out.len() < out_min_len {
+            if dst_out.len() < out_min_len || out_min_len == POLY1305_OUTSIZE {
                 return Err(UnknownCryptoError);
             }
         }
         None => return Err(UnknownCryptoError),
     };
 
-    if plaintext.is_empty() {
-        return Err(UnknownCryptoError);
-    }
+    let pt_len = plaintext.len();
+    dst_out[..pt_len].copy_from_slice(plaintext);
 
-    let optional_ad = match ad {
-        Some(n_val) => n_val,
-        None => &[0u8; 0],
+    let mut enc_ctx =
+        ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+    let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    chacha20::xor_keystream(&mut enc_ctx, ENC_CTR, tmp.as_mut(), &mut dst_out[..pt_len])?;
+
+    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut enc_ctx, &mut tmp));
+    let ad = match ad {
+        Some(val) => val,
+        None => &[],
     };
-
-    chacha20::encrypt(
-        secret_key,
-        nonce,
-        1,
-        plaintext,
-        &mut dst_out[..plaintext.len()],
-    )?;
-
-    let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
-    let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
-
-    process_authentication(&mut poly1305_state, optional_ad, &dst_out, plaintext.len())?;
-    dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
-        .copy_from_slice(poly1305_state.finalize()?.unprotected_as_bytes());
+    process_authentication(&mut auth_ctx, ad, &dst_out[..pt_len])?;
+    dst_out[pt_len..(pt_len + POLY1305_OUTSIZE)]
+        .copy_from_slice(auth_ctx.finalize()?.unprotected_as_bytes());
 
     Ok(())
 }
@@ -231,32 +200,27 @@ pub fn open(
         return Err(UnknownCryptoError);
     }
 
-    let optional_ad = match ad {
-        Some(n_val) => n_val,
-        None => &[0u8; 0],
-    };
+    let mut dec_ctx =
+        ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+    let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
-
-    let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
-    let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
-    process_authentication(
-        &mut poly1305_state,
-        optional_ad,
-        ciphertext_with_tag,
-        ciphertext_len,
-    )?;
-
+    let ad = match ad {
+        Some(val) => val,
+        None => &[],
+    };
+    process_authentication(&mut auth_ctx, ad, &ciphertext_with_tag[..ciphertext_len])?;
     util::secure_cmp(
-        poly1305_state.finalize()?.unprotected_as_bytes(),
+        auth_ctx.finalize()?.unprotected_as_bytes(),
         &ciphertext_with_tag[ciphertext_len..],
     )?;
 
-    chacha20::decrypt(
-        secret_key,
-        nonce,
-        1,
-        &ciphertext_with_tag[..ciphertext_len],
+    dst_out[..ciphertext_len].copy_from_slice(&ciphertext_with_tag[..ciphertext_len]);
+    chacha20::xor_keystream(
+        &mut dec_ctx,
+        ENC_CTR,
+        tmp.as_mut(),
         &mut dst_out[..ciphertext_len],
     )
 }
@@ -285,110 +249,28 @@ mod public {
     }
 }
 
+#[cfg(debug_assertions)]
 // Testing private functions in the module.
 #[cfg(test)]
 mod private {
     use super::*;
 
-    mod test_padding {
-        use super::*;
-        #[test]
-        fn test_length_padding() {
-            assert_eq!(padding(0), 0);
-            assert_eq!(padding(1), 15);
-            assert_eq!(padding(2), 14);
-            assert_eq!(padding(3), 13);
-            assert_eq!(padding(4), 12);
-            assert_eq!(padding(5), 11);
-            assert_eq!(padding(6), 10);
-            assert_eq!(padding(7), 9);
-            assert_eq!(padding(8), 8);
-            assert_eq!(padding(9), 7);
-            assert_eq!(padding(10), 6);
-            assert_eq!(padding(11), 5);
-            assert_eq!(padding(12), 4);
-            assert_eq!(padding(13), 3);
-            assert_eq!(padding(14), 2);
-            assert_eq!(padding(15), 1);
-            assert_eq!(padding(16), 0);
-        }
-
-        // Proptests. Only executed when NOT testing no_std.
-        #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
-
-            quickcheck! {
-                // The usize that padding() returns should always
-                // be what remains to make input a multiple of 16 in length.
-                fn prop_padding_result(input: usize) -> bool {
-                    let rem = padding(input);
-
-                    ((input + rem) % 16) == 0
-                }
-            }
-
-            quickcheck! {
-                // padding() should never return a usize above 15.
-                // The usize must always be in range of 0..=15.
-                fn prop_result_never_above_15(input: usize) -> bool {
-                    padding(input) < 16
-                }
-            }
-        }
-    }
-
     mod test_process_authentication {
         use super::*;
-
-        #[test]
-        #[should_panic]
-        fn test_panic_index_0() {
-            let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
-            let n = Nonce::from_slice(&[0u8; 12]).unwrap();
-
-            let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-            let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
-
-            process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 0).unwrap();
-        }
-
         #[test]
         #[should_panic]
         fn test_panic_empty_buf() {
             let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
             let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
-            let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-            let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
+            let mut chacha20_ctx =
+                ChaCha20::new(sk.unprotected_as_bytes(), n.as_ref(), true).unwrap();
+            let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
 
-            process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 0], 64).unwrap();
-        }
+            let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
+            let mut poly1305_state = Poly1305::new(&poly1305_key);
 
-        #[test]
-        #[should_panic]
-        fn test_panic_above_length_index() {
-            let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
-            let n = Nonce::from_slice(&[0u8; 12]).unwrap();
-
-            let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-            let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
-
-            process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
-        }
-
-        #[test]
-        fn test_length_index() {
-            let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
-            let n = Nonce::from_slice(&[0u8; 12]).unwrap();
-
-            let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-            let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
-
-            assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).is_ok());
-            assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 63).is_ok());
-            assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 1).is_ok());
-            assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 1], 1).is_ok());
+            process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 0]).unwrap();
         }
     }
 }
@@ -411,10 +293,12 @@ mod test_vectors {
             0x8b, 0x77, 0x0d, 0xc7,
         ];
 
+        let mut chacha20_ctx =
+            ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
         assert_eq!(
-            poly1305_key_gen(&key, &nonce)
-                .unwrap()
-                .unprotected_as_bytes(),
+            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
             expected.as_ref()
         );
     }
@@ -437,10 +321,12 @@ mod test_vectors {
             0xe3, 0xfb, 0xb7, 0x39,
         ];
 
+        let mut chacha20_ctx =
+            ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
         assert_eq!(
-            poly1305_key_gen(&key, &nonce)
-                .unwrap()
-                .unprotected_as_bytes(),
+            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
             expected.as_ref()
         );
     }
@@ -463,10 +349,12 @@ mod test_vectors {
             0xd2, 0x33, 0x10, 0xae,
         ];
 
+        let mut chacha20_ctx =
+            ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
         assert_eq!(
-            poly1305_key_gen(&key, &nonce)
-                .unwrap()
-                .unprotected_as_bytes(),
+            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
             expected.as_ref()
         );
     }

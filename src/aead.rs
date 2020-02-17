@@ -66,6 +66,7 @@
 //! the security of all data that has been encrypted with that given key is
 //! compromised.
 //! - To securely generate a strong key, use [`SecretKey::default()`].
+//! - The length of `plaintext` is not hidden, only its contents.
 //!
 //! # Example:
 //! ```rust

@@ -28,24 +28,21 @@
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
-//! - `ad`: Additional data to authenticate (this is not encrypted and can be
-//!   `None`. This data is also not a part of `dst_out`).
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`).
 //! - `plaintext`: The data to be encrypted.
-//! - `ciphertext`: The encrypted data with a Poly1305 tag and a [`StreamTag`] indicating its function.
-//! - `dst_out`: Destination array that will hold the
-//!   `ciphertext`/`plaintext` after encryption/decryption.
+//! - `ciphertext`: The encrypted data with, a Poly1305 tag and a [`StreamTag`] indicating its function.
+//! - `dst_out`: Destination array that will hold the `ciphertext`/`plaintext` after encryption/decryption.
 //! - `tag`: Indicates the type of message. The `tag` is a part of the output when encrypting. It
-//! is encrypted and authenticated.
+//!   is encrypted and authenticated.
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - The length of `dst_out` is less than `plaintext + 17` when encrypting.
-//! - The length of `dst_out` is less than `ciphertext - 17` when
-//!   decrypting.
-//! - The length of `ciphertext` is not greater than `16`.
-//! - The received mac does not match the calculated mac when decrypting. This can indicate
-//!   a dropped or reordered message within the stream.
-//! - More than 2^32-3 * 64 bytes of data are processed when encrypting/decrypting a single chunk.
+//! - The length of `dst_out` is less than `plaintext` + [`ABYTES`] when calling [`seal_chunk()`].
+//! - The length of `dst_out` is less than `ciphertext` - [`ABYTES`] when calling [`open_chunk()`].
+//! - The length of `ciphertext` is less than [`ABYTES`].
+//! - The received mac does not match the calculated mac when calling [`open_chunk()`]. This can
+//!   indicate a dropped or reordered message within the stream.
+//! - More than `2^32-3 * 64` bytes of data are processed when sealing/opening a single chunk.
 //! - [`ABYTES`] + `plaintext.len()` overflows when encrypting.
 //!
 //! # Panics:
@@ -53,13 +50,11 @@
 //! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows `u64::max_value()` when decrypting.
 //!
 //! # Security:
-//! - It is critical for security that a given nonce is not re-used with a given
-//!   key.
-//! - The nonce can be  randomly generated using a CSPRNG.
-//! [`Nonce::generate()`] can be used for this.
+//! - It is critical for security that a given nonce is not re-used with a given key.
+//! - The nonce can be  randomly generated using a CSPRNG. [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
-//! - The length of the messages is leaked.
-//! - It is recommended to use `StreamTag::FINISH` as tag for the last message. This allows the
+//! - The lengths of the messages are not hidden, only their contents.
+//! - It is recommended to use `StreamTag::FINISH` as the tag for the last message. This allows the
 //!   decrypting side to detect if messages at the end of the stream are lost.
 //!
 //! # Example:
@@ -94,20 +89,21 @@
 //! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
 //! [`StreamTag`]: enum.StreamTag.html
 //! [`ABYTES`]: constant.ABYTES.html
-
+//! [`seal_chunk()`]: struct.StreamXChaCha20Poly1305.html#method.seal_chunk
+//! [`open_chunk()`]: struct.StreamXChaCha20Poly1305.html#method.open_chunk
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::aead::chacha20poly1305::{padding, poly1305_key_gen};
+use crate::hazardous::aead::chacha20poly1305::poly1305_key_gen;
 use crate::hazardous::mac::poly1305::{Poly1305, Tag as Poly1305Tag, POLY1305_OUTSIZE};
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::hazardous::stream::chacha20::{
-    encrypt as chacha20_enc, encrypt_in_place as chacha20_xor_stream, Nonce as IETFNonce,
+    encrypt as chacha20_enc, encrypt_in_place as chacha20_xor_stream, ChaCha20, Nonce as IETFNonce,
     CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
 };
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::xchacha20::Nonce;
 use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 #[derive(Debug)]
 /// Tag that indicates the type of message.
@@ -162,9 +158,26 @@ const COUNTERBYTES: usize = 4;
 /// The size of the internal nonce.
 const INONCEBYTES: usize = 8;
 /// The size of a StreamTag.
-const TAG_SIZE: usize = 1;
+pub const TAG_SIZE: usize = 1;
 /// Size of additional data appended to each message.
 pub const ABYTES: usize = POLY1305_OUTSIZE + TAG_SIZE;
+
+/// Padding size that gives the needed bytes to pad `input` to an integral
+/// multiple of 16.
+fn padding(input: usize) -> usize {
+    if input == 0 {
+        return 0;
+    }
+
+    let rem = input % 16;
+
+    if rem != 0 {
+        16 - rem
+    } else {
+        0
+    }
+}
+
 /// Streaming XChaCha20Poly1305 state.
 pub struct StreamXChaCha20Poly1305 {
     key: SecretKey,
@@ -204,13 +217,18 @@ impl StreamXChaCha20Poly1305 {
     ) -> Result<Poly1305Tag, UnknownCryptoError> {
         debug_assert!(text.len() >= textpos + msglen);
 
-        let mut pad = [0u8; 16];
-        let mut poly = Poly1305::new(&poly1305_key_gen(&self.key, &self.get_nonce())?);
+        let mut chacha20_ctx = ChaCha20::new(
+            self.key.unprotected_as_bytes(),
+            self.get_nonce().as_ref(),
+            true,
+        )
+        .unwrap();
+        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
 
-        if !ad.is_empty() {
-            poly.update(ad)?;
-            poly.update(&pad[..padding(ad.len())])?;
-        }
+        let mut pad = [0u8; 16];
+        let mut poly = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block));
+
+        poly.process_pad_to_blocksize(ad)?;
         poly.update(block)?;
         poly.update(&text[textpos..(textpos + msglen)])?;
         poly.update(&pad[..padding(CHACHA_BLOCKSIZE.wrapping_sub(msglen))])?;
@@ -457,6 +475,54 @@ mod public {
 #[cfg(test)]
 mod private {
     use super::*;
+
+    mod test_padding {
+        use super::*;
+        #[test]
+        fn test_length_padding() {
+            assert_eq!(padding(0), 0);
+            assert_eq!(padding(1), 15);
+            assert_eq!(padding(2), 14);
+            assert_eq!(padding(3), 13);
+            assert_eq!(padding(4), 12);
+            assert_eq!(padding(5), 11);
+            assert_eq!(padding(6), 10);
+            assert_eq!(padding(7), 9);
+            assert_eq!(padding(8), 8);
+            assert_eq!(padding(9), 7);
+            assert_eq!(padding(10), 6);
+            assert_eq!(padding(11), 5);
+            assert_eq!(padding(12), 4);
+            assert_eq!(padding(13), 3);
+            assert_eq!(padding(14), 2);
+            assert_eq!(padding(15), 1);
+            assert_eq!(padding(16), 0);
+        }
+
+        // Proptests. Only executed when NOT testing no_std.
+        #[cfg(feature = "safe_api")]
+        mod proptest {
+            use super::*;
+
+            quickcheck! {
+                // The usize that padding() returns should always
+                // be what remains to make input a multiple of 16 in length.
+                fn prop_padding_result(input: usize) -> bool {
+                    let rem = padding(input);
+
+                    ((input + rem) % 16) == 0
+                }
+            }
+
+            quickcheck! {
+                // padding() should never return a usize above 15.
+                // The usize must always be in range of 0..=15.
+                fn prop_result_never_above_15(input: usize) -> bool {
+                    padding(input) < 16
+                }
+            }
+        }
+    }
 
     // Test values were generated using libsodium. See /tests/test_generation/
 

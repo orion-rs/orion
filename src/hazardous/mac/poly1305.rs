@@ -318,6 +318,34 @@ impl Poly1305 {
         state
     }
 
+    /// Update state with a `data` and pad it to blocksize with 0, if not
+    /// evenly divisible by blocksize.
+    pub(crate) fn process_pad_to_blocksize(
+        &mut self,
+        data: &[u8],
+    ) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+        if data.is_empty() {
+            return Ok(());
+        }
+
+        let mut blocksize_iter = data.chunks_exact(POLY1305_BLOCKSIZE);
+        for block in &mut blocksize_iter {
+            self.process_block(block).unwrap();
+        }
+
+        let remaining = blocksize_iter.remainder();
+        if !remaining.is_empty() {
+            let mut pad = [0u8; POLY1305_BLOCKSIZE];
+            pad[..remaining.len()].copy_from_slice(remaining);
+            self.process_block(&pad).unwrap();
+        }
+
+        Ok(())
+    }
+
     /// Reset to `new()` state.
     pub fn reset(&mut self) {
         self.a = [0u32; 5];
@@ -534,6 +562,36 @@ mod public {
 #[cfg(test)]
 mod private {
     use super::*;
+
+    mod test_process_pad_to_blocksize {
+        use super::*;
+
+        #[test]
+        fn test_process_err_on_finalized() {
+            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let mut state = Poly1305::new(&sk);
+
+            state.process_pad_to_blocksize(&[0u8; 16]).unwrap();
+            let _ = state.finalize().unwrap();
+            assert!(state.process_pad_to_blocksize(&[0u8; 16]).is_err());
+        }
+
+        #[test]
+        fn test_process_pad_no_pad() {
+            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let mut state_pad = Poly1305::new(&sk);
+            let mut state_no_pad = Poly1305::new(&sk);
+
+            // 15 missing to be evenly divisible by 16.
+            state_pad.process_pad_to_blocksize(&[0u8; 17]).unwrap();
+            state_no_pad.process_pad_to_blocksize(&[0u8; 32]).unwrap();
+
+            assert_eq!(
+                state_no_pad.finalize().unwrap(),
+                state_pad.finalize().unwrap()
+            );
+        }
+    }
 
     mod test_process_block {
         use super::*;
