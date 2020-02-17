@@ -43,6 +43,15 @@ impl core::ops::BitXor for U32x4 {
     }
 }
 
+impl zeroize::Zeroize for U32x4 {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+        self.1.zeroize();
+        self.2.zeroize();
+        self.3.zeroize();
+    }
+}
+
 impl U32x4 {
     #[must_use]
     #[inline(always)]

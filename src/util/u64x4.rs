@@ -59,6 +59,15 @@ impl Default for U64x4 {
     }
 }
 
+impl zeroize::Zeroize for U64x4 {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+        self.1.zeroize();
+        self.2.zeroize();
+        self.3.zeroize();
+    }
+}
+
 #[cfg(test)]
 impl PartialEq<U64x4> for U64x4 {
     fn eq(&self, other: &Self) -> bool {

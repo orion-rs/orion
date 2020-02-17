@@ -174,12 +174,7 @@ pub(crate) struct ChaCha20 {
 
 impl Drop for ChaCha20 {
     fn drop(&mut self) {
-        for row in self.state.iter_mut() {
-            row.0.zeroize();
-            row.1.zeroize();
-            row.2.zeroize();
-            row.3.zeroize();
-        }
+        self.state.iter_mut().zeroize();
     }
 }
 

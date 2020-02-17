@@ -199,18 +199,8 @@ pub struct Blake2b {
 impl Drop for Blake2b {
     fn drop(&mut self) {
         use zeroize::Zeroize;
-        for row in self.init_state.iter_mut() {
-            row.0.zeroize();
-            row.1.zeroize();
-            row.2.zeroize();
-            row.3.zeroize();
-        }
-        for row in self.internal_state.iter_mut() {
-            row.0.zeroize();
-            row.1.zeroize();
-            row.2.zeroize();
-            row.3.zeroize();
-        }
+        self.init_state.iter_mut().zeroize();
+        self.internal_state.iter_mut().zeroize();
         self.buffer.zeroize();
     }
 }
