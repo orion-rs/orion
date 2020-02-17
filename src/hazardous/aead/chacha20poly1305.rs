@@ -23,8 +23,7 @@
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
-//! - `ad`: Additional data to authenticate (this is not encrypted and can be
-//!   `None`.  This data is also not a part of `dst_out`).
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`).
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 16 byte
 //!   Poly1305 tag appended to it.
 //! - `plaintext`: The data to be encrypted.
@@ -44,30 +43,29 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - The length of `dst_out` is less than `plaintext + 16` when encrypting.
+//! - The length of `dst_out` is less than `plaintext + 16` when calling `seal()`.
 //! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when
-//!   decrypting.
+//!   calling `open()`.
 //! - The length of `ciphertext_with_tag` is not greater than `16`.
-//! - `plaintext` or `ciphertext_with_tag` are empty.
-//! - The received tag does not match the calculated tag when decrypting.
-//! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when encrypting.
+//! - `plaintext` is empty.
+//! - The received tag does not match the calculated tag when  calling `open()`.
+//! - `plaintext.len() + 16` overflows when  calling `seal()`.
 //! - Converting `usize` to `u64` would be a lossy conversion.
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - More than 2^32-1 * 64 bytes of data are processed.
+//! - More than `2^32-1 * 64` bytes of data are processed.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
-//!   key. Should this happen,
-//! the security of all data that has been encrypted with that given key is
-//! compromised.
+//!   key. Should this happen, the security of all data that has been encrypted
+//!   with that given key is compromised.
 //! - Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated
 //!   using a CSPRNG.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
 //!
 //! # Recommendation:
-//! - It is recommended to use [XChaCha20Poly1305] when possible.
+//! - It is recommended to use [`XChaCha20Poly1305`] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -75,9 +73,9 @@
 //!
 //! let secret_key = aead::chacha20poly1305::SecretKey::generate();
 //!
-//! let nonce = aead::chacha20poly1305::Nonce::from_slice(&[
-//!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
-//! ])?;
+//! // WARNING: This nonce is only meant for demonstration and should not
+//! // be repeated. Please read the security section.
+//! let nonce = aead::chacha20poly1305::Nonce::from([0u8; 12]);
 //! let ad = "Additional data".as_bytes();
 //! let message = "Data to protect".as_bytes();
 //!
@@ -95,7 +93,7 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
-//! [XChaCha20Poly1305]: ../xchacha20poly1305/index.html
+//! [`XChaCha20Poly1305`]: ../xchacha20poly1305/index.html
 //! [`POLY1305_OUTSIZE`]: ../../mac/poly1305/constant.POLY1305_OUTSIZE.html
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
