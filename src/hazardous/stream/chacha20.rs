@@ -48,30 +48,21 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - More than 2^32-1 keystream blocks are processed or more than 2^32-1 * 64
-//! bytes of data are processed.
-//!
-//! ### Note:
-//! [`keystream_block`] is for use-cases where more control over the keystream
-//! used for encryption/decryption is desired. It does not encrypt anything.
-//! This function's `counter` parameter is never increased and therefor is not
-//! checked for potential overflow on increase either. Only use it if you are
-//! absolutely sure you actually need to use it.
+//! - More than `2^32-1` keystream blocks are processed or more than `2^32-1 * 64`
+//!   bytes of data are processed.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
-//!   key. Should this happen,
-//! the security of all data that has been encrypted with that given key is
-//! compromised.
+//!   key. Should this happen, the security of all data that has been encrypted
+//!   with that given key is compromised.
 //! - Functions herein do not provide any data integrity. If you need
-//! data integrity, which is nearly ***always the case***, you should use an
-//! AEAD construction instead. See orions [`aead`] module for this.
-//! - Only a nonce for XChaCha20 is big enough to be randomly generated using a
-//!   CSPRNG.
+//!   data integrity, which is nearly ***always the case***, you should use an
+//!   AEAD construction instead. See orions [`aead`] module for this.
+//! - Only a nonce for XChaCha20 is big enough to be randomly generated using a CSPRNG.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
 //!
 //! # Recommendation:
-//! - It is recommended to use [XChaCha20Poly1305] when possible.
+//! - It is recommended to use [`XChaCha20Poly1305`] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -79,12 +70,12 @@
 //!
 //! let secret_key = chacha20::SecretKey::generate();
 //!
-//! let nonce = chacha20::Nonce::from_slice(&[
-//!     0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
-//! ])?;
-//!
-//! // Length of this message is 15
+//! // WARNING: This nonce is only meant for demonstration and should not
+//! // be repeated. Please read the security section.
+//! let nonce = chacha20::Nonce::from([0u8; 12]);
 //! let message = "Data to protect".as_bytes();
+//!
+//! // Length of this message is 15.
 //!
 //! let mut dst_out_pt = [0u8; 15];
 //! let mut dst_out_ct = [0u8; 15];
@@ -96,10 +87,9 @@
 //! assert_eq!(dst_out_pt, message);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`keystream_block`]: fn.keystream_block.html
 //! [`SecretKey::generate()`]: struct.SecretKey.html
 //! [`aead`]: ../../aead/index.html
-//! [XChaCha20Poly1305]: ../../aead/xchacha20poly1305/index.html
+//! [`XChaCha20Poly1305`]: ../../aead/xchacha20poly1305/index.html
 use crate::errors::UnknownCryptoError;
 use crate::util::endianness::load_u32_le;
 use crate::util::u32x4::U32x4;
