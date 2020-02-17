@@ -203,6 +203,7 @@ impl PasswordHash {
         )
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Construct from given byte slice and parameters.
     pub fn from_slice(
         password_hash: &[u8],
@@ -234,6 +235,7 @@ impl PasswordHash {
         })
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Construct from encoded password hash.
     pub fn from_encoded(password_hash: &str) -> Result<Self, UnknownCryptoError> {
         if password_hash.len() > Self::MAX_ENCODED_LEN
