@@ -69,6 +69,7 @@ extern crate quickcheck;
 #[macro_use]
 mod typedefs;
 
+#[macro_use]
 /// Utilities such as constant-time comparison.
 pub mod util;
 

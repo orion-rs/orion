@@ -165,17 +165,6 @@ const INONCEBYTES: usize = 8;
 const TAG_SIZE: usize = 1;
 /// Size of additional data appended to each message.
 pub const ABYTES: usize = POLY1305_OUTSIZE + TAG_SIZE;
-
-/// XOR two slices that are 8 bytes in size.
-fn xor_slices_8(out: &mut [u8], input: &[u8]) {
-    debug_assert_eq!(out.len(), 8);
-    debug_assert_eq!(input.len(), 8);
-
-    for (o_elem, i_elem) in out.iter_mut().zip(input.iter()) {
-        *o_elem ^= i_elem;
-    }
-}
-
 /// Streaming XChaCha20Poly1305 state.
 pub struct StreamXChaCha20Poly1305 {
     key: SecretKey,
@@ -244,9 +233,9 @@ impl StreamXChaCha20Poly1305 {
         mac: &Poly1305Tag,
         tag: &StreamTag,
     ) -> Result<(), UnknownCryptoError> {
-        xor_slices_8(
-            self.inonce.as_mut(),
+        xor_slices!(
             &mac.unprotected_as_bytes()[..INONCEBYTES],
+            self.inonce.as_mut()
         );
         self.counter = self.counter.wrapping_add(1);
         if bool::from(
