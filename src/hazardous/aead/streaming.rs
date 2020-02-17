@@ -100,14 +100,14 @@ use crate::hazardous::aead::chacha20poly1305::{padding, poly1305_key_gen};
 use crate::hazardous::mac::poly1305::{Poly1305, Tag as Poly1305Tag, POLY1305_OUTSIZE};
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::hazardous::stream::chacha20::{
-    encrypt as chacha20_enc, encrypt_in_place as chacha20_xor_stream, Nonce as IETFNonce,
+    encrypt as chacha20_enc, encrypt_in_place as chacha20_xor_stream, ChaCha20, Nonce as IETFNonce,
     CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
 };
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::xchacha20::Nonce;
 use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 #[derive(Debug)]
 /// Tag that indicates the type of message.
@@ -204,8 +204,16 @@ impl StreamXChaCha20Poly1305 {
     ) -> Result<Poly1305Tag, UnknownCryptoError> {
         debug_assert!(text.len() >= textpos + msglen);
 
+        let mut chacha20_ctx = ChaCha20::new(
+            self.key.unprotected_as_bytes(),
+            self.get_nonce().as_ref(),
+            true,
+        )
+        .unwrap();
+        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
         let mut pad = [0u8; 16];
-        let mut poly = Poly1305::new(&poly1305_key_gen(&self.key, &self.get_nonce())?);
+        let mut poly = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block));
 
         if !ad.is_empty() {
             poly.update(ad)?;

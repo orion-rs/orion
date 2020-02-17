@@ -100,7 +100,7 @@ pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
     errors::UnknownCryptoError,
     hazardous::{
-        mac::poly1305::{self, OneTimeKey, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
+        mac::poly1305::{OneTimeKey, Poly1305, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
         stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE},
     },
     util,
@@ -109,10 +109,11 @@ use zeroize::Zeroizing;
 
 /// Poly1305 key generation using IETF ChaCha20.
 pub(crate) fn poly1305_key_gen(
-    key: &SecretKey,
-    nonce: &Nonce,
-) -> Result<OneTimeKey, UnknownCryptoError> {
-    OneTimeKey::from_slice(&chacha20::keystream_block(key, nonce, 0)?[..POLY1305_KEYSIZE])
+    ctx: &mut ChaCha20,
+    tmp_buffer: &mut Zeroizing<[u8; CHACHA_BLOCKSIZE]>,
+) -> OneTimeKey {
+    ctx.keystream_block(0, tmp_buffer.as_mut());
+    OneTimeKey::from_slice(&tmp_buffer[..POLY1305_KEYSIZE]).unwrap()
 }
 
 #[inline]
@@ -138,7 +139,7 @@ pub(crate) fn padding(input: usize) -> usize {
 /// indexing is needed because authentication happens on different input lengths
 /// in seal()/open().
 fn process_authentication(
-    poly1305_state: &mut poly1305::Poly1305,
+    poly1305_state: &mut Poly1305,
     ad: &[u8],
     buf: &[u8],
     buf_in_len: usize,
@@ -192,11 +193,11 @@ pub fn seal(
         return Err(UnknownCryptoError);
     }
 
-    dst_out[..plaintext.len()].copy_from_slice(plaintext);
-
     let mut chacha20_ctx =
         ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
     let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
+    dst_out[..plaintext.len()].copy_from_slice(plaintext);
     chacha20::xor_keystream(
         &mut chacha20_ctx,
         1,
@@ -205,16 +206,15 @@ pub fn seal(
     )?;
 
     chacha20_ctx.keystream_block(0, tmp_block.as_mut());
-    let poly1305_key = OneTimeKey::from_slice(&tmp_block[..POLY1305_KEYSIZE]).unwrap();
-    let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
+    let mut poly_ctx = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block));
 
     let optional_ad = match ad {
         Some(n_val) => n_val,
         None => &[0u8; 0],
     };
-    process_authentication(&mut poly1305_state, optional_ad, &dst_out, plaintext.len())?;
+    process_authentication(&mut poly_ctx, optional_ad, &dst_out, plaintext.len())?;
     dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
-        .copy_from_slice(poly1305_state.finalize()?.unprotected_as_bytes());
+        .copy_from_slice(poly_ctx.finalize()?.unprotected_as_bytes());
 
     Ok(())
 }
@@ -240,8 +240,7 @@ pub fn open(
     let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
 
     chacha20_ctx.keystream_block(0, tmp_block.as_mut());
-    let poly1305_key = OneTimeKey::from_slice(&tmp_block[..POLY1305_KEYSIZE]).unwrap();
-    let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
+    let mut poly_ctx = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block));
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
     let optional_ad = match ad {
@@ -249,14 +248,14 @@ pub fn open(
         None => &[0u8; 0],
     };
     process_authentication(
-        &mut poly1305_state,
+        &mut poly_ctx,
         optional_ad,
         ciphertext_with_tag,
         ciphertext_len,
     )?;
 
     util::secure_cmp(
-        poly1305_state.finalize()?.unprotected_as_bytes(),
+        poly_ctx.finalize()?.unprotected_as_bytes(),
         &ciphertext_with_tag[ciphertext_len..],
     )?;
 
@@ -355,8 +354,12 @@ mod private {
             let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
             let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
-            let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-            let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
+            let mut chacha20_ctx =
+                ChaCha20::new(sk.unprotected_as_bytes(), n.as_ref(), true).unwrap();
+            let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
+            let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
+            let mut poly1305_state = Poly1305::new(&poly1305_key);
 
             process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 0).unwrap();
         }
@@ -367,8 +370,12 @@ mod private {
             let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
             let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
-            let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-            let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
+            let mut chacha20_ctx =
+                ChaCha20::new(sk.unprotected_as_bytes(), n.as_ref(), true).unwrap();
+            let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
+            let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
+            let mut poly1305_state = Poly1305::new(&poly1305_key);
 
             process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 0], 64).unwrap();
         }
@@ -379,8 +386,12 @@ mod private {
             let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
             let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
-            let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-            let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
+            let mut chacha20_ctx =
+                ChaCha20::new(sk.unprotected_as_bytes(), n.as_ref(), true).unwrap();
+            let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
+            let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
+            let mut poly1305_state = Poly1305::new(&poly1305_key);
 
             process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 65).unwrap();
         }
@@ -390,8 +401,12 @@ mod private {
             let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
             let n = Nonce::from_slice(&[0u8; 12]).unwrap();
 
-            let poly1305_key = poly1305_key_gen(&sk, &n).unwrap();
-            let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
+            let mut chacha20_ctx =
+                ChaCha20::new(sk.unprotected_as_bytes(), n.as_ref(), true).unwrap();
+            let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
+            let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
+            let mut poly1305_state = Poly1305::new(&poly1305_key);
 
             assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 64).is_ok());
             assert!(process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 64], 63).is_ok());
@@ -419,10 +434,12 @@ mod test_vectors {
             0x8b, 0x77, 0x0d, 0xc7,
         ];
 
+        let mut chacha20_ctx =
+            ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
         assert_eq!(
-            poly1305_key_gen(&key, &nonce)
-                .unwrap()
-                .unprotected_as_bytes(),
+            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
             expected.as_ref()
         );
     }
@@ -445,10 +462,12 @@ mod test_vectors {
             0xe3, 0xfb, 0xb7, 0x39,
         ];
 
+        let mut chacha20_ctx =
+            ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
         assert_eq!(
-            poly1305_key_gen(&key, &nonce)
-                .unwrap()
-                .unprotected_as_bytes(),
+            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
             expected.as_ref()
         );
     }
@@ -471,10 +490,12 @@ mod test_vectors {
             0xd2, 0x33, 0x10, 0xae,
         ];
 
+        let mut chacha20_ctx =
+            ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
         assert_eq!(
-            poly1305_key_gen(&key, &nonce)
-                .unwrap()
-                .unprotected_as_bytes(),
+            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
             expected.as_ref()
         );
     }
