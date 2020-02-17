@@ -251,10 +251,7 @@ impl StreamXChaCha20Poly1305 {
         mac: &Poly1305Tag,
         tag: &StreamTag,
     ) -> Result<(), UnknownCryptoError> {
-        xor_slices!(
-            &mac.unprotected_as_bytes()[..INONCEBYTES],
-            self.inonce.as_mut()
-        );
+        xor_slices!(mac.unprotected_as_bytes()[..INONCEBYTES], self.inonce);
         self.counter = self.counter.wrapping_add(1);
         if bool::from(
             !(tag.as_byte() & StreamTag::REKEY.as_byte()).ct_eq(&0u8) | self.counter.ct_eq(&0u32),

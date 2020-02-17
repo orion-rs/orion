@@ -306,7 +306,7 @@ pub(crate) fn xor_keystream(
         match initial_counter.checked_add(ctr as u32) {
             Some(counter) => {
                 ctx.keystream_block(counter, tmp_block);
-                xor_slices!(&tmp_block, out_block);
+                xor_slices!(tmp_block, out_block);
             }
             None => return Err(UnknownCryptoError),
         }

@@ -113,10 +113,7 @@ fn function_f(
             hmac.reset();
             hmac.update(&u_step)?;
             u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
-            dk_block
-                .iter_mut()
-                .zip(u_step.iter())
-                .for_each(|(a, b)| *a ^= b);
+            xor_slices!(u_step, dk_block);
         }
     }
 

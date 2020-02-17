@@ -90,6 +90,7 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2b::{Blake2b, BLAKE2B_OUTSIZE};
 use crate::util;
+use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 use zeroize::Zeroize;
 
 /// The Argon2 version (0x13).
@@ -300,9 +301,7 @@ fn g_two(block: &[u64], out: &mut [u64]) {
     working_block.copy_from_slice(block);
     fill_block(&mut working_block);
 
-    for (el_out, &el_src) in working_block.iter_mut().zip(block.iter()) {
-        *el_out ^= el_src;
-    }
+    xor_slices!(block, working_block);
 
     let mut tmp_block = [0u64; 128];
     tmp_block.copy_from_slice(&working_block);
@@ -332,10 +331,7 @@ fn g_xor(block_x: &[u64], block_y: &[u64], out: &mut [u64]) {
     fill_block(&mut working_block);
 
     // `out` = Z ^ R
-    for (el_out, el_z) in out.iter_mut().zip(working_block.iter()) {
-        *el_out ^= el_z;
-    }
-
+    xor_slices!(working_block, out);
     working_block.zeroize();
 }
 
@@ -419,33 +415,6 @@ impl Gidx {
     }
 }
 
-/// Copy a 1024*u8 block into dst.
-fn load_into(src: &[u8], dst: &mut [u64; 128]) {
-    debug_assert!(src.len() == 1024);
-    use core::convert::TryInto;
-
-    for (src_chunk, dst_elem) in src
-        .chunks_exact(core::mem::size_of::<u64>())
-        .zip(dst.iter_mut())
-    {
-        // src will be 1024 and thereby evenly divisable by 8 making
-        // and so this unwrap() should not be able to panic.
-        *dst_elem = u64::from_le_bytes(src_chunk.try_into().unwrap());
-    }
-}
-
-/// Copy a 128*u64 block into dst.
-fn store_into(src: &[u64], dst: &mut [u8; 1024]) {
-    debug_assert!(src.len() == 128);
-
-    for (src_elem, dst_chunk) in src
-        .iter()
-        .zip(dst.chunks_exact_mut(core::mem::size_of::<u64>()))
-    {
-        dst_chunk.copy_from_slice(&src_elem.to_le_bytes());
-    }
-}
-
 #[allow(clippy::too_many_arguments)]
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Argon2i password hashing function as described in the [draft RFC](https://datatracker.ietf.org/doc/draft-irtf-cfrg-argon2/).
@@ -526,11 +495,11 @@ pub fn derive_key(
 
     // H' into the first two blocks
     extended_hash(&h0, &mut tmp)?;
-    load_into(&tmp, &mut blocks[0]);
+    load_u64_into_le(&tmp, &mut blocks[0]);
     h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + core::mem::size_of::<u32>())]
         .copy_from_slice(&1u32.to_le_bytes()); // Block 1
     extended_hash(&h0, &mut tmp)?;
-    load_into(&tmp, &mut blocks[1]);
+    load_u64_into_le(&tmp, &mut blocks[1]);
 
     let mut gidx = Gidx::new(n_blocks, iterations, segment_length);
     let mut prev_b = [0u64; 128];
@@ -566,7 +535,7 @@ pub fn derive_key(
         }
     }
 
-    store_into(blocks.get(n_blocks as usize - 1).unwrap(), &mut tmp);
+    store_u64_into_le(blocks.get(n_blocks as usize - 1).unwrap(), &mut tmp);
     extended_hash(&tmp, dst_out)?;
 
     prev_b.zeroize();
