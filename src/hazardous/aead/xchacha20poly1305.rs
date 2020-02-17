@@ -45,6 +45,7 @@
 //! - `plaintext` or `ciphertext_with_tag` are empty.
 //! - The received tag does not match the calculated tag when decrypting.
 //! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when encrypting.
+//! - Converting `usize` to `u64` would be a lossy conversion.
 //!
 //! # Panics:
 //! A panic will occur if:
