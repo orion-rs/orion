@@ -394,12 +394,7 @@ pub fn hash_password(
         buffer.as_mut(),
     )?;
 
-    PasswordHash::from_slice(
-        buffer.as_ref(),
-        salt.as_ref(),
-        iterations,
-        memory,
-    )
+    PasswordHash::from_slice(buffer.as_ref(), salt.as_ref(), iterations, memory)
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]

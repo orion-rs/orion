@@ -101,12 +101,12 @@ use crate::{
     errors::UnknownCryptoError,
     hazardous::{
         mac::poly1305::{self, OneTimeKey, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
-        stream::chacha20,
+        stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE},
     },
     util,
 };
+use zeroize::Zeroizing;
 
-#[inline]
 /// Poly1305 key generation using IETF ChaCha20.
 pub(crate) fn poly1305_key_gen(
     key: &SecretKey,
@@ -192,22 +192,26 @@ pub fn seal(
         return Err(UnknownCryptoError);
     }
 
+    dst_out[..plaintext.len()].copy_from_slice(plaintext);
+
+    let mut chacha20_ctx =
+        ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+    let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    chacha20::xor_keystream(
+        &mut chacha20_ctx,
+        1,
+        tmp_block.as_mut(),
+        &mut dst_out[..plaintext.len()],
+    )?;
+
+    chacha20_ctx.keystream_block(0, tmp_block.as_mut());
+    let poly1305_key = OneTimeKey::from_slice(&tmp_block[..POLY1305_KEYSIZE]).unwrap();
+    let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
+
     let optional_ad = match ad {
         Some(n_val) => n_val,
         None => &[0u8; 0],
     };
-
-    chacha20::encrypt(
-        secret_key,
-        nonce,
-        1,
-        plaintext,
-        &mut dst_out[..plaintext.len()],
-    )?;
-
-    let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
-    let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
-
     process_authentication(&mut poly1305_state, optional_ad, &dst_out, plaintext.len())?;
     dst_out[plaintext.len()..(plaintext.len() + POLY1305_OUTSIZE)]
         .copy_from_slice(poly1305_state.finalize()?.unprotected_as_bytes());
@@ -231,15 +235,19 @@ pub fn open(
         return Err(UnknownCryptoError);
     }
 
+    let mut chacha20_ctx =
+        ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+    let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
+    chacha20_ctx.keystream_block(0, tmp_block.as_mut());
+    let poly1305_key = OneTimeKey::from_slice(&tmp_block[..POLY1305_KEYSIZE]).unwrap();
+    let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
+
+    let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
     let optional_ad = match ad {
         Some(n_val) => n_val,
         None => &[0u8; 0],
     };
-
-    let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
-
-    let poly1305_key = poly1305_key_gen(secret_key, nonce)?;
-    let mut poly1305_state = poly1305::Poly1305::new(&poly1305_key);
     process_authentication(
         &mut poly1305_state,
         optional_ad,
@@ -252,11 +260,11 @@ pub fn open(
         &ciphertext_with_tag[ciphertext_len..],
     )?;
 
-    chacha20::decrypt(
-        secret_key,
-        nonce,
+    dst_out[..ciphertext_len].copy_from_slice(&ciphertext_with_tag[..ciphertext_len]);
+    chacha20::xor_keystream(
+        &mut chacha20_ctx,
         1,
-        &ciphertext_with_tag[..ciphertext_len],
+        tmp_block.as_mut(),
         &mut dst_out[..ciphertext_len],
     )
 }
