@@ -249,14 +249,15 @@ mod public {
     }
 }
 
+#[cfg(debug_assertions)]
 // Testing private functions in the module.
 #[cfg(test)]
 mod private {
     use super::*;
 
+    #[cfg(debug_assertions)]
     mod test_process_authentication {
         use super::*;
-
         #[test]
         #[should_panic]
         fn test_panic_empty_buf() {
