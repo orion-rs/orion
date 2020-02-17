@@ -98,6 +98,7 @@ use crate::{
     hltypes::Salt,
 };
 use base64::{decode_config, encode_config, STANDARD_NO_PAD};
+use zeroize::Zeroizing;
 
 /// The length of the salt used for password hashing.
 pub const SALT_LENGTH: usize = 16;
@@ -381,7 +382,7 @@ pub fn hash_password(
 
     // Cannot panic as this is a valid size.
     let salt = Salt::generate(SALT_LENGTH).unwrap();
-    let mut buffer = vec![0u8; PWHASH_LENGTH];
+    let mut buffer = Zeroizing::new([0u8; PWHASH_LENGTH]);
 
     argon2i::derive_key(
         password.unprotected_as_bytes(),
@@ -390,15 +391,15 @@ pub fn hash_password(
         memory,
         None,
         None,
-        &mut buffer,
+        buffer.as_mut(),
     )?;
 
-    Ok(PasswordHash::from_slice(
-        &buffer,
+    PasswordHash::from_slice(
+        buffer.as_ref(),
         salt.as_ref(),
         iterations,
         memory,
-    )?)
+    )
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -413,7 +414,7 @@ pub fn hash_password_verify(
         return Err(UnknownCryptoError);
     }
 
-    let mut buffer = vec![0u8; PWHASH_LENGTH];
+    let mut buffer = Zeroizing::new([0u8; PWHASH_LENGTH]);
 
     argon2i::verify(
         expected.unprotected_as_bytes(),
@@ -423,10 +424,8 @@ pub fn hash_password_verify(
         memory,
         None,
         None,
-        &mut buffer,
-    )?;
-
-    Ok(())
+        buffer.as_mut(),
+    )
 }
 
 // Testing public functions in the module.
