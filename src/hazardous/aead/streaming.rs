@@ -96,7 +96,7 @@
 //! [`ABYTES`]: constant.ABYTES.html
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::aead::chacha20poly1305::{padding, poly1305_key_gen};
+use crate::hazardous::aead::chacha20poly1305::poly1305_key_gen;
 use crate::hazardous::mac::poly1305::{Poly1305, Tag as Poly1305Tag, POLY1305_OUTSIZE};
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::hazardous::stream::chacha20::{
@@ -165,6 +165,24 @@ const INONCEBYTES: usize = 8;
 const TAG_SIZE: usize = 1;
 /// Size of additional data appended to each message.
 pub const ABYTES: usize = POLY1305_OUTSIZE + TAG_SIZE;
+
+#[inline]
+/// Padding size that gives the needed bytes to pad `input` to an integral
+/// multiple of 16.
+pub(crate) fn padding(input: usize) -> usize {
+    if input == 0 {
+        return 0;
+    }
+
+    let rem = input % 16;
+
+    if rem != 0 {
+        16 - rem
+    } else {
+        0
+    }
+}
+
 /// Streaming XChaCha20Poly1305 state.
 pub struct StreamXChaCha20Poly1305 {
     key: SecretKey,
@@ -462,6 +480,54 @@ mod public {
 #[cfg(test)]
 mod private {
     use super::*;
+
+    mod test_padding {
+        use super::*;
+        #[test]
+        fn test_length_padding() {
+            assert_eq!(padding(0), 0);
+            assert_eq!(padding(1), 15);
+            assert_eq!(padding(2), 14);
+            assert_eq!(padding(3), 13);
+            assert_eq!(padding(4), 12);
+            assert_eq!(padding(5), 11);
+            assert_eq!(padding(6), 10);
+            assert_eq!(padding(7), 9);
+            assert_eq!(padding(8), 8);
+            assert_eq!(padding(9), 7);
+            assert_eq!(padding(10), 6);
+            assert_eq!(padding(11), 5);
+            assert_eq!(padding(12), 4);
+            assert_eq!(padding(13), 3);
+            assert_eq!(padding(14), 2);
+            assert_eq!(padding(15), 1);
+            assert_eq!(padding(16), 0);
+        }
+
+        // Proptests. Only executed when NOT testing no_std.
+        #[cfg(feature = "safe_api")]
+        mod proptest {
+            use super::*;
+
+            quickcheck! {
+                // The usize that padding() returns should always
+                // be what remains to make input a multiple of 16 in length.
+                fn prop_padding_result(input: usize) -> bool {
+                    let rem = padding(input);
+
+                    ((input + rem) % 16) == 0
+                }
+            }
+
+            quickcheck! {
+                // padding() should never return a usize above 15.
+                // The usize must always be in range of 0..=15.
+                fn prop_result_never_above_15(input: usize) -> bool {
+                    padding(input) < 16
+                }
+            }
+        }
+    }
 
     // Test values were generated using libsodium. See /tests/test_generation/
 
