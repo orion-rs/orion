@@ -392,7 +392,6 @@ mod public {
         use crate::test_framework::streamcipher_interface::*;
 
         // Proptests. Only executed when NOT testing no_std.
-        #[cfg(feature = "safe_api")]
         mod proptest {
             use super::*;
 
@@ -517,7 +516,6 @@ mod public {
     }
 
     // hex crate uses Vec<u8>, so we need std.
-    #[cfg(feature = "safe_api")]
     mod test_hchacha20 {
         use super::*;
 

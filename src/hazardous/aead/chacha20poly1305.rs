@@ -255,7 +255,6 @@ mod public {
 mod private {
     use super::*;
 
-    #[cfg(debug_assertions)]
     mod test_process_authentication {
         use super::*;
         #[test]
