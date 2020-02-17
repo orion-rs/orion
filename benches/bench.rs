@@ -33,10 +33,10 @@ use orion::hazardous::{
     stream::*,
 };
 
+static INPUT_SIZES: [usize; 3] = [64 * 1024, 128 * 1024, 256 * 1024];
+
 mod mac {
     use super::*;
-
-    static INPUT_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
 
     pub fn bench_poly1305(c: &mut Criterion) {
         let mut group = c.benchmark_group("Poly1305");
@@ -85,8 +85,6 @@ mod mac {
 
 mod aead {
     use super::*;
-
-    static INPUT_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
 
     pub fn bench_chacha20poly1305(c: &mut Criterion) {
         let mut group = c.benchmark_group("ChaCha20-Poly1305");
@@ -146,8 +144,6 @@ mod aead {
 mod hash {
     use super::*;
 
-    static INPUT_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
-
     pub fn bench_sha512(c: &mut Criterion) {
         let mut group = c.benchmark_group("SHA512");
 
@@ -159,40 +155,6 @@ mod hash {
                 BenchmarkId::new("compute hash", *size),
                 &input,
                 |b, input_message| b.iter(|| sha512::Sha512::digest(&input_message).unwrap()),
-            );
-        }
-    }
-
-    pub fn bench_blake2b_256(c: &mut Criterion) {
-        let mut group = c.benchmark_group("BLAKE2b-256");
-
-        for size in INPUT_SIZES.iter() {
-            let input = vec![0u8; *size];
-
-            group.throughput(Throughput::Bytes(*size as u64));
-            group.bench_with_input(
-                BenchmarkId::new("compute hash", *size),
-                &input,
-                |b, input_message| {
-                    b.iter(|| blake2b::Hasher::Blake2b256.digest(&input_message).unwrap())
-                },
-            );
-        }
-    }
-
-    pub fn bench_blake2b_384(c: &mut Criterion) {
-        let mut group = c.benchmark_group("BLAKE2b-384");
-
-        for size in INPUT_SIZES.iter() {
-            let input = vec![0u8; *size];
-
-            group.throughput(Throughput::Bytes(*size as u64));
-            group.bench_with_input(
-                BenchmarkId::new("compute hash", *size),
-                &input,
-                |b, input_message| {
-                    b.iter(|| blake2b::Hasher::Blake2b384.digest(&input_message).unwrap())
-                },
             );
         }
     }
@@ -214,88 +176,22 @@ mod hash {
         }
     }
 
-    // Convenience function for testing Blake2b with a secret key.
-    fn blake2b_keyed(
-        sk: Option<&blake2b::SecretKey>,
-        size: usize,
-        input: &[u8],
-    ) -> Result<blake2b::Digest, orion::errors::UnknownCryptoError> {
-        let mut state = blake2b::Blake2b::new(sk, size).unwrap();
-        state.update(input).unwrap();
-        state.finalize()
-    }
-
-    pub fn bench_blake2b_256_keyed(c: &mut Criterion) {
-        let mut group = c.benchmark_group("BLAKE2b-256_keyed");
-        let sk = &blake2b::SecretKey::generate();
-
-        for size in INPUT_SIZES.iter() {
-            let input = vec![0u8; *size];
-
-            group.throughput(Throughput::Bytes(*size as u64));
-            group.bench_with_input(
-                BenchmarkId::new("compute mac", *size),
-                &input,
-                |b, input_message| b.iter(|| blake2b_keyed(Some(sk), 32, input_message).unwrap()),
-            );
-        }
-    }
-
-    pub fn bench_blake2b_384_keyed(c: &mut Criterion) {
-        let mut group = c.benchmark_group("BLAKE2b-384_keyed");
-        let sk = &blake2b::SecretKey::generate();
-
-        for size in INPUT_SIZES.iter() {
-            let input = vec![0u8; *size];
-
-            group.throughput(Throughput::Bytes(*size as u64));
-            group.bench_with_input(
-                BenchmarkId::new("compute mac", *size),
-                &input,
-                |b, input_message| b.iter(|| blake2b_keyed(Some(sk), 48, input_message).unwrap()),
-            );
-        }
-    }
-
-    pub fn bench_blake2b_512_keyed(c: &mut Criterion) {
-        let mut group = c.benchmark_group("BLAKE2b-512_keyed");
-        let sk = &blake2b::SecretKey::generate();
-
-        for size in INPUT_SIZES.iter() {
-            let input = vec![0u8; *size];
-
-            group.throughput(Throughput::Bytes(*size as u64));
-            group.bench_with_input(
-                BenchmarkId::new("compute mac", *size),
-                &input,
-                |b, input_message| b.iter(|| blake2b_keyed(Some(sk), 64, input_message).unwrap()),
-            );
-        }
-    }
-
     criterion_group! {
         name = hash_benches;
         config = Criterion::default();
         targets =
         bench_sha512,
-        bench_blake2b_256,
-        bench_blake2b_384,
         bench_blake2b_512,
-        bench_blake2b_256_keyed,
-        bench_blake2b_384_keyed,
-        bench_blake2b_512_keyed,
     }
 }
 
 mod stream {
     use super::*;
 
-    static INPUT_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
-
     pub fn bench_chacha20(c: &mut Criterion) {
         let mut group = c.benchmark_group("ChaCha20");
         let key = chacha20poly1305::SecretKey::generate();
-        let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]).unwrap();
+        let nonce = chacha20poly1305::Nonce::from([0u8; 12]);
 
         for size in INPUT_SIZES.iter() {
             let input = vec![0u8; *size];
@@ -346,15 +242,16 @@ mod stream {
 mod kdf {
     use super::*;
 
-    static OKM_SIZES: [usize; 4] = [512, 1024, 2048, 4098];
-    static PBKDF2_ITERATIONS: [usize; 3] = [1000, 10000, 100000];
+    static OKM_SIZES: [usize; 1] = [512];
+    static PBKDF2_ITERATIONS: [usize; 1] = [10000];
 
     pub fn bench_hkdf(c: &mut Criterion) {
         let mut group = c.benchmark_group("HKDF-HMAC-SHA512");
 
+        let ikm = vec![0u8; 64];
+        let salt = ikm.clone();
+
         for size in OKM_SIZES.iter() {
-            let ikm = vec![0u8; 64];
-            let salt = ikm.clone();
             let mut okm_out = vec![0u8; *size];
 
             group.throughput(Throughput::Bytes(*size as u64));
@@ -374,9 +271,10 @@ mod kdf {
         group.sample_size(10);
         group.measurement_time(core::time::Duration::new(30, 0));
 
+        let ikm = vec![0u8; 64];
+        let salt = ikm.clone();
+
         for iterations in PBKDF2_ITERATIONS.iter() {
-            let ikm = vec![0u8; 64];
-            let salt = ikm.clone();
             let mut dk_out = vec![0u8; 64];
 
             // NOTE: The password newtype creation is included
@@ -416,7 +314,7 @@ mod kdf {
                 format!("iter: {}, mem (KiB): {}", iter, mem),
             ),
             &salt,
-            |b, _input_param| {
+            |b, _| {
                 b.iter(|| {
                     argon2i::derive_key(&password, &salt, iter, mem, None, None, &mut dk_out)
                         .unwrap()
