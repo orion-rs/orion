@@ -28,24 +28,21 @@
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
-//! - `ad`: Additional data to authenticate (this is not encrypted and can be
-//!   `None`. This data is also not a part of `dst_out`).
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`).
 //! - `plaintext`: The data to be encrypted.
-//! - `ciphertext`: The encrypted data with a Poly1305 tag and a [`StreamTag`] indicating its function.
-//! - `dst_out`: Destination array that will hold the
-//!   `ciphertext`/`plaintext` after encryption/decryption.
+//! - `ciphertext`: The encrypted data with, a Poly1305 tag and a [`StreamTag`] indicating its function.
+//! - `dst_out`: Destination array that will hold the `ciphertext`/`plaintext` after encryption/decryption.
 //! - `tag`: Indicates the type of message. The `tag` is a part of the output when encrypting. It
-//! is encrypted and authenticated.
+//!   is encrypted and authenticated.
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - The length of `dst_out` is less than `plaintext + 17` when encrypting.
-//! - The length of `dst_out` is less than `ciphertext - 17` when
-//!   decrypting.
-//! - The length of `ciphertext` is not greater than `16`.
-//! - The received mac does not match the calculated mac when decrypting. This can indicate
-//!   a dropped or reordered message within the stream.
-//! - More than 2^32-3 * 64 bytes of data are processed when encrypting/decrypting a single chunk.
+//! - The length of `dst_out` is less than `plaintext` + [`ABYTES`] when calling [`seal_chunk()`].
+//! - The length of `dst_out` is less than `ciphertext` - [`ABYTES`] when calling [`open_chunk()`].
+//! - The length of `ciphertext` is less than [`ABYTES`].
+//! - The received mac does not match the calculated mac when calling [`open_chunk()`]. This can
+//!   indicate a dropped or reordered message within the stream.
+//! - More than `2^32-3 * 64` bytes of data are processed when sealing/opening a single chunk.
 //! - [`ABYTES`] + `plaintext.len()` overflows when encrypting.
 //!
 //! # Panics:
@@ -53,13 +50,11 @@
 //! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows `u64::max_value()` when decrypting.
 //!
 //! # Security:
-//! - It is critical for security that a given nonce is not re-used with a given
-//!   key.
-//! - The nonce can be  randomly generated using a CSPRNG.
-//! [`Nonce::generate()`] can be used for this.
+//! - It is critical for security that a given nonce is not re-used with a given key.
+//! - The nonce can be  randomly generated using a CSPRNG. [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
-//! - The length of the messages is leaked.
-//! - It is recommended to use `StreamTag::FINISH` as tag for the last message. This allows the
+//! - The lengths of the messages are not hidden, only their contents.
+//! - It is recommended to use `StreamTag::FINISH` as the tag for the last message. This allows the
 //!   decrypting side to detect if messages at the end of the stream are lost.
 //!
 //! # Example:
@@ -94,7 +89,8 @@
 //! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
 //! [`StreamTag`]: enum.StreamTag.html
 //! [`ABYTES`]: constant.ABYTES.html
-
+//! [`seal_chunk()`]: struct.StreamXChaCha20Poly1305.html#method.seal_chunk
+//! [`open_chunk()`]: struct.StreamXChaCha20Poly1305.html#method.open_chunk
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead::chacha20poly1305::poly1305_key_gen;
 use crate::hazardous::mac::poly1305::{Poly1305, Tag as Poly1305Tag, POLY1305_OUTSIZE};
@@ -162,14 +158,13 @@ const COUNTERBYTES: usize = 4;
 /// The size of the internal nonce.
 const INONCEBYTES: usize = 8;
 /// The size of a StreamTag.
-const TAG_SIZE: usize = 1;
+pub const TAG_SIZE: usize = 1;
 /// Size of additional data appended to each message.
 pub const ABYTES: usize = POLY1305_OUTSIZE + TAG_SIZE;
 
-#[inline]
 /// Padding size that gives the needed bytes to pad `input` to an integral
 /// multiple of 16.
-pub(crate) fn padding(input: usize) -> usize {
+fn padding(input: usize) -> usize {
     if input == 0 {
         return 0;
     }

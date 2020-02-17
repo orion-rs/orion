@@ -36,13 +36,13 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - The length of `dst_out` is less than `plaintext + 16` when calling `seal()`.
-//! - The length of `dst_out` is less than `ciphertext_with_tag - 16` when
-//!   calling `open()`.
-//! - The length of `ciphertext_with_tag` is not greater than `16`.
+//! - The length of `dst_out` is less than `plaintext` + [`POLY1305_OUTSIZE`] when calling [`seal()`].
+//! - The length of `dst_out` is less than `ciphertext_with_tag` - [`POLY1305_OUTSIZE`] when
+//!   calling [`open()`].
+//! - The length of `ciphertext_with_tag` is not greater than [`POLY1305_OUTSIZE`].
 //! - `plaintext` is empty.
-//! - The received tag does not match the calculated tag when  calling `open()`.
-//! - `plaintext.len() + 16` overflows when  calling `seal()`.
+//! - The received tag does not match the calculated tag when  calling [`open()`].
+//! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when  calling [`seal()`].
 //! - Converting `usize` to `u64` would be a lossy conversion.
 //!
 //! # Panics:
@@ -56,6 +56,7 @@
 //! - Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated
 //!   using a CSPRNG. [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
+//! - The length of `plaintext` is not hidden, only its contents.
 //!
 //! # Recommendation:
 //! - It is recommended to use XChaCha20Poly1305 when possible.
@@ -85,6 +86,8 @@
 //! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
 //! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
 //! [`POLY1305_OUTSIZE`]: ../../mac/poly1305/constant.POLY1305_OUTSIZE.html
+//! [`seal()`]: fn.seal.html
+//! [`open()`]: fn.open.html
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
 use crate::{errors::UnknownCryptoError, hazardous::aead::chacha20poly1305};
