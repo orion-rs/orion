@@ -563,6 +563,33 @@ mod public {
 mod private {
     use super::*;
 
+    mod test_process_pad_to_blocksize {
+        use super::*;
+
+        #[test]
+        fn test_process_err_on_finalized() {
+            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let mut state = Poly1305::new(&sk);
+            
+            state.process_pad_to_blocksize(&[0u8; 16]).unwrap();
+            let _ = state.finalize().unwrap();
+            assert!(state.process_pad_to_blocksize(&[0u8; 16]).is_err());
+        }
+
+        #[test]
+        fn test_process_pad_no_pad() {
+            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let mut state_pad = Poly1305::new(&sk);
+            let mut state_no_pad = Poly1305::new(&sk);
+            
+            // 15 missing to be evenly divisible by 16.
+            state_pad.process_pad_to_blocksize(&[0u8; 17]).unwrap();
+            state_no_pad.process_pad_to_blocksize(&[0u8; 32]).unwrap();
+
+            assert_eq!(state_no_pad.finalize().unwrap(), state_pad.finalize().unwrap());
+        }
+    }
+
     mod test_process_block {
         use super::*;
 
