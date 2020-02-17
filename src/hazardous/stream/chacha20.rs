@@ -378,20 +378,6 @@ pub fn decrypt(
     encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// IETF ChaCha20 block function returning a serialized keystream block.
-pub fn keystream_block(
-    secret_key: &SecretKey,
-    nonce: &Nonce,
-    counter: u32,
-) -> Result<[u8; CHACHA_BLOCKSIZE], UnknownCryptoError> {
-    let mut chacha_state = ChaCha20::new(secret_key.unprotected_as_bytes(), &nonce.as_ref(), true)?;
-    let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
-    chacha_state.keystream_block(counter, &mut keystream_block);
-
-    Ok(keystream_block)
-}
-
 #[doc(hidden)]
 /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub(super) fn hchacha20(
@@ -535,116 +521,6 @@ mod public {
                     ).unwrap();
 
                     dst_out_pt != pt
-                }
-            }
-        }
-    }
-
-    mod test_keystream_block {
-        use super::*;
-
-        #[test]
-        fn test_counter() {
-            // keystream_block never increases the provided counter
-            assert!(keystream_block(
-                &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                u32::max_value(),
-            )
-            .is_ok());
-
-            assert!(keystream_block(
-                &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                0,
-            )
-            .is_ok());
-
-            assert!(keystream_block(
-                &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                64,
-            )
-            .is_ok());
-        }
-
-        #[test]
-        fn test_diff_keys_diff_output() {
-            let keystream1 = keystream_block(
-                &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                0,
-            )
-            .unwrap();
-
-            let keystream2 = keystream_block(
-                &SecretKey::from_slice(&[1u8; 32]).unwrap(),
-                &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                0,
-            )
-            .unwrap();
-
-            assert!(keystream1[..] != keystream2[..]);
-        }
-
-        #[test]
-        fn test_diff_nonce_diff_output() {
-            let keystream1 = keystream_block(
-                &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                0,
-            )
-            .unwrap();
-
-            let keystream2 = keystream_block(
-                &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                &Nonce::from_slice(&[1u8; 12]).unwrap(),
-                0,
-            )
-            .unwrap();
-
-            assert!(keystream1[..] != keystream2[..]);
-        }
-
-        #[test]
-        fn test_diff_initial_counter_diff_output() {
-            let keystream1 = keystream_block(
-                &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                0,
-            )
-            .unwrap();
-
-            let keystream2 = keystream_block(
-                &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                1,
-            )
-            .unwrap();
-
-            assert!(keystream1[..] != keystream2[..]);
-        }
-
-        // Proptests. Only executed when NOT testing no_std.
-        #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
-
-            quickcheck! {
-                fn prop_same_params_same_output(counter: u32) -> bool {
-                    let keystream1 = keystream_block(
-                        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                        &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                        counter,
-                    ).unwrap();
-
-                    let keystream2 = keystream_block(
-                        &SecretKey::from_slice(&[0u8; 32]).unwrap(),
-                        &Nonce::from_slice(&[0u8; 12]).unwrap(),
-                        counter,
-                    ).unwrap();
-
-                    keystream1[..] == keystream2[..]
                 }
             }
         }
@@ -1296,15 +1172,7 @@ mod test_vectors {
         let mut kb = [0u8; 64];
         state.keystream_block(1, &mut kb);
 
-        let keystream_block_only = keystream_block(
-            &SecretKey::from_slice(&key).unwrap(),
-            &Nonce::from_slice(&nonce).unwrap(),
-            1,
-        )
-        .unwrap();
-
         assert_eq!(kb[..], expected[..]);
-        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1329,15 +1197,7 @@ mod test_vectors {
         let mut kb = [0u8; 64];
         state.keystream_block(0, &mut kb);
 
-        let keystream_block_only = keystream_block(
-            &SecretKey::from_slice(&key).unwrap(),
-            &Nonce::from_slice(&nonce).unwrap(),
-            0,
-        )
-        .unwrap();
-
         assert_eq!(kb[..], expected[..]);
-        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1362,15 +1222,7 @@ mod test_vectors {
         let mut kb = [0u8; 64];
         state.keystream_block(1, &mut kb);
 
-        let keystream_block_only = keystream_block(
-            &SecretKey::from_slice(&key).unwrap(),
-            &Nonce::from_slice(&nonce).unwrap(),
-            1,
-        )
-        .unwrap();
-
         assert_eq!(kb[..], expected[..]);
-        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1395,15 +1247,7 @@ mod test_vectors {
         let mut kb = [0u8; 64];
         state.keystream_block(1, &mut kb);
 
-        let keystream_block_only = keystream_block(
-            &SecretKey::from_slice(&key).unwrap(),
-            &Nonce::from_slice(&nonce).unwrap(),
-            1,
-        )
-        .unwrap();
-
         assert_eq!(kb[..], expected[..]);
-        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1428,15 +1272,7 @@ mod test_vectors {
         let mut kb = [0u8; 64];
         state.keystream_block(2, &mut kb);
 
-        let keystream_block_only = keystream_block(
-            &SecretKey::from_slice(&key).unwrap(),
-            &Nonce::from_slice(&nonce).unwrap(),
-            2,
-        )
-        .unwrap();
-
         assert_eq!(kb[..], expected[..]);
-        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1461,15 +1297,7 @@ mod test_vectors {
         let mut kb = [0u8; 64];
         state.keystream_block(0, &mut kb);
 
-        let keystream_block_only = keystream_block(
-            &SecretKey::from_slice(&key).unwrap(),
-            &Nonce::from_slice(&nonce).unwrap(),
-            0,
-        )
-        .unwrap();
-
         assert_eq!(kb[..], expected[..]);
-        assert_eq!(kb[..], keystream_block_only[..]);
     }
 
     #[test]
@@ -1518,28 +1346,6 @@ mod test_vectors {
 
         state.keystream_block(2, &mut actual_keystream[64..]);
         assert!(second_state == state.state);
-
-        assert_eq!(
-            actual_keystream[..expected_keystream.len()].as_ref(),
-            expected_keystream.as_ref()
-        );
-
-        actual_keystream[..64].copy_from_slice(
-            &keystream_block(
-                &SecretKey::from_slice(&key).unwrap(),
-                &Nonce::from_slice(&nonce).unwrap(),
-                1,
-            )
-            .unwrap(),
-        );
-        actual_keystream[64..].copy_from_slice(
-            &keystream_block(
-                &SecretKey::from_slice(&key).unwrap(),
-                &Nonce::from_slice(&nonce).unwrap(),
-                2,
-            )
-            .unwrap(),
-        );
 
         assert_eq!(
             actual_keystream[..expected_keystream.len()].as_ref(),
