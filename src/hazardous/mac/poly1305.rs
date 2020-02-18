@@ -355,7 +355,7 @@ impl Poly1305 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Update state with a `data`. This can be called multiple times.
+    /// Update state with `data`. This can be called multiple times.
     pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);

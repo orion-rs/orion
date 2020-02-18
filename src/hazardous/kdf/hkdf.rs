@@ -92,7 +92,7 @@ pub fn expand(
     }
 
     let optional_info = match info {
-        Some(ref n_val) => *n_val,
+        Some(n_val) => n_val,
         None => &[0u8; 0],
     };
 

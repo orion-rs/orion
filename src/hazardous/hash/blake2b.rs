@@ -28,8 +28,7 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `size` is 0.
-//! - `size` is greater than 64.
+//! - `size` is 0 or greater than 64.
 //! - [`finalize()`] is called twice without a [`reset()`] in between.
 //! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
 //!   between.
@@ -44,13 +43,13 @@
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
-//!   [`SecretKey::generate()`] can be used
-//! for this. It generates a secret key of 32 bytes.
+//!   [`SecretKey::generate()`] can be used for this. It generates
+//!   a secret key of 32 bytes.
 //! - The minimum recommended size for a secret key is 32 bytes.
 //! - When using Blake2b with a secret key, then the output can be used as a
-//!   MAC. If this is the
-//! intention, __**avoid using**__ [`as_ref()`] to compare such MACs and use
-//! instead [`verify()`], which will compare the MAC in constant time.
+//!   MAC. If this is the intention, __**avoid using**__ [`as_ref()`]
+//!   to compare such MACs and use instead [`verify()`], which will compare
+//!   the MAC in constant time.
 //! - The recommended minimum output size is 32.
 //!
 //! # Example:
@@ -113,7 +112,7 @@ construct_public! {
 }
 
 #[allow(clippy::unreadable_literal)]
-/// The BLAKE2b initialization vector (IV) as defined in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
+/// The BLAKE2b initialization vector as defined in the RFC 7693.
 const IV: [U64x4; 2] = [
     U64x4(
         0x6a09e667f3bcc908,
@@ -129,7 +128,7 @@ const IV: [U64x4; 2] = [
     ),
 ];
 
-/// BLAKE2b SGIMA as defined in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
+/// BLAKE2b SIGMA as defined in the RFC 7693.
 const SIGMA: [[usize; 16]; 12] = [
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
@@ -262,7 +261,7 @@ impl Blake2b {
         v[3] = v[3].shl_1();
     }
 
-    /// The compression function f as defined in the RFC.
+    /// The compression function f.
     fn compress_f(&mut self, data: Option<&[u8]>) {
         let mut m_vec = [0u64; 16];
         match data {
@@ -371,7 +370,7 @@ impl Blake2b {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Update state with a `data`. This can be called multiple times.
+    /// Update state with `data`. This can be called multiple times.
     pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
@@ -551,8 +550,7 @@ mod public {
         use super::*;
 
         /// Convenience testing function to avoid repetition when testing
-        /// new sizes with and without a secret key. Returns false if
-        /// incorrect Result is returned.
+        /// new sizes with and without a secret key.
         fn new_tester(sk: Option<&SecretKey>, size: usize) -> bool {
             if size >= 1 && size <= BLAKE2B_OUTSIZE {
                 Blake2b::new(sk, size).is_ok()

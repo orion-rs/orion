@@ -27,5 +27,5 @@ pub mod hkdf;
 pub mod pbkdf2;
 
 #[cfg(feature = "safe_api")]
-/// Argon2i password hashing function as described in the [draft RFC](https://datatracker.ietf.org/doc/draft-irtf-cfrg-argon2/).
+/// Argon2i password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
 pub mod argon2i;

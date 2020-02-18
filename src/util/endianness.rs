@@ -29,7 +29,7 @@ macro_rules! impl_store_into {
         /// Store bytes in `src` in `dst`.
         pub fn $func_name(src: &[$type_alias], dst: &mut [u8]) {
             let type_alias_len = mem::size_of::<$type_alias>();
-            // The length of src must be evenly divisable by the length of dst,
+            // The length of src must be evenly divisible with the length of dst,
             // making sure .chunks_exact() leaves no remainder.
             assert!((type_alias_len * src.len()) == dst.len());
 
@@ -46,7 +46,7 @@ macro_rules! impl_load_into {
         /// Load bytes in `src` into `dst`.
         pub fn $func_name(src: &[u8], dst: &mut [$type_alias]) {
             let type_alias_len = mem::size_of::<$type_alias>();
-            // The length of src must be evenly divisable by the length of dst,
+            // The length of src must be evenly divisible with the length of dst,
             // making sure .chunks_exact() leaves no remainder.
             assert!((dst.len() * type_alias_len) == src.len());
 

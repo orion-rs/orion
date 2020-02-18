@@ -417,7 +417,7 @@ impl Gidx {
 
 #[allow(clippy::too_many_arguments)]
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Argon2i password hashing function as described in the [draft RFC](https://datatracker.ietf.org/doc/draft-irtf-cfrg-argon2/).
+/// Argon2i password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
 pub fn derive_key(
     password: &[u8],
     salt: &[u8],

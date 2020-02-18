@@ -34,14 +34,13 @@
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
-//!   [`SecretKey::generate()`] can be used
-//! for this. It generates a secret key of 128 bytes.
+//!   [`SecretKey::generate()`] can be used for this. It generates
+//!   a secret key of 128 bytes.
 //! - The minimum recommended size for a secret key is 64 bytes.
 //!
 //! # Recommendation:
 //! - If you are unsure of whether to use HMAC or Poly1305, it is most often
-//!   easier to just
-//! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
+//!   easier to just use HMAC. See also [Cryptographic Right Answers].
 //!
 //! # Example:
 //! ```rust
@@ -60,6 +59,7 @@
 //! [`reset()`]: struct.Hmac.html
 //! [`finalize()`]: struct.Hmac.html
 //! [`SecretKey::generate()`]: struct.SecretKey.html
+//! [Cryptographic Right Answers]: https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html
 
 use crate::{
     errors::UnknownCryptoError,
@@ -75,7 +75,7 @@ construct_hmac_key! {
     ///
     /// Using `unprotected_as_bytes()` will return the secret key with padding.
     ///
-    /// Using `get_length()` will return the length with padding (always 128).
+    /// `len()` will return the length with padding (always 128).
     ///
     /// # Panics:
     /// A panic will occur if:
@@ -120,16 +120,12 @@ impl Hmac {
     fn pad_key_io(&mut self, key: &SecretKey) {
         let mut ipad = [0x36; SHA512_BLOCKSIZE];
         let mut opad = [0x5C; SHA512_BLOCKSIZE];
-        // `key` has already been padded with zeroes to a length of SHA512_BLOCKSIZE
-        // in SecretKey::from_slice
+        // The key is padded in SecretKey::from_slice
         for (idx, itm) in key.unprotected_as_bytes().iter().enumerate() {
             opad[idx] ^= itm;
             ipad[idx] ^= itm;
         }
 
-        // Due to opad_hasher and ipad_hasher being initialized in new()
-        // and the size of input to update() is known to be acceptable size,
-        // .unwrap() here should not be able to panic
         self.ipad_hasher.update(ipad.as_ref()).unwrap();
         self.opad_hasher.update(opad.as_ref()).unwrap();
         self.working_hasher = self.ipad_hasher.clone();
@@ -157,7 +153,7 @@ impl Hmac {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Update state with a `data`. This can be called multiple times.
+    /// Update state with `data`. This can be called multiple times.
     pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             Err(UnknownCryptoError)
@@ -167,7 +163,7 @@ impl Hmac {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Return a `Tag`.
+    /// Return a HMAC-SHA512 tag.
     pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
@@ -176,9 +172,7 @@ impl Hmac {
         self.is_finalized = true;
         let mut outer_hasher = self.opad_hasher.clone();
         outer_hasher.update(self.working_hasher.finalize()?.as_ref())?;
-        let tag = Tag::from_slice(outer_hasher.finalize()?.as_ref())?;
-
-        Ok(tag)
+        Tag::from_slice(outer_hasher.finalize()?.as_ref())
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -190,7 +184,7 @@ impl Hmac {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Verify a HMAC-SHA512 Tag in constant time.
+    /// Verify a HMAC-SHA512 tag in constant time.
     pub fn verify(
         expected: &Tag,
         secret_key: &SecretKey,
