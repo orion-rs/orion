@@ -3,12 +3,12 @@
 There are a variety of things that one may contribute to this project. Contributions of any kind are always welcomed.
 
 #### 1.1 Features and Improvements
-Improvements to the library can come in many flavors: Performance, security, usability, etc.
+Improvements to the library can come in many flavors: performance, security, usability, etc.
 An improvement that doesn't add new features or are breaking changes, may be submitted as pull requests directly.
 
 Features that add new functionality or are breaking changes should preferably be discussed in a separate issue first.
 
-Try to make changes adhere to the [Rust API Guidelines](https://rust-lang-nursery.github.io/api-guidelines/checklist.html) as much as possible.
+See [Rust API Guidelines](https://rust-lang-nursery.github.io/api-guidelines/checklist.html) and [Secure Rust Guidelines](https://anssi-fr.github.io/rust-guide/) for some checklists on how to implement new features.
 
 #### 1.2 Testing
 One way to contribute to testing is by writing new unit-tests to cover code that isn't already being tested. Improvements to existing unit-tests is also an option.
@@ -62,7 +62,6 @@ Before submitting a pull request, please make sure you have done the following:
 
 - [ ] Explain what the pull request changes, in the description of the GitHub PR.
 - [ ] If the pull request is a bugfix, try to include a regression test for the bug.
-- [ ] During development it might come in handy to disable clippy deny attributes (`#![deny(warnings)]`, etc). If this has been done, please make sure to enable them again, before submitting a pull request.
 
 All pull requests should be opened against the `master` branch.
 

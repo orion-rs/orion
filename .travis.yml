@@ -62,12 +62,11 @@ matrix:
         - cargo fmt --all -- --check
 
         # cargo-audit
-        - cargo clean
-        - cargo build
-        - cargo audit
+        - cargo generate-lockfile
+        - cargo audit -D
 
         # clippy
-        - cargo clippy
+        - cargo clippy -- -D warnings
 
         # Debug:
         - cargo test

@@ -51,7 +51,7 @@
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
-#![deny(warnings)]
+#![deny(clippy::mem_forget)]
 #![warn(
     missing_docs,
     rust_2018_idioms,
