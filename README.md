@@ -23,9 +23,7 @@ Rust 1.37 or later is supported however, the majority of testing happens with la
 MSRV may be changed at any point and will not be considered a SemVer breaking change.
 
 ### Crate Features
-By default orion targets stable Rust and in this case, extra dependency specifications are not required.
-
-To use orion in a `no_std` context, you need to specify the dependency as such:
+By default orion targets stable Rust with `std`. To use orion in a `no_std` context, you need to specify the dependency as such:
 ```
 orion = { version = "*", default-features = false }
 # Replace * with the most recent version
