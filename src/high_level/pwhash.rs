@@ -91,11 +91,11 @@
 //! [`pwhash::hash_password`]: fn.hash_password.html
 //! [`pwhash::hash_password_verify`]: fn.hash_password_verify.html
 
-pub use crate::hltypes::Password;
+pub use super::hltypes::Password;
+use super::hltypes::Salt;
 use crate::{
     errors::UnknownCryptoError,
     hazardous::kdf::argon2i::{self, LANES, MIN_MEMORY},
-    hltypes::Salt,
 };
 use base64::{decode_config, encode_config, STANDARD_NO_PAD};
 use zeroize::Zeroizing;

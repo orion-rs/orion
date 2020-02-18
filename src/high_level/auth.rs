@@ -68,7 +68,7 @@
 //! [`SecretKey::default()`]: struct.SecretKey.html
 //! [`Tag`]: struct.Tag.html
 
-pub use crate::hltypes::{SecretKey, Tag};
+pub use super::hltypes::{SecretKey, Tag};
 use crate::{
     errors::UnknownCryptoError,
     hazardous::hash::blake2b::{self, Blake2b, Digest},

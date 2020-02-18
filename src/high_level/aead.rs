@@ -84,7 +84,7 @@
 //! [`SecretKey::default()`]: struct.SecretKey.html
 //! [`streaming API`]: streaming/index.html
 
-pub use crate::hltypes::SecretKey;
+pub use super::hltypes::SecretKey;
 use crate::{
     errors::UnknownCryptoError,
     hazardous::{

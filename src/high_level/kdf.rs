@@ -76,7 +76,7 @@
 //! [`Salt`]: struct.Salt.html
 //! [`Salt::default()`]: struct.Salt.html
 
-pub use crate::hltypes::{Password, Salt, SecretKey};
+pub use super::hltypes::{Password, Salt, SecretKey};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2i, pwhash::MIN_ITERATIONS};
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]

@@ -80,22 +80,22 @@ pub mod errors;
 pub mod hazardous;
 
 #[cfg(feature = "safe_api")]
-pub mod hash;
+mod high_level;
 
 #[cfg(feature = "safe_api")]
-pub mod aead;
+pub use high_level::hash;
 
 #[cfg(feature = "safe_api")]
-pub mod auth;
+pub use high_level::aead;
 
 #[cfg(feature = "safe_api")]
-pub mod pwhash;
+pub use high_level::auth;
 
 #[cfg(feature = "safe_api")]
-pub mod kdf;
+pub use high_level::pwhash;
 
 #[cfg(feature = "safe_api")]
-mod hltypes;
+pub use high_level::kdf;
 
 #[doc(hidden)]
 /// Testing framework.
