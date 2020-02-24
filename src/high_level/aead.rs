@@ -199,27 +199,27 @@ pub mod streaming {
     //! use orion::aead::SecretKey;
     //!
     //! let key = SecretKey::default();
-    //! let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
-    //! let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+    //! let (mut sealer, nonce) = StreamSealer::new(&key)?;
+    //! let mut opener = StreamOpener::new(&key, &nonce)?;
     //!
     //! // Message 1
     //! let plaintext1 = "Secret message 1".as_bytes().to_vec();
-    //! let cipher1 = sealer.seal_chunk(&plaintext1, StreamTag::MESSAGE).unwrap();
-    //! let (dec1, tag1) = opener.open_chunk(&cipher1).unwrap();
+    //! let cipher1 = sealer.seal_chunk(&plaintext1, StreamTag::MESSAGE)?;
+    //! let (dec1, tag1) = opener.open_chunk(&cipher1)?;
     //! assert_eq!(plaintext1, dec1);
     //! assert_eq!(tag1, StreamTag::MESSAGE);
     //!
     //! // Message 2
     //! let plaintext2 = "Secret message 2".as_bytes().to_vec();
-    //! let cipher2 = sealer.seal_chunk(&plaintext2, StreamTag::MESSAGE).unwrap();
-    //! let (dec2, tag2) = opener.open_chunk(&cipher2).unwrap();
+    //! let cipher2 = sealer.seal_chunk(&plaintext2, StreamTag::MESSAGE)?;
+    //! let (dec2, tag2) = opener.open_chunk(&cipher2)?;
     //! assert_eq!(plaintext2, dec2);
     //! assert_eq!(tag2, StreamTag::MESSAGE);
     //!
     //! // Message 3 (Last message of this stream, using the FINISH tag)
     //! let plaintext3 = "Secret message 3".as_bytes().to_vec();
-    //! let cipher3 = sealer.seal_chunk(&plaintext3, StreamTag::FINISH).unwrap();
-    //! let (dec3, tag3) = opener.open_chunk(&cipher3).unwrap();
+    //! let cipher3 = sealer.seal_chunk(&plaintext3, StreamTag::FINISH)?;
+    //! let (dec3, tag3) = opener.open_chunk(&cipher3)?;
     //! assert_eq!(plaintext3, dec3);
     //! assert_eq!(tag3, StreamTag::FINISH);
     //!
