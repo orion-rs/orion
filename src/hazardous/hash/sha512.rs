@@ -416,6 +416,22 @@ pub fn compare_sha512_states(state_1: &Sha512, state_2: &Sha512) {
 mod public {
     use super::*;
 
+    #[test]
+    fn test_default_equals_new() {
+        let new = Sha512::new();
+        let default = Sha512::default();
+        compare_sha512_states(&new, &default);
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_debug_impl() {
+        let initial_state = Sha512::new();
+        let debug = format!("{:?}", initial_state);
+        let expected = "Sha512 { working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, message_len: [0, 0], is_finalized: false }";
+        assert_eq!(debug, expected);
+    }
+
     mod test_streaming_interface {
         use super::*;
         use crate::test_framework::incremental_interface::*;

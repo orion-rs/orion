@@ -107,8 +107,7 @@ impl core::fmt::Debug for Hmac {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "Hmac {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***],
-            ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
+            "Hmac {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
             self.is_finalized
         )
     }
@@ -201,6 +200,16 @@ impl Hmac {
 #[cfg(test)]
 mod public {
     use super::*;
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_debug_impl() {
+        let secret_key = SecretKey::generate();
+        let initial_state = Hmac::new(&secret_key);
+        let debug = format!("{:?}", initial_state);
+        let expected = "Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false }";
+        assert_eq!(debug, expected);
+    }
 
     #[cfg(feature = "safe_api")]
     mod test_verify {

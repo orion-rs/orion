@@ -476,6 +476,15 @@ impl Blake2b {
 mod public {
     use super::*;
 
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_debug_impl() {
+        let initial_state = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
+        let debug = format!("{:?}", initial_state);
+        let expected = "Blake2b { init_state: [***OMITTED***], internal_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, t: [0, 0], f: [0, 0], is_finalized: false, is_keyed: false, size: 64 }";
+        assert_eq!(debug, expected);
+    }
+
     fn compare_blake2b_states(state_1: &Blake2b, state_2: &Blake2b) {
         assert!(state_1.init_state == state_2.init_state);
         assert!(state_1.internal_state == state_2.internal_state);

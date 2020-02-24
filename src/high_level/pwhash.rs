@@ -432,6 +432,16 @@ pub fn hash_password_verify(
 mod public {
     use super::*;
 
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_debug_impl() {
+        let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let password_hash = PasswordHash::from_encoded(valid).unwrap();
+        let debug = format!("{:?}", password_hash);
+        let expected = "PasswordHash { encoded_password_hash: [***OMITTED***], password_hash: [***OMITTED***], iterations: 3, memory: 65536 }";
+        assert_eq!(debug, expected);
+    }
+
     /// The tests herein were generated with the CLI tool from the reference implementation at:
     /// https://github.com/P-H-C/phc-winner-argon2/commit/62358ba2123abd17fccf2a108a301d4b52c01a7c
     mod test_encoding_from_ref {
@@ -704,6 +714,23 @@ mod public {
         }
 
         #[test]
+        fn test_bad_encoding_first_not_empty() {
+            // Nothing should precede "$argon2i"
+            let non_empty_first = "apples$argon2i$v=19$m=4096,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(non_empty_first).is_err());
+        }
+
+        #[test]
+        fn test_bad_encoding_bad_p() {
+            let p_is_j = "$argon2i$v=19$m=4096,t=3,j=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let p_gone = "$argon2i$v=19$m=4096,t=3,=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            assert!(PasswordHash::from_encoded(p_is_j).is_err());
+            assert!(PasswordHash::from_encoded(p_gone).is_err());
+        }
+
+        #[test]
         fn test_decimal_value_reject_leading_zeroes() {
             // https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
             // According to the specification, the decimal parameters may not start with 0, if there is more than
@@ -842,15 +869,25 @@ mod public {
         #[test]
         fn test_argon2i_invalid_iterations() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
-
+            let password_hash = PasswordHash::from_encoded("$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c").unwrap();
             assert!(hash_password(&password, MIN_ITERATIONS - 1, 4096).is_err());
+            assert!(
+                hash_password_verify(&password_hash, &password, MIN_ITERATIONS - 1, 4096).is_err()
+            );
         }
 
         #[test]
         fn test_argon2i_invalid_memory() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
-
-            assert!(hash_password(&password, 3, MIN_MEMORY - 1).is_err());
+            let password_hash = PasswordHash::from_encoded("$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c").unwrap();
+            assert!(hash_password(&password, MIN_ITERATIONS, MIN_MEMORY - 1).is_err());
+            assert!(hash_password_verify(
+                &password_hash,
+                &password,
+                MIN_ITERATIONS,
+                MIN_MEMORY - 1
+            )
+            .is_err());
         }
     }
 }

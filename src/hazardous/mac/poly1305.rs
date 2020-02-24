@@ -131,8 +131,7 @@ impl core::fmt::Debug for Poly1305 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "Poly1305 {{ a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***],
-            leftover: ***OMITTED***, buffer: [***OMITTED***], is_finalized: {:?} }}",
+            "Poly1305 {{ a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***], leftover: [***OMITTED***], buffer: [***OMITTED***], is_finalized: {:?} }}",
             self.is_finalized
         )
     }
@@ -457,6 +456,16 @@ impl Poly1305 {
 #[cfg(test)]
 mod public {
     use super::*;
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_debug_impl() {
+        let secret_key = OneTimeKey::generate();
+        let initial_state = Poly1305::new(&secret_key);
+        let debug = format!("{:?}", initial_state);
+        let expected = "Poly1305 { a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***], leftover: [***OMITTED***], buffer: [***OMITTED***], is_finalized: false }";
+        assert_eq!(debug, expected);
+    }
 
     #[cfg(feature = "safe_api")]
     mod test_verify {

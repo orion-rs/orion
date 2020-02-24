@@ -1015,7 +1015,39 @@ mod private {
         }
     }
 
-    mod test_xor_keystream {
+    mod test_encrypt_in_place {
+        use super::*;
+
+        #[test]
+        #[should_panic]
+        #[cfg(debug_assertions)]
+        fn test_xor_keystream_err_bad_tmp() {
+            let mut ctx =
+                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true).unwrap();
+            let mut tmp = [0u8; CHACHA_BLOCKSIZE - 1];
+            let mut out = [0u8; CHACHA_BLOCKSIZE];
+            xor_keystream(&mut ctx, 0, &mut tmp, &mut out).unwrap();
+        }
+
+        #[test]
+        fn test_xor_keystream_err_empty_input() {
+            let mut ctx =
+                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true).unwrap();
+            let mut tmp = [0u8; CHACHA_BLOCKSIZE];
+            let mut out = [0u8; 0];
+            assert!(xor_keystream(&mut ctx, 0, &mut tmp, &mut out).is_err());
+        }
+
+        #[test]
+        fn test_enc_in_place_err_empty_input() {
+            let n = Nonce::from([0u8; IETF_CHACHA_NONCESIZE]);
+            let sk = SecretKey::from([0u8; CHACHA_KEYSIZE]);
+            let mut out = [0u8; 0];
+            assert!(encrypt_in_place(&sk, &n, 0, &mut out).is_err());
+        }
+    }
+
+    mod test_keystream_block {
         use super::*;
 
         #[test]

@@ -338,6 +338,19 @@ macro_rules! test_omitted_debug (($name:ident, $upper_bound:expr) => (
 
 #[cfg(test)]
 #[cfg(feature = "safe_api")]
+macro_rules! test_normal_debug (($name:ident, $upper_bound:expr) => (
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_omitted_debug() {
+        let public = format!("{:?}", [0u8; $upper_bound].as_ref());
+        let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $upper_bound]).unwrap());
+        assert_eq!(test_debug_contents.contains(&public), true);
+    }
+));
+
+#[cfg(test)]
+#[cfg(feature = "safe_api")]
 macro_rules! test_from_slice_variable (($name:ident) => (
     #[test]
     #[cfg(feature = "safe_api")]
@@ -492,6 +505,14 @@ macro_rules! construct_public {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, as_ref);
             test_partial_eq!($name, $upper_bound);
+
+            #[cfg(test)]
+            #[cfg(feature = "safe_api")]
+            mod tests_with_std {
+                use super::*;
+
+                test_normal_debug!($name, $upper_bound);
+            }
         }
     );
 
@@ -528,6 +549,7 @@ macro_rules! construct_public {
             mod tests_with_std {
                 use super::*;
 
+                test_normal_debug!($name, $upper_bound);
                 test_generate!($name, $gen_length);
             }
         }
@@ -812,6 +834,7 @@ macro_rules! construct_salt_variable_size {
             test_as_bytes_and_get_length!($name, 1, $default_size + 1, as_ref);
             test_generate_variable!($name);
             test_partial_eq!($name, $default_size);
+            test_normal_debug!($name, $default_size);
         }
     );
 }

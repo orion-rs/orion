@@ -189,8 +189,7 @@ impl core::fmt::Debug for StreamXChaCha20Poly1305 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "StreamXChaCha20Poly1305  {{ key: [***OMITTED***], counter: [***OMITTED***],\
-             inonce: [***OMITTED***]",
+            "StreamXChaCha20Poly1305  {{ key: [***OMITTED***], counter: [***OMITTED***], inonce: [***OMITTED***]",
         )
     }
 }
@@ -386,6 +385,19 @@ impl StreamXChaCha20Poly1305 {
 
 #[cfg(test)]
 mod public {
+    #[cfg(feature = "safe_api")]
+    use super::*;
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_debug_impl() {
+        let secret_key = SecretKey::generate();
+        let nonce = Nonce::generate();
+        let initial_state = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
+        let debug = format!("{:?}", initial_state);
+        let expected = "StreamXChaCha20Poly1305  { key: [***OMITTED***], counter: [***OMITTED***], inonce: [***OMITTED***]";
+        assert_eq!(debug, expected);
+    }
 
     #[cfg(feature = "safe_api")]
     mod proptest {
