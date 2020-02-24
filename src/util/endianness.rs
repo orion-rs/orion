@@ -25,7 +25,6 @@ use core::mem;
 
 macro_rules! impl_store_into {
     ($type_alias:ty, $conv_function:ident, $func_name:ident) => {
-        #[inline]
         /// Store bytes in `src` in `dst`.
         pub fn $func_name(src: &[$type_alias], dst: &mut [u8]) {
             let type_alias_len = mem::size_of::<$type_alias>();
@@ -42,7 +41,6 @@ macro_rules! impl_store_into {
 
 macro_rules! impl_load_into {
     ($type_alias:ty, $type_alias_expr:ident, $conv_function:ident, $func_name:ident) => {
-        #[inline]
         /// Load bytes in `src` into `dst`.
         pub fn $func_name(src: &[u8], dst: &mut [$type_alias]) {
             let type_alias_len = mem::size_of::<$type_alias>();
@@ -62,7 +60,6 @@ macro_rules! impl_load_into {
 
 macro_rules! impl_load {
     ($type_alias:ty, $type_alias_expr:ident, $conv_function:ident, $func_name:ident) => {
-        #[inline]
         /// Convert bytes in `src` to a given primitive.
         pub fn $func_name(src: &[u8]) -> $type_alias {
             // Satisfying this assert should prove that using TryInto

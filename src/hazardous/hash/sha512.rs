@@ -151,43 +151,36 @@ impl Default for Sha512 {
 }
 
 impl Sha512 {
-    #[inline]
     /// The Ch function as specified in FIPS 180-4 section 4.1.3.
-    fn ch(x: u64, y: u64, z: u64) -> u64 {
+    const fn ch(x: u64, y: u64, z: u64) -> u64 {
         z ^ (x & (y ^ z))
     }
 
-    #[inline]
     /// The Maj function as specified in FIPS 180-4 section 4.1.3.
-    fn maj(x: u64, y: u64, z: u64) -> u64 {
+    const fn maj(x: u64, y: u64, z: u64) -> u64 {
         (x & y) | (z & (x | y))
     }
 
-    #[inline]
     /// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-    fn big_sigma_0(x: u64) -> u64 {
+    const fn big_sigma_0(x: u64) -> u64 {
         (x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39)
     }
 
-    #[inline]
     /// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-    fn big_sigma_1(x: u64) -> u64 {
+    const fn big_sigma_1(x: u64) -> u64 {
         (x.rotate_right(14)) ^ x.rotate_right(18) ^ x.rotate_right(41)
     }
 
-    #[inline]
     /// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-    fn small_sigma_0(x: u64) -> u64 {
+    const fn small_sigma_0(x: u64) -> u64 {
         (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7)
     }
 
-    #[inline]
     /// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-    fn small_sigma_1(x: u64) -> u64 {
+    const fn small_sigma_1(x: u64) -> u64 {
         (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6)
     }
 
-    #[inline]
     #[allow(clippy::many_single_char_names)]
     #[allow(clippy::too_many_arguments)]
     /// Message compression adopted from [mbed TLS](https://tls.mbed.org/sha-512-source-code).
@@ -215,8 +208,7 @@ impl Sha512 {
         *h = temp1.wrapping_add(temp2);
     }
 
-    #[inline]
-	#[rustfmt::skip]
+    #[rustfmt::skip]
 	#[allow(clippy::many_single_char_names)]
 	/// Process data in `self.buffer` or optionally `data`.
 	fn process(&mut self, data: Option<&[u8]>) {
@@ -267,7 +259,6 @@ impl Sha512 {
 		self.working_state[7] = self.working_state[7].wrapping_add(h);
 	}
 
-    #[inline]
     /// Increment the message length during processing of data.
     fn increment_mlen(&mut self, length: u64) {
         // The checked shift checks that the right-hand side is a legal shift.

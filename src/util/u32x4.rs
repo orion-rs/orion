@@ -32,7 +32,6 @@ impl core::ops::BitXor for U32x4 {
     type Output = Self;
 
     #[must_use]
-    #[inline(always)]
     fn bitxor(self, _rhs: Self) -> Self::Output {
         Self(
             self.0 ^ _rhs.0,
@@ -54,8 +53,7 @@ impl zeroize::Zeroize for U32x4 {
 
 impl U32x4 {
     #[must_use]
-    #[inline(always)]
-    pub const fn wrapping_add(self, _rhs: Self) -> Self {
+    pub(crate) const fn wrapping_add(self, _rhs: Self) -> Self {
         Self(
             self.0.wrapping_add(_rhs.0),
             self.1.wrapping_add(_rhs.1),
@@ -65,26 +63,22 @@ impl U32x4 {
     }
 
     #[must_use]
-    #[inline(always)]
-    pub const fn shl_1(self) -> Self {
+    pub(crate) const fn shl_1(self) -> Self {
         Self(self.1, self.2, self.3, self.0)
     }
 
     #[must_use]
-    #[inline(always)]
-    pub const fn shl_2(self) -> Self {
+    pub(crate) const fn shl_2(self) -> Self {
         Self(self.2, self.3, self.0, self.1)
     }
 
     #[must_use]
-    #[inline(always)]
-    pub const fn shl_3(self) -> Self {
+    pub(crate) const fn shl_3(self) -> Self {
         Self(self.3, self.0, self.1, self.2)
     }
 
     #[must_use]
-    #[inline(always)]
-    pub const fn rotate_left(self, n: u32) -> Self {
+    pub(crate) const fn rotate_left(self, n: u32) -> Self {
         Self(
             self.0.rotate_left(n),
             self.1.rotate_left(n),
@@ -93,8 +87,7 @@ impl U32x4 {
         )
     }
 
-    #[inline(always)]
-    pub fn store_into_le(&self, slice_in: &mut [u8]) {
+    pub(crate) fn store_into_le(&self, slice_in: &mut [u8]) {
         debug_assert!(slice_in.len() == core::mem::size_of::<u32>() * 4);
         let mut iter = slice_in.chunks_exact_mut(core::mem::size_of::<u32>());
         iter.next().unwrap().copy_from_slice(&self.0.to_le_bytes());

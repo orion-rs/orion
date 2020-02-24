@@ -115,7 +115,6 @@ impl core::fmt::Debug for Hmac {
 }
 
 impl Hmac {
-    #[inline]
     /// Pad `key` with `ipad` and `opad`.
     fn pad_key_io(&mut self, key: &SecretKey) {
         let mut ipad = [0x36; SHA512_BLOCKSIZE];

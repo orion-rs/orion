@@ -144,6 +144,51 @@ const SIGMA: [[usize; 16]; 12] = [
     [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
 ];
 
+/// Quarter round on the BLAKE2b internal matrix.
+macro_rules! QROUND {
+    ($v0:expr, $v1:expr, $v2:expr, $v3:expr, $s_idx:expr, $rconst1:expr, $rconst2:expr) => {
+        $v0 = $v0.wrapping_add($v1).wrapping_add($s_idx);
+        $v3 = ($v3 ^ $v0).rotate_right($rconst1);
+        $v2 = $v2.wrapping_add($v3);
+        $v1 = ($v1 ^ $v2).rotate_right($rconst2);
+    };
+}
+
+/// Perform a single round based on a message schedule selection.
+macro_rules! ROUND {
+    ($v0:expr, $v1:expr, $v2:expr, $v3:expr, $s_idx:expr, $m:expr) => {
+        let s_indexed = U64x4($m[$s_idx[0]], $m[$s_idx[2]], $m[$s_idx[4]], $m[$s_idx[6]]);
+        QROUND!($v0, $v1, $v2, $v3, s_indexed, 32, 24);
+        let s_indexed = U64x4($m[$s_idx[1]], $m[$s_idx[3]], $m[$s_idx[5]], $m[$s_idx[7]]);
+        QROUND!($v0, $v1, $v2, $v3, s_indexed, 16, 63);
+
+        // Shuffle
+        $v1 = $v1.shl_1();
+        $v2 = $v2.shl_2();
+        $v3 = $v3.shl_3();
+
+        let s_indexed = U64x4(
+            $m[$s_idx[8]],
+            $m[$s_idx[10]],
+            $m[$s_idx[12]],
+            $m[$s_idx[14]],
+        );
+        QROUND!($v0, $v1, $v2, $v3, s_indexed, 32, 24);
+        let s_indexed = U64x4(
+            $m[$s_idx[9]],
+            $m[$s_idx[11]],
+            $m[$s_idx[13]],
+            $m[$s_idx[15]],
+        );
+        QROUND!($v0, $v1, $v2, $v3, s_indexed, 16, 63);
+
+        // Unshuffle
+        $v1 = $v1.shl_3();
+        $v2 = $v2.shl_2();
+        $v3 = $v3.shl_1();
+    };
+}
+
 /// Convenience functions for common BLAKE2b operations.
 pub enum Hasher {
     /// Blake2b with `32` as `size`.
@@ -217,7 +262,6 @@ impl core::fmt::Debug for Blake2b {
 }
 
 impl Blake2b {
-    #[inline(always)]
     /// Increment the internal states offset value `t`.
     fn increment_offset(&mut self, value: u64) {
         let (res, was_overflow) = self.t[0].overflowing_add(value);
@@ -226,39 +270,6 @@ impl Blake2b {
             // If this panics size limit is reached.
             self.t[1] = self.t[1].checked_add(1).unwrap();
         }
-    }
-
-    #[inline(always)]
-    /// Quarter round on the BLAKE2b internal matrix.
-    fn blake_qround(v: &mut [U64x4; 4], s_idx: &U64x4, r1: u32, r2: u32) {
-        v[0] = v[0].wrapping_add(v[1]).wrapping_add(*s_idx);
-        v[3] = (v[3] ^ v[0]).rotate_right(r1);
-        v[2] = v[2].wrapping_add(v[3]);
-        v[1] = (v[1] ^ v[2]).rotate_right(r2);
-    }
-
-    #[inline(always)]
-    /// Perform a single round based on a message schedule selection.
-    fn round(s_idx: &[usize; 16], m: &[u64; 16], v: &mut [U64x4; 4]) {
-        let s_indexed = U64x4(m[s_idx[0]], m[s_idx[2]], m[s_idx[4]], m[s_idx[6]]);
-        Self::blake_qround(v, &s_indexed, 32, 24);
-        let s_indexed = U64x4(m[s_idx[1]], m[s_idx[3]], m[s_idx[5]], m[s_idx[7]]);
-        Self::blake_qround(v, &s_indexed, 16, 63);
-
-        // Shuffle
-        v[1] = v[1].shl_1();
-        v[2] = v[2].shl_2();
-        v[3] = v[3].shl_3();
-
-        let s_indexed = U64x4(m[s_idx[8]], m[s_idx[10]], m[s_idx[12]], m[s_idx[14]]);
-        Self::blake_qround(v, &s_indexed, 32, 24);
-        let s_indexed = U64x4(m[s_idx[9]], m[s_idx[11]], m[s_idx[13]], m[s_idx[15]]);
-        Self::blake_qround(v, &s_indexed, 16, 63);
-
-        // Unshuffle
-        v[1] = v[1].shl_3();
-        v[2] = v[2].shl_2();
-        v[3] = v[3].shl_1();
     }
 
     /// The compression function f.
@@ -272,30 +283,31 @@ impl Blake2b {
             None => load_u64_into_le(&self.buffer, &mut m_vec),
         }
 
-        let v3 = U64x4(
+        let mut v0 = self.internal_state[0];
+        let mut v1 = self.internal_state[1];
+        let mut v2 = IV[0];
+        let mut v3 = U64x4(
             self.t[0] ^ IV[1].0,
             self.t[1] ^ IV[1].1,
             self.f[0] ^ IV[1].2,
             self.f[1] ^ IV[1].3,
         );
 
-        let mut w_vec: [U64x4; 4] = [self.internal_state[0], self.internal_state[1], IV[0], v3];
+        ROUND!(v0, v1, v2, v3, SIGMA[0], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[1], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[2], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[3], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[4], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[5], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[6], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[7], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[8], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[9], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[10], m_vec);
+        ROUND!(v0, v1, v2, v3, SIGMA[11], m_vec);
 
-        Self::round(&SIGMA[0], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[1], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[2], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[3], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[4], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[5], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[6], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[7], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[8], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[9], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[10], &m_vec, &mut w_vec);
-        Self::round(&SIGMA[11], &m_vec, &mut w_vec);
-
-        self.internal_state[0] ^= w_vec[0] ^ w_vec[2];
-        self.internal_state[1] ^= w_vec[1] ^ w_vec[3];
+        self.internal_state[0] ^= v0 ^ v2;
+        self.internal_state[1] ^= v1 ^ v3;
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]

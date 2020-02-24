@@ -121,7 +121,7 @@ pub enum StreamTag {
 }
 
 impl StreamTag {
-    #[inline(always)]
+    #[inline]
     /// Return the tag as a byte.
     pub fn as_byte(&self) -> u8 {
         match *self {

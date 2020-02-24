@@ -318,12 +318,14 @@ impl PasswordHash {
         })
     }
 
+    #[inline]
     /// Return encoded password hash. __**Warning**__: Should not be used to verify
     /// password hashes. This __**breaks protections**__ that the type implements.
     pub fn unprotected_as_encoded(&self) -> &str {
         self.encoded_password_hash.as_ref()
     }
 
+    #[inline]
     /// Return the password hash as byte slice. __**Warning**__: Should not be used unless strictly
     /// needed. This __**breaks protections**__ that the type implements.
     pub fn unprotected_as_bytes(&self) -> &[u8] {

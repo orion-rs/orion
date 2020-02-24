@@ -91,7 +91,6 @@ construct_hmac_key! {
     (Password, SHA512_BLOCKSIZE)
 }
 
-#[inline]
 /// The F function as described in the RFC.
 fn function_f(
     salt: &[u8],
