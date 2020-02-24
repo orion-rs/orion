@@ -1,0 +1,29 @@
+name: Security Audit
+on:
+  schedule:
+    - cron: '0 0 * * *' # Midnight of each day
+
+jobs:
+  security_audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          ref: crates-published
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install cargo audit
+        run: cargo install cargo-audit
+
+      - name: Run cargo audit
+        uses: actions-rs/cargo@v1
+        with:
+          command: audit
+          args: --deny-warnings
