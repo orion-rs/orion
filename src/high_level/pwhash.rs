@@ -184,6 +184,7 @@ impl PasswordHash {
     /// Parse a decimal parameter value to a u32. Returns an error on overflow
     /// and if the value has leading zeroes.
     fn parse_decimal_value(value: &str) -> Result<u32, UnknownCryptoError> {
+        // See: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
         if value.len() > 1 && value.starts_with('0') {
             return Err(UnknownCryptoError);
         }

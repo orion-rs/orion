@@ -100,19 +100,18 @@ fn function_f(
     block_len: usize,
     hmac: &mut hmac::Hmac,
 ) -> Result<(), UnknownCryptoError> {
-    let mut u_step: [u8; SHA512_OUTSIZE] = [0u8; 64];
     hmac.update(salt)?;
     hmac.update(&index.to_be_bytes())?;
 
-    u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
-    dk_block.copy_from_slice(&u_step[..block_len]);
+    let mut u_step = hmac.finalize()?;
+    dk_block.copy_from_slice(&u_step.unprotected_as_bytes()[..block_len]);
 
     if iterations > 1 {
         for _ in 1..iterations {
             hmac.reset();
-            hmac.update(&u_step)?;
-            u_step.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes());
-            xor_slices!(u_step, dk_block);
+            hmac.update(u_step.unprotected_as_bytes())?;
+            u_step = hmac.finalize()?;
+            xor_slices!(u_step.unprotected_as_bytes(), dk_block);
         }
     }
 
