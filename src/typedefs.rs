@@ -342,7 +342,7 @@ macro_rules! test_normal_debug (($name:ident, $upper_bound:expr) => (
     #[test]
     #[cfg(feature = "safe_api")]
     // format! is only available with std
-    fn test_omitted_debug() {
+    fn test_normal_debug() {
         let public = format!("{:?}", [0u8; $upper_bound].as_ref());
         let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $upper_bound]).unwrap());
         assert_eq!(test_debug_contents.contains(&public), true);
