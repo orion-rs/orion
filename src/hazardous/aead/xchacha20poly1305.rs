@@ -39,8 +39,8 @@
 //! - The length of `dst_out` is less than `plaintext` + [`POLY1305_OUTSIZE`] when calling [`seal()`].
 //! - The length of `dst_out` is less than `ciphertext_with_tag` - [`POLY1305_OUTSIZE`] when
 //!   calling [`open()`].
-//! - The length of `ciphertext_with_tag` is not greater than [`POLY1305_OUTSIZE`].
-//! - `plaintext` is empty.
+//! - The length of the `ciphertext_with_tag` is not greater than [`POLY1305_OUTSIZE`].
+//! - The `plaintext` is empty.
 //! - The received tag does not match the calculated tag when  calling [`open()`].
 //! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when  calling [`seal()`].
 //! - Converting `usize` to `u64` would be a lossy conversion.
@@ -56,7 +56,7 @@
 //! - Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated
 //!   using a CSPRNG. [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
-//! - The length of `plaintext` is not hidden, only its contents.
+//! - The length of the `plaintext` is not hidden, only its contents.
 //!
 //! # Recommendation:
 //! - It is recommended to use XChaCha20Poly1305 when possible.

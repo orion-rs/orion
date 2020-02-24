@@ -48,14 +48,14 @@
 //! - `iterations` is less than 3.
 //! - `length` is less than 4.
 //! - `memory` is less than 8.
-//! - The length of `password` or `expected` is greater than `u32::max_value()`.
-//! - The length of `salt` is greater than `u32::max_value()` or less than `8`.
+//! - The length of the `password` or `expected` is greater than `u32::max_value()`.
+//! - The length of the `salt` is greater than `u32::max_value()` or less than `8`.
 //! - The `expected` does not match the derived key.
 //!
 //! # Security:
 //! - Choosing the correct cost parameters is important for security. Please refer to
 //!   [libsodium's docs](https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters)
-//! for a description on how to do this.
+//! for a description of how to do this.
 //! - The salt should always be generated using a CSPRNG. [`Salt::default()`]
 //!   can be used for this, it will generate a [`Salt`] of 16 bytes.
 //! - The recommended minimum size for a salt is 16 bytes.

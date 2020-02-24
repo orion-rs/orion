@@ -800,7 +800,7 @@ mod public {
             assert_eq!(res_3, res_4);
 
             // Tests for the assumption that returning Ok() on empty update() calls
-            // with streaming API's, gives the correct result. This is done by testing
+            // with streaming APIs, gives the correct result. This is done by testing
             // the reasoning that if update() is empty, returns Ok(), it is the same as
             // calling new() -> finalize(). i.e not calling update() at all.
             if data.is_empty() {

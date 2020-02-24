@@ -89,7 +89,7 @@ macro_rules! impl_normal_debug_trait (($name:ident) => (
 /// Macro that implements the `Drop` trait on a object called `$name` which has
 /// a field `value`. This `Drop` will zero out the field `value` when the
 /// objects destructor is called. WARNING: This requires value to be an array as
-/// clear_on_drop will not be called correctly if this particluar trait is
+/// clear_on_drop will not be called correctly if this particular trait is
 /// implemented on Vec's.
 macro_rules! impl_drop_trait (($name:ident) => (
     impl Drop for $name {

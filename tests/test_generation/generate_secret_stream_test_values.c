@@ -281,7 +281,7 @@ void stream_with_explicit_rekey(unsigned char *header, const unsigned char *key)
 {
   print_test_case_begin("test_seal_open_with_explicit_rekey");
   
-  /// Encryptes 5 messages. Rekey is forced after three 
+  /// Encrypts 5 messages. Rekey is forced after three 
   unsigned char msg1[] = "test1";
   unsigned char msg2[] = "this is longer text";
   unsigned char msg3[] = "1";

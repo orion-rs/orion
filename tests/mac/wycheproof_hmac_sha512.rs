@@ -40,7 +40,7 @@ fn wycheproof_runner(path: &str) {
                                 &tag[..],
                                 &key[..],
                                 &msg[..],
-                                Some(tag_len as usize / 8), /* Wychproof sets tag length in bits, we need bytes */
+                                Some(tag_len as usize / 8), /* Wycheproof sets tag length in bits, we need bytes */
                                 result,
                             );
                         }

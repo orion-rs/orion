@@ -33,8 +33,7 @@
 //! - Both one-shot functions and a [`streaming API`] are provided.
 //! - The nonce is automatically generated.
 //! - Returns a vector where the first 24 bytes are the nonce and the rest is
-//!   the authenticated
-//! ciphertext with the last 16 bytes being the corresponding Poly1305 tag.
+//!   the authenticated ciphertext with the last 16 bytes being the corresponding Poly1305 tag.
 //! - Uses XChaCha20Poly1305 with no additional data.
 //! - When using [`seal`] and [`open`] then the separation of tags, nonces and
 //!   ciphertext are automatically handled.
@@ -43,13 +42,12 @@
 //! - `plaintext`:  The data to be encrypted.
 //! - `secret_key`: The secret key used to encrypt the `plaintext`.
 //! - `ciphertext_with_tag_and_nonce`:  The data to be decrypted with the first
-//!   24 bytes being the nonce and the last
-//! 16 bytes being the corresponding Poly1305 tag.
+//!   24 bytes being the nonce and the last 16 bytes being the corresponding Poly1305 tag.
 //!
 //! # Errors:
 //! An error will be returned if:
 //! - `secret_key` is not 32 bytes.
-//! - `plaintext` is empty.
+//! - the `plaintext` is empty.
 //! - `ciphertext_with_tag_and_nonce` is less than 41 bytes
 //!   ([`XCHACHA_NONCESIZE`] + [`POLY1305_OUTSIZE`] + 1).
 //! - The received tag does not match the calculated tag when calling [`open`].
@@ -66,7 +64,7 @@
 //! the security of all data that has been encrypted with that given key is
 //! compromised.
 //! - To securely generate a strong key, use [`SecretKey::default()`].
-//! - The length of `plaintext` is not hidden, only its contents.
+//! - The length of the `plaintext` is not hidden, only its contents.
 //!
 //! # Example:
 //! ```rust
@@ -159,7 +157,7 @@ pub mod streaming {
     //!  This can be used to encrypt and authenticate a stream of data. It prevents the
     //!  modification, reordering, dropping or duplication of messages. Nonce management is handled automatically.
     //!
-    //!  An example of this could be the encryption of files which are too large to encrypt in one piece.
+    //!  An example of this could be the encryption of files that are too large to encrypt in one piece.
     //!
     //! # About:
     //! This implementation is based on and compatible with the ["secretstream" API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)

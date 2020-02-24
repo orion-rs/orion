@@ -117,7 +117,7 @@ pub(crate) fn subkey_and_nonce(secret_key: &SecretKey, nonce: &Nonce) -> (Secret
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// XChaCha20 encryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
+/// XChaCha20 encryption as specified in the [draft RFC](https://tools.ietf.org/html/draft-irtf-cfrg-xchacha-03).
 pub fn encrypt(
     secret_key: &SecretKey,
     nonce: &Nonce,
@@ -131,7 +131,7 @@ pub fn encrypt(
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// XChaCha20 decryption as specified in the [draft RFC](https://github.com/bikeshedders/xchacha-rfc).
+/// XChaCha20 decryption as specified in the [draft RFC](https://tools.ietf.org/html/draft-irtf-cfrg-xchacha-03).
 pub fn decrypt(
     secret_key: &SecretKey,
     nonce: &Nonce,

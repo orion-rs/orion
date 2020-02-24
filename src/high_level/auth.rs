@@ -26,7 +26,7 @@
 //! `orion::auth` can be used to ensure message integrity and authenticity by
 //! using a secret key.
 //!
-//! An example of this could be securing API's by having a user of a given API
+//! An example of this could be securing APIs by having a user of a given API
 //! sign their API request and having the API server verify these signed API
 //! requests.
 //!

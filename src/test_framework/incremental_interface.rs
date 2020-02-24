@@ -40,7 +40,7 @@ pub trait TestableStreamingContext<T: PartialEq> {
     /// Streaming context function to verify pre-computed results.
     fn verify_result(expected: &T, input: &[u8]) -> Result<(), UnknownCryptoError>;
 
-    /// Testing utiliy-function that compares the internal state to another.
+    /// Testing utility-function that compares the internal state to another.
     fn compare_states(state_1: &Self, state_2: &Self);
 }
 
@@ -174,7 +174,7 @@ where
         assert!(res_3 == res_4);
 
         // Tests for the assumption that returning Ok() on empty update() calls
-        // with streaming API's, gives the correct result. This is done by testing
+        // with streaming APIs, gives the correct result. This is done by testing
         // the reasoning that if update() is empty, returns Ok(), it is the same as
         // calling new() -> finalize(). i.e not calling update() at all.
         if data.is_empty() {
@@ -329,7 +329,7 @@ where
         assert!(state.finalize().is_ok());
     }
 
-    /// Using the same input should always result in a succesfull verification.
+    /// Using the same input should always result in a successful verification.
     pub fn verify_same_input_ok(data: &[u8]) {
         let expected = T::one_shot(&data).unwrap();
         assert!(T::verify_result(&expected, data).is_ok());

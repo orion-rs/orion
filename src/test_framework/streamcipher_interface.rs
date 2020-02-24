@@ -62,7 +62,7 @@ pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 /// the initial counter on encrypt()/decrypt() would
 /// increase.
 fn counter_increase_times(a: f32) -> u32 {
-    // Otherwise a overflowing subtration would happen
+    // Otherwise a overflowing subtraction would happen
     if a <= 64f32 {
         return 0;
     }

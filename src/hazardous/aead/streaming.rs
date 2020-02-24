@@ -39,7 +39,7 @@
 //! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` + [`ABYTES`] when calling [`seal_chunk()`].
 //! - The length of `dst_out` is less than `ciphertext` - [`ABYTES`] when calling [`open_chunk()`].
-//! - The length of `ciphertext` is less than [`ABYTES`].
+//! - The length of the `ciphertext` is less than [`ABYTES`].
 //! - The received mac does not match the calculated mac when calling [`open_chunk()`]. This can
 //!   indicate a dropped or reordered message within the stream.
 //! - More than `2^32-3 * 64` bytes of data are processed when sealing/opening a single chunk.

@@ -252,7 +252,7 @@ mod public {
             }
 
             fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
-                // This will only run verifcation tests on differing input. They do not
+                // This will only run verification tests on differing input. They do not
                 // include tests for different secret keys.
                 Hmac::verify(expected, &SecretKey::from_slice(&KEY).unwrap(), input)
             }

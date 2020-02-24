@@ -35,7 +35,7 @@ pub mod hash;
 /// MACs (Message Authentication Code).
 pub mod mac;
 
-/// KDFs (Key Derivation Function) and PBKDF (Password-Based Key Derivation
+/// KDFs (Key Derivation Function) and PBKDFs (Password-Based Key Derivation
 /// Function).
 pub mod kdf;
 

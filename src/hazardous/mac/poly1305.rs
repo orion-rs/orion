@@ -43,8 +43,7 @@
 //!
 //! # Recommendation:
 //! - If you are unsure of whether to use HMAC or Poly1305, it is most often
-//!   easier to just
-//! use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
+//!   easier to just use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
 //!
 //! # Example:
 //! ```rust
@@ -512,7 +511,7 @@ mod public {
             }
 
             fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
-                // This will only run verifcation tests on differing input. They do not
+                // This will only run verification tests on differing input. They do not
                 // include tests for different secret keys.
                 Poly1305::verify(expected, &OneTimeKey::from_slice(&KEY).unwrap(), input)
             }

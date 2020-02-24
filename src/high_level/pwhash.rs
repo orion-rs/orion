@@ -45,7 +45,7 @@
 //! $argon2i$v=19$m=8192,t=3,p=1$c21hbGxzYWx0$lmO1aPPy3x0CcvrKpFLi1TL/uSVJ/eO5hPHiWZFaWvY
 //! ```
 //!
-//! See a more detailed descrption of the encoding format [here](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md).
+//! See a more detailed description of the encoding format [here](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md).
 //!
 //! # Note:
 //! This implementation only supports a single thread/lane.
@@ -60,7 +60,7 @@
 //! An error will be returned if:
 //! - `memory` is less than 8.
 //! - `iterations` is less than 3.
-//! - The length of `password` is greater than `u32::max_value()`.
+//! - The length of the `password` is greater than `u32::max_value()`.
 //! - The password hash does not match `expected`.
 //!
 //! # Panics:
@@ -73,7 +73,7 @@
 //! Either use [`pwhash::hash_password_verify`] or compare two [`PasswordHash`]es.
 //! - Choosing the correct cost parameters is important for security. Please refer to
 //! [libsodium's docs](https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters)
-//! for a description on how to do this.
+//! for a description of how to do this.
 //!
 //! # Example:
 //! ```rust
@@ -114,7 +114,7 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 ///  
 /// # Errors:
 /// An error will be returned if:
-/// - The encoded password hash contains whitespaces.
+/// - The encoded password hash contains whitespace.
 /// - The encoded password hash has a parallelism count other than 1.
 /// - The encoded password contains any other fields than: The algorithm name,
 /// version, m, t, p and the salt and password hash.
@@ -471,7 +471,7 @@ mod public {
         fn test_encoding_and_verify_3() {
             let iterations: u32 = 3;
             let memory: u32 = 65536;
-            // Differetn salt from test 2
+            // Different salt from test 2
             let password = Password::from_slice(b"passwordPASSWORDPassword").unwrap();
             let raw_hash =
                 hex::decode("fa9ea96fecd0998251d698c1303edda4df3889a39bfa87cd5e7b8656ef61b510")
@@ -656,7 +656,7 @@ mod public {
         #[test]
         fn test_bad_encoding_invalid_order() {
             let version_first = "$v=19$argon2i$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-            let t_beofre_m = "$argon2i$v=19$t=3,m=65536,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let t_before_m = "$argon2i$v=19$t=3,m=65536,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             let p_before_t = "$argon2i$v=19$m=65536,p=1,t=3$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             let p_before_m = "$argon2i$v=19$p=1,m=65536,t=3$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             let pass_before_salt = "$argon2i$v=19$m=65536,t=3,p=1$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA$cHBwcHBwcHBwcHBwcHBwcA";
@@ -664,7 +664,7 @@ mod public {
             let pass_first = "$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA";
 
             assert!(PasswordHash::from_encoded(version_first).is_err());
-            assert!(PasswordHash::from_encoded(t_beofre_m).is_err());
+            assert!(PasswordHash::from_encoded(t_before_m).is_err());
             assert!(PasswordHash::from_encoded(p_before_t).is_err());
             assert!(PasswordHash::from_encoded(p_before_m).is_err());
             assert!(PasswordHash::from_encoded(pass_before_salt).is_err());

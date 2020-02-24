@@ -211,7 +211,7 @@ __Date:__ November 23, 2018.
 
 __Changelog:__
 
-- New types for secret keys, nonces, tags, etc. This greatly increases misuse-reisstance, usability and safety. To read more about the types and how they are implemented, see the [wiki section](https://github.com/brycx/orion/wiki/Design).
+- New types for secret keys, nonces, tags, etc. This greatly increases misuse-resistance, usability and safety. To read more about the types and how they are implemented, see the [wiki section](https://github.com/brycx/orion/wiki/Design).
 - `default` API has been dropped. All high-level functionality is now accessible through these interfaces: `orion::aead`, `orion::auth`, `orion::kdf` and `orion::pwhash`.
 - AEAD interfaces in `hazardous` and in the high-level API (previously `default::encrypt`, etc.) have been renamed to `seal` and `open` to reflect the authentication and hopefully increase familiarity.
 - `finalize_to_dst()` has been dropped for HMAC.
@@ -224,7 +224,7 @@ __Changelog:__
 - The password length enforcement in high-level PBKDF2 API has been removed.
 - All other public types (eg. `CShake`, `Hmac` and `Poly1305`) now implement `Debug`.
 - Using `clear_on_drop` to wipe memory in favor of `seckey`.
-- New features `nightly` and `no_std`. To use orion in a `no_std` context, some dependency specfications are needed. Refer to the README for these.
+- New features `nightly` and `no_std`. To use orion in a `no_std` context, some dependency specifications are needed. Refer to the README for these.
 - Major improvements to error propagation.
 
 ### 0.9.1 [Yanked]
@@ -243,7 +243,7 @@ __Date:__ November 4, 2018.
 __Changelog:__
 
 - Added support for HChaCha20, XChaCha20 and AEAD XChaCha20Poly1305.
-- The `default` API's encryption/decryption interface has been reintroduced, now offering
+- The `default` APIs encryption/decryption interface has been reintroduced, now offering
 authenticated encryption through the AEAD XChaCha20Poly1305 implementation.
 - Most of the library's structure has been revamped.
 - Major additions to the project wiki detailing testing and some information regarding dependencies and security.

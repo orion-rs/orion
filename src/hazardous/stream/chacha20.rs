@@ -39,7 +39,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
-//! - `plaintext` or `ciphertext` are empty.
+//! - `plaintext` or `ciphertext` is empty.
 //! - The `initial_counter` is high enough to cause a potential overflow.
 //!
 //! Even though `dst_out` is allowed to be of greater length than `plaintext`,
@@ -75,7 +75,7 @@
 //! let nonce = chacha20::Nonce::from([0u8; 12]);
 //! let message = "Data to protect".as_bytes();
 //!
-//! // Length of this message is 15.
+//! // The length of this message is 15.
 //!
 //! let mut dst_out_pt = [0u8; 15];
 //! let mut dst_out_ct = [0u8; 15];
@@ -1002,7 +1002,7 @@ mod private {
             }
 
             quickcheck! {
-                // Always fail to intialize state while the nonce is not
+                // Always fail to initialize state while the nonce is not
                 // the correct length. If it is correct length, never panic.
                 fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
                     if nonce.len() == HCHACHA_NONCESIZE {
@@ -1146,7 +1146,7 @@ mod test_vectors {
             U32x4(0x13121110, 0x17161514, 0x1b1a1918, 0x1f1e1d1c),
             U32x4(0x00000001, 0x09000000, 0x4a000000, 0x00000000),
         ];
-        // Test initial key-steup
+        // Test initial key-setup
         let mut state = init(&key, &nonce).unwrap();
         // Set block counter
         state.state[3].0 = 1;
