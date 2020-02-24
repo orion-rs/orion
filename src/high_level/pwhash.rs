@@ -352,26 +352,7 @@ impl core::fmt::Debug for PasswordHash {
     }
 }
 
-impl PartialEq<PasswordHash> for PasswordHash {
-    fn eq(&self, other: &PasswordHash) -> bool {
-        use subtle::ConstantTimeEq;
-
-        (self
-            .unprotected_as_bytes()
-            .ct_eq(other.unprotected_as_bytes()))
-        .into()
-    }
-}
-
-impl Eq for PasswordHash {}
-
-impl PartialEq<&[u8]> for PasswordHash {
-    fn eq(&self, other: &&[u8]) -> bool {
-        use subtle::ConstantTimeEq;
-
-        (self.unprotected_as_bytes().ct_eq(*other)).into()
-    }
-}
+impl_ct_partialeq_trait!(PasswordHash, unprotected_as_bytes);
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hash a password using Argon2i.
