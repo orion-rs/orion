@@ -6,6 +6,30 @@ mod other_poly1305 {
     use self::hex::decode;
     use crate::mac::poly1305_test_runner;
 
+    // Generated with libsodium 1.0.18
+    #[test]
+    fn libsodium_all_zero_key() {
+        let key =
+            decode("0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+        let input =
+            decode("e4e4c4054fe35a75d9c0f679ad8770d8227e68e4c1e68ce67ee88e6be251a207").unwrap();
+        let tag = decode("00000000000000000000000000000000").unwrap();
+
+        poly1305_test_runner(&key, &input, &tag);
+    }
+
+    // Generated with libsodium 1.0.18
+    #[test]
+    fn libsodium_all_max_key() {
+        let key =
+            decode("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").unwrap();
+        let input =
+            decode("e4e4c4054fe35a75d9c0f679ad8770d8227e68e4c1e68ce67ee88e6be251a207").unwrap();
+        let tag = decode("9350f79217cd3707b0c4acd6b6bbc6f2").unwrap();
+
+        poly1305_test_runner(&key, &input, &tag);
+    }
+
     // Testing against BoringSSL test vector from [boringssl](https://boringssl.googlesource.com/boringssl/+/master/crypto/poly1305/poly1305_tests.txt).
     // Pulled at commit (master): 0f5ecd3a854546d943104e1f7421e489b7f4d5aa
     #[test]
