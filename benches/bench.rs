@@ -301,7 +301,7 @@ mod kdf {
         let mut group = c.benchmark_group("Argon2i");
 
         let iter = 3;
-        let mem = 512;
+        let mem = 128;
         let password = [0u8; 16];
         let salt = [0u8; 16];
         let mut dk_out = [0u8; 32];
