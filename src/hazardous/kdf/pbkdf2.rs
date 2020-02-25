@@ -88,7 +88,7 @@ construct_hmac_key! {
     /// # Panics:
     /// A panic will occur if:
     /// - Failure to generate random bytes securely.
-    (Password, SHA512_BLOCKSIZE)
+    (Password, test_pbkdf2_password, SHA512_BLOCKSIZE)
 }
 
 /// The F function as described in the RFC.

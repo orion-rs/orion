@@ -80,7 +80,7 @@ construct_hmac_key! {
     /// # Panics:
     /// A panic will occur if:
     /// - Failure to generate random bytes securely.
-    (SecretKey, SHA512_BLOCKSIZE)
+    (SecretKey, test_hmac_key, SHA512_BLOCKSIZE)
 }
 
 construct_tag! {

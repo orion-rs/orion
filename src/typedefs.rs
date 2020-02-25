@@ -24,17 +24,14 @@
 /// Trait implementation macros
 
 #[cfg(feature = "safe_api")]
-/// Macro that implements the `Default` trait, which will make a type, that
-/// needs secure default methods like CSPRNG generation, return itself with a
-/// default and secure length of random bytes.
+/// Macro that implements the `Default` trait using a CSPRNG.
 macro_rules! impl_default_trait (($name:ident, $size:expr) => (
     impl Default for $name {
         #[cfg(feature = "safe_api")]
         /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
         fn default() -> $name {
-            use crate::util;
             let mut value = vec![0u8; $size];
-            util::secure_rand_bytes(&mut value).unwrap();
+            crate::util::secure_rand_bytes(&mut value).unwrap();
 
             $name { value: value, original_length: $size }
         }
@@ -43,7 +40,7 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
 
 /// Macro that implements the `PartialEq` trait on a object called `$name` that
 /// provides a given $bytes_function to return a slice. This `PartialEq` will
-/// perform in constant time.
+/// execute in constant-time.
 macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
     impl PartialEq<$name> for $name {
         fn eq(&self, other: &$name) -> bool {
@@ -88,9 +85,7 @@ macro_rules! impl_normal_debug_trait (($name:ident) => (
 
 /// Macro that implements the `Drop` trait on a object called `$name` which has
 /// a field `value`. This `Drop` will zero out the field `value` when the
-/// objects destructor is called. WARNING: This requires value to be an array as
-/// clear_on_drop will not be called correctly if this particular trait is
-/// implemented on Vec's.
+/// objects destructor is called.
 macro_rules! impl_drop_trait (($name:ident) => (
     impl Drop for $name {
         fn drop(&mut self) {
@@ -176,7 +171,7 @@ macro_rules! func_from_slice_variable_size (($name:ident) => (
 
 /// Macro to implement a `unprotected_as_bytes()` function for objects that
 /// implement extra protections. Typically used on objects that implement
-/// `Drop`, `Debug` and/or `PartialEq`.
+/// `Drop`.
 macro_rules! func_unprotected_as_bytes (() => (
     #[inline]
     /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
@@ -203,11 +198,10 @@ macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) =
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> $name {
-        use crate::util;
         let mut value = [0u8; $upper_bound];
         // This will not panic on size, unless the newtype has been initialized $upper_bound
         // or $gen_length with 0.
-        util::secure_rand_bytes(&mut value[..$gen_length]).unwrap();
+        crate::util::secure_rand_bytes(&mut value[..$gen_length]).unwrap();
 
         $name { value: value, original_length: $gen_length }
     }
@@ -221,14 +215,13 @@ macro_rules! func_generate_variable_size (($name:ident) => (
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
-        use crate::util;
         if length < 1 || length >= (u32::max_value() as usize) {
             return Err(UnknownCryptoError);
         }
 
         let mut value = vec![0u8; length];
         // This cannot panic on size input due to above length checks.
-        util::secure_rand_bytes(&mut value).unwrap();
+        crate::util::secure_rand_bytes(&mut value).unwrap();
 
         Ok($name { value: value, original_length: length })
     }
@@ -461,7 +454,7 @@ macro_rules! construct_secret_key {
     );
 }
 
-/// Macro to construct a digest type containing non-sensitive data, using a
+/// Macro to construct a public type containing non-sensitive data, using a
 /// fixed-size array.
 ///
 /// - $name: The name for the newtype.
@@ -627,7 +620,7 @@ macro_rules! construct_tag {
 /// to the required length specified by the HMAC specifications.
 macro_rules! construct_hmac_key {
     ($(#[$meta:meta])*
-    ($name:ident, $size:expr)) => (
+    ($name:ident, $test_module_name:ident, $size:expr)) => (
         $(#[$meta])*
         ///
         /// # Security:
@@ -684,54 +677,27 @@ macro_rules! construct_hmac_key {
             func_len!();
         }
 
-        #[test]
-        fn test_partial_eq() {
-            assert!($name::from_slice(&[0u8; $size]).unwrap() == $name::from_slice(&[0u8; $size]).unwrap());
-            assert!($name::from_slice(&[0u8; $size]).unwrap() != $name::from_slice(&[1u8; $size]).unwrap());
+        #[cfg(test)]
+        mod $test_module_name {
+            use super::*;
+            test_as_bytes_and_get_length!($name, $size, $size, unprotected_as_bytes);
+            test_partial_eq!($name, $size);
 
-            assert!($name::from_slice(&[0u8; $size]).unwrap() == [0u8; $size].as_ref());
-            assert!($name::from_slice(&[0u8; $size]).unwrap() != [1u8; $size].as_ref());
-        }
+            #[test]
+            fn test_key_size() {
+                assert!($name::from_slice(&[0u8; $size]).is_ok());
+                assert!($name::from_slice(&[0u8; $size - $size]).is_ok());
+                assert!($name::from_slice(&[0u8; $size + 1]).is_ok());
+            }
 
-        #[test]
-        fn test_key_size() {
-            assert!($name::from_slice(&[0u8; $size]).is_ok());
-            assert!($name::from_slice(&[0u8; $size - $size]).is_ok());
-            assert!($name::from_slice(&[0u8; $size + 1]).is_ok());
-        }
+            #[cfg(test)]
+            #[cfg(feature = "safe_api")]
+            mod tests_with_std {
+                use super::*;
 
-        #[test]
-        fn test_unprotected_as_bytes_hmac_key() {
-            let test = $name::from_slice(&[0u8; $size]).unwrap();
-            assert!(test.unprotected_as_bytes().len() == $size);
-            assert!(test.unprotected_as_bytes() == [0u8; $size].as_ref());
-        }
-
-        #[test]
-        fn test_get_length_hmac_key() {
-            let test = $name::from_slice(&[0u8; $size]).unwrap();
-            assert!(test.unprotected_as_bytes().len() == test.len());
-            assert!($size == test.len());
-        }
-
-        #[test]
-        #[cfg(feature = "safe_api")]
-        fn test_generate_hmac() {
-            let test_zero = $name::from_slice(&[0u8; $size]).unwrap();
-            // A random one should never be all 0's.
-            let test_rand = $name::generate();
-            assert!(test_zero != test_rand);
-            // A random generated one should always be $size in length.
-            assert!(test_rand.len() == $size);
-        }
-
-        #[test]
-        #[cfg(feature = "safe_api")]
-        // format! is only available with std
-        fn test_omitted_debug_hmac_key() {
-            let secret = format!("{:?}", [0u8; $size].as_ref());
-            let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $size]).unwrap());
-            assert_eq!(test_debug_contents.contains(&secret), false);
+                test_generate!($name, $size);
+                test_omitted_debug!($name, $size);
+            }
         }
     );
 }
