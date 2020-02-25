@@ -1,3 +1,43 @@
+### 0.15.0
+
+__Date:__ February 25, 2020.
+
+__Changelog:__
+
+- [Breaking change] `secure_cmp` and all verification functions now return `Result<(), UnknownCryptoError>` instead of `Result<bool, UnknownCryptoError>` ([#97](https://github.com/brycx/orion/issues/97)).
+- [Breaking change] HChaCha20 is no longer public.
+- [Breaking change] The default size of a randomly generated secret key in `hazardous::hash::blake2b` is now 32 bytes instead of 64 bytes ([#88](https://github.com/brycx/orion/pull/88#issuecomment-529423151)).
+- [Breaking change] `orion::auth` now uses BLAKE2b in keyed-mode as MAC ([#88](https://github.com/brycx/orion/pull/88), by [Vince Mutolo](https://github.com/vlmutolo)).
+- [Breaking change] The public API for structs used with incremental processing has been changed ([#106](https://github.com/brycx/orion/issues/106) and [#87](https://github.com/brycx/orion/pull/87)).
+- [Breaking change] Support for Argon2i(single-threaded) has been added. This is now used in the `orion::kdf` and `orion::pwhash` modules ([#113](https://github.com/brycx/orion/pull/113)).
+- [Breaking change] `chacha20::keystream_block` is no longer available.
+- [Breaking change] Uses of (X)ChaCha20Poly1305 will return an error if a `usize` to `u64` conversion would be lossy.
+- [Breaking change] orion is now `no_std`-compatible on stable Rust and the `no_std` and `nightly` features have been removed ([#111](https://github.com/brycx/orion/pull/111)).
+- libsodium-compatible, streaming AEAD based on XChaCha20Poly1305 (libsodiums "secretstream") ([#99](https://github.com/brycx/orion/pull/99) and [#108](https://github.com/brycx/orion/pull/108), by [snsmac](https://github.com/snsmac)).
+- Switch to Criterion for benchmarks.
+- Add contribution guidelines in `CONTRIBUTING.md`.
+- Move the changelog to a `CHANGELOG.md` file.
+- Add test vectors to XChaCha20.
+- Improvements to `secure_cmp` ([#93](https://github.com/brycx/orion/pull/93), by [snsmac](https://github.com/snsmac))
+- Add explicit security warnings to `#[must_use]` public APIs that return a `Result` ([#95](https://github.com/brycx/orion/pull/95), by [Cole Lawrence](https://github.com/colelawrence))
+- Cleanup in the orion-dudect tests and add tests for newtype `PartialEq<&[u8]>` impl.
+- Remove hardcoded docs.rs links in the documentation ([#100](https://github.com/brycx/orion/pull/100), by [Kyle Schreiber](https://github.com/finfet)).
+- Previously, the documentation for `util::secure_rand_bytes` stated that a panic would occur if the function failed to generate random bytes without throwing an error, which was not the case. This has been corrected.
+- Add `Blake2b::verify` to fuzzing targets.
+- orion-dudect now also tests for constant-time execution in CI on OSX and Windows platforms.
+- Testing constant-time execution with WASM at [orion-sidefuzz](https://github.com/brycx/orion-sidefuzz).
+- New testing framework which has greatly reduced the amount of duplicate testing code ([#96](https://github.com/brycx/orion/pull/96)).
+- Document and test MSRV ([#104](https://github.com/brycx/orion/issues/104)).
+- orion is now listed as an alternative to the old `rust-crypto` crate on [RustSec](https://rustsec.org/advisories/RUSTSEC-2016-0005.html).
+- `UnknownCryptoError` now implements `std::error::Error` for better interoperability with error-handling crates.
+- Added new test vectors from Wycheproof for ChaCha20Poly1305, XChaCha20Poly1305, HMAC-SHA512 and HKDF-HMAC-SHA512 ([#116](https://github.com/brycx/orion/pull/116)).
+- `#![deny(warnings)]` has been removed and replaced with flags in CI build jobs.
+- GitHub actions are used for daily security audit for the `crates-published` branch. Travis CI runs only weekly on `crates-published` branch now (daily before).
+- Removed inlining attributes that did not provide any performance improvements when tested with benchmarks ([commit](https://github.com/brycx/orion/commit/eea1899c0b2967c17c0ee6d05559065c3f67c7d5)).
+- Various performance improvements.
+- Various improvements to fuzzing targets.
+- Various improvements to tests.
+
 ### 0.14.4
 
 __Date:__ August 21, 2019.
