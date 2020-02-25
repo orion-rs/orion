@@ -38,6 +38,14 @@ __Changelog:__
 - Various improvements to fuzzing targets.
 - Various improvements to tests.
 
+### 0.14.5
+
+__Date:__ January 25, 2020.
+
+__Changelog:__
+
+- Fix `nightly` build breakage.
+
 ### 0.14.4
 
 __Date:__ August 21, 2019.
