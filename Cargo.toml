@@ -13,7 +13,6 @@ license = "MIT"
 exclude = [
     ".gitignore",
     ".travis.yml",
-    "benches/*",
     "tests/*"
 ]
 
