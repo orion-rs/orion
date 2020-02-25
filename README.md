@@ -48,6 +48,8 @@ Fuzzing is done using [honggfuzz-rs](https://github.com/rust-fuzz/honggfuzz-rs) 
 Constant-time execution tests can be found at [orion-dudect](https://github.com/brycx/orion-dudect) and [orion-sidefuzz](https://github.com/brycx/orion-sidefuzz).
 
 ### Benchmarks
+An overview of the performance that can be expected from orion can be [seen here](https://github.com/brycx/orion/wiki/Benchmarks).
+
 The library can be benchmarked with [Criterion](https://github.com/bheisler/criterion.rs) as below. All benchmarking tests are located in `benches/`.
 ```
 cargo bench
