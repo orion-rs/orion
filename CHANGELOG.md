@@ -1,3 +1,12 @@
+### 0.15.1
+
+__Date:__ March 9, 2020.
+
+__Changelog:__
+
+- Update `base64` dependency from `0.11.0` to `0.12.0`.
+- Documentation improvements.
+
 ### 0.15.0
 
 __Date:__ February 25, 2020.
