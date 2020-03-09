@@ -201,8 +201,8 @@ impl PasswordHash {
             "$argon2i$v=19$m={},t={},p=1${}${}",
             memory,
             iterations,
-            encode_config(&salt, STANDARD_NO_PAD),
-            encode_config(&password_hash, STANDARD_NO_PAD)
+            encode_config(salt, STANDARD_NO_PAD),
+            encode_config(password_hash, STANDARD_NO_PAD)
         )
     }
 
