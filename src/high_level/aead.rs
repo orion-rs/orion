@@ -230,6 +230,7 @@ pub mod streaming {
     //! [`SecretKey::generate()`]: ../struct.SecretKey.html
 
     use super::*;
+    pub use crate::hazardous::aead::streaming::Nonce;
     pub use crate::hazardous::aead::streaming::StreamTag;
 
     #[derive(Debug)]
