@@ -210,8 +210,8 @@ impl Sha512 {
 
     #[rustfmt::skip]
 	#[allow(clippy::many_single_char_names)]
-	/// Process data in `self.buffer` or optionally `data`.
-	fn process(&mut self, data: Option<&[u8]>) {
+    /// Process data in `self.buffer` or optionally `data`.
+    fn process(&mut self, data: Option<&[u8]>) {
 		let mut w = [0u64; 80];
 		match data {
 			Some(bytes) => {
