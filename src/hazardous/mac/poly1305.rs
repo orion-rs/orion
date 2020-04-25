@@ -64,8 +64,6 @@
 //! [`finalize()`]: struct.Poly1305.html
 //! [`OneTimeKey::generate()`]: struct.OneTimeKey.html
 
-use core;
-
 use crate::{
     errors::UnknownCryptoError,
     util::endianness::{load_u32_le, store_u32_into_le},
