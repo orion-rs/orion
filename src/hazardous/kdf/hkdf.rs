@@ -32,7 +32,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than 1.
-//! - The length of `dst_out` is greater than 255 * hash_output_size_in_bytes.
+//! - The length of `dst_out` is greater than 255 * [`SHA512_OUTSIZE`].
 //! - The derived key does not match the expected when verifying.
 //!
 //! # Security:
@@ -59,6 +59,7 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
+//! [`SHA512_OUTSIZE`]: ../../hash/sha512/constant.SHA512_OUTSIZE.html
 
 use crate::{
     errors::UnknownCryptoError,
@@ -84,7 +85,7 @@ pub fn expand(
     info: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if dst_out.len() > 16320 {
+    if dst_out.len() > 255 * SHA512_OUTSIZE {
         return Err(UnknownCryptoError);
     }
     if dst_out.is_empty() {
