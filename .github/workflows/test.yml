@@ -1,0 +1,45 @@
+on: [push, pull_request]
+
+name: Basic tests
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        rust: [stable, nightly]
+    
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      
+      - name: Test debug-mode, default features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: cargo test
+      
+      - name: Test debug-mode, no default features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: cargo test --no-default-features --tests
+      
+      - name: Test release-mode, default features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: cargo test --release
+      
+      - name: Test release-mode, no default features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: cargo test --release --no-default-features --tests

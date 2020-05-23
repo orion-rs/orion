@@ -39,28 +39,6 @@ matrix:
 
         - cargo clean
 
-    - name: "[RELEASE + DEBUG]: Tests"
-      rust: nightly
-      script:
-        # Debug:
-        - cargo test
-        - cargo test --no-default-features --tests
-        
-        # Release:
-        - cargo test --release
-        - cargo test --release --no-default-features --tests
-
-    - name: "[RELEASE + DEBUG]: Tests"
-      rust: stable
-      script:
-        # Debug:
-        - cargo test
-        - cargo test --no-default-features --tests
-
-        # Release:
-        - cargo test --release
-        - cargo test --release --no-default-features --tests
-
     - name: "[RELEASE + DEBUG (stable)]: Build no_std"
       env: TARGET=thumbv7em-none-eabi
       rust: stable
