@@ -50,20 +50,15 @@ matrix:
         - cargo test --release
         - cargo test --release --no-default-features --tests
 
-    - name: "[RELEASE + DEBUG]: Tests + cargo-audit + clippy + fmt"
+    - name: "[RELEASE + DEBUG]: Tests + clippy + fmt"
       rust: stable
       install:
-        - cargo install --force cargo-audit
         - rustup component add clippy
         - rustup component add rustfmt
       script:
         # rust-fmt
         - cargo clean
         - cargo fmt --all -- --check
-
-        # cargo-audit
-        - cargo generate-lockfile
-        - cargo audit -D
 
         # clippy
         - cargo clippy -- -D warnings
