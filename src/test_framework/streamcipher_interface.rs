@@ -264,18 +264,13 @@ fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
 pub fn test_diff_params_diff_output<Encryptor, Decryptor, Key, Nonce>(
     encryptor: &Encryptor,
     decryptor: &Decryptor,
-    input: &[u8],
 ) where
     Key: TestingRandom + PartialEq<Key>,
     Nonce: TestingRandom + PartialEq<Nonce>,
     Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
     Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    let mut input = input;
-
-    if input.is_empty() {
-        input = &[0u8; 1];
-    }
+    let input = &[0u8; 16];
 
     let sk1 = Key::gen();
     let sk2 = Key::gen();
@@ -294,15 +289,15 @@ pub fn test_diff_params_diff_output<Encryptor, Decryptor, Key, Nonce>(
     // Different secret key
     encryptor(&sk1, &n1, c1, input, &mut dst_out_ct).unwrap();
     decryptor(&sk2, &n1, c1, &dst_out_ct, &mut dst_out_pt).unwrap();
-    assert_ne!(dst_out_pt, input);
+    assert_ne!(&dst_out_pt[..], input);
 
     // Different nonce
     encryptor(&sk1, &n1, c1, input, &mut dst_out_ct).unwrap();
     decryptor(&sk1, &n2, c1, &dst_out_ct, &mut dst_out_pt).unwrap();
-    assert_ne!(dst_out_pt, input);
+    assert_ne!(&dst_out_pt[..], input);
 
     // Different initial counter
     encryptor(&sk1, &n1, c1, input, &mut dst_out_ct).unwrap();
     decryptor(&sk1, &n1, c2, &dst_out_ct, &mut dst_out_pt).unwrap();
-    assert_ne!(dst_out_pt, input);
+    assert_ne!(&dst_out_pt[..], input);
 }

@@ -168,7 +168,7 @@ mod public {
                     let secret_key = SecretKey::generate();
                     let nonce = Nonce::generate();
                     StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
-                    test_diff_params_diff_output(&encrypt, &decrypt, &input);
+                    test_diff_params_diff_output(&encrypt, &decrypt);
 
                     true
                 }

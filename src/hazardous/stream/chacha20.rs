@@ -409,7 +409,7 @@ mod public {
                     let secret_key = SecretKey::generate();
                     let nonce = Nonce::from_slice(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
                     StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
-                    test_diff_params_diff_output(&encrypt, &decrypt, &input);
+                    test_diff_params_diff_output(&encrypt, &decrypt);
 
                     true
                 }
