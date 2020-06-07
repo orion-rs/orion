@@ -33,7 +33,7 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
             let mut value = vec![0u8; $size];
             crate::util::secure_rand_bytes(&mut value).unwrap();
 
-            $name { value: value, original_length: $size }
+            $name { value, original_length: $size }
         }
     }
 ));
@@ -149,7 +149,7 @@ macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr
         let mut value = [0u8; $upper_bound];
         value[..slice_len].copy_from_slice(slice);
 
-        Ok($name { value: value, original_length: slice_len })
+        Ok($name { value, original_length: slice_len })
     }
 ));
 
@@ -203,7 +203,7 @@ macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) =
         // or $gen_length with 0.
         crate::util::secure_rand_bytes(&mut value[..$gen_length]).unwrap();
 
-        $name { value: value, original_length: $gen_length }
+        $name { value, original_length: $gen_length }
     }
 ));
 
@@ -223,7 +223,7 @@ macro_rules! func_generate_variable_size (($name:ident) => (
         // This cannot panic on size input due to above length checks.
         crate::util::secure_rand_bytes(&mut value).unwrap();
 
-        Ok($name { value: value, original_length: length })
+        Ok($name { value, original_length: length })
     }
 ));
 
