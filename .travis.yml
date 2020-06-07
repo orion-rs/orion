@@ -39,43 +39,6 @@ matrix:
 
         - cargo clean
 
-    - name: "[RELEASE + DEBUG]: Tests"
-      rust: nightly
-      script:
-        # Debug:
-        - cargo test
-        - cargo test --no-default-features --tests
-        
-        # Release:
-        - cargo test --release
-        - cargo test --release --no-default-features --tests
-
-    - name: "[RELEASE + DEBUG]: Tests + cargo-audit + clippy + fmt"
-      rust: stable
-      install:
-        - cargo install --force cargo-audit
-        - rustup component add clippy
-        - rustup component add rustfmt
-      script:
-        # rust-fmt
-        - cargo clean
-        - cargo fmt --all -- --check
-
-        # cargo-audit
-        - cargo generate-lockfile
-        - cargo audit -D
-
-        # clippy
-        - cargo clippy -- -D warnings
-
-        # Debug:
-        - cargo test
-        - cargo test --no-default-features --tests
-
-        # Release:
-        - cargo test --release
-        - cargo test --release --no-default-features --tests
-
     - name: "[RELEASE + DEBUG (stable)]: Build no_std"
       env: TARGET=thumbv7em-none-eabi
       rust: stable
