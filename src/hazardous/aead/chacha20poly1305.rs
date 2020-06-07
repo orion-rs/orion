@@ -242,7 +242,7 @@ mod public {
                 let secret_key = SecretKey::generate();
                 let nonce = Nonce::from_slice(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
                 AeadTestRunner(seal, open, secret_key, nonce, &input, None, POLY1305_OUTSIZE, &ad);
-
+                test_diff_params_err(&seal, &open, &input, POLY1305_OUTSIZE);
                 true
             }
         }
