@@ -261,7 +261,7 @@ fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
 #[cfg(feature = "safe_api")]
 /// Test that encrypting using different secret-key/nonce/initial-counter combinations yields different
 /// ciphertexts.
-pub fn diff_params_diff_output<Encryptor, Decryptor, Key, Nonce>(
+pub fn test_diff_params_diff_output<Encryptor, Decryptor, Key, Nonce>(
     encryptor: &Encryptor,
     decryptor: &Decryptor,
     input: &[u8],
@@ -271,7 +271,11 @@ pub fn diff_params_diff_output<Encryptor, Decryptor, Key, Nonce>(
     Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
     Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    assert!(!input.is_empty());
+    let mut input = input;
+
+    if input.is_empty() {
+        input = &[0u8; 1];
+    }
 
     let sk1 = Key::gen();
     let sk2 = Key::gen();
