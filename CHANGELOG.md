@@ -1,3 +1,15 @@
+### 0.15.2
+
+__Date:__ June 7, 2020.
+
+__Changelog:__
+
+- Remove old `no_std` feature from CONTRIBUTING guidelines.
+- Improve documentation and code around HKDFs maximum output length.
+- Move clippy, rustfmt and basic tests to GitHub Actions ([#122](https://github.com/brycx/orion/pull/122)).
+- Add random secret-key/nonce tests to AEADs and stream ciphers ([#123](https://github.com/brycx/orion/pull/123)).
+- Address various clippy warnings.
+
 ### 0.15.1
 
 __Date:__ March 9, 2020.
