@@ -136,7 +136,7 @@ mod public {
                 let secret_key = SecretKey::generate();
                 let nonce = Nonce::generate();
                 AeadTestRunner(seal, open, secret_key, nonce, &input, None, POLY1305_OUTSIZE, &ad);
-
+                test_diff_params_err(&seal, &open, &input, POLY1305_OUTSIZE);
                 true
             }
         }
