@@ -81,7 +81,7 @@ impl_load_into!(u64, u64, from_be_bytes, load_u64_into_be);
 
 impl_store_into!(u32, to_le_bytes, store_u32_into_le);
 
-#[cfg(any(feature = "safe_api", test))]
+#[cfg(any(feature = "safe_api", feature = "alloc", test))]
 impl_store_into!(u64, to_le_bytes, store_u64_into_le);
 
 impl_store_into!(u64, to_be_bytes, store_u64_into_be);

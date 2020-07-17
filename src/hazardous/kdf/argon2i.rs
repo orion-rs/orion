@@ -543,11 +543,11 @@ pub fn verify(
 mod public {
     use super::*;
 
+    #[cfg(feature = "safe_api")]
     mod test_verify {
         use super::*;
 
         // Proptests. Only executed when NOT testing no_std.
-        #[cfg(feature = "safe_api")]
         mod proptest {
             use super::*;
 

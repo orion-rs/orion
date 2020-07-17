@@ -26,6 +26,6 @@ pub mod hkdf;
 /// PBKDF2-HMAC-SHA512 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
 pub mod pbkdf2;
 
-#[cfg(feature = "safe_api")]
+#[cfg(any(feature = "safe_api", feature = "alloc"))]
 /// Argon2i password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
 pub mod argon2i;
