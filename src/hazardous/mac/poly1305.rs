@@ -38,6 +38,9 @@
 //! - The calculated tag does not match the expected when verifying.
 //!
 //! # Security:
+//! - A given key must never be used more than once. A unique [`OneTimeKey`],
+//!   for each message authenticated, is required. If a key is used more than once,
+//!   it reveals enough information for an attacker to forge future authentications with the same key.
 //! - The one-time key should be generated using a CSPRNG.
 //!   [`OneTimeKey::generate()`] can be used for this.
 //!
@@ -63,6 +66,7 @@
 //! [`reset()`]: struct.Poly1305.html
 //! [`finalize()`]: struct.Poly1305.html
 //! [`OneTimeKey::generate()`]: struct.OneTimeKey.html
+//! [`OneTimeKey`]: struct.OneTimeKey.html
 
 use crate::{
     errors::UnknownCryptoError,
