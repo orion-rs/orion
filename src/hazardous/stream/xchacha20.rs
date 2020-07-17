@@ -49,7 +49,7 @@
 //!   with that given key is compromised.
 //! - Functions herein do not provide any data integrity. If you need
 //!   data integrity, which is nearly ***always the case***, you should use an
-//!   AEAD construction instead. See orions [`aead`] module for this.
+//!   AEAD construction instead. See the [`aead`] module for this.
 //! - Only a nonce for XChaCha20 is big enough to be randomly generated using a
 //!   CSPRNG. [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
@@ -80,6 +80,7 @@
 //! [`Nonce::generate()`]: struct.Nonce.html
 //! [`SecretKey::generate()`]: ../chacha20/struct.SecretKey.html
 //! [`XChaCha20Poly1305`]: ../../aead/xchacha20poly1305/index.html
+//! [`aead`]: ../../aead/index.html
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{
     errors::UnknownCryptoError,

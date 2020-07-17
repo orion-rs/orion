@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //! # About:
-//! Argon2i version 1.3. This implementation is __not__ available with `no_std`.
+//! Argon2i version 1.3. This implementation is available with features `safe_api` and `alloc`.
 //!
 //! # Note:
 //! This implementation only supports a single thread/lane.
