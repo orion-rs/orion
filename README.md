@@ -23,12 +23,21 @@ MSRV may be changed at any point and will not be considered a SemVer breaking ch
 
 ### Crate Features
 By default orion targets stable Rust with `std`. To use orion in a `no_std` context, you need to specify the dependency as such:
-```
+```toml
 orion = { version = "*", default-features = false }
 # Replace * with the most recent version
 ```
 
-When orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator.
+When orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator. 
+
+Argon2i is not available with `no_std` by default, but can be by enabling the `alloc` feature:
+
+```toml
+[dependencies.orion]
+version = "*" # Replace * with the most recent version
+default-features = false
+features = ["alloc"]
+```
 
 ### Documentation
 Can be viewed [here](https://docs.rs/orion) or built with:
