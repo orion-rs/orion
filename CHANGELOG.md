@@ -1,3 +1,13 @@
+### 0.15.3
+
+__Date:__ August 8, 2020.
+
+__Changelog:__
+
+- Documentation improvements.
+- Argon2i is now available in a `no_std` context, using the new `alloc` feature ([#126](https://github.com/brycx/orion/pull/126)).
+- `release` and `bench` profiles now use the default LTO (thin local LTO) instead of fat LTO.
+
 ### 0.15.2
 
 __Date:__ June 7, 2020.
