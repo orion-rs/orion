@@ -31,6 +31,12 @@ jobs:
           command: test
           args: --no-default-features --tests
       
+      - name: Test debug-mode, alloc feature
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features --features alloc --tests
+      
       - name: Test release-mode, default features
         uses: actions-rs/cargo@v1
         with:
@@ -42,3 +48,9 @@ jobs:
         with:
           command: test
           args: --release --no-default-features --tests
+      
+      - name: Test release-mode, alloc feature
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release --no-default-features --features alloc --tests

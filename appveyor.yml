@@ -30,6 +30,11 @@ test_script:
   - cargo build --no-default-features --target %TARGET% --release
   - cargo test --tests --no-default-features --target %TARGET%
   - cargo test --tests --no-default-features --target %TARGET% --release
+  # alloc feature
+  - cargo build --no-default-features --features alloc --target %TARGET%
+  - cargo build --no-default-features --features alloc --target %TARGET% --release
+  - cargo test --tests --no-default-features --features alloc --target %TARGET%
+  - cargo test --tests --no-default-features --features alloc --target %TARGET% --release
 
 cache:
   - C:\Users\appveyor\.cargo\registry

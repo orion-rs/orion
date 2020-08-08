@@ -66,6 +66,10 @@
 #[macro_use]
 extern crate quickcheck;
 
+#[cfg(feature = "alloc")]
+#[cfg_attr(feature = "alloc", macro_use)]
+extern crate alloc;
+
 #[macro_use]
 mod typedefs;
 
