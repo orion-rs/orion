@@ -36,18 +36,6 @@ criterion = "0.3.0"
 name = "bench"
 harness = false
 
-[profile.bench]
-opt-level = 3
-debug = false
-lto = true
-debug-assertions = false
-
-[profile.release]
-opt-level = 3
-debug = false
-lto = true
-debug-assertions = false
-
 [profile.dev]
 opt-level = 1
 
