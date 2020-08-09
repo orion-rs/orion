@@ -19,6 +19,7 @@ jobs:
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
 
@@ -30,4 +31,5 @@ jobs:
       - name: Run cargo test - release
         uses: actions-rs/cargo@v1
         with:
-          command: test --release
+          command: test
+          args: --release
