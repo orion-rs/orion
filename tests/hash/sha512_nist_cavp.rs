@@ -62,7 +62,7 @@ fn nist_cavp_runner(path: &str) {
             match data_name.as_str() {
                 "input" => input = data,
                 "expected_output" => expected_output = data,
-                _ => panic!("Unexpected data in test case"),
+                _ => (),
             }
         }
 

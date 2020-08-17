@@ -10,6 +10,8 @@ extern crate hex;
 use self::hex::decode;
 use std::{fs::File, io::BufRead, io::BufReader, io::Lines};
 
+use super::TestCase;
+
 fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
     // Only make SecretKey if test case key value is not empty.
     let mut state = if key.is_empty() {
@@ -34,28 +36,6 @@ fn sha512_test_runner(data: &[u8], output: &[u8]) {
 
     assert!(digest.as_ref() == digest_one_shot.as_ref());
     assert!(digest.as_ref() == output);
-}
-#[derive(Debug)]
-pub struct TestCase {
-    pub data: Vec<(String, Vec<u8>)>,
-    pub outcome: bool,
-}
-
-impl TestCase {
-    pub fn new() -> Self {
-        Self {
-            data: Vec::<(String, Vec<u8>)>::new(),
-            outcome: false,
-        }
-    }
-
-    pub fn set_expected_outcome(&mut self, expected_outcome: bool) {
-        self.outcome = expected_outcome;
-    }
-
-    pub fn add_input_data(&mut self, data_name: &str, input_data: &[u8]) {
-        self.data.push((data_name.to_string(), input_data.to_vec()));
-    }
 }
 
 #[derive(Debug)]
