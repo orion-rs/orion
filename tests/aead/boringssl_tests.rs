@@ -6,22 +6,11 @@ use super::*;
 use std::{fs::File, io::BufRead, io::BufReader, io::Lines};
 
 extern crate orion;
-use self::{
-    aead::{
-        chacha20poly1305::{self, SecretKey},
-        xchacha20poly1305,
-    },
-    orion::{
-        errors::UnknownCryptoError,
-        hazardous::{
-            aead,
-            mac::poly1305::POLY1305_OUTSIZE,
-            stream::{
-                chacha20::{CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE},
-                xchacha20::XCHACHA_NONCESIZE,
-            },
-        },
-        test_framework::aead_interface::AeadTestRunner,
+use self::orion::hazardous::{
+    mac::poly1305::POLY1305_OUTSIZE,
+    stream::{
+        chacha20::{CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE},
+        xchacha20::XCHACHA_NONCESIZE,
     },
 };
 
