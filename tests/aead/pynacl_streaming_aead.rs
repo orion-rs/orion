@@ -66,7 +66,9 @@ fn run_tests_from_json(path_to_vectors: &str) {
 
 #[test]
 fn test_pynacl() {
-    run_tests_from_json("./tests/test_data/third_party/pynacl/pynacl_secretstream_test_vectors.json");
+    run_tests_from_json(
+        "./tests/test_data/third_party/pynacl/pynacl_secretstream_test_vectors.json",
+    );
     run_tests_from_json("./tests/test_data/pynacl_generated.json");
     run_tests_from_json("./tests/test_data/pynacl_generated_with_rekey.json");
 }

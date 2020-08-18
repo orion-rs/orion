@@ -120,7 +120,7 @@ impl Iterator for TestReader {
 
 #[test]
 fn test_nist_cavp() {
-    let mut cavs_reader = TestReader::new("./tests/test_data/original/HMAC.rsp");
+    let mut cavs_reader = TestReader::new("./tests/test_data/third_party/nist/HMAC.rsp");
     let mut test_case = cavs_reader.next();
 
     while test_case.is_some() {

@@ -53,5 +53,7 @@ fn wycheproof_runner(path: &str) {
 
 #[test]
 fn test_wycheproof_hmac() {
-    wycheproof_runner("./tests/test_data/original/wycheproof_hmac_sha512_test.json");
+    wycheproof_runner(
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_hmac_sha512_test.json",
+    );
 }

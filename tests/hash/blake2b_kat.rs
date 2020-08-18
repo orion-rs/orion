@@ -9,7 +9,7 @@ use std::{fs::File, io::BufReader};
 
 #[test]
 fn test_blake2b_kat() {
-    let file = File::open("./tests/test_data/original/blake2-kat.json").unwrap();
+    let file = File::open("./tests/test_data/third_party/blake2-kat.json").unwrap();
     let reader = BufReader::new(file);
     let stream = Deserializer::from_reader(reader).into_iter::<Value>();
 
