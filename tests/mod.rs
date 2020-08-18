@@ -12,10 +12,11 @@ pub mod mac;
 #[cfg(test)]
 pub mod stream;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TestCase {
     pub data: Vec<(String, Vec<u8>)>,
     pub outcome: bool,
+    pub test_case_number: u64,
 }
 
 impl TestCase {
@@ -23,6 +24,7 @@ impl TestCase {
         Self {
             data: Vec::<(String, Vec<u8>)>::new(),
             outcome: false,
+            test_case_number: 0,
         }
     }
 

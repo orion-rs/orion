@@ -107,6 +107,7 @@ impl Iterator for TestReader {
                         test_case.add_input_data("input", &input);
                         test_case.add_input_data("expected_output", &expected_output);
                         test_case.set_expected_outcome(true);
+                        test_case.test_case_number = self.test_case_count as u64;
 
                         return Some(test_case);
                     }
