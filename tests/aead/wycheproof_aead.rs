@@ -56,11 +56,11 @@ fn wycheproof_runner(path: &str, is_ietf: bool) {
 #[test]
 fn test_wycheproof_aead() {
     wycheproof_runner(
-        "./tests/test_data/original/wycheproof_chacha20_poly1305_test.json",
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_chacha20_poly1305_test.json",
         true,
     );
     wycheproof_runner(
-        "./tests/test_data/original/wycheproof_xchacha20_poly1305_test.json",
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_xchacha20_poly1305_test.json",
         false,
     );
 }

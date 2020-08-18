@@ -198,7 +198,7 @@ fn boringssl_runner(path: &str, is_ietf: bool) {
 #[test]
 fn test_chacha20poly1305() {
     boringssl_runner(
-        "./tests/test_data/original/boringssl_chacha20_poly1305.txt",
+        "./tests/test_data/third_party/google/boringssl/boringssl_chacha20_poly1305.txt",
         true,
     );
 }
@@ -206,7 +206,7 @@ fn test_chacha20poly1305() {
 #[test]
 fn test_xchacha20poly1305() {
     boringssl_runner(
-        "./tests/test_data/original/boringssl_xchacha20_poly1305.txt",
+        "./tests/test_data/third_party/google/boringssl/boringssl_xchacha20_poly1305.txt",
         false,
     );
 }
