@@ -415,11 +415,6 @@ mod public {
             ad: Option<&[u8]>,
             output: &mut [u8],
         ) -> Result<(), UnknownCryptoError> {
-            // NOTE: AeadTestRunner assumes that input must be at least
-            // 1. `seal_chunk` accepts 0 which is tested further down.
-            if input.len() == 0 {
-                return Err(UnknownCryptoError);
-            }
             let mut state = StreamXChaCha20Poly1305::new(sk, nonce);
             state.seal_chunk(input, ad, output, StreamTag::MESSAGE)
         }
@@ -431,12 +426,6 @@ mod public {
             ad: Option<&[u8]>,
             output: &mut [u8],
         ) -> Result<(), UnknownCryptoError> {
-            // NOTE: AeadTestRunner assumes that input must be at least
-            // ABYTES + 1. `open_chunk` accepts ABYTES exactly which is tested
-            // further down.
-            if input.len() == ABYTES {
-                return Err(UnknownCryptoError);
-            }
             let mut state = StreamXChaCha20Poly1305::new(sk, nonce);
             state.open_chunk(input, ad, output)?;
 

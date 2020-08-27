@@ -39,8 +39,7 @@
 //! - The length of `dst_out` is less than `plaintext` + [`POLY1305_OUTSIZE`] when calling [`seal()`].
 //! - The length of `dst_out` is less than `ciphertext_with_tag` - [`POLY1305_OUTSIZE`] when
 //!   calling [`open()`].
-//! - The length of the `ciphertext_with_tag` is not greater than [`POLY1305_OUTSIZE`].
-//! - The `plaintext` is empty.
+//! - The length of the `ciphertext_with_tag` is not at least [`POLY1305_OUTSIZE`].
 //! - The received tag does not match the calculated tag when  calling [`open()`].
 //! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when  calling [`seal()`].
 //! - Converting `usize` to `u64` would be a lossy conversion.

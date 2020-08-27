@@ -46,8 +46,7 @@
 //! - The length of `dst_out` is less than `plaintext` + [`POLY1305_OUTSIZE`] when calling [`seal()`].
 //! - The length of `dst_out` is less than `ciphertext_with_tag` - [`POLY1305_OUTSIZE`] when
 //!   calling [`open()`].
-//! - The length of `ciphertext_with_tag` is not greater than [`POLY1305_OUTSIZE`].
-//! - The `plaintext` is empty.
+//! - The length of `ciphertext_with_tag` is not at least [`POLY1305_OUTSIZE`].
 //! - The received tag does not match the calculated tag when  calling [`open()`].
 //! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when  calling [`seal()`].
 //! - Converting `usize` to `u64` would be a lossy conversion.
@@ -131,7 +130,6 @@ fn process_authentication(
     ad: &[u8],
     ciphertext: &[u8],
 ) -> Result<(), UnknownCryptoError> {
-    debug_assert!(!ciphertext.is_empty());
     auth_ctx.process_pad_to_blocksize(ad)?;
     auth_ctx.process_pad_to_blocksize(ciphertext)?;
 
@@ -157,26 +155,25 @@ pub fn seal(
 ) -> Result<(), UnknownCryptoError> {
     match plaintext.len().checked_add(POLY1305_OUTSIZE) {
         Some(out_min_len) => {
-            if dst_out.len() < out_min_len || out_min_len == POLY1305_OUTSIZE {
+            if dst_out.len() < out_min_len {
                 return Err(UnknownCryptoError);
             }
         }
         None => return Err(UnknownCryptoError),
     };
 
-    let pt_len = plaintext.len();
-    dst_out[..pt_len].copy_from_slice(plaintext);
-
     let mut enc_ctx =
         ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
     let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
-    chacha20::xor_keystream(&mut enc_ctx, ENC_CTR, tmp.as_mut(), &mut dst_out[..pt_len])?;
+
+    let pt_len = plaintext.len();
+    if pt_len != 0 {
+        dst_out[..pt_len].copy_from_slice(plaintext);
+        chacha20::xor_keystream(&mut enc_ctx, ENC_CTR, tmp.as_mut(), &mut dst_out[..pt_len])?;
+    }
 
     let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut enc_ctx, &mut tmp));
-    let ad = match ad {
-        Some(val) => val,
-        None => &[],
-    };
+    let ad = ad.unwrap_or(&[0u8; 0]);
     process_authentication(&mut auth_ctx, ad, &dst_out[..pt_len])?;
     dst_out[pt_len..(pt_len + POLY1305_OUTSIZE)]
         .copy_from_slice(auth_ctx.finalize()?.unprotected_as_bytes());
@@ -193,7 +190,7 @@ pub fn open(
     ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if ciphertext_with_tag.len() <= POLY1305_OUTSIZE {
+    if ciphertext_with_tag.len() < POLY1305_OUTSIZE {
         return Err(UnknownCryptoError);
     }
     if dst_out.len() < ciphertext_with_tag.len() - POLY1305_OUTSIZE {
@@ -206,23 +203,24 @@ pub fn open(
     let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
-    let ad = match ad {
-        Some(val) => val,
-        None => &[],
-    };
+    let ad = ad.unwrap_or(&[0u8; 0]);
     process_authentication(&mut auth_ctx, ad, &ciphertext_with_tag[..ciphertext_len])?;
     util::secure_cmp(
         auth_ctx.finalize()?.unprotected_as_bytes(),
         &ciphertext_with_tag[ciphertext_len..],
     )?;
 
-    dst_out[..ciphertext_len].copy_from_slice(&ciphertext_with_tag[..ciphertext_len]);
-    chacha20::xor_keystream(
-        &mut dec_ctx,
-        ENC_CTR,
-        tmp.as_mut(),
-        &mut dst_out[..ciphertext_len],
-    )
+    if ciphertext_len != 0 {
+        dst_out[..ciphertext_len].copy_from_slice(&ciphertext_with_tag[..ciphertext_len]);
+        chacha20::xor_keystream(
+            &mut dec_ctx,
+            ENC_CTR,
+            tmp.as_mut(),
+            &mut dst_out[..ciphertext_len],
+        )?;
+    }
+
+    Ok(())
 }
 
 // Testing public functions in the module.
@@ -245,32 +243,6 @@ mod public {
                 test_diff_params_err(&seal, &open, &input, POLY1305_OUTSIZE);
                 true
             }
-        }
-    }
-}
-
-#[cfg(debug_assertions)]
-// Testing private functions in the module.
-#[cfg(test)]
-mod private {
-    use super::*;
-
-    mod test_process_authentication {
-        use super::*;
-        #[test]
-        #[should_panic]
-        fn test_panic_empty_buf() {
-            let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
-            let n = Nonce::from_slice(&[0u8; 12]).unwrap();
-
-            let mut chacha20_ctx =
-                ChaCha20::new(sk.unprotected_as_bytes(), n.as_ref(), true).unwrap();
-            let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
-
-            let poly1305_key = poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block);
-            let mut poly1305_state = Poly1305::new(&poly1305_key);
-
-            process_authentication(&mut poly1305_state, &[0u8; 0], &[0u8; 0]).unwrap();
         }
     }
 }

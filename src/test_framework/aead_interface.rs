@@ -44,24 +44,22 @@ pub fn AeadTestRunner<Sealer, Opener, Key, Nonce>(
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    if !input.is_empty() {
-        seal_dst_out_length(&sealer, &key, &nonce, input, tag_size, aad);
-        open_dst_out_length(&sealer, &opener, &key, &nonce, input, tag_size, aad);
-        open_modified_tag_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
-        open_modified_ciphertext_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
-        open_modified_aad_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
-        none_or_empty_some_aad_same_result(&sealer, &opener, &key, &nonce, input, tag_size);
-        seal_open_equals_expected(
-            &sealer,
-            &opener,
-            &key,
-            &nonce,
-            &input,
-            expected_ct_with_tag,
-            tag_size,
-            aad,
-        );
-    }
+    seal_dst_out_length(&sealer, &key, &nonce, input, tag_size, aad);
+    open_dst_out_length(&sealer, &opener, &key, &nonce, input, tag_size, aad);
+    open_modified_tag_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
+    open_modified_ciphertext_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
+    open_modified_aad_err(&sealer, &opener, &key, &nonce, input, tag_size, aad);
+    none_or_empty_some_aad_same_result(&sealer, &opener, &key, &nonce, input, tag_size);
+    seal_open_equals_expected(
+        &sealer,
+        &opener,
+        &key,
+        &nonce,
+        &input,
+        expected_ct_with_tag,
+        tag_size,
+        aad,
+    );
     seal_plaintext_length(&sealer, &key, &nonce, tag_size, aad);
     open_ciphertext_with_tag_length(&sealer, &opener, &key, &nonce, tag_size, aad);
 }
@@ -79,7 +77,6 @@ fn seal_dst_out_length<Sealer, Key, Nonce>(
 ) where
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    assert!(!input.is_empty());
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
@@ -120,7 +117,7 @@ fn seal_plaintext_length<Sealer, Key, Nonce>(
 
     let input_0 = vec![0u8; 0];
     let mut dst_out_ct_0 = vec![0u8; input_0.len() + tag_size];
-    assert!(sealer(&key, &nonce, &input_0, default_aad, &mut dst_out_ct_0).is_err());
+    assert!(sealer(&key, &nonce, &input_0, default_aad, &mut dst_out_ct_0).is_ok());
 
     let input_1 = vec![0u8; 1];
     let mut dst_out_ct_1 = vec![0u8; input_1.len() + tag_size];
@@ -146,7 +143,6 @@ fn open_dst_out_length<Sealer, Opener, Key, Nonce>(
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    assert!(!input.is_empty());
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
@@ -156,10 +152,17 @@ fn open_dst_out_length<Sealer, Opener, Key, Nonce>(
     assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_ok());
 
     let mut dst_out_pt_0 = [0u8; 0];
-    assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt_0).is_err());
+    let empty_out_res = opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt_0);
+    if input.is_empty() {
+        assert!(empty_out_res.is_ok());
+    } else {
+        assert!(empty_out_res.is_err());
+    }
 
-    let mut dst_out_pt_less = vec![0u8; input.len() - 1];
-    assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt_less).is_err());
+    if !input.is_empty() {
+        let mut dst_out_pt_less = vec![0u8; input.len() - 1];
+        assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt_less).is_err());
+    }
 
     let mut dst_out_pt_more = vec![0u8; input.len() + 1];
     assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt_more).is_ok());
@@ -179,19 +182,9 @@ fn open_ciphertext_with_tag_length<Sealer, Opener, Key, Nonce>(
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
+    let mut dst_out_pt = vec![0u8; tag_size];
 
-    let mut dst_out_pt = vec![0u8; 64];
-    // Empty input
     assert!(opener(&key, &nonce, &[0u8; 0], default_aad, &mut dst_out_pt).is_err());
-
-    assert!(opener(
-        &key,
-        &nonce,
-        &vec![0u8; tag_size], // Only tagsize, must be at least + 1.
-        default_aad,
-        &mut dst_out_pt
-    )
-    .is_err());
 
     assert!(opener(
         &key,
@@ -202,24 +195,10 @@ fn open_ciphertext_with_tag_length<Sealer, Opener, Key, Nonce>(
     )
     .is_err());
 
-    let mut dst_out_ct = vec![0u8; dst_out_pt.len() + tag_size];
-    sealer(
-        &key,
-        &nonce,
-        &vec![0u8; tag_size + 1],
-        default_aad,
-        &mut dst_out_ct,
-    )
-    .unwrap();
+    let mut dst_out_ct = vec![0u8; tag_size];
+    sealer(&key, &nonce, &[0u8; 0], default_aad, &mut dst_out_ct).unwrap();
 
-    assert!(opener(
-        &key,
-        &nonce,
-        &dst_out_ct[..(tag_size + 1) + tag_size],
-        default_aad,
-        &mut dst_out_pt
-    )
-    .is_ok());
+    assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_ok());
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -238,7 +217,6 @@ fn seal_open_equals_expected<Sealer, Opener, Key, Nonce>(
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    assert!(!input.is_empty());
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
@@ -270,7 +248,6 @@ fn open_modified_tag_err<Sealer, Opener, Key, Nonce>(
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    assert!(!input.is_empty());
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
@@ -296,7 +273,10 @@ fn open_modified_ciphertext_err<Sealer, Opener, Key, Nonce>(
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    assert!(!input.is_empty());
+    let mut input = input;
+    if input.is_empty() {
+        input = &[0u8; 1];
+    }
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
@@ -322,7 +302,6 @@ fn open_modified_aad_err<Sealer, Opener, Key, Nonce>(
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    assert!(!input.is_empty());
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
@@ -345,8 +324,6 @@ fn none_or_empty_some_aad_same_result<Sealer, Opener, Key, Nonce>(
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    assert!(!input.is_empty());
-
     let mut dst_out_ct_none = vec![0u8; input.len() + tag_size];
     let mut dst_out_ct_some_empty = vec![0u8; input.len() + tag_size];
 
@@ -388,11 +365,6 @@ pub fn test_diff_params_err<Sealer, Opener, Key, Nonce>(
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    let mut input = input;
-    if input.is_empty() {
-        input = &[0u8; 1];
-    }
-
     let sk1 = Key::gen();
     let sk2 = Key::gen();
     assert!(sk1 != sk2);
