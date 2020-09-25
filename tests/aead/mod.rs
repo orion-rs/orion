@@ -30,9 +30,6 @@ fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u
         assert!(SecretKey::from_slice(&key).is_err());
         return;
     }
-    if input.is_empty() || output.is_empty() {
-        return;
-    }
 
     let mut dst_ct_out = vec![0u8; input.len() + tag.len()];
     let mut dst_pt_out = vec![0u8; input.len()];
@@ -104,14 +101,6 @@ fn wycheproof_test_runner(
     tcid: u64,
     is_ietf: bool,
 ) -> Result<(), UnknownCryptoError> {
-    // Leave test vectors out that have empty input/output and are otherwise valid
-    // since orion does not accept this. This will be test cases with "tcId" = 2, 3.
-    if result {
-        if input.is_empty() && output.is_empty() {
-            return Ok(());
-        }
-    }
-
     let mut dst_ct_out = vec![0u8; input.len() + 16];
     let mut dst_pt_out = vec![0u8; input.len()];
 
