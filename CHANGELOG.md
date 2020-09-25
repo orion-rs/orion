@@ -1,3 +1,13 @@
+### 0.15.4
+
+__Date:__ September 25, 2020.
+
+__Changelog:__
+
+- Empty plaintexts are now allowed for `hazardous::aead` ([#127](https://github.com/brycx/orion/pull/127)).
+- Update `getrandom` to `0.2`.
+- Bump MSRV to `1.41` due to bump in `subtle`.
+
 ### 0.15.3
 
 __Date:__ August 8, 2020.
