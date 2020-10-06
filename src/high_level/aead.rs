@@ -47,7 +47,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - `secret_key` is not 32 bytes.
-//! - the `plaintext` is empty.
+//! - The `plaintext` is empty.
 //! - `ciphertext_with_tag_and_nonce` is less than 41 bytes
 //!   ([`XCHACHA_NONCESIZE`] + [`POLY1305_OUTSIZE`] + 1).
 //! - The received tag does not match the calculated tag when calling [`open`].
@@ -203,22 +203,22 @@ pub mod streaming {
     //! let mut opener = StreamOpener::new(&key, &nonce)?;
     //!
     //! // Message 1
-    //! let plaintext1 = "Secret message 1".as_bytes().to_vec();
-    //! let cipher1 = sealer.seal_chunk(&plaintext1, StreamTag::MESSAGE)?;
+    //! let plaintext1 = "Secret message 1".as_bytes();
+    //! let cipher1 = sealer.seal_chunk(plaintext1, StreamTag::MESSAGE)?;
     //! let (dec1, tag1) = opener.open_chunk(&cipher1)?;
     //! assert_eq!(plaintext1, dec1);
     //! assert_eq!(tag1, StreamTag::MESSAGE);
     //!
     //! // Message 2
-    //! let plaintext2 = "Secret message 2".as_bytes().to_vec();
-    //! let cipher2 = sealer.seal_chunk(&plaintext2, StreamTag::MESSAGE)?;
+    //! let plaintext2 = "Secret message 2".as_bytes();
+    //! let cipher2 = sealer.seal_chunk(plaintext2, StreamTag::MESSAGE)?;
     //! let (dec2, tag2) = opener.open_chunk(&cipher2)?;
     //! assert_eq!(plaintext2, dec2);
     //! assert_eq!(tag2, StreamTag::MESSAGE);
     //!
     //! // Message 3 (Last message of this stream, using the FINISH tag)
-    //! let plaintext3 = "Secret message 3".as_bytes().to_vec();
-    //! let cipher3 = sealer.seal_chunk(&plaintext3, StreamTag::FINISH)?;
+    //! let plaintext3 = "Secret message 3".as_bytes();
+    //! let cipher3 = sealer.seal_chunk(plaintext3, StreamTag::FINISH)?;
     //! let (dec3, tag3) = opener.open_chunk(&cipher3)?;
     //! assert_eq!(plaintext3, dec3);
     //! assert_eq!(tag3, StreamTag::FINISH);
