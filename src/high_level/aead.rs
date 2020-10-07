@@ -203,24 +203,24 @@ pub mod streaming {
     //! let mut opener = StreamOpener::new(&key, &nonce)?;
     //!
     //! // Message 1
-    //! let plaintext1 = "Secret message 1".as_bytes();
+    //! let plaintext1 = b"Secret message 1";
     //! let cipher1 = sealer.seal_chunk(plaintext1, StreamTag::MESSAGE)?;
     //! let (dec1, tag1) = opener.open_chunk(&cipher1)?;
-    //! assert_eq!(plaintext1, dec1);
+    //! assert_eq!(plaintext1, &dec1.as_ref());
     //! assert_eq!(tag1, StreamTag::MESSAGE);
     //!
     //! // Message 2
-    //! let plaintext2 = "Secret message 2".as_bytes();
+    //! let plaintext2 = b"Secret message 2";
     //! let cipher2 = sealer.seal_chunk(plaintext2, StreamTag::MESSAGE)?;
     //! let (dec2, tag2) = opener.open_chunk(&cipher2)?;
-    //! assert_eq!(plaintext2, dec2);
+    //! assert_eq!(plaintext2, &dec2.as_ref());
     //! assert_eq!(tag2, StreamTag::MESSAGE);
     //!
     //! // Message 3 (Last message of this stream, using the FINISH tag)
-    //! let plaintext3 = "Secret message 3".as_bytes();
+    //! let plaintext3 = b"Secret message 3";
     //! let cipher3 = sealer.seal_chunk(plaintext3, StreamTag::FINISH)?;
     //! let (dec3, tag3) = opener.open_chunk(&cipher3)?;
-    //! assert_eq!(plaintext3, dec3);
+    //! assert_eq!(plaintext3, &dec3.as_ref());
     //! assert_eq!(tag3, StreamTag::FINISH);
     //!
     //! # Ok::<(), orion::errors::UnknownCryptoError>(())
