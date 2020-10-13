@@ -1,3 +1,12 @@
+### 0.15.5
+
+__Date:__ October 13, 2020.
+
+__Changelog:__
+
+- Documentation improvements.
+- Update `base64` to `0.13.0`.
+
 ### 0.15.4
 
 __Date:__ September 25, 2020.
