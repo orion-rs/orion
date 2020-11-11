@@ -88,7 +88,7 @@ __Changelog:__
 - Various improvements to fuzzing targets.
 - Various improvements to tests.
 
-### 0.14.5
+### 0.14.5 [Yanked]
 
 __Date:__ January 25, 2020.
 
@@ -96,7 +96,7 @@ __Changelog:__
 
 - Fix `nightly` build breakage.
 
-### 0.14.4
+### 0.14.4 [Yanked]
 
 __Date:__ August 21, 2019.
 
@@ -106,7 +106,7 @@ __Changelog:__
 - Vectorize the ChaCha20 implementation providing ~6% performance improvement for (X)ChaCha20Poly1305 and ~11.5% for (X)ChaCha20.
 - Documentation improvements.
 
-### 0.14.3
+### 0.14.3 [Yanked]
 
 __Date:__ August 1, 2019.
 
@@ -119,7 +119,7 @@ __Changelog:__
 - Fix use of now deprecated (since `v0.1.7`) `getrandom` errors.
 - Updated fuzzing targets in orion-fuzz.
 
-### 0.14.2
+### 0.14.2 [Yanked]
 
 __Date:__ June 10, 2019.
 
@@ -130,7 +130,7 @@ __Changelog:__
 - Testing WebAssembly (`wasm32-unknown-unknown`) support in CI. 
 - Improved documentation.
 
-### 0.14.1
+### 0.14.1 [Yanked]
 
 __Date:__ May 27, 2019.
 
@@ -139,7 +139,7 @@ __Changelog:__
 - Update `zeroize` dependency.
 - Improvements to documentation.
 
-### 0.14.0
+### 0.14.0 [Yanked]
 
 __Date:__ May 4, 2019.
 
@@ -161,7 +161,7 @@ __Changelog:__
 - `rand_os` has been replaced with `getrandom`.
 - Improvements to documentation examples as they no longer use `.unwrap()` but `?` instead.
 
-### 0.13.4
+### 0.13.4 [Yanked]
 
 __Date:__ April 1, 2019.
 
@@ -169,7 +169,7 @@ __Changelog:__
 
 - Fix build for latest nightly.
 
-### 0.13.3
+### 0.13.3 [Yanked]
 
 __Date:__ March 31, 2019.
 
@@ -179,7 +179,7 @@ __Changelog:__
 - Added a small number of tests.
 - Improvement to constant-time interfaces ([#66](https://github.com/brycx/orion/pull/66)).
 
-### 0.13.2
+### 0.13.2 [Yanked]
 
 __Date:__ March 13, 2019.
 
@@ -192,7 +192,7 @@ __Changelog:__
 
 __Note__: Strictly speaking, the first two changes are breaking, but because of the unlikeliness that this has an effect on anybody, they were not marked as such.
 
-### 0.13.1
+### 0.13.1 [Yanked]
 
 __Date:__ February 16, 2019.
 
@@ -200,7 +200,7 @@ __Changelog:__
 
 - Documentation improvements ([#60](https://github.com/brycx/orion/issues/60)).
 
-### 0.13.0
+### 0.13.0 [Yanked]
 
 __Date:__ February 10, 2019.
 
