@@ -25,7 +25,9 @@ pub struct TestReader {
 impl TestReader {
     ///
     pub fn new(test_file_path: &str) -> Self {
-        let test_file = File::open(test_file_path).unwrap();
+        let test_file = File::open(test_file_path)
+            .expect(format!("TestReader: Unable to open file: {}", test_file_path).as_str());
+        
         let reader = BufReader::new(test_file);
         let lines = reader.lines().into_iter();
 
@@ -38,40 +40,42 @@ impl TestReader {
     }
 }
 
+fn parse(data: &str, split_at: &str) -> Vec<u8> {
+    assert!(data.starts_with(split_at));
+    
+    // .trim() removes whitespace if it's a non-empty string.
+    let string = data.split(split_at).collect::<Vec<&str>>()[1].trim();
+
+    if string.is_empty() {
+        return vec![0u8; 0];
+    }
+
+    // Some of the inputs are strings and not hexadecimal.
+    if string.contains("\'") || string.contains("\"") {
+        // If it's a string, it will the original quotes but escaped.
+        string.replace("\"", "").as_bytes().to_vec()
+    } else {
+        match string {
+            // This is the special case where decoding "00" doesn't give an empty array
+            // as is intended but an array = [0].
+            "00" => vec![0u8; 0], // This is the special case where
+            _ => decode(string).unwrap(),
+        }
+    }
+}
+
 impl Iterator for TestReader {
     type Item = TestCase;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let mut current = self.lines.next();
-
+            
             match current {
                 Some(Ok(string)) => {
                     // Each test case starts with "KEY: *"
                     if string.starts_with("KEY:") && self.should_read_tests {
-                        fn parse(data: &str, split_at: &str) -> Vec<u8> {
-                            assert!(data.starts_with(split_at));
-                            // .trim() removes whitespace if it's a non-empty string.
-                            let string = data.split(split_at).collect::<Vec<&str>>()[1].trim();
-
-                            if string.is_empty() {
-                                return vec![0u8; 0];
-                            }
-
-                            // Some of the inputs are strings and not hexadecimal.
-                            if string.contains("\'") || string.contains("\"") {
-                                // If it's a string, it will the original quotes but escaped.
-                                string.replace("\"", "").as_bytes().to_vec()
-                            } else {
-                                match string {
-                                    // This is the special case where decoding "00" doesn't give an empty array
-                                    // as is intended but an array = [0].
-                                    "00" => vec![0u8; 0], // This is the special case where
-                                    _ => decode(string).unwrap(),
-                                }
-                            }
-                        }
-
+                        
                         let key = parse(&string, "KEY:");
 
                         // We can call unwraps here because the test-vector file obviously
@@ -134,8 +138,8 @@ fn boringssl_runner(path: &str, is_ietf: bool) {
         let mut tag: Vec<u8> = Vec::new();
 
         let mut tc = test_case.unwrap();
-        test_case = test_reader.next();
 
+        // TODO: Replace with a dict or hashmap if possible
         for (data_name, data) in tc.data {
             match data_name.as_str() {
                 "key" => key = data,
@@ -162,9 +166,6 @@ fn boringssl_runner(path: &str, is_ietf: bool) {
         if !is_ietf && (nonce.len() != XCHACHA_NONCESIZE) {
             tc.outcome = false;
         }
-        if input.is_empty() || expected_output.is_empty() {
-            tc.outcome = false;
-        }
         if tag.len() != POLY1305_OUTSIZE {
             tc.outcome = false;
         }
@@ -181,6 +182,9 @@ fn boringssl_runner(path: &str, is_ietf: bool) {
             is_ietf,
         )
         .is_ok());
+
+        // Read the next one
+        test_case = test_reader.next();
     }
 }
 
