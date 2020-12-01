@@ -13,7 +13,6 @@ pub mod mac;
 pub mod stream;
 
 extern crate hex;
-
 use self::hex::decode;
 
 use std::{
@@ -23,9 +22,11 @@ use std::{
 };
 
 #[derive(Debug)]
-///
+/// A test case from a given set of tests.
 pub struct TestCase {
+    /// <Field name, Field Data>, eg.: <"Mac", "d545gfdfggf42312...">
     pub data: HashMap<String, String>,
+    /// If the test is expected to pass or fail
     pub outcome: bool,
     pub test_case_number: u64,
 }
@@ -41,7 +42,6 @@ impl core::fmt::Display for TestCase {
 }
 
 impl TestCase {
-    ///
     pub fn new() -> Self {
         Self {
             data: HashMap::<String, String>::new(),
@@ -50,14 +50,8 @@ impl TestCase {
         }
     }
 
-    ///
-    pub fn set_expected_outcome(&mut self, expected_outcome: bool) {
-        self.outcome = expected_outcome;
-    }
-
     pub fn add_input_data(&mut self, data_name: &str, input_data: &str) {
-        self.data
-            .insert(data_name.to_string(), input_data.to_string());
+        self.data.insert(data_name.into(), input_data.into());
     }
 
     pub fn get_data(&self, field: &str) -> &str {
@@ -69,9 +63,10 @@ impl TestCase {
 
 #[derive(Debug)]
 pub struct TestCaseReader {
+    /// A reader over all lines in a file
     lines: Lines<BufReader<File>>,
-    test_case_count: u32,
-    test_cases_skipped: u32,
+    test_case_count: u64,
+    test_cases_skipped: u64,
     // All fields that define a test case: Eg. Key, Nonce, etc
     // NOTE: They MUST be in correct order from beginning to end.
     test_case_fields: Vec<String>,
@@ -80,7 +75,6 @@ pub struct TestCaseReader {
 }
 
 impl TestCaseReader {
-    ///
     pub fn new(
         path_to_test_file: &str,
         test_case_fields: Vec<String>,
@@ -107,15 +101,14 @@ impl TestCaseReader {
             return vec![0u8; 0];
         }
 
-        // Some of the inputs are strings and not hexadecimal.
+        // If `data` is a string quoted with '"', remove quotes.
         if data.contains("\'") || data.contains("\"") {
-            // If it's a string, it will be the original quotes but escaped in the file.
             data.replace("\"", "").as_bytes().to_vec()
         } else {
             match data {
                 // This is the special case where decoding "00" doesn't give an empty array
                 // as is intended but an array = [0].
-                "00" => vec![0u8; 0], // This is the special case where
+                "00" => vec![0u8; 0],
                 _ => decode(data).unwrap(),
             }
         }
@@ -132,15 +125,14 @@ impl Iterator for TestCaseReader {
 
             match current {
                 Some(Ok(mut string)) => {
-                    // TODO: Don't differentiate between upper/lower case
+                    // Test case fields are ordered, so this is the beginning of a test case
                     if string.starts_with(&self.test_case_fields[0]) {
                         let mut test_case = TestCase::new();
 
-                        // We iterate through the fields and go to the next line each time.
-                        // Because the fields vector is ordered according to a test case,
-                        // the first field we encounter will match the current line.
+                        // Because test case fields are ordered, iter() on fields, together
+                        // with line.next(), will return the right fields in the right order.
                         for field in self.test_case_fields.iter() {
-                            // We need to find the first occurrence of the separator. If not the first,
+                            // We need to find the first occurrence of the separator. If not, the first
                             // parts of the field data may be truncated.
                             // For example, BoringSSL has "IN:" and another ':' in the input string,
                             // which gets cut off, if we don't split at the first occurrence only.
@@ -149,14 +141,14 @@ impl Iterator for TestCaseReader {
                             );
 
                             // .trim() removes whitespace if it's a non-empty string.
-                            // split_at_idx + 1 to not include the separator
+                            // split_at_idx + 1 to not include the separator itself
                             let test_case_data = string.split_at(split_at_idx + 1).1.trim();
 
                             test_case.add_input_data(field, test_case_data);
 
                             if string.starts_with(self.test_case_fields.last().unwrap()) {
                                 self.test_case_count += 1;
-                                test_case.test_case_number = self.test_case_count as u64;
+                                test_case.test_case_number = self.test_case_count;
 
                                 return Some(test_case);
                             }
