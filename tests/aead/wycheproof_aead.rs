@@ -41,10 +41,10 @@ fn wycheproof_runner(path: &str, is_ietf: bool) {
                             let tcid = test_case.get("tcId").unwrap().as_u64().unwrap();
                             println!("tcId: {}, is_ietf: {}", tcid, is_ietf);
 
-                            wycheproof_test_runner(
+                            assert!(wycheproof_test_runner(
                                 &key, &iv, &aad, &tag, &msg, &ct, result, tcid, is_ietf,
                             )
-                            .unwrap();
+                            .is_ok());
                         }
                     }
                 }
@@ -54,13 +54,17 @@ fn wycheproof_runner(path: &str, is_ietf: bool) {
 }
 
 #[test]
-fn test_wycheproof_aead() {
+fn test_wycheproof_chacha20_poly1305() {
     wycheproof_runner(
-        "./tests/test_data/original/wycheproof_chacha20_poly1305_test.json",
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_chacha20_poly1305_test.json",
         true,
     );
+}
+
+#[test]
+fn test_wycheproof_xchacha20_poly1305() {
     wycheproof_runner(
-        "./tests/test_data/original/wycheproof_xchacha20_poly1305_test.json",
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_xchacha20_poly1305_test.json",
         false,
     );
 }

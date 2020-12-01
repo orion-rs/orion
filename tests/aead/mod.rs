@@ -1,5 +1,4 @@
-pub mod boringssl_chacha20_poly1305;
-pub mod boringssl_xchacha20_poly1305;
+pub mod boringssl_tests;
 pub mod other_xchacha20_poly1305;
 pub mod pynacl_streaming_aead;
 pub mod rfc_chacha20_poly1305;
@@ -11,84 +10,8 @@ use self::{
         chacha20poly1305::{self, SecretKey},
         xchacha20poly1305,
     },
-    orion::{
-        errors::UnknownCryptoError,
-        hazardous::{
-            aead,
-            mac::poly1305::POLY1305_OUTSIZE,
-            stream::{
-                chacha20::{CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE},
-                xchacha20::XCHACHA_NONCESIZE,
-            },
-        },
-        test_framework::aead_interface::AeadTestRunner,
-    },
+    orion::{errors::UnknownCryptoError, hazardous::aead},
 };
-
-fn aead_test_runner(key: &[u8], nonce: &[u8], aad: &[u8], tag: &[u8], input: &[u8], output: &[u8]) {
-    if key.len() != CHACHA_KEYSIZE {
-        assert!(SecretKey::from_slice(&key).is_err());
-        return;
-    }
-
-    let mut dst_ct_out = vec![0u8; input.len() + tag.len()];
-    let mut dst_pt_out = vec![0u8; input.len()];
-
-    let mut output_with_tag = vec![0u8; output.len() + tag.len()];
-    output_with_tag[..output.len()].copy_from_slice(output);
-    output_with_tag[output.len()..].copy_from_slice(tag);
-
-    let sk = SecretKey::from_slice(&key).unwrap();
-
-    // Determine variant based on NONCE size
-    if nonce.len() == IETF_CHACHA_NONCESIZE {
-        let n = chacha20poly1305::Nonce::from_slice(&nonce).unwrap();
-
-        if tag.len() != POLY1305_OUTSIZE {
-            dst_ct_out[..input.len()].copy_from_slice(output);
-            dst_ct_out[input.len()..].copy_from_slice(tag);
-            assert!(chacha20poly1305::open(&sk, &n, &output, Some(aad), &mut dst_pt_out,).is_err());
-            return;
-        }
-
-        AeadTestRunner(
-            chacha20poly1305::seal,
-            chacha20poly1305::open,
-            sk,
-            n,
-            input,
-            Some(&output_with_tag[..]),
-            tag.len(),
-            aad,
-        );
-    } else if nonce.len() == XCHACHA_NONCESIZE {
-        let n = xchacha20poly1305::Nonce::from_slice(&nonce).unwrap();
-
-        if tag.len() != POLY1305_OUTSIZE {
-            dst_ct_out[..input.len()].copy_from_slice(output);
-            dst_ct_out[input.len()..].copy_from_slice(tag);
-            assert!(
-                xchacha20poly1305::open(&sk, &n, &output, Some(aad), &mut dst_pt_out,).is_err()
-            );
-
-            return;
-        }
-
-        AeadTestRunner(
-            xchacha20poly1305::seal,
-            xchacha20poly1305::open,
-            sk,
-            n,
-            input,
-            Some(&output_with_tag[..]),
-            tag.len(),
-            aad,
-        );
-    } else {
-        assert!(chacha20poly1305::Nonce::from_slice(&nonce).is_err());
-        assert!(xchacha20poly1305::Nonce::from_slice(&nonce).is_err());
-    }
-}
 
 fn wycheproof_test_runner(
     key: &[u8],

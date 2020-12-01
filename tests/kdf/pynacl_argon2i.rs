@@ -52,5 +52,5 @@ fn run_tests_from_json(path_to_vectors: &str) {
 
 #[test]
 fn test_pynacl() {
-    run_tests_from_json("./tests/test_data/original/pynacl_raw_argon2i_hashes.json");
+    run_tests_from_json("./tests/test_data/third_party/pynacl/pynacl_raw_argon2i_hashes.json");
 }
