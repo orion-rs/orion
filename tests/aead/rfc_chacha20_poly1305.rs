@@ -4,7 +4,7 @@ mod rfc_aead_chacha20_poly1305 {
 
     extern crate orion;
     use self::orion::hazardous::aead;
-    use crate::aead::aead_test_runner;
+    use crate::aead::wycheproof_test_runner;
 
     #[test]
     fn test_case_0() {
@@ -38,7 +38,18 @@ mod rfc_aead_chacha20_poly1305 {
             0x06, 0x91,
         ];
 
-        aead_test_runner(&key, &nonce, &aad, &expected_tag, plaintext, &expected_ct);
+        assert!(wycheproof_test_runner(
+            &key,
+            &nonce,
+            &aad,
+            &expected_tag,
+            plaintext,
+            &expected_ct,
+            true,
+            0,
+            true
+        )
+        .is_ok());
     }
 
     #[test]
