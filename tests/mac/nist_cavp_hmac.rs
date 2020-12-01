@@ -17,6 +17,14 @@ fn test_nist_cavp() {
         "=",
     );
 
+    // Skip ahead in the file until [L=64] is reached so that we read
+    // only SHA512 test cases.
+    let mut line = nist_cavp_reader.lines.next().unwrap().unwrap();
+    while line != "[L=64]" {
+        line = nist_cavp_reader.lines.next().unwrap().unwrap();
+    }
+
+
     let mut test_case = nist_cavp_reader.next();
     while test_case.is_some() {
         let tc = test_case.unwrap();
