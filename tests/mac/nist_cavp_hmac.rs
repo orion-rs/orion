@@ -24,7 +24,6 @@ fn test_nist_cavp() {
         line = nist_cavp_reader.lines.next().unwrap().unwrap();
     }
 
-
     let mut test_case = nist_cavp_reader.next();
     while test_case.is_some() {
         let tc = test_case.unwrap();

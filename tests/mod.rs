@@ -109,7 +109,7 @@ impl TestCaseReader {
 
         // Some of the inputs are strings and not hexadecimal.
         if data.contains("\'") || data.contains("\"") {
-            // If it's a string, it will the original quotes but escaped.
+            // If it's a string, it will be the original quotes but escaped in the file.
             data.replace("\"", "").as_bytes().to_vec()
         } else {
             match data {
@@ -140,13 +140,17 @@ impl Iterator for TestCaseReader {
                         // Because the fields vector is ordered according to a test case,
                         // the first field we encounter will match the current line.
                         for field in self.test_case_fields.iter() {
+                            // We need to find the first occurrence of the separator. If not the first,
+                            // parts of the field data may be truncated.
+                            // For example, BoringSSL has "IN:" and another ':' in the input string,
+                            // which gets cut off, if we don't split at the first occurrence only.
+                            let split_at_idx = string.find(&self.test_case_field_separator).expect(
+                                "TestCaseReader: Could not find separator in test case field",
+                            );
+
                             // .trim() removes whitespace if it's a non-empty string.
-                            let test_case_data = string
-                                .split(&self.test_case_field_separator)
-                                .collect::<Vec<&str>>()
-                                .last()
-                                .unwrap()
-                                .trim();
+                            // split_at_idx + 1 to not include the separator
+                            let test_case_data = string.split_at(split_at_idx + 1).1.trim();
 
                             test_case.add_input_data(field, test_case_data);
 
