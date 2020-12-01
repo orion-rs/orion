@@ -1,4 +1,6 @@
-use super::*;
+use crate::hash::sha512;
+use crate::hash::sha512_test_runner;
+use crate::TestCaseReader;
 
 #[test]
 fn test_streaming_1() {
@@ -50,24 +52,23 @@ fn test_streaming_3() {
     assert_eq!(&expected[..], res.as_ref());
 }
 
+/// NISTs SHA512 Long/Short share the same format,
+/// so fields and separator remain the same.
 fn nist_cavp_runner(path: &str) {
-    let mut cavs_reader = TestReader::new(path);
-    let mut test_case = cavs_reader.next();
+    let nist_cavp_fields: Vec<String> = vec!["Len".into(), "Msg".into(), "MD".into()];
+    let mut nist_cavp_reader = TestCaseReader::new(path, nist_cavp_fields, "=");
 
+    let mut test_case = nist_cavp_reader.next();
     while test_case.is_some() {
-        let mut input: Vec<u8> = Vec::new();
-        let mut expected_output: Vec<u8> = Vec::new();
+        let tc = test_case.unwrap();
 
-        for (data_name, data) in test_case.unwrap().data {
-            match data_name.as_str() {
-                "input" => input = data,
-                "expected_output" => expected_output = data,
-                _ => (),
-            }
-        }
+        let input: Vec<u8> = TestCaseReader::default_parse(tc.get_data("Msg"));
+        let expected_output: Vec<u8> = TestCaseReader::default_parse(tc.get_data("MD"));
 
         sha512_test_runner(&input[..], &expected_output[..]);
-        test_case = cavs_reader.next();
+
+        // Read the next one
+        test_case = nist_cavp_reader.next();
     }
 }
 
