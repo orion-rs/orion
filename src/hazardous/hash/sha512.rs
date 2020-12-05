@@ -183,7 +183,8 @@ impl Sha512 {
 
     #[allow(clippy::many_single_char_names)]
     #[allow(clippy::too_many_arguments)]
-    /// Message compression adopted from [mbed TLS](https://tls.mbed.org/sha-512-source-code).
+    /// Message compression adopted from [mbed
+    /// TLS](https://github.com/ARMmbed/mbedtls/blob/master/library/sha512.c).
     fn compress(
         a: u64,
         b: u64,
