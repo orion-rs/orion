@@ -1,52 +1,43 @@
 // Testing against PyNaCl test vectors
 // Latest commit when these test vectors were pulled: https://github.com/pyca/pynacl/commit/d28395dafd1b87f377299a8646551a454759e161
 // The generated test vectors have been generated the 24th January 2020.
-extern crate hex;
-extern crate orion;
-extern crate serde_json;
 
-use self::hex::decode;
-
-use self::serde_json::{Deserializer, Value};
+use hex::decode;
+use orion::hazardous::kdf::argon2i;
+use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
 
-use orion::hazardous::kdf::argon2i;
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct TestCase {
+    passwd: String,
+    mode: String,
+    dgst_len: usize,
+    iters: u32,
+    salt: String,
+    pwhash: String,
+    maxmem: u32,
+}
 
 fn run_tests_from_json(path_to_vectors: &str) {
     let file = File::open(path_to_vectors).unwrap();
     let reader = BufReader::new(file);
-    let stream = Deserializer::from_reader(reader).into_iter::<Value>();
+    let tests: Vec<TestCase> = serde_json::from_reader(reader).unwrap();
 
-    for test_file in stream {
-        for test_groups in test_file.unwrap().as_array() {
-            for test_case in test_groups {
-                let password = test_case
-                    .get("passwd")
-                    .unwrap()
-                    .as_str()
-                    .unwrap()
-                    .as_bytes();
-                let outsize = test_case.get("dgst_len").unwrap().as_u64().unwrap();
-                let salt = test_case.get("salt").unwrap().as_str().unwrap().as_bytes();
-                let iterations = test_case.get("iters").unwrap().as_u64().unwrap();
-                let expected_hash =
-                    decode(test_case.get("pwhash").unwrap().as_str().unwrap()).unwrap();
-                let memory = test_case.get("maxmem").unwrap().as_u64().unwrap();
+    for test in tests {
+        let mut dst_out = vec![0u8; test.dgst_len as usize];
 
-                let mut dst_out = vec![0u8; outsize as usize];
-                assert!(argon2i::verify(
-                    &expected_hash[..],
-                    password,
-                    salt,
-                    iterations as u32,
-                    memory as u32,
-                    None,
-                    None,
-                    &mut dst_out
-                )
-                .is_ok());
-            }
-        }
+        assert!(argon2i::verify(
+            &decode(&test.pwhash).unwrap(),
+            test.passwd.as_bytes(),
+            test.salt.as_bytes(),
+            test.iters,
+            test.maxmem,
+            None,
+            None,
+            &mut dst_out
+        )
+        .is_ok());
     }
 }
 
