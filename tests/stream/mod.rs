@@ -2,16 +2,10 @@ pub mod other_chacha20;
 pub mod rfc_chacha20;
 pub mod rfc_xchacha20;
 
-extern crate orion;
-
-use self::{
-    chacha20::SecretKey,
-    orion::hazardous::stream::{
-        chacha20::{self, IETF_CHACHA_NONCESIZE},
-        xchacha20::{self, XCHACHA_NONCESIZE},
-    },
-};
+use chacha20::SecretKey;
 use orion::hazardous::stream::chacha20::CHACHA_KEYSIZE;
+use orion::hazardous::stream::chacha20::{self, IETF_CHACHA_NONCESIZE};
+use orion::hazardous::stream::xchacha20::{self, XCHACHA_NONCESIZE};
 use orion::test_framework::streamcipher_interface::StreamCipherTestRunner;
 
 pub fn chacha_test_runner(

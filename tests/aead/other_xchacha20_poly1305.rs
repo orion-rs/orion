@@ -3,8 +3,7 @@
 #[cfg(test)]
 mod sodiumoxide_xchacha20_poly1305 {
 
-    extern crate orion;
-    use self::orion::hazardous::aead;
+    use orion::hazardous::aead;
 
     #[test]
     fn test_case_0() {
@@ -86,10 +85,8 @@ mod sodiumoxide_xchacha20_poly1305 {
 #[cfg(test)]
 mod wireguard_xchacha20_poly1305 {
 
-    extern crate hex;
-    extern crate orion;
-
-    use self::{hex::decode, orion::hazardous::aead};
+    use hex::decode;
+    use orion::hazardous::aead;
 
     fn wireguard_test_runner(key: &[u8], nonce: &[u8], plaintext: &[u8], expected_ct: &[u8]) {
         // These test vector ciphertexts already include the tag

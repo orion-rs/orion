@@ -4,13 +4,10 @@ pub mod pynacl_streaming_aead;
 pub mod rfc_chacha20_poly1305;
 pub mod wycheproof_aead;
 
-extern crate orion;
-use self::{
-    aead::{
-        chacha20poly1305::{self, SecretKey},
-        xchacha20poly1305,
-    },
-    orion::{errors::UnknownCryptoError, hazardous::aead},
+use orion::errors::UnknownCryptoError;
+use orion::hazardous::aead::{
+    chacha20poly1305::{self, SecretKey},
+    xchacha20poly1305,
 };
 
 fn wycheproof_test_runner(

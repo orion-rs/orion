@@ -3,10 +3,8 @@
 #[cfg(test)]
 mod other_argon2i {
 
-    extern crate hex;
-    extern crate orion;
-
-    use self::{hex::decode, orion::hazardous::kdf::argon2i};
+    use hex::decode;
+    use orion::hazardous::kdf::argon2i;
 
     #[test]
     fn test_case_0() {

@@ -2,15 +2,11 @@
 // https://github.com/openssl/openssl/blob/2d0b44126763f989a4cbffbffe9d0c7518158bb7/test/evptests.txt
 // Taken at commit: 9257959
 
-use super::*;
-
 #[cfg(test)]
 mod openssl_test_vectors {
 
-    extern crate hex;
-
-    use self::hex::decode;
-    use super::*;
+    use super::super::blake2b_test_runner;
+    use hex::decode;
 
     #[test]
     fn openssl_test_case_0() {

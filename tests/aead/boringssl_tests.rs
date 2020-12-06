@@ -1,14 +1,12 @@
-extern crate orion;
-
-use self::orion::hazardous::{
+use crate::aead::wycheproof_test_runner;
+use crate::TestCaseReader;
+use orion::hazardous::{
     mac::poly1305::POLY1305_OUTSIZE,
     stream::{
         chacha20::{CHACHA_KEYSIZE, IETF_CHACHA_NONCESIZE},
         xchacha20::XCHACHA_NONCESIZE,
     },
 };
-use crate::aead::wycheproof_test_runner;
-use crate::TestCaseReader;
 
 /// BoringSSLs ChaCha20Poly1305 and XChaCha20Poly1305 share the same format
 /// so the fields and separator remain the same.

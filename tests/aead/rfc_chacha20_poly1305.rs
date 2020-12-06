@@ -2,9 +2,8 @@
 #[cfg(test)]
 mod rfc_aead_chacha20_poly1305 {
 
-    extern crate orion;
-    use self::orion::hazardous::aead;
     use crate::aead::wycheproof_test_runner;
+    use orion::hazardous::aead;
 
     #[test]
     fn test_case_0() {

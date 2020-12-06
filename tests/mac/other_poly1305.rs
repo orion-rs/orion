@@ -1,10 +1,8 @@
 #[cfg(test)]
 mod other_poly1305 {
 
-    extern crate hex;
-
-    use self::hex::decode;
     use crate::mac::poly1305_test_runner;
+    use hex::decode;
 
     // Generated with libsodium 1.0.18
     #[test]

@@ -12,8 +12,7 @@ pub mod mac;
 #[cfg(test)]
 pub mod stream;
 
-extern crate hex;
-use self::hex::decode;
+use hex::decode;
 
 use std::{
     collections::HashMap,
