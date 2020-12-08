@@ -1,8 +1,13 @@
 name: Security Audit
 on:
+  push:
+    # Check immediately if dependencies are altered
+    paths:
+      - '**/Cargo.toml'
+    # Check also at midnight each day
   schedule:
-    - cron: '0 0 * * *' # Midnight of each day
-
+    - cron: '0 0 * * *'
+      
 jobs:
   security_audit:
     name: Security Audit
@@ -10,9 +15,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-        with:
-          ref: master
-
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:

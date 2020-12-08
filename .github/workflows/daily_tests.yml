@@ -1,4 +1,4 @@
-name: Tests
+name: Daily tests
 on:
   schedule:
     - cron: '0 0 * * *' # Midnight of each day
@@ -22,14 +22,8 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
-
-      - name: Run cargo test - debug
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-      
       - name: Run cargo test - release
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --release
+          args: --release --all-features
