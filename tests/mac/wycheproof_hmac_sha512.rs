@@ -1,54 +1,65 @@
 // Testing against Google Wycheproof test vectors
 // Latest commit when these test vectors were pulled: https://github.com/google/wycheproof/commit/2196000605e45d91097147c9c71f26b72af58003
-extern crate hex;
-extern crate serde_json;
 
-use self::hex::decode;
-
-use self::serde_json::{Deserializer, Value};
-use crate::mac::hmac_test_runner;
+use hex::decode;
+use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct WycheproofHmacTests {
+    algorithm: String,
+    numberOfTests: u64,
+    testGroups: Vec<HmacTestGroup>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct HmacTestGroup {
+    keySize: u64,
+    tagSize: u64,
+    tests: Vec<TestVector>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct TestVector {
+    tcId: u64,
+    comment: String,
+    key: String,
+    msg: String,
+    tag: String,
+    result: String,
+    flags: Vec<String>,
+}
 
 fn wycheproof_runner(path: &str) {
     let file = File::open(path).unwrap();
     let reader = BufReader::new(file);
-    let stream = Deserializer::from_reader(reader).into_iter::<Value>();
+    let tests: WycheproofHmacTests = serde_json::from_reader(reader).unwrap();
 
-    for test_file in stream {
-        for test_groups in test_file.unwrap().get("testGroups") {
-            for test_group_collection in test_groups.as_array() {
-                for test_group in test_group_collection {
-                    let tag_len = test_group.get("tagSize").unwrap().as_u64().unwrap();
-                    for test_vectors in test_group.get("tests").unwrap().as_array() {
-                        for test_case in test_vectors {
-                            let key =
-                                decode(test_case.get("key").unwrap().as_str().unwrap()).unwrap();
-                            let msg =
-                                decode(test_case.get("msg").unwrap().as_str().unwrap()).unwrap();
-                            let tag =
-                                decode(test_case.get("tag").unwrap().as_str().unwrap()).unwrap();
-                            let result: bool =
-                                match test_case.get("result").unwrap().as_str().unwrap() {
-                                    "valid" => true,
-                                    "invalid" => false,
-                                    _ => panic!("Unrecognized result detected!"),
-                                };
-                            let tcid = test_case.get("tcId").unwrap().as_u64().unwrap();
-                            println!("tcId: {}, len: {}", tcid, tag_len);
+    let mut tests_run = 0;
+    for test_group in tests.testGroups.iter() {
+        for test in test_group.tests.iter() {
+            let should_test_pass: bool = match test.result.as_str() {
+                "valid" => true,
+                "invalid" => false,
+                _ => panic!("Unexpected test outcome for Wycheproof test"),
+            };
 
-                            hmac_test_runner(
-                                &tag[..],
-                                &key[..],
-                                &msg[..],
-                                Some(tag_len as usize / 8), /* Wycheproof sets tag length in bits, we need bytes */
-                                result,
-                            );
-                        }
-                    }
-                }
-            }
+            super::hmac_test_runner(
+                &decode(&test.tag).unwrap(),
+                &decode(&test.key).unwrap(),
+                &decode(&test.msg).unwrap(),
+                Some((test_group.tagSize / 8) as usize),
+                should_test_pass,
+            );
+
+            tests_run += 1;
         }
     }
+
+    assert_eq!(tests_run, tests.numberOfTests);
 }
 
 #[test]

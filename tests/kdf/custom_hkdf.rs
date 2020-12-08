@@ -5,10 +5,8 @@
 #[cfg(test)]
 mod custom_hkdf {
 
-    extern crate hex;
-    use self::hex::decode;
-
     use crate::kdf::hkdf_test_runner;
+    use hex::decode;
 
     #[test]
     fn test_case_1() {

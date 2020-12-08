@@ -2,12 +2,8 @@
 #[cfg(test)]
 mod other_hkdf {
 
-    extern crate hex;
-    extern crate orion;
-
-    use self::hex::decode;
-
     use crate::kdf::hkdf_test_runner;
+    use hex::decode;
 
     #[test]
     fn test_case_1() {

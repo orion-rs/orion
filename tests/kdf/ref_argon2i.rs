@@ -4,10 +4,7 @@
 #[cfg(test)]
 mod ref_argon2i {
 
-    extern crate hex;
-    extern crate orion;
-
-    use self::orion::hazardous::kdf::argon2i;
+    use orion::hazardous::kdf::argon2i;
 
     #[test]
     fn test_case_1() {

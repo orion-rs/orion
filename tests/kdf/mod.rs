@@ -9,8 +9,7 @@ pub mod pynacl_argon2i;
 pub mod ref_argon2i;
 pub mod wycheproof_hkdf;
 
-extern crate orion;
-use self::orion::hazardous::{kdf::hkdf::*, mac::hmac};
+use orion::hazardous::{kdf::hkdf::*, mac::hmac};
 
 pub fn hkdf_test_runner(
     expected_prk: Option<&[u8]>,

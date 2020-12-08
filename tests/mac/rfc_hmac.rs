@@ -2,10 +2,8 @@
 #[cfg(test)]
 mod rfc4231 {
 
-    extern crate hex;
-
-    use self::hex::decode;
     use crate::mac::hmac_test_runner;
+    use hex::decode;
 
     #[test]
     fn test_case_1() {

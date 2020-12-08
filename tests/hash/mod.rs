@@ -2,8 +2,7 @@ pub mod blake2b_kat;
 pub mod other_blake2b;
 pub mod sha512_nist_cavp;
 
-extern crate orion;
-use self::orion::hazardous::hash::{blake2b, sha512};
+use orion::hazardous::hash::{blake2b, sha512};
 
 fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
     // Only make SecretKey if test case key value is not empty.
