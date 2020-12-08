@@ -135,8 +135,8 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           use-cross: true
-          command: test --release
-          args: --target ${{ matrix.arch }}
+          command: test
+          args: --release --target ${{ matrix.arch }}
     
 
   # https://rustwasm.github.io/docs/book/reference/add-wasm-support-to-crate.html#maintaining-ongoing-support-for-webassembly
