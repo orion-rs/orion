@@ -59,7 +59,7 @@
 
 use crate::{
     errors::UnknownCryptoError,
-    util::endianness::{load_u64_into_be, store_u64_into_be},
+    util::endianness::{load_u32_into_be, store_u32_into_be},
 };
 
 /// The blocksize for the hash function SHA256.
@@ -114,7 +114,7 @@ pub struct Sha256 {
     working_state: [u32; 8],
     buffer: [u8; SHA256_BLOCKSIZE],
     leftover: usize,
-    message_len: [u64; 2], // TODO: u32
+    message_len: [u32; 2], // TODO: u32
     is_finalized: bool,
 }
 
@@ -184,20 +184,20 @@ impl Sha256 {
     #[allow(clippy::many_single_char_names)]
     #[allow(clippy::too_many_arguments)]
     /// Message compression adopted from [mbed
-    /// TLS](https://github.com/ARMmbed/mbedtls/blob/master/library/sha512.c).
+    /// TLS](https://github.com/ARMmbed/mbedtls/blob/master/library/sha256.c).
     ///
     /// TODO: Can this be re-used for SHA256?
     fn compress(
-        a: u64,
-        b: u64,
-        c: u64,
-        d: &mut u64,
-        e: u64,
-        f: u64,
-        g: u64,
-        h: &mut u64,
-        x: u64,
-        ki: u64,
+        a: u32,
+        b: u32,
+        c: u32,
+        d: &mut u32,
+        e: u32,
+        f: u32,
+        g: u32,
+        h: &mut u32,
+        x: u32,
+        ki: u32,
     ) {
         let temp1 = h
             .wrapping_add(Self::big_sigma_1(e))
@@ -215,16 +215,16 @@ impl Sha256 {
 	#[allow(clippy::many_single_char_names)]
     /// Process data in `self.buffer` or optionally `data`.
     fn process(&mut self, data: Option<&[u8]>) {
-		let mut w = [0u64; 80];
+		let mut w = [0u32; 64];
 		match data {
 			Some(bytes) => {
-				debug_assert!(bytes.len() == SHA512_BLOCKSIZE);
-				load_u64_into_be(bytes, &mut w[..16]);
+				debug_assert!(bytes.len() == SHA256_BLOCKSIZE);
+				load_u32_into_be(bytes, &mut w[..8]);
 			}
-			None => load_u64_into_be(&self.buffer, &mut w[..16]),
+			None => load_u32_into_be(&self.buffer, &mut w[..8]),
 		}
 
-		for t in 16..80 {
+		for t in 8..64 {
 			w[t] = Self::small_sigma_1(w[t - 2])
 				.wrapping_add(w[t - 7])
 				.wrapping_add(Self::small_sigma_0(w[t - 15]))
@@ -241,7 +241,7 @@ impl Sha256 {
 		let mut h = self.working_state[7];
 
 		let mut t = 0;
-		while t < 80 {
+		while t < 64 {
 			Self::compress(a, b, c, &mut d, e, f, g, &mut h, w[t], K[t]); t += 1;
 			Self::compress(h, a, b, &mut c, d, e, f, &mut g, w[t], K[t]); t += 1;
 			Self::compress(g, h, a, &mut b, c, d, e, &mut f, w[t], K[t]); t += 1;
@@ -263,12 +263,12 @@ impl Sha256 {
 	}
 
     /// Increment the message length during processing of data.
-    fn increment_mlen(&mut self, length: u64) {
+    fn increment_mlen(&mut self, length: u32) {
         // The checked shift checks that the right-hand side is a legal shift.
-        // The result can still overflow if length > u64::max_value() / 8.
+        // The result can still overflow if length > u32::max_value() / 8.
         // Should be impossible for a user to trigger, because update() processes
-        // in SHA512_BLOCKSIZE chunks.
-        debug_assert!(length <= u64::max_value() / 8);
+        // in SHA256_BLOCKSIZE chunks.
+        debug_assert!(length <= u32::max_value() / 8);
 
         // left-shift to get bit-sized representation of length
         // using .unwrap() because it should not panic in practice
@@ -288,7 +288,7 @@ impl Sha256 {
             working_state: H0,
             buffer: [0u8; SHA256_BLOCKSIZE],
             leftover: 0,
-            message_len: [0u64; 2],
+            message_len: [0u32; 2],
             is_finalized: false,
         }
     }
@@ -298,7 +298,7 @@ impl Sha256 {
         self.working_state = H0;
         self.buffer = [0u8; SHA256_BLOCKSIZE];
         self.leftover = 0;
-        self.message_len = [0u64; 2];
+        self.message_len = [0u32; 2];
         self.is_finalized = false;
     }
 
@@ -314,10 +314,12 @@ impl Sha256 {
 
         let mut bytes = data;
 
-        if self.leftover != 0 {
-            debug_assert!(self.leftover <= SHA512_BLOCKSIZE);
+        // TODO: Nothing but blocksize has changed. Ensure this is valid for SHA256 as well.
 
-            let mut want = SHA512_BLOCKSIZE - self.leftover;
+        if self.leftover != 0 {
+            debug_assert!(self.leftover <= SHA256_BLOCKSIZE);
+
+            let mut want = SHA256_BLOCKSIZE - self.leftover;
             if want > bytes.len() {
                 want = bytes.len();
             }
@@ -328,9 +330,9 @@ impl Sha256 {
 
             bytes = &bytes[want..];
             self.leftover += want;
-            self.increment_mlen(want as u64);
+            self.increment_mlen(want as u32);
 
-            if self.leftover < SHA512_BLOCKSIZE {
+            if self.leftover < SHA256_BLOCKSIZE {
                 return Ok(());
             }
 
@@ -338,17 +340,17 @@ impl Sha256 {
             self.leftover = 0;
         }
 
-        while bytes.len() >= SHA512_BLOCKSIZE {
-            self.process(Some(bytes[..SHA512_BLOCKSIZE].as_ref()));
-            self.increment_mlen(SHA512_BLOCKSIZE as u64);
-            bytes = &bytes[SHA512_BLOCKSIZE..];
+        while bytes.len() >= SHA256_BLOCKSIZE {
+            self.process(Some(bytes[..SHA256_BLOCKSIZE].as_ref()));
+            self.increment_mlen(SHA256_BLOCKSIZE as u32);
+            bytes = &bytes[SHA256_BLOCKSIZE..];
         }
 
         if !bytes.is_empty() {
             debug_assert!(self.leftover == 0);
             self.buffer[..bytes.len()].copy_from_slice(bytes);
             self.leftover = bytes.len();
-            self.increment_mlen(bytes.len() as u64);
+            self.increment_mlen(bytes.len() as u32);
         }
 
         Ok(())
@@ -361,11 +363,13 @@ impl Sha256 {
             return Err(UnknownCryptoError);
         }
 
+        // TODO: Nothing but blocksize has changed. Ensure this is valid for SHA256 as well.
+
         self.is_finalized = true;
 
-        // self.leftover should not be greater than SHA512_BLCOKSIZE
+        // self.leftover should not be greater than SHA256_BLOCKSIZE
         // as that would have been processed in the update call
-        debug_assert!(self.leftover < SHA512_BLOCKSIZE);
+        debug_assert!(self.leftover < SHA256_BLOCKSIZE);
         self.buffer[self.leftover] = 0x80;
         self.leftover += 1;
 
@@ -374,22 +378,22 @@ impl Sha256 {
         }
 
         // Check for available space for length padding
-        if (SHA512_BLOCKSIZE - self.leftover) < 16 {
+        if (SHA256_BLOCKSIZE - self.leftover) < 16 {
             self.process(None);
             for itm in self.buffer.iter_mut().take(self.leftover) {
                 *itm = 0;
             }
         }
 
-        self.buffer[SHA512_BLOCKSIZE - 16..SHA512_BLOCKSIZE - 8]
+        self.buffer[SHA256_BLOCKSIZE - 16..SHA256_BLOCKSIZE - 8]
             .copy_from_slice(&self.message_len[0].to_be_bytes());
-        self.buffer[SHA512_BLOCKSIZE - 8..SHA512_BLOCKSIZE]
+        self.buffer[SHA256_BLOCKSIZE - 8..SHA256_BLOCKSIZE]
             .copy_from_slice(&self.message_len[1].to_be_bytes());
 
         self.process(None);
 
-        let mut digest = [0u8; SHA512_OUTSIZE];
-        store_u64_into_be(&self.working_state, &mut digest);
+        let mut digest = [0u8; SHA256_OUTSIZE];
+        store_u32_into_be(&self.working_state, &mut digest);
 
         Ok(Digest::from(digest))
     }
@@ -519,19 +523,19 @@ mod private {
                 working_state: H0,
                 buffer: [0u8; SHA256_BLOCKSIZE],
                 leftover: 0,
-                message_len: [0u64; 2],
+                message_len: [0u32; 2],
                 is_finalized: false,
             };
 
             context.increment_mlen(1);
-            assert!(context.message_len == [0u64, 8u64]);
+            assert!(context.message_len == [0u32, 8u32]);
             context.increment_mlen(17);
-            assert!(context.message_len == [0u64, 144u64]);
+            assert!(context.message_len == [0u32, 144u32]);
             context.increment_mlen(12);
-            assert!(context.message_len == [0u64, 240u64]);
+            assert!(context.message_len == [0u32, 240u32]);
             // Overflow
-            context.increment_mlen(u64::max_value() / 8);
-            assert!(context.message_len == [1u64, 232u64]);
+            context.increment_mlen(u32::max_value() / 8);
+            assert!(context.message_len == [1u32, 232u32]);
         }
 
         #[test]
@@ -541,10 +545,10 @@ mod private {
                 working_state: H0,
                 buffer: [0u8; SHA256_BLOCKSIZE],
                 leftover: 0,
-                message_len: [u64::max_value(), u64::max_value() - 7],
+                message_len: [u32::max_value(), u32::max_value() - 7],
                 is_finalized: false,
             };
-            // u64::max_value() - 7, to leave so that the length represented
+            // u32::max_value() - 7, to leave so that the length represented
             // in bites should overflow by exactly one.
             context.increment_mlen(1);
         }
