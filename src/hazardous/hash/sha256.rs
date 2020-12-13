@@ -39,22 +39,22 @@
 //!
 //! # Example:
 //! ```rust
-//! //use orion::hazardous::hash::sha512::Sha512;
+//! use orion::hazardous::hash::sha256::Sha256;
 //!
 //! // Using the streaming interface
-//! //let mut state = Sha512::new();
-//! //state.update(b"Hello world")?;
-//! //let hash = state.finalize()?;
+//! let mut state = Sha256::new();
+//! state.update(b"Hello world")?;
+//! let hash = state.finalize()?;
 //!
 //! // Using the one-shot function
-//! //let hash_one_shot = Sha512::digest(b"Hello world")?;
+//! let hash_one_shot = Sha256::digest(b"Hello world")?;
 //!
-//! //assert_eq!(hash, hash_one_shot);
+//! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: struct.Sha512.html
-//! [`reset()`]: struct.Sha512.html
-//! [`finalize()`]: struct.Sha512.html
+//! [`update()`]: struct.Sha256.html
+//! [`reset()`]: struct.Sha256.html
+//! [`finalize()`]: struct.Sha256.html
 //! [BLAKE2b]: ../blake2b/index.html
 
 use crate::{
@@ -64,7 +64,7 @@ use crate::{
 
 /// The blocksize for the hash function SHA256.
 pub const SHA256_BLOCKSIZE: usize = 64;
-/// The output size for the hash function SHA512.
+/// The output size for the hash function SHA256.
 pub const SHA256_OUTSIZE: usize = 32;
 
 construct_public! {
@@ -114,7 +114,7 @@ pub struct Sha256 {
     working_state: [u32; 8],
     buffer: [u8; SHA256_BLOCKSIZE],
     leftover: usize,
-    message_len: [u32; 2], // TODO: u32
+    message_len: [u32; 2],
     is_finalized: bool,
 }
 
@@ -184,9 +184,7 @@ impl Sha256 {
     #[allow(clippy::many_single_char_names)]
     #[allow(clippy::too_many_arguments)]
     /// Message compression adopted from [mbed
-    /// TLS](https://github.com/ARMmbed/mbedtls/blob/master/library/sha256.c).
-    ///
-    /// TODO: Can this be re-used for SHA256?
+    /// TLS](https://github.com/ARMmbed/mbedtls/blob/master/library/sha512.c).
     fn compress(
         a: u32,
         b: u32,
@@ -282,7 +280,7 @@ impl Sha256 {
         }
     }
 
-    /// Initialize a `Sha512` struct.
+    /// Initialize a `Sha256` struct.
     pub fn new() -> Self {
         Self {
             working_state: H0,
@@ -355,13 +353,11 @@ impl Sha256 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Return a SHA512 digest.
+    /// Return a SHA256 digest.
     pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
-
-        // TODO: Nothing but blocksize has changed. Ensure this is valid for SHA256 as well.
 
         self.is_finalized = true;
 
@@ -397,7 +393,7 @@ impl Sha256 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Calculate a SHA512 digest of some `data`.
+    /// Calculate a SHA256 digest of some `data`.
     pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
         let mut state = Self::new();
         state.update(data)?;
