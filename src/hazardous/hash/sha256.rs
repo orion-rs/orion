@@ -33,7 +33,8 @@
 //! A panic will occur if:
 //!
 //! # Security:
-//!
+//! - SHA256 is vulnerable to length extension attacks.
+//! 
 //! # Recommendation:
 //! - It is recommended to use [BLAKE2b] when possible.
 //!
