@@ -63,7 +63,7 @@
 
 use crate::{
     errors::UnknownCryptoError,
-    hazardous::hash::sha512::{self, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
+    hazardous::hash::sha2::sha512::{self, SHA512_BLOCKSIZE, SHA512_OUTSIZE},
 };
 use zeroize::Zeroize;
 
@@ -238,7 +238,7 @@ mod public {
 
     mod test_streaming_interface {
         use super::*;
-        use crate::hazardous::hash::sha512::compare_sha512_states;
+        use crate::hazardous::hash::sha2::sha512::compare_sha512_states;
         use crate::test_framework::incremental_interface::*;
 
         const KEY: [u8; 32] = [0u8; 32];

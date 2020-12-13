@@ -154,7 +154,7 @@ mod hash {
             group.bench_with_input(
                 BenchmarkId::new("compute hash", *size),
                 &input,
-                |b, input_message| b.iter(|| sha512::Sha512::digest(&input_message).unwrap()),
+                |b, input_message| b.iter(|| sha2::sha512::Sha512::digest(&input_message).unwrap()),
             );
         }
     }

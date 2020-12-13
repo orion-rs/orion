@@ -1,5 +1,5 @@
 use crate::hash::nist_cavp_runner;
-use orion::hazardous::hash::sha512;
+use orion::hazardous::hash::sha2::sha512;
 
 #[test]
 fn test_streaming_1() {

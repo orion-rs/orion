@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2020 The orion Developers
+// Copyright (c) 2018-2020 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,31 +31,32 @@
 //!
 //! # Panics:
 //! A panic will occur if:
+//! - More than 2*(2^64-1) __bits__ of data are hashed.
 //!
 //! # Security:
-//! - SHA384 is vulnerable to length extension attacks.
+//! - SHA512 is vulnerable to length extension attacks.
 //!
 //! # Recommendation:
 //! - It is recommended to use [BLAKE2b] when possible.
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::hash::sha384::Sha384;
+//! use orion::hazardous::hash::sha2::sha512::Sha512;
 //!
 //! // Using the streaming interface
-//! let mut state = Sha384::new();
+//! let mut state = Sha512::new();
 //! state.update(b"Hello world")?;
 //! let hash = state.finalize()?;
 //!
 //! // Using the one-shot function
-//! let hash_one_shot = Sha384::digest(b"Hello world")?;
+//! let hash_one_shot = Sha512::digest(b"Hello world")?;
 //!
 //! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: struct.Sha384.html
-//! [`reset()`]: struct.Sha384.html
-//! [`finalize()`]: struct.Sha384.html
+//! [`update()`]: struct.Sha512.html
+//! [`reset()`]: struct.Sha512.html
+//! [`finalize()`]: struct.Sha512.html
 //! [BLAKE2b]: ../blake2b/index.html
 
 use crate::{
@@ -63,46 +64,67 @@ use crate::{
     util::endianness::{load_u64_into_be, store_u64_into_be},
 };
 
-/// The blocksize for the hash function SHA384.
-pub const SHA384_BLOCKSIZE: usize = 128;
-/// The output size for the hash function SHA384.
-pub const SHA384_OUTSIZE: usize = 48;
+/// The blocksize for the hash function SHA512.
+pub const SHA512_BLOCKSIZE: usize = 128;
+/// The output size for the hash function SHA512.
+pub const SHA512_OUTSIZE: usize = 64;
 
 construct_public! {
-    /// A type to represent the `Digest` that SHA384 returns.
+    /// A type to represent the `Digest` that SHA512 returns.
     ///
     /// # Errors:
     /// An error will be returned if:
-    /// - `slice` is not 48 bytes.
-    (Digest, test_digest, SHA384_OUTSIZE, SHA384_OUTSIZE)
+    /// - `slice` is not 64 bytes.
+    (Digest, test_digest, SHA512_OUTSIZE, SHA512_OUTSIZE)
 }
 
-impl_from_trait!(Digest, SHA384_OUTSIZE);
+impl_from_trait!(Digest, SHA512_OUTSIZE);
 
 #[rustfmt::skip]
 #[allow(clippy::unreadable_literal)]
-/// The SHA384 constants as defined in FIPS 180-4.
-const K: [u64; 80] = crate::hazardous::hash::sha512::K;
+/// The SHA512 constants as defined in FIPS 180-4.
+pub(crate) const K: [u64; 80] = [
+    0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
+    0x3956c25bf348b538, 0x59f111f1b605d019, 0x923f82a4af194f9b, 0xab1c5ed5da6d8118,
+    0xd807aa98a3030242, 0x12835b0145706fbe, 0x243185be4ee4b28c, 0x550c7dc3d5ffb4e2,
+    0x72be5d74f27b896f, 0x80deb1fe3b1696b1, 0x9bdc06a725c71235, 0xc19bf174cf692694,
+    0xe49b69c19ef14ad2, 0xefbe4786384f25e3, 0x0fc19dc68b8cd5b5, 0x240ca1cc77ac9c65,
+    0x2de92c6f592b0275, 0x4a7484aa6ea6e483, 0x5cb0a9dcbd41fbd4, 0x76f988da831153b5,
+    0x983e5152ee66dfab, 0xa831c66d2db43210, 0xb00327c898fb213f, 0xbf597fc7beef0ee4,
+    0xc6e00bf33da88fc2, 0xd5a79147930aa725, 0x06ca6351e003826f, 0x142929670a0e6e70,
+    0x27b70a8546d22ffc, 0x2e1b21385c26c926, 0x4d2c6dfc5ac42aed, 0x53380d139d95b3df,
+    0x650a73548baf63de, 0x766a0abb3c77b2a8, 0x81c2c92e47edaee6, 0x92722c851482353b,
+    0xa2bfe8a14cf10364, 0xa81a664bbc423001, 0xc24b8b70d0f89791, 0xc76c51a30654be30,
+    0xd192e819d6ef5218, 0xd69906245565a910, 0xf40e35855771202a, 0x106aa07032bbd1b8,
+    0x19a4c116b8d2d0c8, 0x1e376c085141ab53, 0x2748774cdf8eeb99, 0x34b0bcb5e19b48a8,
+    0x391c0cb3c5c95a63, 0x4ed8aa4ae3418acb, 0x5b9cca4f7763e373, 0x682e6ff3d6b2b8a3,
+    0x748f82ee5defb2fc, 0x78a5636f43172f60, 0x84c87814a1f0ab72, 0x8cc702081a6439ec,
+    0x90befffa23631e28, 0xa4506cebde82bde9, 0xbef9a3f7b2c67915, 0xc67178f2e372532b,
+    0xca273eceea26619c, 0xd186b8c721c0c207, 0xeada7dd6cde0eb1e, 0xf57d4f7fee6ed178,
+    0x06f067aa72176fba, 0x0a637dc5a2c898a6, 0x113f9804bef90dae, 0x1b710b35131c471b,
+    0x28db77f523047d84, 0x32caab7b40c72493, 0x3c9ebe0a15c9bebc, 0x431d67c49c100d4c,
+    0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817,
+];
 
 #[rustfmt::skip]
 #[allow(clippy::unreadable_literal)]
-/// The SHA384 initial hash value H(0) as defined in FIPS 180-4.
+/// The SHA512 initial hash value H(0) as defined in FIPS 180-4.
 const H0: [u64; 8] = [
-    0xcbbb9d5dc1059ed8, 0x629a292a367cd507, 0x9159015a3070dd17, 0x152fecd8f70e5939,
-    0x67332667ffc00b31, 0x8eb44a8768581511, 0xdb0c2e0d64f98fa7, 0x47b5481dbefa4fa4,
+    0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
+    0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179,
 ];
 
 #[derive(Clone)]
-/// SHA384 streaming state.
-pub struct Sha384 {
+/// SHA512 streaming state.
+pub struct Sha512 {
     working_state: [u64; 8],
-    buffer: [u8; SHA384_BLOCKSIZE],
+    buffer: [u8; SHA512_BLOCKSIZE],
     leftover: usize,
     message_len: [u64; 2],
     is_finalized: bool,
 }
 
-impl Drop for Sha384 {
+impl Drop for Sha512 {
     fn drop(&mut self) {
         use zeroize::Zeroize;
         self.working_state.zeroize();
@@ -111,24 +133,24 @@ impl Drop for Sha384 {
     }
 }
 
-impl core::fmt::Debug for Sha384 {
+impl core::fmt::Debug for Sha512 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "Sha384 {{ working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: {:?}, \
+            "Sha512 {{ working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: {:?}, \
              message_len: {:?}, is_finalized: {:?} }}",
             self.leftover, self.message_len, self.is_finalized
         )
     }
 }
 
-impl Default for Sha384 {
+impl Default for Sha512 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Sha384 {
+impl Sha512 {
     /// The Ch function as specified in FIPS 180-4 section 4.1.3.
     const fn ch(x: u64, y: u64, z: u64) -> u64 {
         z ^ (x & (y ^ z))
@@ -194,7 +216,7 @@ impl Sha384 {
 		let mut w = [0u64; 80];
 		match data {
 			Some(bytes) => {
-				debug_assert!(bytes.len() == SHA384_BLOCKSIZE);
+				debug_assert!(bytes.len() == SHA512_BLOCKSIZE);
 				load_u64_into_be(bytes, &mut w[..16]);
 			}
 			None => load_u64_into_be(&self.buffer, &mut w[..16]),
@@ -241,10 +263,10 @@ impl Sha384 {
     /// Increment the message length during processing of data.
     fn increment_mlen(&mut self, length: u64) {
         // The checked shift checks that the right-hand side is a legal shift.
-        // The result can still overflow if length > u64::max_value() / 8.
+        // The result can still overflow if length > u64::MAX / 8.
         // Should be impossible for a user to trigger, because update() processes
-        // in SHA384_BLOCKSIZE chunks.
-        debug_assert!(length <= u64::max_value() / 8);
+        // in SHA512_BLOCKSIZE chunks.
+        debug_assert!(length <= u64::MAX / 8);
 
         // left-shift to get bit-sized representation of length
         // using .unwrap() because it should not panic in practice
@@ -258,11 +280,11 @@ impl Sha384 {
         }
     }
 
-    /// Initialize a `Sha384` struct.
+    /// Initialize a `Sha512` struct.
     pub fn new() -> Self {
         Self {
             working_state: H0,
-            buffer: [0u8; SHA384_BLOCKSIZE],
+            buffer: [0u8; SHA512_BLOCKSIZE],
             leftover: 0,
             message_len: [0u64; 2],
             is_finalized: false,
@@ -272,7 +294,7 @@ impl Sha384 {
     /// Reset to `new()` state.
     pub fn reset(&mut self) {
         self.working_state = H0;
-        self.buffer = [0u8; SHA384_BLOCKSIZE];
+        self.buffer = [0u8; SHA512_BLOCKSIZE];
         self.leftover = 0;
         self.message_len = [0u64; 2];
         self.is_finalized = false;
@@ -291,9 +313,9 @@ impl Sha384 {
         let mut bytes = data;
 
         if self.leftover != 0 {
-            debug_assert!(self.leftover <= SHA384_BLOCKSIZE);
+            debug_assert!(self.leftover <= SHA512_BLOCKSIZE);
 
-            let mut want = SHA384_BLOCKSIZE - self.leftover;
+            let mut want = SHA512_BLOCKSIZE - self.leftover;
             if want > bytes.len() {
                 want = bytes.len();
             }
@@ -306,7 +328,7 @@ impl Sha384 {
             self.leftover += want;
             self.increment_mlen(want as u64);
 
-            if self.leftover < SHA384_BLOCKSIZE {
+            if self.leftover < SHA512_BLOCKSIZE {
                 return Ok(());
             }
 
@@ -314,10 +336,10 @@ impl Sha384 {
             self.leftover = 0;
         }
 
-        while bytes.len() >= SHA384_BLOCKSIZE {
-            self.process(Some(bytes[..SHA384_BLOCKSIZE].as_ref()));
-            self.increment_mlen(SHA384_BLOCKSIZE as u64);
-            bytes = &bytes[SHA384_BLOCKSIZE..];
+        while bytes.len() >= SHA512_BLOCKSIZE {
+            self.process(Some(bytes[..SHA512_BLOCKSIZE].as_ref()));
+            self.increment_mlen(SHA512_BLOCKSIZE as u64);
+            bytes = &bytes[SHA512_BLOCKSIZE..];
         }
 
         if !bytes.is_empty() {
@@ -331,7 +353,7 @@ impl Sha384 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Return a SHA384 digest.
+    /// Return a SHA512 digest.
     pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
@@ -339,9 +361,9 @@ impl Sha384 {
 
         self.is_finalized = true;
 
-        // self.leftover should not be greater than SHA384_BLOCKSIZE
+        // self.leftover should not be greater than SHA512_BLCOKSIZE
         // as that would have been processed in the update call
-        debug_assert!(self.leftover < SHA384_BLOCKSIZE);
+        debug_assert!(self.leftover < SHA512_BLOCKSIZE);
         self.buffer[self.leftover] = 0x80;
         self.leftover += 1;
 
@@ -350,28 +372,28 @@ impl Sha384 {
         }
 
         // Check for available space for length padding
-        if (SHA384_BLOCKSIZE - self.leftover) < 16 {
+        if (SHA512_BLOCKSIZE - self.leftover) < 16 {
             self.process(None);
             for itm in self.buffer.iter_mut().take(self.leftover) {
                 *itm = 0;
             }
         }
 
-        self.buffer[SHA384_BLOCKSIZE - 16..SHA384_BLOCKSIZE - 8]
+        self.buffer[SHA512_BLOCKSIZE - 16..SHA512_BLOCKSIZE - 8]
             .copy_from_slice(&self.message_len[0].to_be_bytes());
-        self.buffer[SHA384_BLOCKSIZE - 8..SHA384_BLOCKSIZE]
+        self.buffer[SHA512_BLOCKSIZE - 8..SHA512_BLOCKSIZE]
             .copy_from_slice(&self.message_len[1].to_be_bytes());
 
         self.process(None);
 
-        let mut digest = [0u8; SHA384_OUTSIZE];
-        store_u64_into_be(&self.working_state[..6], &mut digest);
+        let mut digest = [0u8; SHA512_OUTSIZE];
+        store_u64_into_be(&self.working_state, &mut digest);
 
         Ok(Digest::from(digest))
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Calculate a SHA384 digest of some `data`.
+    /// Calculate a SHA512 digest of some `data`.
     pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
         let mut state = Self::new();
         state.update(data)?;
@@ -380,9 +402,9 @@ impl Sha384 {
 }
 
 #[cfg(test)]
-/// Compare two Sha384 state objects to check if their fields
+/// Compare two Sha512 state objects to check if their fields
 /// are the same.
-pub fn compare_sha384_states(state_1: &Sha384, state_2: &Sha384) {
+pub fn compare_sha512_states(state_1: &Sha512, state_2: &Sha512) {
     assert_eq!(state_1.working_state, state_2.working_state);
     assert_eq!(state_1.buffer[..], state_2.buffer[..]);
     assert_eq!(state_1.leftover, state_2.leftover);
@@ -397,17 +419,17 @@ mod public {
 
     #[test]
     fn test_default_equals_new() {
-        let new = Sha384::new();
-        let default = Sha384::default();
-        compare_sha384_states(&new, &default);
+        let new = Sha512::new();
+        let default = Sha512::default();
+        compare_sha512_states(&new, &default);
     }
 
     #[test]
     #[cfg(feature = "safe_api")]
     fn test_debug_impl() {
-        let initial_state = Sha384::new();
+        let initial_state = Sha512::new();
         let debug = format!("{:?}", initial_state);
-        let expected = "Sha384 { working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, message_len: [0, 0], is_finalized: false }";
+        let expected = "Sha512 { working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, message_len: [0, 0], is_finalized: false }";
         assert_eq!(debug, expected);
     }
 
@@ -415,7 +437,7 @@ mod public {
         use super::*;
         use crate::test_framework::incremental_interface::*;
 
-        impl TestableStreamingContext<Digest> for Sha384 {
+        impl TestableStreamingContext<Digest> for Sha512 {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
                 Ok(self.reset())
             }
@@ -429,7 +451,7 @@ mod public {
             }
 
             fn one_shot(input: &[u8]) -> Result<Digest, UnknownCryptoError> {
-                Sha384::digest(input)
+                Sha512::digest(input)
             }
 
             fn verify_result(expected: &Digest, input: &[u8]) -> Result<(), UnknownCryptoError> {
@@ -442,18 +464,18 @@ mod public {
                 }
             }
 
-            fn compare_states(state_1: &Sha384, state_2: &Sha384) {
-                compare_sha384_states(state_1, state_2)
+            fn compare_states(state_1: &Sha512, state_2: &Sha512) {
+                compare_sha512_states(state_1, state_2)
             }
         }
 
         #[test]
         fn default_consistency_tests() {
-            let initial_state: Sha384 = Sha384::new();
+            let initial_state: Sha512 = Sha512::new();
 
-            let test_runner = StreamingContextConsistencyTester::<Digest, Sha384>::new(
+            let test_runner = StreamingContextConsistencyTester::<Digest, Sha512>::new(
                 initial_state,
-                SHA384_BLOCKSIZE,
+                SHA512_BLOCKSIZE,
             );
             test_runner.run_all_tests();
         }
@@ -467,11 +489,11 @@ mod public {
                 /// Related bug: https://github.com/brycx/orion/issues/46
                 /// Test different streaming state usage patterns.
                 fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-                    let initial_state: Sha384 = Sha384::new();
+                    let initial_state: Sha512 = Sha512::new();
 
-                    let test_runner = StreamingContextConsistencyTester::<Digest, Sha384>::new(
+                    let test_runner = StreamingContextConsistencyTester::<Digest, Sha512>::new(
                         initial_state,
-                        SHA384_BLOCKSIZE,
+                        SHA512_BLOCKSIZE,
                     );
                     test_runner.run_all_tests_property(&data);
                     true
@@ -491,9 +513,9 @@ mod private {
 
         #[test]
         fn test_mlen_increase_values() {
-            let mut context = Sha384 {
+            let mut context = Sha512 {
                 working_state: H0,
-                buffer: [0u8; SHA384_BLOCKSIZE],
+                buffer: [0u8; SHA512_BLOCKSIZE],
                 leftover: 0,
                 message_len: [0u64; 2],
                 is_finalized: false,
@@ -506,21 +528,21 @@ mod private {
             context.increment_mlen(12);
             assert!(context.message_len == [0u64, 240u64]);
             // Overflow
-            context.increment_mlen(u64::max_value() / 8);
+            context.increment_mlen(u64::MAX / 8);
             assert!(context.message_len == [1u64, 232u64]);
         }
 
         #[test]
         #[should_panic]
         fn test_panic_on_second_overflow() {
-            let mut context = Sha384 {
+            let mut context = Sha512 {
                 working_state: H0,
-                buffer: [0u8; SHA384_BLOCKSIZE],
+                buffer: [0u8; SHA512_BLOCKSIZE],
                 leftover: 0,
-                message_len: [u64::max_value(), u64::max_value() - 7],
+                message_len: [u64::MAX, u64::MAX - 7],
                 is_finalized: false,
             };
-            // u64::max_value() - 7, to leave so that the length represented
+            // u64::MAX - 7, to leave so that the length represented
             // in bites should overflow by exactly one.
             context.increment_mlen(1);
         }

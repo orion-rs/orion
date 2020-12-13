@@ -34,13 +34,13 @@
 //!
 //! # Security:
 //! - SHA256 is vulnerable to length extension attacks.
-//! 
+//!
 //! # Recommendation:
 //! - It is recommended to use [BLAKE2b] when possible.
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::hash::sha256::Sha256;
+//! use orion::hazardous::hash::sha2::sha256::Sha256;
 //!
 //! // Using the streaming interface
 //! let mut state = Sha256::new();
