@@ -2,8 +2,9 @@ pub mod blake2b_kat;
 pub mod other_blake2b;
 pub mod sha512_nist_cavp;
 pub mod sha256_nist_cavp;
+pub mod sha384_nist_cavp;
 
-use orion::hazardous::hash::{blake2b, sha512, sha256};
+use orion::hazardous::hash::{blake2b, sha512, sha256, sha384};
 use crate::TestCaseReader;
 
 fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
@@ -44,6 +45,18 @@ fn sha256_test_runner(data: &[u8], output: &[u8]) {
     assert!(digest.as_ref() == output);
 }
 
+// TODO: Refactor
+fn sha384_test_runner(data: &[u8], output: &[u8]) {
+    let mut state = sha384::Sha384::new();
+    state.update(data).unwrap();
+    let digest = state.finalize().unwrap();
+
+    let digest_one_shot = sha384::Sha384::digest(data).unwrap();
+
+    assert!(digest.as_ref() == digest_one_shot.as_ref());
+    assert!(digest.as_ref() == output);
+}
+
 /// NISTs SHA256/512 Long/Short share the same format,
 /// so fields and separator remain the same.
 fn nist_cavp_runner(path: &str) {
@@ -51,6 +64,8 @@ fn nist_cavp_runner(path: &str) {
     let mut nist_cavp_reader = TestCaseReader::new(path, nist_cavp_fields, "=");
 
     let mut test_case = nist_cavp_reader.next();
+    // Check that we actually ran any of the SHA2 test runners.
+    let mut ran_any_runner = false;
     while test_case.is_some() {
         let tc = test_case.unwrap();
 
@@ -59,11 +74,18 @@ fn nist_cavp_runner(path: &str) {
 
         if path.contains("SHA256") {
             sha256_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
         }
         if path.contains("SHA512") {
             sha512_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
+        }
+        if path.contains("SHA384") {
+            sha384_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
         }
 
+        assert!(ran_any_runner);
         // Read the next one
         test_case = nist_cavp_reader.next();
     }

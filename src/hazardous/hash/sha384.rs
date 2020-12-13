@@ -365,7 +365,7 @@ impl Sha384 {
         self.process(None);
 
         let mut digest = [0u8; SHA384_OUTSIZE];
-        store_u64_into_be(&self.working_state, &mut digest);
+        store_u64_into_be(&self.working_state[..6], &mut digest);
 
         Ok(Digest::from(digest))
     }
