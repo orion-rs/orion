@@ -215,16 +215,16 @@ impl Sha256 {
 	#[allow(clippy::many_single_char_names)]
     /// Process data in `self.buffer` or optionally `data`.
     fn process(&mut self, data: Option<&[u8]>) {
-		let mut w = [0u32; 64];
+        let mut w = [0u32; 64];
 		match data {
 			Some(bytes) => {
-				debug_assert!(bytes.len() == SHA256_BLOCKSIZE);
-				load_u32_into_be(bytes, &mut w[..8]);
+                debug_assert!(bytes.len() == SHA256_BLOCKSIZE);
+				load_u32_into_be(bytes, &mut w[..16]);
 			}
-			None => load_u32_into_be(&self.buffer, &mut w[..8]),
+			None => load_u32_into_be(&self.buffer, &mut w[..16]),
 		}
 
-		for t in 8..64 {
+		for t in 16..64 {
 			w[t] = Self::small_sigma_1(w[t - 2])
 				.wrapping_add(w[t - 7])
 				.wrapping_add(Self::small_sigma_0(w[t - 15]))
@@ -314,8 +314,6 @@ impl Sha256 {
 
         let mut bytes = data;
 
-        // TODO: Nothing but blocksize has changed. Ensure this is valid for SHA256 as well.
-
         if self.leftover != 0 {
             debug_assert!(self.leftover <= SHA256_BLOCKSIZE);
 
@@ -378,16 +376,16 @@ impl Sha256 {
         }
 
         // Check for available space for length padding
-        if (SHA256_BLOCKSIZE - self.leftover) < 16 {
+        if (SHA256_BLOCKSIZE - self.leftover) < 8 {
             self.process(None);
             for itm in self.buffer.iter_mut().take(self.leftover) {
                 *itm = 0;
             }
         }
 
-        self.buffer[SHA256_BLOCKSIZE - 16..SHA256_BLOCKSIZE - 8]
+        self.buffer[SHA256_BLOCKSIZE - 8..SHA256_BLOCKSIZE - 4]
             .copy_from_slice(&self.message_len[0].to_be_bytes());
-        self.buffer[SHA256_BLOCKSIZE - 8..SHA256_BLOCKSIZE]
+        self.buffer[SHA256_BLOCKSIZE - 4..SHA256_BLOCKSIZE]
             .copy_from_slice(&self.message_len[1].to_be_bytes());
 
         self.process(None);
