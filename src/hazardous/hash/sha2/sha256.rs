@@ -60,6 +60,7 @@
 
 use crate::{
     errors::UnknownCryptoError,
+    hazardous::hash::sha2::common::{ch, maj},
     util::endianness::{load_u32_into_be, store_u32_into_be},
 };
 
@@ -146,22 +147,6 @@ impl Default for Sha256 {
 }
 
 impl Sha256 {
-    /// The Ch function as specified in FIPS 180-4 section 4.1.3.
-    ///
-    /// TODO: Shared between all SHA2 functions. Make generic over data-types that
-    /// implement the needed op traits.
-    const fn ch(x: u32, y: u32, z: u32) -> u32 {
-        z ^ (x & (y ^ z))
-    }
-
-    /// The Maj function as specified in FIPS 180-4 section 4.1.3.
-    ///
-    /// TODO: Shared between all SHA2 functions. Make generic over data-types that
-    /// implement the needed op traits.
-    const fn maj(x: u32, y: u32, z: u32) -> u32 {
-        (x & y) | (z & (x | y))
-    }
-
     /// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.2.
     const fn big_sigma_0(x: u32) -> u32 {
         (x.rotate_right(2)) ^ x.rotate_right(13) ^ x.rotate_right(22)
@@ -200,11 +185,11 @@ impl Sha256 {
     ) {
         let temp1 = h
             .wrapping_add(Self::big_sigma_1(e))
-            .wrapping_add(Self::ch(e, f, g))
+            .wrapping_add(ch(e, f, g))
             .wrapping_add(ki)
             .wrapping_add(x);
 
-        let temp2 = Self::big_sigma_0(a).wrapping_add(Self::maj(a, b, c));
+        let temp2 = Self::big_sigma_0(a).wrapping_add(maj(a, b, c));
 
         *d = d.wrapping_add(temp1);
         *h = temp1.wrapping_add(temp2);

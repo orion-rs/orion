@@ -20,14 +20,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// SHA512 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
-pub mod sha512;
+use core::ops::*;
 
-/// SHA256 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
-pub mod sha256;
+/// The Ch function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) fn ch<T>(x: T, y: T, z: T) -> T
+where
+    T: BitXor<Output = T> + BitAnd<Output = T> + Copy,
+{
+    z ^ (x & (y ^ z))
+}
 
-/// SHA384 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
-pub mod sha384;
-
-/// Common functionality shared between SHA2 variants.
-mod common;
+/// The Maj function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) fn maj<T>(x: T, y: T, z: T) -> T
+where
+    T: BitOr<Output = T> + BitAnd<Output = T> + Copy,
+{
+    (x & y) | (z & (x | y))
+}

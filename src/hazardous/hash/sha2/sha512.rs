@@ -61,6 +61,7 @@
 
 use crate::{
     errors::UnknownCryptoError,
+    hazardous::hash::sha2::common::{ch, maj},
     util::endianness::{load_u64_into_be, store_u64_into_be},
 };
 
@@ -151,16 +152,6 @@ impl Default for Sha512 {
 }
 
 impl Sha512 {
-    /// The Ch function as specified in FIPS 180-4 section 4.1.3.
-    const fn ch(x: u64, y: u64, z: u64) -> u64 {
-        z ^ (x & (y ^ z))
-    }
-
-    /// The Maj function as specified in FIPS 180-4 section 4.1.3.
-    const fn maj(x: u64, y: u64, z: u64) -> u64 {
-        (x & y) | (z & (x | y))
-    }
-
     /// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
     const fn big_sigma_0(x: u64) -> u64 {
         (x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39)
@@ -199,11 +190,11 @@ impl Sha512 {
     ) {
         let temp1 = h
             .wrapping_add(Self::big_sigma_1(e))
-            .wrapping_add(Self::ch(e, f, g))
+            .wrapping_add(ch(e, f, g))
             .wrapping_add(ki)
             .wrapping_add(x);
 
-        let temp2 = Self::big_sigma_0(a).wrapping_add(Self::maj(a, b, c));
+        let temp2 = Self::big_sigma_0(a).wrapping_add(maj(a, b, c));
 
         *d = d.wrapping_add(temp1);
         *h = temp1.wrapping_add(temp2);
