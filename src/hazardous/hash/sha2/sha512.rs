@@ -172,84 +172,7 @@ impl Sha512 {
         (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6)
     }
 
-    #[allow(clippy::many_single_char_names)]
-    #[allow(clippy::too_many_arguments)]
-    /// Message compression adopted from [mbed
-    /// TLS](https://github.com/ARMmbed/mbedtls/blob/master/library/sha512.c).
-    fn compress(
-        a: u64,
-        b: u64,
-        c: u64,
-        d: &mut u64,
-        e: u64,
-        f: u64,
-        g: u64,
-        h: &mut u64,
-        x: u64,
-        ki: u64,
-    ) {
-        let temp1 = h
-            .wrapping_add(Self::big_sigma_1(e))
-            .wrapping_add(ch(e, f, g))
-            .wrapping_add(ki)
-            .wrapping_add(x);
-
-        let temp2 = Self::big_sigma_0(a).wrapping_add(maj(a, b, c));
-
-        *d = d.wrapping_add(temp1);
-        *h = temp1.wrapping_add(temp2);
-    }
-
-    #[rustfmt::skip]
-	#[allow(clippy::many_single_char_names)]
-    /// Process data in `self.buffer` or optionally `data`.
-    fn process(&mut self, data: Option<&[u8]>) {
-		let mut w = [0u64; 80];
-		match data {
-			Some(bytes) => {
-				debug_assert!(bytes.len() == SHA512_BLOCKSIZE);
-				load_u64_into_be(bytes, &mut w[..16]);
-			}
-			None => load_u64_into_be(&self.buffer, &mut w[..16]),
-		}
-
-		for t in 16..80 {
-			w[t] = Self::small_sigma_1(w[t - 2])
-				.wrapping_add(w[t - 7])
-				.wrapping_add(Self::small_sigma_0(w[t - 15]))
-				.wrapping_add(w[t - 16]);
-		}
-
-		let mut a = self.working_state[0];
-		let mut b = self.working_state[1];
-		let mut c = self.working_state[2];
-		let mut d = self.working_state[3];
-		let mut e = self.working_state[4];
-		let mut f = self.working_state[5];
-		let mut g = self.working_state[6];
-		let mut h = self.working_state[7];
-
-		let mut t = 0;
-		while t < 80 {
-			Self::compress(a, b, c, &mut d, e, f, g, &mut h, w[t], K[t]); t += 1;
-			Self::compress(h, a, b, &mut c, d, e, f, &mut g, w[t], K[t]); t += 1;
-			Self::compress(g, h, a, &mut b, c, d, e, &mut f, w[t], K[t]); t += 1;
-			Self::compress(f, g, h, &mut a, b, c, d, &mut e, w[t], K[t]); t += 1;
-			Self::compress(e, f, g, &mut h, a, b, c, &mut d, w[t], K[t]); t += 1;
-			Self::compress(d, e, f, &mut g, h, a, b, &mut c, w[t], K[t]); t += 1;
-			Self::compress(c, d, e, &mut f, g, h, a, &mut b, w[t], K[t]); t += 1;
-			Self::compress(b, c, d, &mut e, f, g, h, &mut a, w[t], K[t]); t += 1;
-		}
-
-		self.working_state[0] = self.working_state[0].wrapping_add(a);
-		self.working_state[1] = self.working_state[1].wrapping_add(b);
-		self.working_state[2] = self.working_state[2].wrapping_add(c);
-		self.working_state[3] = self.working_state[3].wrapping_add(d);
-		self.working_state[4] = self.working_state[4].wrapping_add(e);
-		self.working_state[5] = self.working_state[5].wrapping_add(f);
-		self.working_state[6] = self.working_state[6].wrapping_add(g);
-		self.working_state[7] = self.working_state[7].wrapping_add(h);
-	}
+    func_compress_and_process!(SHA512_BLOCKSIZE, u64, 0u64, load_u64_into_be, 80);
 
     /// Increment the message length during processing of data.
     fn increment_mlen(&mut self, length: u64) {
@@ -291,57 +214,7 @@ impl Sha512 {
         self.is_finalized = false;
     }
 
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Update state with `data`. This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-        if self.is_finalized {
-            return Err(UnknownCryptoError);
-        }
-        if data.is_empty() {
-            return Ok(());
-        }
-
-        let mut bytes = data;
-
-        if self.leftover != 0 {
-            debug_assert!(self.leftover <= SHA512_BLOCKSIZE);
-
-            let mut want = SHA512_BLOCKSIZE - self.leftover;
-            if want > bytes.len() {
-                want = bytes.len();
-            }
-
-            for (idx, itm) in bytes.iter().enumerate().take(want) {
-                self.buffer[self.leftover + idx] = *itm;
-            }
-
-            bytes = &bytes[want..];
-            self.leftover += want;
-            self.increment_mlen(want as u64);
-
-            if self.leftover < SHA512_BLOCKSIZE {
-                return Ok(());
-            }
-
-            self.process(None);
-            self.leftover = 0;
-        }
-
-        while bytes.len() >= SHA512_BLOCKSIZE {
-            self.process(Some(bytes[..SHA512_BLOCKSIZE].as_ref()));
-            self.increment_mlen(SHA512_BLOCKSIZE as u64);
-            bytes = &bytes[SHA512_BLOCKSIZE..];
-        }
-
-        if !bytes.is_empty() {
-            debug_assert!(self.leftover == 0);
-            self.buffer[..bytes.len()].copy_from_slice(bytes);
-            self.leftover = bytes.len();
-            self.increment_mlen(bytes.len() as u64);
-        }
-
-        Ok(())
-    }
+    func_update!(SHA512_BLOCKSIZE, u64);
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Return a SHA512 digest.
