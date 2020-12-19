@@ -48,8 +48,8 @@
 //! - `iterations` is less than 3.
 //! - `length` is less than 4.
 //! - `memory` is less than 8.
-//! - The length of the `password` or `expected` is greater than `u32::max_value()`.
-//! - The length of the `salt` is greater than `u32::max_value()` or less than `8`.
+//! - The length of the `password` or `expected` is greater than `u32::MAX`.
+//! - The length of the `salt` is greater than `u32::MAX` or less than `8`.
 //! - The `expected` does not match the derived key.
 //!
 //! # Security:

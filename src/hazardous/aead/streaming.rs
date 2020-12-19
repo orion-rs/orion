@@ -47,7 +47,7 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows `u64::max_value()` when decrypting.
+//! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows `u64::MAX` when decrypting.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given key.
@@ -1300,7 +1300,7 @@ mod private {
         ];
 
         let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-        ctx.counter = u32::max_value();
+        ctx.counter = u32::MAX;
         assert_eq!(ctx.key, before_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
@@ -1345,7 +1345,7 @@ mod private {
         ];
 
         let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-        ctx.counter = u32::max_value();
+        ctx.counter = u32::MAX;
         assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
@@ -1390,7 +1390,7 @@ mod private {
         ];
 
         let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-        ctx.counter = u32::max_value();
+        ctx.counter = u32::MAX;
         assert_eq!(ctx.key, before_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
@@ -1435,7 +1435,7 @@ mod private {
         ];
 
         let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-        ctx.counter = u32::max_value();
+        ctx.counter = u32::MAX;
         assert_eq!(ctx.key, before_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));

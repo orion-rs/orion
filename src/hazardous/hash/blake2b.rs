@@ -968,7 +968,7 @@ mod private {
             context.increment_offset(12);
             assert!(context.t == [30u64, 0u64]);
             // Overflow
-            context.increment_offset(u64::max_value());
+            context.increment_offset(u64::MAX);
             assert!(context.t == [29u64, 1u64]);
         }
 
@@ -980,14 +980,14 @@ mod private {
                 internal_state: IV,
                 buffer: [0u8; BLAKE2B_BLOCKSIZE],
                 leftover: 0,
-                t: [1u64, u64::max_value()],
+                t: [1u64, u64::MAX],
                 f: [0u64; 2],
                 is_finalized: false,
                 is_keyed: false,
                 size: 1,
             };
 
-            context.increment_offset(u64::max_value());
+            context.increment_offset(u64::MAX);
         }
     }
 }

@@ -60,7 +60,7 @@
 //! An error will be returned if:
 //! - `memory` is less than 8.
 //! - `iterations` is less than 3.
-//! - The length of the `password` is greater than `u32::max_value()`.
+//! - The length of the `password` is greater than `u32::MAX`.
 //! - The password hash does not match `expected`.
 //!
 //! # Panics:
@@ -604,7 +604,7 @@ mod public {
             let exact_min = "$argon2i$v=19$m=8,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             let less = "$argon2i$v=19$m=7,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             // Throws error during parsing as u32
-            let u32_overflow = format!("$argon2i$v=19$m={},t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA", u64::max_value());
+            let u32_overflow = format!("$argon2i$v=19$m={},t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA", u64::MAX);
 
             assert!(PasswordHash::from_encoded(exact_min).is_ok());
             assert!(PasswordHash::from_encoded(less).is_err());
@@ -616,7 +616,7 @@ mod public {
             let exact_min = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             let less = "$argon2i$v=19$m=65536,t=2,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             // Throws error during parsing as u32
-            let u32_overflow = format!("$argon2i$v=19$m=65536,t={},p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA", u64::max_value());
+            let u32_overflow = format!("$argon2i$v=19$m=65536,t={},p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA", u64::MAX);
 
             assert!(PasswordHash::from_encoded(exact_min).is_ok());
             assert!(PasswordHash::from_encoded(less).is_err());

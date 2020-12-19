@@ -39,11 +39,11 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - The length of the `password` is greater than `u32::max_value()`.
-//! - The length of the `salt` is greater than `u32::max_value()` or less than `8`.
-//! - The length of the `secret` is greater than `u32::max_value()`.
-//! - The length of the `ad` is greater than `u32::max_value()`.
-//! - The length of `dst_out` is greater than `u32::max_value()` or less than `4`.
+//! - The length of the `password` is greater than `u32::MAX`.
+//! - The length of the `salt` is greater than `u32::MAX` or less than `8`.
+//! - The length of the `secret` is greater than `u32::MAX`.
+//! - The length of the `ad` is greater than `u32::MAX`.
+//! - The length of `dst_out` is greater than `u32::MAX` or less than `4`.
 //! - `iterations` is less than `1`.
 //! - `memory` is less than `8`.
 //! - The hashed password does not match the expected when verifying.

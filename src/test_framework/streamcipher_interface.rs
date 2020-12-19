@@ -212,7 +212,7 @@ fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
     assert!(encryptor(
         key,
         nonce,
-        u32::max_value(),
+        u32::MAX,
         &[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
         &mut dst_out
     )
@@ -220,7 +220,7 @@ fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
     assert!(decryptor(
         key,
         nonce,
-        u32::max_value(),
+        u32::MAX,
         &[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
         &mut dst_out
     )
@@ -242,7 +242,7 @@ fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
     assert!(encryptor(
         key,
         nonce,
-        u32::max_value(),
+        u32::MAX,
         &[0u8; 64], // Only needs to process one keystream
         &mut dst_out
     )
@@ -250,7 +250,7 @@ fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
     assert!(decryptor(
         key,
         nonce,
-        u32::max_value(),
+        u32::MAX,
         &[0u8; 64], // Only needs to process one keystream
         &mut dst_out
     )

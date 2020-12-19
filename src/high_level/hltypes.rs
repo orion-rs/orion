@@ -33,7 +33,7 @@ construct_secret_key_variable_size! {
     /// An error will be returned if:
     /// - `slice` is empty.
     /// - `length` is 0.
-    /// - `length` is not less than `u32::max_value()`.
+    /// - `length` is not less than `u32::MAX`.
     ///
     /// # Panics:
     /// A panic will occur if:
@@ -50,7 +50,7 @@ construct_salt_variable_size! {
     /// An error will be returned if:
     /// - `slice` is empty.
     /// - `length` is 0.
-    /// - `length` is not less than `u32::max_value()`.
+    /// - `length` is not less than `u32::MAX`.
     ///
     /// # Panics:
     /// A panic will occur if:
@@ -78,7 +78,7 @@ construct_secret_key_variable_size! {
     /// An error will be returned if:
     /// - `slice` is empty.
     /// - `length` is 0.
-    /// - `length` is not less than `u32::max_value()`.
+    /// - `length` is not less than `u32::MAX`.
     ///
     /// # Panics:
     /// A panic will occur if:
