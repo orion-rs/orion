@@ -215,7 +215,7 @@ macro_rules! func_generate_variable_size (($name:ident) => (
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
-        if length < 1 || length >= (u32::max_value() as usize) {
+        if length < 1 || length >= (u32::MAX as usize) {
             return Err(UnknownCryptoError);
         }
 
@@ -362,7 +362,7 @@ macro_rules! test_generate_variable (($name:ident) => (
     #[cfg(feature = "safe_api")]
     fn test_generate_variable() {
         assert!($name::generate(0).is_err());
-        assert!($name::generate(usize::max_value()).is_err());
+        assert!($name::generate(usize::MAX).is_err());
         assert!($name::generate(1).is_ok());
         assert!($name::generate(64).is_ok());
 

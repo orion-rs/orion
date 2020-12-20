@@ -966,8 +966,7 @@ mod private {
             let mut hchacha_keystream_block_max = [0u8; HCHACHA_OUTSIZE];
 
             chacha_state_hchacha.keystream_block(0, &mut hchacha_keystream_block_zero);
-            chacha_state_hchacha
-                .keystream_block(u32::max_value(), &mut hchacha_keystream_block_max);
+            chacha_state_hchacha.keystream_block(u32::MAX, &mut hchacha_keystream_block_max);
 
             assert_eq!(hchacha_keystream_block_zero, hchacha_keystream_block_max);
         }
@@ -1010,7 +1009,7 @@ mod private {
                     U32x4(0, 0, 0, 0),
                     U32x4(0, 0, 0, 0),
                 ],
-                internal_counter: (u32::max_value() - 128),
+                internal_counter: (u32::MAX - 128),
                 is_ietf: true,
             };
 
@@ -1031,7 +1030,7 @@ mod private {
                     U32x4(0, 0, 0, 0),
                     U32x4(0, 0, 0, 0),
                 ],
-                internal_counter: (u32::max_value() - 128),
+                internal_counter: (u32::MAX - 128),
                 is_ietf: false,
             };
 

@@ -196,7 +196,7 @@ mod public {
             /// in `authenticate/authenticate_verify`.
             fn prop_authenticate_key_size(input: Vec<u8>) -> bool {
                 let sec_key_res = SecretKey::from_slice(&input);
-                if input.len() == 0 || input.len() >= u32::max_value() as usize {
+                if input.len() == 0 || input.len() >= u32::MAX as usize {
                     return sec_key_res.is_err();
                 }
                 let sec_key = sec_key_res.unwrap();
