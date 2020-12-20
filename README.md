@@ -1,5 +1,5 @@
 # orion
-[![Tests](https://github.com/brycx/orion/workflows/Tests/badge.svg)](https://github.com/brycx/orion/actions) [![Daily tests](https://github.com/brycx/orion/workflows/Daily%20tests/badge.svg)](https://github.com/brycx/orion/actions) [![dudect](https://github.com/brycx/orion-dudect/workflows/dudect/badge.svg)](https://github.com/brycx/orion-dudect/actions)  [![Security Audit](https://github.com/brycx/orion/workflows/Security%20Audit/badge.svg)](https://github.com/brycx/orion/actions) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion) [![Documentation](https://docs.rs/orion/badge.svg)](https://docs.rs/orion/) [![Crates.io](https://img.shields.io/crates/v/orion.svg)](https://crates.io/crates/orion) [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/) [![MSRV](https://img.shields.io/badge/MSRV-1.41-informational.svg)](https://img.shields.io/badge/MSRV-1.41-informational) [![Matrix](https://img.shields.io/matrix/orion-rs:matrix.org.svg?logo=matrix)](https://matrix.to/#/#orion-rs:matrix.org)
+[![Tests](https://github.com/brycx/orion/workflows/Tests/badge.svg)](https://github.com/brycx/orion/actions) [![Daily tests](https://github.com/brycx/orion/workflows/Daily%20tests/badge.svg)](https://github.com/brycx/orion/actions) [![dudect](https://github.com/brycx/orion-dudect/workflows/dudect/badge.svg)](https://github.com/brycx/orion-dudect/actions)  [![Security Audit](https://github.com/brycx/orion/workflows/Security%20Audit/badge.svg)](https://github.com/brycx/orion/actions) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion) [![Documentation](https://docs.rs/orion/badge.svg)](https://docs.rs/orion/) [![Crates.io](https://img.shields.io/crates/v/orion.svg)](https://crates.io/crates/orion) [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/) [![MSRV](https://img.shields.io/badge/MSRV-1.43-informational.svg)](https://img.shields.io/badge/MSRV-1.43-informational) [![Matrix](https://img.shields.io/matrix/orion-rs:matrix.org.svg?logo=matrix)](https://matrix.to/#/#orion-rs:matrix.org)
 
 ### About
 orion is a cryptography library written in pure Rust. It aims to provide easy and usable crypto while trying to minimize the use of unsafe code. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
@@ -17,7 +17,7 @@ This library has **not undergone any third-party security audit**. Usage is at *
 More information about security regarding orion is available in the [wiki](https://github.com/brycx/orion/wiki/Security).
 
 ### Minimum Supported Rust Version
-Rust 1.41 or later is supported however, the majority of testing happens with latest stable Rust.
+Rust 1.43 or later is supported however, the majority of testing happens with latest stable Rust.
 
 MSRV may be changed at any point and will not be considered a SemVer breaking change.
 
