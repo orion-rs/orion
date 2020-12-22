@@ -155,10 +155,10 @@ impl Sha384 {
     /// Increment the message length during processing of data.
     fn increment_mlen(&mut self, length: u64) {
         // The checked shift checks that the right-hand side is a legal shift.
-        // The result can still overflow if length > u64::max_value() / 8.
+        // The result can still overflow if length > u64::MAX / 8.
         // Should be impossible for a user to trigger, because update() processes
         // in SHA384_BLOCKSIZE chunks.
-        debug_assert!(length <= u64::max_value() / 8);
+        debug_assert!(length <= u64::MAX / 8);
 
         // left-shift to get bit-sized representation of length
         // using .unwrap() because it should not panic in practice
@@ -370,7 +370,7 @@ mod private {
             context.increment_mlen(12);
             assert!(context.message_len == [0u64, 240u64]);
             // Overflow
-            context.increment_mlen(u64::max_value() / 8);
+            context.increment_mlen(u64::MAX / 8);
             assert!(context.message_len == [1u64, 232u64]);
         }
 
@@ -381,10 +381,10 @@ mod private {
                 working_state: H0,
                 buffer: [0u8; SHA384_BLOCKSIZE],
                 leftover: 0,
-                message_len: [u64::max_value(), u64::max_value() - 7],
+                message_len: [u64::MAX, u64::MAX - 7],
                 is_finalized: false,
             };
-            // u64::max_value() - 7, to leave so that the length represented
+            // u64::MAX - 7, to leave so that the length represented
             // in bites should overflow by exactly one.
             context.increment_mlen(1);
         }

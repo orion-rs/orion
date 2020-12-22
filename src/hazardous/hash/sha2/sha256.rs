@@ -172,10 +172,10 @@ impl Sha256 {
     /// Increment the message length during processing of data.
     fn increment_mlen(&mut self, length: u32) {
         // The checked shift checks that the right-hand side is a legal shift.
-        // The result can still overflow if length > u32::max_value() / 8.
+        // The result can still overflow if length > u32::MAX / 8.
         // Should be impossible for a user to trigger, because update() processes
         // in SHA256_BLOCKSIZE chunks.
-        debug_assert!(length <= u32::max_value() / 8);
+        debug_assert!(length <= u32::MAX / 8);
 
         // left-shift to get bit-sized representation of length
         // using .unwrap() because it should not panic in practice
@@ -387,7 +387,7 @@ mod private {
             context.increment_mlen(12);
             assert!(context.message_len == [0u32, 240u32]);
             // Overflow
-            context.increment_mlen(u32::max_value() / 8);
+            context.increment_mlen(u32::MAX / 8);
             assert!(context.message_len == [1u32, 232u32]);
         }
 
@@ -398,10 +398,10 @@ mod private {
                 working_state: H0,
                 buffer: [0u8; SHA256_BLOCKSIZE],
                 leftover: 0,
-                message_len: [u32::max_value(), u32::max_value() - 7],
+                message_len: [u32::MAX, u32::MAX - 7],
                 is_finalized: false,
             };
-            // u32::max_value() - 7, to leave so that the length represented
+            // u32::MAX - 7, to leave so that the length represented
             // in bites should overflow by exactly one.
             context.increment_mlen(1);
         }
