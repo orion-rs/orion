@@ -58,9 +58,9 @@
 //! [`finalize()`]: struct.Sha384.html
 //! [BLAKE2b]: ../blake2b/index.html
 
+use super::{ch, maj};
 use crate::{
     errors::UnknownCryptoError,
-    hazardous::hash::sha2::common::{ch, maj},
     util::endianness::{load_u64_into_be, store_u64_into_be},
 };
 
