@@ -33,7 +33,6 @@ fn sha512_test_runner(data: &[u8], output: &[u8]) {
     assert!(digest.as_ref() == output);
 }
 
-// TODO: Refactor
 fn sha256_test_runner(data: &[u8], output: &[u8]) {
     let mut state = sha256::Sha256::new();
     state.update(data).unwrap();
@@ -45,7 +44,6 @@ fn sha256_test_runner(data: &[u8], output: &[u8]) {
     assert!(digest.as_ref() == output);
 }
 
-// TODO: Refactor
 fn sha384_test_runner(data: &[u8], output: &[u8]) {
     let mut state = sha384::Sha384::new();
     state.update(data).unwrap();
@@ -57,7 +55,7 @@ fn sha384_test_runner(data: &[u8], output: &[u8]) {
     assert!(digest.as_ref() == output);
 }
 
-/// NISTs SHA256/512 Long/Short share the same format,
+/// NISTs SHA256/384/512 Long/Short share the same format,
 /// so fields and separator remain the same.
 fn nist_cavp_runner(path: &str) {
     let nist_cavp_fields: Vec<String> = vec!["Len".into(), "Msg".into(), "MD".into()];
@@ -76,12 +74,12 @@ fn nist_cavp_runner(path: &str) {
             sha256_test_runner(&input[..], &expected_output[..]);
             ran_any_runner = true;
         }
-        if path.contains("SHA512") {
-            sha512_test_runner(&input[..], &expected_output[..]);
-            ran_any_runner = true;
-        }
         if path.contains("SHA384") {
             sha384_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
+        }
+        if path.contains("SHA512") {
+            sha512_test_runner(&input[..], &expected_output[..]);
             ran_any_runner = true;
         }
 
