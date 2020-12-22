@@ -31,6 +31,7 @@
 //!
 //! # Panics:
 //! A panic will occur if:
+//! - More than 2*(2^32-1) __bits__ of data are hashed.
 //!
 //! # Security:
 //! - SHA256 is vulnerable to length extension attacks.

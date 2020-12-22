@@ -31,6 +31,7 @@
 //!
 //! # Panics:
 //! A panic will occur if:
+//! - More than 2*(2^64-1) __bits__ of data are hashed.
 //!
 //! # Security:
 //! - SHA384 is vulnerable to length extension attacks.
