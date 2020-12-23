@@ -14,7 +14,7 @@ Currently supports:
 ### Security
 This library has **not undergone any third-party security audit**. Usage is at **own risk**.
 
-See the [SECURITY.md](https://github.com/brycx/orion/blob/master/CHANGELOG.md) regarding recommendations on correct use, reporting security issues and more. Additional information about security regarding Orion is available in the [wiki](https://github.com/brycx/orion/wiki/Security).
+See the [SECURITY.md](https://github.com/brycx/orion/blob/master/SECURITY.md) regarding recommendations on correct use, reporting security issues and more. Additional information about security regarding Orion is available in the [wiki](https://github.com/brycx/orion/wiki/Security).
 
 ### Minimum Supported Rust Version
 Rust 1.43 or later is supported however, the majority of testing happens with latest stable Rust.
