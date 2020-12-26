@@ -25,28 +25,16 @@ Quality of documentation is a vital part of this project. Contributions to this 
 
 Try to make changes adhere to the [Rust API Guidelines](https://rust-lang-nursery.github.io/api-guidelines/checklist.html) as much as possible.
 
-### 2. Bug Reports
-A bug report should _ideally_ include all the information in this template:
+### 2. Bug Reports and Feature Requests
+There are templates for both these scenarios, please see the `.github/ISSUE_TEMPLATE/` directory.
 
-```
-Brief description:
-
-Steps to reproduce:
-
-Expected result:
-
-Actual result:
-
-Additional information:
-    - Rust version ($ rustc -V)
-    - orion version
-```
-
-Bug reports don't need to strictly follow this template but in most cases, more information about the bug makes it easier to analyze and fix.
+A bug report or feature request should _ideally_ follow the provided templates. It's not a strict requirement but in most cases, more information about the bug or feature makes it easier to fix/evaluate.
 
 ### 3. Pull Requests
 
 Before submitting a pull request, please make sure you have done the following:
+
+- [ ] Explain what the pull request changes, in the description of the GitHub PR, or link to the relevant issue.
 
 - [ ] A change or addition of functionality is covered by unit-tests.
 
@@ -60,12 +48,8 @@ Before submitting a pull request, please make sure you have done the following:
   - `cargo clippy`
   - `cargo fmt`
 
-- [ ] Explain what the pull request changes, in the description of the GitHub PR.
 - [ ] If the pull request is a bugfix, try to include a regression test for the bug.
 
 All pull requests should be opened against the `master` branch.
 
-If your pull request is still work-in-progress, make the title of the pull request start with `[WIP]`.
-
-### 4. Feature Requests
-A request for a new feature should be started in a GitHub issue. This issue should explain what feature is requested, why it is requested and, if applicable, the use-case behind it.
+If your pull request is still work-in-progress, make the title of the pull request start with `WIP:`.
