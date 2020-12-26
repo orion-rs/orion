@@ -2,7 +2,7 @@
 [![Tests](https://github.com/brycx/orion/workflows/Tests/badge.svg)](https://github.com/brycx/orion/actions) [![Daily tests](https://github.com/brycx/orion/workflows/Daily%20tests/badge.svg)](https://github.com/brycx/orion/actions) [![dudect](https://github.com/brycx/orion-dudect/workflows/dudect/badge.svg)](https://github.com/brycx/orion-dudect/actions)  [![Security Audit](https://github.com/brycx/orion/workflows/Security%20Audit/badge.svg)](https://github.com/brycx/orion/actions) [![codecov](https://codecov.io/gh/brycx/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/brycx/orion) [![Documentation](https://docs.rs/orion/badge.svg)](https://docs.rs/orion/) [![Crates.io](https://img.shields.io/crates/v/orion.svg)](https://crates.io/crates/orion) [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/) [![MSRV](https://img.shields.io/badge/MSRV-1.43-informational.svg)](https://img.shields.io/badge/MSRV-1.43-informational) [![Matrix](https://img.shields.io/matrix/orion-rs:matrix.org.svg?logo=matrix)](https://matrix.to/#/#orion-rs:matrix.org)
 
 ### About
-Orion is a cryptography library written in pure Rust. It aims to provide easy and usable crypto while trying to minimize the use of unsafe code. You can read more about orion in the [wiki](https://github.com/brycx/orion/wiki).
+Orion is a cryptography library written in pure Rust. It aims to provide easy and usable crypto while trying to minimize the use of unsafe code. You can read more about Orion in the [wiki](https://github.com/brycx/orion/wiki).
 
 Currently supports:
 * **AEAD**: (X)ChaCha20Poly1305.

@@ -33,5 +33,5 @@ Any version which is affected by a security issue, will be yanked. Even though w
 The are recommendations on how to use Orion correctly:
 
 - Use `cargo audit` to ensure the current version has no published security vulnerabilities
-- Never use `opt-level=0`, always use build in release mode
+- Never use `opt-level=0`, always build in release mode
 - Always use the latest version of Orion
