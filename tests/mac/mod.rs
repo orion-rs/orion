@@ -5,7 +5,7 @@ pub mod rfc_hmac;
 pub mod rfc_poly1305;
 pub mod wycheproof_hmac_sha512;
 
-use orion::hazardous::hash::sha512::SHA512_OUTSIZE;
+use orion::hazardous::hash::sha2::sha512::SHA512_OUTSIZE;
 use orion::hazardous::mac::{hmac, poly1305};
 use poly1305::{OneTimeKey, Tag};
 
