@@ -41,7 +41,7 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::hash::sha512::Sha512;
+//! use orion::hazardous::hash::sha2::sha512::Sha512;
 //!
 //! // Using the streaming interface
 //! let mut state = Sha512::new();
@@ -59,6 +59,7 @@
 //! [`finalize()`]: struct.Sha512.html
 //! [BLAKE2b]: ../blake2b/index.html
 
+use super::{ch, maj};
 use crate::{
     errors::UnknownCryptoError,
     util::endianness::{load_u64_into_be, store_u64_into_be},
@@ -83,7 +84,7 @@ impl_from_trait!(Digest, SHA512_OUTSIZE);
 #[rustfmt::skip]
 #[allow(clippy::unreadable_literal)]
 /// The SHA512 constants as defined in FIPS 180-4.
-const K: [u64; 80] = [
+pub(crate) const K: [u64; 80] = [
     0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
     0x3956c25bf348b538, 0x59f111f1b605d019, 0x923f82a4af194f9b, 0xab1c5ed5da6d8118,
     0xd807aa98a3030242, 0x12835b0145706fbe, 0x243185be4ee4b28c, 0x550c7dc3d5ffb4e2,
@@ -113,6 +114,26 @@ const H0: [u64; 8] = [
     0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179,
 ];
+
+/// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) const fn big_sigma_0(x: u64) -> u64 {
+    (x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39)
+}
+
+/// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) const fn big_sigma_1(x: u64) -> u64 {
+    (x.rotate_right(14)) ^ x.rotate_right(18) ^ x.rotate_right(41)
+}
+
+/// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) const fn small_sigma_0(x: u64) -> u64 {
+    (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7)
+}
+
+/// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) const fn small_sigma_1(x: u64) -> u64 {
+    (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6)
+}
 
 #[derive(Clone)]
 /// SHA512 streaming state.
@@ -151,114 +172,7 @@ impl Default for Sha512 {
 }
 
 impl Sha512 {
-    /// The Ch function as specified in FIPS 180-4 section 4.1.3.
-    const fn ch(x: u64, y: u64, z: u64) -> u64 {
-        z ^ (x & (y ^ z))
-    }
-
-    /// The Maj function as specified in FIPS 180-4 section 4.1.3.
-    const fn maj(x: u64, y: u64, z: u64) -> u64 {
-        (x & y) | (z & (x | y))
-    }
-
-    /// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-    const fn big_sigma_0(x: u64) -> u64 {
-        (x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39)
-    }
-
-    /// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-    const fn big_sigma_1(x: u64) -> u64 {
-        (x.rotate_right(14)) ^ x.rotate_right(18) ^ x.rotate_right(41)
-    }
-
-    /// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-    const fn small_sigma_0(x: u64) -> u64 {
-        (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7)
-    }
-
-    /// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-    const fn small_sigma_1(x: u64) -> u64 {
-        (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6)
-    }
-
-    #[allow(clippy::many_single_char_names)]
-    #[allow(clippy::too_many_arguments)]
-    /// Message compression adopted from [mbed
-    /// TLS](https://github.com/ARMmbed/mbedtls/blob/master/library/sha512.c).
-    fn compress(
-        a: u64,
-        b: u64,
-        c: u64,
-        d: &mut u64,
-        e: u64,
-        f: u64,
-        g: u64,
-        h: &mut u64,
-        x: u64,
-        ki: u64,
-    ) {
-        let temp1 = h
-            .wrapping_add(Self::big_sigma_1(e))
-            .wrapping_add(Self::ch(e, f, g))
-            .wrapping_add(ki)
-            .wrapping_add(x);
-
-        let temp2 = Self::big_sigma_0(a).wrapping_add(Self::maj(a, b, c));
-
-        *d = d.wrapping_add(temp1);
-        *h = temp1.wrapping_add(temp2);
-    }
-
-    #[rustfmt::skip]
-	#[allow(clippy::many_single_char_names)]
-    /// Process data in `self.buffer` or optionally `data`.
-    fn process(&mut self, data: Option<&[u8]>) {
-		let mut w = [0u64; 80];
-		match data {
-			Some(bytes) => {
-				debug_assert!(bytes.len() == SHA512_BLOCKSIZE);
-				load_u64_into_be(bytes, &mut w[..16]);
-			}
-			None => load_u64_into_be(&self.buffer, &mut w[..16]),
-		}
-
-		for t in 16..80 {
-			w[t] = Self::small_sigma_1(w[t - 2])
-				.wrapping_add(w[t - 7])
-				.wrapping_add(Self::small_sigma_0(w[t - 15]))
-				.wrapping_add(w[t - 16]);
-		}
-
-		let mut a = self.working_state[0];
-		let mut b = self.working_state[1];
-		let mut c = self.working_state[2];
-		let mut d = self.working_state[3];
-		let mut e = self.working_state[4];
-		let mut f = self.working_state[5];
-		let mut g = self.working_state[6];
-		let mut h = self.working_state[7];
-
-		let mut t = 0;
-		while t < 80 {
-			Self::compress(a, b, c, &mut d, e, f, g, &mut h, w[t], K[t]); t += 1;
-			Self::compress(h, a, b, &mut c, d, e, f, &mut g, w[t], K[t]); t += 1;
-			Self::compress(g, h, a, &mut b, c, d, e, &mut f, w[t], K[t]); t += 1;
-			Self::compress(f, g, h, &mut a, b, c, d, &mut e, w[t], K[t]); t += 1;
-			Self::compress(e, f, g, &mut h, a, b, c, &mut d, w[t], K[t]); t += 1;
-			Self::compress(d, e, f, &mut g, h, a, b, &mut c, w[t], K[t]); t += 1;
-			Self::compress(c, d, e, &mut f, g, h, a, &mut b, w[t], K[t]); t += 1;
-			Self::compress(b, c, d, &mut e, f, g, h, &mut a, w[t], K[t]); t += 1;
-		}
-
-		self.working_state[0] = self.working_state[0].wrapping_add(a);
-		self.working_state[1] = self.working_state[1].wrapping_add(b);
-		self.working_state[2] = self.working_state[2].wrapping_add(c);
-		self.working_state[3] = self.working_state[3].wrapping_add(d);
-		self.working_state[4] = self.working_state[4].wrapping_add(e);
-		self.working_state[5] = self.working_state[5].wrapping_add(f);
-		self.working_state[6] = self.working_state[6].wrapping_add(g);
-		self.working_state[7] = self.working_state[7].wrapping_add(h);
-	}
+    func_compress_and_process!(SHA512_BLOCKSIZE, u64, 0u64, load_u64_into_be, 80);
 
     /// Increment the message length during processing of data.
     fn increment_mlen(&mut self, length: u64) {
@@ -300,57 +214,7 @@ impl Sha512 {
         self.is_finalized = false;
     }
 
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Update state with `data`. This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-        if self.is_finalized {
-            return Err(UnknownCryptoError);
-        }
-        if data.is_empty() {
-            return Ok(());
-        }
-
-        let mut bytes = data;
-
-        if self.leftover != 0 {
-            debug_assert!(self.leftover <= SHA512_BLOCKSIZE);
-
-            let mut want = SHA512_BLOCKSIZE - self.leftover;
-            if want > bytes.len() {
-                want = bytes.len();
-            }
-
-            for (idx, itm) in bytes.iter().enumerate().take(want) {
-                self.buffer[self.leftover + idx] = *itm;
-            }
-
-            bytes = &bytes[want..];
-            self.leftover += want;
-            self.increment_mlen(want as u64);
-
-            if self.leftover < SHA512_BLOCKSIZE {
-                return Ok(());
-            }
-
-            self.process(None);
-            self.leftover = 0;
-        }
-
-        while bytes.len() >= SHA512_BLOCKSIZE {
-            self.process(Some(bytes[..SHA512_BLOCKSIZE].as_ref()));
-            self.increment_mlen(SHA512_BLOCKSIZE as u64);
-            bytes = &bytes[SHA512_BLOCKSIZE..];
-        }
-
-        if !bytes.is_empty() {
-            debug_assert!(self.leftover == 0);
-            self.buffer[..bytes.len()].copy_from_slice(bytes);
-            self.leftover = bytes.len();
-            self.increment_mlen(bytes.len() as u64);
-        }
-
-        Ok(())
-    }
+    func_update!(SHA512_BLOCKSIZE, u64);
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Return a SHA512 digest.
