@@ -158,7 +158,7 @@ mod hash {
             );
         }
     }
-    
+
     pub fn bench_sha384(c: &mut Criterion) {
         let mut group = c.benchmark_group("SHA384");
 
@@ -173,7 +173,7 @@ mod hash {
             );
         }
     }
-    
+
     pub fn bench_sha512(c: &mut Criterion) {
         let mut group = c.benchmark_group("SHA512");
 

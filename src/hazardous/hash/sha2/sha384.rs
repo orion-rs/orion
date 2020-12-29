@@ -62,6 +62,7 @@
 use super::{ch, maj};
 use crate::{
     errors::UnknownCryptoError,
+    hazardous::hash::sha2::sha512::{big_sigma_0, big_sigma_1, small_sigma_0, small_sigma_1},
     util::endianness::{load_u64_into_be, store_u64_into_be},
 };
 
@@ -131,26 +132,6 @@ impl Default for Sha384 {
 }
 
 impl Sha384 {
-    /// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-    const fn big_sigma_0(x: u64) -> u64 {
-        (x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39)
-    }
-
-    /// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-    const fn big_sigma_1(x: u64) -> u64 {
-        (x.rotate_right(14)) ^ x.rotate_right(18) ^ x.rotate_right(41)
-    }
-
-    /// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-    const fn small_sigma_0(x: u64) -> u64 {
-        (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7)
-    }
-
-    /// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-    const fn small_sigma_1(x: u64) -> u64 {
-        (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6)
-    }
-
     func_compress_and_process!(SHA384_BLOCKSIZE, u64, 0u64, load_u64_into_be, 80);
 
     /// Increment the message length during processing of data.

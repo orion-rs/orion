@@ -115,6 +115,26 @@ const H0: [u64; 8] = [
     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179,
 ];
 
+/// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) const fn big_sigma_0(x: u64) -> u64 {
+    (x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39)
+}
+
+/// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) const fn big_sigma_1(x: u64) -> u64 {
+    (x.rotate_right(14)) ^ x.rotate_right(18) ^ x.rotate_right(41)
+}
+
+/// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) const fn small_sigma_0(x: u64) -> u64 {
+    (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7)
+}
+
+/// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
+pub(crate) const fn small_sigma_1(x: u64) -> u64 {
+    (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6)
+}
+
 #[derive(Clone)]
 /// SHA512 streaming state.
 pub struct Sha512 {
@@ -152,26 +172,6 @@ impl Default for Sha512 {
 }
 
 impl Sha512 {
-    /// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-    const fn big_sigma_0(x: u64) -> u64 {
-        (x.rotate_right(28)) ^ x.rotate_right(34) ^ x.rotate_right(39)
-    }
-
-    /// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-    const fn big_sigma_1(x: u64) -> u64 {
-        (x.rotate_right(14)) ^ x.rotate_right(18) ^ x.rotate_right(41)
-    }
-
-    /// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.3.
-    const fn small_sigma_0(x: u64) -> u64 {
-        (x.rotate_right(1)) ^ x.rotate_right(8) ^ (x >> 7)
-    }
-
-    /// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.3.
-    const fn small_sigma_1(x: u64) -> u64 {
-        (x.rotate_right(19)) ^ x.rotate_right(61) ^ (x >> 6)
-    }
-
     func_compress_and_process!(SHA512_BLOCKSIZE, u64, 0u64, load_u64_into_be, 80);
 
     /// Increment the message length during processing of data.

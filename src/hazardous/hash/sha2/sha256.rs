@@ -111,6 +111,26 @@ const H0: [u32; 8] = [
     0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
 ];
 
+/// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.2.
+const fn big_sigma_0(x: u32) -> u32 {
+    (x.rotate_right(2)) ^ x.rotate_right(13) ^ x.rotate_right(22)
+}
+
+/// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.2.
+const fn big_sigma_1(x: u32) -> u32 {
+    (x.rotate_right(6)) ^ x.rotate_right(11) ^ x.rotate_right(25)
+}
+
+/// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.2.
+const fn small_sigma_0(x: u32) -> u32 {
+    (x.rotate_right(7)) ^ x.rotate_right(18) ^ (x >> 3)
+}
+
+/// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.2.
+const fn small_sigma_1(x: u32) -> u32 {
+    (x.rotate_right(17)) ^ x.rotate_right(19) ^ (x >> 10)
+}
+
 #[derive(Clone)]
 /// SHA256 streaming state.
 pub struct Sha256 {
@@ -148,26 +168,6 @@ impl Default for Sha256 {
 }
 
 impl Sha256 {
-    /// The Big Sigma 0 function as specified in FIPS 180-4 section 4.1.2.
-    const fn big_sigma_0(x: u32) -> u32 {
-        (x.rotate_right(2)) ^ x.rotate_right(13) ^ x.rotate_right(22)
-    }
-
-    /// The Big Sigma 1 function as specified in FIPS 180-4 section 4.1.2.
-    const fn big_sigma_1(x: u32) -> u32 {
-        (x.rotate_right(6)) ^ x.rotate_right(11) ^ x.rotate_right(25)
-    }
-
-    /// The Small Sigma 0 function as specified in FIPS 180-4 section 4.1.2.
-    const fn small_sigma_0(x: u32) -> u32 {
-        (x.rotate_right(7)) ^ x.rotate_right(18) ^ (x >> 3)
-    }
-
-    /// The Small Sigma 1 function as specified in FIPS 180-4 section 4.1.2.
-    const fn small_sigma_1(x: u32) -> u32 {
-        (x.rotate_right(17)) ^ x.rotate_right(19) ^ (x >> 10)
-    }
-
     func_compress_and_process!(SHA256_BLOCKSIZE, u32, 0u32, load_u32_into_be, 64);
 
     /// Increment the message length during processing of data.

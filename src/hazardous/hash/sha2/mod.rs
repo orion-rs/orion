@@ -110,12 +110,12 @@ macro_rules! func_compress_and_process (($blocksize:expr, $primitive:ident, $def
         ki: $primitive,
     ) {
         let temp1 = h
-            .wrapping_add(Self::big_sigma_1(e))
+            .wrapping_add(big_sigma_1(e))
             .wrapping_add(ch(e, f, g))
             .wrapping_add(ki)
             .wrapping_add(x);
 
-        let temp2 = Self::big_sigma_0(a).wrapping_add(maj(a, b, c));
+        let temp2 = big_sigma_0(a).wrapping_add(maj(a, b, c));
 
         *d = d.wrapping_add(temp1);
         *h = temp1.wrapping_add(temp2);
@@ -135,9 +135,9 @@ macro_rules! func_compress_and_process (($blocksize:expr, $primitive:ident, $def
 		}
 
 		for t in 16..$w_size {
-			w[t] = Self::small_sigma_1(w[t - 2])
+			w[t] = small_sigma_1(w[t - 2])
 				.wrapping_add(w[t - 7])
-				.wrapping_add(Self::small_sigma_0(w[t - 15]))
+				.wrapping_add(small_sigma_0(w[t - 15]))
 				.wrapping_add(w[t - 16]);
 		}
 
