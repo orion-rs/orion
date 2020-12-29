@@ -144,6 +144,36 @@ mod aead {
 mod hash {
     use super::*;
 
+    pub fn bench_sha256(c: &mut Criterion) {
+        let mut group = c.benchmark_group("SHA256");
+
+        for size in INPUT_SIZES.iter() {
+            let input = vec![0u8; *size];
+
+            group.throughput(Throughput::Bytes(*size as u64));
+            group.bench_with_input(
+                BenchmarkId::new("compute hash", *size),
+                &input,
+                |b, input_message| b.iter(|| sha2::sha256::Sha256::digest(&input_message).unwrap()),
+            );
+        }
+    }
+
+    pub fn bench_sha384(c: &mut Criterion) {
+        let mut group = c.benchmark_group("SHA384");
+
+        for size in INPUT_SIZES.iter() {
+            let input = vec![0u8; *size];
+
+            group.throughput(Throughput::Bytes(*size as u64));
+            group.bench_with_input(
+                BenchmarkId::new("compute hash", *size),
+                &input,
+                |b, input_message| b.iter(|| sha2::sha384::Sha384::digest(&input_message).unwrap()),
+            );
+        }
+    }
+
     pub fn bench_sha512(c: &mut Criterion) {
         let mut group = c.benchmark_group("SHA512");
 
@@ -154,7 +184,7 @@ mod hash {
             group.bench_with_input(
                 BenchmarkId::new("compute hash", *size),
                 &input,
-                |b, input_message| b.iter(|| sha512::Sha512::digest(&input_message).unwrap()),
+                |b, input_message| b.iter(|| sha2::sha512::Sha512::digest(&input_message).unwrap()),
             );
         }
     }
@@ -180,6 +210,8 @@ mod hash {
         name = hash_benches;
         config = Criterion::default();
         targets =
+        bench_sha256,
+        bench_sha384,
         bench_sha512,
         bench_blake2b_512,
     }
