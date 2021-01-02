@@ -399,10 +399,11 @@ pub fn hash_password(
 /// let hash1 = pwhash::hash_password(&password1, 3, 1<<16)?;
 /// let hash2 = pwhash::hash_password(&password2, 4, 2<<16)?;
 ///
-/// // We don't have to remember which password used what parameters when it
+/// // We don't have to remember which password used what parameters when it's
 /// // time to verify them.
 /// assert!(pwhash::hash_password_verify(&hash1, &password1).is_ok());
 /// assert!(pwhash::hash_password_verify(&hash2, &password2).is_ok());
+/// assert!(pwhash::hash_password_verify(&hash1, &password2).is_err());
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
