@@ -382,8 +382,8 @@ pub fn hash_password(
     PasswordHash::from_slice(buffer.as_ref(), salt.as_ref(), iterations, memory)
 }
 
-/// Hash and verify a password using Argon2i. The Argon2i parameters "iterations"
-/// and "memory" will be pulled from the `expected: &PasswordHash` argument. If
+/// Hash and verify a password using Argon2i. The Argon2i parameters `iterations`
+/// and `memory` will be pulled from the `expected: &PasswordHash` argument. If
 /// you want to manually specify the iterations and memory for Argon2i to use in
 /// hashing the `password` argument, see the
 /// [hash_password_verify_with](crate::pwhash::hash_password_verify_with) function.
