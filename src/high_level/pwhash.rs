@@ -386,7 +386,7 @@ pub fn hash_password(
 /// and `memory` will be pulled from the `expected: &PasswordHash` argument. If
 /// you want to manually specify the iterations and memory for Argon2i to use in
 /// hashing the `password` argument, see the
-/// [hash_password_verify_with](crate::pwhash::hash_password_verify_with) function.
+/// [`hazardous::kdf`](crate::hazardous::kdf::argon2i) module.
 ///
 /// # Example:
 /// ```rust
