@@ -425,50 +425,6 @@ pub fn hash_password_verify(
     )
 }
 
-/// Hash and verify a password using Argon2i. If you want the parameters for the Argon2i
-/// hash to be automatically detected (which you likely do), please see the
-/// [hash_password_verify](crate::pwhash::hash_password_verify) function.
-///
-/// # Example:
-/// ```rust
-/// use orion::pwhash;
-///
-/// let password = pwhash::Password::from_slice(b"Secret password")?;
-/// let hash = pwhash::hash_password(&password, 3, 1<<16)?;
-///
-/// // Correct paramters
-/// assert!(pwhash::hash_password_verify_with(&hash, &password, 3, 1<<16).is_ok());
-///
-/// // Incorrect parameters
-/// assert!(pwhash::hash_password_verify_with(&hash, &password, 3, 1<<15).is_err());
-/// assert!(pwhash::hash_password_verify_with(&hash, &password, 4, 1<<16).is_err());
-/// # Ok::<(), orion::errors::UnknownCryptoError>(())
-/// ```
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-pub fn hash_password_verify_with(
-    expected: &PasswordHash,
-    password: &Password,
-    iterations: u32,
-    memory: u32,
-) -> Result<(), UnknownCryptoError> {
-    if iterations < MIN_ITERATIONS {
-        return Err(UnknownCryptoError);
-    }
-
-    let mut buffer = Zeroizing::new([0u8; PWHASH_LENGTH]);
-
-    argon2i::verify(
-        expected.unprotected_as_bytes(),
-        password.unprotected_as_bytes(),
-        expected.salt.as_ref(),
-        iterations,
-        memory,
-        None,
-        None,
-        buffer.as_mut(),
-    )
-}
-
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -896,35 +852,6 @@ mod public {
             let modified = PasswordHash::from_slice(&pwd_mod, &salt_mod, 3, 4096).unwrap();
 
             assert!(hash_password_verify(&modified, &password).is_err());
-        }
-    }
-
-    mod test_pwhash_and_verify_with {
-        use super::*;
-
-        #[test]
-        fn test_argon2i_invalid_iterations() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let password_hash = PasswordHash::from_encoded("$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c").unwrap();
-            assert!(hash_password(&password, MIN_ITERATIONS - 1, 4096).is_err());
-            assert!(
-                hash_password_verify_with(&password_hash, &password, MIN_ITERATIONS - 1, 4096)
-                    .is_err()
-            );
-        }
-
-        #[test]
-        fn test_argon2i_invalid_memory() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let password_hash = PasswordHash::from_encoded("$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c").unwrap();
-            assert!(hash_password(&password, MIN_ITERATIONS, MIN_MEMORY - 1).is_err());
-            assert!(hash_password_verify_with(
-                &password_hash,
-                &password,
-                MIN_ITERATIONS,
-                MIN_MEMORY - 1
-            )
-            .is_err());
         }
     }
 }
