@@ -136,13 +136,12 @@ macro_rules! impl_from_trait (($name:ident, $size:expr) => (
 /// $upper_bound.
 macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    #[allow(clippy::double_comparisons)]
     /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
 
         let slice_len = slice.len();
 
-        if slice_len < $lower_bound || slice_len > $upper_bound {
+        if !($lower_bound..=$upper_bound).contains(&slice_len) {
             return Err(UnknownCryptoError);
         }
 

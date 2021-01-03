@@ -314,7 +314,7 @@ impl Blake2b {
     #[allow(clippy::unreadable_literal)]
     /// Initialize a `Blake2b` struct with a given size and an optional key.
     pub fn new(secret_key: Option<&SecretKey>, size: usize) -> Result<Self, UnknownCryptoError> {
-        if size < 1 || size > BLAKE2B_OUTSIZE {
+        if !(1..=BLAKE2B_OUTSIZE).contains(&size) {
             return Err(UnknownCryptoError);
         }
 

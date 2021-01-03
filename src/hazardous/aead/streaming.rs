@@ -311,10 +311,7 @@ impl StreamXChaCha20Poly1305 {
         };
 
         let mut block = [0u8; CHACHA_BLOCKSIZE];
-        let ad = match ad {
-            Some(v) => v,
-            None => &[0u8; 0],
-        };
+        let ad = ad.unwrap_or(&[0u8; 0]);
 
         let macpos = TAG_SIZE + msglen;
         let nonce = self.get_nonce();
@@ -352,10 +349,7 @@ impl StreamXChaCha20Poly1305 {
         }
 
         let mut block = [0u8; CHACHA_BLOCKSIZE];
-        let ad = match ad {
-            Some(v) => v,
-            None => &[0u8; 0],
-        };
+        let ad = ad.unwrap_or(&[0u8; 0]);
 
         let macpos = TAG_SIZE + msglen;
         let nonce = self.get_nonce();

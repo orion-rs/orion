@@ -92,10 +92,7 @@ pub fn expand(
         return Err(UnknownCryptoError);
     }
 
-    let optional_info = match info {
-        Some(n_val) => n_val,
-        None => &[0u8; 0],
-    };
+    let optional_info = info.unwrap_or(&[0u8; 0]);
 
     let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
     let okm_len = dst_out.len();
