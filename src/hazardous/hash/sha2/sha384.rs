@@ -210,7 +210,7 @@ impl Sha384 {
         self.process(None);
 
         debug_assert!(digest_dst.len() == SHA384_BLOCKSIZE);
-        store_u64_into_be(&self.working_state[..6], &mut digest_dst);
+        store_u64_into_be(&self.working_state[..6], digest_dst);
 
         Ok(())
     }

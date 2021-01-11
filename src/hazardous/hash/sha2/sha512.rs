@@ -250,7 +250,7 @@ impl Sha512 {
         self.process(None);
 
         debug_assert!(digest_dst.len() == SHA512_OUTSIZE);
-        store_u64_into_be(&self.working_state, &mut digest_dst);
+        store_u64_into_be(&self.working_state, digest_dst);
 
         Ok(())
     }
