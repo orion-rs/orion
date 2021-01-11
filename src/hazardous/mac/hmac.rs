@@ -94,6 +94,368 @@ construct_tag! {
 
 impl_from_trait!(Tag, SHA512_OUTSIZE);
 
+pub(crate) struct HmacGeneric<T, const BLOCKSIZE: usize, const OUTSIZE: usize> {
+    working_hasher: T,
+    opad_hasher: T,
+    ipad_hasher: T,
+    pub(crate) buffer: [u8; OUTSIZE],
+    is_finalized: bool,
+}
+
+impl<T, const BLOCKSIZE: usize, const OUTSIZE: usize> HmacGeneric<T, BLOCKSIZE, OUTSIZE>
+where
+    T: crate::hazardous::hash::sha2::Sha2Hash,
+{
+    /// Pad `key` with `ipad` and `opad`.
+    fn pad_key_io(&mut self, key: &[u8]) {
+        debug_assert!(key.len() == BLOCKSIZE);
+        let mut ipad = [0x36; BLOCKSIZE];
+        let mut opad = [0x5C; BLOCKSIZE];
+        // The key is padded in SecretKey::from_slice
+        for (idx, itm) in key.iter().enumerate() {
+            opad[idx] ^= itm;
+            ipad[idx] ^= itm;
+        }
+
+        self.ipad_hasher.update(ipad.as_ref()).unwrap();
+        self.opad_hasher.update(opad.as_ref()).unwrap();
+        self.working_hasher = self.ipad_hasher.clone();
+        ipad.zeroize();
+        opad.zeroize();
+    }
+
+    /// Initialize `Hmac` struct with a given key.
+    fn new(secret_key: &[u8]) -> Self {
+        let mut state = Self {
+            working_hasher: T::new(),
+            opad_hasher: T::new(),
+            ipad_hasher: T::new(),
+            buffer: [0u8; OUTSIZE],
+            is_finalized: false,
+        };
+
+        state.pad_key_io(secret_key);
+        state
+    }
+
+    /// Reset to `new()` state.
+    fn reset(&mut self) {
+        self.working_hasher = self.ipad_hasher.clone();
+        self.is_finalized = false;
+    }
+
+    /// Update state with `data`. This can be called multiple times.
+    fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            Err(UnknownCryptoError)
+        } else {
+            self.working_hasher.update(data)
+        }
+    }
+
+    /// Return a HMAC-SHA512 tag.
+    fn finalize(&mut self) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+
+        self.is_finalized = true;
+        let mut outer_hasher = self.opad_hasher.clone();
+        self.working_hasher.finalize(&mut self.buffer)?;
+        outer_hasher.update(&self.buffer)?;
+
+        outer_hasher.finalize(&mut self.buffer)
+    }
+}
+
+mod NewHmac {
+    use super::HmacGeneric;
+    use crate::errors::UnknownCryptoError;
+    use zeroize::Zeroize;
+
+    mod sha256 {
+        use super::*;
+        use crate::hazardous::hash::sha2::sha256;
+
+        construct_hmac_key! {
+            /// A type to represent the `SecretKey` that HMAC uses for authentication.
+            ///
+            /// # Note:
+            /// `SecretKey` pads the secret key for use with HMAC to a length of 64, when initialized.
+            ///
+            /// Using `unprotected_as_bytes()` will return the secret key with padding.
+            ///
+            /// `len()` will return the length with padding (always 64).
+            ///
+            /// # Panics:
+            /// A panic will occur if:
+            /// - Failure to generate random bytes securely.
+            (SecretKey, test_hmac_key, sha256::SHA256_BLOCKSIZE)
+        }
+
+        construct_tag! {
+            /// A type to represent the `Tag` that HMAC returns.
+            ///
+            /// # Errors:
+            /// An error will be returned if:
+            /// - `slice` is not 32 bytes.
+            (Tag, test_tag, sha256::SHA256_OUTSIZE, sha256::SHA256_OUTSIZE)
+        }
+
+        impl_from_trait!(Tag, sha256::SHA256_OUTSIZE);
+
+        pub struct HmacSha256 {
+            _internal: HmacGeneric<
+                sha256::Sha256,
+                { sha256::SHA256_BLOCKSIZE },
+                { sha256::SHA256_OUTSIZE },
+            >,
+        }
+
+        impl HmacSha256 {
+            /// Initialize `Hmac` struct with a given key.
+            pub fn new(secret_key: &SecretKey) -> Self {
+                Self {
+                    _internal: HmacGeneric::<
+                        sha256::Sha256,
+                        { sha256::SHA256_BLOCKSIZE },
+                        { sha256::SHA256_OUTSIZE },
+                    >::new(secret_key.unprotected_as_bytes()),
+                }
+            }
+
+            /// Reset to `new()` state.
+            pub fn reset(&mut self) {
+                self._internal.reset();
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// Update state with `data`. This can be called multiple times.
+            pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+                self._internal.update(data)
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// Return a HMAC-SHA256 tag.
+            pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
+                self._internal.finalize()?;
+
+                Tag::from_slice(&self._internal.buffer)
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// One-shot function for generating an HMAC-SHA256 tag of `data`.
+            pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
+                let mut state = Self::new(secret_key);
+                state.update(data)?;
+                state.finalize()
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// Verify a HMAC-SHA256 tag in constant time.
+            pub fn verify(
+                expected: &Tag,
+                secret_key: &SecretKey,
+                data: &[u8],
+            ) -> Result<(), UnknownCryptoError> {
+                if &Self::hmac(secret_key, data)? == expected {
+                    Ok(())
+                } else {
+                    Err(UnknownCryptoError)
+                }
+            }
+        }
+    }
+
+    mod sha384 {
+        use super::*;
+        use crate::hazardous::hash::sha2::sha384;
+
+        construct_hmac_key! {
+            /// A type to represent the `SecretKey` that HMAC uses for authentication.
+            ///
+            /// # Note:
+            /// `SecretKey` pads the secret key for use with HMAC to a length of 128, when initialized.
+            ///
+            /// Using `unprotected_as_bytes()` will return the secret key with padding.
+            ///
+            /// `len()` will return the length with padding (always 128).
+            ///
+            /// # Panics:
+            /// A panic will occur if:
+            /// - Failure to generate random bytes securely.
+            (SecretKey, test_hmac_key, sha384::SHA384_BLOCKSIZE)
+        }
+
+        construct_tag! {
+            /// A type to represent the `Tag` that HMAC returns.
+            ///
+            /// # Errors:
+            /// An error will be returned if:
+            /// - `slice` is not 48 bytes.
+            (Tag, test_tag, sha384::SHA384_OUTSIZE, sha384::SHA384_OUTSIZE)
+        }
+
+        impl_from_trait!(Tag, sha384::SHA384_OUTSIZE);
+
+        pub struct HmacSha384 {
+            _internal: HmacGeneric<
+                sha384::Sha384,
+                { sha384::SHA384_BLOCKSIZE },
+                { sha384::SHA384_OUTSIZE },
+            >,
+        }
+
+        impl HmacSha384 {
+            /// Initialize `Hmac` struct with a given key.
+            pub fn new(secret_key: &SecretKey) -> Self {
+                Self {
+                    _internal: HmacGeneric::<
+                        sha384::Sha384,
+                        { sha384::SHA384_BLOCKSIZE },
+                        { sha384::SHA384_OUTSIZE },
+                    >::new(secret_key.unprotected_as_bytes()),
+                }
+            }
+
+            /// Reset to `new()` state.
+            pub fn reset(&mut self) {
+                self._internal.reset();
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// Update state with `data`. This can be called multiple times.
+            pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+                self._internal.update(data)
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// Return a HMAC-SHA384 tag.
+            pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
+                self._internal.finalize()?;
+
+                Tag::from_slice(&self._internal.buffer)
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// One-shot function for generating an HMAC-SHA384 tag of `data`.
+            pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
+                let mut state = Self::new(secret_key);
+                state.update(data)?;
+                state.finalize()
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// Verify a HMAC-SHA384 tag in constant time.
+            pub fn verify(
+                expected: &Tag,
+                secret_key: &SecretKey,
+                data: &[u8],
+            ) -> Result<(), UnknownCryptoError> {
+                if &Self::hmac(secret_key, data)? == expected {
+                    Ok(())
+                } else {
+                    Err(UnknownCryptoError)
+                }
+            }
+        }
+    }
+
+    mod sha512 {
+        use super::*;
+        use crate::hazardous::hash::sha2::sha512;
+
+        construct_hmac_key! {
+            /// A type to represent the `SecretKey` that HMAC uses for authentication.
+            ///
+            /// # Note:
+            /// `SecretKey` pads the secret key for use with HMAC to a length of 128, when initialized.
+            ///
+            /// Using `unprotected_as_bytes()` will return the secret key with padding.
+            ///
+            /// `len()` will return the length with padding (always 128).
+            ///
+            /// # Panics:
+            /// A panic will occur if:
+            /// - Failure to generate random bytes securely.
+            (SecretKey, test_hmac_key, sha512::SHA512_BLOCKSIZE)
+        }
+
+        construct_tag! {
+            /// A type to represent the `Tag` that HMAC returns.
+            ///
+            /// # Errors:
+            /// An error will be returned if:
+            /// - `slice` is not 64 bytes.
+            (Tag, test_tag, sha512::SHA512_OUTSIZE, sha512::SHA512_OUTSIZE)
+        }
+
+        impl_from_trait!(Tag, sha512::SHA512_OUTSIZE);
+
+        pub struct HmacSha512 {
+            _internal: HmacGeneric<
+                sha512::Sha512,
+                { sha512::SHA512_BLOCKSIZE },
+                { sha512::SHA512_OUTSIZE },
+            >,
+        }
+
+        impl HmacSha512 {
+            /// Initialize `Hmac` struct with a given key.
+            pub fn new(secret_key: &SecretKey) -> Self {
+                Self {
+                    _internal: HmacGeneric::<
+                        sha512::Sha512,
+                        { sha512::SHA512_BLOCKSIZE },
+                        { sha512::SHA512_OUTSIZE },
+                    >::new(secret_key.unprotected_as_bytes()),
+                }
+            }
+
+            /// Reset to `new()` state.
+            pub fn reset(&mut self) {
+                self._internal.reset();
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// Update state with `data`. This can be called multiple times.
+            pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+                self._internal.update(data)
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// Return a HMAC-SHA512 tag.
+            pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
+                self._internal.finalize()?;
+
+                Tag::from_slice(&self._internal.buffer)
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// One-shot function for generating an HMAC-SHA512 tag of `data`.
+            pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
+                let mut state = Self::new(secret_key);
+                state.update(data)?;
+                state.finalize()
+            }
+
+            #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+            /// Verify a HMAC-SHA512 tag in constant time.
+            pub fn verify(
+                expected: &Tag,
+                secret_key: &SecretKey,
+                data: &[u8],
+            ) -> Result<(), UnknownCryptoError> {
+                if &Self::hmac(secret_key, data)? == expected {
+                    Ok(())
+                } else {
+                    Err(UnknownCryptoError)
+                }
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 /// HMAC-SHA512 streaming state.
 pub struct Hmac {

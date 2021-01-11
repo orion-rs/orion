@@ -216,16 +216,15 @@ impl Sha512 {
 
     func_update!(SHA512_BLOCKSIZE, u64);
 
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Return a SHA512 digest.
-    pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
+    fn _finalize_internal(&mut self, digest_dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
 
         self.is_finalized = true;
 
-        // self.leftover should not be greater than SHA512_BLCOKSIZE
+        // self.leftover should not be greater than SHA512_BLOCKSIZE
         // as that would have been processed in the update call
         debug_assert!(self.leftover < SHA512_BLOCKSIZE);
         self.buffer[self.leftover] = 0x80;
@@ -250,8 +249,17 @@ impl Sha512 {
 
         self.process(None);
 
+        debug_assert!(digest_dst.len() == SHA512_OUTSIZE);
+        store_u64_into_be(&self.working_state, &mut digest_dst);
+
+        Ok(())
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Return a SHA512 digest.
+    pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
         let mut digest = [0u8; SHA512_OUTSIZE];
-        store_u64_into_be(&self.working_state, &mut digest);
+        self._finalize_internal(&mut digest)?;
 
         Ok(Digest::from(digest))
     }
@@ -262,6 +270,20 @@ impl Sha512 {
         let mut state = Self::new();
         state.update(data)?;
         state.finalize()
+    }
+}
+
+impl super::Sha2Hash for Sha512 {
+    fn new() -> Self {
+        Sha512::new()
+    }
+
+    fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.update(data)
+    }
+
+    fn finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        self._finalize_internal(dest)
     }
 }
 

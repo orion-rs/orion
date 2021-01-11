@@ -212,9 +212,7 @@ impl Sha256 {
 
     func_update!(SHA256_BLOCKSIZE, u32);
 
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Return a SHA256 digest.
-    pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
+    fn _finalize_internal(&mut self, digest_dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
@@ -246,8 +244,17 @@ impl Sha256 {
 
         self.process(None);
 
+        debug_assert!(digest_dst.len() == SHA256_OUTSIZE);
+        store_u32_into_be(&self.working_state, digest_dst);
+
+        Ok(())
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Return a SHA256 digest.
+    pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
         let mut digest = [0u8; SHA256_OUTSIZE];
-        store_u32_into_be(&self.working_state, &mut digest);
+        self._finalize_internal(&mut digest)?;
 
         Ok(Digest::from(digest))
     }
@@ -258,6 +265,20 @@ impl Sha256 {
         let mut state = Self::new();
         state.update(data)?;
         state.finalize()
+    }
+}
+
+impl super::Sha2Hash for Sha256 {
+    fn new() -> Self {
+        Sha256::new()
+    }
+
+    fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.update(data)
+    }
+
+    fn finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        self._finalize_internal(dest)
     }
 }
 

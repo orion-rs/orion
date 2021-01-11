@@ -49,6 +49,7 @@
 //! [`orion::auth`]: auth/index.html
 //! [`orion::hash`]: hash/index.html
 
+#![feature(min_const_generics)]
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
 #![deny(clippy::mem_forget)]

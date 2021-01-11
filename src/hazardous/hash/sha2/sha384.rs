@@ -176,9 +176,8 @@ impl Sha384 {
 
     func_update!(SHA384_BLOCKSIZE, u64);
 
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Return a SHA384 digest.
-    pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
+    fn _finalize_internal(&mut self, digest_dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
@@ -210,8 +209,17 @@ impl Sha384 {
 
         self.process(None);
 
+        debug_assert!(digest_dst.len() == SHA384_BLOCKSIZE);
+        store_u64_into_be(&self.working_state[..6], &mut digest_dst);
+
+        Ok(())
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Return a SHA384 digest.
+    pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
         let mut digest = [0u8; SHA384_OUTSIZE];
-        store_u64_into_be(&self.working_state[..6], &mut digest);
+        self._finalize_internal(&mut digest)?;
 
         Ok(Digest::from(digest))
     }
@@ -222,6 +230,20 @@ impl Sha384 {
         let mut state = Self::new();
         state.update(data)?;
         state.finalize()
+    }
+}
+
+impl super::Sha2Hash for Sha384 {
+    fn new() -> Self {
+        Sha384::new()
+    }
+
+    fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.update(data)
+    }
+
+    fn finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        self._finalize_internal(dest)
     }
 }
 
