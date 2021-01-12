@@ -61,31 +61,36 @@
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 //! [`SHA512_OUTSIZE`]: ../../hash/sha512/constant.SHA512_OUTSIZE.html
 
-use crate::{
-    errors::UnknownCryptoError,
-    hazardous::{
-        hash::sha2::sha512::SHA512_OUTSIZE,
-        mac::hmac::{self, SecretKey},
-    },
-    util,
-};
+use crate::errors::UnknownCryptoError;
+use crate::hazardous::hash::sha2;
+use crate::hazardous::mac::hmac;
+use crate::util;
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// The HKDF extract step.
-pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::Tag, UnknownCryptoError> {
-    let mut prk = hmac::Hmac::new(&SecretKey::from_slice(salt)?);
+fn _extract<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
+    salt: &[u8],
+    ikm: &[u8],
+) -> Result<[u8; SHA2_OUTSIZE], UnknownCryptoError>
+where
+    T: sha2::Sha2Hash,
+{
+    let mut prk = hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new(salt);
     prk.update(ikm)?;
-    prk.finalize()
+    prk.finalize()?;
+
+    Ok(prk.buffer)
 }
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// The HKDF expand step.
-pub fn expand(
-    prk: &hmac::Tag,
+fn _expand<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
+    prk: &[u8],
     info: Option<&[u8]>,
     dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    if dst_out.len() > 255 * SHA512_OUTSIZE {
+) -> Result<(), UnknownCryptoError>
+where
+    T: sha2::Sha2Hash,
+{
+    if dst_out.len() > 255 * SHA2_OUTSIZE {
         return Err(UnknownCryptoError);
     }
     if dst_out.is_empty() {
@@ -94,18 +99,19 @@ pub fn expand(
 
     let optional_info = info.unwrap_or(&[0u8; 0]);
 
-    let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(&prk.unprotected_as_bytes())?);
+    let mut hmac = hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new(prk);
     let okm_len = dst_out.len();
 
-    for (idx, hlen_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
+    for (idx, hlen_block) in dst_out.chunks_mut(SHA2_OUTSIZE).enumerate() {
         let block_len = hlen_block.len();
 
         hmac.update(optional_info)?;
         hmac.update(&[idx as u8 + 1_u8])?;
-        hlen_block.copy_from_slice(&hmac.finalize()?.unprotected_as_bytes()[..block_len]);
+        hmac.finalize()?;
+        hlen_block.copy_from_slice(&hmac.buffer[..block_len]);
 
         // Check if it's the last iteration, if yes don't process anything
-        if block_len < SHA512_OUTSIZE || (block_len * (idx + 1) == okm_len) {
+        if block_len < SHA2_OUTSIZE || (block_len * (idx + 1) == okm_len) {
             break;
         } else {
             hmac.reset();
@@ -116,30 +122,163 @@ pub fn expand(
     Ok(())
 }
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Combine `extract` and `expand` to return a derived key.
-pub fn derive_key(
-    salt: &[u8],
-    ikm: &[u8],
-    info: Option<&[u8]>,
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    expand(&extract(salt, ikm)?, info, dst_out)
+mod sha256 {
+    use super::*;
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// The HKDF extract step.
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::sha256::Tag, UnknownCryptoError> {
+        let mut prk = hmac::sha256::HmacSha256::new(&hmac::sha256::SecretKey::from_slice(salt)?);
+        prk.update(ikm)?;
+        prk.finalize()
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// The HKDF expand step.
+    pub fn expand(
+        prk: &hmac::sha256::Tag,
+        info: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        debug_assert!(prk.len() == sha2::sha256::SHA256_OUTSIZE);
+
+        _expand::<
+            sha2::sha256::Sha256,
+            { sha2::sha256::SHA256_BLOCKSIZE },
+            { sha2::sha256::SHA256_OUTSIZE },
+        >(prk.unprotected_as_bytes(), info, dst_out)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Combine `extract` and `expand` to return a derived key.
+    pub fn derive_key(
+        salt: &[u8],
+        ikm: &[u8],
+        info: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        expand(&extract(salt, ikm)?, info, dst_out)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Verify a derived key in constant time.
+    pub fn verify(
+        expected: &[u8],
+        salt: &[u8],
+        ikm: &[u8],
+        info: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        derive_key(salt, ikm, info, dst_out)?;
+        util::secure_cmp(&dst_out, expected)
+    }
 }
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Verify a derived key in constant time.
-pub fn verify(
-    expected: &[u8],
-    salt: &[u8],
-    ikm: &[u8],
-    info: Option<&[u8]>,
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    derive_key(salt, ikm, info, dst_out)?;
-    util::secure_cmp(&dst_out, expected)
+mod sha384 {
+    use super::*;
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// The HKDF extract step.
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::sha384::Tag, UnknownCryptoError> {
+        let mut prk = hmac::sha384::HmacSha384::new(&hmac::sha384::SecretKey::from_slice(salt)?);
+        prk.update(ikm)?;
+        prk.finalize()
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// The HKDF expand step.
+    pub fn expand(
+        prk: &hmac::sha384::Tag,
+        info: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        debug_assert!(prk.len() == sha2::sha384::SHA384_OUTSIZE);
+
+        _expand::<
+            sha2::sha384::Sha384,
+            { sha2::sha384::SHA384_BLOCKSIZE },
+            { sha2::sha384::SHA384_OUTSIZE },
+        >(prk.unprotected_as_bytes(), info, dst_out)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Combine `extract` and `expand` to return a derived key.
+    pub fn derive_key(
+        salt: &[u8],
+        ikm: &[u8],
+        info: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        expand(&extract(salt, ikm)?, info, dst_out)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Verify a derived key in constant time.
+    pub fn verify(
+        expected: &[u8],
+        salt: &[u8],
+        ikm: &[u8],
+        info: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        derive_key(salt, ikm, info, dst_out)?;
+        util::secure_cmp(&dst_out, expected)
+    }
 }
 
+mod sha512 {
+    use super::*;
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// The HKDF extract step.
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::sha512::Tag, UnknownCryptoError> {
+        let mut prk = hmac::sha512::HmacSha512::new(&hmac::sha512::SecretKey::from_slice(salt)?);
+        prk.update(ikm)?;
+        prk.finalize()
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// The HKDF expand step.
+    pub fn expand(
+        prk: &hmac::sha512::Tag,
+        info: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        debug_assert!(prk.len() == sha2::sha512::SHA512_OUTSIZE);
+
+        _expand::<
+            sha2::sha512::Sha512,
+            { sha2::sha512::SHA512_BLOCKSIZE },
+            { sha2::sha512::SHA512_OUTSIZE },
+        >(prk.unprotected_as_bytes(), info, dst_out)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Combine `extract` and `expand` to return a derived key.
+    pub fn derive_key(
+        salt: &[u8],
+        ikm: &[u8],
+        info: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        expand(&extract(salt, ikm)?, info, dst_out)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Verify a derived key in constant time.
+    pub fn verify(
+        expected: &[u8],
+        salt: &[u8],
+        ikm: &[u8],
+        info: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        derive_key(salt, ikm, info, dst_out)?;
+        util::secure_cmp(&dst_out, expected)
+    }
+}
+
+/*
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -274,3 +413,4 @@ mod public {
         }
     }
 }
+*/

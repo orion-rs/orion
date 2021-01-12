@@ -64,6 +64,8 @@
 use crate::errors::UnknownCryptoError;
 use zeroize::Zeroize;
 
+// TODO: Missing update of newtype, it uses SHA512 outsize!
+
 #[derive(Clone)]
 /// HMAC-SHA2 streaming state.
 pub(crate) struct HmacGeneric<T, const BLOCKSIZE: usize, const OUTSIZE: usize> {
@@ -97,7 +99,7 @@ where
     }
 
     /// Initialize `Hmac` struct with a given key.
-    fn new(secret_key: &[u8]) -> Self {
+    pub(crate) fn new(secret_key: &[u8]) -> Self {
         let mut state = Self {
             working_hasher: T::new(),
             opad_hasher: T::new(),
@@ -111,13 +113,14 @@ where
     }
 
     /// Reset to `new()` state.
-    fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         self.working_hasher = self.ipad_hasher.clone();
         self.is_finalized = false;
+        // TODO: Should we zero buffer here? It's always overwritten before reading from it, it seems
     }
 
     /// Update state with `data`. This can be called multiple times.
-    fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+    pub(crate) fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             Err(UnknownCryptoError)
         } else {
@@ -126,7 +129,7 @@ where
     }
 
     /// Return a HMAC-SHA512 tag.
-    fn finalize(&mut self) -> Result<(), UnknownCryptoError> {
+    pub(crate) fn finalize(&mut self) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
@@ -142,7 +145,7 @@ where
 
 pub mod sha256 {
     use super::*;
-    use crate::hazardous::hash::sha2::sha256;
+    use crate::hazardous::hash::sha2::sha256::{self, Sha256};
 
     construct_hmac_key! {
         /// A type to represent the `SecretKey` that HMAC uses for authentication.
@@ -157,7 +160,7 @@ pub mod sha256 {
         /// # Panics:
         /// A panic will occur if:
         /// - Failure to generate random bytes securely.
-        (SecretKey, test_hmac_key, sha256::SHA256_BLOCKSIZE)
+        (SecretKey, Sha256, sha256::SHA256_OUTSIZE, test_hmac_key, sha256::SHA256_BLOCKSIZE)
     }
 
     construct_tag! {
@@ -174,8 +177,7 @@ pub mod sha256 {
     #[derive(Clone)]
     /// HMAC-SHA256 streaming state.
     pub struct HmacSha256 {
-        _internal:
-            HmacGeneric<sha256::Sha256, { sha256::SHA256_BLOCKSIZE }, { sha256::SHA256_OUTSIZE }>,
+        _internal: HmacGeneric<Sha256, { sha256::SHA256_BLOCKSIZE }, { sha256::SHA256_OUTSIZE }>,
     }
 
     impl core::fmt::Debug for HmacSha256 {
@@ -193,7 +195,7 @@ pub mod sha256 {
         pub fn new(secret_key: &SecretKey) -> Self {
             Self {
                 _internal: HmacGeneric::<
-                    sha256::Sha256,
+                    Sha256,
                     { sha256::SHA256_BLOCKSIZE },
                     { sha256::SHA256_OUTSIZE },
                 >::new(secret_key.unprotected_as_bytes()),
@@ -368,7 +370,7 @@ pub mod sha256 {
 
 pub mod sha384 {
     use super::*;
-    use crate::hazardous::hash::sha2::sha384;
+    use crate::hazardous::hash::sha2::sha384::{self, Sha384};
 
     construct_hmac_key! {
         /// A type to represent the `SecretKey` that HMAC uses for authentication.
@@ -383,7 +385,7 @@ pub mod sha384 {
         /// # Panics:
         /// A panic will occur if:
         /// - Failure to generate random bytes securely.
-        (SecretKey, test_hmac_key, sha384::SHA384_BLOCKSIZE)
+        (SecretKey, Sha384, sha384::SHA384_OUTSIZE, test_hmac_key, sha384::SHA384_BLOCKSIZE)
     }
 
     construct_tag! {
@@ -400,8 +402,7 @@ pub mod sha384 {
     #[derive(Clone)]
     /// HMAC-SHA384 streaming state.
     pub struct HmacSha384 {
-        _internal:
-            HmacGeneric<sha384::Sha384, { sha384::SHA384_BLOCKSIZE }, { sha384::SHA384_OUTSIZE }>,
+        _internal: HmacGeneric<Sha384, { sha384::SHA384_BLOCKSIZE }, { sha384::SHA384_OUTSIZE }>,
     }
 
     impl core::fmt::Debug for HmacSha384 {
@@ -419,7 +420,7 @@ pub mod sha384 {
         pub fn new(secret_key: &SecretKey) -> Self {
             Self {
                 _internal: HmacGeneric::<
-                    sha384::Sha384,
+                    Sha384,
                     { sha384::SHA384_BLOCKSIZE },
                     { sha384::SHA384_OUTSIZE },
                 >::new(secret_key.unprotected_as_bytes()),
@@ -594,7 +595,7 @@ pub mod sha384 {
 
 pub mod sha512 {
     use super::*;
-    use crate::hazardous::hash::sha2::sha512;
+    use crate::hazardous::hash::sha2::sha512::{self, Sha512};
 
     construct_hmac_key! {
         /// A type to represent the `SecretKey` that HMAC uses for authentication.
@@ -609,7 +610,7 @@ pub mod sha512 {
         /// # Panics:
         /// A panic will occur if:
         /// - Failure to generate random bytes securely.
-        (SecretKey, test_hmac_key, sha512::SHA512_BLOCKSIZE)
+        (SecretKey, Sha512, sha512::SHA512_OUTSIZE, test_hmac_key, sha512::SHA512_BLOCKSIZE)
     }
 
     construct_tag! {
@@ -626,8 +627,7 @@ pub mod sha512 {
     #[derive(Clone)]
     /// HMAC-SHA512 streaming state.
     pub struct HmacSha512 {
-        _internal:
-            HmacGeneric<sha512::Sha512, { sha512::SHA512_BLOCKSIZE }, { sha512::SHA512_OUTSIZE }>,
+        _internal: HmacGeneric<Sha512, { sha512::SHA512_BLOCKSIZE }, { sha512::SHA512_OUTSIZE }>,
     }
 
     impl core::fmt::Debug for HmacSha512 {
@@ -645,7 +645,7 @@ pub mod sha512 {
         pub fn new(secret_key: &SecretKey) -> Self {
             Self {
                 _internal: HmacGeneric::<
-                    sha512::Sha512,
+                    Sha512,
                     { sha512::SHA512_BLOCKSIZE },
                     { sha512::SHA512_OUTSIZE },
                 >::new(secret_key.unprotected_as_bytes()),

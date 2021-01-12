@@ -1,16 +1,17 @@
-pub mod custom_hkdf;
-pub mod custom_pbkdf2;
+//pub mod custom_hkdf;
+//pub mod custom_pbkdf2;
 #[cfg(feature = "safe_api")]
 pub mod other_argon2i;
-pub mod other_hkdf;
+//pub mod other_hkdf;
 #[cfg(feature = "safe_api")]
 pub mod pynacl_argon2i;
 #[cfg(feature = "safe_api")]
 pub mod ref_argon2i;
-pub mod wycheproof_hkdf;
+//pub mod wycheproof_hkdf;
 
 use orion::hazardous::{kdf::hkdf::*, mac::hmac};
 
+/*
 pub fn hkdf_test_runner(
     expected_prk: Option<&[u8]>,
     expected_okm: &[u8],
@@ -34,3 +35,4 @@ pub fn hkdf_test_runner(
         assert!(verify(expected_okm, salt, ikm, Some(&info), &mut okm_out).is_err());
     }
 }
+*/
