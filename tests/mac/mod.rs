@@ -1,7 +1,7 @@
 pub mod boringssl_poly1305;
 pub mod nist_cavp_hmac;
 pub mod other_poly1305;
-//pub mod rfc_hmac;
+pub mod rfc_hmac;
 pub mod rfc_poly1305;
 pub mod wycheproof_hmac;
 
