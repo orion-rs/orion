@@ -73,8 +73,8 @@ pub struct TestCaseReader {
     test_case_field_separator: String,
     // Optional stop flags. When one of these strings are encountered, next() will return None.
     stop_flags: Option<Vec<String>>,
-    // Indicates whether the most recent next() => None was caused by a stop flag.
-    stop_flag_hit: bool,
+    // The most recent stop flag hit, if any.
+    stop_flag_hit: Option<String>,
 }
 
 impl TestCaseReader {
@@ -96,7 +96,7 @@ impl TestCaseReader {
             test_case_fields,
             test_case_field_separator: test_case_field_separator.to_string(),
             stop_flags: None,
-            stop_flag_hit: false,
+            stop_flag_hit: None,
         }
     }
 
@@ -126,7 +126,14 @@ impl TestCaseReader {
 
     /// Return true if the most recent None from next() was due to a stop flag.
     pub fn did_hit_flag(&self) -> bool {
-        self.stop_flag_hit
+        self.stop_flag_hit.is_some()
+    }
+
+    /// Return the most recent stop flag, if any.
+    pub fn last_stop_flag(&self) -> String {
+        debug_assert!(self.stop_flag_hit.is_some());
+
+        self.stop_flag_hit.as_ref().unwrap().to_string()
     }
 }
 
@@ -136,7 +143,7 @@ impl Iterator for TestCaseReader {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             // Reset
-            self.stop_flag_hit = false;
+            self.stop_flag_hit = None;
 
             // Read the first line
             let mut current = self.lines.next();
@@ -148,7 +155,7 @@ impl Iterator for TestCaseReader {
                         Some(flags) => {
                             for flag in flags.iter() {
                                 if &string == flag {
-                                    self.stop_flag_hit = true;
+                                    self.stop_flag_hit = Some(flag.to_string());
                                     return None;
                                 }
                             }
