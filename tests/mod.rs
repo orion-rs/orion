@@ -71,6 +71,10 @@ pub struct TestCaseReader {
     test_case_fields: Vec<String>,
     // The separator that separates the test case fields name and data (eg. '=')
     test_case_field_separator: String,
+    // Optional stop flags. When one of these strings are encountered, next() will return None.
+    stop_flags: Option<Vec<String>>,
+    // Indicates whether the most recent next() => None was caused by a stop flag.
+    stop_flag_hit: bool,
 }
 
 impl TestCaseReader {
@@ -91,6 +95,8 @@ impl TestCaseReader {
             test_cases_skipped: 0,
             test_case_fields,
             test_case_field_separator: test_case_field_separator.to_string(),
+            stop_flags: None,
+            stop_flag_hit: false,
         }
     }
 
@@ -112,6 +118,16 @@ impl TestCaseReader {
             }
         }
     }
+
+    /// Set a stop flag that will cause .next() to return None, when the flag is encountered.
+    pub fn set_stop_flag(&mut self, flags: Vec<String>) {
+        self.stop_flags = Some(flags);
+    }
+
+    /// Return true if the most recent None from next() was due to a stop flag.
+    pub fn did_hit_flag(&self) -> bool {
+        self.stop_flag_hit
+    }
 }
 
 impl Iterator for TestCaseReader {
@@ -119,11 +135,27 @@ impl Iterator for TestCaseReader {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
+            // Reset
+            self.stop_flag_hit = false;
+
             // Read the first line
             let mut current = self.lines.next();
 
             match current {
                 Some(Ok(mut string)) => {
+                    // First check if a stop_flags are set and if we've encountered one.
+                    match &self.stop_flags {
+                        Some(flags) => {
+                            for flag in flags.iter() {
+                                if &string == flag {
+                                    self.stop_flag_hit = true;
+                                    return None;
+                                }
+                            }
+                        }
+                        None => (),
+                    }
+
                     // Test case fields are ordered, so this is the beginning of a test case
                     if string.starts_with(&self.test_case_fields[0]) {
                         let mut test_case = TestCase::new();
