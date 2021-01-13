@@ -120,7 +120,7 @@ impl TestCaseReader {
     }
 
     /// Set a stop flag that will cause .next() to return None, when the flag is encountered.
-    pub fn set_stop_flag(&mut self, flags: Vec<String>) {
+    pub fn set_stop_flags(&mut self, flags: Vec<String>) {
         self.stop_flags = Some(flags);
     }
 

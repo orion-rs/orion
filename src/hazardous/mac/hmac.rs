@@ -64,8 +64,6 @@
 use crate::errors::UnknownCryptoError;
 use zeroize::Zeroize;
 
-// TODO: Missing update of newtype, it uses SHA512 outsize!
-
 #[derive(Clone)]
 /// HMAC-SHA2 streaming state.
 pub(crate) struct HmacGeneric<T, const BLOCKSIZE: usize, const OUTSIZE: usize> {
@@ -184,7 +182,7 @@ pub mod sha256 {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             write!(
                     f,
-                    "Hmac {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
+                    "HmacSha256 {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
                     self._internal.is_finalized
                 )
         }
@@ -704,7 +702,7 @@ pub mod sha512 {
             let secret_key = SecretKey::generate();
             let initial_state = HmacSha512::new(&secret_key);
             let debug = format!("{:?}", initial_state);
-            let expected = "Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false }";
+            let expected = "HmacSha512 { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false }";
             assert_eq!(debug, expected);
         }
 

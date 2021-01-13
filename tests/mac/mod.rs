@@ -1,5 +1,5 @@
 pub mod boringssl_poly1305;
-//pub mod nist_cavp_hmac;
+pub mod nist_cavp_hmac;
 pub mod other_poly1305;
 //pub mod rfc_hmac;
 pub mod rfc_poly1305;
@@ -24,7 +24,7 @@ macro_rules! impl_hmac_test_runner (($name:ident, $hmac:ident, $hmac_tag:ident, 
 
         let key = $hmac_sk::from_slice(secret_key).unwrap();
 
-        // Only use verify() on SHA512_OUTSIZE length tags since this is
+        // Only use verify() on OUTSIZE length tags since this is
         // the amount that Tag requires.
         if len == $sha2_outsize {
             let expected_tag = $hmac_tag::from_slice(expected).unwrap();
