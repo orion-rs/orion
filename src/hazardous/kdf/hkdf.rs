@@ -74,6 +74,8 @@ fn _extract<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
 where
     T: sha2::Sha2Hash,
 {
+    // TODO: The salt needs to be padded here, because HmacGeneric expects the result of padding through
+    // unprotected_as_bytes(). Make a function that can be used here, but also in typedef macros.
     let mut prk = hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new(salt);
     prk.update(ikm)?;
     prk.finalize()?;
@@ -99,6 +101,8 @@ where
 
     let optional_info = info.unwrap_or(&[0u8; 0]);
 
+    // TODO: The prk needs to be padded here, because HmacGeneric expects the result of padding through
+    // unprotected_as_bytes(). Make a function that can be used here, but also in typedef macros.
     let mut hmac = hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new(prk);
     let okm_len = dst_out.len();
 
@@ -122,7 +126,7 @@ where
     Ok(())
 }
 
-mod sha256 {
+pub mod sha256 {
     use super::*;
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -174,7 +178,7 @@ mod sha256 {
     }
 }
 
-mod sha384 {
+pub mod sha384 {
     use super::*;
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -226,7 +230,7 @@ mod sha384 {
     }
 }
 
-mod sha512 {
+pub mod sha512 {
     use super::*;
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
