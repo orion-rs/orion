@@ -392,18 +392,20 @@ pub fn hash_password(
 /// ```rust
 /// use orion::pwhash;
 ///
-/// let password1 = pwhash::Password::from_slice(b"Secret password")?;
-/// let password2 = pwhash::Password::from_slice(b"Secret password")?;
+/// let password = pwhash::Password::from_slice(b"Secret password")?;
+/// let wrong_password = pwhash::Password::from_slice(b"hunter2")?;
 ///
 /// // Pretend these are stored somewhere and out-of-mind, e.g. in a database.
-/// let hash1 = pwhash::hash_password(&password1, 3, 1<<16)?;
-/// let hash2 = pwhash::hash_password(&password2, 4, 2<<16)?;
+/// let hash1 = pwhash::hash_password(&password, 3, 1<<15)?;
+/// let hash2 = pwhash::hash_password(&password, 4, 2<<15)?;
 ///
 /// // We don't have to remember which password used what parameters when it's
-/// // time to verify them.
-/// assert!(pwhash::hash_password_verify(&hash1, &password1).is_ok());
-/// assert!(pwhash::hash_password_verify(&hash2, &password2).is_ok());
-/// assert!(pwhash::hash_password_verify(&hash1, &password2).is_err());
+/// // time to verify them. Both will correctly return `Ok(())`.
+/// assert!(pwhash::hash_password_verify(&hash1, &password).is_ok());
+/// assert!(pwhash::hash_password_verify(&hash2, &password).is_ok());
+///
+/// // The only way to get a failing result is to use the wrong password.
+/// assert!(pwhash::hash_password_verify(&hash1, &wrong_password).is_err());
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
