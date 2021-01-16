@@ -830,6 +830,56 @@ mod public {
         }
 
         #[test]
+        fn test_argon2i_verify_err_modified_memory() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+
+            let dk = hash_password(&password, 3, 4096).unwrap();
+            let encoded = dk.unprotected_as_encoded();
+
+            let mut modified = encoded.to_string();
+            let memory_offset = modified.find("$m=4096").unwrap();
+            modified.replace_range(memory_offset..memory_offset + 7, "$m=2048");
+
+            let modified = PasswordHash::from_encoded(&modified).unwrap();
+
+            assert!(hash_password_verify(&modified, &password).is_err());
+        }
+
+        #[test]
+        fn test_argon2i_verify_err_modified_iterations() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+
+            let dk = hash_password(&password, 3, 4096).unwrap();
+            let encoded = dk.unprotected_as_encoded();
+
+            let mut modified = encoded.to_string();
+            let iterations_offset = modified.find(",t=3").unwrap();
+            modified.replace_range(iterations_offset..iterations_offset + 4, ",t=4");
+
+            let modified = PasswordHash::from_encoded(&modified).unwrap();
+
+            assert!(hash_password_verify(&modified, &password).is_err());
+        }
+
+        #[test]
+        fn test_argon2i_verify_err_modified_memory_and_iterations() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+
+            let dk = hash_password(&password, 3, 4096).unwrap();
+            let encoded = dk.unprotected_as_encoded();
+
+            let mut modified = encoded.to_string();
+            let memory_offset = modified.find("$m=4096").unwrap();
+            let iterations_offset = modified.find(",t=3").unwrap();
+            modified.replace_range(memory_offset..memory_offset + 7, "$m=2048");
+            modified.replace_range(iterations_offset..iterations_offset + 4, ",t=4");
+
+            let modified = PasswordHash::from_encoded(&modified).unwrap();
+
+            assert!(hash_password_verify(&modified, &password).is_err());
+        }
+
+        #[test]
         fn test_argon2i_verify_err_modified_salt() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
 
