@@ -83,7 +83,7 @@
 //! let password = pwhash::Password::from_slice(b"Secret password")?;
 //!
 //! let hash = pwhash::hash_password(&password, 3, 1<<16)?;
-//! assert!(pwhash::hash_password_verify(&hash, &password, 3, 1<<16).is_ok());
+//! assert!(pwhash::hash_password_verify(&hash, &password).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`PasswordHash`]: struct.PasswordHash.html
@@ -382,26 +382,45 @@ pub fn hash_password(
     PasswordHash::from_slice(buffer.as_ref(), salt.as_ref(), iterations, memory)
 }
 
+/// Hash and verify a password using Argon2i. The Argon2i parameters `iterations`
+/// and `memory` will be pulled from the `expected: &PasswordHash` argument. If
+/// you want to manually specify the iterations and memory for Argon2i to use in
+/// hashing the `password` argument, see the
+/// [`hazardous::kdf`](crate::hazardous::kdf::argon2i) module.
+///
+/// # Example:
+/// ```rust
+/// use orion::pwhash;
+///
+/// let password = pwhash::Password::from_slice(b"Secret password")?;
+/// let wrong_password = pwhash::Password::from_slice(b"hunter2")?;
+///
+/// // Pretend these are stored somewhere and out-of-mind, e.g. in a database.
+/// let hash1 = pwhash::hash_password(&password, 3, 1<<15)?;
+/// let hash2 = pwhash::hash_password(&password, 4, 2<<15)?;
+///
+/// // We don't have to remember which password used what parameters when it's
+/// // time to verify them. Both will correctly return `Ok(())`.
+/// assert!(pwhash::hash_password_verify(&hash1, &password).is_ok());
+/// assert!(pwhash::hash_password_verify(&hash2, &password).is_ok());
+///
+/// // The only way to get a failing result is to use the wrong password.
+/// assert!(pwhash::hash_password_verify(&hash1, &wrong_password).is_err());
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
+/// ```
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Hash and verify a password using Argon2i.
 pub fn hash_password_verify(
     expected: &PasswordHash,
     password: &Password,
-    iterations: u32,
-    memory: u32,
 ) -> Result<(), UnknownCryptoError> {
-    if iterations < MIN_ITERATIONS {
-        return Err(UnknownCryptoError);
-    }
-
     let mut buffer = Zeroizing::new([0u8; PWHASH_LENGTH]);
 
     argon2i::verify(
         expected.unprotected_as_bytes(),
         password.unprotected_as_bytes(),
         expected.salt.as_ref(),
-        iterations,
-        memory,
+        expected.iterations,
+        expected.memory,
         None,
         None,
         buffer.as_mut(),
@@ -431,8 +450,6 @@ mod public {
 
         #[test]
         fn test_encoding_and_verify_1() {
-            let iterations: u32 = 3;
-            let memory: u32 = 65536;
             let password = Password::from_slice(b"password").unwrap();
             let raw_hash =
                 hex::decode("7d1b1163d3c0b791fea802ae5d1ccbd3fe896c54a1b0277ad96e5a1f311293f7")
@@ -441,13 +458,11 @@ mod public {
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
             assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
-            assert!(hash_password_verify(&expected, &password, iterations, memory).is_ok());
+            assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
         #[test]
         fn test_encoding_and_verify_2() {
-            let iterations: u32 = 3;
-            let memory: u32 = 65536;
             let password = Password::from_slice(b"passwordPASSWORDPassword").unwrap();
             let raw_hash =
                 hex::decode("ed4b0fd657e165f9ffe90f66ff315fbec878e629f03b2d6468d4b17a50c796aa")
@@ -456,13 +471,11 @@ mod public {
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
             assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
-            assert!(hash_password_verify(&expected, &password, iterations, memory).is_ok());
+            assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
         #[test]
         fn test_encoding_and_verify_3() {
-            let iterations: u32 = 3;
-            let memory: u32 = 65536;
             // Different salt from test 2
             let password = Password::from_slice(b"passwordPASSWORDPassword").unwrap();
             let raw_hash =
@@ -472,13 +485,11 @@ mod public {
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
             assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
-            assert!(hash_password_verify(&expected, &password, iterations, memory).is_ok());
+            assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
         #[test]
         fn test_encoding_and_verify_4() {
-            let iterations: u32 = 3;
-            let memory: u32 = 256;
             let password = Password::from_slice(b"passwordPASSWORDPassword").unwrap();
             let raw_hash =
                 hex::decode("fb3e0cdf7b10970bf6711c151861851566006f8986c9109ba2cdd5d98f9ca9d7")
@@ -487,13 +498,11 @@ mod public {
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
             assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
-            assert!(hash_password_verify(&expected, &password, iterations, memory).is_ok());
+            assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
         #[test]
         fn test_encoding_and_verify_5() {
-            let iterations: u32 = 4;
-            let memory: u32 = 256;
             let password = Password::from_slice(b"passwordPASSWORDPassword").unwrap();
             let raw_hash =
                 hex::decode("9b134c4c1c34e66170d1088c18be3a8e0f4a1837d4c069703ce62f85248b1e8f")
@@ -502,7 +511,7 @@ mod public {
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
             assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
-            assert!(hash_password_verify(&expected, &password, iterations, memory).is_ok());
+            assert!(hash_password_verify(&expected, &password).is_ok());
         }
     }
 
@@ -804,7 +813,7 @@ mod public {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
             let dk = hash_password(&password, 3, 4096).unwrap();
 
-            assert!(hash_password_verify(&dk, &password, 3, 4096).is_ok());
+            assert!(hash_password_verify(&dk, &password).is_ok());
         }
 
         #[test]
@@ -816,7 +825,57 @@ mod public {
             pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
             let modified = PasswordHash::from_slice(&pwd_mod, dk.salt.as_ref(), 3, 4096).unwrap();
 
-            assert!(hash_password_verify(&modified, &password, 3, 4096).is_err());
+            assert!(hash_password_verify(&modified, &password).is_err());
+        }
+
+        #[test]
+        fn test_argon2i_verify_err_modified_memory() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+
+            let dk = hash_password(&password, 3, 4096).unwrap();
+            let encoded = dk.unprotected_as_encoded();
+
+            let mut modified = encoded.to_string();
+            let memory_offset = modified.find("$m=4096").unwrap();
+            modified.replace_range(memory_offset..memory_offset + 7, "$m=2048");
+
+            let modified = PasswordHash::from_encoded(&modified).unwrap();
+
+            assert!(hash_password_verify(&modified, &password).is_err());
+        }
+
+        #[test]
+        fn test_argon2i_verify_err_modified_iterations() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+
+            let dk = hash_password(&password, 3, 4096).unwrap();
+            let encoded = dk.unprotected_as_encoded();
+
+            let mut modified = encoded.to_string();
+            let iterations_offset = modified.find(",t=3").unwrap();
+            modified.replace_range(iterations_offset..iterations_offset + 4, ",t=4");
+
+            let modified = PasswordHash::from_encoded(&modified).unwrap();
+
+            assert!(hash_password_verify(&modified, &password).is_err());
+        }
+
+        #[test]
+        fn test_argon2i_verify_err_modified_memory_and_iterations() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+
+            let dk = hash_password(&password, 3, 4096).unwrap();
+            let encoded = dk.unprotected_as_encoded();
+
+            let mut modified = encoded.to_string();
+            let memory_offset = modified.find("$m=4096").unwrap();
+            let iterations_offset = modified.find(",t=3").unwrap();
+            modified.replace_range(memory_offset..memory_offset + 7, "$m=2048");
+            modified.replace_range(iterations_offset..iterations_offset + 4, ",t=4");
+
+            let modified = PasswordHash::from_encoded(&modified).unwrap();
+
+            assert!(hash_password_verify(&modified, &password).is_err());
         }
 
         #[test]
@@ -829,7 +888,7 @@ mod public {
             let modified =
                 PasswordHash::from_slice(&dk.unprotected_as_bytes(), &salt_mod, 3, 4096).unwrap();
 
-            assert!(hash_password_verify(&modified, &password, 3, 4096).is_err());
+            assert!(hash_password_verify(&modified, &password).is_err());
         }
 
         #[test]
@@ -843,31 +902,7 @@ mod public {
             salt_mod[0..16].copy_from_slice(&[0u8; 16]);
             let modified = PasswordHash::from_slice(&pwd_mod, &salt_mod, 3, 4096).unwrap();
 
-            assert!(hash_password_verify(&modified, &password, 3, 4096).is_err());
-        }
-
-        #[test]
-        fn test_argon2i_invalid_iterations() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let password_hash = PasswordHash::from_encoded("$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c").unwrap();
-            assert!(hash_password(&password, MIN_ITERATIONS - 1, 4096).is_err());
-            assert!(
-                hash_password_verify(&password_hash, &password, MIN_ITERATIONS - 1, 4096).is_err()
-            );
-        }
-
-        #[test]
-        fn test_argon2i_invalid_memory() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let password_hash = PasswordHash::from_encoded("$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c").unwrap();
-            assert!(hash_password(&password, MIN_ITERATIONS, MIN_MEMORY - 1).is_err());
-            assert!(hash_password_verify(
-                &password_hash,
-                &password,
-                MIN_ITERATIONS,
-                MIN_MEMORY - 1
-            )
-            .is_err());
+            assert!(hash_password_verify(&modified, &password).is_err());
         }
     }
 }
