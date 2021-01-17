@@ -905,5 +905,17 @@ mod public {
 
             assert!(hash_password_verify(&modified, &password).is_err());
         }
+
+        #[test]
+        fn test_argon2i_invalid_iterations() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            assert!(hash_password(&password, MIN_ITERATIONS - 1, 4096).is_err());
+        }
+
+        #[test]
+        fn test_argon2i_invalid_memory() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            assert!(hash_password(&password, MIN_ITERATIONS, MIN_MEMORY - 1).is_err());
+        }
     }
 }
