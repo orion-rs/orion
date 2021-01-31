@@ -545,7 +545,7 @@ mod private {
             97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
             97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
         ];
-        let input = [
+        let input: [u8; 79] = [
             98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8,
             101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8,
             101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8,
@@ -554,7 +554,7 @@ mod private {
             101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8,
             0u8,
         ];
-        let output = [
+        let output: [u8; 96] = [
             252u8, 178u8, 0u8, 210u8, 9u8, 149u8, 109u8, 242u8, 161u8, 71u8, 231u8, 3u8, 175u8,
             17u8, 24u8, 148u8, 40u8, 118u8, 80u8, 107u8, 96u8, 105u8, 191u8, 34u8, 86u8, 101u8,
             33u8, 53u8, 116u8, 51u8, 220u8, 199u8, 26u8, 140u8, 80u8, 251u8, 81u8, 125u8, 160u8,
@@ -569,16 +569,16 @@ mod private {
         let nonce = Nonce::from_slice(&nonce).unwrap();
 
         let mut state = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
-        let mut dst_out = vec![0u8; output.len()];
+        let mut dst_out = [0u8; 96];
         state
             .seal_chunk(&input, None, &mut dst_out, StreamTag::MESSAGE)
             .unwrap();
-        assert_eq!(dst_out, output);
+        assert_eq!(dst_out.as_ref(), output.as_ref());
 
         state = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
-        let mut dst_out_pt = vec![0u8; input.len()];
+        let mut dst_out_pt = [0u8; 79];
         state.open_chunk(&output, None, &mut dst_out_pt).unwrap();
-        assert_eq!(dst_out_pt, input);
+        assert_eq!(dst_out_pt.as_ref(), input.as_ref());
     }
 
     // Test values were generated using libsodium. See /tests/test_generation/
