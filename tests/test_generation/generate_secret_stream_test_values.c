@@ -343,6 +343,31 @@ void stream_with_explicit_rekey(unsigned char *header, const unsigned char *key)
   print_test_case_end();
 }
 
+void push_exactly_79_bytes(unsigned char *header, const unsigned char *key)
+{
+  print_test_case_begin("test_seal_with_exactly_79_plaintext");
+  
+  char msg1[] = "beefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbe";
+
+  crypto_secretstream_xchacha20poly1305_state st;
+  crypto_secretstream_xchacha20poly1305_init_push_patched(&st, header, key);
+
+  print_array("1st Message: ", msg1, sizeof(msg1));
+  printf("%ul\n", sizeof(msg1));
+  print_internal_state(&st, "before");
+
+  unsigned char cipher[100];
+  unsigned long long clen_out;
+
+  crypto_secretstream_xchacha20poly1305_push(
+      &st, cipher, &clen_out, msg1, sizeof(msg1), NULL, 0,
+      crypto_secretstream_xchacha20poly1305_tag_message());
+  printf("After Msg1:\n");
+  print_internal_state(&st, "after");
+  print_array("Ciphertext: ", cipher, clen_out);
+}
+
+
 int main() {
 
   if (sodium_init() != 0)
@@ -372,6 +397,7 @@ int main() {
   ctx_final_counter_overflow(header, key);
   ctx_push_counter_overflow(header, key);
   stream_with_explicit_rekey(header, key);
+  push_exactly_79_bytes(header, key);
 
   return 0;
 }
