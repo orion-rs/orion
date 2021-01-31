@@ -180,6 +180,8 @@ fn encrypt_decrypt_equals_expected<Encryptor, Decryptor, Key, Nonce>(
         assert!(return_if_counter_will_overflow(
             encryptor, decryptor, key, nonce, counter, input
         ));
+
+        return;
     }
 
     let mut dst_out_ct = vec![0u8; input.len()];

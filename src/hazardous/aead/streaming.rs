@@ -502,7 +502,24 @@ mod private {
                 fn prop_padding_result(input: usize) -> bool {
                     let rem = padding(input);
 
-                    ((input + rem) % 16) == 0
+                    // NOTE: It is possible to have an input size that will
+                    // have padding() return a remainder that cannot be added
+                    // to the original input size without overflowing its usize (tested on 64-bit).
+                    // This is okay, because nothing is added to the returned value of padding()
+                    // in generate_auth_tag. It's only ever added in this test. The remainder is still
+                    // valid regardless, which is also "proven" by the test below.
+                    // So to test the below assumption, we can only ever do so if it doesn't overflow,
+                    // hence the needed check.
+                    //
+                    // See also below test test_inputsize_79().
+                    //
+                    // (Trigger here with: size = 18446744073709551601)
+                    // (Trigger seal_chunk/open_chunk with input of size 79 (check usage of wrapping_sub))
+
+                    match input.checked_add(rem) {
+                        Some(res) => res % 16 == 0,
+                        None => true // The case we cannot test
+                    }
                 }
             }
 
@@ -514,6 +531,54 @@ mod private {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_inputsize_79() {
+        // Generated with libsodium
+        let sk = [
+            49u8, 50u8, 51u8, 52u8, 53u8, 54u8, 55u8, 56u8, 57u8, 97u8, 98u8, 99u8, 100u8, 101u8,
+            102u8, 103u8, 104u8, 105u8, 106u8, 107u8, 108u8, 109u8, 111u8, 110u8, 112u8, 113u8,
+            114u8, 115u8, 116u8, 117u8, 118u8, 0u8,
+        ];
+        let nonce = [
+            97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8, 97u8, 98u8,
+            97u8, 98u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+        ];
+        let input: [u8; 79] = [
+            98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8,
+            101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8,
+            101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8,
+            102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8,
+            98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8,
+            101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8, 101u8, 102u8, 98u8, 101u8,
+            0u8,
+        ];
+        let output: [u8; 96] = [
+            252u8, 178u8, 0u8, 210u8, 9u8, 149u8, 109u8, 242u8, 161u8, 71u8, 231u8, 3u8, 175u8,
+            17u8, 24u8, 148u8, 40u8, 118u8, 80u8, 107u8, 96u8, 105u8, 191u8, 34u8, 86u8, 101u8,
+            33u8, 53u8, 116u8, 51u8, 220u8, 199u8, 26u8, 140u8, 80u8, 251u8, 81u8, 125u8, 160u8,
+            186u8, 197u8, 26u8, 72u8, 217u8, 22u8, 205u8, 150u8, 103u8, 233u8, 204u8, 79u8, 59u8,
+            137u8, 18u8, 93u8, 25u8, 189u8, 131u8, 137u8, 231u8, 123u8, 56u8, 186u8, 215u8, 33u8,
+            41u8, 241u8, 146u8, 248u8, 44u8, 253u8, 253u8, 177u8, 115u8, 51u8, 23u8, 166u8, 64u8,
+            6u8, 213u8, 174u8, 254u8, 55u8, 101u8, 185u8, 178u8, 89u8, 121u8, 175u8, 221u8, 174u8,
+            75u8, 188u8, 65u8, 41u8, 75u8,
+        ];
+
+        let secret_key = SecretKey::from_slice(&sk).unwrap();
+        let nonce = Nonce::from_slice(&nonce).unwrap();
+
+        let mut state = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
+        let mut dst_out = [0u8; 96];
+        state
+            .seal_chunk(&input, None, &mut dst_out, StreamTag::MESSAGE)
+            .unwrap();
+        assert_eq!(dst_out.as_ref(), output.as_ref());
+
+        state = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
+        let mut dst_out_pt = [0u8; 79];
+        state.open_chunk(&output, None, &mut dst_out_pt).unwrap();
+        assert_eq!(dst_out_pt.as_ref(), input.as_ref());
     }
 
     // Test values were generated using libsodium. See /tests/test_generation/
