@@ -65,68 +65,53 @@
 //! [`Password::generate()`]: struct.Password.html#method.generate
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
+use hmac::HmacGeneric;
+
 use crate::{
     errors::UnknownCryptoError,
-    hazardous::{
-        hash::sha2::sha512::{SHA512_BLOCKSIZE, SHA512_OUTSIZE},
-        mac::hmac,
-    },
+    hazardous::{hash::sha2, mac::hmac},
     util,
 };
 
-construct_hmac_key! {
-    /// A type to represent the `Password` that PBKDF2 hashes.
-    ///
-    /// # Note:
-    /// Because `Password` is used as a `SecretKey` for HMAC during hashing, `Password` already
-    /// pads the given password to a length of 128, for use in HMAC, when initialized.
-    ///
-    /// Using `unprotected_as_bytes()` will return the password with padding.
-    ///
-    /// Using `get_length()` will return the length with padding (always 128).
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (Password, test_pbkdf2_password, SHA512_BLOCKSIZE)
-}
-
 /// The F function as described in the RFC.
-fn function_f(
+fn _function_f<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
     salt: &[u8],
     iterations: usize,
     index: u32,
     dk_block: &mut [u8],
     block_len: usize,
-    hmac: &mut hmac::Hmac,
-) -> Result<(), UnknownCryptoError> {
+    hmac: &mut HmacGeneric<T, SHA2_BLOCKSIZE, SHA2_OUTSIZE>,
+) -> Result<(), UnknownCryptoError>
+where
+    T: sha2::Sha2Hash,
+{
     hmac.update(salt)?;
     hmac.update(&index.to_be_bytes())?;
+    hmac.finalize()?;
 
-    let mut u_step = hmac.finalize()?;
-    dk_block.copy_from_slice(&u_step.unprotected_as_bytes()[..block_len]);
+    dk_block.copy_from_slice(&hmac.buffer[..block_len]);
 
     if iterations > 1 {
         for _ in 1..iterations {
             hmac.reset();
-            hmac.update(u_step.unprotected_as_bytes())?;
-            u_step = hmac.finalize()?;
-            xor_slices!(u_step.unprotected_as_bytes(), dk_block);
+            hmac.update(&hmac.buffer)?;
+            hmac.finalize()?;
+            xor_slices!(&hmac.buffer, dk_block);
         }
     }
 
     Ok(())
 }
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// PBKDF2-SHA512 (Password-Based Key Derivation Function 2) as specified in the
-/// [RFC 8018](https://tools.ietf.org/html/rfc8018).
-pub fn derive_key(
-    password: &Password,
+fn _derive_key<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
+    padded_password: &[u8],
     salt: &[u8],
     iterations: usize,
     dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
+) -> Result<(), UnknownCryptoError>
+where
+    T: sha2::Sha2Hash,
+{
     if iterations < 1 {
         return Err(UnknownCryptoError);
     }
@@ -134,15 +119,15 @@ pub fn derive_key(
         return Err(UnknownCryptoError);
     }
 
-    let mut hmac = hmac::Hmac::new(&hmac::SecretKey::from_slice(
-        &password.unprotected_as_bytes(),
-    )?);
+    let mut hmac = hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new_no_padding(
+        padded_password,
+    );
 
-    for (idx, dk_block) in dst_out.chunks_mut(SHA512_OUTSIZE).enumerate() {
+    for (idx, dk_block) in dst_out.chunks_mut(SHA2_OUTSIZE).enumerate() {
         // If this panics, then the size limit for PBKDF2 is reached.
         let block_idx = (1u32).checked_add(idx as u32).unwrap();
 
-        function_f(
+        _function_f(
             salt,
             iterations,
             block_idx,
@@ -156,17 +141,160 @@ pub fn derive_key(
     Ok(())
 }
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
-pub fn verify(
-    expected: &[u8],
-    password: &Password,
-    salt: &[u8],
-    iterations: usize,
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    derive_key(password, salt, iterations, dst_out)?;
-    util::secure_cmp(&dst_out, expected)
+/// PBKDF2-HMAC-SHA256 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
+pub mod sha256 {
+    use super::*;
+    use crate::hazardous::hash::sha2::sha256::{self, Sha256};
+
+    construct_hmac_key! {
+        /// A type to represent the `Password` that PBKDF2 hashes.
+        ///
+        /// # Note:
+        /// Because `Password` is used as a `SecretKey` for HMAC during hashing, `Password` already
+        /// pads the given password to a length of 64, for use in HMAC, when initialized.
+        ///
+        /// Using `unprotected_as_bytes()` will return the password with padding.
+        ///
+        /// Using `get_length()` will return the length with padding (always 64).
+        ///
+        /// # Panics:
+        /// A panic will occur if:
+        /// - Failure to generate random bytes securely.
+        (Password, Sha256, sha256::SHA256_OUTSIZE, test_pbkdf2_password, sha256::SHA256_BLOCKSIZE)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Derive a key using PBKDF2-HMAC-SHA256.
+    pub fn derive_key(
+        password: &Password,
+        salt: &[u8],
+        iterations: usize,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        _derive_key::<Sha256, { sha256::SHA256_BLOCKSIZE }, { sha256::SHA256_OUTSIZE }>(
+            password.unprotected_as_bytes(),
+            salt,
+            iterations,
+            dst_out,
+        )
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Verify PBKDF2-HMAC-SHA256 derived key in constant time.
+    pub fn verify(
+        expected: &[u8],
+        password: &Password,
+        salt: &[u8],
+        iterations: usize,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        derive_key(password, salt, iterations, dst_out)?;
+        util::secure_cmp(&dst_out, expected)
+    }
+}
+
+/// PBKDF2-HMAC-SHA384 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
+pub mod sha384 {
+    use super::*;
+    use crate::hazardous::hash::sha2::sha384::{self, Sha384};
+
+    construct_hmac_key! {
+        /// A type to represent the `Password` that PBKDF2 hashes.
+        ///
+        /// # Note:
+        /// Because `Password` is used as a `SecretKey` for HMAC during hashing, `Password` already
+        /// pads the given password to a length of 128, for use in HMAC, when initialized.
+        ///
+        /// Using `unprotected_as_bytes()` will return the password with padding.
+        ///
+        /// Using `get_length()` will return the length with padding (always 128).
+        ///
+        /// # Panics:
+        /// A panic will occur if:
+        /// - Failure to generate random bytes securely.
+        (Password, Sha384, sha384::SHA384_OUTSIZE, test_pbkdf2_password, sha384::SHA384_BLOCKSIZE)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Derive a key using PBKDF2-HMAC-SHA384.
+    pub fn derive_key(
+        password: &Password,
+        salt: &[u8],
+        iterations: usize,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        _derive_key::<Sha384, { sha384::SHA384_BLOCKSIZE }, { sha384::SHA384_OUTSIZE }>(
+            password.unprotected_as_bytes(),
+            salt,
+            iterations,
+            dst_out,
+        )
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Verify PBKDF2-HMAC-SHA384 derived key in constant time.
+    pub fn verify(
+        expected: &[u8],
+        password: &Password,
+        salt: &[u8],
+        iterations: usize,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        derive_key(password, salt, iterations, dst_out)?;
+        util::secure_cmp(&dst_out, expected)
+    }
+}
+
+/// PBKDF2-HMAC-SHA512 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
+pub mod sha512 {
+    use super::*;
+    use crate::hazardous::hash::sha2::sha512::{self, Sha512};
+
+    construct_hmac_key! {
+        /// A type to represent the `Password` that PBKDF2 hashes.
+        ///
+        /// # Note:
+        /// Because `Password` is used as a `SecretKey` for HMAC during hashing, `Password` already
+        /// pads the given password to a length of 128, for use in HMAC, when initialized.
+        ///
+        /// Using `unprotected_as_bytes()` will return the password with padding.
+        ///
+        /// Using `get_length()` will return the length with padding (always 128).
+        ///
+        /// # Panics:
+        /// A panic will occur if:
+        /// - Failure to generate random bytes securely.
+        (Password, Sha512, sha512::SHA512_OUTSIZE, test_pbkdf2_password, sha512::SHA512_BLOCKSIZE)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Derive a key using PBKDF2-HMAC-SHA512.
+    pub fn derive_key(
+        password: &Password,
+        salt: &[u8],
+        iterations: usize,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        _derive_key::<Sha512, { sha512::SHA512_BLOCKSIZE }, { sha512::SHA512_OUTSIZE }>(
+            password.unprotected_as_bytes(),
+            salt,
+            iterations,
+            dst_out,
+        )
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
+    pub fn verify(
+        expected: &[u8],
+        password: &Password,
+        salt: &[u8],
+        iterations: usize,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        derive_key(password, salt, iterations, dst_out)?;
+        util::secure_cmp(&dst_out, expected)
+    }
 }
 
 // Testing public functions in the module.
