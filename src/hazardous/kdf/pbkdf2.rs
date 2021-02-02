@@ -36,10 +36,11 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - The length of `dst_out` is greater than (2^32 - 1) * 64.
+//! - The length of `dst_out` is greater than (2^32 - 1) * SHA(256/384/512)_OUTSIZE.
 //!
 //! # Security:
-//! - Use [`Password::generate()`] to randomly generate a password of 128 bytes.
+//! - Use [`Password::generate()`] to randomly generate a password of the same length as
+//! the underlying SHA2 hash functions blocksize.
 //! - Salts should always be generated using a CSPRNG.
 //!   [`util::secure_rand_bytes()`] can be used for this.
 //! - The recommended length for a salt is 64 bytes.
@@ -52,14 +53,14 @@
 //!
 //! let mut salt = [0u8; 64];
 //! util::secure_rand_bytes(&mut salt)?;
-//! let password = pbkdf2::Password::from_slice("Secret password".as_bytes())?;
+//! let password = pbkdf2::sha512::Password::from_slice("Secret password".as_bytes())?;
 //! let mut dst_out = [0u8; 64];
 //!
-//! pbkdf2::derive_key(&password, &salt, 10000, &mut dst_out)?;
+//! pbkdf2::sha512::derive_key(&password, &salt, 10000, &mut dst_out)?;
 //!
 //! let expected_dk = dst_out;
 //!
-//! assert!(pbkdf2::verify(&expected_dk, &password, &salt, 10000, &mut dst_out).is_ok());
+//! assert!(pbkdf2::sha512::verify(&expected_dk, &password, &salt, 10000, &mut dst_out).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Password::generate()`]: struct.Password.html#method.generate

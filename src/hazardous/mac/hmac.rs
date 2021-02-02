@@ -34,8 +34,7 @@
 //!
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
-//!   [`SecretKey::generate()`] can be used for this. It generates
-//!   a secret key of 128 bytes.
+//!   [`SecretKey::generate()`] can be used for this.
 //! - The minimum recommended size for a secret key is 64 bytes.
 //!
 //! # Recommendation:
@@ -44,15 +43,15 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::mac::hmac::{Hmac, SecretKey};
+//! use orion::hazardous::mac::hmac::sha512::{HmacSha512, SecretKey};
 //!
 //! let key = SecretKey::generate();
 //!
-//! let mut state = Hmac::new(&key);
+//! let mut state = HmacSha512::new(&key);
 //! state.update(b"Some message.")?;
 //! let tag = state.finalize()?;
 //!
-//! assert!(Hmac::verify(&tag, &key, b"Some message.").is_ok());
+//! assert!(HmacSha512::verify(&tag, &key, b"Some message.").is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: struct.Hmac.html

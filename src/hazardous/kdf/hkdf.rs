@@ -32,7 +32,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than 1.
-//! - The length of `dst_out` is greater than 255 * [`SHA512_OUTSIZE`].
+//! - The length of `dst_out` is greater than 255 * SHA(256/384/512)_OUTSIZE.
 //! - The derived key does not match the expected when verifying.
 //!
 //! # Security:
@@ -51,15 +51,14 @@
 //! util::secure_rand_bytes(&mut salt)?;
 //! let mut okm_out = [0u8; 32];
 //!
-//! hkdf::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out)?;
+//! hkdf::sha512::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out)?;
 //!
 //! let exp_okm = okm_out;
 //!
-//! assert!(hkdf::verify(&exp_okm, &salt, "IKM".as_bytes(), None, &mut okm_out).is_ok());
+//! assert!(hkdf::sha512::verify(&exp_okm, &salt, "IKM".as_bytes(), None, &mut okm_out).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
-//! [`SHA512_OUTSIZE`]: ../../hash/sha512/constant.SHA512_OUTSIZE.html
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::sha2;
