@@ -74,9 +74,8 @@ fn _extract<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
 where
     T: sha2::Sha2Hash,
 {
-    // TODO: The salt needs to be padded here, because HmacGeneric expects the result of padding through
-    // unprotected_as_bytes(). Make a function that can be used here, but also in typedef macros.
-    let mut prk = hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new(salt);
+    let mut prk =
+        hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new_with_padding(salt)?;
     prk.update(ikm)?;
     prk.finalize()?;
 
@@ -101,9 +100,8 @@ where
 
     let optional_info = info.unwrap_or(&[0u8; 0]);
 
-    // TODO: The prk needs to be padded here, because HmacGeneric expects the result of padding through
-    // unprotected_as_bytes(). Make a function that can be used here, but also in typedef macros.
-    let mut hmac = hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new(prk);
+    let mut hmac =
+        hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new_with_padding(prk)?;
     let okm_len = dst_out.len();
 
     for (idx, hlen_block) in dst_out.chunks_mut(SHA2_OUTSIZE).enumerate() {

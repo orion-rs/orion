@@ -280,6 +280,12 @@ impl super::Sha2Hash for Sha256 {
     fn finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
         self._finalize_internal(dest)
     }
+
+    fn digest(data: &[u8], dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        let mut ctx = Sha256::new();
+        ctx.update(data)?;
+        ctx._finalize_internal(dest)
+    }
 }
 
 #[cfg(test)]

@@ -191,4 +191,6 @@ pub(crate) trait Sha2Hash: Clone {
     fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError>;
 
     fn finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError>;
+
+    fn digest(data: &[u8], dest: &mut [u8]) -> Result<(), UnknownCryptoError>;
 }

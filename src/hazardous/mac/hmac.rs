@@ -78,6 +78,23 @@ impl<T, const BLOCKSIZE: usize, const OUTSIZE: usize> HmacGeneric<T, BLOCKSIZE, 
 where
     T: crate::hazardous::hash::sha2::Sha2Hash,
 {
+    /// Pad the key according to the internal SHA2 used.
+    /// This function should only be used in places where the SecretKey newtype
+    /// isn't passed, since it also pads the key.
+    fn pad_raw_key(secret_key: &[u8]) -> Result<[u8; BLOCKSIZE], UnknownCryptoError> {
+        let mut sk = [0u8; BLOCKSIZE];
+
+        let slice_len = secret_key.len();
+
+        if slice_len > BLOCKSIZE {
+            T::digest(secret_key, &mut sk[..OUTSIZE])?;
+        } else {
+            sk[..slice_len].copy_from_slice(secret_key);
+        }
+
+        Ok(sk)
+    }
+
     /// Pad `key` with `ipad` and `opad`.
     fn pad_key_io(&mut self, key: &[u8]) {
         debug_assert!(key.len() == BLOCKSIZE);
@@ -96,8 +113,8 @@ where
         opad.zeroize();
     }
 
-    /// Initialize `Hmac` struct with a given key.
-    pub(crate) fn new(secret_key: &[u8]) -> Self {
+    /// Initialize `Hmac` struct with a given key that already is padded.
+    pub(crate) fn new_no_padding(secret_key: &[u8]) -> Self {
         let mut state = Self {
             working_hasher: T::new(),
             opad_hasher: T::new(),
@@ -108,6 +125,23 @@ where
 
         state.pad_key_io(secret_key);
         state
+    }
+
+    /// Initialize `Hmac` struct with a given key that must be padded.
+    pub(crate) fn new_with_padding(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+        let mut state = Self {
+            working_hasher: T::new(),
+            opad_hasher: T::new(),
+            ipad_hasher: T::new(),
+            buffer: [0u8; OUTSIZE],
+            is_finalized: false,
+        };
+
+        let mut sk = Self::pad_raw_key(secret_key)?;
+        state.pad_key_io(&sk);
+        sk.zeroize();
+
+        Ok(state)
     }
 
     /// Reset to `new()` state.
@@ -196,7 +230,7 @@ pub mod sha256 {
                     Sha256,
                     { sha256::SHA256_BLOCKSIZE },
                     { sha256::SHA256_OUTSIZE },
-                >::new(secret_key.unprotected_as_bytes()),
+                >::new_no_padding(secret_key.unprotected_as_bytes()),
             }
         }
 
@@ -421,7 +455,7 @@ pub mod sha384 {
                     Sha384,
                     { sha384::SHA384_BLOCKSIZE },
                     { sha384::SHA384_OUTSIZE },
-                >::new(secret_key.unprotected_as_bytes()),
+                >::new_no_padding(secret_key.unprotected_as_bytes()),
             }
         }
 
@@ -646,7 +680,7 @@ pub mod sha512 {
                     Sha512,
                     { sha512::SHA512_BLOCKSIZE },
                     { sha512::SHA512_OUTSIZE },
-                >::new(secret_key.unprotected_as_bytes()),
+                >::new_no_padding(secret_key.unprotected_as_bytes()),
             }
         }
 
