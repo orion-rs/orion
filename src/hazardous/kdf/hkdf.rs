@@ -124,6 +124,7 @@ where
     Ok(())
 }
 
+/// HKDF-HMAC-SHA256 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod sha256 {
     use super::*;
 
@@ -176,6 +177,7 @@ pub mod sha256 {
     }
 }
 
+/// HKDF-HMAC-SHA384 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod sha384 {
     use super::*;
 
@@ -228,6 +230,7 @@ pub mod sha384 {
     }
 }
 
+/// HKDF-HMAC-SHA512 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod sha512 {
     use super::*;
 
