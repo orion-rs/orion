@@ -175,6 +175,7 @@ where
     }
 }
 
+/// HMAC-SHA256 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub mod sha256 {
     use super::*;
     use crate::hazardous::hash::sha2::sha256::{self, Sha256};
@@ -400,6 +401,7 @@ pub mod sha256 {
     }
 }
 
+/// HMAC-SHA384 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub mod sha384 {
     use super::*;
     use crate::hazardous::hash::sha2::sha384::{self, Sha384};
@@ -625,6 +627,7 @@ pub mod sha384 {
     }
 }
 
+/// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub mod sha512 {
     use super::*;
     use crate::hazardous::hash::sha2::sha512::{self, Sha512};

@@ -5,8 +5,7 @@ pub mod rfc_hmac;
 pub mod rfc_poly1305;
 pub mod wycheproof_hmac;
 
-use orion::hazardous::hash::sha2;
-use orion::hazardous::mac::{hmac, poly1305};
+use orion::hazardous::mac::poly1305;
 use poly1305::{OneTimeKey, Tag};
 
 macro_rules! impl_hmac_test_runner (($name:ident, $hmac:ident, $hmac_tag:ident, $hmac_sk:ident, $sha2_outsize:ident) => (

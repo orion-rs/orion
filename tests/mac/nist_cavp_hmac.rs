@@ -1,5 +1,4 @@
 use crate::{TestCase, TestCaseReader};
-use serde::de::value;
 
 #[test]
 fn test_nist_cavp() {
