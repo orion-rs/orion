@@ -85,18 +85,21 @@ fn _function_f<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
 where
     T: sha2::Sha2Hash,
 {
+    let mut u_step = [0u8; SHA2_OUTSIZE];
     hmac.update(salt)?;
     hmac.update(&index.to_be_bytes())?;
     hmac.finalize()?;
 
-    dk_block.copy_from_slice(&hmac.buffer[..block_len]);
+    u_step.copy_from_slice(&hmac.buffer);
+    dk_block.copy_from_slice(&u_step[..block_len]);
 
     if iterations > 1 {
         for _ in 1..iterations {
             hmac.reset();
-            hmac.update(&hmac.buffer)?;
+            hmac.update(&u_step)?;
             hmac.finalize()?;
-            xor_slices!(&hmac.buffer, dk_block);
+            u_step.copy_from_slice(&hmac.buffer);
+            xor_slices!(&u_step, dk_block);
         }
     }
 
@@ -297,6 +300,7 @@ pub mod sha512 {
     }
 }
 
+/*
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -401,3 +405,4 @@ mod public {
         }
     }
 }
+*/
