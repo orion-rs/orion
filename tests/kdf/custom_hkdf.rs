@@ -22,7 +22,7 @@ mod custom_hkdf {
 
         kdf::hkdf256_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_256,
             &salt,
             &ikm,
             &info,
@@ -31,7 +31,7 @@ mod custom_hkdf {
         );
         kdf::hkdf384_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_384,
             &salt,
             &ikm,
             &info,
@@ -40,7 +40,7 @@ mod custom_hkdf {
         );
         kdf::hkdf512_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_512,
             &salt,
             &ikm,
             &info,
@@ -68,7 +68,7 @@ mod custom_hkdf {
 
         kdf::hkdf256_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_256,
             &salt,
             &ikm,
             &info,
@@ -77,7 +77,7 @@ mod custom_hkdf {
         );
         kdf::hkdf384_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_384,
             &salt,
             &ikm,
             &info,
@@ -86,7 +86,7 @@ mod custom_hkdf {
         );
         kdf::hkdf512_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_512,
             &salt,
             &ikm,
             &info,
@@ -114,7 +114,7 @@ mod custom_hkdf {
 
         kdf::hkdf256_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_256,
             &salt,
             &ikm,
             &info,
@@ -123,7 +123,7 @@ mod custom_hkdf {
         );
         kdf::hkdf384_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_384,
             &salt,
             &ikm,
             &info,
@@ -132,7 +132,7 @@ mod custom_hkdf {
         );
         kdf::hkdf512_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_512,
             &salt,
             &ikm,
             &info,
@@ -155,7 +155,7 @@ mod custom_hkdf {
 
         kdf::hkdf256_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_256,
             &salt,
             &ikm,
             &info,
@@ -164,7 +164,7 @@ mod custom_hkdf {
         );
         kdf::hkdf384_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_384,
             &salt,
             &ikm,
             &info,
@@ -173,7 +173,7 @@ mod custom_hkdf {
         );
         kdf::hkdf512_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_512,
             &salt,
             &ikm,
             &info,
@@ -196,7 +196,7 @@ mod custom_hkdf {
 
         kdf::hkdf256_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_256,
             &salt,
             &ikm,
             &info,
@@ -205,7 +205,7 @@ mod custom_hkdf {
         );
         kdf::hkdf384_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_384,
             &salt,
             &ikm,
             &info,
@@ -214,7 +214,7 @@ mod custom_hkdf {
         );
         kdf::hkdf512_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_512,
             &salt,
             &ikm,
             &info,
@@ -239,7 +239,7 @@ mod custom_hkdf {
 
         kdf::hkdf256_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_256,
             &salt,
             &ikm,
             &info,
@@ -248,7 +248,7 @@ mod custom_hkdf {
         );
         kdf::hkdf384_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_384,
             &salt,
             &ikm,
             &info,
@@ -257,7 +257,7 @@ mod custom_hkdf {
         );
         kdf::hkdf512_test_runner(
             None,
-            &expected_okm,
+            &expected_okm_512,
             &salt,
             &ikm,
             &info,

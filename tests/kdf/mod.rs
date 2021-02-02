@@ -1,6 +1,5 @@
 pub mod custom_hkdf;
 pub mod custom_pbkdf2;
-pub mod rfc_pbkdf2;
 #[cfg(feature = "safe_api")]
 pub mod other_argon2i;
 pub mod other_hkdf;
@@ -8,6 +7,7 @@ pub mod other_hkdf;
 pub mod pynacl_argon2i;
 #[cfg(feature = "safe_api")]
 pub mod ref_argon2i;
+pub mod rfc_pbkdf2;
 pub mod wycheproof_hkdf;
 
 use orion::hazardous::{kdf::hkdf, mac::hmac};
