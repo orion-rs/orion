@@ -300,7 +300,6 @@ pub mod sha512 {
     }
 }
 
-/*
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -311,42 +310,122 @@ mod public {
 
         #[test]
         fn verify_true() {
-            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_256 = sha256::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_384 = sha384::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_512 = sha512::Password::from_slice("pass\0word".as_bytes()).unwrap();
+
             let salt = "sa\0lt".as_bytes();
-            let iterations: usize = 4096;
+            let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
+            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha256::verify(
+                &okm_out,
+                &password_256,
+                salt,
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_ok());
 
-            assert!(verify(&okm_out, &password, salt, iterations, &mut okm_out_verify).is_ok());
+            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha384::verify(
+                &okm_out,
+                &password_384,
+                salt,
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_ok());
+
+            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha512::verify(
+                &okm_out,
+                &password_512,
+                salt,
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_ok());
         }
 
         #[test]
         fn verify_false_wrong_salt() {
-            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_256 = sha256::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_384 = sha384::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_512 = sha512::Password::from_slice("pass\0word".as_bytes()).unwrap();
+
             let salt = "sa\0lt".as_bytes();
-            let iterations: usize = 4096;
+            let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
+            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha256::verify(
+                &okm_out,
+                &password_256,
+                b"",
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_err());
 
-            assert!(verify(&okm_out, &password, b"", iterations, &mut okm_out_verify).is_err());
+            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha384::verify(
+                &okm_out,
+                &password_384,
+                b"",
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_err());
+
+            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha512::verify(
+                &okm_out,
+                &password_512,
+                b"",
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_err());
         }
         #[test]
         fn verify_false_wrong_password() {
-            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_256 = sha256::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_384 = sha384::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_512 = sha512::Password::from_slice("pass\0word".as_bytes()).unwrap();
+
             let salt = "sa\0lt".as_bytes();
-            let iterations: usize = 4096;
+            let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
-
-            assert!(verify(
+            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha256::verify(
                 &okm_out,
-                &Password::from_slice(b"").unwrap(),
+                &sha256::Password::from_slice(b"pass").unwrap(),
+                salt,
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_err());
+
+            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha384::verify(
+                &okm_out,
+                &sha384::Password::from_slice(b"pass").unwrap(),
+                salt,
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_err());
+
+            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha512::verify(
+                &okm_out,
+                &sha512::Password::from_slice(b"pass").unwrap(),
                 salt,
                 iterations,
                 &mut okm_out_verify
@@ -356,28 +435,71 @@ mod public {
 
         #[test]
         fn verify_diff_dklen_error() {
-            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_256 = sha256::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_384 = sha384::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_512 = sha512::Password::from_slice("pass\0word".as_bytes()).unwrap();
+
             let salt = "sa\0lt".as_bytes();
-            let iterations: usize = 4096;
+            let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 32];
 
-            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
+            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha256::verify(
+                &okm_out,
+                &password_256,
+                salt,
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_err());
 
-            assert!(verify(&okm_out, &password, salt, iterations, &mut okm_out_verify).is_err());
+            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha384::verify(
+                &okm_out,
+                &password_384,
+                salt,
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_err());
+
+            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            assert!(sha512::verify(
+                &okm_out,
+                &password_512,
+                salt,
+                iterations,
+                &mut okm_out_verify
+            )
+            .is_err());
         }
 
         #[test]
         fn verify_diff_iter_error() {
-            let password = Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_256 = sha256::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_384 = sha384::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_512 = sha512::Password::from_slice("pass\0word".as_bytes()).unwrap();
+
             let salt = "sa\0lt".as_bytes();
-            let iterations: usize = 4096;
+            let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            derive_key(&password, &salt, iterations, &mut okm_out).unwrap();
+            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            assert!(
+                sha256::verify(&okm_out, &password_256, salt, 127, &mut okm_out_verify).is_err()
+            );
 
-            assert!(verify(&okm_out, &password, salt, 1024, &mut okm_out_verify).is_err());
+            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            assert!(
+                sha384::verify(&okm_out, &password_384, salt, 127, &mut okm_out_verify).is_err()
+            );
+
+            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            assert!(
+                sha512::verify(&okm_out, &password_512, salt, 127, &mut okm_out_verify).is_err()
+            );
         }
     }
 
@@ -386,23 +508,32 @@ mod public {
 
         #[test]
         fn zero_iterations_err() {
-            let password = Password::from_slice("password".as_bytes()).unwrap();
+            let password_256 = sha256::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_384 = sha384::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_512 = sha512::Password::from_slice("pass\0word".as_bytes()).unwrap();
+
             let salt = "salt".as_bytes();
             let iterations: usize = 0;
             let mut okm_out = [0u8; 15];
 
-            assert!(derive_key(&password, salt, iterations, &mut okm_out).is_err());
+            assert!(sha256::derive_key(&password_256, salt, iterations, &mut okm_out).is_err());
+            assert!(sha384::derive_key(&password_384, salt, iterations, &mut okm_out).is_err());
+            assert!(sha512::derive_key(&password_512, salt, iterations, &mut okm_out).is_err());
         }
 
         #[test]
         fn zero_dklen_err() {
-            let password = Password::from_slice("password".as_bytes()).unwrap();
+            let password_256 = sha256::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_384 = sha384::Password::from_slice("pass\0word".as_bytes()).unwrap();
+            let password_512 = sha512::Password::from_slice("pass\0word".as_bytes()).unwrap();
+
             let salt = "salt".as_bytes();
             let iterations: usize = 1;
             let mut okm_out = [0u8; 0];
 
-            assert!(derive_key(&password, salt, iterations, &mut okm_out).is_err());
+            assert!(sha256::derive_key(&password_256, salt, iterations, &mut okm_out).is_err());
+            assert!(sha384::derive_key(&password_384, salt, iterations, &mut okm_out).is_err());
+            assert!(sha512::derive_key(&password_512, salt, iterations, &mut okm_out).is_err());
         }
     }
 }
-*/
