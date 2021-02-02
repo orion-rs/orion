@@ -1,4 +1,4 @@
-//pub mod custom_hkdf;
+pub mod custom_hkdf;
 //pub mod custom_pbkdf2;
 #[cfg(feature = "safe_api")]
 pub mod other_argon2i;
