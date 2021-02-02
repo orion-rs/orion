@@ -2,7 +2,7 @@
 #[cfg(test)]
 mod other_hkdf {
 
-    use crate::kdf::hkdf_test_runner;
+    use crate::kdf::hkdf512_test_runner;
     use hex::decode;
 
     #[test]
@@ -18,7 +18,7 @@ mod other_hkdf {
         )
         .unwrap();
 
-        hkdf_test_runner(
+        hkdf512_test_runner(
             Some(&expected_prk),
             &expected_okm,
             &salt,
@@ -41,7 +41,7 @@ mod other_hkdf {
                 "ce6c97192805b346e6161e821ed165673b84f400a2b514b2fe23d84cd189ddf1b695b48cbd1c8388441137b3ce28f16aa64ba33ba466b24df6cfcb021ecff235f6a2056ce3af1de44d572097a8505d9e7a93",
             ).unwrap();
 
-        hkdf_test_runner(
+        hkdf512_test_runner(
             Some(&expected_prk),
             &expected_okm,
             &salt,
@@ -65,7 +65,7 @@ mod other_hkdf {
         )
         .unwrap();
 
-        hkdf_test_runner(
+        hkdf512_test_runner(
             Some(&expected_prk),
             &expected_okm,
             &salt,
@@ -89,7 +89,7 @@ mod other_hkdf {
         )
         .unwrap();
 
-        hkdf_test_runner(
+        hkdf512_test_runner(
             Some(&expected_prk),
             &expected_okm,
             &salt,
@@ -113,7 +113,7 @@ mod other_hkdf {
         )
         .unwrap();
 
-        hkdf_test_runner(
+        hkdf512_test_runner(
             Some(&expected_prk),
             &expected_okm,
             &salt,
