@@ -160,7 +160,8 @@ macro_rules! func_from_slice_variable_size (($name:ident) => (
     #[cfg(feature = "safe_api")]
     /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-        if slice.is_empty() {
+        // See issue on `isize` limit: https://github.com/brycx/orion/issues/130
+        if slice.is_empty() || slice.len() > (isize::MAX as usize) {
             return Err(UnknownCryptoError);
         }
 
@@ -214,7 +215,8 @@ macro_rules! func_generate_variable_size (($name:ident) => (
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
-        if length < 1 || length >= (u32::MAX as usize) {
+        // See issue on `isize` limit: https://github.com/brycx/orion/issues/130
+        if length < 1 || length > (isize::MAX as usize) {
             return Err(UnknownCryptoError);
         }
 
