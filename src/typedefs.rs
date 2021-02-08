@@ -363,7 +363,7 @@ macro_rules! test_generate_variable (($name:ident) => (
     #[cfg(feature = "safe_api")]
     fn test_generate_variable() {
         assert!($name::generate(0).is_err());
-        assert!($name::generate((isize::MAX + 1) as usize).is_err());
+        assert!($name::generate((isize::MAX as usize) + 1).is_err());
         assert!($name::generate(1).is_ok());
         assert!($name::generate(64).is_ok());
 
