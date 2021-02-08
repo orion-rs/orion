@@ -407,7 +407,7 @@ macro_rules! construct_secret_key {
         /// ```rust
         /// use orion::hazardous::stream::chacha20::SecretKey;
         ///
-        /// // Initialize a secret key with 32 random bytes.
+        /// // Initialize a secret key with random bytes.
         /// let secret_key = SecretKey::generate();
         ///
         /// // Secure, constant-time comparison with a byte slice
@@ -634,7 +634,7 @@ macro_rules! construct_hmac_key {
         /// ```rust
         /// use orion::hazardous::mac::hmac::SecretKey;
         ///
-        /// // Initialize a secret key with 32 random bytes.
+        /// // Initialize a secret key with random bytes.
         /// let secret_key = SecretKey::generate();
         ///
         /// // Secure, constant-time comparison with a byte slice
