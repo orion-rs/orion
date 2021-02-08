@@ -57,14 +57,14 @@
 //! ```rust
 //! use orion::auth;
 //!
-//! // There exists a shared key between the user and API endpoint
+//! // There exists a shared key between the user and API server
 //! let key = auth::SecretKey::default();
 //!
 //! // User generates message and authentication tag
 //! let msg = "Some message.".as_bytes();
 //! let expected_tag = auth::authenticate(&key, msg)?;
 //!
-//! // API endpoint verifies the authenticity of the message with the tag
+//! // API server verifies the authenticity of the message with the tag
 //! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
