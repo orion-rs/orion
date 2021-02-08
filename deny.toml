@@ -1,0 +1,31 @@
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "x86_64-unknown-linux-musl" },
+    { triple = "x86_64-apple-darwin" },
+    { triple = "x86_64-pc-windows-msvc" },
+]
+
+[advisories]
+unmaintained = "deny"
+yanked = "deny"
+notice = "deny"
+unsound = "deny"
+vulnerability = "deny"
+
+[licenses]
+unlicensed = "deny"
+# We want really high confidence when inferring licenses from text
+confidence-threshold = 0.93
+allow = [
+    "MIT",
+    "BSD-3-Clause",
+    "Apache-2.0",
+]
+
+[bans]
+multiple-versions = "allow" # We don't maintain Cargo lockfile, so this isn't really feasible to deny
+wildcards = "deny" # Dependencies should not have be specified with '*'
+
+[sources]
+unknown-registry = "deny" # crates.io is allowed and a known register by default
+unknown-git = "deny"
