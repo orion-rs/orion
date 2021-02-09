@@ -59,7 +59,7 @@
     unused_qualifications,
     overflowing_literals
 )]
-#![doc(html_root_url = "https://docs.rs/orion/0.15.5")]
+#![doc(html_root_url = "https://docs.rs/orion/0.15.6")]
 
 #[cfg(test)]
 #[cfg(feature = "safe_api")]

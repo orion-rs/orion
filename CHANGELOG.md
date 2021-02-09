@@ -1,3 +1,21 @@
+### 0.15.6
+
+__Date:__ February 9, 2021.
+
+__Changelog:__
+
+- The entire CI infrastructure has been moved to GitHub Actions (removing AppVeyor and Travis CI).
+- Add `cargo-deny` to CI jobs ([#174](https://github.com/brycx/orion/pull/174)).
+- Refactoring of code related to testing and reading test vectors ([#136](https://github.com/brycx/orion/pull/136), [#143](https://github.com/brycx/orion/pull/143)).
+- Add new public Matrix room for discussion ([#144](https://github.com/brycx/orion/issues/144)).
+- Internal documentation improvements and clippy improvements (by [u5surf](https://github.com/u5surf)).
+- Update and correct license years ([#164](https://github.com/brycx/orion/pull/164)).
+- Update `quickcheck`.
+- Fix documentation on the `generate()` output-size for HMAC-based secret key newtypes which was incorrect ([#169](https://github.com/brycx/orion/issues/169)).
+- Improve the usage example in `orion::auth` ([Vince Mutolo](https://github.com/vlmutolo)).
+- Add GitHub issue templates for bugs and feature requests ([#155](https://github.com/brycx/orion/pull/155)).
+- Add `SECURITY.md`, specifying a disclosure policy, threat-model and information regarding yanking ([#163](https://github.com/brycx/orion/pull/163)).
+
 ### 0.15.5
 
 __Date:__ October 13, 2020.
