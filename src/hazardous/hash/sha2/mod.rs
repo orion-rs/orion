@@ -22,8 +22,6 @@
 
 use core::ops::{BitAnd, BitOr, BitXor};
 
-use crate::errors::UnknownCryptoError;
-
 /// The Ch function as specified in FIPS 180-4 section 4.1.3.
 pub(crate) fn ch<T>(x: T, y: T, z: T) -> T
 where
@@ -183,14 +181,3 @@ pub mod sha384;
 
 /// SHA512 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
 pub mod sha512;
-
-/// A trait used by HMAC, HKDF and PBKDF2.
-pub(crate) trait Sha2Hash: Clone {
-    fn new() -> Self;
-
-    fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError>;
-
-    fn finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError>;
-
-    fn digest(data: &[u8], dest: &mut [u8]) -> Result<(), UnknownCryptoError>;
-}

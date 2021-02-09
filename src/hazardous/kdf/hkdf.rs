@@ -61,7 +61,7 @@
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::hash::sha2;
+use crate::hazardous::hash::{self, sha2};
 use crate::hazardous::mac::hmac;
 use crate::util;
 
@@ -71,7 +71,7 @@ fn _extract<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
     ikm: &[u8],
 ) -> Result<[u8; SHA2_OUTSIZE], UnknownCryptoError>
 where
-    T: sha2::Sha2Hash,
+    T: hash::ShaHash,
 {
     let mut prk =
         hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new_with_padding(salt)?;
@@ -88,7 +88,7 @@ fn _expand<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError>
 where
-    T: sha2::Sha2Hash,
+    T: hash::ShaHash,
 {
     if dst_out.len() > 255 * SHA2_OUTSIZE {
         return Err(UnknownCryptoError);

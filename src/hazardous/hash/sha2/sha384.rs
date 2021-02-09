@@ -233,7 +233,7 @@ impl Sha384 {
     }
 }
 
-impl super::Sha2Hash for Sha384 {
+impl crate::hazardous::hash::ShaHash for Sha384 {
     fn new() -> Self {
         Sha384::new()
     }

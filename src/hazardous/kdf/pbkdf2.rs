@@ -70,7 +70,7 @@ use hmac::HmacGeneric;
 
 use crate::{
     errors::UnknownCryptoError,
-    hazardous::{hash::sha2, mac::hmac},
+    hazardous::{hash::{self, sha2}, mac::hmac},
     util,
 };
 
@@ -84,7 +84,7 @@ fn _function_f<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
     hmac: &mut HmacGeneric<T, SHA2_BLOCKSIZE, SHA2_OUTSIZE>,
 ) -> Result<(), UnknownCryptoError>
 where
-    T: sha2::Sha2Hash,
+    T: hash::ShaHash,
 {
     let mut u_step = [0u8; SHA2_OUTSIZE];
     hmac.update(salt)?;
@@ -114,7 +114,7 @@ fn _derive_key<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError>
 where
-    T: sha2::Sha2Hash,
+    T: hash::ShaHash,
 {
     if iterations < 1 {
         return Err(UnknownCryptoError);

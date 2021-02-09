@@ -75,7 +75,7 @@ pub(crate) struct HmacGeneric<T, const BLOCKSIZE: usize, const OUTSIZE: usize> {
 
 impl<T, const BLOCKSIZE: usize, const OUTSIZE: usize> HmacGeneric<T, BLOCKSIZE, OUTSIZE>
 where
-    T: crate::hazardous::hash::sha2::Sha2Hash,
+    T: crate::hazardous::hash::ShaHash,
 {
     /// Pad the key according to the internal SHA used.
     /// This function should only be used in places where the SecretKey newtype

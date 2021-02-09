@@ -273,7 +273,7 @@ impl Sha512 {
     }
 }
 
-impl super::Sha2Hash for Sha512 {
+impl crate::hazardous::hash::ShaHash for Sha512 {
     fn new() -> Self {
         Sha512::new()
     }

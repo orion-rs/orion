@@ -268,7 +268,7 @@ impl Sha256 {
     }
 }
 
-impl super::Sha2Hash for Sha256 {
+impl crate::hazardous::hash::ShaHash for Sha256 {
     fn new() -> Self {
         Sha256::new()
     }
