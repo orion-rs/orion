@@ -64,7 +64,7 @@ use crate::errors::UnknownCryptoError;
 use zeroize::Zeroize;
 
 #[derive(Clone)]
-/// HMAC-SHA2 streaming state.
+/// HMAC streaming state.
 pub(crate) struct HmacGeneric<T, const BLOCKSIZE: usize, const OUTSIZE: usize> {
     working_hasher: T,
     opad_hasher: T,
@@ -77,7 +77,7 @@ impl<T, const BLOCKSIZE: usize, const OUTSIZE: usize> HmacGeneric<T, BLOCKSIZE, 
 where
     T: crate::hazardous::hash::sha2::Sha2Hash,
 {
-    /// Pad the key according to the internal SHA2 used.
+    /// Pad the key according to the internal SHA used.
     /// This function should only be used in places where the SecretKey newtype
     /// isn't passed, since it also pads the key.
     fn pad_raw_key(secret_key: &[u8]) -> Result<[u8; BLOCKSIZE], UnknownCryptoError> {
@@ -159,7 +159,7 @@ where
         }
     }
 
-    /// Return a HMAC-SHA512 tag.
+    /// Compute the HMAC tag and place into `self.buffer`.
     pub(crate) fn finalize(&mut self) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
