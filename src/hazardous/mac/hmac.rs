@@ -64,7 +64,7 @@ use crate::errors::UnknownCryptoError;
 use zeroize::Zeroize;
 
 #[derive(Clone)]
-/// HMAC streaming state.
+/// HMAC streaming state for a hash T with a blocksize and outsize.
 pub(crate) struct HmacGeneric<T, const BLOCKSIZE: usize, const OUTSIZE: usize> {
     working_hasher: T,
     opad_hasher: T,
@@ -96,10 +96,10 @@ where
 
     /// Pad `key` with `ipad` and `opad`.
     fn pad_key_io(&mut self, key: &[u8]) {
+        // NOTE: The key is should be padded already.
         debug_assert!(key.len() == BLOCKSIZE);
         let mut ipad = [0x36; BLOCKSIZE];
         let mut opad = [0x5C; BLOCKSIZE];
-        // The key is padded in SecretKey::from_slice
         for (idx, itm) in key.iter().enumerate() {
             opad[idx] ^= itm;
             ipad[idx] ^= itm;
