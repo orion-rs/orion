@@ -3,6 +3,9 @@ on:
   pull_request:
     branches:
       - '*'
+      - '!generic-hmac'
+      - '!0v16'
+      - '!0v16/**'
   # Test only pushes to master branch
   push:
     branches:
