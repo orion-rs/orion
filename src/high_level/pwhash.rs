@@ -147,7 +147,7 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
 /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
 /// ```rust
-/// use orion::hazardous::mac::hmac::Tag;
+/// use orion::hazardous::mac::hmac::sha512::Tag;
 /// # use orion::errors::UnknownCryptoError;
 ///
 /// # fn main() -> Result<(), Box<UnknownCryptoError>> {

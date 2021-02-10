@@ -47,15 +47,39 @@ fn wycheproof_runner(path: &str) {
                 _ => panic!("Unexpected test outcome for Wycheproof test"),
             };
 
-            super::hmac_test_runner(
-                &decode(&test.tag).unwrap(),
-                &decode(&test.key).unwrap(),
-                &decode(&test.msg).unwrap(),
-                Some((test_group.tagSize / 8) as usize),
-                should_test_pass,
-            );
+            if path.contains("sha256") {
+                super::hmac256_test_runner(
+                    &decode(&test.tag).unwrap(),
+                    &decode(&test.key).unwrap(),
+                    &decode(&test.msg).unwrap(),
+                    Some((test_group.tagSize / 8) as usize),
+                    should_test_pass,
+                );
 
-            tests_run += 1;
+                tests_run += 1;
+            }
+            if path.contains("sha384") {
+                super::hmac384_test_runner(
+                    &decode(&test.tag).unwrap(),
+                    &decode(&test.key).unwrap(),
+                    &decode(&test.msg).unwrap(),
+                    Some((test_group.tagSize / 8) as usize),
+                    should_test_pass,
+                );
+
+                tests_run += 1;
+            }
+            if path.contains("sha512") {
+                super::hmac512_test_runner(
+                    &decode(&test.tag).unwrap(),
+                    &decode(&test.key).unwrap(),
+                    &decode(&test.msg).unwrap(),
+                    Some((test_group.tagSize / 8) as usize),
+                    should_test_pass,
+                );
+
+                tests_run += 1;
+            }
         }
     }
 
@@ -63,7 +87,21 @@ fn wycheproof_runner(path: &str) {
 }
 
 #[test]
-fn test_wycheproof_hmac() {
+fn test_wycheproof_hmac_256() {
+    wycheproof_runner(
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_hmac_sha256_test.json",
+    );
+}
+
+#[test]
+fn test_wycheproof_hmac_384() {
+    wycheproof_runner(
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_hmac_sha384_test.json",
+    );
+}
+
+#[test]
+fn test_wycheproof_hmac_512() {
     wycheproof_runner(
         "./tests/test_data/third_party/google/wycheproof/wycheproof_hmac_sha512_test.json",
     );

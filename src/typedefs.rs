@@ -569,7 +569,7 @@ macro_rules! construct_tag {
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
-        /// use orion::hazardous::mac::hmac::Tag;
+        /// use orion::hazardous::mac::hmac::sha512::Tag;
         /// # use orion::errors::UnknownCryptoError;
         ///
         /// # fn main() -> Result<(), Box<UnknownCryptoError>> {
@@ -623,7 +623,7 @@ macro_rules! construct_tag {
 /// to the required length specified by the HMAC specifications.
 macro_rules! construct_hmac_key {
     ($(#[$meta:meta])*
-    ($name:ident, $test_module_name:ident, $size:expr)) => (
+    ($name:ident, $sha2:ident, $sha2_outsize:expr, $test_module_name:ident, $size:expr)) => (
         $(#[$meta])*
         ///
         /// # Security:
@@ -636,7 +636,7 @@ macro_rules! construct_hmac_key {
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
-        /// use orion::hazardous::mac::hmac::SecretKey;
+        /// use orion::hazardous::mac::hmac::sha512::SecretKey;
         ///
         /// // Initialize a secret key with random bytes.
         /// let secret_key = SecretKey::generate();
@@ -660,14 +660,12 @@ macro_rules! construct_hmac_key {
             #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
             /// Construct from a given byte slice.
             pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
-                use crate::hazardous::hash::sha2::sha512::{Sha512, SHA512_OUTSIZE};
-
                 let mut secret_key = [0u8; $size];
 
                 let slice_len = slice.len();
 
                 if slice_len > $size {
-                    secret_key[..SHA512_OUTSIZE].copy_from_slice(&Sha512::digest(slice)?.as_ref());
+                    secret_key[..$sha2_outsize].copy_from_slice(&$sha2::digest(slice)?.as_ref());
                 } else {
                     secret_key[..slice_len].copy_from_slice(slice);
                 }

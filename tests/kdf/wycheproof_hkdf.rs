@@ -48,17 +48,47 @@ fn wycheproof_runner(path: &str) {
                 _ => panic!("Unexpected test outcome for Wycheproof test"),
             };
 
-            super::hkdf_test_runner(
-                None,
-                &decode(&test.okm).unwrap(),
-                &decode(&test.salt).unwrap(),
-                &decode(&test.ikm).unwrap(),
-                &decode(&test.info).unwrap(),
-                test.size,
-                should_test_pass,
-            );
+            dbg!(&test);
 
-            tests_run += 1;
+            if tests.algorithm.contains("SHA-256") {
+                super::hkdf256_test_runner(
+                    None,
+                    &decode(&test.okm).unwrap(),
+                    &decode(&test.salt).unwrap(),
+                    &decode(&test.ikm).unwrap(),
+                    &decode(&test.info).unwrap(),
+                    test.size,
+                    should_test_pass,
+                );
+
+                tests_run += 1;
+            }
+            if tests.algorithm.contains("SHA-384") {
+                super::hkdf384_test_runner(
+                    None,
+                    &decode(&test.okm).unwrap(),
+                    &decode(&test.salt).unwrap(),
+                    &decode(&test.ikm).unwrap(),
+                    &decode(&test.info).unwrap(),
+                    test.size,
+                    should_test_pass,
+                );
+
+                tests_run += 1;
+            }
+            if tests.algorithm.contains("SHA-512") {
+                super::hkdf512_test_runner(
+                    None,
+                    &decode(&test.okm).unwrap(),
+                    &decode(&test.salt).unwrap(),
+                    &decode(&test.ikm).unwrap(),
+                    &decode(&test.info).unwrap(),
+                    test.size,
+                    should_test_pass,
+                );
+
+                tests_run += 1;
+            }
         }
     }
 
@@ -66,7 +96,19 @@ fn wycheproof_runner(path: &str) {
 }
 
 #[test]
-fn test_wycheproof_hkdf() {
+fn test_wycheproof_hkdf_256() {
+    wycheproof_runner(
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_hkdf_sha256_test.json",
+    );
+}
+#[test]
+fn test_wycheproof_hkdf_384() {
+    wycheproof_runner(
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_hkdf_sha384_test.json",
+    );
+}
+#[test]
+fn test_wycheproof_hkdf_512() {
     wycheproof_runner(
         "./tests/test_data/third_party/google/wycheproof/wycheproof_hkdf_sha512_test.json",
     );
