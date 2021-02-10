@@ -70,10 +70,7 @@ use hmac::HmacGeneric;
 
 use crate::{
     errors::UnknownCryptoError,
-    hazardous::{
-        hash::{self, sha2},
-        mac::hmac,
-    },
+    hazardous::{hash, mac::hmac},
     util,
 };
 
