@@ -147,7 +147,7 @@ where
     pub(crate) fn reset(&mut self) {
         self.working_hasher = self.ipad_hasher.clone();
         self.is_finalized = false;
-        // TODO: Should we zero buffer here? It's always overwritten before reading from it, it seems
+        self.buffer = [0u8; OUTSIZE];
     }
 
     /// Update state with `data`. This can be called multiple times.
