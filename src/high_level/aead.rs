@@ -568,8 +568,6 @@ mod public {
             assert_eq!(tag3, StreamTag::MESSAGE);
         }
 
-        use super::streaming::*;
-
         #[quickcheck]
         #[cfg(feature = "safe_api")]
         fn prop_stream_seal_open_same_input(input: Vec<u8>) -> bool {
