@@ -567,59 +567,57 @@ mod public {
             assert_eq!(tag2, StreamTag::FINISH);
             assert_eq!(tag3, StreamTag::MESSAGE);
         }
-    }
 
-    mod proptest {
         use super::streaming::*;
-        use super::*;
 
-        quickcheck! {
-                fn prop_stream_seal_open_same_input(input: Vec<u8>) -> bool {
-                    let key = SecretKey::default();
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        fn prop_stream_seal_open_same_input(input: Vec<u8>) -> bool {
+            let key = SecretKey::default();
 
-                    let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
-                    let ct = sealer.seal_chunk(&input[..],StreamTag::MESSAGE).unwrap();
+            let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
+            let ct = sealer.seal_chunk(&input[..], StreamTag::MESSAGE).unwrap();
 
-                    let mut opener = StreamOpener::new(&key, &nonce).unwrap();
-                    let (pt_decrypted, tag) = opener.open_chunk(&ct).unwrap();
+            let mut opener = StreamOpener::new(&key, &nonce).unwrap();
+            let (pt_decrypted, tag) = opener.open_chunk(&ct).unwrap();
 
-                    input == pt_decrypted && tag == StreamTag::MESSAGE
-                }
-        }
-        quickcheck! {
-            // Sealing input, and then opening should always yield the same input.
-            fn prop_seal_open_same_input(input: Vec<u8>) -> bool {
-                let pt = if input.is_empty() {
-                    vec![1u8; 10]
-                } else {
-                    input
-                };
-
-                let sk = SecretKey::default();
-
-                let ct = seal(&sk, &pt).unwrap();
-                let pt_decrypted = open(&sk, &ct).unwrap();
-
-                pt == pt_decrypted
-            }
+            input == pt_decrypted && tag == StreamTag::MESSAGE
         }
 
-        quickcheck! {
-            // Sealing input, modifying the tag and then opening should
-            // always fail due to authentication.
-            fn prop_fail_on_diff_key(input: Vec<u8>) -> bool {
-                let pt = if input.is_empty() {
-                    vec![1u8; 10]
-                } else {
-                    input
-                };
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        // Sealing input, and then opening should always yield the same input.
+        fn prop_seal_open_same_input(input: Vec<u8>) -> bool {
+            let pt = if input.is_empty() {
+                vec![1u8; 10]
+            } else {
+                input
+            };
 
-                let sk = SecretKey::default();
-                let sk2 = SecretKey::default();
-                let ct = seal(&sk, &pt).unwrap();
+            let sk = SecretKey::default();
 
-                open(&sk2, &ct).is_err()
-            }
+            let ct = seal(&sk, &pt).unwrap();
+            let pt_decrypted = open(&sk, &ct).unwrap();
+
+            pt == pt_decrypted
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        // Sealing input, modifying the tag and then opening should
+        // always fail due to authentication.
+        fn prop_fail_on_diff_key(input: Vec<u8>) -> bool {
+            let pt = if input.is_empty() {
+                vec![1u8; 10]
+            } else {
+                input
+            };
+
+            let sk = SecretKey::default();
+            let sk2 = SecretKey::default();
+            let ct = seal(&sk, &pt).unwrap();
+
+            open(&sk2, &ct).is_err()
         }
     }
 }

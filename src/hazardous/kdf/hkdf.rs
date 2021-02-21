@@ -189,32 +189,30 @@ mod public {
     mod test_derive_key {
         use super::*;
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        /// Using derive_key() should always yield the same result
+        /// as using extract and expand separately.
+        fn prop_test_derive_key_same_separate(
+            salt: Vec<u8>,
+            ikm: Vec<u8>,
+            info: Vec<u8>,
+            outsize: usize,
+        ) -> bool {
+            let outsize_checked = if outsize == 0 || outsize > 16320 {
+                64
+            } else {
+                outsize
+            };
 
-            quickcheck! {
-                /// Using derive_key() should always yield the same result
-                /// as using extract and expand separately.
-                fn prop_test_derive_key_same_separate(salt: Vec<u8>, ikm: Vec<u8>, info: Vec<u8>, outsize: usize) -> bool {
+            let prk = extract(&salt[..], &ikm[..]).unwrap();
+            let mut out = vec![0u8; outsize_checked];
+            expand(&prk, Some(&info[..]), &mut out).unwrap();
 
-                    let outsize_checked = if outsize == 0 || outsize > 16320 {
-                        64
-                    } else {
-                        outsize
-                    };
+            let mut out_one_shot = vec![0u8; outsize_checked];
+            derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
 
-                    let prk = extract(&salt[..], &ikm[..]).unwrap();
-                    let mut out = vec![0u8; outsize_checked];
-                    expand(&prk, Some(&info[..]), &mut out).unwrap();
-
-                    let mut out_one_shot = vec![0u8; outsize_checked];
-                    derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
-
-                    out == out_one_shot
-                }
-            }
+            out == out_one_shot
         }
     }
 

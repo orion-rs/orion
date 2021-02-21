@@ -63,8 +63,11 @@
 
 #[cfg(test)]
 #[cfg(feature = "safe_api")]
-#[macro_use]
 extern crate quickcheck;
+#[cfg(test)]
+#[cfg(feature = "safe_api")]
+#[macro_use(quickcheck)]
+extern crate quickcheck_macros;
 
 #[cfg(feature = "alloc")]
 #[cfg_attr(feature = "alloc", macro_use)]

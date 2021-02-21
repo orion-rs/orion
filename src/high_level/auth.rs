@@ -157,61 +157,55 @@ mod public {
         }
     }
 
-    // Proptests. Only executed when NOT testing no_std.
+    #[quickcheck]
     #[cfg(feature = "safe_api")]
-    mod proptest {
-        use super::*;
+    /// Authentication and verifying that tag with the same parameters
+    /// should always be true.
+    fn prop_authenticate_verify(input: Vec<u8>) -> bool {
+        let sk = SecretKey::default();
+        let tag = authenticate(&sk, &input[..]).unwrap();
+        authenticate_verify(&tag, &sk, &input[..]).is_ok()
+    }
 
-        quickcheck! {
-            /// Authentication and verifying that tag with the same parameters
-            /// should always be true.
-            fn prop_authenticate_verify(input: Vec<u8>) -> bool {
-                let sk = SecretKey::default();
-                let tag = authenticate(&sk, &input[..]).unwrap();
-                authenticate_verify(&tag, &sk, &input[..]).is_ok()
-            }
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    /// Authentication and verifying that tag with a different key should
+    /// never be true.
+    fn prop_verify_fail_diff_key(input: Vec<u8>) -> bool {
+        let sk = SecretKey::default();
+        let sk2 = SecretKey::default();
+        let tag = authenticate(&sk, &input[..]).unwrap();
+
+        authenticate_verify(&tag, &sk2, &input[..]).is_err()
+    }
+
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    /// Authentication and verifying that tag with different input should
+    /// never be true.
+    fn prop_verify_fail_diff_input(input: Vec<u8>) -> bool {
+        let sk = SecretKey::default();
+        let tag = authenticate(&sk, &input[..]).unwrap();
+
+        authenticate_verify(&tag, &sk, b"Completely wrong input").is_err()
+    }
+
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    /// Verify the bounds of 32..=64 (inclusive) for the `SecretKey` used
+    /// in `authenticate/authenticate_verify`.
+    fn prop_authenticate_key_size(input: Vec<u8>) -> bool {
+        let sec_key_res = SecretKey::from_slice(&input);
+        if input.len() == 0 || input.len() >= u32::MAX as usize {
+            return sec_key_res.is_err();
         }
-
-        quickcheck! {
-            /// Authentication and verifying that tag with a different key should
-            /// never be true.
-            fn prop_verify_fail_diff_key(input: Vec<u8>) -> bool {
-                let sk = SecretKey::default();
-                let sk2 = SecretKey::default();
-                let tag = authenticate(&sk, &input[..]).unwrap();
-
-                authenticate_verify(&tag, &sk2, &input[..]).is_err()
-            }
-        }
-
-        quickcheck! {
-            /// Authentication and verifying that tag with different input should
-            /// never be true.
-            fn prop_verify_fail_diff_input(input: Vec<u8>) -> bool {
-                let sk = SecretKey::default();
-                let tag = authenticate(&sk, &input[..]).unwrap();
-
-                authenticate_verify(&tag, &sk, b"Completely wrong input").is_err()
-            }
-        }
-
-        quickcheck! {
-            /// Verify the bounds of 32..=64 (inclusive) for the `SecretKey` used
-            /// in `authenticate/authenticate_verify`.
-            fn prop_authenticate_key_size(input: Vec<u8>) -> bool {
-                let sec_key_res = SecretKey::from_slice(&input);
-                if input.len() == 0 || input.len() >= u32::MAX as usize {
-                    return sec_key_res.is_err();
-                }
-                let sec_key = sec_key_res.unwrap();
-                let msg = "what do ya want for nothing?".as_bytes().to_vec();
-                let auth_res = authenticate(&sec_key, &msg);
-                if input.len() >= BLAKE2B_MIN_KEY_SIZE && input.len() <= blake2b::BLAKE2B_KEYSIZE {
-                    auth_res.is_ok()
-                } else {
-                    auth_res.is_err()
-                }
-            }
+        let sec_key = sec_key_res.unwrap();
+        let msg = "what do ya want for nothing?".as_bytes().to_vec();
+        let auth_res = authenticate(&sec_key, &msg);
+        if input.len() >= BLAKE2B_MIN_KEY_SIZE && input.len() <= blake2b::BLAKE2B_KEYSIZE {
+            auth_res.is_ok()
+        } else {
+            auth_res.is_err()
         }
     }
 }

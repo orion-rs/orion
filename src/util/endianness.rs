@@ -393,105 +393,96 @@ mod public {
         assert_eq!(load_u32_le(&input_0), expected_0);
     }
 
-    // Proptests. Only executed when NOT testing no_std.
+    #[quickcheck]
     #[cfg(feature = "safe_api")]
-    mod proptest {
-        use super::*;
+    /// Load and store should not change the result.
+    fn prop_load_store_u32_le(src: Vec<u8>) -> bool {
+        if !src.is_empty() && src.len() % 4 == 0 {
+            let mut dst_load = vec![0u32; src.len() / 4];
+            load_u32_into_le(&src[..], &mut dst_load);
+            // Test that loading a single also is working correctly
+            dst_load[0] = load_u32_le(&src[..4]);
+            let mut dst_store = src.clone();
+            store_u32_into_le(&dst_load[..], &mut dst_store);
 
-        quickcheck! {
-            /// Load and store should not change the result.
-            fn prop_load_store_u32_le(src: Vec<u8>) -> bool {
-                if !src.is_empty() && src.len() % 4 == 0 {
-                    let mut dst_load = vec![0u32; src.len() / 4];
-                    load_u32_into_le(&src[..], &mut dst_load);
-                    // Test that loading a single also is working correctly
-                    dst_load[0] = load_u32_le(&src[..4]);
-                    let mut dst_store = src.clone();
-                    store_u32_into_le(&dst_load[..], &mut dst_store);
+            dst_store == src
+        } else {
+            // Otherwise above functions panic.
+            true
+        }
+    }
 
-                    dst_store == src
-                } else {
-                    // Otherwise above functions panic.
-                    true
-                }
-            }
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    /// Load and store should not change the result.
+    fn prop_load_store_u64_le(src: Vec<u8>) -> bool {
+        if !src.is_empty() && src.len() % 8 == 0 {
+            let mut dst_load = vec![0u64; src.len() / 8];
+            load_u64_into_le(&src[..], &mut dst_load);
+            let mut dst_store = src.clone();
+            store_u64_into_le(&dst_load[..], &mut dst_store);
+
+            dst_store == src
+        } else {
+            // Otherwise above functions panic.
+            true
+        }
+    }
+
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    /// Load and store should not change the result.
+    fn prop_load_store_u64_be(src: Vec<u8>) -> bool {
+        if !src.is_empty() && src.len() % 8 == 0 {
+            let mut dst_load = vec![0u64; src.len() / 8];
+            load_u64_into_be(&src[..], &mut dst_load);
+            let mut dst_store = src.clone();
+            store_u64_into_be(&dst_load[..], &mut dst_store);
+
+            dst_store == src
+        } else {
+            // Otherwise above functions panic.
+            true
+        }
+    }
+
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    /// Store and load should not change the result.
+    fn prop_store_load_u32_le(src: Vec<u32>) -> bool {
+        let mut dst_store = vec![0u8; src.len() * 4];
+        store_u32_into_le(&src[..], &mut dst_store);
+        let mut dst_load = src.clone();
+        load_u32_into_le(&dst_store[..], &mut dst_load);
+        if dst_store.len() >= 4 {
+            // Test that loading a single also is working correctly
+            dst_load[0] = load_u32_le(&dst_store[..4]);
         }
 
-        quickcheck! {
-            /// Load and store should not change the result.
-            fn prop_load_store_u64_le(src: Vec<u8>) -> bool {
-                if !src.is_empty() && src.len() % 8 == 0 {
-                    let mut dst_load = vec![0u64; src.len() / 8];
-                    load_u64_into_le(&src[..], &mut dst_load);
-                    let mut dst_store = src.clone();
-                    store_u64_into_le(&dst_load[..], &mut dst_store);
+        dst_load == src
+    }
 
-                    dst_store == src
-                } else {
-                    // Otherwise above functions panic.
-                    true
-                }
-            }
-        }
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    /// Store and load should not change the result.
+    fn prop_store_load_u64_le(src: Vec<u64>) -> bool {
+        let mut dst_store = vec![0u8; src.len() * 8];
+        store_u64_into_le(&src[..], &mut dst_store);
+        let mut dst_load = src.clone();
+        load_u64_into_le(&dst_store[..], &mut dst_load);
 
-        quickcheck! {
-            /// Load and store should not change the result.
-            fn prop_load_store_u64_be(src: Vec<u8>) -> bool {
-                if !src.is_empty() && src.len() % 8 == 0 {
-                    let mut dst_load = vec![0u64; src.len() / 8];
-                    load_u64_into_be(&src[..], &mut dst_load);
-                    let mut dst_store = src.clone();
-                    store_u64_into_be(&dst_load[..], &mut dst_store);
+        dst_load == src
+    }
 
-                    dst_store == src
-                } else {
-                    // Otherwise above functions panic.
-                    true
-                }
-            }
-        }
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    /// Store and load should not change the result.
+    fn prop_store_load_u64_be(src: Vec<u64>) -> bool {
+        let mut dst_store = vec![0u8; src.len() * 8];
+        store_u64_into_be(&src[..], &mut dst_store);
+        let mut dst_load = src.clone();
+        load_u64_into_be(&dst_store[..], &mut dst_load);
 
-        quickcheck! {
-            /// Store and load should not change the result.
-            fn prop_store_load_u32_le(src: Vec<u32>) -> bool {
-
-                let mut dst_store = vec![0u8; src.len() * 4];
-                store_u32_into_le(&src[..], &mut dst_store);
-                let mut dst_load = src.clone();
-                load_u32_into_le(&dst_store[..], &mut dst_load);
-                if dst_store.len() >= 4 {
-                    // Test that loading a single also is working correctly
-                    dst_load[0] = load_u32_le(&dst_store[..4]);
-                }
-
-                dst_load == src
-            }
-        }
-
-        quickcheck! {
-             /// Store and load should not change the result.
-            fn prop_store_load_u64_le(src: Vec<u64>) -> bool {
-
-                let mut dst_store = vec![0u8; src.len() * 8];
-                store_u64_into_le(&src[..], &mut dst_store);
-                let mut dst_load = src.clone();
-                load_u64_into_le(&dst_store[..], &mut dst_load);
-
-                dst_load == src
-            }
-        }
-
-        quickcheck! {
-             /// Store and load should not change the result.
-            fn prop_store_load_u64_be(src: Vec<u64>) -> bool {
-
-                let mut dst_store = vec![0u8; src.len() * 8];
-                store_u64_into_be(&src[..], &mut dst_store);
-                let mut dst_load = src.clone();
-                load_u64_into_be(&dst_store[..], &mut dst_load);
-
-                dst_load == src
-            }
-        }
+        dst_load == src
     }
 }

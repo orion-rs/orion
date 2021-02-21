@@ -547,37 +547,40 @@ mod public {
     mod test_verify {
         use super::*;
 
-        // Proptests. Only executed when NOT testing no_std.
-        mod proptest {
-            use super::*;
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        fn prop_test_same_input_verify_true(
+            hlen: u32,
+            kib: u32,
+            p: Vec<u8>,
+            s: Vec<u8>,
+            k: Vec<u8>,
+            x: Vec<u8>,
+        ) -> bool {
+            let passes = 1;
+            let mem = if kib < 8 || kib > 4096 { 1024 } else { kib };
+            let salt = if s.len() < 8 { vec![37u8; 8] } else { s };
 
-            quickcheck! {
-                fn prop_test_same_input_verify_true(hlen: u32, kib: u32, p: Vec<u8>, s: Vec<u8>, k: Vec<u8>, x: Vec<u8>) -> bool {
+            let mut dst_out = if hlen < 4 || hlen > 512 {
+                vec![0u8; 32]
+            } else {
+                vec![0u8; hlen as usize]
+            };
 
-                    let passes = 1;
-                    let mem = if kib < 8 || kib > 4096 {
-                        1024
-                    } else {
-                        kib
-                    };
-                    let salt = if s.len() < 8 {
-                        vec![37u8; 8]
-                    } else {
-                        s
-                    };
+            let mut dst_out_verify = dst_out.clone();
+            derive_key(&p, &salt, passes, mem, Some(&k), Some(&x), &mut dst_out).unwrap();
 
-                    let mut dst_out = if hlen < 4 || hlen > 512 {
-                        vec![0u8; 32]
-                    } else {
-                        vec![0u8; hlen as usize]
-                    };
-
-                    let mut dst_out_verify = dst_out.clone();
-                    derive_key(&p, &salt, passes, mem, Some(&k), Some(&x), &mut dst_out).unwrap();
-
-                    verify(&dst_out, &p, &salt, passes, mem, Some(&k), Some(&x), &mut dst_out_verify).is_ok()
-                }
-            }
+            verify(
+                &dst_out,
+                &p,
+                &salt,
+                passes,
+                mem,
+                Some(&k),
+                Some(&x),
+                &mut dst_out_verify,
+            )
+            .is_ok()
         }
     }
 
@@ -1123,20 +1126,21 @@ mod private {
             assert_eq!(expected.as_ref(), actual.as_ref());
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        fn prop_test_same_result(
+            hlen: u32,
+            kib: u32,
+            passes: u32,
+            p: Vec<u8>,
+            s: Vec<u8>,
+            k: Vec<u8>,
+            x: Vec<u8>,
+        ) -> bool {
+            let first = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let second = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
 
-            quickcheck! {
-                fn prop_test_same_result(hlen: u32, kib: u32, passes: u32, p: Vec<u8>, s: Vec<u8>, k: Vec<u8>, x: Vec<u8>) -> bool {
-
-                    let first = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
-                    let second = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
-
-                    first.as_ref() == second.as_ref()
-                }
-            }
+            first.as_ref() == second.as_ref()
         }
     }
 
@@ -1344,43 +1348,36 @@ mod private {
             assert_eq!(expected.as_ref(), out.as_ref());
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        fn prop_test_same_result(input: Vec<u8>, out: Vec<u8>) -> bool {
+            let mut first = out.clone();
+            let mut second = out.clone();
 
-            quickcheck! {
-                fn prop_test_same_result(input: Vec<u8>, out: Vec<u8>) -> bool {
-                    let mut first = out.clone();
-                    let mut second = out.clone();
-
-                    if out.is_empty() && extended_hash(&input, &mut first).is_err() {
-                        return true;
-                    }
-
-                    extended_hash(&input, &mut first).unwrap();
-                    extended_hash(&input, &mut second).unwrap();
-
-                    first == second
-                }
+            if out.is_empty() && extended_hash(&input, &mut first).is_err() {
+                return true;
             }
 
-            quickcheck! {
-                fn prop_test_diff_result(input: Vec<u8>, out: Vec<u8>) -> bool {
-                    let mut first = out.clone();
-                    let mut second = out.clone();
+            extended_hash(&input, &mut first).unwrap();
+            extended_hash(&input, &mut second).unwrap();
 
+            first == second
+        }
 
-                    if out.is_empty() && extended_hash(&input, &mut first).is_err() {
-                        return true;
-                    }
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        fn prop_test_diff_result(input: Vec<u8>, out: Vec<u8>) -> bool {
+            let mut first = out.clone();
+            let mut second = out.clone();
 
-                    extended_hash(&input, &mut first).unwrap();
-                    extended_hash(&first, &mut second).unwrap();
-
-                    first != second
-                }
+            if out.is_empty() && extended_hash(&input, &mut first).is_err() {
+                return true;
             }
+
+            extended_hash(&input, &mut first).unwrap();
+            extended_hash(&first, &mut second).unwrap();
+
+            first != second
         }
     }
 
