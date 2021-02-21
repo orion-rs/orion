@@ -135,12 +135,10 @@ mod tests {
         let mut dst = [0u8; 0];
         assert!(secure_rand_bytes(&mut dst).is_err());
 
-        let mut dst = [0u8; 0];
         let err = secure_rand_bytes(&mut dst).unwrap_err();
         assert_eq!(err, errors::UnknownCryptoError);
     }
 
-    #[cfg(feature = "safe_api")]
     #[test]
     fn test_ct_eq_ok() {
         let buf_1 = [0x06; 10];

@@ -41,6 +41,8 @@ macro_rules! impl_default_trait (($name:ident, $size:expr) => (
 /// Macro that implements the `PartialEq` trait on a object called `$name` that
 /// provides a given $bytes_function to return a slice. This `PartialEq` will
 /// execute in constant-time.
+///
+/// This also provides an empty `Eq` implementation.
 macro_rules! impl_ct_partialeq_trait (($name:ident, $bytes_function:ident) => (
     impl PartialEq<$name> for $name {
         fn eq(&self, other: &$name) -> bool {
@@ -129,11 +131,11 @@ macro_rules! impl_from_trait (($name:ident, $size:expr) => (
 /// Function implementation macros
 
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
-/// if the slice is not of length `$size`.
+/// if the slice length is not accepted.
 /// $lower_bound and $upper_bound is the inclusive range of which a slice might
 /// be acceptable in length. If a slice may only be a fixed size, $lower_bound
-/// and $upper_bound should be the same. value will be allocated with a size of
-/// $upper_bound.
+/// and $upper_bound should be the same. The `value` field will always be allocated with
+/// a size of $upper_bound.
 macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Construct from a given byte slice.
@@ -191,15 +193,14 @@ macro_rules! func_len (() => (
 ));
 
 /// Macro to implement a `generate()` function for objects that benefit from
-/// having a CSPRNG available to generate data of a fixed length $size.
+/// having a CSPRNG available to generate data of a fixed length $gen_length.
 macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) => (
-
     #[cfg(feature = "safe_api")]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> $name {
         let mut value = [0u8; $upper_bound];
-        // This will not panic on size, unless the newtype has been initialized $upper_bound
-        // or $gen_length with 0.
+        // This will not panic on size, unless the newtype has been defined with $upper_bound
+        // or $gen_length equal to 0.
         crate::util::secure_rand_bytes(&mut value[..$gen_length]).unwrap();
 
         $name { value, original_length: $gen_length }
@@ -246,9 +247,10 @@ macro_rules! test_bound_parameters (($name:ident, $lower_bound:expr, $upper_boun
 macro_rules! test_partial_eq (($name:ident, $upper_bound:expr) => (
     #[test]
     fn test_partial_eq() {
+        // PartialEq<Self>
         assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() == $name::from_slice(&[0u8; $upper_bound]).unwrap());
         assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() != $name::from_slice(&[1u8; $upper_bound]).unwrap());
-
+        // PartialEq<&[u8]>
         assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() == [0u8; $upper_bound].as_ref());
         assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() != [1u8; $upper_bound].as_ref());
     }
