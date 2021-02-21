@@ -159,21 +159,15 @@ mod public {
             }
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
+            let secret_key = SecretKey::generate();
+            let nonce = Nonce::generate();
+            StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
+            test_diff_params_diff_output(&encrypt, &decrypt);
 
-            quickcheck! {
-                fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
-                    let secret_key = SecretKey::generate();
-                    let nonce = Nonce::generate();
-                    StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
-                    test_diff_params_diff_output(&encrypt, &decrypt);
-
-                    true
-                }
-            }
+            true
         }
     }
 }

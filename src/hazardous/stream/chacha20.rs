@@ -400,20 +400,14 @@ mod public {
             }
         }
 
-        // Proptests. Only executed when NOT testing no_std.
-        mod proptest {
-            use super::*;
+        #[quickcheck]
+        fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
+            let secret_key = SecretKey::generate();
+            let nonce = Nonce::from_slice(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
+            StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
+            test_diff_params_diff_output(&encrypt, &decrypt);
 
-            quickcheck! {
-                fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
-                    let secret_key = SecretKey::generate();
-                    let nonce = Nonce::from_slice(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
-                    StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
-                    test_diff_params_diff_output(&encrypt, &decrypt);
-
-                    true
-                }
-            }
+            true
         }
     }
 
@@ -893,31 +887,25 @@ mod private {
             );
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
-
-            quickcheck! {
-                fn prop_test_nonce_length_ietf(nonce: Vec<u8>) -> bool {
-                    if nonce.len() == IETF_CHACHA_NONCESIZE {
-                        ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_ok()
-                    } else {
-                        ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_err()
-                    }
-                }
+        fn prop_test_nonce_length_ietf(nonce: Vec<u8>) -> bool {
+            if nonce.len() == IETF_CHACHA_NONCESIZE {
+                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_ok()
+            } else {
+                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_err()
             }
+        }
 
-            quickcheck! {
-                // Always fail to initialize state while the nonce is not
-                // the correct length. If it is correct length, never panic.
-                fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
-                    if nonce.len() == HCHACHA_NONCESIZE {
-                        ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_ok()
-                    } else {
-                        ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_err()
-                    }
-                }
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        // Always fail to initialize state while the nonce is not
+        // the correct length. If it is correct length, never panic.
+        fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
+            if nonce.len() == HCHACHA_NONCESIZE {
+                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_ok()
+            } else {
+                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_err()
             }
         }
     }

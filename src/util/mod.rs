@@ -172,14 +172,13 @@ mod tests {
         assert!(secure_cmp(&[0, 1], &[0]).is_err());
     }
 
+    #[quickcheck]
     #[cfg(feature = "safe_api")]
-    quickcheck! {
-        fn prop_secure_cmp(a: Vec<u8>, b: Vec<u8>) -> bool {
-            if a == b {
-                secure_cmp(&a, &b).is_ok()
-            } else {
-                secure_cmp(&a, &b).is_err()
-            }
+    fn prop_secure_cmp(a: Vec<u8>, b: Vec<u8>) -> bool {
+        if a == b {
+            secure_cmp(&a, &b).is_ok()
+        } else {
+            secure_cmp(&a, &b).is_err()
         }
     }
 }

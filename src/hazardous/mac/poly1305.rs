@@ -473,24 +473,18 @@ mod public {
     mod test_verify {
         use super::*;
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        /// When using a different key, verify() should always yield an error.
+        /// NOTE: Using different and same input data is tested with TestableStreamingContext.
+        fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
+            let sk = OneTimeKey::generate();
+            let mut state = Poly1305::new(&sk);
+            state.update(&data[..]).unwrap();
+            let tag = state.finalize().unwrap();
+            let bad_sk = OneTimeKey::generate();
 
-            quickcheck! {
-                /// When using a different key, verify() should always yield an error.
-                /// NOTE: Using different and same input data is tested with TestableStreamingContext.
-                fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-                    let sk = OneTimeKey::generate();
-                    let mut state = Poly1305::new(&sk);
-                    state.update(&data[..]).unwrap();
-                    let tag = state.finalize().unwrap();
-                    let bad_sk = OneTimeKey::generate();
-
-                    Poly1305::verify(&tag, &bad_sk, &data[..]).is_err()
-                }
-            }
+            Poly1305::verify(&tag, &bad_sk, &data[..]).is_err()
         }
     }
 
@@ -548,22 +542,19 @@ mod public {
             test_runner.run_all_tests();
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Test different streaming state usage patterns.
+        fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+            let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
 
-            quickcheck! {
-                /// Related bug: https://github.com/brycx/orion/issues/46
-                /// Test different streaming state usage patterns.
-                fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-                    let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
-
-                    let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(initial_state, POLY1305_BLOCKSIZE);
-                    test_runner.run_all_tests_property(&data);
-                    true
-                }
-            }
+            let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(
+                initial_state,
+                POLY1305_BLOCKSIZE,
+            );
+            test_runner.run_all_tests_property(&data);
+            true
         }
     }
 }

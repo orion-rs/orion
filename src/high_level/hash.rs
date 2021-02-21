@@ -70,28 +70,15 @@ pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
 mod public {
     use super::*;
 
-    #[cfg(feature = "safe_api")]
-    mod test_digest {
-        use super::*;
+    #[quickcheck]
+    /// Hashing twice with same input should always produce same output.
+    fn prop_digest_same_result(input: Vec<u8>) -> bool {
+        digest(&input[..]).unwrap() == digest(&input[..]).unwrap()
+    }
 
-        // Proptests. Only executed when NOT testing no_std.
-        #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
-
-            quickcheck! {
-                /// Hashing twice with same input should always produce same output.
-                fn prop_digest_same_result(input: Vec<u8>) -> bool {
-                    digest(&input[..]).unwrap() ==  digest(&input[..]).unwrap()
-                }
-            }
-
-            quickcheck! {
-                /// Hashing twice with different input should never produce same output.
-                fn prop_digest_diff_result(input: Vec<u8>) -> bool {
-                    digest(&input[..]).unwrap() !=  digest(b"Completely wrong input").unwrap()
-                }
-            }
-        }
+    #[quickcheck]
+    /// Hashing twice with different input should never produce same output.
+    fn prop_digest_diff_result(input: Vec<u8>) -> bool {
+        digest(&input[..]).unwrap() != digest(b"Completely wrong input").unwrap()
     }
 }

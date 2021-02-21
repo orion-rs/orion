@@ -545,25 +545,19 @@ mod public {
             test_runner.run_all_tests();
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Test different streaming state usage patterns.
+        fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+            let initial_state: Blake2b = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
 
-            quickcheck! {
-                /// Related bug: https://github.com/brycx/orion/issues/46
-                /// Test different streaming state usage patterns.
-                fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-                    let initial_state: Blake2b = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
-
-                    let test_runner = StreamingContextConsistencyTester::<Digest, Blake2b>::new(
-                        initial_state,
-                        BLAKE2B_BLOCKSIZE,
-                    );
-                    test_runner.run_all_tests_property(&data);
-                    true
-                }
-            }
+            let test_runner = StreamingContextConsistencyTester::<Digest, Blake2b>::new(
+                initial_state,
+                BLAKE2B_BLOCKSIZE,
+            );
+            test_runner.run_all_tests_property(&data);
+            true
         }
     }
 
@@ -594,22 +588,16 @@ mod public {
             assert!(new_tester(Some(&sk), 1));
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        /// Given a valid size parameter, new should always pass. If size
+        /// is invalid, then new should always fail.
+        fn prop_new_size(size: usize) -> bool {
+            let no_key = new_tester(None, size);
+            let sk = SecretKey::generate();
+            let key = new_tester(Some(&sk), size);
 
-            quickcheck! {
-                /// Given a valid size parameter, new should always pass. If size
-                /// is invalid, then new should always fail.
-                fn prop_new_size(size: usize) -> bool {
-                    let no_key = new_tester(None, size);
-                    let sk = SecretKey::generate();
-                    let key = new_tester(Some(&sk), size);
-
-                    no_key && key
-                }
-            }
+            no_key && key
         }
     }
 
@@ -617,24 +605,18 @@ mod public {
     mod test_verify {
         use super::*;
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        /// When using a different key, verify() should always yield an error.
+        /// NOTE: Using different and same input data is tested with TestableStreamingContext.
+        fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
+            let sk = SecretKey::generate();
+            let mut state = Blake2b::new(Some(&sk), 64).unwrap();
+            state.update(&data[..]).unwrap();
+            let tag = state.finalize().unwrap();
+            let bad_sk = SecretKey::generate();
 
-            quickcheck! {
-                /// When using a different key, verify() should always yield an error.
-                /// NOTE: Using different and same input data is tested with TestableStreamingContext.
-                fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-                    let sk = SecretKey::generate();
-                    let mut state = Blake2b::new(Some(&sk), 64).unwrap();
-                    state.update(&data[..]).unwrap();
-                    let tag = state.finalize().unwrap();
-                    let bad_sk = SecretKey::generate();
-
-                    Blake2b::verify(&tag, &bad_sk, 64, &data[..]).is_err()
-                }
-            }
+            Blake2b::verify(&tag, &bad_sk, 64, &data[..]).is_err()
         }
     }
 
@@ -660,93 +642,87 @@ mod public {
             let _state_512 = Hasher::Blake2b512.init().unwrap();
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        /// Given some data, digest() should never fail in practice and should
+        /// produce the same output on a second call.
+        /// Only panics if data is unreasonably large.
+        fn prop_hasher_digest_no_panic_and_same_result(data: Vec<u8>) -> bool {
+            let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
+            let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
+            let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
 
-            quickcheck! {
-                /// Given some data, digest() should never fail in practice and should
-                /// produce the same output on a second call.
-                /// Only panics if data is unreasonably large.
-                fn prop_hasher_digest_no_panic_and_same_result(data: Vec<u8>) -> bool {
-                    let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
-                    let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
-                    let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
+            let d256_re = Hasher::Blake2b256.digest(&data[..]).unwrap();
+            let d384_re = Hasher::Blake2b384.digest(&data[..]).unwrap();
+            let d512_re = Hasher::Blake2b512.digest(&data[..]).unwrap();
 
-                    let d256_re = Hasher::Blake2b256.digest(&data[..]).unwrap();
-                    let d384_re = Hasher::Blake2b384.digest(&data[..]).unwrap();
-                    let d512_re = Hasher::Blake2b512.digest(&data[..]).unwrap();
+            (d256 == d256_re) && (d384 == d384_re) && (d512 == d512_re)
+        }
 
-                    (d256 == d256_re) && (d384 == d384_re) && (d512 == d512_re)
-                }
-            }
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Given some data, .digest() should produce the same output as when
+        /// calling with streaming state.
+        fn prop_hasher_digest_256_same_as_streaming(data: Vec<u8>) -> bool {
+            let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
 
-            quickcheck! {
-                /// Given some data, .digest() should produce the same output as when
-                /// calling with streaming state.
-                fn prop_hasher_digest_256_same_as_streaming(data: Vec<u8>) -> bool {
-                    let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
+            let mut state = Blake2b::new(None, 32).unwrap();
+            state.update(&data[..]).unwrap();
 
-                    let mut state = Blake2b::new(None, 32).unwrap();
-                    state.update(&data[..]).unwrap();
+            d256 == state.finalize().unwrap()
+        }
 
-                    d256 == state.finalize().unwrap()
-                }
-            }
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Given some data, .digest() should produce the same output as when
+        /// calling with streaming state.
+        fn prop_hasher_digest_384_same_as_streaming(data: Vec<u8>) -> bool {
+            let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
 
-            quickcheck! {
-                /// Given some data, .digest() should produce the same output as when
-                /// calling with streaming state.
-                fn prop_hasher_digest_384_same_as_streaming(data: Vec<u8>) -> bool {
-                    let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
+            let mut state = Blake2b::new(None, 48).unwrap();
+            state.update(&data[..]).unwrap();
 
-                    let mut state = Blake2b::new(None, 48).unwrap();
-                    state.update(&data[..]).unwrap();
+            d384 == state.finalize().unwrap()
+        }
 
-                    d384 == state.finalize().unwrap()
-                }
-            }
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Given some data, .digest() should produce the same output as when
+        /// calling with streaming state.
+        fn prop_hasher_digest_512_same_as_streaming(data: Vec<u8>) -> bool {
+            let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
 
-            quickcheck! {
-                /// Given some data, .digest() should produce the same output as when
-                /// calling with streaming state.
-                fn prop_hasher_digest_512_same_as_streaming(data: Vec<u8>) -> bool {
-                    let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
+            let mut state = Blake2b::new(None, 64).unwrap();
+            state.update(&data[..]).unwrap();
 
-                    let mut state = Blake2b::new(None, 64).unwrap();
-                    state.update(&data[..]).unwrap();
+            d512 == state.finalize().unwrap()
+        }
 
-                    d512 == state.finalize().unwrap()
-                }
-            }
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Given two different data, .digest() should never produce the
+        /// same output.
+        fn prop_hasher_digest_diff_input_diff_result(data: Vec<u8>) -> bool {
+            let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
+            let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
+            let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
 
-            quickcheck! {
-                /// Given two different data, .digest() should never produce the
-                /// same output.
-                fn prop_hasher_digest_diff_input_diff_result(data: Vec<u8>) -> bool {
-                    let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
-                    let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
-                    let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
+            let d256_re = Hasher::Blake2b256.digest(b"Wrong data").unwrap();
+            let d384_re = Hasher::Blake2b384.digest(b"Wrong data").unwrap();
+            let d512_re = Hasher::Blake2b512.digest(b"Wrong data").unwrap();
 
-                    let d256_re = Hasher::Blake2b256.digest(b"Wrong data").unwrap();
-                    let d384_re = Hasher::Blake2b384.digest(b"Wrong data").unwrap();
-                    let d512_re = Hasher::Blake2b512.digest(b"Wrong data").unwrap();
+            (d256 != d256_re) && (d384 != d384_re) && (d512 != d512_re)
+        }
 
-                    (d256 != d256_re) && (d384 != d384_re) && (d512 != d512_re)
-                }
-            }
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// .init() should never fail.
+        fn prop_hasher_init_no_panic() -> bool {
+            let _d256 = Hasher::Blake2b256.init().unwrap();
+            let _d384 = Hasher::Blake2b384.init().unwrap();
+            let _d512 = Hasher::Blake2b512.init().unwrap();
 
-            quickcheck! {
-                /// .init() should never fail.
-                fn prop_hasher_init_no_panic() -> bool {
-                    let _d256 = Hasher::Blake2b256.init().unwrap();
-                    let _d384 = Hasher::Blake2b384.init().unwrap();
-                    let _d512 = Hasher::Blake2b512.init().unwrap();
-
-                    true
-                }
-            }
+            true
         }
     }
 
@@ -901,40 +877,34 @@ mod public {
             produces_same_hash(Some(&sk), 28, b"");
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
-
-            quickcheck! {
-                /// Related bug: https://github.com/brycx/orion/issues/46
-                /// Test different streaming state usage patterns.
-                fn prop_same_hash_different_usage(data: Vec<u8>, size: usize) -> bool {
-                    if size >= 1 && size <= BLAKE2B_OUTSIZE {
-                        // Will panic on incorrect results.
-                        produces_same_hash(None, size, &data[..]);
-                        let sk = SecretKey::generate();
-                        produces_same_hash(Some(&sk), size, &data[..]);
-                    }
-
-                    true
-                }
+        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Test different streaming state usage patterns.
+        fn prop_same_hash_different_usage(data: Vec<u8>, size: usize) -> bool {
+            if size >= 1 && size <= BLAKE2B_OUTSIZE {
+                // Will panic on incorrect results.
+                produces_same_hash(None, size, &data[..]);
+                let sk = SecretKey::generate();
+                produces_same_hash(Some(&sk), size, &data[..]);
             }
 
-            quickcheck! {
-                /// Related bug: https://github.com/brycx/orion/issues/46
-                /// Test different streaming state usage patterns.
-                fn prop_same_state_different_usage(data: Vec<u8>, size: usize) -> bool {
-                    if size >= 1 && size <= BLAKE2B_OUTSIZE {
-                        // Will panic on incorrect results.
-                        produces_same_state(None, size, &data[..]);
-                        let sk = SecretKey::generate();
-                        produces_same_state(Some(&sk), size, &data[..]);
-                    }
+            true
+        }
 
-                    true
-                }
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Test different streaming state usage patterns.
+        fn prop_same_state_different_usage(data: Vec<u8>, size: usize) -> bool {
+            if size >= 1 && size <= BLAKE2B_OUTSIZE {
+                // Will panic on incorrect results.
+                produces_same_state(None, size, &data[..]);
+                let sk = SecretKey::generate();
+                produces_same_state(Some(&sk), size, &data[..]);
             }
+
+            true
         }
     }
 }

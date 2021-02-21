@@ -480,25 +480,19 @@ mod public {
             test_runner.run_all_tests();
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Test different streaming state usage patterns.
+        fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+            let initial_state: Sha512 = Sha512::new();
 
-            quickcheck! {
-                /// Related bug: https://github.com/brycx/orion/issues/46
-                /// Test different streaming state usage patterns.
-                fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-                    let initial_state: Sha512 = Sha512::new();
-
-                    let test_runner = StreamingContextConsistencyTester::<Digest, Sha512>::new(
-                        initial_state,
-                        SHA512_BLOCKSIZE,
-                    );
-                    test_runner.run_all_tests_property(&data);
-                    true
-                }
-            }
+            let test_runner = StreamingContextConsistencyTester::<Digest, Sha512>::new(
+                initial_state,
+                SHA512_BLOCKSIZE,
+            );
+            test_runner.run_all_tests_property(&data);
+            true
         }
     }
 }

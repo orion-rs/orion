@@ -228,22 +228,25 @@ pub fn open(
 #[cfg(feature = "safe_api")]
 mod public {
     use super::*;
+    use crate::test_framework::aead_interface::{test_diff_params_err, AeadTestRunner};
 
-    // Proptests. Only executed when NOT testing no_std.
+    #[quickcheck]
     #[cfg(feature = "safe_api")]
-    mod proptest {
-        use super::*;
-        use crate::test_framework::aead_interface::*;
-
-        quickcheck! {
-            fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
-                let secret_key = SecretKey::generate();
-                let nonce = Nonce::from_slice(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
-                AeadTestRunner(seal, open, secret_key, nonce, &input, None, POLY1305_OUTSIZE, &ad);
-                test_diff_params_err(&seal, &open, &input, POLY1305_OUTSIZE);
-                true
-            }
-        }
+    fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
+        let secret_key = SecretKey::generate();
+        let nonce = Nonce::from_slice(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
+        AeadTestRunner(
+            seal,
+            open,
+            secret_key,
+            nonce,
+            &input,
+            None,
+            POLY1305_OUTSIZE,
+            &ad,
+        );
+        test_diff_params_err(&seal, &open, &input, POLY1305_OUTSIZE);
+        true
     }
 }
 

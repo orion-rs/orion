@@ -778,22 +778,21 @@ mod public {
             assert!(PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 4, 1 << 16).is_ok());
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
-
-            quickcheck! {
-                /// If valid params then it's always valid to encode/decode.
-                fn prop_always_produce_valid_encoding(password: Vec<u8>, salt: Vec<u8>, iterations: u32, memory: u32) -> bool {
-                    let res = PasswordHash::from_slice(&password[..], &salt[..], iterations, memory);
-                    if res.is_ok() {
-                        assert!(PasswordHash::from_encoded(res.unwrap().unprotected_as_encoded()).is_ok());
-                    }
-
-                    true
-                }
+        /// If valid params then it's always valid to encode/decode.
+        fn prop_always_produce_valid_encoding(
+            password: Vec<u8>,
+            salt: Vec<u8>,
+            iterations: u32,
+            memory: u32,
+        ) -> bool {
+            let res = PasswordHash::from_slice(&password[..], &salt[..], iterations, memory);
+            if res.is_ok() {
+                assert!(PasswordHash::from_encoded(res.unwrap().unprotected_as_encoded()).is_ok());
             }
+
+            true
         }
     }
 

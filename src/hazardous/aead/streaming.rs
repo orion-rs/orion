@@ -426,39 +426,38 @@ mod public {
             Ok(())
         }
 
-        quickcheck! {
-            fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
-                let secret_key = SecretKey::generate();
-                let nonce = Nonce::generate();
-                AeadTestRunner(seal, open, secret_key, nonce, &input, None, ABYTES , &ad);
+        #[quickcheck]
+        fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
+            let secret_key = SecretKey::generate();
+            let nonce = Nonce::generate();
+            AeadTestRunner(seal, open, secret_key, nonce, &input, None, ABYTES, &ad);
 
-                true
-            }
+            true
         }
 
-        quickcheck! {
-            fn prop_same_input_twice_diff_output(input: Vec<u8>, ad: Vec<u8>) -> bool {
-                let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::generate(), &Nonce::generate());
+        #[quickcheck]
+        fn prop_same_input_twice_diff_output(input: Vec<u8>, ad: Vec<u8>) -> bool {
+            let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::generate(), &Nonce::generate());
 
-                let mut ct1 = vec![0u8; input.len() + ABYTES];
-                let mut ct2 = ct1.clone();
+            let mut ct1 = vec![0u8; input.len() + ABYTES];
+            let mut ct2 = ct1.clone();
 
-                ctx.seal_chunk(&input, Some(&ad), &mut ct1, StreamTag::MESSAGE).unwrap();
-                ctx.seal_chunk(&input, Some(&ad), &mut ct2, StreamTag::MESSAGE).unwrap();
+            ctx.seal_chunk(&input, Some(&ad), &mut ct1, StreamTag::MESSAGE)
+                .unwrap();
+            ctx.seal_chunk(&input, Some(&ad), &mut ct2, StreamTag::MESSAGE)
+                .unwrap();
 
-                ct1 != ct2
-            }
+            ct1 != ct2
         }
 
-        quickcheck! {
-            fn prop_tag(byte: u8) -> bool {
-                match byte {
-                    0u8 => StreamTag::try_from(byte).unwrap() == StreamTag::MESSAGE,
-                    1u8 => StreamTag::try_from(byte).unwrap() == StreamTag::PUSH,
-                    2u8 => StreamTag::try_from(byte).unwrap() == StreamTag::REKEY,
-                    3u8 => StreamTag::try_from(byte).unwrap() == StreamTag::FINISH,
-                    _ => StreamTag::try_from(byte).is_err(),
-                }
+        #[quickcheck]
+        fn prop_tag(byte: u8) -> bool {
+            match byte {
+                0u8 => StreamTag::try_from(byte).unwrap() == StreamTag::MESSAGE,
+                1u8 => StreamTag::try_from(byte).unwrap() == StreamTag::PUSH,
+                2u8 => StreamTag::try_from(byte).unwrap() == StreamTag::REKEY,
+                3u8 => StreamTag::try_from(byte).unwrap() == StreamTag::FINISH,
+                _ => StreamTag::try_from(byte).is_err(),
             }
         }
     }
@@ -491,45 +490,39 @@ mod private {
             assert_eq!(padding(16), 0);
         }
 
-        // Proptests. Only executed when NOT testing no_std.
+        #[quickcheck]
         #[cfg(feature = "safe_api")]
-        mod proptest {
-            use super::*;
+        // The usize that padding() returns should always
+        // be what remains to make input a multiple of 16 in length.
+        fn prop_padding_result(input: usize) -> bool {
+            let rem = padding(input);
 
-            quickcheck! {
-                // The usize that padding() returns should always
-                // be what remains to make input a multiple of 16 in length.
-                fn prop_padding_result(input: usize) -> bool {
-                    let rem = padding(input);
+            // NOTE: It is possible to have an input size that will
+            // have padding() return a remainder that cannot be added
+            // to the original input size without overflowing its usize (tested on 64-bit).
+            // This is okay, because nothing is added to the returned value of padding()
+            // in generate_auth_tag. It's only ever added in this test. The remainder is still
+            // valid regardless, which is also "proven" by the test below.
+            // So to test the below assumption, we can only ever do so if it doesn't overflow,
+            // hence the needed check.
+            //
+            // See also below test test_inputsize_79().
+            //
+            // (Trigger here with: size = 18446744073709551601)
+            // (Trigger seal_chunk/open_chunk with input of size 79 (check usage of wrapping_sub))
 
-                    // NOTE: It is possible to have an input size that will
-                    // have padding() return a remainder that cannot be added
-                    // to the original input size without overflowing its usize (tested on 64-bit).
-                    // This is okay, because nothing is added to the returned value of padding()
-                    // in generate_auth_tag. It's only ever added in this test. The remainder is still
-                    // valid regardless, which is also "proven" by the test below.
-                    // So to test the below assumption, we can only ever do so if it doesn't overflow,
-                    // hence the needed check.
-                    //
-                    // See also below test test_inputsize_79().
-                    //
-                    // (Trigger here with: size = 18446744073709551601)
-                    // (Trigger seal_chunk/open_chunk with input of size 79 (check usage of wrapping_sub))
-
-                    match input.checked_add(rem) {
-                        Some(res) => res % 16 == 0,
-                        None => true // The case we cannot test
-                    }
-                }
+            match input.checked_add(rem) {
+                Some(res) => res % 16 == 0,
+                None => true, // The case we cannot test
             }
+        }
 
-            quickcheck! {
-                // padding() should never return a usize above 15.
-                // The usize must always be in range of 0..=15.
-                fn prop_result_never_above_15(input: usize) -> bool {
-                    padding(input) < 16
-                }
-            }
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        // padding() should never return a usize above 15.
+        // The usize must always be in range of 0..=15.
+        fn prop_result_never_above_15(input: usize) -> bool {
+            padding(input) < 16
         }
     }
 
