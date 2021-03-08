@@ -115,6 +115,7 @@ pub(crate) mod sha2Core {
     }
 
     #[derive(Clone)]
+    /// Core SHA2 state.
     pub(crate) struct State<
         W,
         T,
@@ -755,8 +756,6 @@ mod test_word {
         assert_eq!(WordU64::default().0, u64::default());
     }
 
-    // TODO: Enable quickcheck_macros dev dependency
-    /*
     #[quickcheck]
     #[rustfmt::skip]
     fn equiv_from(n: u32, m: u64) -> bool {
@@ -819,16 +818,16 @@ mod test_word {
         let w32n1 = WordU32::from(n1);
         let w32n2 = WordU32::from(n2);
         let ret32: bool = match (w32n1.overflowing_add(w32n2), n1.overflowing_add(n2)) {
-            ((w32, true), (n, true)) => w32.0 == n, // True if values and did_overflow match.
-            ((w32, false), (n, false)) => w32.0 == n, // True if values and did_overflow match.
+            ((w32, true), (n, true)) => w32.0 == n,
+            ((w32, false), (n, false)) => w32.0 == n,
             _ => false,
         };
 
         let w64m1 = WordU64::from(m1);
         let w64m2 = WordU64::from(m2);
         let ret64: bool = match (w64m1.overflowing_add(w64m2), m1.overflowing_add(m2)) {
-            ((w64, true), (n, true)) => w64.0 == n, // True if values and did_overflow match.
-            ((w64, false), (n, false)) => w64.0 == n, // True if values and did_overflow match.
+            ((w64, true), (n, true)) => w64.0 == n,
+            ((w64, false), (n, false)) => w64.0 == n,
             _ => false,
         };
 
@@ -924,5 +923,4 @@ mod test_word {
 
         true
     }
-    */
 }
