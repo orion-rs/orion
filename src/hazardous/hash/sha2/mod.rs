@@ -31,8 +31,10 @@ pub mod sha512;
 
 pub(crate) mod sha2Core {
     use crate::errors::UnknownCryptoError;
+    use core::fmt::Debug;
     use core::marker::PhantomData;
     use core::ops::*;
+    use zeroize::Zeroize;
 
     /// Word used within the SHA2 internal state.
     pub(crate) trait Word:
@@ -45,6 +47,9 @@ pub(crate) mod sha2Core {
         + Div<Output = Self>
         + From<usize>
         + Copy
+        + Debug
+        + PartialEq<Self>
+        + Zeroize
     {
         const MAX: Self;
 
@@ -127,6 +132,41 @@ pub(crate) mod sha2Core {
         pub(crate) leftover: usize,
         pub(crate) message_len: [W; 2],
         pub(crate) is_finalized: bool,
+    }
+
+    impl<
+            W: Word,
+            T: Variant<W, { N_CONSTS }>,
+            const BLOCKSIZE: usize,
+            const OUTSIZE: usize,
+            const N_CONSTS: usize,
+        > Drop for State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
+    {
+        fn drop(&mut self) {
+            self.working_state.iter_mut().zeroize();
+            self.buffer.iter_mut().zeroize();
+            self.message_len.iter_mut().zeroize();
+            self.leftover.zeroize();
+            self.is_finalized.zeroize();
+        }
+    }
+
+    impl<
+            W: Word,
+            T: Variant<W, { N_CONSTS }>,
+            const BLOCKSIZE: usize,
+            const OUTSIZE: usize,
+            const N_CONSTS: usize,
+        > Debug for State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
+    {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(
+                f,
+                "State {{ working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: {:?}, \
+             message_len: {:?}, is_finalized: {:?} }}",
+                self.leftover, self.message_len, self.is_finalized
+            )
+        }
     }
 
     impl<
@@ -347,15 +387,36 @@ pub(crate) mod sha2Core {
 
             Ok(())
         }
+
+        #[cfg(test)]
+        /// Compare two Sha2 state objects to check if their fields
+        /// are the same.
+        pub(crate) fn compare_state_to_other(&self, other: &Self) {
+            for idx in 0..8 {
+                assert_eq!(self.working_state[idx], other.working_state[idx]);
+            }
+            assert_eq!(self.buffer, other.buffer);
+            assert_eq!(self.leftover, other.leftover);
+            assert_eq!(self.message_len[0], other.message_len[0]);
+            assert_eq!(self.message_len[1], other.message_len[1]);
+            assert_eq!(self.is_finalized, other.is_finalized);
+        }
     }
 }
 
 pub(crate) mod W32 {
     use core::convert::{From, TryFrom, TryInto};
     use core::ops::*;
+    use zeroize::Zeroize;
 
     #[derive(Debug, PartialEq, Copy, Clone)]
     pub(crate) struct WordU32(pub(crate) u32);
+
+    impl Zeroize for WordU32 {
+        fn zeroize(&mut self) {
+            self.0.zeroize();
+        }
+    }
 
     impl BitOr for WordU32 {
         type Output = Self;
@@ -500,9 +561,16 @@ pub(crate) mod W32 {
 pub(crate) mod W64 {
     use core::convert::{From, TryFrom, TryInto};
     use core::ops::*;
+    use zeroize::Zeroize;
 
     #[derive(Debug, PartialEq, Copy, Clone)]
     pub(crate) struct WordU64(pub(crate) u64);
+
+    impl Zeroize for WordU64 {
+        fn zeroize(&mut self) {
+            self.0.zeroize();
+        }
+    }
 
     impl BitOr for WordU64 {
         type Output = Self;

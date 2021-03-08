@@ -66,40 +66,33 @@
 //! [`Password::generate()`]: struct.Password.html#method.generate
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
-use hmac::HmacGeneric;
-
-use crate::{
-    errors::UnknownCryptoError,
-    hazardous::{hash, mac::hmac},
-    util,
-};
+use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
 
 /// The F function as described in the RFC.
-fn _function_f<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
+fn _function_f<Hmac>(
     salt: &[u8],
     iterations: usize,
     index: u32,
     dk_block: &mut [u8],
     block_len: usize,
-    hmac: &mut HmacGeneric<T, SHA2_BLOCKSIZE, SHA2_OUTSIZE>,
+    u_step: &mut [u8],
+    hmac: &mut Hmac,
 ) -> Result<(), UnknownCryptoError>
 where
-    T: hash::ShaHash,
+    Hmac: hmac::HmacFunction,
 {
-    let mut u_step = [0u8; SHA2_OUTSIZE];
-    hmac.update(salt)?;
-    hmac.update(&index.to_be_bytes())?;
-    hmac.finalize()?;
-
-    u_step.copy_from_slice(&hmac.buffer);
+    debug_assert!(u_step.len() == Hmac::HASH_FUNC_OUTSIZE);
+    hmac._update(salt)?;
+    hmac._update(&index.to_be_bytes())?;
+    hmac._finalize(u_step)?;
+    debug_assert!(block_len <= u_step.len());
     dk_block.copy_from_slice(&u_step[..block_len]);
 
     if iterations > 1 {
         for _ in 1..iterations {
-            hmac.reset();
-            hmac.update(&u_step)?;
-            hmac.finalize()?;
-            u_step.copy_from_slice(&hmac.buffer);
+            hmac._reset();
+            hmac._update(&u_step)?;
+            hmac._finalize(u_step)?;
             xor_slices!(&u_step, dk_block);
         }
     }
@@ -107,29 +100,30 @@ where
     Ok(())
 }
 
-fn _derive_key<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
+///
+///
+/// NOTE: Hmac has the output size of the hash function defined,
+/// but the array initialization with the size cannot depend on a generic parameter,
+/// because we don't have full support for const generics yet.
+fn _derive_key<Hmac, const OUTSIZE: usize>(
     padded_password: &[u8],
     salt: &[u8],
     iterations: usize,
-    dst_out: &mut [u8],
+    dest: &mut [u8],
 ) -> Result<(), UnknownCryptoError>
 where
-    T: hash::ShaHash,
+    Hmac: hmac::HmacFunction,
 {
-    if iterations < 1 {
-        return Err(UnknownCryptoError);
-    }
-    if dst_out.is_empty() {
+    debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
+    if dest.is_empty() || iterations < 1 {
         return Err(UnknownCryptoError);
     }
 
-    let mut hmac = hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new_no_padding(
-        padded_password,
-    );
-
-    for (idx, dk_block) in dst_out.chunks_mut(SHA2_OUTSIZE).enumerate() {
+    let mut u_step = [0u8; OUTSIZE];
+    let mut hmac = Hmac::_new(padded_password);
+    for (idx, dk_block) in dest.chunks_mut(Hmac::HASH_FUNC_OUTSIZE).enumerate() {
         // If this panics, then the size limit for PBKDF2 is reached.
-        let block_idx = (1u32).checked_add(idx as u32).unwrap();
+        let block_idx: u32 = 1u32.checked_add(idx as u32).unwrap();
 
         _function_f(
             salt,
@@ -137,12 +131,34 @@ where
             block_idx,
             dk_block,
             dk_block.len(),
+            &mut u_step,
             &mut hmac,
         )?;
-        hmac.reset();
+
+        hmac._reset();
     }
 
     Ok(())
+}
+
+///
+///
+/// NOTE: Hmac has the output size of the hash function defined,
+/// but the array initialization with the size cannot depend on a generic parameter,
+/// because we don't have full support for const generics yet.
+fn _verify<Hmac, const OUTSIZE: usize>(
+    expected: &[u8],
+    padded_password: &[u8],
+    salt: &[u8],
+    iterations: usize,
+    dest: &mut [u8],
+) -> Result<(), UnknownCryptoError>
+where
+    Hmac: hmac::HmacFunction,
+{
+    debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
+    _derive_key::<Hmac, { OUTSIZE }>(padded_password, salt, iterations, dest)?;
+    crate::util::secure_cmp(expected, dest)
 }
 
 /// PBKDF2-HMAC-SHA256 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
@@ -173,13 +189,13 @@ pub mod sha256 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dst_out: &mut [u8],
+        dest: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _derive_key::<Sha256, { sha256::SHA256_BLOCKSIZE }, { sha256::SHA256_OUTSIZE }>(
+        _derive_key::<hmac::sha256::HmacSha256, { sha256::SHA256_OUTSIZE }>(
             password.unprotected_as_bytes(),
             salt,
             iterations,
-            dst_out,
+            dest,
         )
     }
 
@@ -190,10 +206,15 @@ pub mod sha256 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dst_out: &mut [u8],
+        dest: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        derive_key(password, salt, iterations, dst_out)?;
-        util::secure_cmp(&dst_out, expected)
+        _verify::<hmac::sha256::HmacSha256, { sha256::SHA256_OUTSIZE }>(
+            expected,
+            password.unprotected_as_bytes(),
+            salt,
+            iterations,
+            dest,
+        )
     }
 }
 
@@ -225,13 +246,13 @@ pub mod sha384 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dst_out: &mut [u8],
+        dest: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _derive_key::<Sha384, { sha384::SHA384_BLOCKSIZE }, { sha384::SHA384_OUTSIZE }>(
+        _derive_key::<hmac::sha384::HmacSha384, { sha384::SHA384_OUTSIZE }>(
             password.unprotected_as_bytes(),
             salt,
             iterations,
-            dst_out,
+            dest,
         )
     }
 
@@ -242,10 +263,15 @@ pub mod sha384 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dst_out: &mut [u8],
+        dest: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        derive_key(password, salt, iterations, dst_out)?;
-        util::secure_cmp(&dst_out, expected)
+        _verify::<hmac::sha384::HmacSha384, { sha384::SHA384_OUTSIZE }>(
+            expected,
+            password.unprotected_as_bytes(),
+            salt,
+            iterations,
+            dest,
+        )
     }
 }
 
@@ -277,13 +303,13 @@ pub mod sha512 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dst_out: &mut [u8],
+        dest: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _derive_key::<Sha512, { sha512::SHA512_BLOCKSIZE }, { sha512::SHA512_OUTSIZE }>(
+        _derive_key::<hmac::sha512::HmacSha512, { sha512::SHA512_OUTSIZE }>(
             password.unprotected_as_bytes(),
             salt,
             iterations,
-            dst_out,
+            dest,
         )
     }
 
@@ -294,10 +320,15 @@ pub mod sha512 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dst_out: &mut [u8],
+        dest: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        derive_key(password, salt, iterations, dst_out)?;
-        util::secure_cmp(&dst_out, expected)
+        _verify::<hmac::sha512::HmacSha512, { sha512::SHA512_OUTSIZE }>(
+            expected,
+            password.unprotected_as_bytes(),
+            salt,
+            iterations,
+            dest,
+        )
     }
 }
 

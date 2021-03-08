@@ -141,12 +141,10 @@ impl Variant<WordU64, { N_CONSTS }> for V512 {
     }
 }
 
-// TODO: Missing Drop (for underlying state?)
-// TODO: Missing Debug (for underlying state?)
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+/// SHA512 streaming state.
 pub struct Sha512 {
-    _state: State<WordU64, V512, { SHA512_BLOCKSIZE }, { SHA512_OUTSIZE }, { N_CONSTS }>,
+    pub(crate) _state: State<WordU64, V512, { SHA512_BLOCKSIZE }, { SHA512_OUTSIZE }, { N_CONSTS }>,
 }
 
 impl Default for Sha512 {
@@ -156,12 +154,6 @@ impl Default for Sha512 {
 }
 
 impl Sha512 {
-    /// The blocksize of the hash function.
-    const BLOCKSIZE: usize = SHA512_BLOCKSIZE;
-
-    /// The output size of the hash function.
-    const OUTSIZE: usize = SHA512_OUTSIZE;
-
     /// Create a new instance of the hash function.
     pub fn new() -> Self {
         Self {
@@ -205,17 +197,39 @@ impl Sha512 {
     }
 }
 
-// TODO: This can probably be refactored to the underlying state or even
-// defined by the Variant trait. PartialEq(testing-only) trait for states?
-#[cfg(test)]
-/// Compare two Sha512 state objects to check if their fields
-/// are the same.
-pub fn compare_sha512_states(state_1: &Sha512, state_2: &Sha512) {
-    assert_eq!(state_1._state.working_state, state_2._state.working_state);
-    assert_eq!(state_1._state.buffer[..], state_2._state.buffer[..]);
-    assert_eq!(state_1._state.leftover, state_2._state.leftover);
-    assert_eq!(state_1._state.message_len, state_2._state.message_len);
-    assert_eq!(state_1._state.is_finalized, state_2._state.is_finalized);
+impl crate::hazardous::mac::hmac::HmacHashFunction for Sha512 {
+    /// The blocksize of the hash function.
+    const _BLOCKSIZE: usize = SHA512_BLOCKSIZE;
+
+    /// The output size of the hash function.
+    const _OUTSIZE: usize = SHA512_OUTSIZE;
+
+    /// Create a new instance of the hash function.
+    fn _new() -> Self {
+        Self::new()
+    }
+
+    /// Update the internal state with `data`.
+    fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.update(data)
+    }
+
+    /// Finalize the hash and put the final digest into `dest`.
+    fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        self._finalize_internal(dest)
+    }
+
+    /// Compute a digest of `data` and copy it into `dest`.
+    fn _digest(data: &[u8], dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        let mut ctx = Self::new();
+        ctx.update(data)?;
+        ctx._finalize_internal(dest)
+    }
+
+    #[cfg(test)]
+    fn compare_state_to_other(&self, other: &Self) {
+        self._state.compare_state_to_other(&other._state);
+    }
 }
 
 // Testing public functions in the module.
@@ -227,20 +241,17 @@ mod public {
     fn test_default_equals_new() {
         let new = Sha512::new();
         let default = Sha512::default();
-        compare_sha512_states(&new, &default);
+        new._state.compare_state_to_other(&default._state);
     }
 
-    // TODO: Re-enable
-    /*
     #[test]
     #[cfg(feature = "safe_api")]
     fn test_debug_impl() {
         let initial_state = Sha512::new();
         let debug = format!("{:?}", initial_state);
-        let expected = "Sha512 { working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, message_len: [0, 0], is_finalized: false }";
+        let expected = "Sha512 { _state: State { working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, message_len: [WordU64(0), WordU64(0)], is_finalized: false } }";
         assert_eq!(debug, expected);
     }
-    */
 
     mod test_streaming_interface {
         use super::*;
@@ -274,7 +285,7 @@ mod public {
             }
 
             fn compare_states(state_1: &Sha512, state_2: &Sha512) {
-                compare_sha512_states(state_1, state_2)
+                state_1._state.compare_state_to_other(&state_2._state);
             }
         }
 
@@ -328,7 +339,7 @@ mod private {
 
             context._state.increment_mlen(&WordU64::from(12u64));
             assert!(context._state.message_len[0] == WordU64::from(0u64));
-            assert!(context._state.message_len[1] == WordU64::from(24u64));
+            assert!(context._state.message_len[1] == WordU64::from(240u64));
 
             // Overflow
             context._state.increment_mlen(&WordU64::from(u64::MAX / 8));
