@@ -897,6 +897,87 @@ mod test_word {
         true
     }
 
+    #[test]
+    fn test_results_store_and_load_u64_into_be() {
+        let input_0: [WordU64; 2] = [
+            WordU64::from(588679683042986719u64),
+            WordU64::from(14213404201893491922u64),
+        ];
+        let input_1: [WordU64; 4] = [
+            WordU64::from(11866671478157678302u64),
+            WordU64::from(12365793902795026927u64),
+            WordU64::from(3777757590820648064u64),
+            WordU64::from(6594491344853184185u64),
+        ];
+        let input_2: [WordU64; 6] = [
+            WordU64::from(2101516190274184922u64),
+            WordU64::from(7904425905466803755u64),
+            WordU64::from(16590119592260157258u64),
+            WordU64::from(6043085125584392657u64),
+            WordU64::from(292831874581513482u64),
+            WordU64::from(1878340435767862001u64),
+        ];
+        let input_3: [WordU64; 8] = [
+            WordU64::from(10720360125345046831u64),
+            WordU64::from(12576204976780952869u64),
+            WordU64::from(2183760329755932840u64),
+            WordU64::from(12806242450747917237u64),
+            WordU64::from(17861362669514295908u64),
+            WordU64::from(4901620135335484985u64),
+            WordU64::from(3014680565865559727u64),
+            WordU64::from(5106077179490460734u64),
+        ];
+
+        let expected_0: [u8; 16] = [
+            8, 43, 105, 13, 130, 68, 74, 223, 197, 64, 39, 208, 214, 231, 244, 210,
+        ];
+        let expected_1: [u8; 32] = [
+            164, 174, 226, 214, 73, 217, 22, 222, 171, 156, 32, 9, 173, 201, 241, 239, 52, 109, 74,
+            131, 112, 102, 116, 128, 91, 132, 86, 240, 100, 92, 174, 185,
+        ];
+        let expected_2: [u8; 48] = [
+            29, 42, 21, 215, 59, 6, 102, 218, 109, 178, 41, 123, 72, 190, 134, 43, 230, 59, 241,
+            222, 245, 234, 63, 74, 83, 221, 89, 231, 113, 231, 145, 209, 4, 16, 89, 9, 215, 87,
+            197, 10, 26, 17, 52, 172, 169, 50, 34, 241,
+        ];
+        let expected_3: [u8; 64] = [
+            148, 198, 94, 188, 47, 116, 33, 47, 174, 135, 167, 203, 119, 135, 69, 37, 30, 78, 70,
+            115, 41, 177, 56, 168, 177, 184, 233, 168, 152, 91, 131, 181, 247, 224, 78, 182, 224,
+            210, 138, 100, 68, 6, 13, 139, 14, 146, 222, 57, 41, 214, 76, 0, 143, 176, 182, 175,
+            70, 220, 110, 36, 63, 65, 228, 62,
+        ];
+
+        let mut actual_bytes_0 = [0u8; 16];
+        let mut actual_bytes_1 = [0u8; 32];
+        let mut actual_bytes_2 = [0u8; 48];
+        let mut actual_bytes_3 = [0u8; 64];
+
+        WordU64::as_be_bytes(&input_0, &mut actual_bytes_0);
+        WordU64::as_be_bytes(&input_1, &mut actual_bytes_1);
+        WordU64::as_be_bytes(&input_2, &mut actual_bytes_2);
+        WordU64::as_be_bytes(&input_3, &mut actual_bytes_3);
+
+        assert_eq!(actual_bytes_0, expected_0);
+        assert_eq!(actual_bytes_1, expected_1);
+        assert_eq!(actual_bytes_2.as_ref(), expected_2.as_ref());
+        assert_eq!(actual_bytes_3.as_ref(), expected_3.as_ref());
+
+        let mut actual_nums_0 = [WordU64::default(); 2];
+        let mut actual_nums_1 = [WordU64::default(); 4];
+        let mut actual_nums_2 = [WordU64::default(); 6];
+        let mut actual_nums_3 = [WordU64::default(); 8];
+
+        WordU64::from_be_bytes(&actual_bytes_0, &mut actual_nums_0);
+        WordU64::from_be_bytes(&actual_bytes_1, &mut actual_nums_1);
+        WordU64::from_be_bytes(&actual_bytes_2, &mut actual_nums_2);
+        WordU64::from_be_bytes(&actual_bytes_3, &mut actual_nums_3);
+
+        assert_eq!(actual_nums_0, input_0);
+        assert_eq!(actual_nums_1, input_1);
+        assert_eq!(actual_nums_2, input_2);
+        assert_eq!(actual_nums_3, input_3);
+    }
+
     #[cfg(debug_assertions)]
     #[quickcheck]
     #[rustfmt::skip]
