@@ -405,7 +405,7 @@ pub(crate) mod sha2_core {
     }
 }
 
-pub(crate) mod W32 {
+pub(crate) mod w32 {
     use core::convert::{From, TryFrom, TryInto};
     use core::ops::*;
     use zeroize::Zeroize;
@@ -559,7 +559,7 @@ pub(crate) mod W32 {
     }
 }
 
-pub(crate) mod W64 {
+pub(crate) mod w64 {
     use core::convert::{From, TryFrom, TryInto};
     use core::ops::*;
     use zeroize::Zeroize;
@@ -716,8 +716,8 @@ pub(crate) mod W64 {
 #[cfg(test)]
 mod test_word {
     use super::sha2_core::Word;
-    use super::W32::WordU32;
-    use super::W64::WordU64;
+    use super::w32::WordU32;
+    use super::w64::WordU64;
 
     #[test]
     #[should_panic]

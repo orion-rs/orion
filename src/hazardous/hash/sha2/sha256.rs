@@ -80,7 +80,7 @@ construct_public! {
 impl_from_trait!(Digest, SHA256_OUTSIZE);
 
 use super::sha2_core::{State, Variant, Word};
-use super::W32::WordU32;
+use super::w32::WordU32;
 
 #[derive(Clone)]
 /// SHA256 streaming state.

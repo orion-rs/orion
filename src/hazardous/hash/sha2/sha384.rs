@@ -73,7 +73,7 @@ construct_public! {
 impl_from_trait!(Digest, SHA384_OUTSIZE);
 
 use super::sha2_core::{State, Variant};
-use super::W64::WordU64;
+use super::w64::WordU64;
 
 /// The blocksize for the hash function SHA384.
 pub const SHA384_BLOCKSIZE: usize = 128;
