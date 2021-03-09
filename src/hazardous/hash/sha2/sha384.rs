@@ -72,7 +72,7 @@ construct_public! {
 
 impl_from_trait!(Digest, SHA384_OUTSIZE);
 
-use super::sha2Core::{State, Variant};
+use super::sha2_core::{State, Variant};
 use super::W64::WordU64;
 
 /// The blocksize for the hash function SHA384.
@@ -327,7 +327,7 @@ mod private {
         #[test]
         #[should_panic]
         fn test_panic_on_second_overflow() {
-            use crate::hazardous::hash::sha2::sha2Core::Word;
+            use crate::hazardous::hash::sha2::sha2_core::Word;
 
             let mut context = Sha384::default();
             context._state.message_len = [WordU64::MAX, WordU64::from(u64::MAX - 7)];

@@ -72,7 +72,7 @@ construct_public! {
 
 impl_from_trait!(Digest, SHA512_OUTSIZE);
 
-use super::sha2Core::{State, Variant, Word};
+use super::sha2_core::{State, Variant, Word};
 use super::W64::WordU64;
 
 /// The blocksize for the hash function SHA512.

@@ -29,7 +29,7 @@ pub mod sha384;
 /// SHA512 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
 pub mod sha512;
 
-pub(crate) mod sha2Core {
+pub(crate) mod sha2_core {
     use crate::errors::UnknownCryptoError;
     use core::fmt::Debug;
     use core::marker::PhantomData;
@@ -479,7 +479,7 @@ pub(crate) mod W32 {
         }
     }
 
-    impl super::sha2Core::Word for WordU32 {
+    impl super::sha2_core::Word for WordU32 {
         const MAX: Self = Self(u32::MAX);
 
         #[inline]
@@ -633,7 +633,7 @@ pub(crate) mod W64 {
         }
     }
 
-    impl super::sha2Core::Word for WordU64 {
+    impl super::sha2_core::Word for WordU64 {
         const MAX: Self = Self(u64::MAX);
 
         #[inline]
@@ -715,7 +715,7 @@ pub(crate) mod W64 {
 
 #[cfg(test)]
 mod test_word {
-    use super::sha2Core::Word;
+    use super::sha2_core::Word;
     use super::W32::WordU32;
     use super::W64::WordU64;
 
