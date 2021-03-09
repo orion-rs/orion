@@ -72,10 +72,8 @@ pub(crate) mod sha2_core {
         fn from_be(src: &[u8]) -> Self;
 
         #[allow(clippy::wrong_self_convention)]
-        // TODO: Missing tests
         fn as_be_bytes(src: &[Self], dest: &mut [u8]);
 
-        // TODO: Missing tests
         fn from_be_bytes(src: &[u8], dest: &mut [Self]);
 
         #[cfg(debug_assertions)]
@@ -895,6 +893,78 @@ mod test_word {
         if w64m.0 != u64::from_be_bytes(dest64) { return false; }
 
         true
+    }
+
+    #[test]
+    fn test_results_store_and_load_u32_into_be() {
+        let input_0: [WordU32; 2] = [WordU32::from(777190791u32), WordU32::from(1465409568u32)];
+        let input_1: [WordU32; 4] = [
+            WordU32::from(3418616323u32),
+            WordU32::from(2289579672u32),
+            WordU32::from(172726903u32),
+            WordU32::from(1048927929u32),
+        ];
+        let input_2: [WordU32; 6] = [
+            WordU32::from(84693101u32),
+            WordU32::from(443297962u32),
+            WordU32::from(3962861724u32),
+            WordU32::from(3081916164u32),
+            WordU32::from(4167874952u32),
+            WordU32::from(3982893227u32),
+        ];
+        let input_3: [WordU32; 8] = [
+            WordU32::from(2761719494u32),
+            WordU32::from(242571916u32),
+            WordU32::from(3097304063u32),
+            WordU32::from(3924274282u32),
+            WordU32::from(1553851098u32),
+            WordU32::from(3673278295u32),
+            WordU32::from(3531531406u32),
+            WordU32::from(2347852690u32),
+        ];
+
+        let expected_0: [u8; 8] = [46, 82, 253, 135, 87, 88, 96, 32];
+        let expected_1: [u8; 16] = [
+            203, 195, 242, 3, 136, 120, 54, 152, 10, 75, 154, 119, 62, 133, 94, 185,
+        ];
+        let expected_2: [u8; 24] = [
+            5, 12, 80, 109, 26, 108, 48, 170, 236, 52, 120, 156, 183, 178, 79, 4, 248, 108, 185,
+            136, 237, 102, 32, 171,
+        ];
+        let expected_3: [u8; 32] = [
+            164, 156, 126, 198, 14, 117, 90, 140, 184, 157, 27, 255, 233, 231, 172, 106, 92, 157,
+            226, 218, 218, 241, 199, 87, 210, 126, 228, 142, 139, 241, 99, 146,
+        ];
+
+        let mut actual_bytes_0 = [0u8; 8];
+        let mut actual_bytes_1 = [0u8; 16];
+        let mut actual_bytes_2 = [0u8; 24];
+        let mut actual_bytes_3 = [0u8; 32];
+
+        WordU32::as_be_bytes(&input_0, &mut actual_bytes_0);
+        WordU32::as_be_bytes(&input_1, &mut actual_bytes_1);
+        WordU32::as_be_bytes(&input_2, &mut actual_bytes_2);
+        WordU32::as_be_bytes(&input_3, &mut actual_bytes_3);
+
+        assert_eq!(actual_bytes_0, expected_0);
+        assert_eq!(actual_bytes_1, expected_1);
+        assert_eq!(actual_bytes_2, expected_2);
+        assert_eq!(actual_bytes_3, expected_3);
+
+        let mut actual_nums_0 = [WordU32::default(); 2];
+        let mut actual_nums_1 = [WordU32::default(); 4];
+        let mut actual_nums_2 = [WordU32::default(); 6];
+        let mut actual_nums_3 = [WordU32::default(); 8];
+
+        WordU32::from_be_bytes(&actual_bytes_0, &mut actual_nums_0);
+        WordU32::from_be_bytes(&actual_bytes_1, &mut actual_nums_1);
+        WordU32::from_be_bytes(&actual_bytes_2, &mut actual_nums_2);
+        WordU32::from_be_bytes(&actual_bytes_3, &mut actual_nums_3);
+
+        assert_eq!(actual_nums_0, input_0);
+        assert_eq!(actual_nums_1, input_1);
+        assert_eq!(actual_nums_2, input_2);
+        assert_eq!(actual_nums_3, input_3);
     }
 
     #[test]
