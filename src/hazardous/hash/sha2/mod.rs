@@ -76,7 +76,7 @@ pub(crate) mod sha2_core {
 
         fn from_be_bytes(src: &[u8], dest: &mut [Self]);
 
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, test))]
         fn less_than_or_equal(&self, rhs: Self) -> bool;
     }
 
@@ -183,6 +183,7 @@ pub(crate) mod sha2_core {
             // The result can still overflow if length > $primitive::MAX / 8.
             // Should be impossible for a user to trigger, because update() processes
             // in SHA(256/384/512)_BLOCKSIZE chunks.
+            #[cfg(any(debug_assertions, test))]
             debug_assert!(length.less_than_or_equal(W::MAX / W::from(8)));
 
             // left-shift to get bit-sized representation of length
@@ -545,7 +546,7 @@ pub(crate) mod w32 {
             }
         }
 
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, test))]
         fn less_than_or_equal(&self, rhs: Self) -> bool {
             self.0 <= rhs.0
         }
@@ -693,7 +694,7 @@ pub(crate) mod w64 {
             }
         }
 
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, test))]
         fn less_than_or_equal(&self, rhs: Self) -> bool {
             self.0 <= rhs.0
         }
