@@ -497,18 +497,12 @@ pub(crate) mod w32 {
 
         #[inline]
         fn checked_add(&self, rhs: Self) -> Option<Self> {
-            match self.0.checked_add(rhs.0) {
-                Some(res) => Some(Self(res)),
-                None => None,
-            }
+            self.0.checked_add(rhs.0).map(Self)
         }
 
         #[inline]
         fn checked_shl(&self, rhs: u32) -> Option<Self> {
-            match self.0.checked_shl(rhs) {
-                Some(res) => Some(Self(res)),
-                None => None,
-            }
+            self.0.checked_shl(rhs).map(Self)
         }
 
         #[inline]
@@ -651,18 +645,12 @@ pub(crate) mod w64 {
 
         #[inline]
         fn checked_add(&self, rhs: Self) -> Option<Self> {
-            match self.0.checked_add(rhs.0) {
-                Some(res) => Some(Self(res)),
-                None => None,
-            }
+            self.0.checked_add(rhs.0).map(Self)
         }
 
         #[inline]
         fn checked_shl(&self, rhs: u32) -> Option<Self> {
-            match self.0.checked_shl(rhs) {
-                Some(res) => Some(Self(res)),
-                None => None,
-            }
+            self.0.checked_shl(rhs).map(Self)
         }
 
         #[inline]
