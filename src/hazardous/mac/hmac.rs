@@ -98,7 +98,9 @@ pub(crate) trait HmacFunction {
     const HASH_FUNC_OUTSIZE: usize;
 
     /// Create a new instance of the HMAC function, using a `secret_key` that may or may not be padded.
-    fn _new(secret_key: &[u8]) -> Self;
+    fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError>
+    where
+        Self: Sized;
 
     /// Update the internal state with `data`.
     fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError>;
@@ -261,17 +263,17 @@ pub mod sha256 {
     }
 
     impl HmacSha256 {
-        fn _new(secret_key: &[u8]) -> Self {
-            // TODO: Write why unwrap() here is fine.
-            Self {
-                _state: Hmac::<Sha256, { sha256::SHA256_BLOCKSIZE }>::_new(secret_key).unwrap(),
-            }
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Ok(Self {
+                _state: Hmac::<Sha256, { sha256::SHA256_BLOCKSIZE }>::_new(secret_key)?,
+            })
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// Initialize `Hmac` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
-            Self::_new(secret_key.unprotected_as_bytes())
+            // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
+            Self::_new(secret_key.unprotected_as_bytes()).unwrap()
         }
 
         /// Reset to `new()` state.
@@ -330,7 +332,7 @@ pub mod sha256 {
         const HASH_FUNC_OUTSIZE: usize = sha256::SHA256_OUTSIZE;
 
         /// Create a new instance of the HMAC function, using a `secret_key` that may or may not be padded.
-        fn _new(secret_key: &[u8]) -> Self {
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
             Self::_new(secret_key)
         }
 
@@ -491,17 +493,17 @@ pub mod sha384 {
     }
 
     impl HmacSha384 {
-        fn _new(secret_key: &[u8]) -> Self {
-            // TODO: Write why unwrap() here is fine.
-            Self {
-                _state: Hmac::<Sha384, { sha384::SHA384_BLOCKSIZE }>::_new(secret_key).unwrap(),
-            }
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Ok(Self {
+                _state: Hmac::<Sha384, { sha384::SHA384_BLOCKSIZE }>::_new(secret_key)?,
+            })
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// Initialize `Hmac` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
-            Self::_new(secret_key.unprotected_as_bytes())
+            // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
+            Self::_new(secret_key.unprotected_as_bytes()).unwrap()
         }
 
         /// Reset to `new()` state.
@@ -560,7 +562,7 @@ pub mod sha384 {
         const HASH_FUNC_OUTSIZE: usize = sha384::SHA384_OUTSIZE;
 
         /// Create a new instance of the HMAC function, using a `secret_key` that may or may not be padded.
-        fn _new(secret_key: &[u8]) -> Self {
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
             Self::_new(secret_key)
         }
 
@@ -721,17 +723,17 @@ pub mod sha512 {
     }
 
     impl HmacSha512 {
-        fn _new(secret_key: &[u8]) -> Self {
-            // TODO: Write why unwrap() here is fine.
-            Self {
-                _state: Hmac::<Sha512, { sha512::SHA512_BLOCKSIZE }>::_new(secret_key).unwrap(),
-            }
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Ok(Self {
+                _state: Hmac::<Sha512, { sha512::SHA512_BLOCKSIZE }>::_new(secret_key)?,
+            })
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// Initialize `Hmac` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
-            Self::_new(secret_key.unprotected_as_bytes())
+            // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
+            Self::_new(secret_key.unprotected_as_bytes()).unwrap()
         }
 
         /// Reset to `new()` state.
@@ -790,7 +792,7 @@ pub mod sha512 {
         const HASH_FUNC_OUTSIZE: usize = sha512::SHA512_OUTSIZE;
 
         /// Create a new instance of the HMAC function, using a `secret_key` that may or may not be padded.
-        fn _new(secret_key: &[u8]) -> Self {
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
             Self::_new(secret_key)
         }
 

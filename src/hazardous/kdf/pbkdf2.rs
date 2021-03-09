@@ -120,7 +120,7 @@ where
     }
 
     let mut u_step = [0u8; OUTSIZE];
-    let mut hmac = Hmac::_new(padded_password);
+    let mut hmac = Hmac::_new(padded_password)?;
     for (idx, dk_block) in dest.chunks_mut(Hmac::HASH_FUNC_OUTSIZE).enumerate() {
         // If this panics, then the size limit for PBKDF2 is reached.
         let block_idx: u32 = 1u32.checked_add(idx as u32).unwrap();

@@ -79,7 +79,7 @@ where
     debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
     let mut dest = [0u8; OUTSIZE];
 
-    let mut ctx = Hmac::_new(salt);
+    let mut ctx = Hmac::_new(salt)?;
     ctx._update(ikm)?;
     ctx._finalize(&mut dest)?;
 
@@ -101,7 +101,7 @@ where
     }
 
     let optional_info = info.unwrap_or(&[0u8; 0]);
-    let mut ctx = Hmac::_new(prk);
+    let mut ctx = Hmac::_new(prk)?;
 
     // We require a temporary buffer in case the requested bytes
     // to derive are lower than the HMAC functions output size.
