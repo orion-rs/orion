@@ -67,12 +67,13 @@ pub(crate) mod sha2_core {
 
         fn size_of() -> usize;
 
-        fn into_be(&self, dest: &mut [u8]);
+        fn as_be(&self, dest: &mut [u8]);
 
         fn from_be(src: &[u8]) -> Self;
 
+        #[allow(clippy::wrong_self_convention)]
         // TODO: Missing tests
-        fn into_be_bytes(src: &[Self], dest: &mut [u8]);
+        fn as_be_bytes(src: &[Self], dest: &mut [u8]);
 
         // TODO: Missing tests
         fn from_be_bytes(src: &[u8], dest: &mut [Self]);
@@ -379,12 +380,12 @@ pub(crate) mod sha2_core {
             }
 
             self.message_len[0]
-                .into_be(&mut self.buffer[BLOCKSIZE - (lenpad * 2)..BLOCKSIZE - lenpad]);
-            self.message_len[1].into_be(&mut self.buffer[BLOCKSIZE - lenpad..BLOCKSIZE]);
+                .as_be(&mut self.buffer[BLOCKSIZE - (lenpad * 2)..BLOCKSIZE - lenpad]);
+            self.message_len[1].as_be(&mut self.buffer[BLOCKSIZE - lenpad..BLOCKSIZE]);
             self.process(None);
 
             let to_use = OUTSIZE / W::size_of();
-            W::into_be_bytes(&self.working_state[..to_use], &mut dest[..OUTSIZE]);
+            W::as_be_bytes(&self.working_state[..to_use], &mut dest[..OUTSIZE]);
 
             Ok(())
         }
@@ -526,7 +527,7 @@ pub(crate) mod w32 {
         }
 
         #[inline]
-        fn into_be(&self, dest: &mut [u8]) {
+        fn as_be(&self, dest: &mut [u8]) {
             debug_assert!(dest.len() == Self::size_of());
             dest.copy_from_slice(&self.0.to_be_bytes());
         }
@@ -537,10 +538,10 @@ pub(crate) mod w32 {
         }
 
         #[inline]
-        fn into_be_bytes(src: &[Self], dest: &mut [u8]) {
+        fn as_be_bytes(src: &[Self], dest: &mut [u8]) {
             debug_assert!(dest.len() == src.len() * Self::size_of());
             for (src_elem, dst_chunk) in src.iter().zip(dest.chunks_exact_mut(Self::size_of())) {
-                src_elem.into_be(dst_chunk);
+                src_elem.as_be(dst_chunk);
             }
         }
 
@@ -680,7 +681,7 @@ pub(crate) mod w64 {
         }
 
         #[inline]
-        fn into_be(&self, dest: &mut [u8]) {
+        fn as_be(&self, dest: &mut [u8]) {
             debug_assert!(dest.len() == Self::size_of());
             dest.copy_from_slice(&self.0.to_be_bytes());
         }
@@ -691,10 +692,10 @@ pub(crate) mod w64 {
         }
 
         #[inline]
-        fn into_be_bytes(src: &[Self], dest: &mut [u8]) {
+        fn as_be_bytes(src: &[Self], dest: &mut [u8]) {
             debug_assert!(dest.len() == src.len() * Self::size_of());
             for (src_elem, dst_chunk) in src.iter().zip(dest.chunks_exact_mut(Self::size_of())) {
-                src_elem.into_be(dst_chunk);
+                src_elem.as_be(dst_chunk);
             }
         }
 
@@ -895,8 +896,8 @@ mod test_word {
 
         let mut dest32 = [0u8; core::mem::size_of::<u32>()];
         let mut dest64 = [0u8; core::mem::size_of::<u64>()];
-        w32n.into_be(&mut dest32);
-        w64m.into_be(&mut dest64);
+        w32n.as_be(&mut dest32);
+        w64m.as_be(&mut dest64);
 
         if &dest32 != &n.to_be_bytes() { return false; }
         if &dest64 != &m.to_be_bytes() { return false; }
