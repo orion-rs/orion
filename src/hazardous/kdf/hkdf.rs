@@ -96,6 +96,7 @@ where
     Hmac: hmac::HmacFunction,
 {
     debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
+    debug_assert!(prk.len() == Hmac::HASH_FUNC_OUTSIZE);
     if dest.is_empty() || dest.len() > 255 * Hmac::HASH_FUNC_OUTSIZE {
         return Err(UnknownCryptoError);
     }
@@ -167,11 +168,15 @@ pub mod sha256 {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF expand step.
     pub fn expand(
-        prk: &[u8],
+        prk: &Tag,
         info: Option<&[u8]>,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(prk, info, dest)
+        _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
+            prk.unprotected_as_bytes(),
+            info,
+            dst_out,
+        )
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -180,9 +185,9 @@ pub mod sha256 {
         salt: &[u8],
         ikm: &[u8],
         info: Option<&[u8]>,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _derive_key::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(salt, ikm, info, dest)
+        _derive_key::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
     // See: https://github.com/brycx/orion/issues/179
@@ -225,7 +230,7 @@ pub mod sha256 {
 
             let prk = extract(&salt[..], &ikm[..]).unwrap();
             let mut out = vec![0u8; outsize_checked];
-            expand(prk.unprotected_as_bytes(), Some(&info[..]), &mut out).unwrap();
+            expand(&prk, Some(&info[..]), &mut out).unwrap();
 
             let mut out_one_shot = vec![0u8; outsize_checked];
             derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
@@ -253,11 +258,15 @@ pub mod sha384 {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF expand step.
     pub fn expand(
-        prk: &[u8],
+        prk: &Tag,
         info: Option<&[u8]>,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(prk, info, dest)
+        _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(
+            prk.unprotected_as_bytes(),
+            info,
+            dst_out,
+        )
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -266,9 +275,9 @@ pub mod sha384 {
         salt: &[u8],
         ikm: &[u8],
         info: Option<&[u8]>,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _derive_key::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(salt, ikm, info, dest)
+        _derive_key::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
     // See: https://github.com/brycx/orion/issues/179
@@ -311,7 +320,7 @@ pub mod sha384 {
 
             let prk = extract(&salt[..], &ikm[..]).unwrap();
             let mut out = vec![0u8; outsize_checked];
-            expand(prk.unprotected_as_bytes(), Some(&info[..]), &mut out).unwrap();
+            expand(&prk, Some(&info[..]), &mut out).unwrap();
 
             let mut out_one_shot = vec![0u8; outsize_checked];
             derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
@@ -339,11 +348,15 @@ pub mod sha512 {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF expand step.
     pub fn expand(
-        prk: &[u8],
+        prk: &Tag,
         info: Option<&[u8]>,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(prk, info, dest)
+        _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(
+            prk.unprotected_as_bytes(),
+            info,
+            dst_out,
+        )
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -352,9 +365,9 @@ pub mod sha512 {
         salt: &[u8],
         ikm: &[u8],
         info: Option<&[u8]>,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _derive_key::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(salt, ikm, info, dest)
+        _derive_key::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
     // See: https://github.com/brycx/orion/issues/179
@@ -397,7 +410,7 @@ pub mod sha512 {
 
             let prk = extract(&salt[..], &ikm[..]).unwrap();
             let mut out = vec![0u8; outsize_checked];
-            expand(prk.unprotected_as_bytes(), Some(&info[..]), &mut out).unwrap();
+            expand(&prk, Some(&info[..]), &mut out).unwrap();
 
             let mut out_one_shot = vec![0u8; outsize_checked];
             derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
@@ -423,30 +436,30 @@ mod public {
         fn hkdf_above_maximum_length_err() {
             let mut okm_out = [0u8; 255 * SHA256_OUTSIZE + 1];
             let prk = sha256::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha256::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_err());
+            assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_err());
 
             let mut okm_out = [0u8; 255 * SHA384_OUTSIZE + 1];
             let prk = sha384::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha384::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_err());
+            assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_err());
 
             let mut okm_out = [0u8; 255 * SHA512_OUTSIZE + 1];
             let prk = sha512::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha512::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_err());
+            assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_err());
         }
 
         #[test]
         fn hkdf_exact_maximum_length_ok() {
             let mut okm_out = [0u8; 255 * SHA256_OUTSIZE];
             let prk = sha256::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha256::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_ok());
+            assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_ok());
 
             let mut okm_out = [0u8; 255 * SHA384_OUTSIZE];
             let prk = sha384::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha384::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_ok());
+            assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_ok());
 
             let mut okm_out = [0u8; 255 * SHA512_OUTSIZE];
             let prk = sha512::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha512::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_ok());
+            assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_ok());
         }
 
         #[test]
@@ -454,13 +467,13 @@ mod public {
             let mut okm_out = [0u8; 0];
 
             let prk = sha256::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha256::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_err());
+            assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_err());
 
             let prk = sha384::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha384::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_err());
+            assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_err());
 
             let prk = sha512::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha512::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_err());
+            assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_err());
         }
 
         #[test]
@@ -470,15 +483,15 @@ mod public {
             let mut okm_out_verify = [0u8; 32];
 
             let prk = sha256::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha256::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_ok()); // Use info Some
+            assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
             assert!(sha256::verify(&okm_out, b"", b"", None, &mut okm_out_verify).is_ok());
 
             let prk = sha384::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha384::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_ok()); // Use info Some
+            assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
             assert!(sha384::verify(&okm_out, b"", b"", None, &mut okm_out_verify).is_ok());
 
             let prk = sha512::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha512::expand(prk.unprotected_as_bytes(), Some(b""), &mut okm_out).is_ok()); // Use info Some
+            assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
             assert!(sha512::verify(&okm_out, b"", b"", None, &mut okm_out_verify).is_ok());
         }
     }
