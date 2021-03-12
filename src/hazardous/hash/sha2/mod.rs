@@ -744,158 +744,6 @@ mod test_word {
         assert_eq!(WordU64::default().0, u64::default());
     }
 
-    #[quickcheck]
-    #[rustfmt::skip]
-    fn equiv_from(n: u32, m: u64) -> bool {
-        // Implicitly assume there's no panic
-        if WordU32::from(n).0 != n { return false; }
-        if WordU64::from(m).0 != m { return false; }
-
-        true
-    }
-
-    #[quickcheck]
-    #[rustfmt::skip]
-    fn equiv_ops(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
-        // WordU32
-        let w32n1 = WordU32::from(n1);
-        let w32n2 = WordU32::from(n2);
-
-        if !((w32n1 | w32n2).0  == n1 | n2)  { return false; }
-        if !((w32n1 & w32n2).0  == n1 & n2)  { return false; }
-        if !((w32n1 ^ w32n2).0  == n1 ^ n2)  { return false; }
-        // Test only specific values used with Shr (in sigma functions)
-        if !((w32n1 >> WordU32::from(10usize)).0 == n1 >> 10) { return false; }
-        if !((w32n1 >> WordU32::from(3usize)).0  == n1 >> 3)  { return false; }
-        if !w32n2.0 == 0 {
-            if !((w32n1 / w32n2).0  == n1 / n2)  { return false };
-        }
-
-        // WordU64
-        let w64m1 = WordU64::from(m1);
-        let w64m2 = WordU64::from(m2);
-
-        if !((w64m1 | w64m2).0  == m1 | m2)  { return false; }
-        if !((w64m1 & w64m2).0  == m1 & m2)  { return false; }
-        if !((w64m1 ^ w64m2).0  == m1 ^ m2)  { return false; }
-        // Test only specific values used with Shr (in sigma functions)
-        if !((w64m1 >> WordU64::from(7usize)).0 == m1 >> 7) { return false; }
-        if !((w64m1 >> WordU64::from(6usize)).0 == m1 >> 6) { return false; }
-        if !w64m2.0 == 0 {
-            if !((w64m1 / w64m2).0  == m1 / m2)  { return false };
-        }
-
-        true
-    }
-
-    #[quickcheck]
-    fn equiv_wrapping_add(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
-        let w32n1 = WordU32::from(n1);
-        let w32n2 = WordU32::from(n2);
-        let ret32 = w32n1.wrapping_add(w32n2).0 == n1.wrapping_add(n2);
-
-        let w64m1 = WordU64::from(m1);
-        let w64m2 = WordU64::from(m2);
-        let ret64 = w64m1.wrapping_add(w64m2).0 == m1.wrapping_add(m2);
-
-        (ret32 == true) && (ret64 == true)
-    }
-
-    #[quickcheck]
-    fn equiv_overflowing_add(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
-        let w32n1 = WordU32::from(n1);
-        let w32n2 = WordU32::from(n2);
-        let ret32: bool = match (w32n1.overflowing_add(w32n2), n1.overflowing_add(n2)) {
-            ((w32, true), (n, true)) => w32.0 == n,
-            ((w32, false), (n, false)) => w32.0 == n,
-            _ => false,
-        };
-
-        let w64m1 = WordU64::from(m1);
-        let w64m2 = WordU64::from(m2);
-        let ret64: bool = match (w64m1.overflowing_add(w64m2), m1.overflowing_add(m2)) {
-            ((w64, true), (n, true)) => w64.0 == n,
-            ((w64, false), (n, false)) => w64.0 == n,
-            _ => false,
-        };
-
-        (ret32 == true) && (ret64 == true)
-    }
-
-    #[quickcheck]
-    fn equiv_checked_add(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
-        let w32n1 = WordU32::from(n1);
-        let w32n2 = WordU32::from(n2);
-        let ret32: bool = match (w32n1.checked_add(w32n2), n1.checked_add(n2)) {
-            (Some(w32), Some(n)) => w32.0 == n,
-            (None, None) => true,
-            _ => false,
-        };
-
-        let w64m1 = WordU64::from(m1);
-        let w64m2 = WordU64::from(m2);
-        let ret64: bool = match (w64m1.checked_add(w64m2), m1.checked_add(m2)) {
-            (Some(w64), Some(n)) => w64.0 == n,
-            (None, None) => true,
-            _ => false,
-        };
-
-        (ret32 == true) && (ret64 == true)
-    }
-
-    #[quickcheck]
-    fn equiv_checked_shl(n: u32, m: u64, x: u32) -> bool {
-        let w32n = WordU32::from(n);
-        let ret32: bool = match (w32n.checked_shl(x), n.checked_shl(x)) {
-            (Some(w32), Some(n1)) => w32.0 == n1,
-            (None, None) => true,
-            _ => false,
-        };
-
-        let w64m = WordU64::from(m);
-        let ret64: bool = match (w64m.checked_shl(x), m.checked_shl(x)) {
-            (Some(w64), Some(n1)) => w64.0 == n1,
-            (None, None) => true,
-            _ => false,
-        };
-
-        (ret32 == true) && (ret64 == true)
-    }
-
-    #[quickcheck]
-    #[rustfmt::skip]
-    fn equiv_rotate_right(n: u32, m: u64, x: u32) -> bool {
-        let w32n = WordU32::from(n);
-        let w64m = WordU64::from(m);
-
-        if w32n.rotate_right(x).0 != n.rotate_right(x) { return false; }
-        if w64m.rotate_right(x).0 != m.rotate_right(x) { return false; }
-
-        true
-    }
-
-    #[quickcheck]
-    #[rustfmt::skip]
-    fn equiv_into_from_be(n: u32, m: u64) -> bool {
-
-        let w32n = WordU32::from(n);
-        let w64m = WordU64::from(m);
-
-        let mut dest32 = [0u8; core::mem::size_of::<u32>()];
-        let mut dest64 = [0u8; core::mem::size_of::<u64>()];
-        w32n.as_be(&mut dest32);
-        w64m.as_be(&mut dest64);
-
-        if &dest32 != &n.to_be_bytes() { return false; }
-        if &dest64 != &m.to_be_bytes() { return false; }
-
-
-        if w32n.0 != u32::from_be_bytes(dest32) { return false; }
-        if w64m.0 != u64::from_be_bytes(dest64) { return false; }
-
-        true
-    }
-
     #[test]
     fn test_results_store_and_load_u32_into_be() {
         let input_0: [WordU32; 2] = [WordU32::from(777190791u32), WordU32::from(1465409568u32)];
@@ -1049,19 +897,176 @@ mod test_word {
         assert_eq!(actual_nums_3, input_3);
     }
 
-    #[cfg(debug_assertions)]
-    #[quickcheck]
-    #[rustfmt::skip]
-    /// Word::less_than_or_equal() is only used for debug_assertions.
-    fn equiv_less_than_or_equal(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
-        let w32n1 = WordU32::from(n1);
-        let w32n2 = WordU32::from(n2);
-        let w64m1 = WordU64::from(m1);
-        let w64m2 = WordU64::from(m2);
+    #[cfg(feature = "safe_api")]
+    mod proptests {
+        use super::*;
 
-        if w32n1.less_than_or_equal(w32n2) != (n1 <= n2) { return false; }
-        if w64m1.less_than_or_equal(w64m2) != (m1 <= m2) { return false; }
+        #[quickcheck]
+        #[rustfmt::skip]
+        fn equiv_from(n: u32, m: u64) -> bool {
+            // Implicitly assume there's no panic
+            if WordU32::from(n).0 != n { return false; }
+            if WordU64::from(m).0 != m { return false; }
+    
+            true
+        }
 
-        true
+        #[quickcheck]
+        #[rustfmt::skip]
+        fn equiv_ops(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
+            // WordU32
+            let w32n1 = WordU32::from(n1);
+            let w32n2 = WordU32::from(n2);
+    
+            if !((w32n1 | w32n2).0  == n1 | n2)  { return false; }
+            if !((w32n1 & w32n2).0  == n1 & n2)  { return false; }
+            if !((w32n1 ^ w32n2).0  == n1 ^ n2)  { return false; }
+            // Test only specific values used with Shr (in sigma functions)
+            if !((w32n1 >> WordU32::from(10usize)).0 == n1 >> 10) { return false; }
+            if !((w32n1 >> WordU32::from(3usize)).0  == n1 >> 3)  { return false; }
+            if !w32n2.0 == 0 {
+                if !((w32n1 / w32n2).0  == n1 / n2)  { return false };
+            }
+    
+            // WordU64
+            let w64m1 = WordU64::from(m1);
+            let w64m2 = WordU64::from(m2);
+    
+            if !((w64m1 | w64m2).0  == m1 | m2)  { return false; }
+            if !((w64m1 & w64m2).0  == m1 & m2)  { return false; }
+            if !((w64m1 ^ w64m2).0  == m1 ^ m2)  { return false; }
+            // Test only specific values used with Shr (in sigma functions)
+            if !((w64m1 >> WordU64::from(7usize)).0 == m1 >> 7) { return false; }
+            if !((w64m1 >> WordU64::from(6usize)).0 == m1 >> 6) { return false; }
+            if !w64m2.0 == 0 {
+                if !((w64m1 / w64m2).0  == m1 / m2)  { return false };
+            }
+    
+            true
+        }
+
+        #[quickcheck]
+        fn equiv_wrapping_add(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
+            let w32n1 = WordU32::from(n1);
+            let w32n2 = WordU32::from(n2);
+            let ret32 = w32n1.wrapping_add(w32n2).0 == n1.wrapping_add(n2);
+
+            let w64m1 = WordU64::from(m1);
+            let w64m2 = WordU64::from(m2);
+            let ret64 = w64m1.wrapping_add(w64m2).0 == m1.wrapping_add(m2);
+
+            (ret32 == true) && (ret64 == true)
+        }
+
+        #[quickcheck]
+        fn equiv_overflowing_add(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
+            let w32n1 = WordU32::from(n1);
+            let w32n2 = WordU32::from(n2);
+            let ret32: bool = match (w32n1.overflowing_add(w32n2), n1.overflowing_add(n2)) {
+                ((w32, true), (n, true)) => w32.0 == n,
+                ((w32, false), (n, false)) => w32.0 == n,
+                _ => false,
+            };
+
+            let w64m1 = WordU64::from(m1);
+            let w64m2 = WordU64::from(m2);
+            let ret64: bool = match (w64m1.overflowing_add(w64m2), m1.overflowing_add(m2)) {
+                ((w64, true), (n, true)) => w64.0 == n,
+                ((w64, false), (n, false)) => w64.0 == n,
+                _ => false,
+            };
+
+            (ret32 == true) && (ret64 == true)
+        }
+
+        #[quickcheck]
+        fn equiv_checked_add(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
+            let w32n1 = WordU32::from(n1);
+            let w32n2 = WordU32::from(n2);
+            let ret32: bool = match (w32n1.checked_add(w32n2), n1.checked_add(n2)) {
+                (Some(w32), Some(n)) => w32.0 == n,
+                (None, None) => true,
+                _ => false,
+            };
+
+            let w64m1 = WordU64::from(m1);
+            let w64m2 = WordU64::from(m2);
+            let ret64: bool = match (w64m1.checked_add(w64m2), m1.checked_add(m2)) {
+                (Some(w64), Some(n)) => w64.0 == n,
+                (None, None) => true,
+                _ => false,
+            };
+
+            (ret32 == true) && (ret64 == true)
+        }
+
+        #[quickcheck]
+        fn equiv_checked_shl(n: u32, m: u64, x: u32) -> bool {
+            let w32n = WordU32::from(n);
+            let ret32: bool = match (w32n.checked_shl(x), n.checked_shl(x)) {
+                (Some(w32), Some(n1)) => w32.0 == n1,
+                (None, None) => true,
+                _ => false,
+            };
+
+            let w64m = WordU64::from(m);
+            let ret64: bool = match (w64m.checked_shl(x), m.checked_shl(x)) {
+                (Some(w64), Some(n1)) => w64.0 == n1,
+                (None, None) => true,
+                _ => false,
+            };
+
+            (ret32 == true) && (ret64 == true)
+        }
+
+        #[quickcheck]
+        #[rustfmt::skip]
+        fn equiv_rotate_right(n: u32, m: u64, x: u32) -> bool {
+            let w32n = WordU32::from(n);
+            let w64m = WordU64::from(m);
+    
+            if w32n.rotate_right(x).0 != n.rotate_right(x) { return false; }
+            if w64m.rotate_right(x).0 != m.rotate_right(x) { return false; }
+    
+            true
+        }
+
+        #[quickcheck]
+        #[rustfmt::skip]
+        fn equiv_into_from_be(n: u32, m: u64) -> bool {
+    
+            let w32n = WordU32::from(n);
+            let w64m = WordU64::from(m);
+    
+            let mut dest32 = [0u8; core::mem::size_of::<u32>()];
+            let mut dest64 = [0u8; core::mem::size_of::<u64>()];
+            w32n.as_be(&mut dest32);
+            w64m.as_be(&mut dest64);
+    
+            if &dest32 != &n.to_be_bytes() { return false; }
+            if &dest64 != &m.to_be_bytes() { return false; }
+    
+    
+            if w32n.0 != u32::from_be_bytes(dest32) { return false; }
+            if w64m.0 != u64::from_be_bytes(dest64) { return false; }
+    
+            true
+        }
+
+        #[cfg(debug_assertions)]
+        #[quickcheck]
+        #[rustfmt::skip]
+        /// Word::less_than_or_equal() is only used for debug_assertions.
+        fn equiv_less_than_or_equal(n1: u32, n2: u32, m1: u64, m2: u64) -> bool {
+            let w32n1 = WordU32::from(n1);
+            let w32n2 = WordU32::from(n2);
+            let w64m1 = WordU64::from(m1);
+            let w64m2 = WordU64::from(m2);
+    
+            if w32n1.less_than_or_equal(w32n2) != (n1 <= n2) { return false; }
+            if w64m1.less_than_or_equal(w64m2) != (m1 <= m2) { return false; }
+    
+            true
+        }
     }
 }
