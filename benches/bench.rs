@@ -56,11 +56,11 @@ mod mac {
         }
     }
 
-    pub fn bench_hmac(c: &mut Criterion) {
-        let mut group = c.benchmark_group("HMAC-SHA512");
+    pub fn bench_hmac_sha256(c: &mut Criterion) {
+        let mut group = c.benchmark_group("HMAC-SHA256");
         // NOTE: Setting the key like this will pad it for HMAC.
         // Padding is therefor not included in benchmarks.
-        let key = hmac::SecretKey::generate();
+        let key = hmac::sha256::SecretKey::generate();
 
         for size in INPUT_SIZES.iter() {
             let input = vec![0u8; *size];
@@ -69,7 +69,29 @@ mod mac {
             group.bench_with_input(
                 BenchmarkId::new("compute mac", *size),
                 &input,
-                |b, input_message| b.iter(|| hmac::Hmac::hmac(&key, &input_message).unwrap()),
+                |b, input_message| {
+                    b.iter(|| hmac::sha256::HmacSha256::hmac(&key, &input_message).unwrap())
+                },
+            );
+        }
+    }
+
+    pub fn bench_hmac_sha512(c: &mut Criterion) {
+        let mut group = c.benchmark_group("HMAC-SHA512");
+        // NOTE: Setting the key like this will pad it for HMAC.
+        // Padding is therefor not included in benchmarks.
+        let key = hmac::sha512::SecretKey::generate();
+
+        for size in INPUT_SIZES.iter() {
+            let input = vec![0u8; *size];
+
+            group.throughput(Throughput::Bytes(*size as u64));
+            group.bench_with_input(
+                BenchmarkId::new("compute mac", *size),
+                &input,
+                |b, input_message| {
+                    b.iter(|| hmac::sha512::HmacSha512::hmac(&key, &input_message).unwrap())
+                },
             );
         }
     }
@@ -79,7 +101,8 @@ mod mac {
         config = Criterion::default();
         targets =
         bench_poly1305,
-        bench_hmac,
+        bench_hmac_sha256,
+        bench_hmac_sha512,
     }
 }
 
@@ -277,7 +300,29 @@ mod kdf {
     static OKM_SIZES: [usize; 1] = [512];
     static PBKDF2_ITERATIONS: [usize; 1] = [10000];
 
-    pub fn bench_hkdf(c: &mut Criterion) {
+    pub fn bench_hkdf_sha256(c: &mut Criterion) {
+        let mut group = c.benchmark_group("HKDF-HMAC-SHA256");
+
+        let ikm = vec![0u8; 64];
+        let salt = ikm.clone();
+
+        for size in OKM_SIZES.iter() {
+            let mut okm_out = vec![0u8; *size];
+
+            group.throughput(Throughput::Bytes(*size as u64));
+            group.bench_with_input(
+                BenchmarkId::new("derive bytes", *size),
+                &ikm,
+                |b, input_ikm| {
+                    b.iter(|| {
+                        hkdf::sha256::derive_key(&salt, input_ikm, None, &mut okm_out).unwrap()
+                    })
+                },
+            );
+        }
+    }
+
+    pub fn bench_hkdf_sha512(c: &mut Criterion) {
         let mut group = c.benchmark_group("HKDF-HMAC-SHA512");
 
         let ikm = vec![0u8; 64];
@@ -291,13 +336,47 @@ mod kdf {
                 BenchmarkId::new("derive bytes", *size),
                 &ikm,
                 |b, input_ikm| {
-                    b.iter(|| hkdf::derive_key(&salt, input_ikm, None, &mut okm_out).unwrap())
+                    b.iter(|| {
+                        hkdf::sha512::derive_key(&salt, input_ikm, None, &mut okm_out).unwrap()
+                    })
                 },
             );
         }
     }
 
-    pub fn bench_pbkdf2(c: &mut Criterion) {
+    pub fn bench_pbkdf2_sha256(c: &mut Criterion) {
+        let mut group = c.benchmark_group("PBKDF2-HMAC-SHA256");
+        // 10 is the lowest acceptable same size.
+        group.sample_size(10);
+        group.measurement_time(core::time::Duration::new(30, 0));
+
+        let ikm = vec![0u8; 64];
+        let salt = ikm.clone();
+
+        for iterations in PBKDF2_ITERATIONS.iter() {
+            let mut dk_out = vec![0u8; 64];
+
+            // NOTE: The password newtype creation is included
+            // as this pads the salt for HMAC internally.
+            group.bench_with_input(
+                BenchmarkId::new("derive 64 bytes", *iterations),
+                &iterations,
+                |b, iter_count| {
+                    b.iter(|| {
+                        pbkdf2::sha256::derive_key(
+                            &pbkdf2::sha256::Password::from_slice(&salt).unwrap(),
+                            &ikm,
+                            **iter_count,
+                            &mut dk_out,
+                        )
+                        .unwrap()
+                    })
+                },
+            );
+        }
+    }
+
+    pub fn bench_pbkdf2_sha512(c: &mut Criterion) {
         let mut group = c.benchmark_group("PBKDF2-HMAC-SHA512");
         // 10 is the lowest acceptable same size.
         group.sample_size(10);
@@ -316,8 +395,8 @@ mod kdf {
                 &iterations,
                 |b, iter_count| {
                     b.iter(|| {
-                        pbkdf2::derive_key(
-                            &pbkdf2::Password::from_slice(&salt).unwrap(),
+                        pbkdf2::sha512::derive_key(
+                            &pbkdf2::sha512::Password::from_slice(&salt).unwrap(),
                             &ikm,
                             **iter_count,
                             &mut dk_out,
@@ -360,8 +439,10 @@ mod kdf {
         config = Criterion::default();
         targets =
         bench_argon2i,
-        bench_hkdf,
-        bench_pbkdf2,
+        bench_hkdf_sha256,
+        bench_hkdf_sha512,
+        bench_pbkdf2_sha256,
+        bench_pbkdf2_sha512,
     }
 }
 
