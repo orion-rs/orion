@@ -189,13 +189,13 @@ pub mod sha256 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _derive_key::<hmac::sha256::HmacSha256, { sha256::SHA256_OUTSIZE }>(
             password.unprotected_as_bytes(),
             salt,
             iterations,
-            dest,
+            dst_out,
         )
     }
 
@@ -206,14 +206,14 @@ pub mod sha256 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _verify::<hmac::sha256::HmacSha256, { sha256::SHA256_OUTSIZE }>(
             expected,
             password.unprotected_as_bytes(),
             salt,
             iterations,
-            dest,
+            dst_out,
         )
     }
 }
@@ -246,13 +246,13 @@ pub mod sha384 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _derive_key::<hmac::sha384::HmacSha384, { sha384::SHA384_OUTSIZE }>(
             password.unprotected_as_bytes(),
             salt,
             iterations,
-            dest,
+            dst_out,
         )
     }
 
@@ -263,14 +263,14 @@ pub mod sha384 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _verify::<hmac::sha384::HmacSha384, { sha384::SHA384_OUTSIZE }>(
             expected,
             password.unprotected_as_bytes(),
             salt,
             iterations,
-            dest,
+            dst_out,
         )
     }
 }
@@ -303,13 +303,13 @@ pub mod sha512 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _derive_key::<hmac::sha512::HmacSha512, { sha512::SHA512_OUTSIZE }>(
             password.unprotected_as_bytes(),
             salt,
             iterations,
-            dest,
+            dst_out,
         )
     }
 
@@ -320,14 +320,14 @@ pub mod sha512 {
         password: &Password,
         salt: &[u8],
         iterations: usize,
-        dest: &mut [u8],
+        dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _verify::<hmac::sha512::HmacSha512, { sha512::SHA512_OUTSIZE }>(
             expected,
             password.unprotected_as_bytes(),
             salt,
             iterations,
-            dest,
+            dst_out,
         )
     }
 }
