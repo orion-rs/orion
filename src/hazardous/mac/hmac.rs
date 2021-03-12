@@ -91,7 +91,7 @@ pub(crate) trait HmacHashFunction: Clone {
 
 /// A trait used to define a HMAC function.
 pub(crate) trait HmacFunction {
-    // NOTE: Clippy complaints this is not used, however it is used in both HKDF and PBKDF2. Perhaps a bug
+    // NOTE: Clippy complains this is not used, however it is used in both HKDF and PBKDF2. Perhaps a bug
     // with min_const_generics?
     #[allow(dead_code)]
     /// The output size of the internal hash function used.
@@ -138,7 +138,7 @@ impl<S: HmacHashFunction, const BLOCKSIZE: usize> core::fmt::Debug for Hmac<S, B
 }
 
 impl<S: HmacHashFunction, const BLOCKSIZE: usize> Hmac<S, BLOCKSIZE> {
-    // NOTE: Clippy complaints this is not used, however it is used in both HKDF and PBKDF2. Perhaps a bug
+    // NOTE: Clippy complains this is not used, however it is used in both HKDF and PBKDF2. Perhaps a bug
     // with min_const_generics?
     #[allow(dead_code)]
     const HASH_FUNC_OUTSIZE: usize = S::_OUTSIZE;
@@ -194,6 +194,7 @@ impl<S: HmacHashFunction, const BLOCKSIZE: usize> Hmac<S, BLOCKSIZE> {
     }
 
     fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        debug_assert!(!dest.is_empty());
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
@@ -270,7 +271,7 @@ pub mod sha256 {
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Initialize `Hmac` struct with a given key.
+        /// Initialize `HmacSha256` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
             // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
             Self::_new(secret_key.unprotected_as_bytes()).unwrap()
@@ -500,7 +501,7 @@ pub mod sha384 {
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Initialize `Hmac` struct with a given key.
+        /// Initialize `HmacSha384` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
             // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
             Self::_new(secret_key.unprotected_as_bytes()).unwrap()
@@ -730,7 +731,7 @@ pub mod sha512 {
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Initialize `Hmac` struct with a given key.
+        /// Initialize `HmacSha512` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
             // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
             Self::_new(secret_key.unprotected_as_bytes()).unwrap()
