@@ -154,7 +154,7 @@ impl Default for Sha512 {
 }
 
 impl Sha512 {
-    /// Create a new instance of the hash function.
+    /// Initialize a `Sha512` struct.
     pub fn new() -> Self {
         Self {
             _state:
@@ -169,7 +169,7 @@ impl Sha512 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Update the internal state with `data`.
+    /// Update state with `data`. This can be called multiple times.
     pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         self._state._update(data)
     }

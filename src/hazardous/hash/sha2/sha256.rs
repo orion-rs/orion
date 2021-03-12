@@ -151,7 +151,7 @@ impl Default for Sha256 {
 }
 
 impl Sha256 {
-    /// Create a new instance of the hash function.
+    /// Initialize a `Sha256` struct.
     pub fn new() -> Self {
         Self {
             _state:
@@ -166,7 +166,7 @@ impl Sha256 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Update the internal state with `data`.
+    /// Update state with `data`. This can be called multiple times.
     pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         self._state._update(data)
     }
