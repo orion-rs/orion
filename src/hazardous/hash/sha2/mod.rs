@@ -80,10 +80,11 @@ pub(crate) mod sha2_core {
         fn less_than_or_equal(&self, rhs: Self) -> bool;
     }
 
-    /// Trait to define functions of a specific SHA2 variant.
+    /// Trait to define a specific SHA2 variant.
     pub(crate) trait Variant<W: Word, const N_CONSTS: usize>: Clone {
         /// The constants as defined in FIPS 180-4.
         const K: [W; N_CONSTS];
+
         /// The initial hash value H(0) as defined in FIPS 180-4.
         const H0: [W; 8];
 

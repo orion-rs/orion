@@ -180,7 +180,7 @@ impl Sha512 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Return a SHA256 digest.
+    /// Return a SHA512 digest.
     pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
         let mut digest = [0u8; SHA512_OUTSIZE];
         self._finalize_internal(&mut digest)?;
@@ -189,7 +189,7 @@ impl Sha512 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Compute a digest of `data` and copy it into `dest`.
+    /// Calculate a SHA512 digest of some `data`.
     pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
         let mut ctx = Self::new();
         ctx.update(data)?;

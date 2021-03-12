@@ -186,7 +186,7 @@ impl Sha256 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Compute a digest of `data` and copy it into `dest`.
+    /// Calculate a SHA256 digest of some `data`.
     pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
         let mut ctx = Self::new();
         ctx.update(data)?;
