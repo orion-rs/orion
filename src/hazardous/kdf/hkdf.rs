@@ -61,94 +61,122 @@
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::hash::{self, sha2};
 use crate::hazardous::mac::hmac;
-use crate::util;
+use zeroize::Zeroize;
 
 /// The HKDF extract step.
-fn _extract<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
+///
+/// NOTE: Hmac has the output size of the hash function defined,
+/// but the array initialization with the size cannot depend on a generic parameter,
+/// because we don't have full support for const generics yet.
+fn _extract<Hmac, const OUTSIZE: usize>(
     salt: &[u8],
     ikm: &[u8],
-) -> Result<[u8; SHA2_OUTSIZE], UnknownCryptoError>
+) -> Result<[u8; OUTSIZE], UnknownCryptoError>
 where
-    T: hash::ShaHash,
+    Hmac: hmac::HmacFunction,
 {
-    let mut prk =
-        hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new_with_padding(salt)?;
-    prk.update(ikm)?;
-    prk.finalize()?;
+    debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
+    let mut dest = [0u8; OUTSIZE];
 
-    Ok(prk.buffer)
+    let mut ctx = Hmac::_new(salt)?;
+    ctx._update(ikm)?;
+    ctx._finalize(&mut dest)?;
+
+    Ok(dest)
 }
 
 /// The HKDF expand step.
-fn _expand<T, const SHA2_BLOCKSIZE: usize, const SHA2_OUTSIZE: usize>(
+fn _expand<Hmac, const OUTSIZE: usize>(
     prk: &[u8],
     info: Option<&[u8]>,
-    dst_out: &mut [u8],
+    dest: &mut [u8],
 ) -> Result<(), UnknownCryptoError>
 where
-    T: hash::ShaHash,
+    Hmac: hmac::HmacFunction,
 {
-    if dst_out.len() > 255 * SHA2_OUTSIZE {
-        return Err(UnknownCryptoError);
-    }
-    if dst_out.is_empty() {
+    debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
+    debug_assert!(prk.len() == Hmac::HASH_FUNC_OUTSIZE);
+    if dest.is_empty() || dest.len() > 255 * Hmac::HASH_FUNC_OUTSIZE {
         return Err(UnknownCryptoError);
     }
 
     let optional_info = info.unwrap_or(&[0u8; 0]);
+    let mut ctx = Hmac::_new(prk)?;
 
-    let mut hmac =
-        hmac::HmacGeneric::<T, { SHA2_BLOCKSIZE }, { SHA2_OUTSIZE }>::new_with_padding(prk)?;
-    let okm_len = dst_out.len();
+    // We require a temporary buffer in case the requested bytes
+    // to derive are lower than the HMAC functions output size.
+    let mut tmp = [0u8; OUTSIZE];
+    let mut idx: u8 = 1;
+    for hlen_block in dest.chunks_mut(Hmac::HASH_FUNC_OUTSIZE) {
+        ctx._update(optional_info)?;
+        ctx._update(&[idx])?;
+        debug_assert!(!hlen_block.is_empty() && hlen_block.len() <= Hmac::HASH_FUNC_OUTSIZE);
+        ctx._finalize(&mut tmp)?;
+        hlen_block.copy_from_slice(&tmp[..hlen_block.len()]);
 
-    for (idx, hlen_block) in dst_out.chunks_mut(SHA2_OUTSIZE).enumerate() {
-        let block_len = hlen_block.len();
-
-        hmac.update(optional_info)?;
-        hmac.update(&[idx as u8 + 1_u8])?;
-        hmac.finalize()?;
-        hlen_block.copy_from_slice(&hmac.buffer[..block_len]);
-
-        // Check if it's the last iteration, if yes don't process anything
-        if block_len < SHA2_OUTSIZE || (block_len * (idx + 1) == okm_len) {
+        if hlen_block.len() < Hmac::HASH_FUNC_OUTSIZE {
             break;
-        } else {
-            hmac.reset();
-            hmac.update(&hlen_block)?;
         }
+        match idx.checked_add(1) {
+            Some(next) => {
+                idx = next;
+                ctx._reset();
+                ctx._update(&hlen_block)?;
+            }
+            // If `idx` reaches 255, the maximum (255 * Hmac::HASH_FUNC_OUTSIZE)
+            // amount of blocks have been processed.
+            None => break,
+        };
     }
 
+    tmp.iter_mut().zeroize();
+
     Ok(())
+}
+
+/// Combine `extract` and `expand` to return a derived key.
+///
+/// NOTE: See comment about const param at _extract function.
+fn _derive_key<Hmac, const OUTSIZE: usize>(
+    salt: &[u8],
+    ikm: &[u8],
+    info: Option<&[u8]>,
+    dest: &mut [u8],
+) -> Result<(), UnknownCryptoError>
+where
+    Hmac: hmac::HmacFunction,
+{
+    _expand::<Hmac, { OUTSIZE }>(&_extract::<Hmac, { OUTSIZE }>(salt, ikm)?, info, dest)
 }
 
 /// HKDF-HMAC-SHA256 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod sha256 {
     use super::*;
+    use crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE;
+    use crate::hazardous::mac::hmac::sha256::Tag;
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF extract step.
-    pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::sha256::Tag, UnknownCryptoError> {
-        let mut prk = hmac::sha256::HmacSha256::new(&hmac::sha256::SecretKey::from_slice(salt)?);
-        prk.update(ikm)?;
-        prk.finalize()
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<Tag, UnknownCryptoError> {
+        Ok(Tag::from(_extract::<
+            hmac::sha256::HmacSha256,
+            { SHA256_OUTSIZE },
+        >(salt, ikm)?))
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF expand step.
     pub fn expand(
-        prk: &hmac::sha256::Tag,
+        prk: &Tag,
         info: Option<&[u8]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        debug_assert!(prk.len() == sha2::sha256::SHA256_OUTSIZE);
-
-        _expand::<
-            sha2::sha256::Sha256,
-            { sha2::sha256::SHA256_BLOCKSIZE },
-            { sha2::sha256::SHA256_OUTSIZE },
-        >(prk.unprotected_as_bytes(), info, dst_out)
+        _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
+            prk.unprotected_as_bytes(),
+            info,
+            dst_out,
+        )
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -159,9 +187,10 @@ pub mod sha256 {
         info: Option<&[u8]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        expand(&extract(salt, ikm)?, info, dst_out)
+        _derive_key::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
+    // See: https://github.com/brycx/orion/issues/179
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Verify a derived key in constant time.
     pub fn verify(
@@ -172,14 +201,14 @@ pub mod sha256 {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         derive_key(salt, ikm, info, dst_out)?;
-        util::secure_cmp(&dst_out, expected)
+        crate::util::secure_cmp(&dst_out, expected)
     }
 
     #[cfg(test)]
     #[cfg(feature = "safe_api")]
     // Mark safe_api because currently it only contains proptests.
     mod test_derive_key {
-        use hash::sha2::sha256::SHA256_OUTSIZE;
+        use crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE;
 
         use super::*;
 
@@ -214,29 +243,30 @@ pub mod sha256 {
 /// HKDF-HMAC-SHA384 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod sha384 {
     use super::*;
+    use crate::hazardous::hash::sha2::sha384::SHA384_OUTSIZE;
+    use crate::hazardous::mac::hmac::sha384::Tag;
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF extract step.
-    pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::sha384::Tag, UnknownCryptoError> {
-        let mut prk = hmac::sha384::HmacSha384::new(&hmac::sha384::SecretKey::from_slice(salt)?);
-        prk.update(ikm)?;
-        prk.finalize()
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<Tag, UnknownCryptoError> {
+        Ok(Tag::from(_extract::<
+            hmac::sha384::HmacSha384,
+            { SHA384_OUTSIZE },
+        >(salt, ikm)?))
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF expand step.
     pub fn expand(
-        prk: &hmac::sha384::Tag,
+        prk: &Tag,
         info: Option<&[u8]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        debug_assert!(prk.len() == sha2::sha384::SHA384_OUTSIZE);
-
-        _expand::<
-            sha2::sha384::Sha384,
-            { sha2::sha384::SHA384_BLOCKSIZE },
-            { sha2::sha384::SHA384_OUTSIZE },
-        >(prk.unprotected_as_bytes(), info, dst_out)
+        _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(
+            prk.unprotected_as_bytes(),
+            info,
+            dst_out,
+        )
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -247,9 +277,10 @@ pub mod sha384 {
         info: Option<&[u8]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        expand(&extract(salt, ikm)?, info, dst_out)
+        _derive_key::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
+    // See: https://github.com/brycx/orion/issues/179
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Verify a derived key in constant time.
     pub fn verify(
@@ -260,14 +291,14 @@ pub mod sha384 {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         derive_key(salt, ikm, info, dst_out)?;
-        util::secure_cmp(&dst_out, expected)
+        crate::util::secure_cmp(&dst_out, expected)
     }
 
     #[cfg(test)]
     #[cfg(feature = "safe_api")]
     // Mark safe_api because currently it only contains proptests.
     mod test_derive_key {
-        use hash::sha2::sha384::SHA384_OUTSIZE;
+        use crate::hazardous::hash::sha2::sha384::SHA384_OUTSIZE;
 
         use super::*;
 
@@ -302,29 +333,30 @@ pub mod sha384 {
 /// HKDF-HMAC-SHA512 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod sha512 {
     use super::*;
+    use crate::hazardous::hash::sha2::sha512::SHA512_OUTSIZE;
+    use crate::hazardous::mac::hmac::sha512::Tag;
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF extract step.
-    pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::sha512::Tag, UnknownCryptoError> {
-        let mut prk = hmac::sha512::HmacSha512::new(&hmac::sha512::SecretKey::from_slice(salt)?);
-        prk.update(ikm)?;
-        prk.finalize()
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<Tag, UnknownCryptoError> {
+        Ok(Tag::from(_extract::<
+            hmac::sha512::HmacSha512,
+            { SHA512_OUTSIZE },
+        >(salt, ikm)?))
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF expand step.
     pub fn expand(
-        prk: &hmac::sha512::Tag,
+        prk: &Tag,
         info: Option<&[u8]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        debug_assert!(prk.len() == sha2::sha512::SHA512_OUTSIZE);
-
-        _expand::<
-            sha2::sha512::Sha512,
-            { sha2::sha512::SHA512_BLOCKSIZE },
-            { sha2::sha512::SHA512_OUTSIZE },
-        >(prk.unprotected_as_bytes(), info, dst_out)
+        _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(
+            prk.unprotected_as_bytes(),
+            info,
+            dst_out,
+        )
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -335,9 +367,10 @@ pub mod sha512 {
         info: Option<&[u8]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        expand(&extract(salt, ikm)?, info, dst_out)
+        _derive_key::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
+    // See: https://github.com/brycx/orion/issues/179
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Verify a derived key in constant time.
     pub fn verify(
@@ -348,14 +381,14 @@ pub mod sha512 {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         derive_key(salt, ikm, info, dst_out)?;
-        util::secure_cmp(&dst_out, expected)
+        crate::util::secure_cmp(&dst_out, expected)
     }
 
     #[cfg(test)]
     #[cfg(feature = "safe_api")]
     // Mark safe_api because currently it only contains proptests.
     mod test_derive_key {
-        use hash::sha2::sha512::SHA512_OUTSIZE;
+        use crate::hazardous::hash::sha2::sha512::SHA512_OUTSIZE;
 
         use super::*;
 
@@ -394,9 +427,10 @@ mod public {
 
     mod test_expand {
         use super::*;
-        use sha2::sha256::SHA256_OUTSIZE;
-        use sha2::sha384::SHA384_OUTSIZE;
-        use sha2::sha512::SHA512_OUTSIZE;
+
+        use crate::hazardous::hash::sha2::{
+            sha256::SHA256_OUTSIZE, sha384::SHA384_OUTSIZE, sha512::SHA512_OUTSIZE,
+        };
 
         #[test]
         fn hkdf_above_maximum_length_err() {

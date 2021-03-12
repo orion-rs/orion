@@ -63,114 +63,163 @@
 use crate::errors::UnknownCryptoError;
 use zeroize::Zeroize;
 
+/// A trait used to define a cryptographic hash function used by HMAC.
+pub(crate) trait HmacHashFunction: Clone {
+    /// The blocksize of the hash function.
+    const _BLOCKSIZE: usize;
+
+    /// The output size of the hash function.
+    const _OUTSIZE: usize;
+
+    /// Create a new instance of the hash function.
+    fn _new() -> Self;
+
+    /// Update the internal state with `data`.
+    fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError>;
+
+    /// Finalize the hash and put the final digest into `dest`.
+    fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError>;
+
+    /// Compute a digest of `data` and copy it into `dest`.
+    fn _digest(data: &[u8], dest: &mut [u8]) -> Result<(), UnknownCryptoError>;
+
+    #[cfg(test)]
+    /// Compare two Sha2 state objects to check if their fields
+    /// are the same.
+    fn compare_state_to_other(&self, other: &Self);
+}
+
+/// A trait used to define a HMAC function.
+pub(crate) trait HmacFunction {
+    // NOTE: Clippy complains this is not used, however it is used in both HKDF and PBKDF2. Perhaps a bug
+    // with min_const_generics?
+    #[allow(dead_code)]
+    /// The output size of the internal hash function used.
+    const HASH_FUNC_OUTSIZE: usize;
+
+    /// Create a new instance of the HMAC function, using a `secret_key` that may or may not be padded.
+    fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError>
+    where
+        Self: Sized;
+
+    /// Update the internal state with `data`.
+    fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError>;
+
+    /// Finalize the MAC and put the final tag into `dest`.
+    ///
+    /// NOTE: `dest` may be less than the complete output size of the hash function
+    /// (Self::HASH_FUNC_OUTSIZE). If that is the case, `dest.len()` bytes will be copied,
+    /// but `dest` should NEVER be empty.
+    fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError>;
+
+    /// Reset the state.
+    fn _reset(&mut self);
+}
+
+const IPAD: u8 = 0x36;
+const OPAD: u8 = 0x5C;
+
 #[derive(Clone)]
-/// HMAC streaming state for a hash T with a blocksize and outsize.
-pub(crate) struct HmacGeneric<T, const BLOCKSIZE: usize, const OUTSIZE: usize> {
-    working_hasher: T,
-    opad_hasher: T,
-    ipad_hasher: T,
-    pub(crate) buffer: [u8; OUTSIZE],
+pub(crate) struct Hmac<S: HmacHashFunction, const BLOCKSIZE: usize> {
+    working_hasher: S,
+    opad_hasher: S,
+    ipad_hasher: S,
     is_finalized: bool,
 }
 
-impl<T, const BLOCKSIZE: usize, const OUTSIZE: usize> HmacGeneric<T, BLOCKSIZE, OUTSIZE>
-where
-    T: crate::hazardous::hash::ShaHash,
-{
-    /// Pad the key according to the internal SHA used.
-    /// This function should only be used in places where the SecretKey newtype
-    /// isn't passed, since it also pads the key.
-    fn pad_raw_key(secret_key: &[u8]) -> Result<[u8; BLOCKSIZE], UnknownCryptoError> {
-        let mut sk = [0u8; BLOCKSIZE];
+impl<S: HmacHashFunction, const BLOCKSIZE: usize> core::fmt::Debug for Hmac<S, BLOCKSIZE> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Hmac {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
+            self.is_finalized
+        )
+    }
+}
 
-        let slice_len = secret_key.len();
+impl<S: HmacHashFunction, const BLOCKSIZE: usize> Hmac<S, BLOCKSIZE> {
+    // NOTE: Clippy complains this is not used, however it is used in both HKDF and PBKDF2. Perhaps a bug
+    // with min_const_generics?
+    #[allow(dead_code)]
+    const HASH_FUNC_OUTSIZE: usize = S::_OUTSIZE;
 
-        if slice_len > BLOCKSIZE {
-            T::digest(secret_key, &mut sk[..OUTSIZE])?;
+    /// Construct a state from a `secret_key`. The `secret_key` may be pre-padded or not.
+    ///
+    /// Ref: https://brycx.github.io/2018/08/06/hmac-and-precomputation-optimization.html
+    fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+        debug_assert!(S::_BLOCKSIZE == BLOCKSIZE);
+        let mut ipad = [IPAD; BLOCKSIZE];
+
+        if secret_key.len() > BLOCKSIZE {
+            // SK is NOT pre-padded.
+            debug_assert!(BLOCKSIZE > S::_OUTSIZE);
+            S::_digest(secret_key, &mut ipad[..S::_OUTSIZE])?;
+            for elem in ipad.iter_mut().take(S::_OUTSIZE) {
+                *elem ^= IPAD;
+            }
         } else {
-            sk[..slice_len].copy_from_slice(secret_key);
+            // SK has been pre-padded or SK.len() <= BLOCKSIZE.
+            // Because 0x00 xor IPAD = IPAD, the existence of padding bytes (0x00)
+            // within SK, during this operation, is inconsequential.
+            xor_slices!(secret_key, &mut ipad);
         }
 
-        Ok(sk)
-    }
+        let mut ih = S::_new();
+        ih._update(&ipad)?;
 
-    /// Pad `key` with `ipad` and `opad`.
-    fn pad_key_io(&mut self, key: &[u8]) {
-        // NOTE: The key is should be padded already.
-        debug_assert!(key.len() == BLOCKSIZE);
-        let mut ipad = [0x36; BLOCKSIZE];
-        let mut opad = [0x5C; BLOCKSIZE];
-        for (idx, itm) in key.iter().enumerate() {
-            opad[idx] ^= itm;
-            ipad[idx] ^= itm;
+        // Transform ipad into OPAD xor SK
+        for elem in ipad.iter_mut() {
+            *elem ^= IPAD ^ OPAD;
         }
 
-        self.ipad_hasher.update(ipad.as_ref()).unwrap();
-        self.opad_hasher.update(opad.as_ref()).unwrap();
-        self.working_hasher = self.ipad_hasher.clone();
-        ipad.zeroize();
-        opad.zeroize();
-    }
+        let mut oh = S::_new();
+        oh._update(&ipad)?;
 
-    /// Initialize `Hmac` struct with a given key that already is padded.
-    pub(crate) fn new_no_padding(secret_key: &[u8]) -> Self {
-        let mut state = Self {
-            working_hasher: T::new(),
-            opad_hasher: T::new(),
-            ipad_hasher: T::new(),
-            buffer: [0u8; OUTSIZE],
+        ipad.iter_mut().zeroize();
+
+        Ok(Self {
+            working_hasher: ih.clone(),
+            opad_hasher: oh,
+            ipad_hasher: ih,
             is_finalized: false,
-        };
-
-        state.pad_key_io(secret_key);
-        state
+        })
     }
 
-    /// Initialize `Hmac` struct with a given key that must be padded.
-    pub(crate) fn new_with_padding(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
-        let mut state = Self {
-            working_hasher: T::new(),
-            opad_hasher: T::new(),
-            ipad_hasher: T::new(),
-            buffer: [0u8; OUTSIZE],
-            is_finalized: false,
-        };
-
-        let mut sk = Self::pad_raw_key(secret_key)?;
-        state.pad_key_io(&sk);
-        sk.zeroize();
-
-        Ok(state)
-    }
-
-    /// Reset to `new()` state.
-    pub(crate) fn reset(&mut self) {
-        self.working_hasher = self.ipad_hasher.clone();
-        self.is_finalized = false;
-        self.buffer = [0u8; OUTSIZE];
-    }
-
-    /// Update state with `data`. This can be called multiple times.
-    pub(crate) fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+    fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             Err(UnknownCryptoError)
         } else {
-            self.working_hasher.update(data)
+            self.working_hasher._update(data)
         }
     }
 
-    /// Compute the HMAC tag and place into `self.buffer`.
-    pub(crate) fn finalize(&mut self) -> Result<(), UnknownCryptoError> {
+    fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        debug_assert!(!dest.is_empty());
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
 
         self.is_finalized = true;
         let mut outer_hasher = self.opad_hasher.clone();
-        self.working_hasher.finalize(&mut self.buffer)?;
-        outer_hasher.update(&self.buffer)?;
+        self.working_hasher._finalize(dest)?;
+        outer_hasher._update(&dest)?;
+        outer_hasher._finalize(dest)
+    }
 
-        outer_hasher.finalize(&mut self.buffer)
+    fn _reset(&mut self) {
+        self.working_hasher = self.ipad_hasher.clone();
+        self.is_finalized = false;
+    }
+
+    #[cfg(test)]
+    /// Compare two Hmac state objects to check if their fields
+    /// are the same.
+    pub(crate) fn compare_state_to_other(&self, other: &Self) {
+        self.working_hasher
+            .compare_state_to_other(&other.working_hasher);
+        self.opad_hasher.compare_state_to_other(&other.opad_hasher);
+        self.ipad_hasher.compare_state_to_other(&other.ipad_hasher);
+        assert_eq!(self.is_finalized, other.is_finalized);
     }
 }
 
@@ -206,59 +255,62 @@ pub mod sha256 {
 
     impl_from_trait!(Tag, sha256::SHA256_OUTSIZE);
 
-    #[derive(Clone)]
+    use super::Hmac;
+
+    #[derive(Clone, Debug)]
     /// HMAC-SHA256 streaming state.
     pub struct HmacSha256 {
-        _internal: HmacGeneric<Sha256, { sha256::SHA256_BLOCKSIZE }, { sha256::SHA256_OUTSIZE }>,
-    }
-
-    impl core::fmt::Debug for HmacSha256 {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            write!(
-                    f,
-                    "HmacSha256 {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
-                    self._internal.is_finalized
-                )
-        }
+        _state: Hmac<Sha256, { sha256::SHA256_BLOCKSIZE }>,
     }
 
     impl HmacSha256 {
-        /// Initialize `Hmac` struct with a given key.
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Ok(Self {
+                _state: Hmac::<Sha256, { sha256::SHA256_BLOCKSIZE }>::_new(secret_key)?,
+            })
+        }
+
+        #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+        /// Initialize `HmacSha256` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
-            Self {
-                _internal: HmacGeneric::<
-                    Sha256,
-                    { sha256::SHA256_BLOCKSIZE },
-                    { sha256::SHA256_OUTSIZE },
-                >::new_no_padding(secret_key.unprotected_as_bytes()),
-            }
+            // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
+            Self::_new(secret_key.unprotected_as_bytes()).unwrap()
         }
 
         /// Reset to `new()` state.
         pub fn reset(&mut self) {
-            self._internal.reset();
+            self._state._reset()
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// Update state with `data`. This can be called multiple times.
         pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-            self._internal.update(data)
+            self._state._update(data)
+        }
+
+        /// Return a HMAC-SHA256 tag.
+        pub(crate) fn _finalize_internal(
+            &mut self,
+            dest: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self._state._finalize(dest)
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// Return a HMAC-SHA256 tag.
         pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
-            self._internal.finalize()?;
+            let mut dest = [0u8; sha256::SHA256_OUTSIZE];
+            self._finalize_internal(&mut dest)?;
 
-            Tag::from_slice(&self._internal.buffer)
+            Ok(Tag::from(dest))
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// One-shot function for generating an HMAC-SHA256 tag of `data`.
         pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-            let mut state = Self::new(secret_key);
-            state.update(data)?;
-            state.finalize()
+            let mut ctx = Self::new(secret_key);
+            ctx.update(data)?;
+            ctx.finalize()
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -276,6 +328,35 @@ pub mod sha256 {
         }
     }
 
+    impl HmacFunction for HmacSha256 {
+        /// The output size of the internal hash function used.
+        const HASH_FUNC_OUTSIZE: usize = sha256::SHA256_OUTSIZE;
+
+        /// Create a new instance of the HMAC function, using a `secret_key` that may or may not be padded.
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Self::_new(secret_key)
+        }
+
+        /// Update the internal state with `data`.
+        fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+            self._state._update(data)
+        }
+
+        /// Finalize the MAC and put the final tag into `dest`.
+        ///
+        /// NOTE: `dest` may be less than the complete output size of the hash function
+        /// (Self::HASH_FUNC_OUTSIZE). If that is the case, `dest.len()` bytes will be copied,
+        /// but `dest` should NEVER be empty.
+        fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self._state._finalize(dest)
+        }
+
+        /// Reset the state.
+        fn _reset(&mut self) {
+            self._state._reset()
+        }
+    }
+
     #[cfg(test)]
     mod public {
         use super::*;
@@ -286,7 +367,7 @@ pub mod sha256 {
             let secret_key = SecretKey::generate();
             let initial_state = HmacSha256::new(&secret_key);
             let debug = format!("{:?}", initial_state);
-            let expected = "HmacSha256 { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false }";
+            let expected = "HmacSha256 { _state: Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false } }";
             assert_eq!(debug, expected);
         }
 
@@ -311,7 +392,6 @@ pub mod sha256 {
 
         mod test_streaming_interface {
             use super::*;
-            use crate::hazardous::hash::sha2::sha256::compare_sha256_states;
             use crate::test_framework::incremental_interface::*;
 
             const KEY: [u8; 32] = [0u8; 32];
@@ -340,22 +420,7 @@ pub mod sha256 {
                 }
 
                 fn compare_states(state_1: &HmacSha256, state_2: &HmacSha256) {
-                    compare_sha256_states(
-                        &state_1._internal.opad_hasher,
-                        &state_2._internal.opad_hasher,
-                    );
-                    compare_sha256_states(
-                        &state_1._internal.ipad_hasher,
-                        &state_2._internal.ipad_hasher,
-                    );
-                    compare_sha256_states(
-                        &state_1._internal.working_hasher,
-                        &state_2._internal.working_hasher,
-                    );
-                    assert_eq!(
-                        state_1._internal.is_finalized,
-                        state_2._internal.is_finalized
-                    );
+                    state_1._state.compare_state_to_other(&state_2._state);
                 }
             }
 
@@ -420,59 +485,62 @@ pub mod sha384 {
 
     impl_from_trait!(Tag, sha384::SHA384_OUTSIZE);
 
-    #[derive(Clone)]
+    use super::Hmac;
+
+    #[derive(Clone, Debug)]
     /// HMAC-SHA384 streaming state.
     pub struct HmacSha384 {
-        _internal: HmacGeneric<Sha384, { sha384::SHA384_BLOCKSIZE }, { sha384::SHA384_OUTSIZE }>,
-    }
-
-    impl core::fmt::Debug for HmacSha384 {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            write!(
-                    f,
-                    "HmacSha384 {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
-                    self._internal.is_finalized
-                )
-        }
+        _state: Hmac<Sha384, { sha384::SHA384_BLOCKSIZE }>,
     }
 
     impl HmacSha384 {
-        /// Initialize `Hmac` struct with a given key.
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Ok(Self {
+                _state: Hmac::<Sha384, { sha384::SHA384_BLOCKSIZE }>::_new(secret_key)?,
+            })
+        }
+
+        #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+        /// Initialize `HmacSha384` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
-            Self {
-                _internal: HmacGeneric::<
-                    Sha384,
-                    { sha384::SHA384_BLOCKSIZE },
-                    { sha384::SHA384_OUTSIZE },
-                >::new_no_padding(secret_key.unprotected_as_bytes()),
-            }
+            // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
+            Self::_new(secret_key.unprotected_as_bytes()).unwrap()
         }
 
         /// Reset to `new()` state.
         pub fn reset(&mut self) {
-            self._internal.reset();
+            self._state._reset()
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// Update state with `data`. This can be called multiple times.
         pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-            self._internal.update(data)
+            self._state._update(data)
+        }
+
+        /// Return a HMAC-SHA384 tag.
+        pub(crate) fn _finalize_internal(
+            &mut self,
+            dest: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self._state._finalize(dest)
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// Return a HMAC-SHA384 tag.
         pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
-            self._internal.finalize()?;
+            let mut dest = [0u8; sha384::SHA384_OUTSIZE];
+            self._finalize_internal(&mut dest)?;
 
-            Tag::from_slice(&self._internal.buffer)
+            Ok(Tag::from(dest))
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// One-shot function for generating an HMAC-SHA384 tag of `data`.
         pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-            let mut state = Self::new(secret_key);
-            state.update(data)?;
-            state.finalize()
+            let mut ctx = Self::new(secret_key);
+            ctx.update(data)?;
+            ctx.finalize()
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -490,6 +558,35 @@ pub mod sha384 {
         }
     }
 
+    impl HmacFunction for HmacSha384 {
+        /// The output size of the internal hash function used.
+        const HASH_FUNC_OUTSIZE: usize = sha384::SHA384_OUTSIZE;
+
+        /// Create a new instance of the HMAC function, using a `secret_key` that may or may not be padded.
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Self::_new(secret_key)
+        }
+
+        /// Update the internal state with `data`.
+        fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+            self._state._update(data)
+        }
+
+        /// Finalize the MAC and put the final tag into `dest`.
+        ///
+        /// NOTE: `dest` may be less than the complete output size of the hash function
+        /// (Self::HASH_FUNC_OUTSIZE). If that is the case, `dest.len()` bytes will be copied,
+        /// but `dest` should NEVER be empty.
+        fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self._state._finalize(dest)
+        }
+
+        /// Reset the state.
+        fn _reset(&mut self) {
+            self._state._reset()
+        }
+    }
+
     #[cfg(test)]
     mod public {
         use super::*;
@@ -500,7 +597,7 @@ pub mod sha384 {
             let secret_key = SecretKey::generate();
             let initial_state = HmacSha384::new(&secret_key);
             let debug = format!("{:?}", initial_state);
-            let expected = "HmacSha384 { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false }";
+            let expected = "HmacSha384 { _state: Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false } }";
             assert_eq!(debug, expected);
         }
 
@@ -525,7 +622,6 @@ pub mod sha384 {
 
         mod test_streaming_interface {
             use super::*;
-            use crate::hazardous::hash::sha2::sha384::compare_sha384_states;
             use crate::test_framework::incremental_interface::*;
 
             const KEY: [u8; 32] = [0u8; 32];
@@ -554,22 +650,7 @@ pub mod sha384 {
                 }
 
                 fn compare_states(state_1: &HmacSha384, state_2: &HmacSha384) {
-                    compare_sha384_states(
-                        &state_1._internal.opad_hasher,
-                        &state_2._internal.opad_hasher,
-                    );
-                    compare_sha384_states(
-                        &state_1._internal.ipad_hasher,
-                        &state_2._internal.ipad_hasher,
-                    );
-                    compare_sha384_states(
-                        &state_1._internal.working_hasher,
-                        &state_2._internal.working_hasher,
-                    );
-                    assert_eq!(
-                        state_1._internal.is_finalized,
-                        state_2._internal.is_finalized
-                    );
+                    state_1._state.compare_state_to_other(&state_2._state);
                 }
             }
 
@@ -634,59 +715,62 @@ pub mod sha512 {
 
     impl_from_trait!(Tag, sha512::SHA512_OUTSIZE);
 
-    #[derive(Clone)]
+    use super::Hmac;
+
+    #[derive(Clone, Debug)]
     /// HMAC-SHA512 streaming state.
     pub struct HmacSha512 {
-        _internal: HmacGeneric<Sha512, { sha512::SHA512_BLOCKSIZE }, { sha512::SHA512_OUTSIZE }>,
-    }
-
-    impl core::fmt::Debug for HmacSha512 {
-        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-            write!(
-                    f,
-                    "HmacSha512 {{ working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: {:?} }}",
-                    self._internal.is_finalized
-                )
-        }
+        _state: Hmac<Sha512, { sha512::SHA512_BLOCKSIZE }>,
     }
 
     impl HmacSha512 {
-        /// Initialize `Hmac` struct with a given key.
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Ok(Self {
+                _state: Hmac::<Sha512, { sha512::SHA512_BLOCKSIZE }>::_new(secret_key)?,
+            })
+        }
+
+        #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+        /// Initialize `HmacSha512` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
-            Self {
-                _internal: HmacGeneric::<
-                    Sha512,
-                    { sha512::SHA512_BLOCKSIZE },
-                    { sha512::SHA512_OUTSIZE },
-                >::new_no_padding(secret_key.unprotected_as_bytes()),
-            }
+            // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
+            Self::_new(secret_key.unprotected_as_bytes()).unwrap()
         }
 
         /// Reset to `new()` state.
         pub fn reset(&mut self) {
-            self._internal.reset();
+            self._state._reset()
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// Update state with `data`. This can be called multiple times.
         pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-            self._internal.update(data)
+            self._state._update(data)
+        }
+
+        /// Return a HMAC-SHA512 tag.
+        pub(crate) fn _finalize_internal(
+            &mut self,
+            dest: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self._state._finalize(dest)
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// Return a HMAC-SHA512 tag.
         pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
-            self._internal.finalize()?;
+            let mut dest = [0u8; sha512::SHA512_OUTSIZE];
+            self._finalize_internal(&mut dest)?;
 
-            Tag::from_slice(&self._internal.buffer)
+            Ok(Tag::from(dest))
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
         /// One-shot function for generating an HMAC-SHA512 tag of `data`.
         pub fn hmac(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-            let mut state = Self::new(secret_key);
-            state.update(data)?;
-            state.finalize()
+            let mut ctx = Self::new(secret_key);
+            ctx.update(data)?;
+            ctx.finalize()
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -704,6 +788,35 @@ pub mod sha512 {
         }
     }
 
+    impl HmacFunction for HmacSha512 {
+        /// The output size of the internal hash function used.
+        const HASH_FUNC_OUTSIZE: usize = sha512::SHA512_OUTSIZE;
+
+        /// Create a new instance of the HMAC function, using a `secret_key` that may or may not be padded.
+        fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Self::_new(secret_key)
+        }
+
+        /// Update the internal state with `data`.
+        fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+            self._state._update(data)
+        }
+
+        /// Finalize the MAC and put the final tag into `dest`.
+        ///
+        /// NOTE: `dest` may be less than the complete output size of the hash function
+        /// (Self::HASH_FUNC_OUTSIZE). If that is the case, `dest.len()` bytes will be copied,
+        /// but `dest` should NEVER be empty.
+        fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self._state._finalize(dest)
+        }
+
+        /// Reset the state.
+        fn _reset(&mut self) {
+            self._state._reset()
+        }
+    }
+
     #[cfg(test)]
     mod public {
         use super::*;
@@ -714,7 +827,7 @@ pub mod sha512 {
             let secret_key = SecretKey::generate();
             let initial_state = HmacSha512::new(&secret_key);
             let debug = format!("{:?}", initial_state);
-            let expected = "HmacSha512 { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false }";
+            let expected = "HmacSha512 { _state: Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false } }";
             assert_eq!(debug, expected);
         }
 
@@ -739,7 +852,6 @@ pub mod sha512 {
 
         mod test_streaming_interface {
             use super::*;
-            use crate::hazardous::hash::sha2::sha512::compare_sha512_states;
             use crate::test_framework::incremental_interface::*;
 
             const KEY: [u8; 32] = [0u8; 32];
@@ -768,22 +880,7 @@ pub mod sha512 {
                 }
 
                 fn compare_states(state_1: &HmacSha512, state_2: &HmacSha512) {
-                    compare_sha512_states(
-                        &state_1._internal.opad_hasher,
-                        &state_2._internal.opad_hasher,
-                    );
-                    compare_sha512_states(
-                        &state_1._internal.ipad_hasher,
-                        &state_2._internal.ipad_hasher,
-                    );
-                    compare_sha512_states(
-                        &state_1._internal.working_hasher,
-                        &state_2._internal.working_hasher,
-                    );
-                    assert_eq!(
-                        state_1._internal.is_finalized,
-                        state_2._internal.is_finalized
-                    );
+                    state_1._state.compare_state_to_other(&state_2._state);
                 }
             }
 
