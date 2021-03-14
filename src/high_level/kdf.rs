@@ -113,30 +113,77 @@ mod public {
         use super::*;
 
         #[test]
-        fn test_derive_key_and_verify() {
+        fn test_derive_key() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
             let salt = Salt::from_slice(&[0u8; 16]).unwrap();
-            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let dk_first = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let dk_second = derive_key(&password, &salt, 3, 1024, 32).unwrap();
 
-            assert!(derive_key_verify(&dk, &password, &salt, 3, 1024).is_ok());
+            assert_eq!(dk_first, dk_second);
         }
 
         #[test]
-        fn test_derive_key_and_verify_err_diff_iter() {
+        fn test_derive_key_err_diff_iter() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
             let salt = Salt::from_slice(&[0u8; 64]).unwrap();
             let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let dk_diff_iter = derive_key(&password, &salt, 4, 1024, 32).unwrap();
 
-            assert!(derive_key_verify(&dk, &password, &salt, 4, 1024).is_err());
+            assert_ne!(dk, dk_diff_iter);
         }
 
         #[test]
-        fn test_derive_key_and_verify_err_diff_mem() {
+        fn test_derive_key_err_diff_mem() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
             let salt = Salt::from_slice(&[0u8; 64]).unwrap();
             let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let dk_diff_mem = derive_key(&password, &salt, 3, 512, 32).unwrap();
 
-            assert!(derive_key_verify(&dk, &password, &salt, 3, 512).is_err());
+            assert_ne!(dk, dk_diff_mem);
+        }
+
+        #[test]
+        fn test_derive_key_err_diff_salt() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let dk_diff_salt = derive_key(
+                &password,
+                &Salt::from_slice(&[1u8; 64]).unwrap(),
+                3,
+                1024,
+                32,
+            )
+            .unwrap();
+
+            assert_ne!(dk, dk_diff_salt);
+        }
+
+        #[test]
+        fn test_derive_key_err_diff_len() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let dk_diff_len = derive_key(&password, &salt, 3, 1024, 64).unwrap();
+
+            assert_ne!(dk, dk_diff_len);
+        }
+
+        #[test]
+        fn test_derive_key_err_diff_pass() {
+            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let dk_diff_pass = derive_key(
+                &Password::from_slice(&[1u8; 64]).unwrap(),
+                &salt,
+                3,
+                1024,
+                32,
+            )
+            .unwrap();
+
+            assert_ne!(dk, dk_diff_pass);
         }
 
         #[test]
@@ -158,9 +205,6 @@ mod public {
             assert!(derive_key(&password, &salt, 2, 1024, 32).is_err());
             assert!(derive_key(&password, &salt, 3, 1024, 32).is_ok());
             assert!(derive_key(&password, &salt, 4, 1024, 32).is_ok());
-
-            assert!(derive_key_verify(&dk, &password, &salt, 2, 1024).is_err());
-            assert!(derive_key_verify(&dk, &password, &salt, 3, 1024).is_ok());
         }
 
         #[test]
@@ -172,9 +216,6 @@ mod public {
             assert!(derive_key(&password, &salt, 3, 7, 32).is_err());
             assert!(derive_key(&password, &salt, 3, 8, 32).is_ok());
             assert!(derive_key(&password, &salt, 3, 9, 32).is_ok());
-
-            assert!(derive_key_verify(&dk, &password, &salt, 3, 7).is_err());
-            assert!(derive_key_verify(&dk, &password, &salt, 3, 8).is_ok());
         }
     }
 }
