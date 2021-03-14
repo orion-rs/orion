@@ -346,7 +346,7 @@ mod kdf {
 
     pub fn bench_pbkdf2_sha256(c: &mut Criterion) {
         let mut group = c.benchmark_group("PBKDF2-HMAC-SHA256");
-        // 10 is the lowest acceptable same size.
+        // 10 is the lowest acceptable sample size.
         group.sample_size(10);
         group.measurement_time(core::time::Duration::new(30, 0));
 
@@ -378,7 +378,7 @@ mod kdf {
 
     pub fn bench_pbkdf2_sha512(c: &mut Criterion) {
         let mut group = c.benchmark_group("PBKDF2-HMAC-SHA512");
-        // 10 is the lowest acceptable same size.
+        // 10 is the lowest acceptable sample size.
         group.sample_size(10);
         group.measurement_time(core::time::Duration::new(30, 0));
 
