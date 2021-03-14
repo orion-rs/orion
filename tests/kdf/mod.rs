@@ -41,17 +41,17 @@ macro_rules! impl_hkdf_test_runner (($name:ident, $extract:ident, $derive_key:id
     }
 ));
 
-use hkdf::sha256::{derive_key as verify256, extract as extract256};
+use hkdf::sha256::{derive_key as derive_key256, extract as extract256};
 use hmac::sha256::Tag as Tag256;
 
-impl_hkdf_test_runner!(hkdf256_test_runner, extract256, verify256, Tag256);
+impl_hkdf_test_runner!(hkdf256_test_runner, extract256, derive_key256, Tag256);
 
-use hkdf::sha384::{derive_key as verify384, extract as extract384};
+use hkdf::sha384::{derive_key as derive_key384, extract as extract384};
 use hmac::sha384::Tag as Tag384;
 
-impl_hkdf_test_runner!(hkdf384_test_runner, extract384, verify384, Tag384);
+impl_hkdf_test_runner!(hkdf384_test_runner, extract384, derive_key384, Tag384);
 
-use hkdf::sha512::{derive_key as verify512, extract as extract512};
+use hkdf::sha512::{derive_key as derive_key512, extract as extract512};
 use hmac::sha512::Tag as Tag512;
 
-impl_hkdf_test_runner!(hkdf512_test_runner, extract512, verify512, Tag512);
+impl_hkdf_test_runner!(hkdf512_test_runner, extract512, derive_key512, Tag512);
