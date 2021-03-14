@@ -37,7 +37,6 @@
 //!
 //! # Parameters:
 //! - `password`: The low-entropy input key to be used in key derivation.
-//! - `expected`: The expected derived key.
 //! - `salt`: The salt used for the key derivation.
 //! - `iterations`: Iterations cost parameter for Argon2i.
 //! - `memory`: Memory (in kibibytes (KiB)) cost parameter for Argon2i.
@@ -48,9 +47,8 @@
 //! - `iterations` is less than 3.
 //! - `length` is less than 4.
 //! - `memory` is less than 8.
-//! - The length of the `password` or `expected` is greater than `u32::MAX`.
+//! - The length of the `password` is greater than `u32::MAX`.
 //! - The length of the `salt` is greater than `u32::MAX` or less than `8`.
-//! - The `expected` does not match the derived key.
 //!
 //! # Security:
 //! - Choosing the correct cost parameters is important for security. Please refer to
@@ -70,7 +68,6 @@
 //!
 //! let derived_key = kdf::derive_key(&user_password, &salt, 3, 1<<16, 32)?;
 //!
-//! assert!(kdf::derive_key_verify(&derived_key, &user_password, &salt, 3, 1<<16).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Salt`]: struct.Salt.html
@@ -105,33 +102,6 @@ pub fn derive_key(
     )?;
 
     Ok(dk)
-}
-
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Derive and verify a key using Argon2i.
-pub fn derive_key_verify(
-    expected: &SecretKey,
-    password: &Password,
-    salt: &Salt,
-    iterations: u32,
-    memory: u32,
-) -> Result<(), UnknownCryptoError> {
-    if iterations < MIN_ITERATIONS {
-        return Err(UnknownCryptoError);
-    }
-
-    let mut dk = SecretKey::from_slice(&vec![0u8; expected.len()])?;
-
-    argon2i::verify(
-        expected.unprotected_as_bytes(),
-        password.unprotected_as_bytes(),
-        salt.as_ref(),
-        iterations,
-        memory,
-        None,
-        None,
-        &mut dk.value,
-    )
 }
 
 // Testing public functions in the module.
