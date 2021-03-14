@@ -12,7 +12,7 @@ pub mod wycheproof_hkdf;
 
 use orion::hazardous::{kdf::hkdf, mac::hmac};
 
-macro_rules! impl_hkdf_test_runner (($name:ident, $extract:ident, $verify:ident, $hmac_tag:ident) => (
+macro_rules! impl_hkdf_test_runner (($name:ident, $extract:ident, $derive_key:ident, $hmac_tag:ident) => (
     fn $name(
         expected_prk: Option<&[u8]>,
         expected_okm: &[u8],
@@ -29,26 +29,29 @@ macro_rules! impl_hkdf_test_runner (($name:ident, $extract:ident, $verify:ident,
 
         let mut okm_out = vec![0u8; okm_len];
 
-        // verify() also runs derive_key()
         if valid_result {
-            assert!($verify(expected_okm, salt, ikm, Some(&info), &mut okm_out).is_ok());
+            assert!($derive_key(salt, ikm, Some(&info), &mut okm_out).is_ok());
+            assert_eq!(okm_out, expected_okm);
         } else {
-            assert!($verify(expected_okm, salt, ikm, Some(&info), &mut okm_out).is_err());
+            // If derivation call is OK, actual MUST NOT = expected
+            if $derive_key(salt, ikm, Some(&info), &mut okm_out).is_ok() {
+                assert_ne!(okm_out, expected_okm);
+            }
         }
     }
 ));
 
-use hkdf::sha256::{extract as extract256, verify as verify256};
+use hkdf::sha256::{derive_key as verify256, extract as extract256};
 use hmac::sha256::Tag as Tag256;
 
 impl_hkdf_test_runner!(hkdf256_test_runner, extract256, verify256, Tag256);
 
-use hkdf::sha384::{extract as extract384, verify as verify384};
+use hkdf::sha384::{derive_key as verify384, extract as extract384};
 use hmac::sha384::Tag as Tag384;
 
 impl_hkdf_test_runner!(hkdf384_test_runner, extract384, verify384, Tag384);
 
-use hkdf::sha512::{extract as extract512, verify as verify512};
+use hkdf::sha512::{derive_key as verify512, extract as extract512};
 use hmac::sha512::Tag as Tag512;
 
 impl_hkdf_test_runner!(hkdf512_test_runner, extract512, verify512, Tag512);
