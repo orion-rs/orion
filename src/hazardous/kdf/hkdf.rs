@@ -190,20 +190,6 @@ pub mod sha256 {
         _derive_key::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
-    // See: https://github.com/brycx/orion/issues/179
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Verify a derived key in constant time.
-    pub fn verify(
-        expected: &[u8],
-        salt: &[u8],
-        ikm: &[u8],
-        info: Option<&[u8]>,
-        dst_out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        derive_key(salt, ikm, info, dst_out)?;
-        crate::util::secure_cmp(&dst_out, expected)
-    }
-
     #[cfg(test)]
     #[cfg(feature = "safe_api")]
     // Mark safe_api because currently it only contains proptests.
@@ -280,20 +266,6 @@ pub mod sha384 {
         _derive_key::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
-    // See: https://github.com/brycx/orion/issues/179
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Verify a derived key in constant time.
-    pub fn verify(
-        expected: &[u8],
-        salt: &[u8],
-        ikm: &[u8],
-        info: Option<&[u8]>,
-        dst_out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        derive_key(salt, ikm, info, dst_out)?;
-        crate::util::secure_cmp(&dst_out, expected)
-    }
-
     #[cfg(test)]
     #[cfg(feature = "safe_api")]
     // Mark safe_api because currently it only contains proptests.
@@ -368,20 +340,6 @@ pub mod sha512 {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _derive_key::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(salt, ikm, info, dst_out)
-    }
-
-    // See: https://github.com/brycx/orion/issues/179
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Verify a derived key in constant time.
-    pub fn verify(
-        expected: &[u8],
-        salt: &[u8],
-        ikm: &[u8],
-        info: Option<&[u8]>,
-        dst_out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        derive_key(salt, ikm, info, dst_out)?;
-        crate::util::secure_cmp(&dst_out, expected)
     }
 
     #[cfg(test)]
