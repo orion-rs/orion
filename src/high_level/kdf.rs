@@ -200,7 +200,6 @@ mod public {
         fn test_derive_key_bad_iter() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
             let salt = Salt::from_slice(&[0u8; 16]).unwrap();
-            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
 
             assert!(derive_key(&password, &salt, 2, 1024, 32).is_err());
             assert!(derive_key(&password, &salt, 3, 1024, 32).is_ok());
@@ -211,7 +210,6 @@ mod public {
         fn test_derive_key_bad_mem() {
             let password = Password::from_slice(&[0u8; 64]).unwrap();
             let salt = Salt::from_slice(&[0u8; 16]).unwrap();
-            let dk = derive_key(&password, &salt, 3, 8, 32).unwrap();
 
             assert!(derive_key(&password, &salt, 3, 7, 32).is_err());
             assert!(derive_key(&password, &salt, 3, 8, 32).is_ok());
