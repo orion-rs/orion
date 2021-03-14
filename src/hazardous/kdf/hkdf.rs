@@ -27,13 +27,11 @@
 //!   then it's an empty string.
 //! - `dst_out`: Destination buffer for the derived key. The length of the
 //!   derived key is implied by the length of `okm_out`.
-//! - `expected`: The expected derived key.
 //!
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than 1.
 //! - The length of `dst_out` is greater than 255 * SHA(256/384/512)_OUTSIZE.
-//! - The derived key does not match the expected when verifying.
 //!
 //! # Security:
 //! - Salts should always be generated using a CSPRNG.
@@ -53,9 +51,6 @@
 //!
 //! hkdf::sha512::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out)?;
 //!
-//! let exp_okm = okm_out;
-//!
-//! assert!(hkdf::sha512::verify(&exp_okm, &salt, "IKM".as_bytes(), None, &mut okm_out).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
@@ -190,20 +185,6 @@ pub mod sha256 {
         _derive_key::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
-    // See: https://github.com/brycx/orion/issues/179
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Verify a derived key in constant time.
-    pub fn verify(
-        expected: &[u8],
-        salt: &[u8],
-        ikm: &[u8],
-        info: Option<&[u8]>,
-        dst_out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        derive_key(salt, ikm, info, dst_out)?;
-        crate::util::secure_cmp(&dst_out, expected)
-    }
-
     #[cfg(test)]
     #[cfg(feature = "safe_api")]
     // Mark safe_api because currently it only contains proptests.
@@ -278,20 +259,6 @@ pub mod sha384 {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _derive_key::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(salt, ikm, info, dst_out)
-    }
-
-    // See: https://github.com/brycx/orion/issues/179
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Verify a derived key in constant time.
-    pub fn verify(
-        expected: &[u8],
-        salt: &[u8],
-        ikm: &[u8],
-        info: Option<&[u8]>,
-        dst_out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        derive_key(salt, ikm, info, dst_out)?;
-        crate::util::secure_cmp(&dst_out, expected)
     }
 
     #[cfg(test)]
@@ -370,20 +337,6 @@ pub mod sha512 {
         _derive_key::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
-    // See: https://github.com/brycx/orion/issues/179
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Verify a derived key in constant time.
-    pub fn verify(
-        expected: &[u8],
-        salt: &[u8],
-        ikm: &[u8],
-        info: Option<&[u8]>,
-        dst_out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        derive_key(salt, ikm, info, dst_out)?;
-        crate::util::secure_cmp(&dst_out, expected)
-    }
-
     #[cfg(test)]
     #[cfg(feature = "safe_api")]
     // Mark safe_api because currently it only contains proptests.
@@ -424,151 +377,145 @@ pub mod sha512 {
 #[cfg(test)]
 mod public {
     use super::*;
+    use crate::hazardous::hash::sha2::{
+        sha256::SHA256_OUTSIZE, sha384::SHA384_OUTSIZE, sha512::SHA512_OUTSIZE,
+    };
 
-    mod test_expand {
-        use super::*;
+    #[test]
+    fn hkdf_above_maximum_length_err() {
+        let mut okm_out = [0u8; 255 * SHA256_OUTSIZE + 1];
+        let prk = sha256::extract(b"", b"").unwrap();
+        assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(sha256::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
-        use crate::hazardous::hash::sha2::{
-            sha256::SHA256_OUTSIZE, sha384::SHA384_OUTSIZE, sha512::SHA512_OUTSIZE,
-        };
+        let mut okm_out = [0u8; 255 * SHA384_OUTSIZE + 1];
+        let prk = sha384::extract(b"", b"").unwrap();
+        assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(sha384::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
-        #[test]
-        fn hkdf_above_maximum_length_err() {
-            let mut okm_out = [0u8; 255 * SHA256_OUTSIZE + 1];
-            let prk = sha256::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_err());
-
-            let mut okm_out = [0u8; 255 * SHA384_OUTSIZE + 1];
-            let prk = sha384::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_err());
-
-            let mut okm_out = [0u8; 255 * SHA512_OUTSIZE + 1];
-            let prk = sha512::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_err());
-        }
-
-        #[test]
-        fn hkdf_exact_maximum_length_ok() {
-            let mut okm_out = [0u8; 255 * SHA256_OUTSIZE];
-            let prk = sha256::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_ok());
-
-            let mut okm_out = [0u8; 255 * SHA384_OUTSIZE];
-            let prk = sha384::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_ok());
-
-            let mut okm_out = [0u8; 255 * SHA512_OUTSIZE];
-            let prk = sha512::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_ok());
-        }
-
-        #[test]
-        fn hkdf_zero_length_err() {
-            let mut okm_out = [0u8; 0];
-
-            let prk = sha256::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_err());
-
-            let prk = sha384::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_err());
-
-            let prk = sha512::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_err());
-        }
-
-        #[test]
-        fn hkdf_info_param() {
-            // Test that using None or empty array as info is the same.
-            let mut okm_out = [0u8; 32];
-            let mut okm_out_verify = [0u8; 32];
-
-            let prk = sha256::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
-            assert!(sha256::verify(&okm_out, b"", b"", None, &mut okm_out_verify).is_ok());
-
-            let prk = sha384::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
-            assert!(sha384::verify(&okm_out, b"", b"", None, &mut okm_out_verify).is_ok());
-
-            let prk = sha512::extract("".as_bytes(), "".as_bytes()).unwrap();
-            assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
-            assert!(sha512::verify(&okm_out, b"", b"", None, &mut okm_out_verify).is_ok());
-        }
+        let mut okm_out = [0u8; 255 * SHA512_OUTSIZE + 1];
+        let prk = sha512::extract(b"", b"").unwrap();
+        assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(sha512::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
     }
 
-    mod test_verify {
-        use super::*;
+    #[test]
+    fn hkdf_exact_maximum_length_ok() {
+        let mut okm_out = [0u8; 255 * SHA256_OUTSIZE];
+        let prk = sha256::extract(b"", b"").unwrap();
+        assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_ok());
+        assert!(sha256::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
 
-        #[test]
-        fn hkdf_verify_true() {
-            let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
-            let salt = b"000102030405060708090a0b0c";
-            let info = b"f0f1f2f3f4f5f6f7f8f9";
-            let mut okm_out = [0u8; 42];
-            let mut okm_out_verify = [0u8; 42];
+        let mut okm_out = [0u8; 255 * SHA384_OUTSIZE];
+        let prk = sha384::extract(b"", b"").unwrap();
+        assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_ok());
+        assert!(sha384::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
 
-            sha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha256::verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_ok());
+        let mut okm_out = [0u8; 255 * SHA512_OUTSIZE];
+        let prk = sha512::extract(b"", b"").unwrap();
+        assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_ok());
+        assert!(sha512::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
+    }
 
-            sha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha384::verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_ok());
+    #[test]
+    fn hkdf_zero_length_err() {
+        let mut okm_out = [0u8; 0];
 
-            sha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha512::verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_ok());
-        }
+        let prk = sha256::extract(b"", b"").unwrap();
+        assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(sha256::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
-        #[test]
-        fn hkdf_verify_wrong_salt() {
-            let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
-            let salt = b"000102030405060708090a0b0c";
-            let info = b"f0f1f2f3f4f5f6f7f8f9";
-            let mut okm_out = [0u8; 42];
-            let mut okm_out_verify = [0u8; 42];
+        let prk = sha384::extract(b"", b"").unwrap();
+        assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(sha384::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
-            sha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha256::verify(&okm_out, b"", ikm, Some(info), &mut okm_out_verify).is_err());
+        let prk = sha512::extract(b"", b"").unwrap();
+        assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(sha512::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
+    }
 
-            sha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha384::verify(&okm_out, b"", ikm, Some(info), &mut okm_out_verify).is_err());
+    #[test]
+    fn hkdf_info_param() {
+        // Test that using None or empty array as info is the same.
+        let mut okm_out = [0u8; 32];
+        let mut okm_out_verify = [0u8; 32];
 
-            sha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha512::verify(&okm_out, b"", ikm, Some(info), &mut okm_out_verify).is_err());
-        }
+        let prk = sha256::extract(b"", b"").unwrap();
+        assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
+        assert!(sha256::derive_key(b"", b"", None, &mut okm_out_verify).is_ok());
+        assert_eq!(okm_out, okm_out_verify);
 
-        #[test]
-        fn hkdf_verify_wrong_ikm() {
-            let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
-            let salt = b"000102030405060708090a0b0c";
-            let info = b"f0f1f2f3f4f5f6f7f8f9";
-            let mut okm_out = [0u8; 42];
-            let mut okm_out_verify = [0u8; 42];
+        let prk = sha384::extract(b"", b"").unwrap();
+        assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
+        assert!(sha384::derive_key(b"", b"", None, &mut okm_out_verify).is_ok());
+        assert_eq!(okm_out, okm_out_verify);
 
-            sha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha256::verify(&okm_out, salt, b"", Some(info), &mut okm_out_verify).is_err());
+        let prk = sha512::extract(b"", b"").unwrap();
+        assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
+        assert!(sha512::derive_key(b"", b"", None, &mut okm_out_verify).is_ok());
+        assert_eq!(okm_out, okm_out_verify);
+    }
 
-            sha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha384::verify(&okm_out, salt, b"", Some(info), &mut okm_out_verify).is_err());
+    #[test]
+    fn hkdf_wrong_salt() {
+        let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+        let salt = b"000102030405060708090a0b0c";
+        let info = b"f0f1f2f3f4f5f6f7f8f9";
+        let mut okm_out = [0u8; 42];
+        let mut okm_out_verify = [0u8; 42];
 
-            sha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha512::verify(&okm_out, salt, b"", Some(info), &mut okm_out_verify).is_err());
-        }
+        sha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        sha256::derive_key(b"", ikm, Some(info), &mut okm_out_verify).unwrap();
+        assert_ne!(okm_out, okm_out_verify);
 
-        #[test]
-        fn verify_diff_length() {
-            let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
-            let salt = b"000102030405060708090a0b0c";
-            let info = b"f0f1f2f3f4f5f6f7f8f9";
-            let mut okm_out = [0u8; 42];
-            let mut okm_out_verify = [0u8; 43];
+        sha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        sha384::derive_key(b"", ikm, Some(info), &mut okm_out_verify).unwrap();
+        assert_ne!(okm_out, okm_out_verify);
 
-            sha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha256::verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_err());
+        sha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        sha512::derive_key(b"", ikm, Some(info), &mut okm_out_verify).unwrap();
+        assert_ne!(okm_out, okm_out_verify);
+    }
 
-            sha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha384::verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_err());
+    #[test]
+    fn hkdf_verify_wrong_ikm() {
+        let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+        let salt = b"000102030405060708090a0b0c";
+        let info = b"f0f1f2f3f4f5f6f7f8f9";
+        let mut okm_out = [0u8; 42];
+        let mut okm_out_verify = [0u8; 42];
 
-            sha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-            assert!(sha512::verify(&okm_out, salt, ikm, Some(info), &mut okm_out_verify).is_err());
-        }
+        sha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        sha256::derive_key(salt, b"", Some(info), &mut okm_out_verify).unwrap();
+        assert_ne!(okm_out, okm_out_verify);
+
+        sha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        sha384::derive_key(salt, b"", Some(info), &mut okm_out_verify).unwrap();
+        assert_ne!(okm_out, okm_out_verify);
+
+        sha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        sha512::derive_key(salt, b"", Some(info), &mut okm_out_verify).unwrap();
+        assert_ne!(okm_out, okm_out_verify);
+    }
+
+    #[test]
+    fn verify_diff_length() {
+        let ikm = b"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+        let salt = b"000102030405060708090a0b0c";
+        let info = b"f0f1f2f3f4f5f6f7f8f9";
+        let mut okm_out = [0u8; 42];
+        let mut okm_out_verify = [0u8; 43];
+
+        sha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        sha256::derive_key(salt, ikm, Some(info), &mut okm_out_verify).unwrap();
+        assert_ne!(okm_out[..], okm_out_verify[..]);
+
+        sha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        sha384::derive_key(salt, ikm, Some(info), &mut okm_out_verify).unwrap();
+        assert_ne!(okm_out[..], okm_out_verify[..]);
+
+        sha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        sha512::derive_key(salt, ikm, Some(info), &mut okm_out_verify).unwrap();
+        assert_ne!(okm_out[..], okm_out_verify[..]);
     }
 }
