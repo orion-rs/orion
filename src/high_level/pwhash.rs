@@ -36,16 +36,16 @@
 //! - The password hash length is set to 32.
 //!
 //! [`PasswordHash`] provides two ways of retrieving the hashed password:
-//! - [`unprotected_as_encoded()`] returns the hashed password in an encoded form.
+//! - [`PasswordHash::unprotected_as_encoded()`] returns the hashed password in an encoded form.
 //! The encoding specifies the settings used to hash the password.
-//! - [`unprotected_as_bytes()`] returns only the hashed password in raw bytes.
+//! - [`PasswordHash::unprotected_as_bytes()`] returns only the hashed password in raw bytes.
 //!
 //! The following is an example of how the encoded password hash might look:
 //! ```text
 //! $argon2i$v=19$m=8192,t=3,p=1$c21hbGxzYWx0$lmO1aPPy3x0CcvrKpFLi1TL/uSVJ/eO5hPHiWZFaWvY
 //! ```
 //!
-//! See a more detailed description of the encoding format [here](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md).
+//! See a more detailed description of the [encoding format here].
 //!
 //! # Note:
 //! This implementation only supports a single thread/lane.
@@ -60,7 +60,7 @@
 //! An error will be returned if:
 //! - `memory` is less than 8.
 //! - `iterations` is less than 3.
-//! - The length of the `password` is greater than `u32::MAX`.
+//! - The length of the `password` is greater than [`u32::MAX`].
 //! - The password hash does not match `expected`.
 //!
 //! # Panics:
@@ -68,12 +68,11 @@
 //! - Failure to generate random bytes securely.
 //!
 //! # Security:
-//! - [`unprotected_as_encoded()`] and [`unprotected_as_bytes()`] should never
+//! - [`PasswordHash::unprotected_as_encoded()`] and [`PasswordHash::unprotected_as_bytes()`] should never
 //! be used to compare password hashes, as these will not run in constant-time.
-//! Either use [`pwhash::hash_password_verify`] or compare two [`PasswordHash`]es.
+//! Either use [`hash_password_verify()`] or compare two [`PasswordHash`]es.
 //! - The base64 encoding and decoding operations that [`PasswordHash`] performs, do NOT run in constant-time.
-//! - Choosing the correct cost parameters is important for security. Please refer to
-//! [libsodium's docs](https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters)
+//! - Choosing the correct cost parameters is important for security. Please refer to [libsodium's docs]
 //! for a description of how to do this.
 //!
 //! # Example:
@@ -86,11 +85,8 @@
 //! assert!(pwhash::hash_password_verify(&hash, &password).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`PasswordHash`]: struct.PasswordHash.html
-//! [`unprotected_as_encoded()`]: struct.PasswordHash.html#method.unprotected_as_encoded
-//! [`unprotected_as_bytes()`]: struct.PasswordHash.html#method.unprotected_as_bytes
-//! [`pwhash::hash_password`]: fn.hash_password.html
-//! [`pwhash::hash_password_verify`]: fn.hash_password_verify.html
+//! [encoding format here]: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md
+//! [libsodium's docs]: https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters
 
 pub use super::hltypes::Password;
 use super::hltypes::Salt;
@@ -128,7 +124,7 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// - `salt` is not 16 bytes.
 /// - The encoded password hash contains numerical values that cannot
 /// be represented as a `u32`.
-/// - The encoded password hash length is less than [`MIN_ENCODED_LEN`] or greater than [`MAX_ENCODED_LEN`].
+/// - The encoded password hash length is less than [`PasswordHash::MIN_ENCODED_LEN`] or greater than [`PasswordHash::MAX_ENCODED_LEN`].
 /// - The parameters in the encoded password hash are not correctly ordered. The ordering must be:
 /// `$argon2i$v=19$m=<value>,t=<value>,p=<value>$<salt>$<hash>`
 /// # Panics:
@@ -162,8 +158,6 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// # Ok(())
 /// # }
 /// ```
-/// [`MIN_ENCODED_LEN`]: struct.PasswordHash.html#associatedconstant.MIN_ENCODED_LEN
-/// [`MAX_ENCODED_LEN`]: struct.PasswordHash.html#associatedconstant.MAX_ENCODED_LEN
 pub struct PasswordHash {
     encoded_password_hash: String,
     password_hash: Vec<u8>,

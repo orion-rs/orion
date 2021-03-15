@@ -47,13 +47,12 @@
 //! - `iterations` is less than 3.
 //! - `length` is less than 4.
 //! - `memory` is less than 8.
-//! - The length of the `password` is greater than `u32::MAX`.
-//! - The length of the `salt` is greater than `u32::MAX` or less than `8`.
+//! - The length of the `password` is greater than [`u32::MAX`].
+//! - The length of the `salt` is greater than [`u32::MAX`] or less than `8`.
 //!
 //! # Security:
 //! - Choosing the correct cost parameters is important for security. Please refer to
-//!   [libsodium's docs](https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters)
-//! for a description of how to do this.
+//!   [libsodium's docs] for a description of how to do this.
 //! - The salt should always be generated using a CSPRNG. [`Salt::default()`]
 //!   can be used for this, it will generate a [`Salt`] of 16 bytes.
 //! - The recommended minimum size for a salt is 16 bytes.
@@ -70,8 +69,7 @@
 //!
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`Salt`]: struct.Salt.html
-//! [`Salt::default()`]: struct.Salt.html
+//! [libsodium's docs]: https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters
 
 pub use super::hltypes::{Password, Salt, SecretKey};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2i, pwhash::MIN_ITERATIONS};

@@ -72,12 +72,13 @@
 //! let digest = Hasher::Blake2b512.digest(b"Some data")?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: struct.Blake2b.html
-//! [`reset()`]: struct.Blake2b.html
-//! [`finalize()`]: struct.Blake2b.html
-//! [`SecretKey::generate()`]: struct.SecretKey.html
-//! [`verify()`]: struct.Blake2b.html
-//! [`as_ref()`]: struct.Digest.html
+//! [`update()`]: blake2b::Blake2b::update
+//! [`reset()`]: blake2b::Blake2b::reset
+//! [`finalize()`]: blake2b::Blake2b::finalize
+//! [`SecretKey::generate()`]: blake2b::SecretKey::generate
+//! [`verify()`]: blake2b::Blake2b::verify
+//! [`as_ref()`]: blake2b::Digest::as_ref
+
 use crate::{errors::UnknownCryptoError, util::endianness::load_u64_into_le, util::u64x4::U64x4};
 
 /// The blocksize for the hash function BLAKE2b.

@@ -49,7 +49,7 @@
 //!   with that given key is compromised.
 //! - Functions herein do not provide any data integrity. If you need
 //!   data integrity, which is nearly ***always the case***, you should use an
-//!   AEAD construction instead. See the [`aead`] module for this.
+//!   AEAD construction instead. See the [`aead`](super::aead) module for this.
 //! - Only a nonce for XChaCha20 is big enough to be randomly generated using a
 //!   CSPRNG. [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
@@ -77,10 +77,9 @@
 //! assert_eq!(dst_out_pt, message);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`Nonce::generate()`]: struct.Nonce.html
-//! [`SecretKey::generate()`]: ../chacha20/struct.SecretKey.html
-//! [`XChaCha20Poly1305`]: ../../aead/xchacha20poly1305/index.html
-//! [`aead`]: ../../aead/index.html
+//! [`SecretKey::generate()`]: xchacha20::SecretKey::generate()
+//! [`Nonce::generate()`]: xchacha20::Nonce::generate()
+//! [`XChaCha20Poly1305`]: super::aead::xchacha20poly1305
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{
     errors::UnknownCryptoError,
@@ -91,8 +90,7 @@ use crate::{
 pub const XCHACHA_NONCESIZE: usize = 24;
 
 construct_public! {
-    /// A type that represents a `Nonce` that XChaCha20, XChaCha20Poly1305 and
-    /// StreamXChaCha20Poly1305 use.
+    /// A type that represents a `Nonce` that XChaCha20, XChaCha20-Poly1305 use.
     ///
     /// # Errors:
     /// An error will be returned if:

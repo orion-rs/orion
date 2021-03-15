@@ -39,11 +39,11 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - The length of the `password` is greater than `u32::MAX`.
-//! - The length of the `salt` is greater than `u32::MAX` or less than `8`.
-//! - The length of the `secret` is greater than `u32::MAX`.
-//! - The length of the `ad` is greater than `u32::MAX`.
-//! - The length of `dst_out` is greater than `u32::MAX` or less than `4`.
+//! - The length of the `password` is greater than [`u32::MAX`].
+//! - The length of the `salt` is greater than [`u32::MAX`] or less than `8`.
+//! - The length of the `secret` is greater than [`u32::MAX`].
+//! - The length of the `ad` is greater than [`u32::MAX`].
+//! - The length of `dst_out` is greater than [`u32::MAX`] or less than `4`.
 //! - `iterations` is less than `1`.
 //! - `memory` is less than `8`.
 //! - The hashed password does not match the expected when verifying.
@@ -53,7 +53,7 @@
 //!
 //! # Security:
 //! - Salts should always be generated using a CSPRNG.
-//!   [`util::secure_rand_bytes()`] can be used for this.
+//!   [`secure_rand_bytes()`] can be used for this.
 //! - The minimum recommended length for a salt is `16` bytes.
 //! - The minimum recommended length for a hashed password is `16` bytes.
 //! - The minimum recommended iteration count is `3`.
@@ -85,7 +85,7 @@
 //! .is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
+//! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2b::{Blake2b, BLAKE2B_OUTSIZE};

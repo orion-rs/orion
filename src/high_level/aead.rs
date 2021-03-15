@@ -30,7 +30,7 @@
 //! confidentiality and authenticity of these messages is required.
 //!
 //! # About:
-//! - Both one-shot functions and a [`streaming API`] are provided.
+//! - Both one-shot functions and a [`streaming`] API are provided.
 //! - The nonce is automatically generated.
 //! - Returns a vector where the first 24 bytes are the nonce and the rest is
 //!   the authenticated ciphertext with the last 16 bytes being the corresponding Poly1305 tag.
@@ -75,12 +75,6 @@
 //! let decrypted_data = aead::open(&secret_key, &ciphertext)?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`seal`]: fn.seal.html
-//! [`open`]: fn.open.html
-//! [`POLY1305_OUTSIZE`]: ../hazardous/mac/poly1305/constant.POLY1305_OUTSIZE.html
-//! [`XCHACHA_NONCESIZE`]: ../hazardous/stream/xchacha20/constant.XCHACHA_NONCESIZE.html
-//! [`SecretKey::default()`]: struct.SecretKey.html
-//! [`streaming API`]: streaming/index.html
 
 pub use super::hltypes::SecretKey;
 use crate::{
@@ -160,8 +154,7 @@ pub mod streaming {
     //!  An example of this could be the encryption of files that are too large to encrypt in one piece.
     //!
     //! # About:
-    //! This implementation is based on and compatible with the ["secretstream" API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
-    //! of libsodium.
+    //! This implementation is based on and compatible with the ["secretstream" API] of libsodium.
     //!
     //! # Parameters:
     //! - `secret_key`: The secret key.
@@ -225,9 +218,10 @@ pub mod streaming {
     //!
     //! # Ok::<(), orion::errors::UnknownCryptoError>(())
     //! ```
-    //! [`ABYTES`]: ../../hazardous/aead/streaming/constant.ABYTES.html
-    //! [`StreamTag`]: ../../hazardous/aead/streaming/enum.StreamTag.html
-    //! [`SecretKey::generate()`]: ../struct.SecretKey.html
+    //! [`ABYTES`]: crate::hazardous::aead::streaming::ABYTES
+    //! [`StreamTag`]: crate::hazardous::aead::streaming::StreamTag
+    //! [`SecretKey::generate()`]: super::SecretKey::generate
+    //! ["secretstream" API]: https://download.libsodium.org/doc/secret-key_cryptography/secretstream
 
     use super::*;
     pub use crate::hazardous::aead::streaming::Nonce;

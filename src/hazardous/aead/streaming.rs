@@ -22,8 +22,7 @@
 
 //! # About:
 //!
-//! This implementation is based on and compatible with the ["secretstream" API](https://download.libsodium.org/doc/secret-key_cryptography/secretstream)
-//! of libsodium.
+//! This implementation is based on and compatible with the ["secretstream" API] of libsodium.
 //!
 //! # Parameters:
 //! - `secret_key`: The secret key.
@@ -47,14 +46,14 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows `u64::MAX` when decrypting.
+//! - 64 + (`ciphertext.len()` - [`ABYTES`]) overflows [`u64::MAX`] when decrypting.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given key.
 //! - The nonce can be  randomly generated using a CSPRNG. [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
 //! - The lengths of the messages are not hidden, only their contents.
-//! - It is recommended to use `StreamTag::FINISH` as the tag for the last message. This allows the
+//! - It is recommended to use [`StreamTag::FINISH`] as the tag for the last message. This allows the
 //!   decrypting side to detect if messages at the end of the stream are lost.
 //!
 //! # Example:
@@ -85,12 +84,15 @@
 //! assert_eq!(dst_out_pt.as_ref(), message);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
-//! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
-//! [`StreamTag`]: enum.StreamTag.html
-//! [`ABYTES`]: constant.ABYTES.html
-//! [`seal_chunk()`]: struct.StreamXChaCha20Poly1305.html#method.seal_chunk
-//! [`open_chunk()`]: struct.StreamXChaCha20Poly1305.html#method.open_chunk
+//! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate
+//! [`Nonce::generate()`]: super::stream::xchacha20::Nonce::generate
+//! [`StreamTag`]: streaming::StreamTag
+//! [`StreamTag::FINISH`]: streaming::StreamTag::FINISH
+//! [`ABYTES`]: streaming::ABYTES
+//! [`seal_chunk()`]: streaming::StreamXChaCha20Poly1305::seal_chunk
+//! [`open_chunk()`]: streaming::StreamXChaCha20Poly1305::open_chunk
+//! ["secretstream" API]: https://download.libsodium.org/doc/secret-key_cryptography/secretstream
+
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead::chacha20poly1305::poly1305_key_gen;
 use crate::hazardous::mac::poly1305::{Poly1305, Tag as Poly1305Tag, POLY1305_OUTSIZE};

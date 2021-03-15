@@ -33,7 +33,7 @@
 //! nonces, as is encrypting a counter using a block cipher with a 64-bit block
 //! size such as DES.  Note that it is not acceptable to use a truncation of a
 //! counter encrypted with block ciphers with 128-bit or 256-bit blocks,
-//! because such a truncation may repeat after a short time." See [RFC](https://tools.ietf.org/html/rfc8439)
+//! because such a truncation may repeat after a short time." See [RFC]
 //! for more information.
 //!
 //! # Errors:
@@ -57,7 +57,7 @@
 //!   with that given key is compromised.
 //! - Functions herein do not provide any data integrity. If you need
 //!   data integrity, which is nearly ***always the case***, you should use an
-//!   AEAD construction instead. See orions [`aead`] module for this.
+//!   AEAD construction instead. See the [`aead`](super::aead) module for this.
 //! - Only a nonce for XChaCha20 is big enough to be randomly generated using a CSPRNG.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
 //!
@@ -87,9 +87,9 @@
 //! assert_eq!(dst_out_pt, message);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey::generate()`]: struct.SecretKey.html
-//! [`aead`]: ../../aead/index.html
-//! [`XChaCha20Poly1305`]: ../../aead/xchacha20poly1305/index.html
+//! [`SecretKey::generate()`]: chacha20::SecretKey::generate()
+//! [`XChaCha20Poly1305`]: super::aead::xchacha20poly1305
+//! [RFC]: https://tools.ietf.org/html/rfc8439
 use crate::errors::UnknownCryptoError;
 use crate::util::endianness::load_u32_le;
 use crate::util::u32x4::U32x4;
@@ -107,8 +107,8 @@ const HCHACHA_OUTSIZE: usize = 32;
 pub(crate) const HCHACHA_NONCESIZE: usize = 16;
 
 construct_secret_key! {
-    /// A type to represent the `SecretKey` that `chacha20`, `xchacha20`, `chacha20poly1305` and
-    /// `xchacha20poly1305` use.
+    /// A type to represent the `SecretKey` that Chacha20, XChaCha20, ChaCha20-Poly1305 and
+    /// XChaCha20-Poly1305 use.
     ///
     /// # Errors:
     /// An error will be returned if:
@@ -123,7 +123,7 @@ construct_secret_key! {
 impl_from_trait!(SecretKey, CHACHA_KEYSIZE);
 
 construct_public! {
-    /// A type that represents a `Nonce` that ChaCha20 and ChaCha20Poly1305 use.
+    /// A type that represents a `Nonce` that ChaCha20 and ChaCha20-Poly1305 use.
     ///
     /// # Errors:
     /// An error will be returned if:
@@ -363,7 +363,6 @@ pub fn decrypt(
     encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
 }
 
-#[doc(hidden)]
 /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
 pub(super) fn hchacha20(
     secret_key: &SecretKey,

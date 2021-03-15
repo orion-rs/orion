@@ -54,10 +54,10 @@
 //! assert!(HmacSha512::verify(&tag, &key, b"Some message.").is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: struct.Hmac.html
-//! [`reset()`]: struct.Hmac.html
-//! [`finalize()`]: struct.Hmac.html
-//! [`SecretKey::generate()`]: struct.SecretKey.html
+//! [`update()`]: hmac::sha512::HmacSha512::update
+//! [`reset()`]: hmac::sha512::HmacSha512::reset
+//! [`finalize()`]: hmac::sha512::HmacSha512::finalize
+//! [`SecretKey::generate()`]: hmac::sha512::SecretKey::generate
 //! [Cryptographic Right Answers]: https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html
 
 use crate::errors::UnknownCryptoError;
