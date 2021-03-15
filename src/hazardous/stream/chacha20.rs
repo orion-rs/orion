@@ -123,8 +123,7 @@ construct_secret_key! {
 impl_from_trait!(SecretKey, CHACHA_KEYSIZE);
 
 construct_public! {
-    /// A type that represents a `Nonce` that [`chacha20`](super::chacha20) and
-    /// [`chacha20poly1305`](super::super::aead::chacha20poly1305) use.
+    /// A type that represents a `Nonce` that ChaCha20 and ChaCha20-Poly1305 use.
     ///
     /// # Errors:
     /// An error will be returned if:
