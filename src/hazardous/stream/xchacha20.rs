@@ -90,7 +90,7 @@ use crate::{
 pub const XCHACHA_NONCESIZE: usize = 24;
 
 construct_public! {
-    /// A type that represents a `Nonce` that XChaCha20, XChaCha20-Poly1305.
+    /// A type that represents a `Nonce` that XChaCha20, XChaCha20-Poly1305 use.
     ///
     /// # Errors:
     /// An error will be returned if:
