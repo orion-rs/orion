@@ -68,9 +68,6 @@
 //! assert!(auth::authenticate_verify(&expected_tag, &key, &msg).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey`]: struct.SecretKey.html
-//! [`SecretKey::default()`]: struct.SecretKey.html
-//! [`Tag`]: struct.Tag.html
 
 pub use super::hltypes::{SecretKey, Tag};
 use crate::{

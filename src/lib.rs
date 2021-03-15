@@ -41,13 +41,14 @@
 //! ### A note on `no_std`:
 //! When orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator.
 //!
-//! More information about orion is available in the [wiki](https://github.com/brycx/orion/wiki).
+//! More information about orion is available in the [wiki].
 //!
-//! [`orion::aead`]: aead/index.html
-//! [`orion::pwhash`]: pwhash/index.html
-//! [`orion::kdf`]: kdf/index.html
-//! [`orion::auth`]: auth/index.html
-//! [`orion::hash`]: hash/index.html
+//! [`orion::aead`]: crate::aead
+//! [`orion::pwhash`]: crate::pwhash
+//! [`orion::kdf`]: crate::kdf
+//! [`orion::auth`]: crate::auth
+//! [`orion::hash`]: crate::hash
+//! [wiki]: https://github.com/brycx/orion/wiki
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
@@ -83,7 +84,7 @@ pub mod util;
 /// Errors for orion's cryptographic operations.
 pub mod errors;
 
-/// [__**Caution**__] Low-level API.
+/// \[__**Caution**__\] Low-level API.
 pub mod hazardous;
 
 #[cfg(feature = "safe_api")]
