@@ -23,7 +23,7 @@
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
-//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`).
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be [`None`]).
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 16 byte
 //!   Poly1305 tag appended to it.
 //! - `plaintext`: The data to be encrypted.
@@ -32,14 +32,13 @@
 //!
 //! `ad`: "A typical use for these data is to authenticate version numbers,
 //! timestamps or monotonically increasing counters in order to discard previous
-//! messages and prevent replay attacks." See [libsodium docs](https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data) for more information.
+//! messages and prevent replay attacks." See [libsodium docs] for more information.
 //!
 //! `nonce`: "Counters and LFSRs are both acceptable ways of generating unique
 //! nonces, as is encrypting a counter using a block cipher with a 64-bit block
 //! size such as DES.  Note that it is not acceptable to use a truncation of a
 //! counter encrypted with block ciphers with 128-bit or 256-bit blocks,
-//! because such a truncation may repeat after a short time." See [RFC](https://tools.ietf.org/html/rfc8439#section-3)
-//! for more information.
+//! because such a truncation may repeat after a short time." See [RFC] for more information.
 //!
 //! # Errors:
 //! An error will be returned if:
@@ -92,11 +91,14 @@
 //! assert_eq!(dst_out_pt.as_ref(), message.as_ref());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
-//! [`XChaCha20Poly1305`]: ../xchacha20poly1305/index.html
-//! [`POLY1305_OUTSIZE`]: ../../mac/poly1305/constant.POLY1305_OUTSIZE.html
-//! [`seal()`]: fn.seal.html
-//! [`open()`]: fn.open.html
+//! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate
+//! [`XChaCha20Poly1305`]: xchacha20poly1305
+//! [`POLY1305_OUTSIZE`]: super::mac::poly1305::POLY1305_OUTSIZE
+//! [`seal()`]: chacha20poly1305::seal
+//! [`open()`]: chacha20poly1305::open
+//! [RFC]: https://tools.ietf.org/html/rfc8439#section-3
+//! [libsodium docs]: https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data
+
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
     errors::UnknownCryptoError,

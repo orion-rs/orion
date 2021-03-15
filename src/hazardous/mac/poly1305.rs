@@ -22,8 +22,7 @@
 // SOFTWARE.
 
 //! # About:
-//! This implementation is based on [poly1305-donna](https://github.com/floodyberry/poly1305-donna)
-//! by Andrew Moon.
+//! This implementation is based on [poly1305-donna] by Andrew Moon.
 //!
 //! # Parameters:
 //! - `data`: Data to be authenticated.
@@ -46,7 +45,7 @@
 //!
 //! # Recommendation:
 //! - If you are unsure of whether to use HMAC or Poly1305, it is most often
-//!   easier to just use HMAC. See also [Cryptographic Right Answers](https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html).
+//!   easier to just use HMAC. See also [Cryptographic Right Answers].
 //!
 //! # Example:
 //! ```rust
@@ -62,11 +61,13 @@
 //! assert!(Poly1305::verify(&tag, &one_time_key, msg.as_bytes()).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: struct.Poly1305.html
-//! [`reset()`]: struct.Poly1305.html
-//! [`finalize()`]: struct.Poly1305.html
-//! [`OneTimeKey::generate()`]: struct.OneTimeKey.html
-//! [`OneTimeKey`]: struct.OneTimeKey.html
+//! [`update()`]: poly1305::Poly1305::update
+//! [`reset()`]: poly1305::Poly1305::reset
+//! [`finalize()`]: poly1305::Poly1305::finalize
+//! [`OneTimeKey::generate()`]: poly1305::OneTimeKey::generate
+//! [`OneTimeKey`]: poly1305::OneTimeKey
+//! [poly1305-donna]: https://github.com/floodyberry/poly1305-donna
+//! [Cryptographic Right Answers]: https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html
 
 use crate::{
     errors::UnknownCryptoError,

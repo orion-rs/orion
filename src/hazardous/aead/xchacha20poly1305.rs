@@ -23,7 +23,7 @@
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
-//! - `ad`: Additional data to authenticate (this is not encrypted and can be `None`).
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be [`None`]).
 //! - `ciphertext_with_tag`: The encrypted data with the corresponding 16 byte
 //!   Poly1305 tag appended to it.
 //! - `plaintext`: The data to be encrypted.
@@ -32,7 +32,7 @@
 //!
 //! `ad`: "A typical use for these data is to authenticate version numbers,
 //! timestamps or monotonically increasing counters in order to discard previous
-//! messages and prevent replay attacks." See [libsodium docs](https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data) for more information.
+//! messages and prevent replay attacks." See [libsodium docs] for more information.
 //!
 //! # Errors:
 //! An error will be returned if:
@@ -57,9 +57,6 @@
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
 //! - The length of the `plaintext` is not hidden, only its contents.
 //!
-//! # Recommendation:
-//! - It is recommended to use XChaCha20Poly1305 when possible.
-//!
 //! # Example:
 //! ```rust
 //! use orion::hazardous::aead;
@@ -82,11 +79,13 @@
 //! assert_eq!(dst_out_pt.as_ref(), message.as_ref());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey::generate()`]: ../../stream/chacha20/struct.SecretKey.html
-//! [`Nonce::generate()`]: ../../stream/xchacha20/struct.Nonce.html
-//! [`POLY1305_OUTSIZE`]: ../../mac/poly1305/constant.POLY1305_OUTSIZE.html
-//! [`seal()`]: fn.seal.html
-//! [`open()`]: fn.open.html
+//! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate
+//! [`Nonce::generate()`]: super::stream::xchacha20::Nonce::generate
+//! [`POLY1305_OUTSIZE`]: super::mac::poly1305::POLY1305_OUTSIZE
+//! [`seal()`]: xchacha20poly1305::seal
+//! [`open()`]: xchacha20poly1305::open
+//! [libsodium docs]: https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data
+
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
 use crate::{errors::UnknownCryptoError, hazardous::aead::chacha20poly1305};

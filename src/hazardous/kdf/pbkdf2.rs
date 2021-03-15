@@ -42,7 +42,7 @@
 //! - Use [`Password::generate()`] to randomly generate a password of the same length as
 //! the underlying SHA2 hash functions blocksize.
 //! - Salts should always be generated using a CSPRNG.
-//!   [`util::secure_rand_bytes()`] can be used for this.
+//!   [`secure_rand_bytes()`] can be used for this.
 //! - The recommended length for a salt is 64 bytes.
 //! - The iteration count should be set as high as feasible. The recommended
 //!   minimum is 100000.
@@ -63,8 +63,8 @@
 //! assert!(pbkdf2::sha512::verify(&expected_dk, &password, &salt, 10000, &mut dst_out).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`Password::generate()`]: struct.Password.html#method.generate
-//! [`util::secure_rand_bytes()`]: ../../../util/fn.secure_rand_bytes.html
+//! [`Password::generate()`]: pbkdf2::sha512::Password::generate
+//! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
 
 use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
 

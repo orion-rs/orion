@@ -54,10 +54,10 @@
 //! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: struct.Sha256.html
-//! [`reset()`]: struct.Sha256.html
-//! [`finalize()`]: struct.Sha256.html
-//! [BLAKE2b]: ../blake2b/index.html
+//! [`update()`]: sha256::Sha256::update
+//! [`reset()`]: sha256::Sha256::reset
+//! [`finalize()`]: sha256::Sha256::finalize
+//! [BLAKE2b]: super::blake2b
 
 use crate::errors::UnknownCryptoError;
 
