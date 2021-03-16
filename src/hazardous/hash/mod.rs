@@ -25,14 +25,3 @@ pub mod blake2b;
 
 /// SHA2 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
 pub mod sha2;
-
-/// A trait used to define a SHA hash, used internally only.
-pub(crate) trait ShaHash: Clone {
-    fn new() -> Self;
-
-    fn update(&mut self, data: &[u8]) -> Result<(), crate::errors::UnknownCryptoError>;
-
-    fn finalize(&mut self, dest: &mut [u8]) -> Result<(), crate::errors::UnknownCryptoError>;
-
-    fn digest(data: &[u8], dest: &mut [u8]) -> Result<(), crate::errors::UnknownCryptoError>;
-}
