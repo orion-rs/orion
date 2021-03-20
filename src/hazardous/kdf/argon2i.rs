@@ -59,8 +59,8 @@
 //! - The minimum recommended iteration count is `3`.
 //! - Password hashes should always be compared in constant-time.
 //! - Please note that when verifying, a copy of the computed password hash is placed into
-//! `dst_out`. If the derived hash is considered sensitive and you want to provide defense 
-//! in depth against an attacker reading your application's private memory, then you as 
+//! `dst_out`. If the derived hash is considered sensitive and you want to provide defense
+//! in depth against an attacker reading your application's private memory, then you as
 //! the user are responsible for zeroing out this buffer (see the [`zeroize` crate]).
 //!
 //! # Example:

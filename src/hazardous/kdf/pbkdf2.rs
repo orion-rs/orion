@@ -47,8 +47,8 @@
 //! - The iteration count should be set as high as feasible. The recommended
 //!   minimum is 100000.
 //! - Please note that when verifying, a copy of the computed password hash is placed into
-//! `dst_out`. If the derived hash is considered sensitive and you want to provide defense 
-//! in depth against an attacker reading your application's private memory, then you as 
+//! `dst_out`. If the derived hash is considered sensitive and you want to provide defense
+//! in depth against an attacker reading your application's private memory, then you as
 //! the user are responsible for zeroing out this buffer (see the [`zeroize` crate]).
 //!
 //! # Example:
