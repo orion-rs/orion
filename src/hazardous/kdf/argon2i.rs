@@ -60,7 +60,7 @@
 //! - Password hashes should always be compared in constant-time.
 //! - Please note that when verifying, a copy of the computed password hash is placed into
 //! `dst_out`. If the derived hash is considered sensitive in the given context, the user is
-//! responsible for zeroing out this buffer (see [`zeroize crate`]).
+//! responsible for zeroing out this buffer (see [`zeroize` crate]).
 //!
 //! # Example:
 //! ```rust
@@ -89,7 +89,7 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
-//! [`zeroize crate`]: https://crates.io/crates/zeroize
+//! [`zeroize` crate]: https://crates.io/crates/zeroize
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2b::{Blake2b, BLAKE2B_OUTSIZE};

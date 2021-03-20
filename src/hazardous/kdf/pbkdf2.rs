@@ -48,7 +48,7 @@
 //!   minimum is 100000.
 //! - Please note that when verifying, a copy of the computed password hash is placed into
 //! `dst_out`. If the derived hash is considered sensitive in the given context, the user is
-//! responsible for zeroing out this buffer (see [`zeroize crate`]).
+//! responsible for zeroing out this buffer (see [`zeroize` crate]).
 //!
 //! # Example:
 //! ```rust
@@ -68,7 +68,7 @@
 //! ```
 //! [`Password::generate()`]: pbkdf2::sha512::Password::generate
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
-//! [`zeroize crate`]: https://crates.io/crates/zeroize
+//! [`zeroize` crate]: https://crates.io/crates/zeroize
 
 use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
 
