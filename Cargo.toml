@@ -20,11 +20,11 @@ exclude = [
 subtle = { version = "^2.2.2", default-features = false }
 zeroize = { version = "1.1.0", default-features = false }
 getrandom = { version = "0.2.0", optional = true }
-base64 = { version = "0.13.0", optional = true }
+ct-codecs = { version = "1.1.1", optional = true }
 
 [features]
 default = [ "safe_api" ]
-safe_api = [ "getrandom", "base64" ]
+safe_api = [ "getrandom", "ct-codecs" ]
 alloc = []
 
 [dev-dependencies]
