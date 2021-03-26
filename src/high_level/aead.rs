@@ -183,7 +183,7 @@ pub mod streaming {
     //!   key.
     //! - To securely generate a strong key, use [`SecretKey::generate()`].
     //! - The length of the messages is leaked.
-    //! - It is recommended to use `StreamTag::FINISH` as tag for the last message. This allows the
+    //! - It is recommended to use `StreamTag::Finish` as tag for the last message. This allows the
     //!   decrypting side to detect if messages at the end of the stream are lost.
     //!
     //! # Example:
@@ -197,24 +197,24 @@ pub mod streaming {
     //!
     //! // Message 1
     //! let plaintext1 = b"Secret message 1";
-    //! let cipher1 = sealer.seal_chunk(plaintext1, StreamTag::MESSAGE)?;
+    //! let cipher1 = sealer.seal_chunk(plaintext1, StreamTag::Message)?;
     //! let (dec1, tag1) = opener.open_chunk(&cipher1)?;
     //! assert_eq!(plaintext1, &dec1.as_ref());
-    //! assert_eq!(tag1, StreamTag::MESSAGE);
+    //! assert_eq!(tag1, StreamTag::Message);
     //!
     //! // Message 2
     //! let plaintext2 = b"Secret message 2";
-    //! let cipher2 = sealer.seal_chunk(plaintext2, StreamTag::MESSAGE)?;
+    //! let cipher2 = sealer.seal_chunk(plaintext2, StreamTag::Message)?;
     //! let (dec2, tag2) = opener.open_chunk(&cipher2)?;
     //! assert_eq!(plaintext2, &dec2.as_ref());
-    //! assert_eq!(tag2, StreamTag::MESSAGE);
+    //! assert_eq!(tag2, StreamTag::Message);
     //!
-    //! // Message 3 (Last message of this stream, using the FINISH tag)
+    //! // Message 3 (Last message of this stream, using the Finish tag)
     //! let plaintext3 = b"Secret message 3";
-    //! let cipher3 = sealer.seal_chunk(plaintext3, StreamTag::FINISH)?;
+    //! let cipher3 = sealer.seal_chunk(plaintext3, StreamTag::Finish)?;
     //! let (dec3, tag3) = opener.open_chunk(&cipher3)?;
     //! assert_eq!(plaintext3, &dec3.as_ref());
-    //! assert_eq!(tag3, StreamTag::FINISH);
+    //! assert_eq!(tag3, StreamTag::Finish);
     //!
     //! # Ok::<(), orion::errors::UnknownCryptoError>(())
     //! ```
@@ -402,11 +402,11 @@ mod public {
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
             let plaintext = "Secret message".as_bytes();
 
-            let dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+            let dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
             assert!(dst_ciphertext.len() == plaintext.len() + 17);
             let (dst_plaintext, tag) = opener.open_chunk(&dst_ciphertext).unwrap();
             assert_eq!(plaintext, &dst_plaintext[..]);
-            assert_eq!(tag, StreamTag::MESSAGE);
+            assert_eq!(tag, StreamTag::Message);
         }
 
         #[test]
@@ -415,7 +415,7 @@ mod public {
             let (mut sealer, _) = StreamSealer::new(&key).unwrap();
             let plaintext = "".as_bytes();
 
-            assert!(sealer.seal_chunk(plaintext, StreamTag::MESSAGE).is_ok());
+            assert!(sealer.seal_chunk(plaintext, StreamTag::Message).is_ok());
         }
 
         #[test]
@@ -434,7 +434,7 @@ mod public {
             let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
             let ciphertext = sealer
-                .seal_chunk("".as_bytes(), StreamTag::MESSAGE)
+                .seal_chunk("".as_bytes(), StreamTag::Message)
                 .unwrap();
             let (pt, tag) = opener.open_chunk(&ciphertext).unwrap();
 
@@ -449,7 +449,7 @@ mod public {
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
             let plaintext = "Secret message".as_bytes();
 
-            let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+            let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
             // Modify tag
             dst_ciphertext[0] ^= 1;
             assert!(opener.open_chunk(&dst_ciphertext).is_err());
@@ -462,7 +462,7 @@ mod public {
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
             let plaintext = "Secret message".as_bytes();
 
-            let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+            let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
             // Modify ciphertext
             dst_ciphertext[1] ^= 1;
             assert!(opener.open_chunk(&dst_ciphertext).is_err());
@@ -475,7 +475,7 @@ mod public {
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
             let plaintext = "Secret message".as_bytes();
 
-            let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+            let mut dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
             // Modify mac
             let macpos = dst_ciphertext.len() - 1;
             dst_ciphertext[macpos] ^= 1;
@@ -490,7 +490,7 @@ mod public {
             let bad_key = SecretKey::default();
             let mut opener = StreamOpener::new(&bad_key, &nonce).unwrap();
 
-            let dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+            let dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
 
             assert!(opener.open_chunk(&dst_ciphertext).is_err());
         }
@@ -507,8 +507,8 @@ mod public {
             let key = SecretKey::default();
             let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
             let plaintext = "Secret message 1".as_bytes();
-            let cipher1 = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
-            let cipher2 = sealer.seal_chunk(plaintext, StreamTag::MESSAGE).unwrap();
+            let cipher1 = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
+            let cipher2 = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
             assert!(cipher1 != cipher2);
 
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
@@ -516,8 +516,8 @@ mod public {
             let (dec2, tag2) = opener.open_chunk(&cipher2).unwrap();
             assert_eq!(plaintext, &dec1[..]);
             assert_eq!(plaintext, &dec2[..]);
-            assert_eq!(tag1, StreamTag::MESSAGE);
-            assert_eq!(tag2, StreamTag::MESSAGE);
+            assert_eq!(tag1, StreamTag::Message);
+            assert_eq!(tag2, StreamTag::Message);
         }
 
         #[test]
@@ -531,10 +531,10 @@ mod public {
             let plaintext = "Secret message 1".as_bytes();
 
             let cipher1 = sealer_first
-                .seal_chunk(plaintext, StreamTag::MESSAGE)
+                .seal_chunk(plaintext, StreamTag::Message)
                 .unwrap();
             let cipher2 = sealer_second
-                .seal_chunk(plaintext, StreamTag::MESSAGE)
+                .seal_chunk(plaintext, StreamTag::Message)
                 .unwrap();
             assert!(cipher1 != cipher2);
         }
@@ -546,9 +546,9 @@ mod public {
             let plaintext1 = "Secret message 1".as_bytes();
             let plaintext2 = "Secret message 2".as_bytes();
             let plaintext3 = "Secret message 3".as_bytes();
-            let cipher1 = sealer.seal_chunk(plaintext1, StreamTag::MESSAGE).unwrap();
-            let cipher2 = sealer.seal_chunk(plaintext2, StreamTag::FINISH).unwrap();
-            let cipher3 = sealer.seal_chunk(plaintext3, StreamTag::MESSAGE).unwrap();
+            let cipher1 = sealer.seal_chunk(plaintext1, StreamTag::Message).unwrap();
+            let cipher2 = sealer.seal_chunk(plaintext2, StreamTag::Finish).unwrap();
+            let cipher3 = sealer.seal_chunk(plaintext3, StreamTag::Message).unwrap();
 
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
             let (dec1, tag1) = opener.open_chunk(&cipher1).unwrap();
@@ -557,9 +557,9 @@ mod public {
             assert_eq!(plaintext1, &dec1[..]);
             assert_eq!(plaintext2, &dec2[..]);
             assert_eq!(plaintext3, &dec3[..]);
-            assert_eq!(tag1, StreamTag::MESSAGE);
-            assert_eq!(tag2, StreamTag::FINISH);
-            assert_eq!(tag3, StreamTag::MESSAGE);
+            assert_eq!(tag1, StreamTag::Message);
+            assert_eq!(tag2, StreamTag::Finish);
+            assert_eq!(tag3, StreamTag::Message);
         }
 
         #[quickcheck]
@@ -568,12 +568,12 @@ mod public {
             let key = SecretKey::default();
 
             let (mut sealer, nonce) = StreamSealer::new(&key).unwrap();
-            let ct = sealer.seal_chunk(&input[..], StreamTag::MESSAGE).unwrap();
+            let ct = sealer.seal_chunk(&input[..], StreamTag::Message).unwrap();
 
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
             let (pt_decrypted, tag) = opener.open_chunk(&ct).unwrap();
 
-            input == pt_decrypted && tag == StreamTag::MESSAGE
+            input == pt_decrypted && tag == StreamTag::Message
         }
 
         #[quickcheck]
