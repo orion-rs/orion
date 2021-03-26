@@ -2,11 +2,7 @@ on:
   # Test on PRs for any branch
   pull_request:
     branches:
-      - 'master'
-      - '!generic-hmac'
-      - '!0v16'
-      - '!0v16/**'
-  # Test only pushes to master branch
+      - '*'
   push:
     branches:
       - master
