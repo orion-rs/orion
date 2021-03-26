@@ -14,6 +14,7 @@ __Changelog:__
 - Update fuzzing targets (#[182](https://github.com/brycx/orion/issues/182)).
 - Add documentation for user-awareness of potential sensitive data in out-parameters during password-hash verification ([#178](https://github.com/brycx/orion/issues/178), [#187](https://github.com/brycx/orion/pull/187)) (contrib. by [Vince Mutolo](https://github.com/vlmutolo)).
 - Replace `base64` dependency with `ct-codecs` to support constant-time encoding & decoding in `orion::pwhash::PasswordHash` ([#188](https://github.com/brycx/orion/issues/188), [#189](https://github.com/brycx/orion/pull/189)).
+- Refactor property-based tests to use the `#[quickcheck]` attribute, introducing `quickcheck_macros` as a dev-dependency ([#180](https://github.com/brycx/orion/pull/180)).
 - Bump MSRV to `1.51.0`.
 
 ### 0.15.6
