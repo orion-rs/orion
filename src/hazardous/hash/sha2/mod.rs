@@ -710,15 +710,20 @@ mod test_word {
 
     #[test]
     #[should_panic]
+    #[cfg(target_pointer_width = "64")]
+    // We can only test this on 64-bit platforms.
+    // On 32-bit platforms, due to the on-by-default #[deny(arithmetic_overflow)]
+    // this won't compile because of `(u32::MAX as usize) + 1)`, not the from call.
     fn w32_panic_on_above_from() {
         WordU32::from((u32::MAX as usize) + 1);
     }
 
     #[test]
-    // #[should_panic]
+    #[should_panic]
+    #[cfg(target_pointer_width = "128")]
+    // See above note.
     fn w64_panic_on_above_from() {
-        // Can't test this except for 128-bit targets.
-        // WordU64::from((u64::MAX as usize) + 1);
+        WordU64::from((u64::MAX as usize) + 1);
     }
 
     #[test]
