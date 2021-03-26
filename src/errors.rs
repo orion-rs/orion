@@ -111,17 +111,17 @@ fn test_unknown_crypto_from_decode_error() {
 
     // Tests Debug impl through "{:?}" and Display impl though "{}"
     let err = format!(
-        "{:?}{}",
+        "{:?}:{}",
         UnknownCryptoError::from(err_one.clone()),
         UnknownCryptoError::from(err_one)
     );
-    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
+    assert_eq!(err, "UnknownCryptoError:UnknownCryptoError");
     let err = format!(
-        "{:?}{}",
+        "{:?}:{}",
         UnknownCryptoError::from(err_two.clone()),
         UnknownCryptoError::from(err_two)
     );
-    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
+    assert_eq!(err, "UnknownCryptoError:UnknownCryptoError");
 }
 
 #[test]
@@ -131,9 +131,9 @@ fn test_unknown_crypto_from_parseint_error() {
 
     // Tests Debug impl through "{:?}" and Display impl though "{}"
     let err = format!(
-        "{:?}{}",
+        "{:?}:{}",
         UnknownCryptoError::from(err_foreign.clone()),
         UnknownCryptoError::from(err_foreign)
     );
-    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
+    assert_eq!(err, "UnknownCryptoError:UnknownCryptoError");
 }
