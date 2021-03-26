@@ -17,7 +17,7 @@ This library has **not undergone any third-party security audit**. Usage is at *
 See the [SECURITY.md](https://github.com/brycx/orion/blob/master/SECURITY.md) regarding recommendations on correct use, reporting security issues and more. Additional information about security regarding Orion is available in the [wiki](https://github.com/brycx/orion/wiki/Security).
 
 ### Minimum Supported Rust Version
-Rust 1.43 or later is supported however, the majority of testing happens with latest stable Rust.
+Rust 1.51 or later is supported however, the majority of testing happens with latest stable Rust.
 
 MSRV may be changed at any point and will not be considered a SemVer breaking change.
 
