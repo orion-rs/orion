@@ -94,7 +94,7 @@ use crate::{
     errors::UnknownCryptoError,
     hazardous::kdf::argon2i::{self, LANES, MIN_MEMORY},
 };
-use base64::{decode_config, encode_config, STANDARD_NO_PAD};
+use ct_codecs::{Base64NoPadding, Decoder, Encoder};
 use zeroize::Zeroizing;
 
 /// The length of the salt used for password hashing.
@@ -190,14 +190,19 @@ impl PasswordHash {
     }
 
     /// Encode password hash, salt and parameters for storage.
-    fn encode(password_hash: &[u8], salt: &[u8], iterations: u32, memory: u32) -> String {
-        format!(
+    fn encode(
+        password_hash: &[u8],
+        salt: &[u8],
+        iterations: u32,
+        memory: u32,
+    ) -> Result<String, UnknownCryptoError> {
+        Ok(format!(
             "$argon2i$v=19$m={},t={},p=1${}${}",
             memory,
             iterations,
-            encode_config(salt, STANDARD_NO_PAD),
-            encode_config(password_hash, STANDARD_NO_PAD)
-        )
+            Base64NoPadding::encode_to_string(salt)?,
+            Base64NoPadding::encode_to_string(password_hash)?,
+        ))
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -221,7 +226,7 @@ impl PasswordHash {
             return Err(UnknownCryptoError);
         }
 
-        let encoded_password_hash = Self::encode(password_hash, salt, iterations, memory);
+        let encoded_password_hash = Self::encode(password_hash, salt, iterations, memory)?;
 
         Ok(Self {
             encoded_password_hash,
@@ -296,11 +301,11 @@ impl PasswordHash {
             return Err(UnknownCryptoError);
         }
 
-        let salt = decode_config(parts.next().unwrap(), STANDARD_NO_PAD)?;
+        let salt = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
         if salt.len() != SALT_LENGTH {
             return Err(UnknownCryptoError);
         }
-        let password_hash_raw = decode_config(&parts.next().unwrap(), STANDARD_NO_PAD)?;
+        let password_hash_raw = Base64NoPadding::decode_to_vec(&parts.next().unwrap(), None)?;
         if password_hash_raw.len() != PWHASH_LENGTH {
             return Err(UnknownCryptoError);
         }

@@ -53,8 +53,8 @@ impl From<getrandom::Error> for UnknownCryptoError {
 }
 
 #[cfg(feature = "safe_api")]
-impl From<base64::DecodeError> for UnknownCryptoError {
-    fn from(_: base64::DecodeError) -> Self {
+impl From<ct_codecs::Error> for UnknownCryptoError {
+    fn from(_: ct_codecs::Error) -> Self {
         UnknownCryptoError
     }
 }
@@ -104,31 +104,24 @@ fn test_source() {
 #[test]
 #[cfg(feature = "safe_api")]
 fn test_unknown_crypto_from_decode_error() {
-    use base64::DecodeError;
+    use ct_codecs::Error;
 
-    let err_one = DecodeError::InvalidByte(0, 0);
-    let err_two = DecodeError::InvalidLastSymbol(0, 0);
-    let err_three = DecodeError::InvalidLength;
+    let err_one = Error::InvalidInput;
+    let err_two = Error::Overflow;
 
     // Tests Debug impl through "{:?}" and Display impl though "{}"
     let err = format!(
-        "{:?}{}",
+        "{:?}:{}",
         UnknownCryptoError::from(err_one.clone()),
         UnknownCryptoError::from(err_one)
     );
-    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
+    assert_eq!(err, "UnknownCryptoError:UnknownCryptoError");
     let err = format!(
-        "{:?}{}",
+        "{:?}:{}",
         UnknownCryptoError::from(err_two.clone()),
         UnknownCryptoError::from(err_two)
     );
-    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
-    let err = format!(
-        "{:?}{}",
-        UnknownCryptoError::from(err_three.clone()),
-        UnknownCryptoError::from(err_three)
-    );
-    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
+    assert_eq!(err, "UnknownCryptoError:UnknownCryptoError");
 }
 
 #[test]
@@ -138,9 +131,9 @@ fn test_unknown_crypto_from_parseint_error() {
 
     // Tests Debug impl through "{:?}" and Display impl though "{}"
     let err = format!(
-        "{:?}{}",
+        "{:?}:{}",
         UnknownCryptoError::from(err_foreign.clone()),
         UnknownCryptoError::from(err_foreign)
     );
-    assert_eq!(err, "UnknownCryptoErrorUnknownCryptoError");
+    assert_eq!(err, "UnknownCryptoError:UnknownCryptoError");
 }
