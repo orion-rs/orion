@@ -71,7 +71,6 @@
 //! - [`PasswordHash::unprotected_as_encoded()`] and [`PasswordHash::unprotected_as_bytes()`] should never
 //! be used to compare password hashes, as these will not run in constant-time.
 //! Either use [`hash_password_verify()`] or compare two [`PasswordHash`]es.
-//! - The base64 encoding and decoding operations that [`PasswordHash`] performs, do NOT run in constant-time.
 //! - Choosing the correct cost parameters is important for security. Please refer to [libsodium's docs]
 //! for a description of how to do this.
 //!
@@ -136,7 +135,6 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// that the type implements.
 /// - Never use `unprotected_as_bytes()` or `unprotected_as_encoded()` to compare password hashes,
 /// as that will not run in constant-time. Compare `PasswordHash`es directly using `==` instead.
-/// - The base64 encoding and decoding operations that `PasswordHash` performs, do NOT run in constant-time.
 /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
 /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
 /// is implemented in such a way that the comparison happens in constant time. Thus, users should
