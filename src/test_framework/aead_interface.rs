@@ -65,7 +65,7 @@ pub fn AeadTestRunner<Sealer, Opener, Key, Nonce>(
 }
 
 #[cfg(feature = "safe_api")]
-/// Related bug: https://github.com/brycx/orion/issues/52
+/// Related bug: https://github.com/orion-rs/orion/issues/52
 /// Test dst_out mutable array sizes when using seal().
 fn seal_dst_out_length<Sealer, Key, Nonce>(
     sealer: &Sealer,
@@ -102,7 +102,7 @@ fn seal_dst_out_length<Sealer, Key, Nonce>(
 }
 
 #[cfg(feature = "safe_api")]
-/// Related bug: https://github.com/brycx/orion/issues/52
+/// Related bug: https://github.com/orion-rs/orion/issues/52
 /// Test input sizes when using seal().
 fn seal_plaintext_length<Sealer, Key, Nonce>(
     sealer: &Sealer,
@@ -129,7 +129,7 @@ fn seal_plaintext_length<Sealer, Key, Nonce>(
 }
 
 #[cfg(feature = "safe_api")]
-/// Related bug: https://github.com/brycx/orion/issues/52
+/// Related bug: https://github.com/orion-rs/orion/issues/52
 /// Test dst_out mutable array sizes when using open().
 fn open_dst_out_length<Sealer, Opener, Key, Nonce>(
     sealer: &Sealer,

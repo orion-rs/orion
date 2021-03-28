@@ -4,17 +4,18 @@ __Date:__ TBD, 2021.
 
 __Changelog:__
 
-- [Breaking change] Use Argon2i parameters from PasswordHash in `pwhash::hash_password_verify()` ([#138](https://github.com/brycx/orion/issues/138)) (by [Vince Mutolo](https://github.com/vlmutolo)).
-- [Breaking change] Limit high-level, variable-length newtype's input to `isize::MAX` ([#130](https://github.com/brycx/orion/issues/130)).
-- [Breaking change] Add support for SHA256 and SHA384 ([#152](https://github.com/brycx/orion/issues/152), [#181](https://github.com/brycx/orion/pull/181), [#162](https://github.com/brycx/orion/issues/162), [#183](https://github.com/brycx/orion/pull/183)).
-- [Breaking change] Add support for HMAC-SHA(256/384), PBKDF2-HMAC-SHA(256/384) and HKDF-HMAC-SHA(256/384) ([#171](https://github.com/brycx/orion/pull/171), [#153](https://github.com/brycx/orion/issues/153), [#154](https://github.com/brycx/orion/issues/154), [#170](https://github.com/brycx/orion/issues/170)).
-- [Breaking change] Remove `orion::kdf::derive_key_verify()` and `orion::hazardous::kdf::hkdf::verify()` ([#179](https://github.com/brycx/orion/issues/179), [#184](https://github.com/brycx/orion/pull/184)).
-- [Breaking change] Convert `StreamTag` used in `orion::hazardous::aead::streaming` and `orion::aead::streaming` to lower-case acronyms (i.e `StreamTag::MESSAGE` -> `StreamTag::Message`) ([#190](https://github.com/brycx/orion/pull/190)).
-- Use new intra-doc links ([#134](https://github.com/brycx/orion/issues/134), [#185](https://github.com/brycx/orion/pull/185)) along with other small improvements to documentation.
-- Update fuzzing targets (#[182](https://github.com/brycx/orion/issues/182)).
-- Add documentation for user-awareness of potential sensitive data in out-parameters during password-hash verification ([#178](https://github.com/brycx/orion/issues/178), [#187](https://github.com/brycx/orion/pull/187)) (contrib. by [Vince Mutolo](https://github.com/vlmutolo)).
-- Replace `base64` dependency with `ct-codecs` to support constant-time encoding & decoding in `orion::pwhash::PasswordHash` ([#188](https://github.com/brycx/orion/issues/188), [#189](https://github.com/brycx/orion/pull/189)).
-- Refactor property-based tests to use the `#[quickcheck]` attribute, introducing `quickcheck_macros` as a dev-dependency ([#180](https://github.com/brycx/orion/pull/180)).
+- [Breaking change] Moved all libraries to the https://github.com/orion-rs organization and added [Vince Mutolo](https://github.com/vlmutolo) as a maintainer ([#191](https://github.com/orion-rs/orion/issues/191)).
+- [Breaking change] Use Argon2i parameters from PasswordHash in `pwhash::hash_password_verify()` ([#138](https://github.com/orion-rs/orion/issues/138)) (by [Vince Mutolo](https://github.com/vlmutolo)).
+- [Breaking change] Limit high-level, variable-length newtype's input to `isize::MAX` ([#130](https://github.com/orion-rs/orion/issues/130)).
+- [Breaking change] Add support for SHA256 and SHA384 ([#152](https://github.com/orion-rs/orion/issues/152), [#181](https://github.com/orion-rs/orion/pull/181), [#162](https://github.com/orion-rs/orion/issues/162), [#183](https://github.com/orion-rs/orion/pull/183)).
+- [Breaking change] Add support for HMAC-SHA(256/384), PBKDF2-HMAC-SHA(256/384) and HKDF-HMAC-SHA(256/384) ([#171](https://github.com/orion-rs/orion/pull/171), [#153](https://github.com/orion-rs/orion/issues/153), [#154](https://github.com/orion-rs/orion/issues/154), [#170](https://github.com/orion-rs/orion/issues/170)).
+- [Breaking change] Remove `orion::kdf::derive_key_verify()` and `orion::hazardous::kdf::hkdf::verify()` ([#179](https://github.com/orion-rs/orion/issues/179), [#184](https://github.com/orion-rs/orion/pull/184)).
+- [Breaking change] Convert `StreamTag` used in `orion::hazardous::aead::streaming` and `orion::aead::streaming` to lower-case acronyms (i.e `StreamTag::MESSAGE` -> `StreamTag::Message`) ([#190](https://github.com/orion-rs/orion/pull/190)).
+- Use new intra-doc links ([#134](https://github.com/orion-rs/orion/issues/134), [#185](https://github.com/orion-rs/orion/pull/185)) along with other small improvements to documentation.
+- Update fuzzing targets (#[182](https://github.com/orion-rs/orion/issues/182)).
+- Add documentation for user-awareness of potential sensitive data in out-parameters during password-hash verification ([#178](https://github.com/orion-rs/orion/issues/178), [#187](https://github.com/orion-rs/orion/pull/187)) (contrib. by [Vince Mutolo](https://github.com/vlmutolo)).
+- Replace `base64` dependency with `ct-codecs` to support constant-time encoding & decoding in `orion::pwhash::PasswordHash` ([#188](https://github.com/orion-rs/orion/issues/188), [#189](https://github.com/orion-rs/orion/pull/189)).
+- Refactor property-based tests to use the `#[quickcheck]` attribute, introducing `quickcheck_macros` as a dev-dependency ([#180](https://github.com/orion-rs/orion/pull/180)).
 - Bump MSRV to `1.51.0`.
 
 ### 0.15.6

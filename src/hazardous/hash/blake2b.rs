@@ -548,7 +548,7 @@ mod public {
 
         #[quickcheck]
         #[cfg(feature = "safe_api")]
-        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
             let initial_state: Blake2b = Blake2b::new(None, BLAKE2B_OUTSIZE).unwrap();
@@ -751,7 +751,7 @@ mod public {
     mod test_streaming_interface {
         use super::*;
 
-        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Testing different usage combinations of new(), update(),
         /// finalize() and reset() produce the same Digest/Tag.
         fn produces_same_hash(sk: Option<&SecretKey>, size: usize, data: &[u8]) {
@@ -811,7 +811,7 @@ mod public {
             }
         }
 
-        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Testing different usage combinations of new(), update(),
         /// finalize() and reset() produce the same Digest/Tag.
         fn produces_same_state(sk: Option<&SecretKey>, size: usize, data: &[u8]) {
@@ -839,7 +839,7 @@ mod public {
         }
 
         #[test]
-        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
         fn test_produce_same_state() {
             produces_same_state(None, 1, b"Tests");
             produces_same_state(None, 32, b"Tests");
@@ -854,7 +854,7 @@ mod public {
         }
 
         #[test]
-        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
         fn test_produce_same_hash() {
             produces_same_hash(None, 1, b"Tests");
             produces_same_hash(None, 32, b"Tests");
@@ -880,7 +880,7 @@ mod public {
 
         #[quickcheck]
         #[cfg(feature = "safe_api")]
-        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_same_hash_different_usage(data: Vec<u8>, size: usize) -> bool {
             if size >= 1 && size <= BLAKE2B_OUTSIZE {
@@ -895,7 +895,7 @@ mod public {
 
         #[quickcheck]
         #[cfg(feature = "safe_api")]
-        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_same_state_different_usage(data: Vec<u8>, size: usize) -> bool {
             if size >= 1 && size <= BLAKE2B_OUTSIZE {

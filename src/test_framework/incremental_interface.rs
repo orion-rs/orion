@@ -136,7 +136,7 @@ where
         Self::verify_diff_input_err(&Self::DEFAULT_INPUT);
     }
 
-    /// Related bug: https://github.com/brycx/orion/issues/46
+    /// Related bug: https://github.com/orion-rs/orion/issues/46
     /// Testing different usage combinations of new(), update(),
     /// finalize() and reset() produce the same output.
     ///
@@ -199,7 +199,7 @@ where
         }
     }
 
-    /// Related bug: https://github.com/brycx/orion/issues/46
+    /// Related bug: https://github.com/orion-rs/orion/issues/46
     /// Testing different usage combinations of new(), update(),
     /// finalize() and reset() produce the same output.
     fn produces_same_state(&self, data: &[u8]) {
@@ -305,7 +305,7 @@ where
         assert!(state.update(data).is_ok());
     }
 
-    /// Related bug: https://github.com/brycx/orion/issues/28
+    /// Related bug: https://github.com/orion-rs/orion/issues/28
     /// new(), update(), finalize(), update(): ERR
     fn update_after_finalize_err(&self, data: &[u8]) {
         let mut state = self._initial_context.clone();

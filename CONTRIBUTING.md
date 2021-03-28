@@ -18,7 +18,7 @@ Adding test vectors (located in `/tests`) is also a good way to improve the test
 #### 1.3 Fuzzing
 Fuzzing is an important part of testing this library. Contributions to this aspect can come in two ways: 1) Running the fuzzing targets, updating the corpus and reporting any issues found and 2) Overall improvements to the fuzzing targets.
 
-Please refer to the [orion-fuzz](https://github.com/brycx/orion-fuzz) repository when working with fuzzing.
+Please refer to the [orion-fuzz](https://github.com/orion-rs/orion-fuzz) repository when working with fuzzing.
 
 #### 1.4 Documentation
 Quality of documentation is a vital part of this project. Contributions to this could include adding documentation where such is missing, clarifying documentation that is unclear or improving examples.
@@ -52,4 +52,4 @@ Before submitting a pull request, please make sure you have done the following:
 
 All pull requests should be opened against the `master` branch.
 
-If your pull request is still work-in-progress, make the title of the pull request start with `WIP:`.
+If your pull request is still work-in-progress, make the title of the pull request start with `WIP:` or open it as a draft via GitHub.

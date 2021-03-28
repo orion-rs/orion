@@ -279,7 +279,7 @@ mod public {
 
         #[quickcheck]
         #[cfg(feature = "safe_api")]
-        /// Related bug: https://github.com/brycx/orion/issues/46
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
             let initial_state: Sha384 = Sha384::new();

@@ -48,7 +48,7 @@
 //! [`orion::kdf`]: crate::kdf
 //! [`orion::auth`]: crate::auth
 //! [`orion::hash`]: crate::hash
-//! [wiki]: https://github.com/brycx/orion/wiki
+//! [wiki]: https://github.com/orion-rs/orion/wiki
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]

@@ -437,7 +437,7 @@ pub mod sha256 {
 
             #[quickcheck]
             #[cfg(feature = "safe_api")]
-            /// Related bug: https://github.com/brycx/orion/issues/46
+            /// Related bug: https://github.com/orion-rs/orion/issues/46
             /// Test different streaming state usage patterns.
             fn prop_input_to_consistency(data: Vec<u8>) -> bool {
                 let initial_state = HmacSha256::new(&SecretKey::from_slice(&KEY).unwrap());
@@ -667,7 +667,7 @@ pub mod sha384 {
 
             #[quickcheck]
             #[cfg(feature = "safe_api")]
-            /// Related bug: https://github.com/brycx/orion/issues/46
+            /// Related bug: https://github.com/orion-rs/orion/issues/46
             /// Test different streaming state usage patterns.
             fn prop_input_to_consistency(data: Vec<u8>) -> bool {
                 let initial_state = HmacSha384::new(&SecretKey::from_slice(&KEY).unwrap());
@@ -897,7 +897,7 @@ pub mod sha512 {
 
             #[quickcheck]
             #[cfg(feature = "safe_api")]
-            /// Related bug: https://github.com/brycx/orion/issues/46
+            /// Related bug: https://github.com/orion-rs/orion/issues/46
             /// Test different streaming state usage patterns.
             fn prop_input_to_consistency(data: Vec<u8>) -> bool {
                 let initial_state = HmacSha512::new(&SecretKey::from_slice(&KEY).unwrap());

@@ -17,7 +17,7 @@ The following are threats, which are considered out-of-scope for Orion.
 - Leaking sensitive memory[1]
 - Timing-based side-channels when not building in release mode
 
-[1] Wiping sensitive memory is performed on a best-effort approach. However, sensitive memory being wiped or not leaked, cannot be guaranteed. See more in the [wiki](https://github.com/brycx/orion/wiki/Security#memory).
+[1] Wiping sensitive memory is performed on a best-effort approach. However, sensitive memory being wiped or not leaked, cannot be guaranteed. See more in the [wiki](https://github.com/orion-rs/orion/wiki/Security#memory).
 
 ### Supported versions
 Currently, only the latest version, released on [crates.io](https://crates.io/crates/orion), recieves testing and is supported with security fixes.
