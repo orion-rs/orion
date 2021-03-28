@@ -60,7 +60,7 @@
 //! An error will be returned if:
 //! - `memory` is less than 8.
 //! - `iterations` is less than 3.
-//! - The length of the `password` is greater than [`u32::MAX`].
+//! - The length of the `password` is greater than [`isize::MAX`].
 //! - The password hash does not match `expected`.
 //!
 //! # Panics:

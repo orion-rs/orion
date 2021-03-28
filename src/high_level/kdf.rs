@@ -47,8 +47,8 @@
 //! - `iterations` is less than 3.
 //! - `length` is less than 4.
 //! - `memory` is less than 8.
-//! - The length of the `password` is greater than [`u32::MAX`].
-//! - The length of the `salt` is greater than [`u32::MAX`] or less than `8`.
+//! - The length of the `password` is greater than [`isize::MAX`].
+//! - The length of the `salt` is greater than [`isize::MAX`] or less than `8`.
 //!
 //! # Security:
 //! - Choosing the correct cost parameters is important for security. Please refer to
