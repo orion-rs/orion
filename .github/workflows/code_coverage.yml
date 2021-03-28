@@ -27,10 +27,6 @@ jobs:
           args: '-- --test-threads 1'
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1.0.2
-
-      - name: Archive code coverage results
-        uses: actions/upload-artifact@v1
+        uses: codecov/codecov-action@v1
         with:
-          name: code-coverage-report
-          path: cobertura.xml
+          fail_ci_if_error: true
