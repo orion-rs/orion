@@ -41,3 +41,6 @@ pub mod kdf;
 
 /// Stream ciphers.
 pub mod stream;
+
+/// Elliptic-Curve Cryptography.
+pub mod ecc;
