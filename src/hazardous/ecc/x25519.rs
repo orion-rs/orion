@@ -309,7 +309,6 @@ mod montgomery {
     // https://eprint.iacr.org/2017/212.pdf
 
     use crate::hazardous::ecc::x25519::{FieldElement, Scalar};
-    use crate::{FieldElement, Scalar};
 
     // Scalar multiplication using the Montgomery Ladder (a.k.a "scalarmult")
     pub fn mont_ladder(scalar: &Scalar, point: &[u8; 32]) -> FieldElement {
@@ -365,10 +364,7 @@ mod montgomery {
 pub mod x25519 {
     use crate::hazardous::ecc::x25519::montgomery::mont_ladder;
     use crate::hazardous::ecc::x25519::Scalar;
-    use crate::montgomery::mont_ladder;
     use crate::util::secure_cmp;
-    use crate::{FieldElement, Scalar};
-    use orion::util::secure_cmp;
 
     ///
     pub const BASEPOINT: [u8; 32] = [
@@ -397,5 +393,148 @@ pub mod x25519 {
         }
 
         Ok(field_element)
+    }
+}
+
+
+#[cfg(test)]
+mod public {
+    use crate::hazardous::ecc::x25519::Scalar;
+    use crate::hazardous::ecc::x25519::x25519::{BASEPOINT, x25519_with_err};
+
+    #[test]
+    fn test_rfc_basic() {
+        // https://www.ietf.org/rfc/rfc7748.html#section-5.2
+
+        let mut scalar = Scalar([0u8; 32]);
+        let mut point = [0u8; 32];
+        let mut expected = [0u8; 32];
+
+        hex::decode_to_slice(
+            "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4",
+            &mut scalar.0,
+        )
+            .unwrap();
+        hex::decode_to_slice(
+            "e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c",
+            &mut point,
+        )
+            .unwrap();
+        hex::decode_to_slice(
+            "c3da55379de9c6908e94ea4df28d084f32eccf03491c71f754b4075577a28552",
+            &mut expected,
+        )
+            .unwrap();
+
+        let actual = x25519_with_err(&scalar, &point).unwrap();
+        assert_eq!(actual, expected);
+
+        hex::decode_to_slice(
+            "4b66e9d4d1b4673c5ad22691957d6af5c11b6421e0ea01d42ca4169e7918ba0d",
+            &mut scalar.0,
+        )
+            .unwrap();
+        hex::decode_to_slice(
+            "e5210f12786811d3f4b7959d0538ae2c31dbe7106fc03c3efc4cd549c715a493",
+            &mut point,
+        )
+            .unwrap();
+        hex::decode_to_slice(
+            "95cbde9476e8907d7aade45cb4b873f88b595a68799fa152e6f8f7647aac7957",
+            &mut expected,
+        )
+            .unwrap();
+
+        let actual = x25519_with_err(&scalar, &point).unwrap();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_rfc_iter() {
+        let mut k = Scalar(BASEPOINT);
+        let mut u = BASEPOINT;
+
+        // 1 iter
+        let ret = x25519_with_err(&k, &u).unwrap();
+        u = k.0;
+        k.0 = ret;
+
+        let mut expected = [0u8; 32];
+        hex::decode_to_slice(
+            "422c8e7a6227d7bca1350b3e2bb7279f7897b87bb6854b783c60e80311ae3079",
+            &mut expected,
+        )
+            .unwrap();
+        assert_eq!(k.0, expected, "Failed after 1 iter");
+
+        for _ in 0..999 {
+            let ret = x25519_with_err(&k, &u).unwrap();
+            u = k.0;
+            k.0 = ret;
+        }
+
+        hex::decode_to_slice(
+            "684cf59ba83309552800ef566f2f4d3c1c3887c49360e3875f2eb94d99532c51",
+            &mut expected,
+        )
+            .unwrap();
+        assert_eq!(k.0, expected, "Failed after 1.000 iter");
+
+        /* Taking a decade...
+        for _ in 0..999000 {
+            let ret = x25519(&k, &u);
+            u = k.0;
+            k.0 = ret;
+        }
+
+        hex::decode_to_slice("7c3911e0ab2586fd864497297e575e6f3bc601c0883c30df5f4dd2d24f665424", &mut expected).unwrap();
+        assert_eq!(k.0, expected, "Failed after 1.000.000 iter");
+         */
+    }
+
+    #[test]
+    fn test_rfc_pub_priv_basepoint() {
+        let mut alice_pub = [0u8; 32];
+        let mut alice_priv = [0u8; 32];
+
+        let mut bob_pub = [0u8; 32];
+        let mut bob_priv = [0u8; 32];
+
+        let mut shared = [0u8; 32];
+
+        hex::decode_to_slice(
+            "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
+            &mut alice_priv,
+        )
+            .unwrap();
+        hex::decode_to_slice(
+            "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a",
+            &mut alice_pub,
+        )
+            .unwrap();
+        assert_eq!(
+            x25519_with_err(&Scalar::from_slice(&alice_priv), &BASEPOINT).unwrap(),
+            alice_pub
+        );
+
+        hex::decode_to_slice(
+            "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
+            &mut bob_priv,
+        )
+            .unwrap();
+        hex::decode_to_slice(
+            "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
+            &mut bob_pub,
+        )
+            .unwrap();
+        assert_eq!(x25519_with_err(&Scalar::from_slice(&bob_priv), &BASEPOINT).unwrap(), bob_pub);
+
+        hex::decode_to_slice(
+            "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742",
+            &mut shared,
+        )
+            .unwrap();
+        assert_eq!(x25519_with_err(&Scalar::from_slice(&alice_priv), &bob_pub).unwrap(), shared);
+        assert_eq!(x25519_with_err(&Scalar::from_slice(&bob_priv), &alice_pub).unwrap(), shared);
     }
 }
