@@ -1,8 +1,7 @@
 // Testing against Google Wycheproof test vectors
 // Latest commit when these test vectors were pulled: https://github.com/google/wycheproof/commit/2196000605e45d91097147c9c71f26b72af58003
 
-use hex::decode;
-use orion::hazardous::ecc::x25519::x25519::x25519_with_err;
+use orion::hazardous::ecc::x25519::x25519_with_err;
 use orion::hazardous::ecc::x25519::{FieldElement, Scalar};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
@@ -69,12 +68,10 @@ fn wycheproof_runner(path: &str) {
             hex::decode_to_slice(&test.public, &mut u).unwrap();
             hex::decode_to_slice(&test.shared, &mut er).unwrap();
 
-            let mut ar = [0u8; 32];
-
             let private = Scalar::from_slice(&k);
 
             if should_test_pass {
-                ar = x25519_with_err(&private, &u).expect(&format!(
+                let ar = x25519_with_err(&private, &u).expect(&format!(
                     "Panicked but should be valid at id {}",
                     &test.tcId
                 ));
@@ -101,4 +98,9 @@ fn wycheproof_runner(path: &str) {
     }
 
     assert_eq!(tests_run, tests.numberOfTests);
+}
+
+#[test]
+fn test_wycheproof_x25519() {
+    wycheproof_runner("./tests/test_data/third_party/google/wycheproof/wycheproof_x25519_test.json");
 }
