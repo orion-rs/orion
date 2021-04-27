@@ -20,6 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// TODO: Perhaps it would be better to apply allow(dead_code) to the specific items,
+// TODO: to make it clear what is being used in orion and what is not.
+#[allow(
+    dead_code,
+    non_camel_case_types,
+    clippy::unnecessary_cast,
+    clippy::unused_unit
+)]
 /// Formally verified  Curve25519 field arithmetic from: https://github.com/mit-plv/fiat-crypto
 mod fiat_curve25519_u64;
 
