@@ -389,6 +389,28 @@ mod public {
     use crate::hazardous::ecc::x25519::{x25519, Scalar, BASEPOINT};
 
     #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_highbit_ignored() {
+        // RFC 7748 dictates that the MSB of final byte must be masked when receiving a field element,
+        // used for agreement (public key). We check that modifying it does not impact the result of
+        // the agreement.
+
+        let k = Scalar::generate();
+
+        let mut u = [0u8; 32];
+        crate::util::secure_rand_bytes(&mut u).unwrap();
+        debug_assert_ne!(u[31] & 127u8, u[31] | 128u8);
+
+        // Mask bit to 0 as we do in `FieldElement::from_bytes()`.
+        u[31] &= 127u8;
+        let msb_zero = x25519(&k, &u).unwrap();
+        u[31] |= 128u8;
+        let msb_one = x25519(&k, &u).unwrap();
+
+        assert_eq!(msb_zero, msb_one);
+    }
+
+    #[test]
     fn test_rfc_basic() {
         // https://www.ietf.org/rfc/rfc7748.html#section-5.2
 
