@@ -24,9 +24,8 @@ use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519::montgomery::mont_ladder;
 use crate::util::secure_cmp;
-use core::ops::{Add, Mul, Sub};
-use std::convert::TryInto;
-use std::ops::Neg;
+use core::convert::TryInto;
+use core::ops::{Add, Mul, Neg, Sub};
 
 /// TODO: Should probably also be zeroized.
 #[derive(Clone, Copy, Debug)]
