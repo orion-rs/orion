@@ -369,7 +369,7 @@ pub const BASEPOINT: [u8; 32] = [
 const LOW_ORDER_POINT_RESULT: [u8; 32] = [0u8; 32];
 
 ///
-pub fn x25519_with_err(scalar: &Scalar, point: &[u8; 32]) -> Result<[u8; 32], UnknownCryptoError> {
+pub fn x25519(scalar: &Scalar, point: &[u8; 32]) -> Result<[u8; 32], UnknownCryptoError> {
     // TODO: Handle errors
     debug_assert_eq!(point.len(), 32);
 
@@ -387,7 +387,7 @@ pub fn x25519_with_err(scalar: &Scalar, point: &[u8; 32]) -> Result<[u8; 32], Un
 
 #[cfg(test)]
 mod public {
-    use crate::hazardous::ecc::x25519::{x25519_with_err, Scalar, BASEPOINT};
+    use crate::hazardous::ecc::x25519::{x25519, Scalar, BASEPOINT};
 
     #[test]
     fn test_rfc_basic() {
@@ -413,7 +413,7 @@ mod public {
         )
         .unwrap();
 
-        let actual = x25519_with_err(&scalar, &point).unwrap();
+        let actual = x25519(&scalar, &point).unwrap();
         assert_eq!(actual, expected);
 
         hex::decode_to_slice(
@@ -432,7 +432,7 @@ mod public {
         )
         .unwrap();
 
-        let actual = x25519_with_err(&scalar, &point).unwrap();
+        let actual = x25519(&scalar, &point).unwrap();
         assert_eq!(actual, expected);
     }
 
@@ -442,7 +442,7 @@ mod public {
         let mut u = BASEPOINT;
 
         // 1 iter
-        let ret = x25519_with_err(&k, &u).unwrap();
+        let ret = x25519(&k, &u).unwrap();
         u = k.0;
         k.0 = ret;
 
@@ -455,7 +455,7 @@ mod public {
         assert_eq!(k.0, expected, "Failed after 1 iter");
 
         for _ in 0..999 {
-            let ret = x25519_with_err(&k, &u).unwrap();
+            let ret = x25519(&k, &u).unwrap();
             u = k.0;
             k.0 = ret;
         }
@@ -500,7 +500,7 @@ mod public {
         )
         .unwrap();
         assert_eq!(
-            x25519_with_err(&Scalar::from_slice(&alice_priv), &BASEPOINT).unwrap(),
+            x25519(&Scalar::from_slice(&alice_priv), &BASEPOINT).unwrap(),
             alice_pub
         );
 
@@ -515,7 +515,7 @@ mod public {
         )
         .unwrap();
         assert_eq!(
-            x25519_with_err(&Scalar::from_slice(&bob_priv), &BASEPOINT).unwrap(),
+            x25519(&Scalar::from_slice(&bob_priv), &BASEPOINT).unwrap(),
             bob_pub
         );
 
@@ -525,11 +525,11 @@ mod public {
         )
         .unwrap();
         assert_eq!(
-            x25519_with_err(&Scalar::from_slice(&alice_priv), &bob_pub).unwrap(),
+            x25519(&Scalar::from_slice(&alice_priv), &bob_pub).unwrap(),
             shared
         );
         assert_eq!(
-            x25519_with_err(&Scalar::from_slice(&bob_priv), &alice_pub).unwrap(),
+            x25519(&Scalar::from_slice(&bob_priv), &alice_pub).unwrap(),
             shared
         );
     }

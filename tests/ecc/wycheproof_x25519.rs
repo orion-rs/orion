@@ -1,8 +1,5 @@
 // Testing against Google Wycheproof test vectors
 // Latest commit when these test vectors were pulled: https://github.com/google/wycheproof/commit/2196000605e45d91097147c9c71f26b72af58003
-
-use orion::hazardous::ecc::x25519::x25519_with_err;
-use orion::hazardous::ecc::x25519::{FieldElement, Scalar};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
 
