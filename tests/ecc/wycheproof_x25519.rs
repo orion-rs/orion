@@ -68,30 +68,7 @@ fn wycheproof_runner(path: &str) {
             hex::decode_to_slice(&test.public, &mut u).unwrap();
             hex::decode_to_slice(&test.shared, &mut er).unwrap();
 
-            let private = Scalar::from_slice(&k);
-
-            if should_test_pass {
-                let ar = x25519_with_err(&private, &u).expect(&format!(
-                    "Panicked but should be valid at id {}",
-                    &test.tcId
-                ));
-
-                assert_eq!(ar, er);
-                let fe_ar = FieldElement::from_bytes(&ar);
-                let fe_er = FieldElement::from_bytes(&er);
-                assert_eq!(
-                    fe_er.as_bytes(),
-                    fe_ar.as_bytes(),
-                    "{}",
-                    format!("Failed tcId: {:?}", &test.tcId,)
-                );
-            } else {
-                assert!(
-                    x25519_with_err(&private, &u).is_err(),
-                    "Failed tcId: {}",
-                    &test.tcId
-                );
-            }
+            super::x25519_test_runner(&er, &k, &u, should_test_pass);
 
             tests_run += 1;
         }
@@ -102,5 +79,7 @@ fn wycheproof_runner(path: &str) {
 
 #[test]
 fn test_wycheproof_x25519() {
-    wycheproof_runner("./tests/test_data/third_party/google/wycheproof/wycheproof_x25519_test.json");
+    wycheproof_runner(
+        "./tests/test_data/third_party/google/wycheproof/wycheproof_x25519_test.json",
+    );
 }
