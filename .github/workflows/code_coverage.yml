@@ -33,5 +33,4 @@ jobs:
       - name: Upload to codecov.io
         uses: codecov/codecov-action@a1ed4b322b4b38cb846afb5a0ebfa17086917d27
         with:
-          token: ${{secrets.CODECOV_TOKEN}}
           fail_ci_if_error: true
