@@ -1,12 +1,17 @@
 on: [push, pull_request]
 
 name: Lints
+permissions:
+  contents: read
 
 jobs:
   lints:
     name: rustfmt and clippy
     runs-on: ubuntu-latest
     steps:
+      with:
+        persist-credentials: false
+        
       - name: Checkout sources
         uses: actions/checkout@v2
 

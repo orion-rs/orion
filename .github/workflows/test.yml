@@ -11,6 +11,8 @@ on:
 # NOTE: Should we use fail-fast: false?
 
 name: Tests
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -30,6 +32,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
       
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -92,6 +96,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -115,6 +121,8 @@ jobs:
           - nightly
     steps:
     - uses: actions/checkout@v2
+      with:
+        persist-credentials: false
     - uses: actions-rs/toolchain@v1
       with:
         profile: minimal
@@ -138,6 +146,8 @@ jobs:
           - mips64-unknown-linux-gnuabi64
     steps:
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -160,6 +170,8 @@ jobs:
           - wasm32-unknown-unknown
     steps:
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -175,6 +187,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -197,6 +211,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        persist-credentials: false
     - uses: EmbarkStudios/cargo-deny-action@v1
       with:
         command: check ${{ matrix.checks }}

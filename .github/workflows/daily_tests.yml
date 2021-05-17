@@ -1,4 +1,7 @@
 name: Daily tests
+permissions:
+  contents: read
+
 on:
   schedule:
     - cron: '0 0 * * *' # Midnight of each day
@@ -15,6 +18,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1

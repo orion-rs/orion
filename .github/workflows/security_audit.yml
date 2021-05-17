@@ -1,4 +1,7 @@
 name: Security Audit
+permissions:
+  contents: read
+
 on:
   push:
     # Check immediately if dependencies are altered
@@ -15,6 +18,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+        with:
+          persist-credentials: false
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
