@@ -13,25 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
         with:
           persist-credentials: false
 
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
         with:
           toolchain: stable
           override: true
 
       - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
+        uses: actions-rs/tarpaulin@60f0b12e5beec09ccca51758913f82d01889151c
         with:
           timeout: '120'
           out-type: 'Xml'
           args: '-- --test-threads 1'
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@a1ed4b322b4b38cb846afb5a0ebfa17086917d27
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           fail_ci_if_error: true
