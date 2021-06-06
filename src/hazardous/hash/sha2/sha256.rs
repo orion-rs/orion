@@ -139,7 +139,7 @@ impl Variant<WordU32, { N_CONSTS }> for V256 {
 }
 
 #[derive(Clone, Debug)]
-/// SHA384 streaming state.
+/// SHA256 streaming state.
 pub struct Sha256 {
     pub(crate) _state: State<WordU32, V256, { SHA256_BLOCKSIZE }, { SHA256_OUTSIZE }, { N_CONSTS }>,
 }
