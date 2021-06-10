@@ -336,6 +336,17 @@ impl PasswordHash {
     pub fn len(&self) -> usize {
         self.password_hash.len()
     }
+
+    #[inline]
+    /// Return `true` if the password hash is empty, `false` otherwise.
+    ///
+    /// __NOTE__: This method should always return `false`, since there shouldn't be a way
+    /// to create an empty password hash.
+    pub fn is_empty(&self) -> bool {
+        debug_assert_eq!(self.encoded_password_hash.is_empty(), self.password_hash.is_empty(),
+                   "Both the encoded password hash and the raw hash must be non-empty or empty at the same time.");
+        self.password_hash.is_empty()
+    }
 }
 
 impl core::fmt::Debug for PasswordHash {
