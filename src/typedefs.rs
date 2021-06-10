@@ -193,6 +193,18 @@ macro_rules! func_len (() => (
     }
 ));
 
+/// Macro to implement an `is_empty()` function which will return `true` if `self.len() == 0`.
+macro_rules! func_is_empty (() => (
+    #[inline]
+    /// Return `true` if this object does not hold any data, `false` otherwise.
+    ///
+    /// __NOTE__: This method should always return `false`, since there shouldn't be a way
+    /// to create an empty instance of this object.
+    pub fn is_empty(&self) -> bool {
+        self.original_length == 0
+    }
+));
+
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a fixed length $gen_length.
 macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) => (
@@ -290,6 +302,9 @@ macro_rules! test_as_bytes_and_get_length (($name:ident, $lower_bound:expr, $upp
         assert!(test_lower.$bytes_function().len() == test_lower.len());
         assert!(test_lower.len() == $lower_bound);
 
+        assert_eq!(test_upper.is_empty(), false);
+        assert_eq!(test_lower.is_empty(), false);
+
         // Test non-fixed-length definitions
         if $lower_bound != $upper_bound {
             let test_upper = $name::from_slice(&[0u8; $upper_bound - 1]).unwrap();
@@ -300,6 +315,9 @@ macro_rules! test_as_bytes_and_get_length (($name:ident, $lower_bound:expr, $upp
 
             assert!(test_lower.$bytes_function().len() == test_lower.len());
             assert!(test_lower.len() == $lower_bound + 1);
+
+            assert_eq!(test_upper.is_empty(), false);
+            assert_eq!(test_lower.is_empty(), false);
         }
     }
 ));
@@ -434,6 +452,7 @@ macro_rules! construct_secret_key {
             func_unprotected_as_bytes!();
             func_generate!($name, $upper_bound, $gen_length);
             func_len!();
+            func_is_empty!();
         }
 
         #[cfg(test)]
@@ -490,6 +509,7 @@ macro_rules! construct_public {
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
             func_len!();
+            func_is_empty!();
         }
 
         #[cfg(test)]
@@ -530,6 +550,7 @@ macro_rules! construct_public {
             func_from_slice!($name, $lower_bound, $upper_bound);
             func_generate!($name, $upper_bound, $gen_length);
             func_len!();
+            func_is_empty!();
         }
 
         #[cfg(test)]
@@ -596,6 +617,7 @@ macro_rules! construct_tag {
             func_from_slice!($name, $lower_bound, $upper_bound);
             func_unprotected_as_bytes!();
             func_len!();
+            func_is_empty!();
         }
 
         #[cfg(test)]
@@ -676,6 +698,7 @@ macro_rules! construct_hmac_key {
             func_unprotected_as_bytes!();
             func_generate!($name, $size, $size);
             func_len!();
+            func_is_empty!();
         }
 
         #[cfg(test)]
@@ -752,6 +775,7 @@ macro_rules! construct_secret_key_variable_size {
             func_from_slice_variable_size!($name);
             func_unprotected_as_bytes!();
             func_len!();
+            func_is_empty!();
             func_generate_variable_size!($name);
         }
 
@@ -790,6 +814,7 @@ macro_rules! construct_salt_variable_size {
         impl $name {
             func_from_slice_variable_size!($name);
             func_len!();
+            func_is_empty!();
             func_generate_variable_size!($name);
         }
 
