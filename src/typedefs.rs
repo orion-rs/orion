@@ -193,7 +193,7 @@ macro_rules! func_len (() => (
     }
 ));
 
-/// Macro to implement a `is_empty()` function which will return `true` if `self.len() == 0`.
+/// Macro to implement an `is_empty()` function which will return `true` if `self.len() == 0`.
 macro_rules! func_is_empty (() => (
     #[inline]
     /// Return `true` if this object does not hold any data, `false` otherwise.
