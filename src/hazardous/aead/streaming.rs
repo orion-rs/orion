@@ -269,7 +269,7 @@ impl StreamXChaCha20Poly1305 {
         inonce.copy_from_slice(&nonce.as_ref()[HCHACHA_NONCESIZE..]);
 
         Self {
-            key: subkey_and_nonce(&secret_key, &nonce).0,
+            key: subkey_and_nonce(secret_key, nonce).0,
             counter: 1,
             inonce,
         }

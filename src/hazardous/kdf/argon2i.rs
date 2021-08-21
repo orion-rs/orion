@@ -540,7 +540,7 @@ pub fn verify(
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     derive_key(password, salt, iterations, memory, secret, ad, dst_out)?;
-    util::secure_cmp(&dst_out, expected)
+    util::secure_cmp(dst_out, expected)
 }
 
 // Testing public functions in the module.

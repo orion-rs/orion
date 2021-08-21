@@ -55,7 +55,7 @@ pub fn AeadTestRunner<Sealer, Opener, Key, Nonce>(
         &opener,
         &key,
         &nonce,
-        &input,
+        input,
         expected_ct_with_tag,
         tag_size,
         aad,
@@ -80,25 +80,18 @@ fn seal_dst_out_length<Sealer, Key, Nonce>(
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
-    assert!(sealer(&key, &nonce, input, default_aad, &mut dst_out_ct).is_ok());
+    assert!(sealer(key, nonce, input, default_aad, &mut dst_out_ct).is_ok());
 
     let mut dst_out_ct_more = vec![0u8; input.len() + (tag_size + 1)];
     // Related bug: #52
-    assert!(sealer(&key, &nonce, input, default_aad, &mut dst_out_ct_more).is_ok());
+    assert!(sealer(key, nonce, input, default_aad, &mut dst_out_ct_more).is_ok());
 
     let mut dst_out_ct_more_double = vec![0u8; input.len() + (tag_size * 2)];
     // Related bug: #52
-    assert!(sealer(
-        &key,
-        &nonce,
-        input,
-        default_aad,
-        &mut dst_out_ct_more_double
-    )
-    .is_ok());
+    assert!(sealer(key, nonce, input, default_aad, &mut dst_out_ct_more_double).is_ok());
 
     let mut dst_out_ct_less = vec![0u8; input.len() + (tag_size - 1)];
-    assert!(sealer(&key, &nonce, input, default_aad, &mut dst_out_ct_less).is_err());
+    assert!(sealer(key, nonce, input, default_aad, &mut dst_out_ct_less).is_err());
 }
 
 #[cfg(feature = "safe_api")]
@@ -117,15 +110,15 @@ fn seal_plaintext_length<Sealer, Key, Nonce>(
 
     let input_0 = vec![0u8; 0];
     let mut dst_out_ct_0 = vec![0u8; input_0.len() + tag_size];
-    assert!(sealer(&key, &nonce, &input_0, default_aad, &mut dst_out_ct_0).is_ok());
+    assert!(sealer(key, nonce, &input_0, default_aad, &mut dst_out_ct_0).is_ok());
 
     let input_1 = vec![0u8; 1];
     let mut dst_out_ct_1 = vec![0u8; input_1.len() + tag_size];
-    assert!(sealer(&key, &nonce, &input_1, default_aad, &mut dst_out_ct_1).is_ok());
+    assert!(sealer(key, nonce, &input_1, default_aad, &mut dst_out_ct_1).is_ok());
 
     let input_128 = vec![0u8; 128];
     let mut dst_out_ct_128 = vec![0u8; input_128.len() + tag_size];
-    assert!(sealer(&key, &nonce, &input_128, default_aad, &mut dst_out_ct_128).is_ok());
+    assert!(sealer(key, nonce, &input_128, default_aad, &mut dst_out_ct_128).is_ok());
 }
 
 #[cfg(feature = "safe_api")]
@@ -146,13 +139,13 @@ fn open_dst_out_length<Sealer, Opener, Key, Nonce>(
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
-    sealer(&key, &nonce, input, default_aad, &mut dst_out_ct).unwrap();
+    sealer(key, nonce, input, default_aad, &mut dst_out_ct).unwrap();
 
     let mut dst_out_pt = vec![0u8; input.len()];
-    assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_ok());
+    assert!(opener(key, nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_ok());
 
     let mut dst_out_pt_0 = [0u8; 0];
-    let empty_out_res = opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt_0);
+    let empty_out_res = opener(key, nonce, &dst_out_ct, default_aad, &mut dst_out_pt_0);
     if input.is_empty() {
         assert!(empty_out_res.is_ok());
     } else {
@@ -161,11 +154,11 @@ fn open_dst_out_length<Sealer, Opener, Key, Nonce>(
 
     if !input.is_empty() {
         let mut dst_out_pt_less = vec![0u8; input.len() - 1];
-        assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt_less).is_err());
+        assert!(opener(key, nonce, &dst_out_ct, default_aad, &mut dst_out_pt_less).is_err());
     }
 
     let mut dst_out_pt_more = vec![0u8; input.len() + 1];
-    assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt_more).is_ok());
+    assert!(opener(key, nonce, &dst_out_ct, default_aad, &mut dst_out_pt_more).is_ok());
 }
 
 #[cfg(feature = "safe_api")]
@@ -184,11 +177,11 @@ fn open_ciphertext_with_tag_length<Sealer, Opener, Key, Nonce>(
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
     let mut dst_out_pt = vec![0u8; tag_size];
 
-    assert!(opener(&key, &nonce, &[0u8; 0], default_aad, &mut dst_out_pt).is_err());
+    assert!(opener(key, nonce, &[0u8; 0], default_aad, &mut dst_out_pt).is_err());
 
     assert!(opener(
-        &key,
-        &nonce,
+        key,
+        nonce,
         &vec![0u8; tag_size - 1],
         default_aad,
         &mut dst_out_pt
@@ -196,9 +189,9 @@ fn open_ciphertext_with_tag_length<Sealer, Opener, Key, Nonce>(
     .is_err());
 
     let mut dst_out_ct = vec![0u8; tag_size];
-    sealer(&key, &nonce, &[0u8; 0], default_aad, &mut dst_out_ct).unwrap();
+    sealer(key, nonce, &[0u8; 0], default_aad, &mut dst_out_ct).unwrap();
 
-    assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_ok());
+    assert!(opener(key, nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_ok());
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -220,16 +213,16 @@ fn seal_open_equals_expected<Sealer, Opener, Key, Nonce>(
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
-    sealer(&key, &nonce, input, default_aad, &mut dst_out_ct).unwrap();
+    sealer(key, nonce, input, default_aad, &mut dst_out_ct).unwrap();
     if let Some(expected) = expected_ct_with_tag {
         assert_eq!(expected, &dst_out_ct[..]);
     }
 
     let mut dst_out_pt = input.to_vec();
-    opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).unwrap();
+    opener(key, nonce, &dst_out_ct, default_aad, &mut dst_out_pt).unwrap();
     assert_eq!(input, &dst_out_pt[..]);
     if let Some(expected) = expected_ct_with_tag {
-        opener(&key, &nonce, &expected, default_aad, &mut dst_out_pt).unwrap();
+        opener(key, nonce, expected, default_aad, &mut dst_out_pt).unwrap();
         assert_eq!(input, &dst_out_pt[..]);
     }
 }
@@ -251,12 +244,12 @@ fn open_modified_tag_err<Sealer, Opener, Key, Nonce>(
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
-    sealer(&key, &nonce, input, default_aad, &mut dst_out_ct).unwrap();
+    sealer(key, nonce, input, default_aad, &mut dst_out_ct).unwrap();
     // Modify the first byte of the authentication tag.
     dst_out_ct[input.len() + 1] ^= 1;
 
     let mut dst_out_pt = input.to_vec();
-    assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_err());
+    assert!(opener(key, nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_err());
 }
 
 #[cfg(feature = "safe_api")]
@@ -280,12 +273,12 @@ fn open_modified_ciphertext_err<Sealer, Opener, Key, Nonce>(
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
-    sealer(&key, &nonce, input, default_aad, &mut dst_out_ct).unwrap();
+    sealer(key, nonce, input, default_aad, &mut dst_out_ct).unwrap();
     // Modify the first byte of the ciphertext.
     dst_out_ct[0] ^= 1;
 
     let mut dst_out_pt = input.to_vec();
-    assert!(opener(&key, &nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_err());
+    assert!(opener(key, nonce, &dst_out_ct, default_aad, &mut dst_out_pt).is_err());
 }
 
 #[cfg(feature = "safe_api")]
@@ -305,10 +298,10 @@ fn open_modified_aad_err<Sealer, Opener, Key, Nonce>(
     let default_aad = if aad.is_empty() { None } else { Some(aad) };
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];
-    sealer(&key, &nonce, input, default_aad, &mut dst_out_ct).unwrap();
+    sealer(key, nonce, input, default_aad, &mut dst_out_ct).unwrap();
 
     let mut dst_out_pt = input.to_vec();
-    assert!(opener(&key, &nonce, &dst_out_ct, Some(b"BAD AAD"), &mut dst_out_pt).is_err());
+    assert!(opener(key, nonce, &dst_out_ct, Some(b"BAD AAD"), &mut dst_out_pt).is_err());
 }
 
 #[cfg(feature = "safe_api")]
@@ -327,10 +320,10 @@ fn none_or_empty_some_aad_same_result<Sealer, Opener, Key, Nonce>(
     let mut dst_out_ct_none = vec![0u8; input.len() + tag_size];
     let mut dst_out_ct_some_empty = vec![0u8; input.len() + tag_size];
 
-    sealer(&key, &nonce, input, None, &mut dst_out_ct_none).unwrap();
+    sealer(key, nonce, input, None, &mut dst_out_ct_none).unwrap();
     sealer(
-        &key,
-        &nonce,
+        key,
+        nonce,
         input,
         Some(&[0u8; 0]),
         &mut dst_out_ct_some_empty,
@@ -341,14 +334,14 @@ fn none_or_empty_some_aad_same_result<Sealer, Opener, Key, Nonce>(
 
     let mut dst_out_pt = vec![0u8; input.len()];
     assert!(opener(
-        &key,
-        &nonce,
+        key,
+        nonce,
         &dst_out_ct_none,
         Some(&[0u8; 0]),
         &mut dst_out_pt
     )
     .is_ok());
-    assert!(opener(&key, &nonce, &dst_out_ct_some_empty, None, &mut dst_out_pt).is_ok());
+    assert!(opener(key, nonce, &dst_out_ct_some_empty, None, &mut dst_out_pt).is_ok());
 }
 
 #[cfg(test)]

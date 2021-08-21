@@ -278,7 +278,7 @@ impl PasswordHash {
             return Err(UnknownCryptoError);
         }
 
-        let memory = Self::parse_decimal_value(&param_parts.next().unwrap())?;
+        let memory = Self::parse_decimal_value(param_parts.next().unwrap())?;
         if memory < MIN_MEMORY {
             return Err(UnknownCryptoError);
         }
@@ -286,7 +286,7 @@ impl PasswordHash {
         if param_parts.next() != Some("t") {
             return Err(UnknownCryptoError);
         }
-        let iterations = Self::parse_decimal_value(&param_parts.next().unwrap())?;
+        let iterations = Self::parse_decimal_value(param_parts.next().unwrap())?;
         if iterations < MIN_ITERATIONS {
             return Err(UnknownCryptoError);
         }
@@ -294,7 +294,7 @@ impl PasswordHash {
         if param_parts.next() != Some("p") {
             return Err(UnknownCryptoError);
         }
-        let lanes = Self::parse_decimal_value(&param_parts.next().unwrap())?;
+        let lanes = Self::parse_decimal_value(param_parts.next().unwrap())?;
         if lanes != LANES {
             return Err(UnknownCryptoError);
         }

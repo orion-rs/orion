@@ -96,9 +96,9 @@ where
     if iterations > 1 {
         for _ in 1..iterations {
             hmac._reset();
-            hmac._update(&u_step)?;
+            hmac._update(u_step)?;
             hmac._finalize(u_step)?;
-            xor_slices!(&u_step, dk_block);
+            xor_slices!(u_step, dk_block);
         }
     }
 

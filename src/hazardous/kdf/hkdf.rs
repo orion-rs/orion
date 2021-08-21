@@ -116,7 +116,7 @@ where
             Some(next) => {
                 idx = next;
                 ctx._reset();
-                ctx._update(&hlen_block)?;
+                ctx._update(hlen_block)?;
             }
             // If `idx` reaches 255, the maximum (255 * Hmac::HASH_FUNC_OUTSIZE)
             // amount of blocks have been processed.

@@ -400,7 +400,7 @@ impl Blake2b {
             let fill = BLAKE2B_BLOCKSIZE - self.leftover;
 
             if bytes.len() <= fill {
-                self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(&bytes);
+                self.buffer[self.leftover..(self.leftover + bytes.len())].copy_from_slice(bytes);
                 self.leftover += bytes.len();
                 return Ok(());
             }

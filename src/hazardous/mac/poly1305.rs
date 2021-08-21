@@ -395,7 +395,7 @@ impl Poly1305 {
             bytes = &bytes[POLY1305_BLOCKSIZE..];
         }
 
-        self.buffer[..bytes.len()].copy_from_slice(&bytes);
+        self.buffer[..bytes.len()].copy_from_slice(bytes);
         self.leftover = bytes.len();
 
         Ok(())

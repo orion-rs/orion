@@ -202,7 +202,7 @@ impl<S: HmacHashFunction, const BLOCKSIZE: usize> Hmac<S, BLOCKSIZE> {
         self.is_finalized = true;
         let mut outer_hasher = self.opad_hasher.clone();
         self.working_hasher._finalize(dest)?;
-        outer_hasher._update(&dest)?;
+        outer_hasher._update(dest)?;
         outer_hasher._finalize(dest)
     }
 

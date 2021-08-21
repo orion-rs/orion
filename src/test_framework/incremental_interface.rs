@@ -262,11 +262,11 @@ where
     /// new(), update(), finalize() == one_shot()
     fn incremental_and_one_shot(&self, data: &[u8]) {
         let mut state = self._initial_context.clone();
-        state.update(&data).unwrap();
+        state.update(data).unwrap();
         let streaming_result = state.finalize().unwrap();
-        let one_shot_result = T::one_shot(&data).unwrap();
+        let one_shot_result = T::one_shot(data).unwrap();
 
-        assert!(streaming_result == one_shot_result);
+        assert_eq!(streaming_result, one_shot_result);
     }
 
     /// new(), update(), finalize(), reset(), finalize(): OK
@@ -331,13 +331,13 @@ where
 
     /// Using the same input should always result in a successful verification.
     pub fn verify_same_input_ok(data: &[u8]) {
-        let expected = T::one_shot(&data).unwrap();
+        let expected = T::one_shot(data).unwrap();
         assert!(T::verify_result(&expected, data).is_ok());
     }
 
     /// Using different input should result in a failed verification.
     pub fn verify_diff_input_err(data: &[u8]) {
-        let expected = T::one_shot(&data).unwrap();
+        let expected = T::one_shot(data).unwrap();
         assert!(T::verify_result(&expected, b"Bad data").is_err());
     }
 }
