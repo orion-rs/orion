@@ -191,30 +191,41 @@ pub mod streaming {
     //! use orion::aead::streaming::*;
     //! use orion::aead::SecretKey;
     //!
-    //! let key = SecretKey::default();
-    //! let (mut sealer, nonce) = StreamSealer::new(&key)?;
-    //! let mut opener = StreamOpener::new(&key, &nonce)?;
+    //! let chunk_size: usize = 128; // The size of the chunks you wish to split the stream into.
+    //! let src = [255u8; 4096]; // Some example input stream.
+    //! let mut out: Vec<Vec<u8>> = Vec::with_capacity(4096 / 128);
     //!
-    //! // Message 1
-    //! let plaintext1 = b"Secret message 1";
-    //! let cipher1 = sealer.seal_chunk(plaintext1, StreamTag::Message)?;
-    //! let (dec1, tag1) = opener.open_chunk(&cipher1)?;
-    //! assert_eq!(plaintext1, &dec1.as_ref());
-    //! assert_eq!(tag1, StreamTag::Message);
+    //! let secret_key = SecretKey::default();
     //!
-    //! // Message 2
-    //! let plaintext2 = b"Secret message 2";
-    //! let cipher2 = sealer.seal_chunk(plaintext2, StreamTag::Message)?;
-    //! let (dec2, tag2) = opener.open_chunk(&cipher2)?;
-    //! assert_eq!(plaintext2, &dec2.as_ref());
-    //! assert_eq!(tag2, StreamTag::Message);
+    //! // Encryption:
+    //! let (mut sealer, nonce) = StreamSealer::new(&secret_key)?;
     //!
-    //! // Message 3 (Last message of this stream, using the Finish tag)
-    //! let plaintext3 = b"Secret message 3";
-    //! let cipher3 = sealer.seal_chunk(plaintext3, StreamTag::Finish)?;
-    //! let (dec3, tag3) = opener.open_chunk(&cipher3)?;
-    //! assert_eq!(plaintext3, &dec3.as_ref());
-    //! assert_eq!(tag3, StreamTag::Finish);
+    //! for (n_chunk, src_chunk) in src.chunks(chunk_size).enumerate() {
+    //!     let encrypted_chunk =
+    //!         if src_chunk.len() != chunk_size || n_chunk + 1 == src.len() / chunk_size {
+    //!             // We've reached the end of the input source,
+    //!             // so we mark it with the Finish tag.
+    //!             sealer.seal_chunk(src_chunk, StreamTag::Finish)?
+    //!         } else {
+    //!             // Just a normal chunk
+    //!             sealer.seal_chunk(src_chunk, StreamTag::Message)?
+    //!         };
+    //!     // Save the encrypted chunk somewhere
+    //!     out.push(encrypted_chunk);
+    //! }
+    //!
+    //! // Decryption:
+    //! let mut opener = StreamOpener::new(&secret_key, &nonce)?;
+    //!
+    //! for (n_chunk, src_chunk) in out.iter().enumerate() {
+    //!     let (_decrypted_chunk, tag) = opener.open_chunk(src_chunk)?;
+    //!
+    //!     if src_chunk.len() != chunk_size + ABYTES || n_chunk + 1 == out.len() {
+    //!         // We've reached the end of the input source,
+    //!         // so we check if the last chunk is also set as Finish.
+    //!         assert_eq!(tag, StreamTag::Finish, "Stream has been truncated!");
+    //!     }
+    //! }
     //!
     //! # Ok::<(), orion::errors::UnknownCryptoError>(())
     //! ```
@@ -226,6 +237,7 @@ pub mod streaming {
     use super::*;
     pub use crate::hazardous::aead::streaming::Nonce;
     pub use crate::hazardous::aead::streaming::StreamTag;
+    pub use crate::hazardous::aead::streaming::ABYTES;
 
     #[derive(Debug)]
     /// Streaming authenticated encryption.
@@ -253,7 +265,7 @@ pub mod streaming {
             plaintext: &[u8],
             tag: StreamTag,
         ) -> Result<Vec<u8>, UnknownCryptoError> {
-            let sealed_chunk_len = plaintext.len().checked_add(aead::streaming::ABYTES);
+            let sealed_chunk_len = plaintext.len().checked_add(ABYTES);
             if sealed_chunk_len.is_none() {
                 return Err(UnknownCryptoError);
             }
@@ -288,11 +300,11 @@ pub mod streaming {
             &mut self,
             ciphertext: &[u8],
         ) -> Result<(Vec<u8>, StreamTag), UnknownCryptoError> {
-            if ciphertext.len() < aead::streaming::ABYTES {
+            if ciphertext.len() < ABYTES {
                 return Err(UnknownCryptoError);
             }
 
-            let mut opened_chunk = vec![0u8; ciphertext.len() - aead::streaming::ABYTES];
+            let mut opened_chunk = vec![0u8; ciphertext.len() - ABYTES];
             let tag = self
                 .internal_sealer
                 .open_chunk(ciphertext, None, &mut opened_chunk)?;
@@ -316,7 +328,7 @@ mod public {
             let plaintext = "Secret message".as_bytes();
 
             let dst_ciphertext = seal(&key, plaintext).unwrap();
-            assert!(dst_ciphertext.len() == plaintext.len() + (24 + 16));
+            assert_eq!(dst_ciphertext.len(), plaintext.len() + (24 + 16));
             let dst_plaintext = open(&key, &dst_ciphertext).unwrap();
             assert_eq!(plaintext, &dst_plaintext[..]);
         }
@@ -403,7 +415,7 @@ mod public {
             let plaintext = "Secret message".as_bytes();
 
             let dst_ciphertext = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
-            assert!(dst_ciphertext.len() == plaintext.len() + 17);
+            assert_eq!(dst_ciphertext.len(), plaintext.len() + 17);
             let (dst_plaintext, tag) = opener.open_chunk(&dst_ciphertext).unwrap();
             assert_eq!(plaintext, &dst_plaintext[..]);
             assert_eq!(tag, StreamTag::Message);
@@ -421,7 +433,7 @@ mod public {
         #[test]
         fn test_open_chunk_less_than_abytes_err() {
             let key = SecretKey::default();
-            let ciphertext = [0u8; aead::streaming::ABYTES - 1];
+            let ciphertext = [0u8; ABYTES - 1];
             let (_, nonce) = StreamSealer::new(&key).unwrap();
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
 
@@ -439,7 +451,7 @@ mod public {
             let (pt, tag) = opener.open_chunk(&ciphertext).unwrap();
 
             assert!(pt.is_empty());
-            assert!(tag.as_byte() == 0u8);
+            assert_eq!(tag.as_byte(), 0u8);
         }
 
         #[test]
@@ -509,7 +521,7 @@ mod public {
             let plaintext = "Secret message 1".as_bytes();
             let cipher1 = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
             let cipher2 = sealer.seal_chunk(plaintext, StreamTag::Message).unwrap();
-            assert!(cipher1 != cipher2);
+            assert_ne!(cipher1, cipher2);
 
             let mut opener = StreamOpener::new(&key, &nonce).unwrap();
             let (dec1, tag1) = opener.open_chunk(&cipher1).unwrap();
@@ -536,7 +548,7 @@ mod public {
             let cipher2 = sealer_second
                 .seal_chunk(plaintext, StreamTag::Message)
                 .unwrap();
-            assert!(cipher1 != cipher2);
+            assert_ne!(cipher1, cipher2);
         }
 
         #[test]
