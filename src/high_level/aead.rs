@@ -198,27 +198,27 @@ pub mod streaming {
     //! let secret_key = SecretKey::default();
     //!
     //! // Encryption:
-    //! let (mut sealer, nonce) = StreamSealer::new(&secret_key).unwrap();
+    //! let (mut sealer, nonce) = StreamSealer::new(&secret_key)?;
     //!
     //! for (n_chunk, src_chunk) in src.chunks(chunk_size).enumerate() {
     //!     let encrypted_chunk =
     //!         if src_chunk.len() != chunk_size || n_chunk + 1 == src.len() / chunk_size {
     //!             // We've reached the end of the input source,
     //!             // so we mark it with the Finish tag.
-    //!             sealer.seal_chunk(src_chunk, StreamTag::Finish).unwrap()
+    //!             sealer.seal_chunk(src_chunk, StreamTag::Finish)?
     //!         } else {
     //!             // Just a normal chunk
-    //!             sealer.seal_chunk(src_chunk, StreamTag::Message).unwrap()
+    //!             sealer.seal_chunk(src_chunk, StreamTag::Message)?
     //!         };
     //!     // Save the encrypted chunk somewhere
     //!     out.push(encrypted_chunk);
     //! }
     //!
     //! // Decryption:
-    //! let mut opener = StreamOpener::new(&secret_key, &nonce).unwrap();
+    //! let mut opener = StreamOpener::new(&secret_key, &nonce)?;
     //!
     //! for (n_chunk, src_chunk) in out.iter().enumerate() {
-    //!     let (_decrypted_chunk, tag) = opener.open_chunk(src_chunk).unwrap();
+    //!     let (_decrypted_chunk, tag) = opener.open_chunk(src_chunk)?;
     //!
     //!     if src_chunk.len() != chunk_size + ABYTES || n_chunk + 1 == out.len() {
     //!         // We've reached the end of the input source,
