@@ -376,7 +376,7 @@ impl<'de> Deserialize<'de> for PasswordHash {
     where
         D: Deserializer<'de>,
     {
-        let encoded_str = <&str>::deserialize(deserializer)?;
+        let encoded_str = String::deserialize(deserializer)?;
         PasswordHash::from_encoded(encoded_str).map_err(de::Error::custom)
     }
 }

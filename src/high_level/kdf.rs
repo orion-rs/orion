@@ -125,7 +125,7 @@ impl<'de> Deserialize<'de> for Salt {
     where
         D: Deserializer<'de>,
     {
-        let bytes = <&[u8]>::deserialize(deserializer)?;
+        let bytes = Vec::<u8>::deserialize(deserializer)?;
         Salt::from_slice(bytes).map_err(de::Error::custom)
     }
 }

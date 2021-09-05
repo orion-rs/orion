@@ -86,7 +86,7 @@ impl<'de> Deserialize<'de> for Digest {
     where
         D: Deserializer<'de>,
     {
-        let bytes = <&[u8]>::deserialize(deserializer)?;
+        let bytes = Vec::<u8>::deserialize(deserializer)?;
         Digest::from_slice(bytes).map_err(de::Error::custom)
     }
 }
