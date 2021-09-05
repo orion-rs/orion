@@ -131,8 +131,8 @@ impl<'de> Deserialize<'de> for Tag {
     where
         D: Deserializer<'de>,
     {
-        let bytes = <&[u8]>::deserialize(deserializer)?;
-        Tag::from_slice(bytes).map_err(de::Error::custom)
+        let bytes = Vec::<u8>::deserialize(deserializer)?;
+        Tag::from_slice(&bytes).map_err(de::Error::custom)
     }
 }
 
@@ -179,6 +179,41 @@ mod public {
             let mac = Tag::from_slice(&[0u8; 32][..]).unwrap();
 
             assert!(authenticate_verify(&mac, &sec_key, &msg).is_err());
+        }
+    }
+
+    mod test_serde_impls {
+        use serde_json::Value as JsonValue;
+        use super::*;
+
+        #[test]
+        fn test_serialize_all_zeros() {
+            let tag_bytes = [0_u8; 32];
+            let tag = Tag::from(tag_bytes);
+            let serialized: JsonValue = serde_json::to_value(&tag).unwrap();
+            let expected: JsonValue = serde_json::json!(tag_bytes);
+
+            // In real code, please only compare on the deserialized, higher-level types.
+            // The serialized versions of these types use insecure, non-constant-time
+            // comparisons.
+            assert_eq!(expected, serialized);
+        }
+
+        #[test]
+        fn test_deserialize_all_zeros() {
+            let tag_bytes = [0_u8; 32];
+            let serialized: String = serde_json::json!(tag_bytes).to_string();
+            let deserialized: Tag = serde_json::from_str(&serialized).unwrap();
+            let expected = Tag::from(tag_bytes);
+            assert_eq!(expected, deserialized);
+        }
+
+        #[test]
+        fn test_deserialize_wrong_length() {
+            let tag_bytes_wrong_len = [0_u8; 31];
+            let serialized: String = serde_json::json!(tag_bytes_wrong_len).to_string();
+            let deserialized: Result<Tag, _> = serde_json::from_str(&serialized);
+            assert!(deserialized.is_err());
         }
     }
 
