@@ -74,9 +74,6 @@ extern crate quickcheck_macros;
 #[cfg_attr(feature = "alloc", macro_use)]
 extern crate alloc;
 
-#[cfg(feature = "serde")]
-mod serde_impls;
-
 #[macro_use]
 mod typedefs;
 

@@ -75,6 +75,12 @@ use crate::{
     hazardous::hash::blake2b::{self, Blake2b, Digest},
 };
 
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Deserialize, Deserializer},
+    ser::{Serialize, Serializer},
+};
+
 /// The Tag size (bytes) to be output by BLAKE2b in keyed mode.
 const BLAKE2B_TAG_SIZE: usize = 32;
 /// The minimum `SecretKey` size (bytes) to be used by BLAKE2b in keyed mode.
@@ -106,6 +112,28 @@ pub fn authenticate_verify(
     let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
     let expected_digest = Digest::from_slice(expected.unprotected_as_bytes())?;
     Blake2b::verify(&expected_digest, &key, BLAKE2B_TAG_SIZE, data)
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for Tag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let bytes: &[u8] = self.unprotected_as_bytes();
+        bytes.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Tag {
+    fn deserialize<D>(deserializer: D) -> Result<Tag, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes = <&[u8]>::deserialize(deserializer)?;
+        Tag::from_slice(bytes).map_err(de::Error::custom)
+    }
 }
 
 // Testing public functions in the module.

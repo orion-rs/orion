@@ -57,10 +57,38 @@
 pub use crate::hazardous::hash::blake2b::Digest;
 use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Deserialize, Deserializer},
+    ser::{Serialize, Serializer},
+};
+
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hashing using BLAKE2b-256.
 pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
     blake2b::Hasher::Blake2b256.digest(data)
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for Digest {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let bytes: &[u8] = self.as_ref();
+        bytes.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Digest {
+    fn deserialize<D>(deserializer: D) -> Result<Digest, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes = <&[u8]>::deserialize(deserializer)?;
+        Digest::from_slice(bytes).map_err(de::Error::custom)
+    }
 }
 
 // Testing public functions in the module.
