@@ -204,11 +204,11 @@ pub mod streaming {
     //!     let encrypted_chunk =
     //!         if src_chunk.len() != chunk_size || n_chunk + 1 == src.len() / chunk_size {
     //!             // We've reached the end of the input source,
-    //!             // so we mark it with the FINISH tag.
-    //!             sealer.seal_chunk(src_chunk, StreamTag::FINISH).unwrap()
+    //!             // so we mark it with the Finish tag.
+    //!             sealer.seal_chunk(src_chunk, StreamTag::Finish).unwrap()
     //!         } else {
     //!             // Just a normal chunk
-    //!             sealer.seal_chunk(src_chunk, StreamTag::MESSAGE).unwrap()
+    //!             sealer.seal_chunk(src_chunk, StreamTag::Message).unwrap()
     //!         };
     //!     // Save the encrypted chunk somewhere
     //!     out.push(encrypted_chunk);
@@ -222,8 +222,8 @@ pub mod streaming {
     //!
     //!     if src_chunk.len() != chunk_size + ABYTES || n_chunk + 1 == out.len() {
     //!         // We've reached the end of the input source,
-    //!         // so we check if the last chunk is also set as FINISH.
-    //!         assert_eq!(tag, StreamTag::FINISH, "Stream has been truncated!");
+    //!         // so we check if the last chunk is also set as Finish.
+    //!         assert_eq!(tag, StreamTag::Finish, "Stream has been truncated!");
     //!     }
     //! }
     //!
