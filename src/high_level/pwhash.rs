@@ -96,6 +96,12 @@ use crate::{
 use ct_codecs::{Base64NoPadding, Decoder, Encoder};
 use zeroize::Zeroizing;
 
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Deserialize, Deserializer},
+    ser::{Serialize, Serializer},
+};
+
 /// The length of the salt used for password hashing.
 pub const SALT_LENGTH: usize = 16;
 
@@ -350,6 +356,28 @@ impl core::fmt::Debug for PasswordHash {
 }
 
 impl_ct_partialeq_trait!(PasswordHash, unprotected_as_bytes);
+
+#[cfg(feature = "serde")]
+impl Serialize for PasswordHash {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let encoded_string = self.unprotected_as_encoded();
+        serializer.serialize_str(&encoded_string)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for PasswordHash {
+    fn deserialize<D>(deserializer: D) -> Result<PasswordHash, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let encoded_str = String::deserialize(deserializer)?;
+        PasswordHash::from_encoded(encoded_str).map_err(de::Error::custom)
+    }
+}
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hash a password using Argon2i.

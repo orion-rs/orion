@@ -75,6 +75,12 @@ use crate::{
     hazardous::hash::blake2b::{self, Blake2b, Digest},
 };
 
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Deserialize, Deserializer},
+    ser::{Serialize, Serializer},
+};
+
 /// The Tag size (bytes) to be output by BLAKE2b in keyed mode.
 const BLAKE2B_TAG_SIZE: usize = 32;
 /// The minimum `SecretKey` size (bytes) to be used by BLAKE2b in keyed mode.
@@ -106,6 +112,28 @@ pub fn authenticate_verify(
     let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
     let expected_digest = Digest::from_slice(expected.unprotected_as_bytes())?;
     Blake2b::verify(&expected_digest, &key, BLAKE2B_TAG_SIZE, data)
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for Tag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let bytes: &[u8] = self.unprotected_as_bytes();
+        bytes.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Tag {
+    fn deserialize<D>(deserializer: D) -> Result<Tag, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes = Vec::<u8>::deserialize(deserializer)?;
+        Tag::from_slice(&bytes).map_err(de::Error::custom)
+    }
 }
 
 // Testing public functions in the module.
@@ -151,6 +179,41 @@ mod public {
             let mac = Tag::from_slice(&[0u8; 32][..]).unwrap();
 
             assert!(authenticate_verify(&mac, &sec_key, &msg).is_err());
+        }
+    }
+
+    mod test_serde_impls {
+        use serde_json::Value as JsonValue;
+        use super::*;
+
+        #[test]
+        fn test_serialize_all_zeros() {
+            let tag_bytes = [0_u8; 32];
+            let tag = Tag::from(tag_bytes);
+            let serialized: JsonValue = serde_json::to_value(&tag).unwrap();
+            let expected: JsonValue = serde_json::json!(tag_bytes);
+
+            // In real code, please only compare on the deserialized, higher-level types.
+            // The serialized versions of these types use insecure, non-constant-time
+            // comparisons.
+            assert_eq!(expected, serialized);
+        }
+
+        #[test]
+        fn test_deserialize_all_zeros() {
+            let tag_bytes = [0_u8; 32];
+            let serialized: String = serde_json::json!(tag_bytes).to_string();
+            let deserialized: Tag = serde_json::from_str(&serialized).unwrap();
+            let expected = Tag::from(tag_bytes);
+            assert_eq!(expected, deserialized);
+        }
+
+        #[test]
+        fn test_deserialize_wrong_length() {
+            let tag_bytes_wrong_len = [0_u8; 31];
+            let serialized: String = serde_json::json!(tag_bytes_wrong_len).to_string();
+            let deserialized: Result<Tag, _> = serde_json::from_str(&serialized);
+            assert!(deserialized.is_err());
         }
     }
 

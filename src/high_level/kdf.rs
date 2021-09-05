@@ -74,6 +74,12 @@
 pub use super::hltypes::{Password, Salt, SecretKey};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2i, pwhash::MIN_ITERATIONS};
 
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Deserialize, Deserializer},
+    ser::{Serialize, Serializer},
+};
+
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Derive a key using Argon2i.
 pub fn derive_key(
@@ -101,6 +107,29 @@ pub fn derive_key(
 
     Ok(dk)
 }
+
+#[cfg(feature = "serde")]
+impl Serialize for Salt {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let bytes: &[u8] = self.as_ref();
+        bytes.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Salt {
+    fn deserialize<D>(deserializer: D) -> Result<Salt, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes = Vec::<u8>::deserialize(deserializer)?;
+        Salt::from_slice(bytes).map_err(de::Error::custom)
+    }
+}
+
 
 // Testing public functions in the module.
 #[cfg(test)]
