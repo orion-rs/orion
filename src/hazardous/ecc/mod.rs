@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2021 The orion Developers
+// Copyright (c) 2021 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! ### **Caution**:
-//! Usage of the `hazardous` module is __**only intended for advanced users**__.
-//! `hazardous` contains implementations with a much higher degree of control.
-//! It is also much easier to misuse those implementations. Only use `hazardous`
-//! if absolutely necessary.
+// TODO: Perhaps it would be better to apply allow(dead_code) to the specific items,
+// TODO: to make it clear what is being used in orion and what is not.
+#[allow(
+    dead_code,
+    non_camel_case_types,
+    clippy::unnecessary_cast,
+    clippy::unused_unit
+)]
+/// Formally verified  Curve25519 field arithmetic from: https://github.com/mit-plv/fiat-crypto
+mod fiat_curve25519_u64;
 
-/// AEADs (Authenticated Encryption with Associated Data).
-pub mod aead;
-
-/// Cryptographic hash functions.
-pub mod hash;
-
-/// MACs (Message Authentication Code).
-pub mod mac;
-
-/// KDFs (Key Derivation Function) and PBKDFs (Password-Based Key Derivation
-/// Function).
-pub mod kdf;
-
-/// Stream ciphers.
-pub mod stream;
-
-/// Elliptic-Curve Cryptography.
-pub mod ecc;
+/// Diffie-Hellman key exchange over Curve25519.
+pub mod x25519;
