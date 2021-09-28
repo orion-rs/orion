@@ -719,7 +719,7 @@ macro_rules! construct_public {
 macro_rules! construct_tag {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr)) => (
-        #[derive(Clone, Copy)]
+        #[derive(Clone)]
         $(#[$meta])*
         ///
         /// # Security:
