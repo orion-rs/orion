@@ -103,13 +103,23 @@ construct_secret_key! {
 }
 
 construct_public! {
-    /// A type to represent the `Digest` that BLAKE2b returns.
+    /// A type to represent the `Digest` that BLAKE2b returns, when used without a secret key.
     ///
     /// # Errors:
     /// An error will be returned if:
     /// - `slice` is empty.
     /// - `slice` is greater than 64 bytes.
     (Digest, test_digest, 1, BLAKE2B_OUTSIZE)
+}
+
+construct_tag! {
+    /// A type to represent the `Tag` that BLAKE2b returns.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is empty.
+    /// - `slice` is greater than 64 bytes.
+    (Tag, test_tag, 1, BLAKE2B_OUTSIZE)
 }
 
 #[allow(clippy::unreadable_literal)]
