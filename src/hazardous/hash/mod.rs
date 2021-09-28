@@ -20,10 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
-pub use blake2::blake2b;
-
 /// SHA2 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
 pub mod sha2;
 
-pub(crate) mod blake2;
+/// BLAKE2 hash functions.
+pub mod blake2;

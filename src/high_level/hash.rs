@@ -56,8 +56,8 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
-pub use crate::hazardous::hash::blake2b::Digest;
-use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
+pub use crate::hazardous::hash::blake2::blake2b::Digest;
+use crate::{errors::UnknownCryptoError, hazardous::hash::blake2::blake2b};
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hashing using BLAKE2b-256.

@@ -57,7 +57,7 @@
 //! [`update()`]: sha384::Sha384::update
 //! [`reset()`]: sha384::Sha384::reset
 //! [`finalize()`]: sha384::Sha384::finalize
-//! [BLAKE2b]: super::blake2b
+//! [BLAKE2b]: super::blake2::blake2b
 
 use crate::errors::UnknownCryptoError;
 

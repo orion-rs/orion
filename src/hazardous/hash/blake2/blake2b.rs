@@ -1,4 +1,65 @@
-//! TODO
+// MIT License
+
+// Copyright (c) 2018-2021 The orion Developers
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+//! # Parameters:
+//! - `size`: The desired output length for the digest.
+//! - `data`: The data to be hashed.
+//! - `expected`: The expected digest when verifying.
+//!
+//! # Errors:
+//! An error will be returned if:
+//! - `size` is 0 or greater than 64.
+//! - [`finalize()`] is called twice without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
+//!   between.
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2*(2^64-1) bytes of data are hashed.
+//!
+//! # Security:
+//! - The recommended minimum output size is 32.
+//! - This interface only allows creating hash digest using BLAKE2b. If using a secret key is desired,
+//! please refer to the [`mac::blake2b`] module.
+//!
+//! # Example:
+//! ```rust
+//! use orion::hazardous::hash::blake2::blake2b::{Blake2b, Hasher};
+//!
+//! // Using the streaming interface.
+//! let mut state = Blake2b::new(64)?;
+//! state.update(b"Some data")?;
+//! let digest_inc = state.finalize()?;
+//!
+//! // Using the `Hasher` for convenience functions.
+//! let digest_oneshot = Hasher::Blake2b512.digest(b"Some data")?;
+//!
+//! assert_eq!(digest_inc, digest_oneshot);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! ```
+//! [`update()`]: blake2b::Blake2b::update
+//! [`reset()`]: blake2b::Blake2b::reset
+//! [`finalize()`]: blake2b::Blake2b::finalize
+//! [`mac::blake2b`]: crate::hazardous::mac::blake2b
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b_core;
@@ -157,6 +218,124 @@ mod public {
             );
             test_runner.run_all_tests_property(&data);
             true
+        }
+    }
+
+    mod test_hasher {
+        use crate::hazardous::hash::blake2::blake2b::{Blake2b, Hasher};
+
+        #[test]
+        fn test_hasher_interface_no_panic_and_same_result() {
+            let digest_256 = Hasher::Blake2b256.digest(b"Test").unwrap();
+            let digest_384 = Hasher::Blake2b384.digest(b"Test").unwrap();
+            let digest_512 = Hasher::Blake2b512.digest(b"Test").unwrap();
+
+            assert_eq!(digest_256, Hasher::Blake2b256.digest(b"Test").unwrap());
+            assert_eq!(digest_384, Hasher::Blake2b384.digest(b"Test").unwrap());
+            assert_eq!(digest_512, Hasher::Blake2b512.digest(b"Test").unwrap());
+
+            assert_ne!(digest_256, Hasher::Blake2b256.digest(b"Wrong").unwrap());
+            assert_ne!(digest_384, Hasher::Blake2b384.digest(b"Wrong").unwrap());
+            assert_ne!(digest_512, Hasher::Blake2b512.digest(b"Wrong").unwrap());
+
+            let _state_256 = Hasher::Blake2b256.init().unwrap();
+            let _state_384 = Hasher::Blake2b384.init().unwrap();
+            let _state_512 = Hasher::Blake2b512.init().unwrap();
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Given some data, digest() should never fail in practice and should
+        /// produce the same output on a second call.
+        /// Only panics if data is unreasonably large.
+        fn prop_hasher_digest_no_panic_and_same_result(data: Vec<u8>) -> bool {
+            let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
+            let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
+            let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
+
+            let d256_re = Hasher::Blake2b256.digest(&data[..]).unwrap();
+            let d384_re = Hasher::Blake2b384.digest(&data[..]).unwrap();
+            let d512_re = Hasher::Blake2b512.digest(&data[..]).unwrap();
+
+            (d256 == d256_re) && (d384 == d384_re) && (d512 == d512_re)
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Given some data, .digest() should produce the same output as when
+        /// calling with streaming state.
+        fn prop_hasher_digest_256_same_as_streaming(data: Vec<u8>) -> bool {
+            let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
+
+            let mut state = Blake2b::new(32).unwrap();
+            state.update(&data[..]).unwrap();
+
+            d256 == state.finalize().unwrap()
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Given some data, .digest() should produce the same output as when
+        /// calling with streaming state.
+        fn prop_hasher_digest_384_same_as_streaming(data: Vec<u8>) -> bool {
+            let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
+
+            let mut state = Blake2b::new(48).unwrap();
+            state.update(&data[..]).unwrap();
+
+            d384 == state.finalize().unwrap()
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Given some data, .digest() should produce the same output as when
+        /// calling with streaming state.
+        fn prop_hasher_digest_512_same_as_streaming(data: Vec<u8>) -> bool {
+            let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
+
+            let mut state = Blake2b::new(64).unwrap();
+            state.update(&data[..]).unwrap();
+
+            d512 == state.finalize().unwrap()
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Given two different data, .digest() should never produce the
+        /// same output.
+        fn prop_hasher_digest_diff_input_diff_result(data: Vec<u8>) -> bool {
+            let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
+            let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
+            let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
+
+            let d256_re = Hasher::Blake2b256.digest(b"Wrong data").unwrap();
+            let d384_re = Hasher::Blake2b384.digest(b"Wrong data").unwrap();
+            let d512_re = Hasher::Blake2b512.digest(b"Wrong data").unwrap();
+
+            (d256 != d256_re) && (d384 != d384_re) && (d512 != d512_re)
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// .init() should never fail.
+        fn prop_hasher_init_no_panic() -> bool {
+            let _d256 = Hasher::Blake2b256.init().unwrap();
+            let _d384 = Hasher::Blake2b384.init().unwrap();
+            let _d512 = Hasher::Blake2b512.init().unwrap();
+
+            true
+        }
+    }
+
+    mod test_new {
+        use crate::hazardous::hash::blake2::blake2b::Blake2b;
+
+        #[test]
+        fn test_init_size() {
+            assert!(Blake2b::new(0).is_err());
+            assert!(Blake2b::new(65).is_err());
+            assert!(Blake2b::new(1).is_ok());
+            assert!(Blake2b::new(64).is_ok());
         }
     }
 }

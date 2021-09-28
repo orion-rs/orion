@@ -1,7 +1,28 @@
-/// TODO
+// MIT License
+
+// Copyright (c) 2018-2021 The orion Developers
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+/// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
 pub mod blake2b;
 
-/// TODO
 pub(crate) mod blake2b_core {
 
     /// The blocksize for the hash function BLAKE2b.
@@ -17,7 +38,7 @@ pub(crate) mod blake2b_core {
 
     #[allow(clippy::unreadable_literal)]
     /// The BLAKE2b initialization vector as defined in the RFC 7693.
-    const IV: [U64x4; 2] = [
+    pub(crate) const IV: [U64x4; 2] = [
         U64x4(
             0x6a09e667f3bcc908,
             0xbb67ae8584caa73b,
@@ -96,14 +117,14 @@ pub(crate) mod blake2b_core {
     #[derive(Clone)]
     /// BLAKE2b streaming state.
     pub(crate) struct State {
-        init_state: [U64x4; 2],
-        internal_state: [U64x4; 2],
-        buffer: [u8; BLAKE2B_BLOCKSIZE],
-        leftover: usize,
-        t: [u64; 2],
-        f: [u64; 2],
-        is_finalized: bool,
-        is_keyed: bool,
+        pub(crate) init_state: [U64x4; 2],
+        pub(crate) internal_state: [U64x4; 2],
+        pub(crate) buffer: [u8; BLAKE2B_BLOCKSIZE],
+        pub(crate) leftover: usize,
+        pub(crate) t: [u64; 2],
+        pub(crate) f: [u64; 2],
+        pub(crate) is_finalized: bool,
+        pub(crate) is_keyed: bool,
         pub(crate) size: usize,
     }
 
@@ -338,5 +359,84 @@ pub(crate) mod blake2b_core {
         assert_eq!(state_1.is_finalized, state_2.is_finalized);
         assert_eq!(state_1.is_keyed, state_2.is_keyed);
         assert_eq!(state_1.size, state_2.size);
+    }
+}
+
+#[cfg(test)]
+mod private {
+    use super::blake2b_core::State;
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_debug_impl() {
+        let initial_state = State::_new(&[], 64).unwrap();
+        let debug = format!("{:?}", initial_state);
+        let expected = "State { init_state: [***OMITTED***], internal_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, t: [0, 0], f: [0, 0], is_finalized: false, is_keyed: false, size: 64 }";
+        assert_eq!(debug, expected);
+    }
+
+    #[test]
+    fn test_switching_keyed_modes_fails() {
+        let mut tmp = [0u8; 64];
+
+        let mut state_keyed = State::_new(&[0u8; 64], 64).unwrap();
+        state_keyed._update(b"Tests").unwrap();
+        state_keyed._finalize(&mut tmp).unwrap();
+        assert!(state_keyed._reset(&[]).is_err());
+        assert!(state_keyed._reset(&[0u8; 64]).is_ok());
+
+        let mut state = State::_new(&[], 64).unwrap();
+        state._update(b"Tests").unwrap();
+        state_keyed._finalize(&mut tmp).unwrap();
+        assert!(state._reset(&[0u8; 64]).is_err());
+        assert!(state._reset(&[]).is_ok());
+    }
+
+    mod test_increment_offset {
+        use crate::hazardous::hash::blake2::blake2b_core::{State, BLAKE2B_BLOCKSIZE, IV};
+        use crate::util::u64x4::U64x4;
+
+        #[test]
+        fn test_offset_increase_values() {
+            let mut context = State {
+                init_state: [U64x4::default(); 2],
+                internal_state: IV,
+                buffer: [0u8; BLAKE2B_BLOCKSIZE],
+                leftover: 0,
+                t: [0u64; 2],
+                f: [0u64; 2],
+                is_finalized: false,
+                is_keyed: false,
+                size: 1,
+            };
+
+            context._increment_offset(1);
+            assert_eq!(context.t, [1u64, 0u64]);
+            context._increment_offset(17);
+            assert_eq!(context.t, [18u64, 0u64]);
+            context._increment_offset(12);
+            assert_eq!(context.t, [30u64, 0u64]);
+            // Overflow
+            context._increment_offset(u64::MAX);
+            assert_eq!(context.t, [29u64, 1u64]);
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_panic_on_second_overflow() {
+            let mut context = State {
+                init_state: [U64x4::default(); 2],
+                internal_state: IV,
+                buffer: [0u8; BLAKE2B_BLOCKSIZE],
+                leftover: 0,
+                t: [1u64, u64::MAX],
+                f: [0u64; 2],
+                is_finalized: false,
+                is_keyed: false,
+                size: 1,
+            };
+
+            context._increment_offset(u64::MAX);
+        }
     }
 }

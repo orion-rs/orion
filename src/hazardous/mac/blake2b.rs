@@ -1,4 +1,69 @@
-//! TODO
+// MIT License
+
+// Copyright (c) 2018-2021 The orion Developers
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+//! # Parameters:
+//! - `secret_key`: The authentication key.
+//! - `size`: The desired output length for the authentication tag.
+//! - `data`: Data to be authenticated.
+//! - `expected`: The expected authentication tag.
+//!
+//! # Errors:
+//! An error will be returned if:
+//! - `size` is 0 or greater than 64.
+//! - [`finalize()`] is called twice without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
+//!   between.
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 2*(2^64-1) bytes of data are hashed.
+//!
+//! # Security:
+//! - The secret key should always be generated using a CSPRNG.
+//!   [`SecretKey::generate()`] can be used for this. It generates
+//!   a secret key of 32 bytes.
+//! - The minimum recommended size for a secret key is 32 bytes.
+//! - The recommended minimum output size is 32.
+//! - This interface only allows creating authentication tag using BLAKE2b. If hash digests are needed,
+//! please refer to the [`hash::blake2::blake2b`] module.
+//!
+//! # Example:
+//! ```rust
+//! use orion::hazardous::mac::blake2b::{Blake2b, SecretKey};
+//!
+//! // Using the streaming interface.
+//! let secret_key = SecretKey::generate();
+//! let mut state_keyed = Blake2b::new(&secret_key, 64)?;
+//! state_keyed.update(b"Some data")?;
+//! let mac = state_keyed.finalize()?;
+//!
+//! assert!(Blake2b::verify(&mac, &secret_key, 64, b"Some data").is_ok());
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! ```
+//! [`update()`]: blake2b::Blake2b::update
+//! [`reset()`]: blake2b::Blake2b::reset
+//! [`finalize()`]: blake2b::Blake2b::finalize
+//! [`SecretKey::generate()`]: blake2b::SecretKey::generate
+//! [`hash::blake2::blake2b`]: crate::hazardous::hash::blake2::blake2b
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b_core::{self, BLAKE2B_KEYSIZE, BLAKE2B_OUTSIZE};
@@ -159,6 +224,189 @@ mod public {
                 BLAKE2B_BLOCKSIZE,
             );
             test_runner.run_all_tests_property(&data);
+            true
+        }
+    }
+
+    mod test_new {
+        use crate::hazardous::mac::blake2b::{Blake2b, SecretKey};
+
+        #[test]
+        fn test_init_size() {
+            let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
+            assert!(Blake2b::new(&sk, 0).is_err());
+            assert!(Blake2b::new(&sk, 65).is_err());
+            assert!(Blake2b::new(&sk, 1).is_ok());
+            assert!(Blake2b::new(&sk, 64).is_ok());
+        }
+    }
+
+    #[cfg(feature = "safe_api")]
+    mod test_verify {
+        use crate::hazardous::mac::blake2b::{Blake2b, SecretKey};
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// When using a different key, verify() should always yield an error.
+        /// NOTE: Using different and same input data is tested with TestableStreamingContext.
+        fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
+            let sk = SecretKey::generate();
+            let mut state = Blake2b::new(&sk, 64).unwrap();
+            state.update(&data[..]).unwrap();
+            let tag = state.finalize().unwrap();
+            let bad_sk = SecretKey::generate();
+
+            Blake2b::verify(&tag, &bad_sk, 64, &data[..]).is_err()
+        }
+    }
+
+    // TODO: Verify that the below tests are not redundant with that tested through
+    // TODO: `StreamingContextConsistencyTester`. If not, these also probably should be included
+    // TODO: in the `hash::blake2b` module
+
+    mod test_streaming_interface {
+        use crate::hazardous::hash::blake2::blake2b_core::{
+            compare_blake2b_states, BLAKE2B_OUTSIZE,
+        };
+        use crate::hazardous::mac::blake2b::{Blake2b, SecretKey};
+
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
+        /// Testing different usage combinations of new(), update(),
+        /// finalize() and reset() produce the same Digest/Tag.
+        fn produces_same_hash(sk: &SecretKey, size: usize, data: &[u8]) {
+            // new(), update(), finalize()
+            let mut state_1 = Blake2b::new(sk, size).unwrap();
+            state_1.update(data).unwrap();
+            let res_1 = state_1.finalize().unwrap();
+
+            // new(), reset(), update(), finalize()
+            let mut state_2 = Blake2b::new(sk, size).unwrap();
+            state_2.reset(sk).unwrap();
+            state_2.update(data).unwrap();
+            let res_2 = state_2.finalize().unwrap();
+
+            // new(), update(), reset(), update(), finalize()
+            let mut state_3 = Blake2b::new(sk, size).unwrap();
+            state_3.update(data).unwrap();
+            state_3.reset(sk).unwrap();
+            state_3.update(data).unwrap();
+            let res_3 = state_3.finalize().unwrap();
+
+            // new(), update(), finalize(), reset(), update(), finalize()
+            let mut state_4 = Blake2b::new(sk, size).unwrap();
+            state_4.update(data).unwrap();
+            let _ = state_4.finalize().unwrap();
+            state_4.reset(sk).unwrap();
+            state_4.update(data).unwrap();
+            let res_4 = state_4.finalize().unwrap();
+
+            assert_eq!(res_1, res_2);
+            assert_eq!(res_2, res_3);
+            assert_eq!(res_3, res_4);
+
+            // Tests for the assumption that returning Ok() on empty update() calls
+            // with streaming APIs, gives the correct result. This is done by testing
+            // the reasoning that if update() is empty, returns Ok(), it is the same as
+            // calling new() -> finalize(). i.e not calling update() at all.
+            if data.is_empty() {
+                // new(), finalize()
+                let mut state_5 = Blake2b::new(sk, size).unwrap();
+                let res_5 = state_5.finalize().unwrap();
+
+                // new(), reset(), finalize()
+                let mut state_6 = Blake2b::new(sk, size).unwrap();
+                state_6.reset(sk).unwrap();
+                let res_6 = state_6.finalize().unwrap();
+
+                // new(), update(), reset(), finalize()
+                let mut state_7 = Blake2b::new(sk, size).unwrap();
+                state_7.update(b"Wrong data").unwrap();
+                state_7.reset(sk).unwrap();
+                let res_7 = state_7.finalize().unwrap();
+
+                assert_eq!(res_4, res_5);
+                assert_eq!(res_5, res_6);
+                assert_eq!(res_6, res_7);
+            }
+        }
+
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
+        /// Testing different usage combinations of new(), update(),
+        /// finalize() and reset() produce the same Digest/Tag.
+        fn produces_same_state(sk: &SecretKey, size: usize, data: &[u8]) {
+            // new()
+            let state_1 = Blake2b::new(sk, size).unwrap();
+
+            // new(), reset()
+            let mut state_2 = Blake2b::new(sk, size).unwrap();
+            state_2.reset(sk).unwrap();
+
+            // new(), update(), reset()
+            let mut state_3 = Blake2b::new(sk, size).unwrap();
+            state_3.update(data).unwrap();
+            state_3.reset(sk).unwrap();
+
+            // new(), update(), finalize(), reset()
+            let mut state_4 = Blake2b::new(sk, size).unwrap();
+            state_4.update(data).unwrap();
+            let _ = state_4.finalize().unwrap();
+            state_4.reset(sk).unwrap();
+
+            compare_blake2b_states(&state_1._state, &state_2._state);
+            compare_blake2b_states(&state_2._state, &state_3._state);
+            compare_blake2b_states(&state_3._state, &state_4._state);
+        }
+
+        #[test]
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
+        fn test_produce_same_state() {
+            let sk = SecretKey::from_slice(b"Testing").unwrap();
+            produces_same_state(&sk, 1, b"Tests");
+            produces_same_state(&sk, 32, b"Tests");
+            produces_same_state(&sk, 64, b"Tests");
+            produces_same_state(&sk, 28, b"Tests");
+        }
+
+        #[test]
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
+        fn test_produce_same_hash() {
+            let sk = SecretKey::from_slice(b"Testing").unwrap();
+            produces_same_hash(&sk, 1, b"Tests");
+            produces_same_hash(&sk, 32, b"Tests");
+            produces_same_hash(&sk, 64, b"Tests");
+            produces_same_hash(&sk, 28, b"Tests");
+
+            produces_same_hash(&sk, 1, b"");
+            produces_same_hash(&sk, 32, b"");
+            produces_same_hash(&sk, 64, b"");
+            produces_same_hash(&sk, 28, b"");
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
+        /// Test different streaming state usage patterns.
+        fn prop_same_hash_different_usage(data: Vec<u8>, size: usize) -> bool {
+            if size >= 1 && size <= BLAKE2B_OUTSIZE {
+                // Will panic on incorrect results.
+                let sk = SecretKey::generate();
+                produces_same_hash(&sk, size, &data[..]);
+            }
+
+            true
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
+        /// Test different streaming state usage patterns.
+        fn prop_same_state_different_usage(data: Vec<u8>, size: usize) -> bool {
+            if size >= 1 && size <= BLAKE2B_OUTSIZE {
+                // Will panic on incorrect results.
+                let sk = SecretKey::generate();
+                produces_same_state(&sk, size, &data[..]);
+            }
+
             true
         }
     }

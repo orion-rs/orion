@@ -93,8 +93,8 @@
 //! [`zeroize` crate]: https://crates.io/crates/zeroize
 
 use crate::errors::UnknownCryptoError;
+use crate::hazardous::hash::blake2::blake2b::Blake2b;
 use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
-use crate::hazardous::hash::blake2b::Blake2b;
 use crate::util;
 use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 use zeroize::Zeroize;

@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `secret_key`:  The authentication key.
+//! - `secret_key`: The authentication key.
 //! - `data`: Data to be authenticated.
 //! - `expected`: The expected authentication tag.
 //!
