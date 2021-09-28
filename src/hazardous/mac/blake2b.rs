@@ -50,13 +50,13 @@
 //! ```rust
 //! use orion::hazardous::mac::blake2b::{Blake2b, SecretKey};
 //!
-//! // Using the streaming interface.
-//! let secret_key = SecretKey::generate();
-//! let mut state_keyed = Blake2b::new(&secret_key, 64)?;
-//! state_keyed.update(b"Some data")?;
-//! let mac = state_keyed.finalize()?;
+//! let key = SecretKey::generate();
 //!
-//! assert!(Blake2b::verify(&mac, &secret_key, 64, b"Some data").is_ok());
+//! let mut state = Blake2b::new(&key, 64)?;
+//! state.update(b"Some data")?;
+//! let tag = state.finalize()?;
+//!
+//! assert!(Blake2b::verify(&tag, &key, 64, b"Some data").is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: blake2b::Blake2b::update

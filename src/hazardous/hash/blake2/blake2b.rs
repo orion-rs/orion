@@ -48,12 +48,12 @@
 //! // Using the streaming interface.
 //! let mut state = Blake2b::new(64)?;
 //! state.update(b"Some data")?;
-//! let digest_inc = state.finalize()?;
+//! let hash = state.finalize()?;
 //!
 //! // Using the `Hasher` for convenience functions.
-//! let digest_oneshot = Hasher::Blake2b512.digest(b"Some data")?;
+//! let hash_one_shot = Hasher::Blake2b512.digest(b"Some data")?;
 //!
-//! assert_eq!(digest_inc, digest_oneshot);
+//! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: blake2b::Blake2b::update
