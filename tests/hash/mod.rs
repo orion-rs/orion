@@ -5,21 +5,25 @@ pub mod sha384_nist_cavp;
 pub mod sha512_nist_cavp;
 
 use crate::TestCaseReader;
-use orion::hazardous::hash::{blake2b, sha2::sha256, sha2::sha384, sha2::sha512};
+use orion::hazardous::hash::{self, sha2::sha256, sha2::sha384, sha2::sha512};
+use orion::hazardous::mac;
 
 fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
     // Only make SecretKey if test case key value is not empty.
-    let mut state = if key.is_empty() {
-        blake2b::Blake2b::new(None, output.len()).unwrap()
+    if key.is_empty() {
+        let mut state = blake2::blake2b::Blake2b::new(output.len()).unwrap();
+        state.update(input).unwrap();
+        let digest = state.finalize().unwrap();
+        assert_eq!(digest.len(), output.len());
+        assert_eq!(digest.as_ref(), &output[..]);
     } else {
-        let secret_key = blake2b::SecretKey::from_slice(key).unwrap();
-        blake2b::Blake2b::new(Some(&secret_key), output.len()).unwrap()
-    };
-
-    state.update(input).unwrap();
-    let digest = state.finalize().unwrap();
-    assert_eq!(digest.len(), output.len());
-    assert_eq!(digest.as_ref(), &output[..]);
+        let secret_key = mac::blake2b::SecretKey::from_slice(key).unwrap();
+        let mut state = mac::blake2b::Blake2b::new(&secret_key, output.len()).unwrap();
+        state.update(input).unwrap();
+        let tag = state.finalize().unwrap();
+        assert_eq!(tag.len(), output.len());
+        assert_eq!(tag.unprotected_as_bytes(), &output[..]);
+    }
 }
 
 fn sha512_test_runner(data: &[u8], output: &[u8]) {

@@ -25,3 +25,6 @@ pub mod hmac;
 
 /// Poly1305 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub mod poly1305;
+
+/// TODO
+pub mod blake2b;
