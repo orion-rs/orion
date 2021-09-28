@@ -222,7 +222,7 @@ mod public {
     }
 
     mod test_hasher {
-        use crate::hazardous::hash::blake2::blake2b::{Blake2b, Hasher};
+        use crate::hazardous::hash::blake2::blake2b::Hasher;
 
         #[test]
         fn test_hasher_interface_no_panic_and_same_result() {
@@ -265,6 +265,8 @@ mod public {
         /// Given some data, .digest() should produce the same output as when
         /// calling with streaming state.
         fn prop_hasher_digest_256_same_as_streaming(data: Vec<u8>) -> bool {
+            use crate::hazardous::hash::blake2::blake2b::Blake2b;
+
             let d256 = Hasher::Blake2b256.digest(&data[..]).unwrap();
 
             let mut state = Blake2b::new(32).unwrap();
@@ -278,6 +280,8 @@ mod public {
         /// Given some data, .digest() should produce the same output as when
         /// calling with streaming state.
         fn prop_hasher_digest_384_same_as_streaming(data: Vec<u8>) -> bool {
+            use crate::hazardous::hash::blake2::blake2b::Blake2b;
+
             let d384 = Hasher::Blake2b384.digest(&data[..]).unwrap();
 
             let mut state = Blake2b::new(48).unwrap();
@@ -291,6 +295,8 @@ mod public {
         /// Given some data, .digest() should produce the same output as when
         /// calling with streaming state.
         fn prop_hasher_digest_512_same_as_streaming(data: Vec<u8>) -> bool {
+            use crate::hazardous::hash::blake2::blake2b::Blake2b;
+
             let d512 = Hasher::Blake2b512.digest(&data[..]).unwrap();
 
             let mut state = Blake2b::new(64).unwrap();

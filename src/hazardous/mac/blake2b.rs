@@ -265,9 +265,7 @@ mod public {
     // TODO: in the `hash::blake2b` module
 
     mod test_streaming_interface {
-        use crate::hazardous::hash::blake2::blake2b_core::{
-            compare_blake2b_states, BLAKE2B_OUTSIZE,
-        };
+        use crate::hazardous::hash::blake2::blake2b_core::compare_blake2b_states;
         use crate::hazardous::mac::blake2b::{Blake2b, SecretKey};
 
         /// Related bug: https://github.com/orion-rs/orion/issues/46
@@ -387,6 +385,8 @@ mod public {
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_same_hash_different_usage(data: Vec<u8>, size: usize) -> bool {
+            use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
+
             if size >= 1 && size <= BLAKE2B_OUTSIZE {
                 // Will panic on incorrect results.
                 let sk = SecretKey::generate();
@@ -401,6 +401,8 @@ mod public {
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_same_state_different_usage(data: Vec<u8>, size: usize) -> bool {
+            use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
+
             if size >= 1 && size <= BLAKE2B_OUTSIZE {
                 // Will panic on incorrect results.
                 let sk = SecretKey::generate();
