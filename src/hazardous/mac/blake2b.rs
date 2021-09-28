@@ -258,11 +258,29 @@ mod public {
 
             Blake2b::verify(&tag, &bad_sk, 64, &data[..]).is_err()
         }
-    }
 
-    // TODO: Verify that the below tests are not redundant with that tested through
-    // TODO: `StreamingContextConsistencyTester`. If not, these also probably should be included
-    // TODO: in the `hash::blake2b` module
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// When using a different size, verify() should always yield an error.
+        /// NOTE: Using different and same input data is tested with TestableStreamingContext.
+        fn prop_verify_diff_size_false(data: Vec<u8>, size_one: usize, size_two: usize) -> bool {
+            let (size_one, size_two) = match (size_one, size_two) {
+                (1..=64, 1..=64) => (size_one, size_two),
+                (_, _) => (32, 64),
+            };
+
+            let sk = SecretKey::generate();
+            let mut state = Blake2b::new(&sk, size_one).unwrap();
+            state.update(&data[..]).unwrap();
+            let tag = state.finalize().unwrap();
+
+            if size_one != size_two {
+                Blake2b::verify(&tag, &sk, size_two, &data[..]).is_err()
+            } else {
+                Blake2b::verify(&tag, &sk, size_two, &data[..]).is_ok()
+            }
+        }
+    }
 
     mod test_streaming_interface {
         use crate::hazardous::hash::blake2::blake2b_core::compare_blake2b_states;
