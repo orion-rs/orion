@@ -22,7 +22,6 @@
 
 use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::ecc::x25519::montgomery::mont_ladder;
 use crate::util::secure_cmp;
 use core::convert::{TryFrom, TryInto};
 use core::ops::{Add, Mul, Neg, Sub};
@@ -256,7 +255,7 @@ impl FieldElement {
 // TODO: a `Secret` made form the newtype macros instead, not this one.
 #[derive(Clone)]
 ///
-pub struct Scalar([u8; 32]);
+struct Scalar([u8; 32]);
 
 impl Drop for Scalar {
     fn drop(&mut self) {
@@ -294,18 +293,6 @@ impl Scalar {
         assert_eq!(slice.len(), 32);
         // TODO: Handle this panic
         Self(slice.try_into().expect("SHOULD NOT PANIC"))
-    }
-
-    #[cfg(feature = "safe_api")]
-    ///
-    pub fn generate() -> Self {
-        // TODO: Should be encoded into newtype - returning an error.
-        use crate::util::secure_rand_bytes;
-
-        let mut ret = [0u8; 32];
-        secure_rand_bytes(&mut ret).expect("FATAL: FAILED TO GENERATE RANDOM SCALAR");
-
-        Self::from_slice(&ret)
     }
 }
 
@@ -400,7 +387,7 @@ construct_secret_key! {
 
 impl_from_trait!(SecretKey, SECRET_KEY_SIZE);
 
-impl TryFrom<SecretKey> for PublicKey {
+impl TryFrom<&SecretKey> for PublicKey {
     type Error = UnknownCryptoError;
 
     fn try_from(secret_key: &SecretKey) -> Result<Self, Self::Error> {
@@ -431,7 +418,17 @@ pub fn key_agreement(
     secret_key: &SecretKey,
     public_key: &PublicKey,
 ) -> Result<SharedSecret, UnknownCryptoError> {
-    unimplemented!();
+    let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes());
+    let u_coord = &public_key.value;
+
+    let field_element = mont_ladder(&scalar, u_coord).as_bytes();
+    // High bit should be zero.
+    debug_assert!((field_element[31] & 0b1000_0000u8) == 0u8);
+    if secure_cmp(&field_element, &LOW_ORDER_POINT_RESULT).is_ok() {
+        return Err(UnknownCryptoError);
+    }
+
+    Ok(SharedSecret::from(field_element))
 }
 
 /// u-coordinate of the base point.
@@ -442,26 +439,11 @@ const BASEPOINT: [u8; 32] = [
 ///
 const LOW_ORDER_POINT_RESULT: [u8; 32] = [0u8; 32];
 
-///
-pub fn x25519(scalar: &Scalar, point: &[u8; 32]) -> Result<[u8; 32], UnknownCryptoError> {
-    // TODO: Handle errors
-    debug_assert_eq!(point.len(), 32);
-
-    let field_element = mont_ladder(&scalar, point).as_bytes();
-    // High bit should be zero.
-    debug_assert!((field_element[31] & 0b1000_0000u8) == 0u8);
-
-    if secure_cmp(&field_element, &LOW_ORDER_POINT_RESULT).is_ok() {
-        dbg!("all-zero shared");
-        return Err(UnknownCryptoError);
-    }
-
-    Ok(field_element)
-}
-
 #[cfg(test)]
 mod public {
-    use crate::hazardous::ecc::x25519::{x25519, Scalar, BASEPOINT};
+    use crate::hazardous::ecc::x25519::{
+        key_agreement, PublicKey, SecretKey, SharedSecret, BASEPOINT,
+    };
 
     #[test]
     #[cfg(feature = "safe_api")]
@@ -469,18 +451,17 @@ mod public {
         // RFC 7748 dictates that the MSB of final byte must be masked when receiving a field element,
         // used for agreement (public key). We check that modifying it does not impact the result of
         // the agreement.
+        let k = SecretKey::generate();
+        let mut u = PublicKey::from([0u8; 32]);
 
-        let k = Scalar::generate();
-
-        let mut u = [0u8; 32];
-        crate::util::secure_rand_bytes(&mut u).unwrap();
-        debug_assert_ne!(u[31] & 127u8, (u[31] & 127u8) | 128u8);
+        crate::util::secure_rand_bytes(&mut u.value).unwrap();
+        debug_assert_ne!(u.value[31] & 127u8, (u.value[31] & 127u8) | 128u8);
 
         // Mask bit to 0 as we do in `FieldElement::from_bytes()`.
-        u[31] &= 127u8;
-        let msb_zero = x25519(&k, &u).unwrap();
-        u[31] |= 128u8;
-        let msb_one = x25519(&k, &u).unwrap();
+        u.value[31] &= 127u8;
+        let msb_zero = key_agreement(&k, &u).unwrap();
+        u.value[31] |= 128u8;
+        let msb_one = key_agreement(&k, &u).unwrap();
 
         assert_eq!(msb_zero, msb_one);
     }
@@ -489,144 +470,144 @@ mod public {
     fn test_rfc_basic() {
         // https://www.ietf.org/rfc/rfc7748.html#section-5.2
 
-        let mut scalar = Scalar([0u8; 32]);
-        let mut point = [0u8; 32];
-        let mut expected = [0u8; 32];
+        let mut scalar = SecretKey::from([0u8; 32]);
+        let mut point = PublicKey::from([0u8; 32]);
+        let mut expected = SharedSecret::from([0u8; 32]);
 
         hex::decode_to_slice(
             "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4",
-            &mut scalar.0,
+            &mut scalar.value,
         )
         .unwrap();
         hex::decode_to_slice(
             "e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c",
-            &mut point,
+            &mut point.value,
         )
         .unwrap();
         hex::decode_to_slice(
             "c3da55379de9c6908e94ea4df28d084f32eccf03491c71f754b4075577a28552",
-            &mut expected,
+            &mut expected.value,
         )
         .unwrap();
 
-        let actual = x25519(&scalar, &point).unwrap();
+        let actual = key_agreement(&scalar, &point).unwrap();
         assert_eq!(actual, expected);
 
         hex::decode_to_slice(
             "4b66e9d4d1b4673c5ad22691957d6af5c11b6421e0ea01d42ca4169e7918ba0d",
-            &mut scalar.0,
+            &mut scalar.value,
         )
         .unwrap();
         hex::decode_to_slice(
             "e5210f12786811d3f4b7959d0538ae2c31dbe7106fc03c3efc4cd549c715a493",
-            &mut point,
+            &mut point.value,
         )
         .unwrap();
         hex::decode_to_slice(
             "95cbde9476e8907d7aade45cb4b873f88b595a68799fa152e6f8f7647aac7957",
-            &mut expected,
+            &mut expected.value,
         )
         .unwrap();
 
-        let actual = x25519(&scalar, &point).unwrap();
+        let actual = key_agreement(&scalar, &point).unwrap();
         assert_eq!(actual, expected);
     }
 
     #[test]
     fn test_rfc_iter() {
-        let mut k = Scalar(BASEPOINT);
-        let mut u = BASEPOINT;
+        let mut k = SecretKey::from(BASEPOINT);
+        let mut u = PublicKey::from(BASEPOINT);
 
         // 1 iter
-        let ret = x25519(&k, &u).unwrap();
-        u = k.0;
-        k.0 = ret;
+        let ret = key_agreement(&k, &u).unwrap();
+        u.value = k.value;
+        k.value = ret.value;
 
-        let mut expected = [0u8; 32];
+        let mut expected = SharedSecret::from([0u8; 32]);
         hex::decode_to_slice(
             "422c8e7a6227d7bca1350b3e2bb7279f7897b87bb6854b783c60e80311ae3079",
-            &mut expected,
+            &mut expected.value,
         )
         .unwrap();
-        assert_eq!(k.0, expected, "Failed after 1 iter");
+        assert_eq!(k.value, expected.value, "Failed after 1 iter");
 
         for _ in 0..999 {
-            let ret = x25519(&k, &u).unwrap();
-            u = k.0;
-            k.0 = ret;
+            let ret = key_agreement(&k, &u).unwrap();
+            u.value = k.value;
+            k.value = ret.value;
         }
 
         hex::decode_to_slice(
             "684cf59ba83309552800ef566f2f4d3c1c3887c49360e3875f2eb94d99532c51",
-            &mut expected,
+            &mut expected.value,
         )
         .unwrap();
-        assert_eq!(k.0, expected, "Failed after 1.000 iter");
+        assert_eq!(k.value, expected.value, "Failed after 1.000 iter");
 
         /* Taking a decade...
         for _ in 0..999000 {
-            let ret = x25519(&k, &u);
-            u = k.0;
-            k.0 = ret;
+            let ret = key_agreement(&k, &u);
+            u.value = k.value;
+            k.value = ret.value;
         }
 
         hex::decode_to_slice("7c3911e0ab2586fd864497297e575e6f3bc601c0883c30df5f4dd2d24f665424", &mut expected).unwrap();
-        assert_eq!(k.0, expected, "Failed after 1.000.000 iter");
+        assert_eq!(k.value, expected.value, "Failed after 1.000.000 iter");
          */
     }
 
     #[test]
     fn test_rfc_pub_priv_basepoint() {
-        let mut alice_pub = [0u8; 32];
-        let mut alice_priv = [0u8; 32];
+        let mut alice_pub = PublicKey::from([0u8; 32]);
+        let mut alice_priv = SecretKey::from([0u8; 32]);
 
-        let mut bob_pub = [0u8; 32];
-        let mut bob_priv = [0u8; 32];
+        let mut bob_pub = PublicKey::from([0u8; 32]);
+        let mut bob_priv = SecretKey::from([0u8; 32]);
 
-        let mut shared = [0u8; 32];
+        let mut shared = SharedSecret::from([0u8; 32]);
 
         hex::decode_to_slice(
             "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
-            &mut alice_priv,
+            &mut alice_priv.value,
         )
         .unwrap();
         hex::decode_to_slice(
             "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a",
-            &mut alice_pub,
+            &mut alice_pub.value,
         )
         .unwrap();
         assert_eq!(
-            x25519(&Scalar::from_slice(&alice_priv), &BASEPOINT).unwrap(),
-            alice_pub
+            key_agreement(&alice_priv, &PublicKey::from(BASEPOINT)).unwrap(),
+            alice_pub.value.as_ref()
         );
 
         hex::decode_to_slice(
             "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
-            &mut bob_priv,
+            &mut bob_priv.value,
         )
         .unwrap();
         hex::decode_to_slice(
             "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
-            &mut bob_pub,
+            &mut bob_pub.value,
         )
         .unwrap();
         assert_eq!(
-            x25519(&Scalar::from_slice(&bob_priv), &BASEPOINT).unwrap(),
-            bob_pub
+            key_agreement(&bob_priv, &PublicKey::from(BASEPOINT)).unwrap(),
+            bob_pub.value.as_ref()
         );
 
         hex::decode_to_slice(
             "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742",
-            &mut shared,
+            &mut shared.value,
         )
         .unwrap();
         assert_eq!(
-            x25519(&Scalar::from_slice(&alice_priv), &bob_pub).unwrap(),
-            shared
+            key_agreement(&alice_priv, &bob_pub).unwrap(),
+            shared.value.as_ref()
         );
         assert_eq!(
-            x25519(&Scalar::from_slice(&bob_priv), &alice_pub).unwrap(),
-            shared
+            key_agreement(&bob_priv, &alice_pub).unwrap(),
+            shared.value.as_ref()
         );
     }
 }

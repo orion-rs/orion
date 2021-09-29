@@ -458,7 +458,7 @@ macro_rules! construct_secret_key {
         mod $test_module_name {
             use super::*;
 
-            test_bound_parameters!($name, $lower_bound, $upper_bound, $gen_length);
+            test_bound_parameters!($name, $lower_bound, $upper_bound, $upper_bound);
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
             test_partial_eq!($name, $upper_bound);
@@ -558,7 +558,7 @@ macro_rules! construct_public {
         $(#[$meta])*
         ///
         pub struct $name {
-            value: [u8; $upper_bound],
+            pub(crate) value: [u8; $upper_bound],
             original_length: usize,
         }
 
@@ -598,7 +598,7 @@ macro_rules! construct_public {
         $(#[$meta])*
         ///
         pub struct $name {
-            value: [u8; $upper_bound],
+            pub(crate) value: [u8; $upper_bound],
             original_length: usize,
         }
 
