@@ -414,6 +414,66 @@ macro_rules! test_generate_variable (($name:ident) => (
 ///   generate().
 macro_rules! construct_secret_key {
     ($(#[$meta:meta])*
+    ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr)) => (
+        $(#[$meta])*
+        ///
+        /// # Security:
+        /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+        /// that the type implements.
+        ///
+        /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
+        /// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+        /// is implemented in such a way that the comparison happens in constant time. Thus, users should
+        /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+        /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
+        /// ```rust
+        /// use orion::hazardous::stream::chacha20::SecretKey;
+        ///
+        /// // Initialize a secret key with random bytes.
+        /// let secret_key = SecretKey::generate();
+        ///
+        /// // Secure, constant-time comparison with a byte slice
+        /// assert!(secret_key != &[0; 32][..]);
+        ///
+        /// // Secure, constant-time comparison with another SecretKey
+        /// assert!(secret_key != SecretKey::generate());
+        /// ```
+        pub struct $name {
+            value: [u8; $upper_bound],
+            original_length: usize,
+        }
+
+        impl_omitted_debug_trait!($name);
+        impl_drop_trait!($name);
+        impl_ct_partialeq_trait!($name, unprotected_as_bytes);
+
+        impl $name {
+            func_from_slice!($name, $lower_bound, $upper_bound);
+            func_unprotected_as_bytes!();
+            func_len!();
+            func_is_empty!();
+        }
+
+        #[cfg(test)]
+        mod $test_module_name {
+            use super::*;
+
+            test_bound_parameters!($name, $lower_bound, $upper_bound, $gen_length);
+            test_from_slice!($name, $lower_bound, $upper_bound);
+            test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
+            test_partial_eq!($name, $upper_bound);
+
+            #[cfg(test)]
+            #[cfg(feature = "safe_api")]
+            mod tests_with_std {
+                use super::*;
+
+                test_omitted_debug!($name, $upper_bound);
+            }
+        }
+    );
+
+    ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr, $gen_length:expr)) => (
         $(#[$meta])*
         ///

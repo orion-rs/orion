@@ -24,8 +24,17 @@ use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519::montgomery::mont_ladder;
 use crate::util::secure_cmp;
-use core::convert::TryInto;
+use core::convert::{TryFrom, TryInto};
 use core::ops::{Add, Mul, Neg, Sub};
+
+/// The size of a public key used in X25519.
+pub const PUBLIC_KEY_SIZE: usize = 32;
+
+/// The size of a secret key used in X25519.
+pub const SECRET_KEY_SIZE: usize = 32;
+
+/// The size of a shared key used in X25519.
+pub const SHARED_KEY_SIZE: usize = 32;
 
 /// TODO: Should probably also be zeroized.
 #[derive(Clone, Copy, Debug)]
@@ -300,67 +309,133 @@ impl Scalar {
     }
 }
 
+/// Scalar multiplication using the Montgomery Ladder (a.k.a "scalarmult")
 ///
-mod montgomery {
+/// Refs:
+/// - https://eprint.iacr.org/2020/956.pdf
+/// - https://eprint.iacr.org/2017/212.pdf
+/// - https://github.com/golang/crypto/blob/0c34fe9e7dc2486962ef9867e3edb3503537209f/curve25519/curve25519_generic.go#L779
+fn mont_ladder(scalar: &Scalar, point: &[u8; 32]) -> FieldElement {
+    let clamped = scalar.clamp();
+    let x1 = FieldElement::from_bytes(point);
+    let mut x2 = FieldElement::one();
+    let mut x3 = x1;
+    let mut z3 = FieldElement::one();
+    let mut z2 = FieldElement::zero();
+    let mut tmp0: FieldElement;
+    let mut tmp1: FieldElement;
 
-    // https://eprint.iacr.org/2020/956.pdf
-    // https://eprint.iacr.org/2017/212.pdf
+    let mut swap: u8 = 0;
 
-    use crate::hazardous::ecc::x25519::{FieldElement, Scalar};
-
-    // Scalar multiplication using the Montgomery Ladder (a.k.a "scalarmult")
-    pub fn mont_ladder(scalar: &Scalar, point: &[u8; 32]) -> FieldElement {
-        // Ref: https://github.com/golang/crypto/blob/0c34fe9e7dc2486962ef9867e3edb3503537209f/curve25519/curve25519_generic.go#L779
-        let clamped = scalar.clamp();
-        let x1 = FieldElement::from_bytes(point);
-        let mut x2 = FieldElement::one();
-        let mut x3 = x1;
-        let mut z3 = FieldElement::one();
-        let mut z2 = FieldElement::zero();
-        let mut tmp0: FieldElement;
-        let mut tmp1: FieldElement;
-
-        let mut swap: u8 = 0;
-
-        for idx in (0..=254).rev() {
-            let bit = (clamped.0[idx >> 3] >> (idx & 7)) & 1;
-            swap ^= bit;
-            FieldElement::conditional_swap(swap, &mut x2, &mut x3);
-            FieldElement::conditional_swap(swap, &mut z2, &mut z3);
-            swap = bit;
-
-            tmp0 = x3 - z3;
-            tmp1 = x2 - z2;
-            x2 = x2 + z2;
-            z2 = x3 + z3;
-            z3 = tmp0 * x2;
-            z2 = z2 * tmp1;
-            tmp0 = tmp1.square();
-            tmp1 = x2.square();
-            x3 = z3 + z2;
-            z2 = z3 - z2;
-            x2 = tmp1 * tmp0;
-            tmp1 = tmp1 - tmp0;
-            z2 = z2.square();
-            z3 = tmp1.mul_121666();
-            x3 = x3.square();
-            tmp0 = tmp0 + z3;
-            z3 = x1 * z2;
-            z2 = tmp1 * tmp0;
-        }
-
+    for idx in (0..=254).rev() {
+        let bit = (clamped.0[idx >> 3] >> (idx & 7)) & 1;
+        swap ^= bit;
         FieldElement::conditional_swap(swap, &mut x2, &mut x3);
         FieldElement::conditional_swap(swap, &mut z2, &mut z3);
+        swap = bit;
 
-        z2.invert();
-        x2 = x2 * z2;
+        tmp0 = x3 - z3;
+        tmp1 = x2 - z2;
+        x2 = x2 + z2;
+        z2 = x3 + z3;
+        z3 = tmp0 * x2;
+        z2 = z2 * tmp1;
+        tmp0 = tmp1.square();
+        tmp1 = x2.square();
+        x3 = z3 + z2;
+        z2 = z3 - z2;
+        x2 = tmp1 * tmp0;
+        tmp1 = tmp1 - tmp0;
+        z2 = z2.square();
+        z3 = tmp1.mul_121666();
+        x3 = x3.square();
+        tmp0 = tmp0 + z3;
+        z3 = x1 * z2;
+        z2 = tmp1 * tmp0;
+    }
 
-        x2
+    FieldElement::conditional_swap(swap, &mut x2, &mut x3);
+    FieldElement::conditional_swap(swap, &mut z2, &mut z3);
+
+    z2.invert();
+    x2 = x2 * z2;
+
+    x2
+}
+
+construct_public! {
+    /// A type that represents a `PublicKey` that X25519 uses.
+    ///
+    /// This type is used internally as a u-coordinate, but hold only raw bytes,
+    /// and does not perform any checks (except for lengths) whatsoever.
+    /// Non-canonical values are accepted, as dictated in the RFC ([`https://www.ietf.org/rfc/rfc7748.html#section-5`]):
+    ///
+    /// "Implementations MUST accept non-canonical values and process them as
+    ///  if they had been reduced modulo the field prime.  The non-canonical
+    ///  values are 2^255 - 19 through 2^255 - 1 for X25519 and 2^448 - 2^224
+    ///  - 1 through 2^448 - 1 for X448."
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 32 bytes.
+    (PublicKey, test_public_key, PUBLIC_KEY_SIZE, PUBLIC_KEY_SIZE)
+}
+
+impl_from_trait!(PublicKey, PUBLIC_KEY_SIZE);
+
+construct_secret_key! {
+    /// A type to represent the `SecretKey` that X25519 uses.
+    ///
+    /// This type is used internally as a scalar.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 32 bytes.
+    ///
+    /// # Panics:
+    /// A panic will occur if:
+    /// - Failure to generate random bytes securely.
+    (SecretKey, test_secret_key, SECRET_KEY_SIZE, SECRET_KEY_SIZE, SECRET_KEY_SIZE)
+}
+
+impl_from_trait!(SecretKey, SECRET_KEY_SIZE);
+
+impl TryFrom<SecretKey> for PublicKey {
+    type Error = UnknownCryptoError;
+
+    fn try_from(secret_key: &SecretKey) -> Result<Self, Self::Error> {
+        // NOTE: This implementation should be identical to x25519() except
+        // for the check a resulting low order point result.
+        let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes());
+
+        Ok(PublicKey::from(mont_ladder(&scalar, &BASEPOINT).as_bytes()))
     }
 }
 
-///
-pub const BASEPOINT: [u8; 32] = [
+construct_secret_key! {
+    /// A type to represent the `SharedKey` that X25519 produces.
+    ///
+    /// This type simply holds bytes. Creating an instance from slices or similar,
+    /// performs no checks whatsoever.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 32 bytes.
+    (SharedSecret, test_shared_key, SHARED_KEY_SIZE, SHARED_KEY_SIZE)
+}
+
+impl_from_trait!(SharedSecret, SHARED_KEY_SIZE);
+
+/// X25519 (Diffie-Hellman with Montgomery form of Curve25519).
+pub fn key_agreement(
+    secret_key: &SecretKey,
+    public_key: &PublicKey,
+) -> Result<SharedSecret, UnknownCryptoError> {
+    unimplemented!();
+}
+
+/// u-coordinate of the base point.
+const BASEPOINT: [u8; 32] = [
     9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
