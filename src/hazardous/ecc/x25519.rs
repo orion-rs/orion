@@ -67,7 +67,7 @@ use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
 use crate::util::secure_cmp;
 use core::convert::TryFrom;
-use core::ops::{Add, Mul, Neg, Sub};
+use core::ops::{Add, Mul, Sub};
 
 /// The size of a public key used in X25519.
 pub const PUBLIC_KEY_SIZE: usize = 32;
@@ -94,23 +94,6 @@ impl PartialEq for FieldElement {
     fn eq(&self, other: &Self) -> bool {
         use subtle::ConstantTimeEq;
         self.as_bytes().ct_eq(&other.as_bytes()).into()
-    }
-}
-
-// TODO: Seems we don't really use Neg anywhere. Should be used in constant-time swap, but fiat already provides this.
-impl Neg for FieldElement {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        // The function fiat_25519_opp negates a field element.
-        use fiat_curve25519_u64::{fiat_25519_carry, fiat_25519_opp};
-
-        let mut ret = [0u64; 5];
-        fiat_25519_opp(&mut ret, &self.0);
-        let tmp = ret;
-        fiat_25519_carry(&mut ret, &tmp);
-
-        Self(ret)
     }
 }
 
