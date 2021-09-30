@@ -20,10 +20,57 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # Parameters:
+//! - `secret_key`: The secret key used in key agreement.
+//! - `public_key`: The public key used in key agreement.
+//!
+//! NOTE: The types `SecretKey`, `PublicKey` and `SharedSecret` are only wrappers for raw-byte
+//! slices. All clamping, masking, etc. is done internally and does not affect the bytes held by these
+//! types.
+//!
+//! # Errors:
+//! An error will be returned if:
+//! - The `key_agreement()` operation results in an all-zero output.
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - TODO: Before finalization, re-check that no panics can indeed occur.
+//!
+//! # Security:
+//! - Multiple different secret_key/public_key pairs can produce the same shared secret. Therefore,
+//! using the resulting `SharedSecret`, directly from `key_agreement()`, is not recommended.
+//! TODO: Add reference to future high-level interface here.
+//! - To securely generate a strong key, use [`SecretKey::generate()`].
+//!
+//! # Recommendation:
+//! - TODO: Add reference to future high-level interface here.
+//!
+//! # Example:
+//! ```rust
+//! use orion::hazardous::ecc::x25519::{SecretKey, PublicKey, SharedSecret, key_agreement};
+//! use core::convert::TryFrom;
+//!
+//! // Alice generates a private key and computes the corresponding public key
+//! let alice_sk = SecretKey::generate();
+//! let alice_pk = PublicKey::try_from(&alice_sk)?;
+//!
+//! // Bob does the same
+//! let bob_sk = SecretKey::generate();
+//! let bob_pk = PublicKey::try_from(&bob_sk)?;
+//!
+//! // They both compute a shared secret using the others public key
+//! let alice_shared = key_agreement(&alice_sk, &bob_pk)?;
+//! let bob_shared = key_agreement(&bob_sk, &alice_pk)?;
+//!
+//! assert_eq!(alice_shared, bob_shared);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! ```
+//! [`SecretKey::generate()`]: crate::hazardous::ecc::x25519::SecretKey::generate
+
 use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
 use crate::util::secure_cmp;
-use core::convert::{TryFrom, TryInto};
+use core::convert::TryFrom;
 use core::ops::{Add, Mul, Neg, Sub};
 
 /// The size of a public key used in X25519.
@@ -35,10 +82,17 @@ pub const SECRET_KEY_SIZE: usize = 32;
 /// The size of a shared key used in X25519.
 pub const SHARED_KEY_SIZE: usize = 32;
 
-/// TODO: Should probably also be zeroized.
+/// u-coordinate of the base point.
+const BASEPOINT: [u8; 32] = [
+    9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+/// The result of computing a shared secret with a low order point.
+const LOW_ORDER_POINT_RESULT: [u8; 32] = [0u8; 32];
+
 #[derive(Clone, Copy, Debug)]
-///
-pub struct FieldElement([u64; 5]);
+/// TODO: Should probably also be zeroized.
+struct FieldElement([u64; 5]);
 
 impl PartialEq for FieldElement {
     fn eq(&self, other: &Self) -> bool {
@@ -64,7 +118,7 @@ impl Neg for FieldElement {
     }
 }
 
-// The function fiat_25519_carry_mul multiplies two field elements and reduces the result.
+/// The function fiat_25519_carry_mul multiplies two field elements and reduces the result.
 impl Mul for FieldElement {
     type Output = Self;
 
@@ -78,7 +132,7 @@ impl Mul for FieldElement {
     }
 }
 
-// The function fiat_25519_add adds two field elements.
+/// The function fiat_25519_add adds two field elements.
 impl Add for FieldElement {
     type Output = Self;
 
@@ -94,7 +148,7 @@ impl Add for FieldElement {
     }
 }
 
-// The function fiat_25519_sub subtracts two field elements.
+/// The function fiat_25519_sub subtracts two field elements.
 impl Sub for FieldElement {
     type Output = Self;
 
@@ -111,35 +165,31 @@ impl Sub for FieldElement {
 }
 
 impl FieldElement {
-    ///
-    pub fn zero() -> Self {
+    /// Create a `FieldElement` that is `0`.
+    fn zero() -> Self {
         Self([0u64, 0u64, 0u64, 0u64, 0u64])
     }
 
-    ///
-    pub fn one() -> Self {
+    /// Create a `FieldElement` that is `1`.
+    fn one() -> Self {
         Self([1u64, 0u64, 0u64, 0u64, 0u64])
     }
 
-    /// Serialize the field element as a byte-array.
-    pub fn as_bytes(&self) -> [u8; 32] {
+    /// Serialize the `FieldElement` as a byte-array.
+    fn as_bytes(&self) -> [u8; 32] {
         // The function fiat_25519_to_bytes serializes a field element to bytes in little-endian order.
         use fiat_curve25519_u64::fiat_25519_to_bytes;
 
         let mut ret = [0u8; 32];
         fiat_25519_to_bytes(&mut ret, &self.0);
 
-        // TODO: Should we mask MSB of last byte here as well? (like in `from_bytes()`)
-        // Does not seem like it. Only when taking bytes as input. After performing scalarmult this
-        // should not apply.
-
         ret
     }
 
-    /// Deserialize the field element from a byte-array in little-endian.
+    /// Deserialize the `FieldElement` from a byte-array in little-endian.
     ///
     /// Masks the MSB in the final byte of the input bytes.
-    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_bytes(bytes: &[u8; 32]) -> Self {
         // The function fiat_25519_from_bytes deserializes a field element from bytes in little-endian order
         use fiat_curve25519_u64::fiat_25519_from_bytes;
 
@@ -155,7 +205,7 @@ impl FieldElement {
     }
 
     /// A conditional-swap operation.
-    pub fn conditional_swap(swap: u8, a: &mut Self, b: &mut Self) {
+    fn conditional_swap(swap: u8, a: &mut Self, b: &mut Self) {
         // The function fiat_25519_selectznz is a multi-limb conditional select.
         use fiat_curve25519_u64::fiat_25519_selectznz;
 
@@ -169,8 +219,8 @@ impl FieldElement {
         fiat_25519_selectznz(&mut b.0, swap, &tmp_b.0, &tmp_a.0);
     }
 
-    /// Square the field element and reduce the result.
-    pub fn square(&self) -> Self {
+    /// Square the `FieldElement` and reduce the result.
+    fn square(&self) -> Self {
         use fiat_curve25519_u64::fiat_25519_carry_square;
 
         let mut ret = [0u64; 5];
@@ -179,8 +229,8 @@ impl FieldElement {
         Self(ret)
     }
 
-    /// Multiply the field element by 121666 and reduce the result.
-    pub fn mul_121666(&self) -> Self {
+    /// Multiply the `FieldElement` by 121666 and reduce the result.
+    fn mul_121666(&self) -> Self {
         use fiat_curve25519_u64::fiat_25519_carry_scmul_121666;
 
         let mut ret = [0u64; 5];
@@ -189,8 +239,8 @@ impl FieldElement {
         Self(ret)
     }
 
-    /// Compute the multiplicative inverse of the field element.
-    pub fn invert(&mut self) {
+    /// Compute the multiplicative inverse of the `FieldElement`.
+    fn invert(&mut self) {
         // TODO: Can we find a cleaner approach?
         // Ref: https://github.com/golang/crypto/blob/0c34fe9e7dc2486962ef9867e3edb3503537209f/curve25519/curve25519_generic.go#L718
         let mut t0: FieldElement;
@@ -231,7 +281,7 @@ impl FieldElement {
         for _ in 1..50 {
             t2 = t2.square();
         }
-        // TODO: Implement MulAssign for operations such as these?
+
         t2 = t2 * t1;
         t3 = t2.square();
         for _ in 1..100 {
@@ -252,12 +302,9 @@ impl FieldElement {
     }
 }
 
-// TODO: Figure out if this is the right type.
-// TODO: If it's part of the public, then it should be a mid-level type, and users interact with
-// TODO: a `Secret` made form the newtype macros instead, not this one.
 #[derive(Clone)]
 ///
-struct Scalar([u8; 32]);
+struct Scalar([u8; SECRET_KEY_SIZE]);
 
 impl Drop for Scalar {
     fn drop(&mut self) {
@@ -277,7 +324,7 @@ impl Scalar {
     /// Clamp this scalar.
     ///
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5
-    pub fn clamp(&self) -> Self {
+    fn clamp(&self) -> Self {
         let mut ret = self.0;
 
         ret[0] &= 248;
@@ -290,11 +337,15 @@ impl Scalar {
     /// Create a scalar from some byte-array.
     ///
     /// The scalar is not clamped.
-    pub fn from_slice(slice: &[u8]) -> Scalar {
-        // TODO: Should be encoded into newtype - returning an error.
-        assert_eq!(slice.len(), 32);
-        // TODO: Handle this panic
-        Self(slice.try_into().expect("SHOULD NOT PANIC"))
+    fn from_slice(slice: &[u8]) -> Result<Scalar, UnknownCryptoError> {
+        if slice.len() != SECRET_KEY_SIZE {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut ret = [0u8; SECRET_KEY_SIZE];
+        ret.copy_from_slice(slice);
+
+        Ok(Self(ret))
     }
 }
 
@@ -359,10 +410,9 @@ construct_public! {
     /// and does not perform any checks (except for lengths) whatsoever.
     /// Non-canonical values are accepted, as dictated in the RFC ([`https://www.ietf.org/rfc/rfc7748.html#section-5`]):
     ///
-    /// "Implementations MUST accept non-canonical values and process them as
+    /// > "Implementations MUST accept non-canonical values and process them as
     ///  if they had been reduced modulo the field prime.  The non-canonical
-    ///  values are 2^255 - 19 through 2^255 - 1 for X25519 and 2^448 - 2^224
-    ///  - 1 through 2^448 - 1 for X448."
+    ///  values are 2^255 - 19 through 2^255 - 1 for X25519 and 2^448 - 2^224 - 1 through 2^448 - 1 for X448."
     ///
     /// # Errors:
     /// An error will be returned if:
@@ -393,9 +443,9 @@ impl TryFrom<&SecretKey> for PublicKey {
     type Error = UnknownCryptoError;
 
     fn try_from(secret_key: &SecretKey) -> Result<Self, Self::Error> {
-        // NOTE: This implementation should be identical to x25519() except
+        // NOTE: This implementation should be identical to key_agreement() except
         // for the check a resulting low order point result.
-        let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes());
+        let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes())?;
 
         Ok(PublicKey::from(mont_ladder(&scalar, &BASEPOINT).as_bytes()))
     }
@@ -420,7 +470,7 @@ pub fn key_agreement(
     secret_key: &SecretKey,
     public_key: &PublicKey,
 ) -> Result<SharedSecret, UnknownCryptoError> {
-    let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes());
+    let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes())?;
     let u_coord = &public_key.value;
 
     let field_element = mont_ladder(&scalar, u_coord).as_bytes();
@@ -432,14 +482,6 @@ pub fn key_agreement(
 
     Ok(SharedSecret::from(field_element))
 }
-
-/// u-coordinate of the base point.
-const BASEPOINT: [u8; 32] = [
-    9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-];
-
-///
-const LOW_ORDER_POINT_RESULT: [u8; 32] = [0u8; 32];
 
 #[cfg(test)]
 mod public {

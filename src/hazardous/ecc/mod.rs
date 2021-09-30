@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// TODO: Perhaps it would be better to apply allow(dead_code) to the specific items,
-// TODO: to make it clear what is being used in orion and what is not.
 #[allow(
     dead_code,
     non_camel_case_types,
@@ -29,7 +27,8 @@
     clippy::unused_unit
 )]
 /// Formally verified  Curve25519 field arithmetic from: https://github.com/mit-plv/fiat-crypto
+/// Last taken at commit: https://github.com/mit-plv/fiat-crypto/commit/626203aec9fcf5617631fb687d719e5e78dac09f
 mod fiat_curve25519_u64;
 
-/// Diffie-Hellman key exchange over Curve25519.
+/// Diffie-Hellman key exchange over Curve25519 as specified in the [RFC 7748](https://datatracker.ietf.org/doc/html/rfc7748).
 pub mod x25519;
