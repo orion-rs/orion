@@ -32,10 +32,6 @@
 //! An error will be returned if:
 //! - The `key_agreement()` operation results in an all-zero output.
 //!
-//! # Panics:
-//! A panic will occur if:
-//! - TODO: Before finalization, re-check that no panics can indeed occur.
-//!
 //! # Security:
 //! - Multiple different secret_key/public_key pairs can produce the same shared secret. Therefore,
 //! using the resulting `SharedSecret`, directly from `key_agreement()`, is not recommended.
