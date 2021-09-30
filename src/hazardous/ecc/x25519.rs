@@ -303,7 +303,7 @@ impl FieldElement {
 }
 
 #[derive(Clone)]
-///
+/// Represents a Scalar decoded from a byte array.
 struct Scalar([u8; SECRET_KEY_SIZE]);
 
 impl Drop for Scalar {
@@ -321,22 +321,10 @@ impl PartialEq for Scalar {
 }
 
 impl Scalar {
-    /// Clamp this scalar.
+    /// Create a scalar from some byte-array.
+    /// The scalar is clamped according to the RFC.
     ///
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5
-    fn clamp(&self) -> Self {
-        let mut ret = self.0;
-
-        ret[0] &= 248;
-        ret[31] &= 127;
-        ret[31] |= 64;
-
-        Self(ret)
-    }
-
-    /// Create a scalar from some byte-array.
-    ///
-    /// The scalar is not clamped.
     fn from_slice(slice: &[u8]) -> Result<Scalar, UnknownCryptoError> {
         if slice.len() != SECRET_KEY_SIZE {
             return Err(UnknownCryptoError);
@@ -344,6 +332,10 @@ impl Scalar {
 
         let mut ret = [0u8; SECRET_KEY_SIZE];
         ret.copy_from_slice(slice);
+        // Clamp
+        ret[0] &= 248;
+        ret[31] &= 127;
+        ret[31] |= 64;
 
         Ok(Self(ret))
     }
@@ -356,7 +348,6 @@ impl Scalar {
 /// - https://eprint.iacr.org/2017/212.pdf
 /// - https://github.com/golang/crypto/blob/0c34fe9e7dc2486962ef9867e3edb3503537209f/curve25519/curve25519_generic.go#L779
 fn mont_ladder(scalar: &Scalar, point: &[u8; 32]) -> FieldElement {
-    let clamped = scalar.clamp();
     let x1 = FieldElement::from_bytes(point);
     let mut x2 = FieldElement::one();
     let mut x3 = x1;
@@ -368,7 +359,7 @@ fn mont_ladder(scalar: &Scalar, point: &[u8; 32]) -> FieldElement {
     let mut swap: u8 = 0;
 
     for idx in (0..=254).rev() {
-        let bit = (clamped.0[idx >> 3] >> (idx & 7)) & 1;
+        let bit = (scalar.0[idx >> 3] >> (idx & 7)) & 1;
         swap ^= bit;
         FieldElement::conditional_swap(swap, &mut x2, &mut x3);
         FieldElement::conditional_swap(swap, &mut z2, &mut z3);
