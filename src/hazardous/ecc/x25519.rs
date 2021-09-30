@@ -561,15 +561,19 @@ mod public {
         assert_eq!(k.value, expected.value, "Failed after 1.000 iter");
 
         /* Taking a decade...
-        for _ in 0..999000 {
-            let ret = key_agreement(&k, &u);
+        for num in 0..999000 {
+            let ret = key_agreement(&k, &u).unwrap();
             u.value = k.value;
             k.value = ret.value;
         }
 
-        hex::decode_to_slice("7c3911e0ab2586fd864497297e575e6f3bc601c0883c30df5f4dd2d24f665424", &mut expected).unwrap();
+        hex::decode_to_slice(
+            "7c3911e0ab2586fd864497297e575e6f3bc601c0883c30df5f4dd2d24f665424",
+            &mut expected.value,
+        )
+        .unwrap();
         assert_eq!(k.value, expected.value, "Failed after 1.000.000 iter");
-         */
+        */
     }
 
     #[test]
