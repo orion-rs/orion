@@ -130,6 +130,8 @@ impl FieldElement {
         fiat_25519_to_bytes(&mut ret, &self.0);
 
         // TODO: Should we mask MSB of last byte here as well? (like in `from_bytes()`)
+        // Does not seem like it. Only when taking bytes as input. After performing scalarmult this
+        // should not apply.
 
         ret
     }
@@ -143,7 +145,7 @@ impl FieldElement {
 
         let mut temp = [0u8; 32];
         temp.copy_from_slice(bytes);
-        temp[31] &= 127u8; // See RFC: " When receiving such an array, implementations of X25519
+        temp[31] &= 127u8; // See RFC: "When receiving such an array, implementations of X25519
                            // (but not X448) MUST mask the most significant bit in the final byte."
 
         let mut ret = [0u64; 5];
@@ -467,9 +469,8 @@ mod public {
     }
 
     #[test]
-    fn test_rfc_basic() {
-        // https://www.ietf.org/rfc/rfc7748.html#section-5.2
-
+    /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
+    fn test_rfc_section_5() {
         let mut scalar = SecretKey::from([0u8; 32]);
         let mut point = PublicKey::from([0u8; 32]);
         let mut expected = SharedSecret::from([0u8; 32]);
@@ -514,7 +515,8 @@ mod public {
     }
 
     #[test]
-    fn test_rfc_iter() {
+    /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
+    fn test_rfc_section_5_iter() {
         let mut k = SecretKey::from(BASEPOINT);
         let mut u = PublicKey::from(BASEPOINT);
 
@@ -557,7 +559,8 @@ mod public {
     }
 
     #[test]
-    fn test_rfc_pub_priv_basepoint() {
+    /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-6.1
+    fn test_rfc__section_6_pub_priv_basepoint() {
         let mut alice_pub = PublicKey::from([0u8; 32]);
         let mut alice_priv = SecretKey::from([0u8; 32]);
 

@@ -50,11 +50,23 @@ fn wycheproof_runner(path: &str) {
             let mut should_test_pass: bool = match test.result.as_str() {
                 "valid" => true,
                 "acceptable" => true, // NOTE: We handle special cases after this
-                _ => false,           // NOTE: expected unreachable
+                _ => panic!("Unexpected test outcome for Wycheproof test"),
             };
 
-            // TODO: Are these the only ones we want to reject? Should align with the RFC.
+            // Only tests that are only `Twist`/`NonCanonical` are accepted.
+
             if test.flags.contains(&"ZeroSharedSecret".to_string()) {
+                should_test_pass = false;
+            }
+
+            if test.flags.contains(&"LowOrderPublic".to_string()) {
+                assert!(test.flags.contains(&"ZeroSharedSecret".to_string()));
+                should_test_pass = false;
+            }
+
+            if test.flags.contains(&"SmallPublicKey".to_string()) {
+                assert!(test.flags.contains(&"LowOrderPublic".to_string()));
+                assert!(test.flags.contains(&"ZeroSharedSecret".to_string()));
                 should_test_pass = false;
             }
 
