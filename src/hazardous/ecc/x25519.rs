@@ -560,7 +560,7 @@ mod public {
 
     #[test]
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-6.1
-    fn test_rfc__section_6_pub_priv_basepoint() {
+    fn test_rfc_section_6_pub_priv_basepoint() {
         let mut alice_pub = PublicKey::from([0u8; 32]);
         let mut alice_priv = SecretKey::from([0u8; 32]);
 
