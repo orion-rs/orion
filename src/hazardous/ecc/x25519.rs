@@ -91,7 +91,7 @@ const BASEPOINT: [u8; 32] = [
 const LOW_ORDER_POINT_RESULT: [u8; 32] = [0u8; 32];
 
 #[derive(Clone, Copy, Debug)]
-/// TODO: Should probably also be zeroized.
+/// Represent an element in the curve field.
 struct FieldElement([u64; 5]);
 
 impl PartialEq for FieldElement {
@@ -240,9 +240,9 @@ impl FieldElement {
     }
 
     /// Compute the multiplicative inverse of the `FieldElement`.
+    ///
+    /// Ref: https://github.com/golang/crypto/blob/0c34fe9e7dc2486962ef9867e3edb3503537209f/curve25519/curve25519_generic.go#L718
     fn invert(&mut self) {
-        // TODO: Can we find a cleaner approach?
-        // Ref: https://github.com/golang/crypto/blob/0c34fe9e7dc2486962ef9867e3edb3503537209f/curve25519/curve25519_generic.go#L718
         let mut t0: FieldElement;
         let mut t1: FieldElement;
         let mut t2: FieldElement;
@@ -347,8 +347,8 @@ impl Scalar {
 /// - https://eprint.iacr.org/2020/956.pdf
 /// - https://eprint.iacr.org/2017/212.pdf
 /// - https://github.com/golang/crypto/blob/0c34fe9e7dc2486962ef9867e3edb3503537209f/curve25519/curve25519_generic.go#L779
-fn mont_ladder(scalar: &Scalar, point: &[u8; 32]) -> FieldElement {
-    let x1 = FieldElement::from_bytes(point);
+fn mont_ladder(scalar: &Scalar, point: FieldElement) -> FieldElement {
+    let x1 = point;
     let mut x2 = FieldElement::one();
     let mut x3 = x1;
     let mut z3 = FieldElement::one();
@@ -435,10 +435,12 @@ impl TryFrom<&SecretKey> for PublicKey {
 
     fn try_from(secret_key: &SecretKey) -> Result<Self, Self::Error> {
         // NOTE: This implementation should be identical to key_agreement() except
-        // for the check a resulting low order point result.
+        // for the check of a resulting low order point result.
         let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes())?;
 
-        Ok(PublicKey::from(mont_ladder(&scalar, &BASEPOINT).as_bytes()))
+        Ok(PublicKey::from(
+            mont_ladder(&scalar, FieldElement::from_bytes(&BASEPOINT)).as_bytes(),
+        ))
     }
 }
 
@@ -462,7 +464,7 @@ pub fn key_agreement(
     public_key: &PublicKey,
 ) -> Result<SharedSecret, UnknownCryptoError> {
     let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes())?;
-    let u_coord = &public_key.value;
+    let u_coord = FieldElement::from_bytes(&public_key.value);
 
     let field_element = mont_ladder(&scalar, u_coord).as_bytes();
     // High bit should be zero.
