@@ -21,10 +21,10 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `secret_key`: The secret key used in key agreement.
+//! - `private_key`: The private key used in key agreement.
 //! - `public_key`: The public key used in key agreement.
 //!
-//! NOTE: The types `SecretKey`, `PublicKey` and `SharedSecret` are only wrappers for raw-byte
+//! NOTE: The types `PrivateKey`, `PublicKey` and `SharedKey` are only wrappers for raw-byte
 //! slices. All clamping, masking, etc. is done internally and does not affect the bytes held by these
 //! types.
 //!
@@ -33,35 +33,35 @@
 //! - The `key_agreement()` operation results in an all-zero output.
 //!
 //! # Security:
-//! - Multiple different secret_key/public_key pairs can produce the same shared secret. Therefore,
-//! using the resulting `SharedSecret`, directly from `key_agreement()`, is not recommended.
+//! - Multiple different `private_key`/`public_key` pairs can produce the same shared key. Therefore,
+//! using the resulting `SharedKey`, directly from `key_agreement()`, is not recommended.
 //! TODO: Add reference to future high-level interface here.
-//! - To securely generate a strong key, use [`SecretKey::generate()`].
+//! - To securely generate a strong key, use [`PrivateKey::generate()`].
 //!
 //! # Recommendation:
 //! - TODO: Add reference to future high-level interface here.
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::ecc::x25519::{SecretKey, PublicKey, SharedSecret, key_agreement};
+//! use orion::hazardous::ecc::x25519::{PrivateKey, PublicKey, SharedKey, key_agreement};
 //! use core::convert::TryFrom;
 //!
 //! // Alice generates a private key and computes the corresponding public key
-//! let alice_sk = SecretKey::generate();
+//! let alice_sk = PrivateKey::generate();
 //! let alice_pk = PublicKey::try_from(&alice_sk)?;
 //!
 //! // Bob does the same
-//! let bob_sk = SecretKey::generate();
+//! let bob_sk = PrivateKey::generate();
 //! let bob_pk = PublicKey::try_from(&bob_sk)?;
 //!
-//! // They both compute a shared secret using the others public key
+//! // They both compute a shared key using the others public key
 //! let alice_shared = key_agreement(&alice_sk, &bob_pk)?;
 //! let bob_shared = key_agreement(&bob_sk, &alice_pk)?;
 //!
 //! assert_eq!(alice_shared, bob_shared);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`SecretKey::generate()`]: crate::hazardous::ecc::x25519::SecretKey::generate
+//! [`PrivateKey::generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
 
 use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
@@ -72,8 +72,8 @@ use core::ops::{Add, Mul, Sub};
 /// The size of a public key used in X25519.
 pub const PUBLIC_KEY_SIZE: usize = 32;
 
-/// The size of a secret key used in X25519.
-pub const SECRET_KEY_SIZE: usize = 32;
+/// The size of a private key used in X25519.
+pub const PRIVATE_KEY_SIZE: usize = 32;
 
 /// The size of a shared key used in X25519.
 pub const SHARED_KEY_SIZE: usize = 32;
@@ -283,7 +283,7 @@ impl FieldElement {
 
 #[derive(Clone)]
 /// Represents a Scalar decoded from a byte array.
-struct Scalar([u8; SECRET_KEY_SIZE]);
+struct Scalar([u8; PRIVATE_KEY_SIZE]);
 
 impl Drop for Scalar {
     fn drop(&mut self) {
@@ -305,11 +305,11 @@ impl Scalar {
     ///
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5
     fn from_slice(slice: &[u8]) -> Result<Scalar, UnknownCryptoError> {
-        if slice.len() != SECRET_KEY_SIZE {
+        if slice.len() != PRIVATE_KEY_SIZE {
             return Err(UnknownCryptoError);
         }
 
-        let mut ret = [0u8; SECRET_KEY_SIZE];
+        let mut ret = [0u8; PRIVATE_KEY_SIZE];
         ret.copy_from_slice(slice);
         // Clamp
         ret[0] &= 248;
@@ -393,7 +393,7 @@ construct_public! {
 impl_from_trait!(PublicKey, PUBLIC_KEY_SIZE);
 
 construct_secret_key! {
-    /// A type to represent the `SecretKey` that X25519 uses.
+    /// A type to represent the `PrivateKey` that X25519 uses.
     ///
     /// This type is used internally as a scalar.
     ///
@@ -404,18 +404,18 @@ construct_secret_key! {
     /// # Panics:
     /// A panic will occur if:
     /// - Failure to generate random bytes securely.
-    (SecretKey, test_secret_key, SECRET_KEY_SIZE, SECRET_KEY_SIZE, SECRET_KEY_SIZE)
+    (PrivateKey, test_private_key, PRIVATE_KEY_SIZE, PRIVATE_KEY_SIZE, PRIVATE_KEY_SIZE)
 }
 
-impl_from_trait!(SecretKey, SECRET_KEY_SIZE);
+impl_from_trait!(PrivateKey, PRIVATE_KEY_SIZE);
 
-impl TryFrom<&SecretKey> for PublicKey {
+impl TryFrom<&PrivateKey> for PublicKey {
     type Error = UnknownCryptoError;
 
-    fn try_from(secret_key: &SecretKey) -> Result<Self, Self::Error> {
+    fn try_from(private_key: &PrivateKey) -> Result<Self, Self::Error> {
         // NOTE: This implementation should be identical to key_agreement() except
         // for the check of a resulting low order point result.
-        let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes())?;
+        let scalar = Scalar::from_slice(private_key.unprotected_as_bytes())?;
 
         Ok(PublicKey::from(
             mont_ladder(&scalar, FieldElement::from_bytes(&BASEPOINT)).as_bytes(),
@@ -432,17 +432,17 @@ construct_secret_key! {
     /// # Errors:
     /// An error will be returned if:
     /// - `slice` is not 32 bytes.
-    (SharedSecret, test_shared_key, SHARED_KEY_SIZE, SHARED_KEY_SIZE)
+    (SharedKey, test_shared_key, SHARED_KEY_SIZE, SHARED_KEY_SIZE)
 }
 
-impl_from_trait!(SharedSecret, SHARED_KEY_SIZE);
+impl_from_trait!(SharedKey, SHARED_KEY_SIZE);
 
 /// X25519 (Diffie-Hellman with Montgomery form of Curve25519).
 pub fn key_agreement(
-    secret_key: &SecretKey,
+    private_key: &PrivateKey,
     public_key: &PublicKey,
-) -> Result<SharedSecret, UnknownCryptoError> {
-    let scalar = Scalar::from_slice(secret_key.unprotected_as_bytes())?;
+) -> Result<SharedKey, UnknownCryptoError> {
+    let scalar = Scalar::from_slice(private_key.unprotected_as_bytes())?;
     let u_coord = FieldElement::from_bytes(&public_key.value);
 
     let field_element = mont_ladder(&scalar, u_coord).as_bytes();
@@ -452,13 +452,13 @@ pub fn key_agreement(
         return Err(UnknownCryptoError);
     }
 
-    Ok(SharedSecret::from(field_element))
+    Ok(SharedKey::from(field_element))
 }
 
 #[cfg(test)]
 mod public {
     use crate::hazardous::ecc::x25519::{
-        key_agreement, PublicKey, SecretKey, SharedSecret, BASEPOINT,
+        key_agreement, PrivateKey, PublicKey, SharedKey, BASEPOINT,
     };
 
     #[test]
@@ -467,7 +467,7 @@ mod public {
         // RFC 7748 dictates that the MSB of final byte must be masked when receiving a field element,
         // used for agreement (public key). We check that modifying it does not impact the result of
         // the agreement.
-        let k = SecretKey::generate();
+        let k = PrivateKey::generate();
         let mut u = PublicKey::from([0u8; 32]);
 
         crate::util::secure_rand_bytes(&mut u.value).unwrap();
@@ -485,9 +485,9 @@ mod public {
     #[test]
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
     fn test_rfc_section_5() {
-        let mut scalar = SecretKey::from([0u8; 32]);
+        let mut scalar = PrivateKey::from([0u8; 32]);
         let mut point = PublicKey::from([0u8; 32]);
-        let mut expected = SharedSecret::from([0u8; 32]);
+        let mut expected = SharedKey::from([0u8; 32]);
 
         hex::decode_to_slice(
             "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4",
@@ -531,7 +531,7 @@ mod public {
     #[test]
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
     fn test_rfc_section_5_iter() {
-        let mut k = SecretKey::from(BASEPOINT);
+        let mut k = PrivateKey::from(BASEPOINT);
         let mut u = PublicKey::from(BASEPOINT);
 
         // 1 iter
@@ -539,7 +539,7 @@ mod public {
         u.value = k.value;
         k.value = ret.value;
 
-        let mut expected = SharedSecret::from([0u8; 32]);
+        let mut expected = SharedKey::from([0u8; 32]);
         hex::decode_to_slice(
             "422c8e7a6227d7bca1350b3e2bb7279f7897b87bb6854b783c60e80311ae3079",
             &mut expected.value,
@@ -580,12 +580,12 @@ mod public {
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-6.1
     fn test_rfc_section_6_pub_priv_basepoint() {
         let mut alice_pub = PublicKey::from([0u8; 32]);
-        let mut alice_priv = SecretKey::from([0u8; 32]);
+        let mut alice_priv = PrivateKey::from([0u8; 32]);
 
         let mut bob_pub = PublicKey::from([0u8; 32]);
-        let mut bob_priv = SecretKey::from([0u8; 32]);
+        let mut bob_priv = PrivateKey::from([0u8; 32]);
 
-        let mut shared = SharedSecret::from([0u8; 32]);
+        let mut shared = SharedKey::from([0u8; 32]);
 
         hex::decode_to_slice(
             "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
