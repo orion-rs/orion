@@ -25,4 +25,5 @@ pub mod auth;
 pub mod hash;
 mod hltypes;
 pub mod kdf;
+pub mod kex;
 pub mod pwhash;
