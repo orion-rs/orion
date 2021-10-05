@@ -29,6 +29,8 @@
 //! Meaning, checking if a file has been modified since the time the hash was
 //! recorded.
 //!
+//! If you are looking for a keyed hash, please see the [`orion::auth`](super::auth) module.
+//!
 //! # About:
 //! - Uses BLAKE2b with an output size of 32 bytes (i.e BLAKE2b-256).
 //!

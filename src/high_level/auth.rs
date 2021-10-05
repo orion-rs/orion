@@ -42,7 +42,7 @@
 //! An error will be returned if:
 //! - The calculated [`Tag`] does not match the expected.
 //! - The [`SecretKey`] supplied is less than 32 bytes or greater than 64 bytes.
-//! - The [`Tag`] is not 32 bytes when verifying.
+//! - The expected [`Tag`] is not 32 bytes when verifying.
 //!
 //! # Panics:
 //! A panic will occur if:
@@ -107,7 +107,7 @@ pub fn authenticate_verify(
         return Err(UnknownCryptoError);
     }
     let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
-    Blake2b::verify(&expected, &key, BLAKE2B_TAG_SIZE, data)
+    Blake2b::verify(expected, &key, BLAKE2B_TAG_SIZE, data)
 }
 
 // Testing public functions in the module.
