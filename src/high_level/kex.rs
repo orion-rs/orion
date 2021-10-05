@@ -25,7 +25,7 @@ pub use crate::hazardous::ecc::x25519::SharedKey;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
-use crate::hazardous::hash::blake2b::Blake2b;
+use crate::hazardous::hash::blake2b::{Blake2b, Digest};
 use core::convert::TryFrom;
 
 #[derive(Debug, PartialEq)]
@@ -59,8 +59,12 @@ impl EphemeralClientSession {
         server_public_key: &PublicKey,
     ) -> Result<SessionKeys, UnknownCryptoError> {
         let q = x25519::key_agreement(&self.private_key, server_public_key)?;
+        let keys = establish_session_keys(&q, &self.public_key, server_public_key)?;
 
-        establish_session_keys(&q, &self.public_key, server_public_key)
+        Ok(SessionKeys {
+            rx: SharedKey::from_slice(&keys.as_ref()[..32])?,
+            tx: SharedKey::from_slice(&keys.as_ref()[32..])?,
+        })
     }
 }
 
@@ -95,8 +99,12 @@ impl EphemeralServerSession {
         client_public_key: &PublicKey,
     ) -> Result<SessionKeys, UnknownCryptoError> {
         let q = x25519::key_agreement(&self.private_key, client_public_key)?;
+        let keys = establish_session_keys(&q, client_public_key, &self.public_key)?;
 
-        establish_session_keys(&q, client_public_key, &self.public_key)
+        Ok(SessionKeys {
+            rx: SharedKey::from_slice(&keys.as_ref()[32..])?,
+            tx: SharedKey::from_slice(&keys.as_ref()[..32])?,
+        })
     }
 }
 
@@ -124,17 +132,12 @@ fn establish_session_keys(
     shared_secret: &SharedKey,
     client_pk: &PublicKey,
     server_pk: &PublicKey,
-) -> Result<SessionKeys, UnknownCryptoError> {
+) -> Result<Digest, UnknownCryptoError> {
     let mut ctx = Blake2b::new(None, 64)?;
     ctx.update(shared_secret.unprotected_as_bytes())?;
     ctx.update(client_pk.as_ref())?;
     ctx.update(server_pk.as_ref())?;
-    let keys = ctx.finalize()?;
-
-    Ok(SessionKeys {
-        rx: SharedKey::from_slice(&keys.as_ref()[..32])?,
-        tx: SharedKey::from_slice(&keys.as_ref()[32..])?,
-    })
+    ctx.finalize()
 }
 
 #[test]
@@ -152,7 +155,6 @@ fn test_ephemeral() {
         .establish_with_client(&client_public_key)
         .unwrap();
 
-    assert_eq!(client, server);
-    assert_eq!(client.get_receiving(), server.get_receiving());
-    assert_eq!(client.get_transport(), server.get_transport());
+    assert_eq!(client.get_receiving(), server.get_transport());
+    assert_eq!(client.get_transport(), server.get_receiving());
 }
