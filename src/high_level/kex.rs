@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 pub use crate::hazardous::ecc::x25519::PublicKey;
-pub use crate::hazardous::ecc::x25519::SharedSecret;
+pub use crate::hazardous::ecc::x25519::SharedKey;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
@@ -31,14 +31,14 @@ use core::convert::TryFrom;
 #[derive(Debug, PartialEq)]
 /// A key pair used to establish shared keys for a single session.
 pub struct EphemeralClientSession {
-    private_key: x25519::SecretKey,
+    private_key: x25519::PrivateKey,
     public_key: PublicKey,
 }
 
 impl EphemeralClientSession {
     /// Generate a new random key pair.
     pub fn new() -> Result<Self, UnknownCryptoError> {
-        let privkey = x25519::SecretKey::generate();
+        let privkey = x25519::PrivateKey::generate();
         let pubkey: PublicKey = PublicKey::try_from(&privkey)?;
 
         Ok(Self {
@@ -67,14 +67,14 @@ impl EphemeralClientSession {
 #[derive(Debug, PartialEq)]
 /// A key pair used to establish shared keys for a single session.
 pub struct EphemeralServerSession {
-    private_key: x25519::SecretKey,
+    private_key: x25519::PrivateKey,
     public_key: PublicKey,
 }
 
 impl EphemeralServerSession {
     /// Generate a new random key pair.
     pub fn new() -> Result<Self, UnknownCryptoError> {
-        let privkey = x25519::SecretKey::generate();
+        let privkey = x25519::PrivateKey::generate();
         let pubkey: PublicKey = PublicKey::try_from(&privkey)?;
 
         Ok(Self {
@@ -103,25 +103,25 @@ impl EphemeralServerSession {
 #[derive(Debug, PartialEq)]
 /// A set of shared secrets for either transmitting to this entity or send to another party.
 pub struct SessionKeys {
-    rx: SharedSecret,
-    tx: SharedSecret,
+    rx: SharedKey,
+    tx: SharedKey,
 }
 
 impl SessionKeys {
     /// Get the shared secret intended to be used for receiving data from the other party.
-    pub fn get_receiving(&self) -> &SharedSecret {
+    pub fn get_receiving(&self) -> &SharedKey {
         &self.rx
     }
 
     /// Get the shared secret intended to be used for transporting data to the other party.
-    pub fn get_transport(&self) -> &SharedSecret {
+    pub fn get_transport(&self) -> &SharedKey {
         &self.tx
     }
 }
 
 /// Using BLAKE2b, derive two shared secret from a scalarmult computation.
 fn establish_session_keys(
-    shared_secret: &SharedSecret,
+    shared_secret: &SharedKey,
     client_pk: &PublicKey,
     server_pk: &PublicKey,
 ) -> Result<SessionKeys, UnknownCryptoError> {
@@ -132,8 +132,8 @@ fn establish_session_keys(
     let keys = ctx.finalize()?;
 
     Ok(SessionKeys {
-        rx: SharedSecret::from_slice(&keys.as_ref()[..32])?,
-        tx: SharedSecret::from_slice(&keys.as_ref()[32..])?,
+        rx: SharedKey::from_slice(&keys.as_ref()[..32])?,
+        tx: SharedKey::from_slice(&keys.as_ref()[32..])?,
     })
 }
 
