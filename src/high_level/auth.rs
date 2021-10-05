@@ -42,6 +42,7 @@
 //! An error will be returned if:
 //! - The calculated [`Tag`] does not match the expected.
 //! - The [`SecretKey`] supplied is less than 32 bytes or greater than 64 bytes.
+//! - The [`Tag`] is not 32 bytes when verifying.
 //!
 //! # Panics:
 //! A panic will occur if:
@@ -71,7 +72,8 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
-pub use super::hltypes::{SecretKey, Tag};
+pub use super::hltypes::SecretKey;
+pub use crate::hazardous::mac::blake2b::Tag;
 use crate::{
     errors::UnknownCryptoError,
     hazardous::mac::blake2b::{self, Blake2b},
@@ -91,8 +93,7 @@ pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownC
     let blake2b_secret_key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
     let mut state = Blake2b::new(&blake2b_secret_key, BLAKE2B_TAG_SIZE)?;
     state.update(data)?;
-    let blake2b_tag = state.finalize()?;
-    Tag::from_slice(blake2b_tag.unprotected_as_bytes())
+    state.finalize()
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -102,12 +103,11 @@ pub fn authenticate_verify(
     secret_key: &SecretKey,
     data: &[u8],
 ) -> Result<(), UnknownCryptoError> {
-    if secret_key.len() < BLAKE2B_MIN_KEY_SIZE {
+    if secret_key.len() < BLAKE2B_MIN_KEY_SIZE || expected.len() != BLAKE2B_TAG_SIZE {
         return Err(UnknownCryptoError);
     }
     let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
-    let expected_tag = blake2b::Tag::from_slice(expected.unprotected_as_bytes())?;
-    Blake2b::verify(&expected_tag, &key, BLAKE2B_TAG_SIZE, data)
+    Blake2b::verify(&expected, &key, BLAKE2B_TAG_SIZE, data)
 }
 
 // Testing public functions in the module.
