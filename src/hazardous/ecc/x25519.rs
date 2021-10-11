@@ -301,6 +301,8 @@ impl PartialEq for Scalar {
     }
 }
 
+impl Eq for Scalar {}
+
 impl Scalar {
     /// Create a scalar from some byte-array.
     /// The scalar is clamped according to the RFC.
@@ -404,10 +406,24 @@ impl PartialEq<&[u8]> for PublicKey {
 
 impl From<[u8; PUBLIC_KEY_SIZE]> for PublicKey {
     #[inline]
-    fn from(bytes: [u8; PUBLIC_KEY_SIZE]) -> PublicKey {
-        PublicKey {
+    fn from(bytes: [u8; PUBLIC_KEY_SIZE]) -> Self {
+        Self {
             fe: FieldElement::from_bytes(&bytes),
         }
+    }
+}
+
+impl TryFrom<&PrivateKey> for PublicKey {
+    type Error = UnknownCryptoError;
+
+    fn try_from(private_key: &PrivateKey) -> Result<Self, Self::Error> {
+        // NOTE: This implementation should be identical to key_agreement() except
+        // for the check of a resulting low order point result.
+        let scalar = Scalar::from_slice(private_key.unprotected_as_bytes())?;
+
+        Ok(PublicKey::from(
+            mont_ladder(&scalar, FieldElement::from_bytes(&BASEPOINT)).as_bytes(),
+        ))
     }
 }
 
@@ -450,34 +466,116 @@ impl PublicKey {
     }
 }
 
-construct_secret_key! {
-    /// A type to represent the `PrivateKey` that X25519 uses.
-    ///
-    /// This type is used internally as a scalar.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (PrivateKey, test_private_key, PRIVATE_KEY_SIZE, PRIVATE_KEY_SIZE, PRIVATE_KEY_SIZE)
+// NOTE: Scalar contains a constant-time PartialEq<Scalar> impl.
+// NOTE: All newtypes impl Drop by default and Scalar has zeroizing Drop
+#[derive(PartialEq)]
+/// A type to represent the `PrivateKey` that X25519 uses.
+///
+/// This type holds a scalar and is used internally as such. The scalar held is decoded
+/// (a.k.a "clamped") as mandated in the [RFC](https://datatracker.ietf.org/doc/html/rfc7748#section-5).
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `slice` is not 32 bytes.
+///
+/// # Panics:
+/// A panic will occur if:
+/// - Failure to generate random bytes securely.
+///
+///
+/// # Security:
+/// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+/// that the type implements.
+///
+/// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
+/// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+/// is implemented in such a way that the comparison happens in constant time. Thus, users should
+/// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+/// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
+/// ```rust
+/// use orion::hazardous::ecc::x25519::PrivateKey;
+///
+/// // Initialize a secret key with random bytes.
+/// let secret_key = PrivateKey::generate();
+///
+/// // Secure, constant-time comparison with a byte slice
+/// assert!(secret_key != &[0; 32][..]);
+///
+/// // Secure, constant-time comparison with another SecretKey
+/// assert!(secret_key != PrivateKey::generate());
+/// ```
+pub struct PrivateKey {
+    scalar: Scalar,
 }
 
-impl_from_trait!(PrivateKey, PRIVATE_KEY_SIZE);
+impl PartialEq<&[u8]> for PrivateKey {
+    fn eq(&self, other: &&[u8]) -> bool {
+        if other.len() != PRIVATE_KEY_SIZE {
+            return false;
+        }
+        // unwrap OK due to valid len
+        let other = Scalar::from_slice(*other).unwrap();
+        self.scalar == other
+    }
+}
 
-impl TryFrom<&PrivateKey> for PublicKey {
-    type Error = UnknownCryptoError;
+impl core::fmt::Debug for PrivateKey {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} {{***OMITTED***}}", stringify!(PrivateKey))
+    }
+}
 
-    fn try_from(private_key: &PrivateKey) -> Result<Self, Self::Error> {
-        // NOTE: This implementation should be identical to key_agreement() except
-        // for the check of a resulting low order point result.
-        let scalar = Scalar::from_slice(private_key.unprotected_as_bytes())?;
+impl From<[u8; PRIVATE_KEY_SIZE]> for PrivateKey {
+    #[inline]
+    fn from(bytes: [u8; PRIVATE_KEY_SIZE]) -> Self {
+        PrivateKey {
+            // unwrap OK due to valid len
+            scalar: Scalar::from_slice(bytes.as_ref()).unwrap(),
+        }
+    }
+}
 
-        Ok(PublicKey::from(
-            mont_ladder(&scalar, FieldElement::from_bytes(&BASEPOINT)).as_bytes(),
-        ))
+impl PrivateKey {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Construct from a given byte slice.
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        Ok(Self {
+            scalar: Scalar::from_slice(slice)?,
+        })
+    }
+
+    #[inline]
+    /// Return the length of the object.
+    pub fn len(&self) -> usize {
+        PRIVATE_KEY_SIZE
+    }
+
+    #[inline]
+    /// Return `true` if this object does not hold any data, `false` otherwise.
+    ///
+    /// __NOTE__: This method should always return `false`, since there shouldn't be a way
+    /// to create an empty instance of this object.
+    pub fn is_empty(&self) -> bool {
+        PRIVATE_KEY_SIZE == 0
+    }
+
+    #[inline]
+    /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
+    /// needed. This __**breaks protections**__ that the type implements.
+    pub fn unprotected_as_bytes(&self) -> &[u8] {
+        self.scalar.0.as_ref()
+    }
+
+    #[cfg(feature = "safe_api")]
+    /// Randomly generate using a CSPRNG. Not available in `no_std` context.
+    pub fn generate() -> PrivateKey {
+        let mut value = [0u8; PRIVATE_KEY_SIZE];
+        crate::util::secure_rand_bytes(&mut value).unwrap();
+
+        Self {
+            // unwrap OK due to valid len
+            scalar: Scalar::from_slice(&value).unwrap(),
+        }
     }
 }
 
@@ -500,10 +598,8 @@ pub fn key_agreement(
     private_key: &PrivateKey,
     public_key: &PublicKey,
 ) -> Result<SharedKey, UnknownCryptoError> {
-    let scalar = Scalar::from_slice(private_key.unprotected_as_bytes())?;
     let u_coord = public_key.fe;
-
-    let field_element = mont_ladder(&scalar, u_coord).as_bytes();
+    let field_element = mont_ladder(&private_key.scalar, u_coord).as_bytes();
     // High bit should be zero.
     debug_assert!((field_element[31] & 0b1000_0000u8) == 0u8);
     if secure_cmp(&field_element, &LOW_ORDER_POINT_RESULT).is_ok() {
