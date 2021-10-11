@@ -655,13 +655,13 @@ mod public {
     #[test]
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
     fn test_rfc_section_5() {
-        let mut scalar = PrivateKey::from([0u8; 32]);
+        let mut scalar = [0u8; 32];
         let mut point = [0u8; 32];
         let mut expected = SharedKey::from([0u8; 32]);
 
         hex::decode_to_slice(
             "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4",
-            &mut scalar.value,
+            &mut scalar,
         )
         .unwrap();
         hex::decode_to_slice(
@@ -675,12 +675,12 @@ mod public {
         )
         .unwrap();
 
-        let actual = key_agreement(&scalar, &PublicKey::from(point)).unwrap();
+        let actual = key_agreement(&PrivateKey::from(scalar), &PublicKey::from(point)).unwrap();
         assert_eq!(actual, expected);
 
         hex::decode_to_slice(
             "4b66e9d4d1b4673c5ad22691957d6af5c11b6421e0ea01d42ca4169e7918ba0d",
-            &mut scalar.value,
+            &mut scalar,
         )
         .unwrap();
         hex::decode_to_slice(
@@ -694,20 +694,20 @@ mod public {
         )
         .unwrap();
 
-        let actual = key_agreement(&scalar, &PublicKey::from(point)).unwrap();
+        let actual = key_agreement(&PrivateKey::from(scalar), &PublicKey::from(point)).unwrap();
         assert_eq!(actual, expected);
     }
 
     #[test]
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
     fn test_rfc_section_5_iter() {
-        let mut k = PrivateKey::from(BASEPOINT);
+        let mut k = BASEPOINT;
         let mut u = BASEPOINT;
 
         // 1 iter
-        let ret = key_agreement(&k, &PublicKey::from(u)).unwrap();
-        u = k.value;
-        k.value = ret.value;
+        let ret = key_agreement(&PrivateKey::from(k), &PublicKey::from(u)).unwrap();
+        u = k;
+        k = ret.value;
 
         let mut expected = SharedKey::from([0u8; 32]);
         hex::decode_to_slice(
@@ -715,12 +715,12 @@ mod public {
             &mut expected.value,
         )
         .unwrap();
-        assert_eq!(k.value, expected.value, "Failed after 1 iter");
+        assert_eq!(k, expected.value, "Failed after 1 iter");
 
         for _ in 0..999 {
-            let ret = key_agreement(&k, &PublicKey::from(u)).unwrap();
-            u = k.value;
-            k.value = ret.value;
+            let ret = key_agreement(&PrivateKey::from(k), &PublicKey::from(u)).unwrap();
+            u = k;
+            k = ret.value;
         }
 
         hex::decode_to_slice(
@@ -728,13 +728,13 @@ mod public {
             &mut expected.value,
         )
         .unwrap();
-        assert_eq!(k.value, expected.value, "Failed after 1.000 iter");
+        assert_eq!(k, expected.value, "Failed after 1.000 iter");
 
         /* Taking a decade...
         for num in 0..999000 {
-            let ret = key_agreement(&k, &PublicKey::from(u)).unwrap();
-            u = k.value;
-            k.value = ret.value;
+            let ret = key_agreement(&PrivateKey::from(k), &PublicKey::from(u)).unwrap();
+            u = k;
+            k = ret.value;
         }
 
         hex::decode_to_slice(
@@ -742,7 +742,7 @@ mod public {
             &mut expected.value,
         )
         .unwrap();
-        assert_eq!(k.value, expected.value, "Failed after 1.000.000 iter");
+        assert_eq!(k, expected.value, "Failed after 1.000.000 iter");
         */
     }
 
@@ -750,16 +750,16 @@ mod public {
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-6.1
     fn test_rfc_section_6_pub_priv_basepoint() {
         let mut alice_pub = [0u8; 32];
-        let mut alice_priv = PrivateKey::from([0u8; 32]);
+        let mut alice_priv = [0u8; 32];
 
         let mut bob_pub = [0u8; 32];
-        let mut bob_priv = PrivateKey::from([0u8; 32]);
+        let mut bob_priv = [0u8; 32];
 
         let mut shared = SharedKey::from([0u8; 32]);
 
         hex::decode_to_slice(
             "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
-            &mut alice_priv.value,
+            &mut alice_priv,
         )
         .unwrap();
         hex::decode_to_slice(
@@ -768,13 +768,13 @@ mod public {
         )
         .unwrap();
         assert_eq!(
-            key_agreement(&alice_priv, &PublicKey::from(BASEPOINT)).unwrap(),
+            key_agreement(&PrivateKey::from(alice_priv), &PublicKey::from(BASEPOINT)).unwrap(),
             PublicKey::from(alice_pub).to_bytes().as_ref()
         );
 
         hex::decode_to_slice(
             "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
-            &mut bob_priv.value,
+            &mut bob_priv,
         )
         .unwrap();
         hex::decode_to_slice(
@@ -783,7 +783,7 @@ mod public {
         )
         .unwrap();
         assert_eq!(
-            key_agreement(&bob_priv, &PublicKey::from(BASEPOINT)).unwrap(),
+            key_agreement(&PrivateKey::from(bob_priv), &PublicKey::from(BASEPOINT)).unwrap(),
             PublicKey::from(bob_pub).to_bytes().as_ref()
         );
 
@@ -793,11 +793,11 @@ mod public {
         )
         .unwrap();
         assert_eq!(
-            key_agreement(&alice_priv, &PublicKey::from(bob_pub)).unwrap(),
+            key_agreement(&PrivateKey::from(alice_priv), &PublicKey::from(bob_pub)).unwrap(),
             shared.value.as_ref()
         );
         assert_eq!(
-            key_agreement(&bob_priv, &PublicKey::from(alice_pub)).unwrap(),
+            key_agreement(&PrivateKey::from(bob_priv), &PublicKey::from(alice_pub)).unwrap(),
             shared.value.as_ref()
         );
     }
