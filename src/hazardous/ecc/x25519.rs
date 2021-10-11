@@ -90,6 +90,8 @@ const LOW_ORDER_POINT_RESULT: [u8; 32] = [0u8; 32];
 /// Represent an element in the curve field.
 struct FieldElement([u64; 5]);
 
+impl Eq for FieldElement {}
+
 impl PartialEq for FieldElement {
     fn eq(&self, other: &Self) -> bool {
         use subtle::ConstantTimeEq;
@@ -373,24 +375,80 @@ fn mont_ladder(scalar: &Scalar, point: FieldElement) -> FieldElement {
     x2
 }
 
-construct_public! {
-    /// A type that represents a `PublicKey` that X25519 uses.
-    ///
-    /// This type is used internally as a u-coordinate, but hold only raw bytes,
-    /// and does not perform any checks (except for lengths) whatsoever.
-    /// Non-canonical values are accepted, as dictated in the RFC ([`https://www.ietf.org/rfc/rfc7748.html#section-5`]):
-    ///
-    /// > "Implementations MUST accept non-canonical values and process them as
-    ///  if they had been reduced modulo the field prime.  The non-canonical
-    ///  values are 2^255 - 19 through 2^255 - 1 for X25519 and 2^448 - 2^224 - 1 through 2^448 - 1 for X448."
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    (PublicKey, test_public_key, PUBLIC_KEY_SIZE, PUBLIC_KEY_SIZE)
+// NOTE: FieldElement contains a constant-time PartialEq<FieldElement> impl.
+#[derive(PartialEq, Debug)]
+/// A type that represents a `PublicKey` that X25519 uses.
+///
+/// This type holds a field element and is used internally as the u-coordinate.
+/// As the RFC mandates, the most significant bit of the last byte is masked.
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `slice` is not 32 bytes.
+pub struct PublicKey {
+    fe: FieldElement,
 }
 
-impl_from_trait!(PublicKey, PUBLIC_KEY_SIZE);
+impl PartialEq<&[u8]> for PublicKey {
+    fn eq(&self, other: &&[u8]) -> bool {
+        use core::convert::TryInto;
+
+        if other.len() != PUBLIC_KEY_SIZE {
+            return false;
+        }
+        let other: [u8; 32] = (*other).try_into().unwrap();
+
+        self.fe == FieldElement::from_bytes(&other)
+    }
+}
+
+impl From<[u8; PUBLIC_KEY_SIZE]> for PublicKey {
+    #[inline]
+    fn from(bytes: [u8; PUBLIC_KEY_SIZE]) -> PublicKey {
+        PublicKey {
+            fe: FieldElement::from_bytes(&bytes),
+        }
+    }
+}
+
+impl PublicKey {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Construct from a given byte slice.
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        use core::convert::TryInto;
+
+        let slice_len = slice.len();
+
+        if slice_len != PUBLIC_KEY_SIZE {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok(Self {
+            fe: FieldElement::from_bytes(slice.try_into().unwrap()),
+        })
+    }
+
+    #[inline]
+    /// Return the length of the object.
+    pub fn len(&self) -> usize {
+        PUBLIC_KEY_SIZE
+    }
+
+    #[inline]
+    /// Return `true` if this object does not hold any data, `false` otherwise.
+    ///
+    /// __NOTE__: This method should always return `false`, since there shouldn't be a way
+    /// to create an empty instance of this object.
+    pub fn is_empty(&self) -> bool {
+        PUBLIC_KEY_SIZE == 0
+    }
+
+    #[inline]
+    /// Convert this PublicKey to its byte-representation.
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.fe.as_bytes()
+    }
+}
 
 construct_secret_key! {
     /// A type to represent the `PrivateKey` that X25519 uses.
@@ -443,7 +501,7 @@ pub fn key_agreement(
     public_key: &PublicKey,
 ) -> Result<SharedKey, UnknownCryptoError> {
     let scalar = Scalar::from_slice(private_key.unprotected_as_bytes())?;
-    let u_coord = FieldElement::from_bytes(&public_key.value);
+    let u_coord = public_key.fe;
 
     let field_element = mont_ladder(&scalar, u_coord).as_bytes();
     // High bit should be zero.
@@ -462,22 +520,38 @@ mod public {
     };
 
     #[test]
+    fn test_public_key_ignores_highbit() {
+        let u = [0u8; 32];
+
+        let mut msb_zero = u;
+        msb_zero[31] &= 127u8;
+        let mut msb_one = u;
+        msb_one[31] |= 128u8;
+
+        // These should equal each-other. The high bits differ, but should be ignored.
+        assert_eq!(PublicKey::from(msb_zero), msb_one.as_ref());
+        assert_eq!(PublicKey::from(msb_zero), PublicKey::from(msb_one));
+    }
+
+    #[test]
     #[cfg(feature = "safe_api")]
     fn test_highbit_ignored() {
         // RFC 7748 dictates that the MSB of final byte must be masked when receiving a field element,
         // used for agreement (public key). We check that modifying it does not impact the result of
         // the agreement.
         let k = PrivateKey::generate();
-        let mut u = PublicKey::from([0u8; 32]);
+        let mut u = [0u8; 32];
+        crate::util::secure_rand_bytes(&mut u).unwrap();
+        debug_assert_ne!(u[31] & 127u8, (u[31] & 127u8) | 128u8);
 
-        crate::util::secure_rand_bytes(&mut u.value).unwrap();
-        debug_assert_ne!(u.value[31] & 127u8, (u.value[31] & 127u8) | 128u8);
+        let mut u_msb_zero = u;
+        u_msb_zero[31] &= 127u8;
+        let mut u_msb_one = u;
+        u_msb_one[31] |= 128u8;
 
         // Mask bit to 0 as we do in `FieldElement::from_bytes()`.
-        u.value[31] &= 127u8;
-        let msb_zero = key_agreement(&k, &u).unwrap();
-        u.value[31] |= 128u8;
-        let msb_one = key_agreement(&k, &u).unwrap();
+        let msb_zero = key_agreement(&k, &PublicKey::from(u_msb_zero)).unwrap();
+        let msb_one = key_agreement(&k, &PublicKey::from(u_msb_one)).unwrap();
 
         assert_eq!(msb_zero, msb_one);
     }
@@ -486,7 +560,7 @@ mod public {
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
     fn test_rfc_section_5() {
         let mut scalar = PrivateKey::from([0u8; 32]);
-        let mut point = PublicKey::from([0u8; 32]);
+        let mut point = [0u8; 32];
         let mut expected = SharedKey::from([0u8; 32]);
 
         hex::decode_to_slice(
@@ -496,7 +570,7 @@ mod public {
         .unwrap();
         hex::decode_to_slice(
             "e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c",
-            &mut point.value,
+            &mut point,
         )
         .unwrap();
         hex::decode_to_slice(
@@ -505,7 +579,7 @@ mod public {
         )
         .unwrap();
 
-        let actual = key_agreement(&scalar, &point).unwrap();
+        let actual = key_agreement(&scalar, &PublicKey::from(point)).unwrap();
         assert_eq!(actual, expected);
 
         hex::decode_to_slice(
@@ -515,7 +589,7 @@ mod public {
         .unwrap();
         hex::decode_to_slice(
             "e5210f12786811d3f4b7959d0538ae2c31dbe7106fc03c3efc4cd549c715a493",
-            &mut point.value,
+            &mut point,
         )
         .unwrap();
         hex::decode_to_slice(
@@ -524,7 +598,7 @@ mod public {
         )
         .unwrap();
 
-        let actual = key_agreement(&scalar, &point).unwrap();
+        let actual = key_agreement(&scalar, &PublicKey::from(point)).unwrap();
         assert_eq!(actual, expected);
     }
 
@@ -532,11 +606,11 @@ mod public {
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
     fn test_rfc_section_5_iter() {
         let mut k = PrivateKey::from(BASEPOINT);
-        let mut u = PublicKey::from(BASEPOINT);
+        let mut u = BASEPOINT;
 
         // 1 iter
-        let ret = key_agreement(&k, &u).unwrap();
-        u.value = k.value;
+        let ret = key_agreement(&k, &PublicKey::from(u)).unwrap();
+        u = k.value;
         k.value = ret.value;
 
         let mut expected = SharedKey::from([0u8; 32]);
@@ -548,8 +622,8 @@ mod public {
         assert_eq!(k.value, expected.value, "Failed after 1 iter");
 
         for _ in 0..999 {
-            let ret = key_agreement(&k, &u).unwrap();
-            u.value = k.value;
+            let ret = key_agreement(&k, &PublicKey::from(u)).unwrap();
+            u = k.value;
             k.value = ret.value;
         }
 
@@ -562,8 +636,8 @@ mod public {
 
         /* Taking a decade...
         for num in 0..999000 {
-            let ret = key_agreement(&k, &u).unwrap();
-            u.value = k.value;
+            let ret = key_agreement(&k, &PublicKey::from(u)).unwrap();
+            u = k.value;
             k.value = ret.value;
         }
 
@@ -579,10 +653,10 @@ mod public {
     #[test]
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-6.1
     fn test_rfc_section_6_pub_priv_basepoint() {
-        let mut alice_pub = PublicKey::from([0u8; 32]);
+        let mut alice_pub = [0u8; 32];
         let mut alice_priv = PrivateKey::from([0u8; 32]);
 
-        let mut bob_pub = PublicKey::from([0u8; 32]);
+        let mut bob_pub = [0u8; 32];
         let mut bob_priv = PrivateKey::from([0u8; 32]);
 
         let mut shared = SharedKey::from([0u8; 32]);
@@ -594,12 +668,12 @@ mod public {
         .unwrap();
         hex::decode_to_slice(
             "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a",
-            &mut alice_pub.value,
+            &mut alice_pub,
         )
         .unwrap();
         assert_eq!(
             key_agreement(&alice_priv, &PublicKey::from(BASEPOINT)).unwrap(),
-            alice_pub.value.as_ref()
+            PublicKey::from(alice_pub).to_bytes().as_ref()
         );
 
         hex::decode_to_slice(
@@ -609,12 +683,12 @@ mod public {
         .unwrap();
         hex::decode_to_slice(
             "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
-            &mut bob_pub.value,
+            &mut bob_pub,
         )
         .unwrap();
         assert_eq!(
             key_agreement(&bob_priv, &PublicKey::from(BASEPOINT)).unwrap(),
-            bob_pub.value.as_ref()
+            PublicKey::from(bob_pub).to_bytes().as_ref()
         );
 
         hex::decode_to_slice(
@@ -623,11 +697,11 @@ mod public {
         )
         .unwrap();
         assert_eq!(
-            key_agreement(&alice_priv, &bob_pub).unwrap(),
+            key_agreement(&alice_priv, &PublicKey::from(bob_pub)).unwrap(),
             shared.value.as_ref()
         );
         assert_eq!(
-            key_agreement(&bob_priv, &alice_pub).unwrap(),
+            key_agreement(&bob_priv, &PublicKey::from(alice_pub)).unwrap(),
             shared.value.as_ref()
         );
     }
