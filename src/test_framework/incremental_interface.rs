@@ -169,9 +169,9 @@ where
         state_4.update(data).unwrap();
         let res_4 = state_4.finalize().unwrap();
 
-        assert!(res_1 == res_2);
-        assert!(res_2 == res_3);
-        assert!(res_3 == res_4);
+        assert_eq!(res_1, res_2);
+        assert_eq!(res_2, res_3);
+        assert_eq!(res_3, res_4);
 
         // Tests for the assumption that returning Ok() on empty update() calls
         // with streaming APIs, gives the correct result. This is done by testing
@@ -193,9 +193,9 @@ where
             state_7.reset().unwrap();
             let res_7 = state_7.finalize().unwrap();
 
-            assert!(res_4 == res_5);
-            assert!(res_5 == res_6);
-            assert!(res_6 == res_7);
+            assert_eq!(res_4, res_5);
+            assert_eq!(res_5, res_6);
+            assert_eq!(res_6, res_7);
         }
     }
 
@@ -255,7 +255,7 @@ where
             let streaming_result = state.finalize().unwrap();
             let one_shot_result = T::one_shot(&other_data).unwrap();
 
-            assert!(streaming_result == one_shot_result);
+            assert_eq!(streaming_result, one_shot_result);
         }
     }
 

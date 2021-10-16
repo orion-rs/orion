@@ -149,10 +149,10 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// let tag = Tag::from_slice(&[1; 64])?;
 ///
 /// // Secure, constant-time comparison with a byte slice
-/// assert!(tag == &[1; 64][..]);
+/// assert_eq!(tag, &[1; 64][..]);
 ///
 /// // Secure, constant-time comparison with another Tag
-/// assert!(tag == Tag::from_slice(&[1; 64])?);
+/// assert_eq!(tag, Tag::from_slice(&[1; 64])?);
 /// # Ok(())
 /// # }
 /// ```
@@ -465,7 +465,7 @@ mod public {
             let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
@@ -478,7 +478,7 @@ mod public {
             let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$7UsP1lfhZfn/6Q9m/zFfvsh45inwOy1kaNSxelDHlqo";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
@@ -492,7 +492,7 @@ mod public {
             let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$U29tZVNhbHRTb21lU2FsdA$+p6pb+zQmYJR1pjBMD7dpN84iaOb+ofNXnuGVu9htRA";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
@@ -505,7 +505,7 @@ mod public {
             let encoded_hash = "$argon2i$v=19$m=256,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$+z4M33sQlwv2cRwVGGGFFWYAb4mGyRCbos3V2Y+cqdc";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
@@ -518,7 +518,7 @@ mod public {
             let encoded_hash = "$argon2i$v=19$m=256,t=4,p=1$c29tZXNhbHRzb21lc2FsdA$mxNMTBw05mFw0QiMGL46jg9KGDfUwGlwPOYvhSSLHo8";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert!(expected.unprotected_as_bytes() == &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
     }

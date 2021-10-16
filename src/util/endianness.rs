@@ -30,7 +30,7 @@ macro_rules! impl_store_into {
             let type_alias_len = mem::size_of::<$type_alias>();
             // The length of src must be evenly divisible with the length of dst,
             // making sure .chunks_exact() leaves no remainder.
-            assert!((type_alias_len * src.len()) == dst.len());
+            assert_eq!((type_alias_len * src.len()), dst.len());
 
             for (src_elem, dst_chunk) in src.iter().zip(dst.chunks_exact_mut(type_alias_len)) {
                 dst_chunk.copy_from_slice(&src_elem.$conv_function());
@@ -46,12 +46,12 @@ macro_rules! impl_load_into {
             let type_alias_len = mem::size_of::<$type_alias>();
             // The length of src must be evenly divisible with the length of dst,
             // making sure .chunks_exact() leaves no remainder.
-            assert!((dst.len() * type_alias_len) == src.len());
+            assert_eq!((dst.len() * type_alias_len), src.len());
 
             for (src_chunk, dst_elem) in src.chunks_exact(type_alias_len).zip(dst.iter_mut()) {
                 // The above assert and this debug assert should prove that .unwrap()
                 // cannot panic using TryInto.
-                debug_assert!(src_chunk.len() == type_alias_len);
+                debug_assert_eq!(src_chunk.len(), type_alias_len);
                 *dst_elem = $type_alias_expr::$conv_function(src_chunk.try_into().unwrap());
             }
         }
@@ -64,7 +64,7 @@ macro_rules! impl_load {
         pub fn $func_name(src: &[u8]) -> $type_alias {
             // Satisfying this assert should prove that using TryInto
             // cannot panic.
-            assert!(mem::size_of::<$type_alias>() == src.len());
+            assert_eq!(mem::size_of::<$type_alias>(), src.len());
             $type_alias_expr::$conv_function(src.try_into().unwrap())
         }
     };

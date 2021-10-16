@@ -24,7 +24,7 @@ macro_rules! impl_hkdf_test_runner (($name:ident, $extract:ident, $derive_key:id
     ) {
         if expected_prk.is_some() {
             let actual_prk = $extract(salt, &ikm).unwrap();
-            assert!(actual_prk == $hmac_tag::from_slice(expected_prk.unwrap()).unwrap());
+            assert_eq!(actual_prk, $hmac_tag::from_slice(expected_prk.unwrap()).unwrap());
         }
 
         let mut okm_out = vec![0u8; okm_len];

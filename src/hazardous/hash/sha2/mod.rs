@@ -235,7 +235,7 @@ pub(crate) mod sha2_core {
             // If `data.is_none()` then we want to process leftover data within `self.buffer`.
             match data {
                 Some(bytes) => {
-                    debug_assert!(bytes.len() == BLOCKSIZE);
+                    debug_assert_eq!(bytes.len(), BLOCKSIZE);
                     W::from_be_bytes(bytes, &mut w[..16]);
                 }
                 None => W::from_be_bytes(&self.buffer, &mut w[..16]),
@@ -342,7 +342,7 @@ pub(crate) mod sha2_core {
             }
 
             if !bytes.is_empty() {
-                debug_assert!(self.leftover == 0);
+                debug_assert_eq!(self.leftover, 0);
                 self.buffer[..bytes.len()].copy_from_slice(bytes);
                 self.leftover = bytes.len();
                 self.increment_mlen(&W::from(bytes.len()));
@@ -354,7 +354,7 @@ pub(crate) mod sha2_core {
         /// Finalize the hash and put the final digest into `dest`.
         pub(crate) fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
             // NOTE: We need to support less than OUTSIZE in HKDF through HMAC.
-            // debug_assert!(dest.len() == OUTSIZE);
+            // debug_assert_eq!(dest.len(), OUTSIZE);
             if self.is_finalized {
                 return Err(UnknownCryptoError);
             }
@@ -522,7 +522,7 @@ pub(crate) mod w32 {
 
         #[inline]
         fn as_be(&self, dest: &mut [u8]) {
-            debug_assert!(dest.len() == Self::size_of());
+            debug_assert_eq!(dest.len(), Self::size_of());
             dest.copy_from_slice(&self.0.to_be_bytes());
         }
 
@@ -533,7 +533,7 @@ pub(crate) mod w32 {
 
         #[inline]
         fn as_be_bytes(src: &[Self], dest: &mut [u8]) {
-            debug_assert!(dest.len() == src.len() * Self::size_of());
+            debug_assert_eq!(dest.len(), src.len() * Self::size_of());
             for (src_elem, dst_chunk) in src.iter().zip(dest.chunks_exact_mut(Self::size_of())) {
                 src_elem.as_be(dst_chunk);
             }
@@ -541,7 +541,7 @@ pub(crate) mod w32 {
 
         #[inline]
         fn from_be_bytes(src: &[u8], dest: &mut [Self]) {
-            debug_assert!(dest.len() == src.len() / Self::size_of());
+            debug_assert_eq!(dest.len(), src.len() / Self::size_of());
             for (src_chunk, dst_elem) in src.chunks_exact(Self::size_of()).zip(dest.iter_mut()) {
                 *dst_elem = Self::from_be(src_chunk);
             }
@@ -670,7 +670,7 @@ pub(crate) mod w64 {
 
         #[inline]
         fn as_be(&self, dest: &mut [u8]) {
-            debug_assert!(dest.len() == Self::size_of());
+            debug_assert_eq!(dest.len(), Self::size_of());
             dest.copy_from_slice(&self.0.to_be_bytes());
         }
 
@@ -681,7 +681,7 @@ pub(crate) mod w64 {
 
         #[inline]
         fn as_be_bytes(src: &[Self], dest: &mut [u8]) {
-            debug_assert!(dest.len() == src.len() * Self::size_of());
+            debug_assert_eq!(dest.len(), src.len() * Self::size_of());
             for (src_elem, dst_chunk) in src.iter().zip(dest.chunks_exact_mut(Self::size_of())) {
                 src_elem.as_be(dst_chunk);
             }
@@ -689,7 +689,7 @@ pub(crate) mod w64 {
 
         #[inline]
         fn from_be_bytes(src: &[u8], dest: &mut [Self]) {
-            debug_assert!(dest.len() == src.len() / Self::size_of());
+            debug_assert_eq!(dest.len(), src.len() / Self::size_of());
             for (src_chunk, dst_elem) in src.chunks_exact(Self::size_of()).zip(dest.iter_mut()) {
                 *dst_elem = Self::from_be(src_chunk);
             }

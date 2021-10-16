@@ -18,8 +18,8 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 
     state.update(input).unwrap();
     let digest = state.finalize().unwrap();
-    assert!(digest.len() == output.len());
-    assert!(digest.as_ref() == &output[..]);
+    assert_eq!(digest.len(), output.len());
+    assert_eq!(digest.as_ref(), &output[..]);
 }
 
 fn sha512_test_runner(data: &[u8], output: &[u8]) {
@@ -29,8 +29,8 @@ fn sha512_test_runner(data: &[u8], output: &[u8]) {
 
     let digest_one_shot = sha512::Sha512::digest(data).unwrap();
 
-    assert!(digest.as_ref() == digest_one_shot.as_ref());
-    assert!(digest.as_ref() == output);
+    assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
+    assert_eq!(digest.as_ref(), output);
 }
 
 fn sha256_test_runner(data: &[u8], output: &[u8]) {
@@ -40,8 +40,8 @@ fn sha256_test_runner(data: &[u8], output: &[u8]) {
 
     let digest_one_shot = sha256::Sha256::digest(data).unwrap();
 
-    assert!(digest.as_ref() == digest_one_shot.as_ref());
-    assert!(digest.as_ref() == output);
+    assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
+    assert_eq!(digest.as_ref(), output);
 }
 
 fn sha384_test_runner(data: &[u8], output: &[u8]) {
@@ -51,8 +51,8 @@ fn sha384_test_runner(data: &[u8], output: &[u8]) {
 
     let digest_one_shot = sha384::Sha384::digest(data).unwrap();
 
-    assert!(digest.as_ref() == digest_one_shot.as_ref());
-    assert!(digest.as_ref() == output);
+    assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
+    assert_eq!(digest.as_ref(), output);
 }
 
 /// NISTs SHA256/384/512 Long/Short share the same format,

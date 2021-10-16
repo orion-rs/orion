@@ -262,10 +262,10 @@ macro_rules! test_partial_eq (($name:ident, $upper_bound:expr) => (
     #[test]
     fn test_partial_eq() {
         // PartialEq<Self>
-        assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() == $name::from_slice(&[0u8; $upper_bound]).unwrap());
+        assert_eq!($name::from_slice(&[0u8; $upper_bound]).unwrap(), $name::from_slice(&[0u8; $upper_bound]).unwrap());
         assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() != $name::from_slice(&[1u8; $upper_bound]).unwrap());
         // PartialEq<&[u8]>
-        assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() == [0u8; $upper_bound].as_ref());
+        assert_eq!($name::from_slice(&[0u8; $upper_bound]).unwrap(), [0u8; $upper_bound].as_ref());
         assert!($name::from_slice(&[0u8; $upper_bound]).unwrap() != [1u8; $upper_bound].as_ref());
     }
 ));
@@ -296,11 +296,11 @@ macro_rules! test_as_bytes_and_get_length (($name:ident, $lower_bound:expr, $upp
         let test_upper = $name::from_slice(&[0u8; $upper_bound]).unwrap();
         let test_lower = $name::from_slice(&[0u8; $lower_bound]).unwrap();
 
-        assert!(test_upper.$bytes_function().len() == test_upper.len());
-        assert!(test_upper.len() == $upper_bound);
+        assert_eq!(test_upper.$bytes_function().len(), test_upper.len());
+        assert_eq!(test_upper.len(), $upper_bound);
 
-        assert!(test_lower.$bytes_function().len() == test_lower.len());
-        assert!(test_lower.len() == $lower_bound);
+        assert_eq!(test_lower.$bytes_function().len(), test_lower.len());
+        assert_eq!(test_lower.len(), $lower_bound);
 
         assert_eq!(test_upper.is_empty(), false);
         assert_eq!(test_lower.is_empty(), false);
@@ -310,11 +310,11 @@ macro_rules! test_as_bytes_and_get_length (($name:ident, $lower_bound:expr, $upp
             let test_upper = $name::from_slice(&[0u8; $upper_bound - 1]).unwrap();
             let test_lower = $name::from_slice(&[0u8; $lower_bound + 1]).unwrap();
 
-            assert!(test_upper.$bytes_function().len() == test_upper.len());
-            assert!(test_upper.len() == $upper_bound - 1);
+            assert_eq!(test_upper.$bytes_function().len(), test_upper.len());
+            assert_eq!(test_upper.len(), $upper_bound - 1);
 
-            assert!(test_lower.$bytes_function().len() == test_lower.len());
-            assert!(test_lower.len() == $lower_bound + 1);
+            assert_eq!(test_lower.$bytes_function().len(), test_lower.len());
+            assert_eq!(test_lower.len(), $lower_bound + 1);
 
             assert_eq!(test_upper.is_empty(), false);
             assert_eq!(test_lower.is_empty(), false);
@@ -333,7 +333,7 @@ macro_rules! test_generate (($name:ident, $gen_length:expr) => (
         let test_rand = $name::generate();
         assert!(test_zero != test_rand);
         // A random generated one should always be $gen_length in length.
-        assert!(test_rand.len() == $gen_length);
+        assert_eq!(test_rand.len(), $gen_length);
     }
 ));
 
@@ -391,7 +391,7 @@ macro_rules! test_generate_variable (($name:ident) => (
         // A random one should never be all 0's.
         let test_rand = $name::generate(128).unwrap();
         assert!(test_zero != test_rand);
-        assert!(test_rand.len() == 128);
+        assert_eq!(test_rand.len(), 128);
     }
 ));
 
@@ -658,10 +658,10 @@ macro_rules! construct_tag {
         /// let tag = Tag::from_slice(&[1; 64])?;
         ///
         /// // Secure, constant-time comparison with a byte slice
-        /// assert!(tag == &[1; 64][..]);
+        /// assert_eq!(tag, &[1; 64][..]);
         ///
         /// // Secure, constant-time comparison with another Tag
-        /// assert!(tag == Tag::from_slice(&[1; 64])?);
+        /// assert_eq!(tag, Tag::from_slice(&[1; 64])?);
         /// # Ok(())
         /// # }
         /// ```

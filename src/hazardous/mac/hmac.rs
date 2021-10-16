@@ -147,7 +147,7 @@ impl<S: HmacHashFunction, const BLOCKSIZE: usize> Hmac<S, BLOCKSIZE> {
     ///
     /// Ref: https://brycx.github.io/2018/08/06/hmac-and-precomputation-optimization.html
     fn _new(secret_key: &[u8]) -> Result<Self, UnknownCryptoError> {
-        debug_assert!(S::_BLOCKSIZE == BLOCKSIZE);
+        debug_assert_eq!(S::_BLOCKSIZE, BLOCKSIZE);
         let mut ipad = [IPAD; BLOCKSIZE];
 
         if secret_key.len() > BLOCKSIZE {
