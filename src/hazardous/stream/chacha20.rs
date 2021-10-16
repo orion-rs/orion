@@ -433,7 +433,7 @@ mod public {
             let keystream2 =
                 hchacha20(&SecretKey::from_slice(&[1u8; 32]).unwrap(), &[0u8; 16]).unwrap();
 
-            assert!(keystream1 != keystream2);
+            assert_ne!(keystream1, keystream2);
         }
 
         #[test]
@@ -444,7 +444,7 @@ mod public {
             let keystream2 =
                 hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[1u8; 16]).unwrap();
 
-            assert!(keystream1 != keystream2);
+            assert_ne!(keystream1, keystream2);
         }
 
         pub fn hchacha_test_runner(key: &str, nonce: &str, output_expected: &str) {
