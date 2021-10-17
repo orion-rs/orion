@@ -66,7 +66,6 @@
 use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
 use crate::util::secure_cmp;
-use core::convert::TryFrom;
 use core::ops::{Add, Mul, Sub};
 
 /// The size of a public key used in X25519.
@@ -409,7 +408,7 @@ construct_secret_key! {
 
 impl_from_trait!(PrivateKey, PRIVATE_KEY_SIZE);
 
-impl TryFrom<&PrivateKey> for PublicKey {
+impl core::convert::TryFrom<&PrivateKey> for PublicKey {
     type Error = UnknownCryptoError;
 
     fn try_from(private_key: &PrivateKey) -> Result<Self, Self::Error> {

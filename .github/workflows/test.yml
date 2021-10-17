@@ -42,6 +42,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+
+      - name: Test debug-mode, all features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features serde
       
       - name: Test debug-mode, no default features
         uses: actions-rs/cargo@v1
@@ -60,6 +66,12 @@ jobs:
         with:
           command: test
           args: --release
+
+      - name: Test release-mode, all features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release --features serde
       
       - name: Test release-mode, no default features
         uses: actions-rs/cargo@v1

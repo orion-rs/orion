@@ -85,6 +85,59 @@ macro_rules! impl_normal_debug_trait (($name:ident) => (
     }
 ));
 
+/// Macro that implements the `serde::{Serialize, Deserialize}` traits.
+#[cfg(feature = "serde")]
+macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
+    /// This type tries to serialize as a `&[u8]` would. Note that the serialized
+    /// type likely does not have the same protections that orion provides, such
+    /// as constant-time operations. A good rule of thumb is to only serialize
+    /// these types for storage. Don't operate on the serialized types.
+    impl serde::Serialize for $name {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::ser::Serializer,
+        {
+            let bytes: &[u8] = self.$bytes_function();
+            bytes.serialize(serializer)
+        }
+    }
+
+    /// This type tries to deserialize as a `Vec<u8>` would. If it succeeds, the digest
+    /// will be built using `Self::from_slice`.
+    ///
+    /// Note that **this allocates** once to store the referenced bytes on the heap.
+    impl<'de> serde::Deserialize<'de> for $name {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::de::Deserializer<'de>,
+        {
+            let bytes = Vec::<u8>::deserialize(deserializer)?;
+            std::convert::TryFrom::try_from(bytes.as_slice()).map_err(serde::de::Error::custom)
+        }
+    }
+));
+
+#[cfg(test)]
+#[cfg(feature = "serde")]
+macro_rules! test_serde_impls (($name:ident, $gen_length:expr) => (
+    #[test]
+    fn test_serde_serialized_equivalence_to_bytes_fn() {
+        let bytes = &[38u8; $gen_length][..];
+        let orion_type = $name::from_slice(bytes).unwrap();
+        let serialized_from_bytes = serde_json::to_value(bytes).unwrap();
+        let serialized_from_orion_type = serde_json::to_value(&orion_type).unwrap();
+        assert_eq!(serialized_from_bytes, serialized_from_orion_type);
+    }
+
+    #[test]
+    fn test_serde_deserialized_equivalence_to_bytes_fn() {
+        let bytes = &[38u8; $gen_length][..];
+        let serialized_from_bytes = serde_json::to_value(bytes).unwrap();
+        let orion_type: $name = serde_json::from_value(serialized_from_bytes).unwrap();
+        assert_eq!(orion_type, bytes);
+    }
+));
+
 /// Macro that implements the `Drop` trait on a object called `$name` which has
 /// a field `value`. This `Drop` will zero out the field `value` when the
 /// objects destructor is called.
@@ -123,6 +176,18 @@ macro_rules! impl_from_trait (($name:ident, $size:expr) => (
                 value: bytes,
                 original_length: $size
             }
+        }
+    }
+));
+
+/// Macro that implements `TryFrom<&[u8]>` on an object called `$name` that
+/// implements the method `from_slice`.
+macro_rules! impl_try_from_trait (($name:ident) => (
+    /// Delegates to `from_slice` implementation
+    impl core::convert::TryFrom<&[u8]> for $name {
+        type Error = UnknownCryptoError;
+        fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+            Self::from_slice(slice)
         }
     }
 ));
@@ -564,7 +629,11 @@ macro_rules! construct_public {
 
         impl_ct_partialeq_trait!($name, as_ref);
         impl_normal_debug_trait!($name);
+        impl_try_from_trait!($name);
         impl_asref_trait!($name);
+
+        #[cfg(feature = "serde")]
+        impl_serde_traits!($name, as_ref);
 
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
@@ -581,6 +650,9 @@ macro_rules! construct_public {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, as_ref);
             test_partial_eq!($name, $upper_bound);
+
+            #[cfg(feature = "serde")]
+            test_serde_impls!($name, $upper_bound);
 
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
@@ -672,6 +744,10 @@ macro_rules! construct_tag {
 
         impl_omitted_debug_trait!($name);
         impl_ct_partialeq_trait!($name, unprotected_as_bytes);
+        impl_try_from_trait!($name);
+
+        #[cfg(feature = "serde")]
+        impl_serde_traits!($name, unprotected_as_bytes);
 
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
@@ -689,6 +765,9 @@ macro_rules! construct_tag {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, unprotected_as_bytes);
             test_partial_eq!($name, $upper_bound);
+
+            #[cfg(feature = "serde")]
+            test_serde_impls!($name, $upper_bound);
 
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
@@ -870,6 +949,10 @@ macro_rules! construct_salt_variable_size {
         impl_default_trait!($name, $default_size);
         impl_ct_partialeq_trait!($name, as_ref);
         impl_asref_trait!($name);
+        impl_try_from_trait!($name);
+
+        #[cfg(feature = "serde")]
+        impl_serde_traits!($name, as_ref);
 
         impl $name {
             func_from_slice_variable_size!($name);
@@ -887,6 +970,9 @@ macro_rules! construct_salt_variable_size {
             test_generate_variable!($name);
             test_partial_eq!($name, $default_size);
             test_normal_debug!($name, $default_size);
+
+            #[cfg(feature = "serde")]
+            test_serde_impls!($name, $default_size);
         }
     );
 }
