@@ -510,12 +510,10 @@ pub struct PrivateKey {
 
 impl PartialEq<&[u8]> for PrivateKey {
     fn eq(&self, other: &&[u8]) -> bool {
-        if other.len() != PRIVATE_KEY_SIZE {
-            return false;
+        match Scalar::from_slice(*other) {
+            Ok(other_scalar) => self.scalar == other_scalar,
+            Err(_) => false,
         }
-        // unwrap OK due to valid len
-        let other = Scalar::from_slice(*other).unwrap();
-        self.scalar == other
     }
 }
 
