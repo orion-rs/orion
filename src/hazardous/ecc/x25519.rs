@@ -378,7 +378,6 @@ fn mont_ladder(scalar: &Scalar, point: FieldElement) -> FieldElement {
 }
 
 // NOTE: FieldElement contains a constant-time PartialEq<FieldElement> impl.
-#[derive(PartialEq, Debug)]
 /// A type that represents a `PublicKey` that X25519 uses.
 ///
 /// This type holds a field element and is used internally as the u-coordinate.
@@ -387,6 +386,7 @@ fn mont_ladder(scalar: &Scalar, point: FieldElement) -> FieldElement {
 /// # Errors:
 /// An error will be returned if:
 /// - `slice` is not 32 bytes.
+#[derive(PartialEq, Debug)]
 pub struct PublicKey {
     fe: FieldElement,
 }
@@ -468,7 +468,6 @@ impl PublicKey {
 
 // NOTE: Scalar contains a constant-time PartialEq<Scalar> impl.
 // NOTE: All newtypes impl Drop by default and Scalar has zeroizing Drop
-#[derive(PartialEq)]
 /// A type to represent the `PrivateKey` that X25519 uses.
 ///
 /// This type holds a scalar and is used internally as such. The scalar held is decoded
@@ -499,11 +498,12 @@ impl PublicKey {
 /// let secret_key = PrivateKey::generate();
 ///
 /// // Secure, constant-time comparison with a byte slice
-/// assert!(secret_key != &[0; 32][..]);
+/// assert_ne!(secret_key, &[0; 32][..]);
 ///
 /// // Secure, constant-time comparison with another SecretKey
-/// assert!(secret_key != PrivateKey::generate());
+/// assert_ne!(secret_key, PrivateKey::generate());
 /// ```
+#[derive(PartialEq)]
 pub struct PrivateKey {
     scalar: Scalar,
 }
