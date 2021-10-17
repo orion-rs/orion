@@ -597,10 +597,10 @@ mod private {
 
     #[test]
     fn test_tag() {
-        assert!(StreamTag::Message.as_byte() == 0u8);
-        assert!(StreamTag::Push.as_byte() == 1u8);
-        assert!(StreamTag::Rekey.as_byte() == 2u8);
-        assert!(StreamTag::Finish.as_byte() == 3u8);
+        assert_eq!(StreamTag::Message.as_byte(), 0u8);
+        assert_eq!(StreamTag::Push.as_byte(), 1u8);
+        assert_eq!(StreamTag::Rekey.as_byte(), 2u8);
+        assert_eq!(StreamTag::Finish.as_byte(), 3u8);
         assert!(StreamTag::try_from(4u8).is_err());
     }
 
@@ -1097,7 +1097,7 @@ mod private {
         // not placed in dst_out.
         assert!(state_dec.open_chunk(&out, None, &mut dst_out).is_ok());
         assert!(dst_out.is_empty());
-        assert!(dst_out == [0u8; 0]);
+        assert_eq!(dst_out, [0u8; 0]);
     }
 
     #[test]

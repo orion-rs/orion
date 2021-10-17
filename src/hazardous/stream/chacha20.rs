@@ -183,7 +183,7 @@ impl ChaCha20 {
     /// Initialize either a ChaCha or HChaCha state with a `secret_key` and
     /// `nonce`.
     pub(crate) fn new(sk: &[u8], n: &[u8], is_ietf: bool) -> Result<Self, UnknownCryptoError> {
-        debug_assert!(sk.len() == CHACHA_KEYSIZE);
+        debug_assert_eq!(sk.len(), CHACHA_KEYSIZE);
         if (n.len() != IETF_CHACHA_NONCESIZE) && is_ietf {
             return Err(UnknownCryptoError);
         }
@@ -293,7 +293,7 @@ pub(crate) fn xor_keystream(
     tmp_block: &mut [u8],
     bytes: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    debug_assert!(tmp_block.len() == CHACHA_BLOCKSIZE);
+    debug_assert_eq!(tmp_block.len(), CHACHA_BLOCKSIZE);
     if bytes.is_empty() {
         return Err(UnknownCryptoError);
     }
@@ -433,7 +433,7 @@ mod public {
             let keystream2 =
                 hchacha20(&SecretKey::from_slice(&[1u8; 32]).unwrap(), &[0u8; 16]).unwrap();
 
-            assert!(keystream1 != keystream2);
+            assert_ne!(keystream1, keystream2);
         }
 
         #[test]
@@ -444,7 +444,7 @@ mod public {
             let keystream2 =
                 hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[1u8; 16]).unwrap();
 
-            assert!(keystream1 != keystream2);
+            assert_ne!(keystream1, keystream2);
         }
 
         pub fn hchacha_test_runner(key: &str, nonce: &str, output_expected: &str) {

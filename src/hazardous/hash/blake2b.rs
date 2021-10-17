@@ -278,7 +278,7 @@ impl Blake2b {
         let mut m_vec = [0u64; 16];
         match data {
             Some(bytes) => {
-                debug_assert!(bytes.len() == BLAKE2B_BLOCKSIZE);
+                debug_assert_eq!(bytes.len(), BLAKE2B_BLOCKSIZE);
                 load_u64_into_le(bytes, &mut m_vec);
             }
             None => load_u64_into_le(&self.buffer, &mut m_vec),
@@ -419,7 +419,7 @@ impl Blake2b {
         }
 
         if !bytes.is_empty() {
-            debug_assert!(self.leftover == 0);
+            debug_assert_eq!(self.leftover, 0);
             self.buffer[..bytes.len()].copy_from_slice(bytes);
             self.leftover += bytes.len();
         }
@@ -933,14 +933,14 @@ mod private {
             };
 
             context.increment_offset(1);
-            assert!(context.t == [1u64, 0u64]);
+            assert_eq!(context.t, [1u64, 0u64]);
             context.increment_offset(17);
-            assert!(context.t == [18u64, 0u64]);
+            assert_eq!(context.t, [18u64, 0u64]);
             context.increment_offset(12);
-            assert!(context.t == [30u64, 0u64]);
+            assert_eq!(context.t, [30u64, 0u64]);
             // Overflow
             context.increment_offset(u64::MAX);
-            assert!(context.t == [29u64, 1u64]);
+            assert_eq!(context.t, [29u64, 1u64]);
         }
 
         #[test]

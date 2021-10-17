@@ -88,7 +88,7 @@ fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) {
 
     let tag_one_shot = poly1305::Poly1305::poly1305(&sk, input).unwrap();
 
-    assert!(tag_stream == output);
-    assert!(tag_one_shot == output);
+    assert_eq!(tag_stream, output);
+    assert_eq!(tag_one_shot, output);
     assert!(poly1305::Poly1305::verify(&Tag::from_slice(&output).unwrap(), &sk, input).is_ok());
 }

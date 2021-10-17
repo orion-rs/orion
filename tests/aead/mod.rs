@@ -37,9 +37,9 @@ fn wycheproof_test_runner(
             xchacha20poly1305::open(&key, &nonce, &dst_ct_out, Some(aad), &mut dst_pt_out)?;
         }
 
-        assert!(dst_ct_out[..input.len()].as_ref() == output);
-        assert!(dst_ct_out[input.len()..].as_ref() == tag);
-        assert!(dst_pt_out[..].as_ref() == input);
+        assert_eq!(dst_ct_out[..input.len()].as_ref(), output);
+        assert_eq!(dst_ct_out[input.len()..].as_ref(), tag);
+        assert_eq!(dst_pt_out[..].as_ref(), input);
     } else {
         // Tests that run here have a "invalid" flag set
         let key = match SecretKey::from_slice(&key) {

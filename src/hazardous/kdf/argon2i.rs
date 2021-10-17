@@ -457,7 +457,10 @@ pub fn derive_key(
         x,
     )?;
     let mut tmp = [0u8; 1024];
-    debug_assert!(h0.len() == ((core::mem::size_of::<u32>() * 2) + BLAKE2B_OUTSIZE));
+    debug_assert_eq!(
+        h0.len(),
+        ((core::mem::size_of::<u32>() * 2) + BLAKE2B_OUTSIZE)
+    );
     debug_assert!(
         h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + core::mem::size_of::<u32>())]
             == [0u8; core::mem::size_of::<u32>()]

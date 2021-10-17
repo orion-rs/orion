@@ -330,21 +330,21 @@ mod private {
             let mut context = Sha512::default();
 
             context._state.increment_mlen(&WordU64::from(1u64));
-            assert!(context._state.message_len[0] == WordU64::from(0u64));
-            assert!(context._state.message_len[1] == WordU64::from(8u64));
+            assert_eq!(context._state.message_len[0], WordU64::from(0u64));
+            assert_eq!(context._state.message_len[1], WordU64::from(8u64));
 
             context._state.increment_mlen(&WordU64::from(17u64));
-            assert!(context._state.message_len[0] == WordU64::from(0u64));
-            assert!(context._state.message_len[1] == WordU64::from(144u64));
+            assert_eq!(context._state.message_len[0], WordU64::from(0u64));
+            assert_eq!(context._state.message_len[1], WordU64::from(144u64));
 
             context._state.increment_mlen(&WordU64::from(12u64));
-            assert!(context._state.message_len[0] == WordU64::from(0u64));
-            assert!(context._state.message_len[1] == WordU64::from(240u64));
+            assert_eq!(context._state.message_len[0], WordU64::from(0u64));
+            assert_eq!(context._state.message_len[1], WordU64::from(240u64));
 
             // Overflow
             context._state.increment_mlen(&WordU64::from(u64::MAX / 8));
-            assert!(context._state.message_len[0] == WordU64::from(1u64));
-            assert!(context._state.message_len[1] == WordU64::from(232u64));
+            assert_eq!(context._state.message_len[0], WordU64::from(1u64));
+            assert_eq!(context._state.message_len[1], WordU64::from(232u64));
         }
 
         #[test]

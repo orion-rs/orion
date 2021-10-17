@@ -599,7 +599,7 @@ pub fn key_agreement(
     let u_coord = public_key.fe;
     let field_element = mont_ladder(&private_key.scalar, u_coord).as_bytes();
     // High bit should be zero.
-    debug_assert!((field_element[31] & 0b1000_0000u8) == 0u8);
+    debug_assert_eq!(field_element[31] & 0b1000_0000u8, 0u8);
     if secure_cmp(&field_element, &LOW_ORDER_POINT_RESULT).is_ok() {
         return Err(UnknownCryptoError);
     }

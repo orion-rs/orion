@@ -86,7 +86,7 @@ fn _function_f<Hmac>(
 where
     Hmac: hmac::HmacFunction,
 {
-    debug_assert!(u_step.len() == Hmac::HASH_FUNC_OUTSIZE);
+    debug_assert_eq!(u_step.len(), Hmac::HASH_FUNC_OUTSIZE);
     hmac._update(salt)?;
     hmac._update(&index.to_be_bytes())?;
     hmac._finalize(u_step)?;
@@ -119,7 +119,7 @@ fn _derive_key<Hmac, const OUTSIZE: usize>(
 where
     Hmac: hmac::HmacFunction,
 {
-    debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
+    debug_assert_eq!(OUTSIZE, Hmac::HASH_FUNC_OUTSIZE);
     if dest.is_empty() || iterations < 1 {
         return Err(UnknownCryptoError);
     }
@@ -161,7 +161,7 @@ fn _verify<Hmac, const OUTSIZE: usize>(
 where
     Hmac: hmac::HmacFunction,
 {
-    debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
+    debug_assert_eq!(OUTSIZE, Hmac::HASH_FUNC_OUTSIZE);
     _derive_key::<Hmac, { OUTSIZE }>(padded_password, salt, iterations, dest)?;
     crate::util::secure_cmp(expected, dest)
 }

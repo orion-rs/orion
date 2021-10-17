@@ -70,7 +70,7 @@ fn _extract<Hmac, const OUTSIZE: usize>(
 where
     Hmac: hmac::HmacFunction,
 {
-    debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
+    debug_assert_eq!(OUTSIZE, Hmac::HASH_FUNC_OUTSIZE);
     let mut dest = [0u8; OUTSIZE];
 
     let mut ctx = Hmac::_new(salt)?;
@@ -89,8 +89,8 @@ fn _expand<Hmac, const OUTSIZE: usize>(
 where
     Hmac: hmac::HmacFunction,
 {
-    debug_assert!(OUTSIZE == Hmac::HASH_FUNC_OUTSIZE);
-    debug_assert!(prk.len() == Hmac::HASH_FUNC_OUTSIZE);
+    debug_assert_eq!(OUTSIZE, Hmac::HASH_FUNC_OUTSIZE);
+    debug_assert_eq!(prk.len(), Hmac::HASH_FUNC_OUTSIZE);
     if dest.is_empty() || dest.len() > 255 * Hmac::HASH_FUNC_OUTSIZE {
         return Err(UnknownCryptoError);
     }
