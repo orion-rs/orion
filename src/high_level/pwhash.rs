@@ -96,6 +96,12 @@ use crate::{
 use ct_codecs::{Base64NoPadding, Decoder, Encoder};
 use zeroize::Zeroizing;
 
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Deserialize, Deserializer},
+    ser::{Serialize, Serializer},
+};
+
 /// The length of the salt used for password hashing.
 pub const SALT_LENGTH: usize = 16;
 
@@ -362,6 +368,33 @@ impl core::fmt::Debug for PasswordHash {
 
 impl_ct_partialeq_trait!(PasswordHash, unprotected_as_bytes);
 
+#[cfg(feature = "serde")]
+/// `PasswordHash` serializes as would a [`String`](std::string::String). Note that
+/// the serialized type likely does not have the same protections that orion
+/// provides, such as constant-time operations. A good rule of thumb is to only
+/// serialize these types for storage. Don't operate on the serialized types.
+impl Serialize for PasswordHash {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let encoded_string = self.unprotected_as_encoded();
+        serializer.serialize_str(encoded_string)
+    }
+}
+
+#[cfg(feature = "serde")]
+/// `PasswordHash` deserializes from a [`String`](std::string::String).
+impl<'de> Deserialize<'de> for PasswordHash {
+    fn deserialize<D>(deserializer: D) -> Result<PasswordHash, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let encoded_str = String::deserialize(deserializer)?;
+        PasswordHash::from_encoded(&encoded_str).map_err(de::Error::custom)
+    }
+}
+
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hash a password using Argon2i.
 pub fn hash_password(
@@ -448,6 +481,28 @@ mod public {
         let debug = format!("{:?}", password_hash);
         let expected = "PasswordHash { encoded_password_hash: [***OMITTED***], password_hash: [***OMITTED***], iterations: 3, memory: 65536 }";
         assert_eq!(debug, expected);
+    }
+
+    #[cfg(feature = "serde")]
+    mod test_serde_impls {
+        use super::*;
+
+        #[test]
+        fn test_valid_deserialization() {
+            let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
+            let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
+            let deserialized: PasswordHash =
+                serde_json::from_str(format!("\"{}\"", encoded_hash).as_str()).unwrap();
+            assert_eq!(deserialized, expected);
+        }
+
+        #[test]
+        fn test_valid_serialization() {
+            let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
+            let hash = PasswordHash::from_encoded(encoded_hash).unwrap();
+            let serialized: String = serde_json::to_string(&hash).unwrap();
+            assert_eq!(serialized, format!("\"{}\"", encoded_hash));
+        }
     }
 
     /// The tests herein were generated with the CLI tool from the reference implementation at:
