@@ -90,6 +90,8 @@ const LOW_ORDER_POINT_RESULT: [u8; 32] = [0u8; 32];
 /// Represent an element in the curve field.
 struct FieldElement([u64; 5]);
 
+impl Eq for FieldElement {}
+
 impl PartialEq for FieldElement {
     fn eq(&self, other: &Self) -> bool {
         use subtle::ConstantTimeEq;
@@ -299,6 +301,8 @@ impl PartialEq for Scalar {
     }
 }
 
+impl Eq for Scalar {}
+
 impl Scalar {
     /// Create a scalar from some byte-array.
     /// The scalar is clamped according to the RFC.
@@ -373,41 +377,41 @@ fn mont_ladder(scalar: &Scalar, point: FieldElement) -> FieldElement {
     x2
 }
 
-construct_public! {
-    /// A type that represents a `PublicKey` that X25519 uses.
-    ///
-    /// This type is used internally as a u-coordinate, but hold only raw bytes,
-    /// and does not perform any checks (except for lengths) whatsoever.
-    /// Non-canonical values are accepted, as dictated in the RFC ([`https://www.ietf.org/rfc/rfc7748.html#section-5`]):
-    ///
-    /// > "Implementations MUST accept non-canonical values and process them as
-    ///  if they had been reduced modulo the field prime.  The non-canonical
-    ///  values are 2^255 - 19 through 2^255 - 1 for X25519 and 2^448 - 2^224 - 1 through 2^448 - 1 for X448."
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    (PublicKey, test_public_key, PUBLIC_KEY_SIZE, PUBLIC_KEY_SIZE)
+// NOTE: FieldElement contains a constant-time PartialEq<FieldElement> impl.
+/// A type that represents a `PublicKey` that X25519 uses.
+///
+/// This type holds a field element and is used internally as the u-coordinate.
+/// As the RFC mandates, the most significant bit of the last byte is masked.
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `slice` is not 32 bytes.
+#[derive(PartialEq, Debug)]
+pub struct PublicKey {
+    fe: FieldElement,
 }
 
-impl_from_trait!(PublicKey, PUBLIC_KEY_SIZE);
+impl PartialEq<&[u8]> for PublicKey {
+    fn eq(&self, other: &&[u8]) -> bool {
+        use core::convert::TryInto;
 
-construct_secret_key! {
-    /// A type to represent the `PrivateKey` that X25519 uses.
-    ///
-    /// This type is used internally as a scalar.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (PrivateKey, test_private_key, PRIVATE_KEY_SIZE, PRIVATE_KEY_SIZE, PRIVATE_KEY_SIZE)
+        if other.len() != PUBLIC_KEY_SIZE {
+            return false;
+        }
+        let other: [u8; 32] = (*other).try_into().unwrap();
+
+        self.fe == FieldElement::from_bytes(&other)
+    }
 }
 
-impl_from_trait!(PrivateKey, PRIVATE_KEY_SIZE);
+impl From<[u8; PUBLIC_KEY_SIZE]> for PublicKey {
+    #[inline]
+    fn from(bytes: [u8; PUBLIC_KEY_SIZE]) -> Self {
+        Self {
+            fe: FieldElement::from_bytes(&bytes),
+        }
+    }
+}
 
 impl TryFrom<&PrivateKey> for PublicKey {
     type Error = UnknownCryptoError;
@@ -420,6 +424,156 @@ impl TryFrom<&PrivateKey> for PublicKey {
         Ok(PublicKey::from(
             mont_ladder(&scalar, FieldElement::from_bytes(&BASEPOINT)).as_bytes(),
         ))
+    }
+}
+
+impl PublicKey {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Construct from a given byte slice.
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        use core::convert::TryInto;
+
+        let slice_len = slice.len();
+
+        if slice_len != PUBLIC_KEY_SIZE {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok(Self {
+            fe: FieldElement::from_bytes(slice.try_into().unwrap()),
+        })
+    }
+
+    #[inline]
+    /// Return the length of the object.
+    pub fn len(&self) -> usize {
+        PUBLIC_KEY_SIZE
+    }
+
+    #[inline]
+    /// Return `true` if this object does not hold any data, `false` otherwise.
+    ///
+    /// __NOTE__: This method should always return `false`, since there shouldn't be a way
+    /// to create an empty instance of this object.
+    pub fn is_empty(&self) -> bool {
+        PUBLIC_KEY_SIZE == 0
+    }
+
+    #[inline]
+    /// Convert this PublicKey to its byte-representation.
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.fe.as_bytes()
+    }
+}
+
+// NOTE: Scalar contains a constant-time PartialEq<Scalar> impl.
+// NOTE: All newtypes impl Drop by default and Scalar has zeroizing Drop
+/// A type to represent the `PrivateKey` that X25519 uses.
+///
+/// This type holds a scalar and is used internally as such. The scalar held is decoded
+/// (a.k.a "clamped") as mandated in the [RFC](https://datatracker.ietf.org/doc/html/rfc7748#section-5).
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `slice` is not 32 bytes.
+///
+/// # Panics:
+/// A panic will occur if:
+/// - Failure to generate random bytes securely.
+///
+///
+/// # Security:
+/// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+/// that the type implements.
+///
+/// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
+/// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+/// is implemented in such a way that the comparison happens in constant time. Thus, users should
+/// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+/// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
+/// ```rust
+/// use orion::hazardous::ecc::x25519::PrivateKey;
+///
+/// // Initialize a secret key with random bytes.
+/// let secret_key = PrivateKey::generate();
+///
+/// // Secure, constant-time comparison with a byte slice
+/// assert_ne!(secret_key, &[0; 32][..]);
+///
+/// // Secure, constant-time comparison with another SecretKey
+/// assert_ne!(secret_key, PrivateKey::generate());
+/// ```
+#[derive(PartialEq)]
+pub struct PrivateKey {
+    scalar: Scalar,
+}
+
+impl PartialEq<&[u8]> for PrivateKey {
+    fn eq(&self, other: &&[u8]) -> bool {
+        match Scalar::from_slice(*other) {
+            Ok(other_scalar) => self.scalar == other_scalar,
+            Err(_) => false,
+        }
+    }
+}
+
+impl core::fmt::Debug for PrivateKey {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} {{***OMITTED***}}", stringify!(PrivateKey))
+    }
+}
+
+impl From<[u8; PRIVATE_KEY_SIZE]> for PrivateKey {
+    #[inline]
+    fn from(bytes: [u8; PRIVATE_KEY_SIZE]) -> Self {
+        PrivateKey {
+            // unwrap OK due to valid len
+            scalar: Scalar::from_slice(bytes.as_ref()).unwrap(),
+        }
+    }
+}
+
+impl PrivateKey {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Construct from a given byte slice.
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        Ok(Self {
+            scalar: Scalar::from_slice(slice)?,
+        })
+    }
+
+    #[inline]
+    /// Return the length of the object.
+    pub fn len(&self) -> usize {
+        PRIVATE_KEY_SIZE
+    }
+
+    #[inline]
+    /// Return `true` if this object does not hold any data, `false` otherwise.
+    ///
+    /// __NOTE__: This method should always return `false`, since there shouldn't be a way
+    /// to create an empty instance of this object.
+    pub fn is_empty(&self) -> bool {
+        PRIVATE_KEY_SIZE == 0
+    }
+
+    #[inline]
+    /// Return the object as byte slice. __**Warning**__: Should not be used unless strictly
+    /// needed. This __**breaks protections**__ that the type implements.
+    pub fn unprotected_as_bytes(&self) -> &[u8] {
+        self.scalar.0.as_ref()
+    }
+
+    #[cfg(feature = "safe_api")]
+    /// Randomly generate using a CSPRNG. Not available in `no_std` context.
+    pub fn generate() -> PrivateKey {
+        let mut value = [0u8; PRIVATE_KEY_SIZE];
+        crate::util::secure_rand_bytes(&mut value).unwrap();
+
+        Self {
+            // unwrap OK due to valid len
+            scalar: Scalar::from_slice(&value).unwrap(),
+        }
     }
 }
 
@@ -442,10 +596,8 @@ pub fn key_agreement(
     private_key: &PrivateKey,
     public_key: &PublicKey,
 ) -> Result<SharedKey, UnknownCryptoError> {
-    let scalar = Scalar::from_slice(private_key.unprotected_as_bytes())?;
-    let u_coord = FieldElement::from_bytes(&public_key.value);
-
-    let field_element = mont_ladder(&scalar, u_coord).as_bytes();
+    let u_coord = public_key.fe;
+    let field_element = mont_ladder(&private_key.scalar, u_coord).as_bytes();
     // High bit should be zero.
     debug_assert!((field_element[31] & 0b1000_0000u8) == 0u8);
     if secure_cmp(&field_element, &LOW_ORDER_POINT_RESULT).is_ok() {
@@ -462,22 +614,38 @@ mod public {
     };
 
     #[test]
+    fn test_public_key_ignores_highbit() {
+        let u = [0u8; 32];
+
+        let mut msb_zero = u;
+        msb_zero[31] &= 127u8;
+        let mut msb_one = u;
+        msb_one[31] |= 128u8;
+
+        // These should equal each-other. The high bits differ, but should be ignored.
+        assert_eq!(PublicKey::from(msb_zero), msb_one.as_ref());
+        assert_eq!(PublicKey::from(msb_zero), PublicKey::from(msb_one));
+    }
+
+    #[test]
     #[cfg(feature = "safe_api")]
     fn test_highbit_ignored() {
         // RFC 7748 dictates that the MSB of final byte must be masked when receiving a field element,
         // used for agreement (public key). We check that modifying it does not impact the result of
         // the agreement.
         let k = PrivateKey::generate();
-        let mut u = PublicKey::from([0u8; 32]);
+        let mut u = [0u8; 32];
+        crate::util::secure_rand_bytes(&mut u).unwrap();
+        debug_assert_ne!(u[31] & 127u8, (u[31] & 127u8) | 128u8);
 
-        crate::util::secure_rand_bytes(&mut u.value).unwrap();
-        debug_assert_ne!(u.value[31] & 127u8, (u.value[31] & 127u8) | 128u8);
+        let mut u_msb_zero = u;
+        u_msb_zero[31] &= 127u8;
+        let mut u_msb_one = u;
+        u_msb_one[31] |= 128u8;
 
         // Mask bit to 0 as we do in `FieldElement::from_bytes()`.
-        u.value[31] &= 127u8;
-        let msb_zero = key_agreement(&k, &u).unwrap();
-        u.value[31] |= 128u8;
-        let msb_one = key_agreement(&k, &u).unwrap();
+        let msb_zero = key_agreement(&k, &PublicKey::from(u_msb_zero)).unwrap();
+        let msb_one = key_agreement(&k, &PublicKey::from(u_msb_one)).unwrap();
 
         assert_eq!(msb_zero, msb_one);
     }
@@ -485,18 +653,18 @@ mod public {
     #[test]
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
     fn test_rfc_section_5() {
-        let mut scalar = PrivateKey::from([0u8; 32]);
-        let mut point = PublicKey::from([0u8; 32]);
+        let mut scalar = [0u8; 32];
+        let mut point = [0u8; 32];
         let mut expected = SharedKey::from([0u8; 32]);
 
         hex::decode_to_slice(
             "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4",
-            &mut scalar.value,
+            &mut scalar,
         )
         .unwrap();
         hex::decode_to_slice(
             "e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c",
-            &mut point.value,
+            &mut point,
         )
         .unwrap();
         hex::decode_to_slice(
@@ -505,17 +673,17 @@ mod public {
         )
         .unwrap();
 
-        let actual = key_agreement(&scalar, &point).unwrap();
+        let actual = key_agreement(&PrivateKey::from(scalar), &PublicKey::from(point)).unwrap();
         assert_eq!(actual, expected);
 
         hex::decode_to_slice(
             "4b66e9d4d1b4673c5ad22691957d6af5c11b6421e0ea01d42ca4169e7918ba0d",
-            &mut scalar.value,
+            &mut scalar,
         )
         .unwrap();
         hex::decode_to_slice(
             "e5210f12786811d3f4b7959d0538ae2c31dbe7106fc03c3efc4cd549c715a493",
-            &mut point.value,
+            &mut point,
         )
         .unwrap();
         hex::decode_to_slice(
@@ -524,20 +692,20 @@ mod public {
         )
         .unwrap();
 
-        let actual = key_agreement(&scalar, &point).unwrap();
+        let actual = key_agreement(&PrivateKey::from(scalar), &PublicKey::from(point)).unwrap();
         assert_eq!(actual, expected);
     }
 
     #[test]
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-5.2
     fn test_rfc_section_5_iter() {
-        let mut k = PrivateKey::from(BASEPOINT);
-        let mut u = PublicKey::from(BASEPOINT);
+        let mut k = BASEPOINT;
+        let mut u = BASEPOINT;
 
         // 1 iter
-        let ret = key_agreement(&k, &u).unwrap();
-        u.value = k.value;
-        k.value = ret.value;
+        let ret = key_agreement(&PrivateKey::from(k), &PublicKey::from(u)).unwrap();
+        u = k;
+        k = ret.value;
 
         let mut expected = SharedKey::from([0u8; 32]);
         hex::decode_to_slice(
@@ -545,12 +713,12 @@ mod public {
             &mut expected.value,
         )
         .unwrap();
-        assert_eq!(k.value, expected.value, "Failed after 1 iter");
+        assert_eq!(k, expected.value, "Failed after 1 iter");
 
         for _ in 0..999 {
-            let ret = key_agreement(&k, &u).unwrap();
-            u.value = k.value;
-            k.value = ret.value;
+            let ret = key_agreement(&PrivateKey::from(k), &PublicKey::from(u)).unwrap();
+            u = k;
+            k = ret.value;
         }
 
         hex::decode_to_slice(
@@ -558,13 +726,13 @@ mod public {
             &mut expected.value,
         )
         .unwrap();
-        assert_eq!(k.value, expected.value, "Failed after 1.000 iter");
+        assert_eq!(k, expected.value, "Failed after 1.000 iter");
 
         /* Taking a decade...
         for num in 0..999000 {
-            let ret = key_agreement(&k, &u).unwrap();
-            u.value = k.value;
-            k.value = ret.value;
+            let ret = key_agreement(&PrivateKey::from(k), &PublicKey::from(u)).unwrap();
+            u = k;
+            k = ret.value;
         }
 
         hex::decode_to_slice(
@@ -572,49 +740,49 @@ mod public {
             &mut expected.value,
         )
         .unwrap();
-        assert_eq!(k.value, expected.value, "Failed after 1.000.000 iter");
+        assert_eq!(k, expected.value, "Failed after 1.000.000 iter");
         */
     }
 
     #[test]
     /// Ref: https://www.ietf.org/rfc/rfc7748.html#section-6.1
     fn test_rfc_section_6_pub_priv_basepoint() {
-        let mut alice_pub = PublicKey::from([0u8; 32]);
-        let mut alice_priv = PrivateKey::from([0u8; 32]);
+        let mut alice_pub = [0u8; 32];
+        let mut alice_priv = [0u8; 32];
 
-        let mut bob_pub = PublicKey::from([0u8; 32]);
-        let mut bob_priv = PrivateKey::from([0u8; 32]);
+        let mut bob_pub = [0u8; 32];
+        let mut bob_priv = [0u8; 32];
 
         let mut shared = SharedKey::from([0u8; 32]);
 
         hex::decode_to_slice(
             "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
-            &mut alice_priv.value,
+            &mut alice_priv,
         )
         .unwrap();
         hex::decode_to_slice(
             "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a",
-            &mut alice_pub.value,
+            &mut alice_pub,
         )
         .unwrap();
         assert_eq!(
-            key_agreement(&alice_priv, &PublicKey::from(BASEPOINT)).unwrap(),
-            alice_pub.value.as_ref()
+            key_agreement(&PrivateKey::from(alice_priv), &PublicKey::from(BASEPOINT)).unwrap(),
+            PublicKey::from(alice_pub).to_bytes().as_ref()
         );
 
         hex::decode_to_slice(
             "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
-            &mut bob_priv.value,
+            &mut bob_priv,
         )
         .unwrap();
         hex::decode_to_slice(
             "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
-            &mut bob_pub.value,
+            &mut bob_pub,
         )
         .unwrap();
         assert_eq!(
-            key_agreement(&bob_priv, &PublicKey::from(BASEPOINT)).unwrap(),
-            bob_pub.value.as_ref()
+            key_agreement(&PrivateKey::from(bob_priv), &PublicKey::from(BASEPOINT)).unwrap(),
+            PublicKey::from(bob_pub).to_bytes().as_ref()
         );
 
         hex::decode_to_slice(
@@ -623,11 +791,11 @@ mod public {
         )
         .unwrap();
         assert_eq!(
-            key_agreement(&alice_priv, &bob_pub).unwrap(),
+            key_agreement(&PrivateKey::from(alice_priv), &PublicKey::from(bob_pub)).unwrap(),
             shared.value.as_ref()
         );
         assert_eq!(
-            key_agreement(&bob_priv, &alice_pub).unwrap(),
+            key_agreement(&PrivateKey::from(bob_priv), &PublicKey::from(alice_pub)).unwrap(),
             shared.value.as_ref()
         );
     }
