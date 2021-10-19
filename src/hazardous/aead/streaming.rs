@@ -107,7 +107,7 @@ use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, Zeroizing};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 /// Tag that indicates the type of message.
 pub enum StreamTag {
     /// A message with no special meaning.
