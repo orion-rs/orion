@@ -1,4 +1,7 @@
 name: Security Audit
+permissions:
+  contents: read
+
 on:
   push:
     # Check immediately if dependencies are altered
@@ -14,9 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+        with:
+          persist-credentials: false
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
         with:
           toolchain: stable
           override: true
@@ -25,7 +30,7 @@ jobs:
         run: cargo install cargo-audit
 
       - name: Run cargo audit
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: audit
           args: --deny warnings

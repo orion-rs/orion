@@ -11,6 +11,8 @@ on:
 # NOTE: Should we use fail-fast: false?
 
 name: Tests
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -29,17 +31,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+        with:
+          persist-credentials: false
       
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
       
       - name: Test debug-mode, default features
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: test
 
@@ -50,19 +54,19 @@ jobs:
           args: --features serde
       
       - name: Test debug-mode, no default features
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: test
           args: --no-default-features --tests
       
       - name: Test debug-mode, alloc feature
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: test
           args: --no-default-features --features alloc --tests
       
       - name: Test release-mode, default features
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: test
           args: --release
@@ -74,13 +78,13 @@ jobs:
           args: --release --features serde
       
       - name: Test release-mode, no default features
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: test
           args: --release --no-default-features --tests
       
       - name: Test release-mode, alloc feature
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: test
           args: --release --no-default-features --features alloc --tests
@@ -91,10 +95,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+        with:
+          persist-credentials: false
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
         with:
           toolchain: nightly
           target: x86_64-unknown-linux-gnu
@@ -114,14 +120,16 @@ jobs:
           - stable
           - nightly
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+      with:
+        persist-credentials: false
+    - uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
       with:
         profile: minimal
         toolchain: ${{ matrix.rust }}
         target: thumbv7em-none-eabi
         override: true
-    - uses: actions-rs/cargo@v1
+    - uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
       with:
         use-cross: true
         command: build
@@ -137,13 +145,15 @@ jobs:
           - armv7-unknown-linux-gnueabihf
           - mips64-unknown-linux-gnuabi64
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+        with:
+          persist-credentials: false
+      - uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
         with:
           toolchain: stable
           target: ${{ matrix.arch }}
           override: true
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           use-cross: true
           command: test
@@ -159,13 +169,15 @@ jobs:
         arch:
           - wasm32-unknown-unknown
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+        with:
+          persist-credentials: false
+      - uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
         with:
           toolchain: stable
           target: ${{ matrix.arch }}
           override: true
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: check
           args: --no-default-features --target ${{ matrix.arch }}
@@ -174,12 +186,14 @@ jobs:
     name: Build documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+        with:
+          persist-credentials: false
+      - uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
         with:
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: doc
           args: --no-deps --all-features
@@ -196,7 +210,9 @@ jobs:
     continue-on-error: ${{ matrix.checks == 'advisories' }}
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: EmbarkStudios/cargo-deny-action@v1
+    - uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+      with:
+        persist-credentials: false
+    - uses: EmbarkStudios/cargo-deny-action@0ca727bbae7b7b578b9a5f98186caac35aa2a00d
       with:
         command: check ${{ matrix.checks }}

@@ -1,4 +1,7 @@
 name: Daily tests
+permissions:
+  contents: read
+
 on:
   schedule:
     - cron: '0 0 * * *' # Midnight of each day
@@ -14,16 +17,18 @@ jobs:
           - nightly
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+        with:
+          persist-credentials: false
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
       - name: Run cargo test - release
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
         with:
           command: test
           args: --release --all-features

@@ -4,6 +4,8 @@ on:
       - master
 
 name: Code coverage
+permissions:
+  contents: read
 
 jobs:
   check:
@@ -11,23 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+        with:
+          persist-credentials: false
 
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
         with:
           toolchain: stable
           override: true
 
       - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
+        uses: actions-rs/tarpaulin@60f0b12e5beec09ccca51758913f82d01889151c
         with:
           timeout: '120'
           out-type: 'Xml'
           args: '-- --test-threads 1'
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@f32b3a3741e1053eb607407145bc9619351dc93b
         with:
-          token: ${{secrets.CODECOV_TOKEN}}
           fail_ci_if_error: true
