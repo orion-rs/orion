@@ -9,11 +9,10 @@ jobs:
     name: rustfmt and clippy
     runs-on: ubuntu-latest
     steps:
-      with:
-        persist-credentials: false
-        
       - name: Checkout sources
         uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+        with:
+          persist-credentials: false
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f
