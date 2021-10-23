@@ -43,48 +43,48 @@ jobs:
           override: true
       
       - name: Test debug-mode, default features
-        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
 
       - name: Test debug-mode, all features
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
           args: --features serde
       
       - name: Test debug-mode, no default features
-        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
           args: --no-default-features --tests
       
       - name: Test debug-mode, alloc feature
-        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
           args: --no-default-features --features alloc --tests
       
       - name: Test release-mode, default features
-        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
           args: --release
 
       - name: Test release-mode, all features
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
           args: --release --features serde
       
       - name: Test release-mode, no default features
-        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
           args: --release --no-default-features --tests
       
       - name: Test release-mode, alloc feature
-        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
           args: --release --no-default-features --features alloc --tests
@@ -129,7 +129,7 @@ jobs:
         toolchain: ${{ matrix.rust }}
         target: thumbv7em-none-eabi
         override: true
-    - uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+    - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
       with:
         use-cross: true
         command: build
@@ -153,7 +153,7 @@ jobs:
           toolchain: stable
           target: ${{ matrix.arch }}
           override: true
-      - uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           use-cross: true
           command: test
@@ -177,7 +177,7 @@ jobs:
           toolchain: stable
           target: ${{ matrix.arch }}
           override: true
-      - uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: check
           args: --no-default-features --target ${{ matrix.arch }}
@@ -193,7 +193,7 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: doc
           args: --no-deps --all-features
