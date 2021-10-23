@@ -74,9 +74,9 @@ impl EphemeralClientSession {
         })
     }
 
-    /// Get a reference to the public key of the key pair.
-    pub fn get_public(&self) -> &PublicKey {
-        &self.public_key
+    /// Get copy of the public key.
+    pub fn get_public(&self) -> PublicKey {
+        self.public_key.clone()
     }
 
     /// Establish session keys with a server. This moves `self` to ensure that the keys
@@ -114,10 +114,11 @@ impl EphemeralServerSession {
         })
     }
 
-    /// Get a reference to the public key of the key pair.
-    pub fn get_public(&self) -> &PublicKey {
-        &self.public_key
+    /// Get copy of the public key.
+    pub fn get_public(&self) -> PublicKey {
+        self.public_key.clone()
     }
+
     /// Establish session keys with a client. This moves `self` to ensure that the keys
     /// generated with [`Self::new()`] are only used for this key exchange, thus remaining ephemeral.
     pub fn establish_with_client(
