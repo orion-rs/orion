@@ -23,28 +23,53 @@
 //! Key exchange.
 //!
 //! # Use case:
-//! `orion::kex` ...
+//! `orion::kex` can be used to establish a pair of shared keys between two parties.
+//!
+//! TODO
 //!
 //! # About:
-//! -
+//! - Both [`EphemeralClientSession`] and [`EphemeralServerSession`] consume `slef` when shared keys
+//! are being established. You can therefore never use the same private key for more than a single
+//! key exchange.
+//!
+//! This implementation is based on and compatible with the
+//! [key exchange API](https://doc.libsodium.org/key_exchange) of libsodium.
 //!
 //! # Parameters:
 //! -
 //!
 //! # Errors:
 //! An error will be returned if:
-//! -
+//! - If the key exchange results in an all-zero output.
 //!
 //! # Panics:
 //! A panic will occur if:
 //! - Failure to generate random bytes securely.
 //!
 //! # Security:
-//! -
+//! - TODO
 //!
 //! # Example:
 //! ```rust
+//! use orion::kex::*;
 //!
+//! /// The server initializes their ephemeral session keys
+//! let session_server = EphemeralServerSession::new().unwrap();
+//! let server_public_key = session_server.get_public();
+//!
+//! /// The client initializes their ephemeral session keys
+//! let session_client = EphemeralClientSession::new().unwrap();
+//! let client_public_key = session_client.get_public();
+//!
+//! let client_keys = session_client
+//!     .establish_with_server(&server_public_key)?;
+//!
+//! let server_keys = session_server
+//!     .establish_with_client(&client_public_key)?;
+//!
+//! assert_eq!(client_keys.get_receiving(), server_keys.get_transport());
+//! assert_eq!(client_keys.get_transport(), server_keys.get_receiving());
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
 pub use crate::hazardous::ecc::x25519::PublicKey;
