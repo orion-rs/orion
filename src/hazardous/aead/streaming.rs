@@ -73,7 +73,7 @@
 //! let mut ctx_enc = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
 //!
 //! // Encrypt and place tag + ciphertext + mac in dst_out_ct
-//! ctx_enc.seal_chunk(message, Some(ad), &mut dst_out_ct, StreamTag::Message)?;
+//! ctx_enc.seal_chunk(message, Some(ad), &mut dst_out_ct, &StreamTag::Message)?;
 //!
 //! let mut ctx_dec = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
 //!
@@ -300,7 +300,7 @@ impl StreamXChaCha20Poly1305 {
         plaintext: &[u8],
         ad: Option<&[u8]>,
         dst_out: &mut [u8],
-        tag: StreamTag,
+        tag: &StreamTag,
     ) -> Result<(), UnknownCryptoError> {
         let msglen = plaintext.len();
         match ABYTES.checked_add(msglen) {
@@ -329,7 +329,7 @@ impl StreamXChaCha20Poly1305 {
         let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, TAG_SIZE)?;
         dst_out[macpos..(macpos + POLY1305_OUTSIZE)].copy_from_slice(mac.unprotected_as_bytes());
 
-        self.advance_state(&mac, &tag)
+        self.advance_state(&mac, tag)
     }
 
     #[allow(clippy::range_plus_one)]
@@ -412,7 +412,7 @@ mod public {
             output: &mut [u8],
         ) -> Result<(), UnknownCryptoError> {
             let mut state = StreamXChaCha20Poly1305::new(sk, nonce);
-            state.seal_chunk(input, ad, output, StreamTag::Message)
+            state.seal_chunk(input, ad, output, &StreamTag::Message)
         }
 
         fn open(
@@ -444,9 +444,9 @@ mod public {
             let mut ct1 = vec![0u8; input.len() + ABYTES];
             let mut ct2 = ct1.clone();
 
-            ctx.seal_chunk(&input, Some(&ad), &mut ct1, StreamTag::Message)
+            ctx.seal_chunk(&input, Some(&ad), &mut ct1, &StreamTag::Message)
                 .unwrap();
-            ctx.seal_chunk(&input, Some(&ad), &mut ct2, StreamTag::Message)
+            ctx.seal_chunk(&input, Some(&ad), &mut ct2, &StreamTag::Message)
                 .unwrap();
 
             ct1 != ct2
@@ -566,7 +566,7 @@ mod private {
         let mut state = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
         let mut dst_out = [0u8; 96];
         state
-            .seal_chunk(&input, None, &mut dst_out, StreamTag::Message)
+            .seal_chunk(&input, None, &mut dst_out, &StreamTag::Message)
             .unwrap();
         assert_eq!(dst_out.as_ref(), output.as_ref());
 
@@ -625,7 +625,7 @@ mod private {
         // 1st StreamTag::Message
         let plaintext1: [u8; 6] = [116u8, 101u8, 115u8, 116u8, 49u8, 0u8];
         let mut out1 = [0u8; 6 + ABYTES];
-        s.seal_chunk(&plaintext1, None, &mut out1, StreamTag::Message)
+        s.seal_chunk(&plaintext1, None, &mut out1, &StreamTag::Message)
             .unwrap();
         assert_eq!(
             s.key,
@@ -654,7 +654,7 @@ mod private {
             101u8, 114u8, 32u8, 116u8, 101u8, 120u8, 116u8, 0u8,
         ];
         let mut out2 = [0u8; 20 + ABYTES];
-        s.seal_chunk(&plaintext2, None, &mut out2, StreamTag::Message)
+        s.seal_chunk(&plaintext2, None, &mut out2, &StreamTag::Message)
             .unwrap();
         assert_eq!(
             s.key,
@@ -683,7 +683,7 @@ mod private {
         // 3rd StreamTag::Message
         let plaintext3: [u8; 2] = [49u8, 0u8];
         let mut out3 = [0u8; 2 + ABYTES];
-        s.seal_chunk(&plaintext3, None, &mut out3, StreamTag::Message)
+        s.seal_chunk(&plaintext3, None, &mut out3, &StreamTag::Message)
             .unwrap();
         assert_eq!(
             s.key,
@@ -729,7 +729,7 @@ mod private {
             116u8, 101u8, 114u8, 32u8, 114u8, 101u8, 107u8, 101u8, 121u8, 0u8,
         ];
         let mut out4 = [0u8; 23 + ABYTES];
-        s.seal_chunk(&plaintext4, None, &mut out4, StreamTag::Message)
+        s.seal_chunk(&plaintext4, None, &mut out4, &StreamTag::Message)
             .unwrap();
         assert_eq!(
             s.key,
@@ -762,7 +762,7 @@ mod private {
             116u8, 101u8, 114u8, 32u8, 114u8, 101u8, 107u8, 101u8, 121u8, 0u8,
         ];
         let mut out5 = [0u8; 36 + ABYTES];
-        s.seal_chunk(&plaintext5, None, &mut out5, StreamTag::Message)
+        s.seal_chunk(&plaintext5, None, &mut out5, &StreamTag::Message)
             .unwrap();
         assert_eq!(
             s.key,
@@ -880,7 +880,7 @@ mod private {
             DEFAULT_MSG.as_ref(),
             None,
             &mut dst_out_msg,
-            StreamTag::Message,
+            &StreamTag::Message,
         )
         .unwrap();
 
@@ -890,7 +890,7 @@ mod private {
             DEFAULT_MSG.as_ref(),
             None,
             &mut dst_out_push,
-            StreamTag::Push,
+            &StreamTag::Push,
         )
         .unwrap();
 
@@ -900,7 +900,7 @@ mod private {
             DEFAULT_MSG.as_ref(),
             None,
             &mut dst_out_rekey,
-            StreamTag::Rekey,
+            &StreamTag::Rekey,
         )
         .unwrap();
 
@@ -910,7 +910,7 @@ mod private {
             DEFAULT_MSG.as_ref(),
             None,
             &mut dst_out_finish,
-            StreamTag::Finish,
+            &StreamTag::Finish,
         )
         .unwrap();
 
@@ -1034,10 +1034,10 @@ mod private {
         let mut state_enc =
             StreamXChaCha20Poly1305::new(&SecretKey::from([0u8; 32]), &Nonce::from([0u8; 24]));
         state_enc
-            .seal_chunk(&input, None, &mut cipher, StreamTag::Message)
+            .seal_chunk(&input, None, &mut cipher, &StreamTag::Message)
             .unwrap();
         state_enc
-            .seal_chunk(&input, None, &mut cipher2, StreamTag::Message)
+            .seal_chunk(&input, None, &mut cipher2, &StreamTag::Message)
             .unwrap();
         assert_ne!(cipher, cipher2);
     }
@@ -1050,13 +1050,13 @@ mod private {
         let mut state_enc =
             StreamXChaCha20Poly1305::new(&SecretKey::from([0u8; 32]), &Nonce::from([0u8; 24]));
         state_enc
-            .seal_chunk(&input, None, &mut cipher, StreamTag::Message)
+            .seal_chunk(&input, None, &mut cipher, &StreamTag::Message)
             .unwrap();
         let mut state_enc =
             StreamXChaCha20Poly1305::new(&SecretKey::from([0u8; 32]), &Nonce::from([0u8; 24]));
         state_enc.rekey().unwrap();
         state_enc
-            .seal_chunk(&input, None, &mut cipher2, StreamTag::Message)
+            .seal_chunk(&input, None, &mut cipher2, &StreamTag::Message)
             .unwrap();
         assert_ne!(cipher, cipher2);
     }
@@ -1069,7 +1069,7 @@ mod private {
             StreamXChaCha20Poly1305::new(&SecretKey::from([0u8; 32]), &Nonce::from([0u8; 24]));
         let mut cipher = [0u8; ABYTES];
         state_enc
-            .seal_chunk(&[0u8; 0], None, &mut cipher, StreamTag::Message)
+            .seal_chunk(&[0u8; 0], None, &mut cipher, &StreamTag::Message)
             .unwrap();
 
         let mut state_dec =
@@ -1088,7 +1088,7 @@ mod private {
             StreamXChaCha20Poly1305::new(&SecretKey::from([0u8; 32]), &Nonce::from([0u8; 24]));
         let mut out = [0u8; ABYTES];
         state_enc
-            .seal_chunk(&[0u8; 0], None, &mut out, StreamTag::Message)
+            .seal_chunk(&[0u8; 0], None, &mut out, &StreamTag::Message)
             .unwrap();
         let mut state_dec =
             StreamXChaCha20Poly1305::new(&SecretKey::from([0u8; 32]), &Nonce::from([0u8; 24]));
@@ -1135,7 +1135,7 @@ mod private {
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
         let mut actual = [0u8; 68];
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Finish)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Finish)
             .unwrap();
 
         assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
@@ -1179,7 +1179,7 @@ mod private {
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
         let mut actual = [0u8; 68];
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Rekey)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Rekey)
             .unwrap();
 
         assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
@@ -1223,9 +1223,9 @@ mod private {
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
         let mut actual = [0u8; 68];
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Finish)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Finish)
             .unwrap();
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Finish)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Finish)
             .unwrap();
 
         assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
@@ -1269,9 +1269,9 @@ mod private {
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
         let mut actual = [0u8; 68];
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Rekey)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Rekey)
             .unwrap();
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Rekey)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Rekey)
             .unwrap();
 
         assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
@@ -1315,7 +1315,7 @@ mod private {
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
         let mut actual = [0u8; 68];
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Push)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Push)
             .unwrap();
 
         assert_eq!(ctx.key, after_internal_key.as_ref());
@@ -1360,7 +1360,7 @@ mod private {
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
         let mut actual = [0u8; 68];
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Message)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Message)
             .unwrap();
 
         assert_eq!(ctx.key, after_internal_key.as_ref());
@@ -1405,7 +1405,7 @@ mod private {
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
         let mut actual = [0u8; 68];
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Rekey)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Rekey)
             .unwrap();
 
         assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
@@ -1450,7 +1450,7 @@ mod private {
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
         let mut actual = [0u8; 68];
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Finish)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Finish)
             .unwrap();
 
         assert_eq!(ctx.key, after_internal_key.as_ref());
@@ -1495,7 +1495,7 @@ mod private {
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
         let mut actual = [0u8; 68];
-        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, StreamTag::Push)
+        ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Push)
             .unwrap();
 
         assert_eq!(ctx.key, after_internal_key.as_ref());
