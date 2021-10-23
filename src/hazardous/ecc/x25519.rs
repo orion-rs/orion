@@ -34,12 +34,12 @@
 //!
 //! # Security:
 //! - Multiple different `private_key`/`public_key` pairs can produce the same shared key. Therefore,
-//! using the resulting `SharedKey`, directly from `key_agreement()`, is not recommended.
-//! TODO: Add reference to future high-level interface here.
+//! using the resulting `SharedKey`, directly from `key_agreement()`, is not recommended. This is handled
+//! automatically in [`orion::kex`].
 //! - To securely generate a strong key, use [`PrivateKey::generate()`].
 //!
 //! # Recommendation:
-//! - TODO: Add reference to future high-level interface here.
+//! - It is recommended to use [`orion::kex`] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -385,7 +385,7 @@ fn mont_ladder(scalar: &Scalar, point: FieldElement) -> FieldElement {
 /// # Errors:
 /// An error will be returned if:
 /// - `slice` is not 32 bytes.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct PublicKey {
     fe: FieldElement,
 }

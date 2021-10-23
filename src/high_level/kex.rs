@@ -20,6 +20,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! Key exchange.
+//!
+//! # Use case:
+//! `orion::kex` ...
+//!
+//! # About:
+//! -
+//!
+//! # Parameters:
+//! -
+//!
+//! # Errors:
+//! An error will be returned if:
+//! -
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - Failure to generate random bytes securely.
+//!
+//! # Security:
+//! -
+//!
+//! # Example:
+//! ```rust
+//!
+//! ```
+
 pub use crate::hazardous::ecc::x25519::PublicKey;
 pub use crate::hazardous::ecc::x25519::SharedKey;
 
@@ -91,7 +118,6 @@ impl EphemeralServerSession {
     pub fn get_public(&self) -> &PublicKey {
         &self.public_key
     }
-
     /// Establish session keys with a client. This moves `self` to ensure that the keys
     /// generated with [`Self::new()`] are only used for this key exchange, thus remaining ephemeral.
     pub fn establish_with_client(
@@ -135,18 +161,18 @@ fn establish_session_keys(
 ) -> Result<Digest, UnknownCryptoError> {
     let mut ctx = Blake2b::new(None, 64)?;
     ctx.update(shared_secret.unprotected_as_bytes())?;
-    ctx.update(client_pk.as_ref())?;
-    ctx.update(server_pk.as_ref())?;
+    ctx.update(&client_pk.to_bytes())?;
+    ctx.update(&server_pk.to_bytes())?;
     ctx.finalize()
 }
 
 #[test]
 fn test_ephemeral() {
     let session_server = EphemeralServerSession::new().unwrap();
-    let server_public_key = session_server.get_public().clone();
+    let server_public_key = session_server.get_public();
 
     let session_client = EphemeralClientSession::new().unwrap();
-    let client_public_key = session_client.get_public().clone();
+    let client_public_key = session_client.get_public();
 
     let client = session_client
         .establish_with_server(&server_public_key)
