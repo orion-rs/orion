@@ -6,4 +6,16 @@ updates:
       interval: "daily"
     labels:
       - "dependencies"
-      
+    commit-message:
+      # Prefix all commit messages with "deps:"
+      prefix: "deps:"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+    commit-message:
+      # Prefix all commit messages with "ci:"
+      prefix: "ci:"
