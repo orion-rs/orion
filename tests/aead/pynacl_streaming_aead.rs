@@ -50,7 +50,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
                     &chunk_msg,
                     Some(&chunk_ad),
                     &mut chunk_out_ct,
-                    StreamTag::try_from(chunk.tag).unwrap(),
+                    &StreamTag::try_from(chunk.tag).unwrap(),
                 )
                 .unwrap();
 
