@@ -54,11 +54,11 @@
 //! use orion::kex::*;
 //!
 //! /// The server initializes their ephemeral session keys
-//! let session_server = EphemeralServerSession::new().unwrap();
+//! let session_server = EphemeralServerSession::new()?;
 //! let server_public_key = session_server.get_public();
 //!
 //! /// The client initializes their ephemeral session keys
-//! let session_client = EphemeralClientSession::new().unwrap();
+//! let session_client = EphemeralClientSession::new()?;
 //! let client_public_key = session_client.get_public();
 //!
 //! let client_keys = session_client

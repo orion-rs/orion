@@ -105,6 +105,9 @@ pub use high_level::pwhash;
 #[cfg(feature = "safe_api")]
 pub use high_level::kdf;
 
+#[cfg(feature = "safe_api")]
+pub use high_level::kex;
+
 #[doc(hidden)]
 /// Testing framework.
 pub mod test_framework;
