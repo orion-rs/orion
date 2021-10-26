@@ -72,9 +72,9 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
+pub use crate::hazardous::ecc::x25519::PrivateKey;
 pub use crate::hazardous::ecc::x25519::PublicKey;
 pub use crate::hazardous::ecc::x25519::SharedKey;
-pub use crate::hazardous::ecc::x25519::PrivateKey;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
