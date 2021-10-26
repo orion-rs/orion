@@ -38,6 +38,9 @@
 //! ## Hashing
 //! [`orion::hash`] offers hashing using BLAKE2b.
 //!
+//! ## Key exchange
+//! [`orion::kex`] offers ephemeral key exchange using X25519 and BLAKE2b.
+//!
 //! ### A note on `no_std`:
 //! When orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator.
 //!
