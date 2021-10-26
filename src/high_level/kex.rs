@@ -20,12 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! Key exchange.
+//! Ephemeral key exchange.
 //!
 //! # Use case:
 //! `orion::kex` can be used to establish a pair of shared keys between two parties.
-//!
-//! TODO
 //!
 //! # About:
 //! - Both [`EphemeralClientSession`] and [`EphemeralServerSession`] consume `slef` when shared keys
@@ -36,7 +34,8 @@
 //! [key exchange API](https://doc.libsodium.org/key_exchange) of libsodium.
 //!
 //! # Parameters:
-//! -
+//! - `server_public_key`: The server's public key used to establish the client's shared session keys.
+//! - `client_public_key`: The client's public key used to establish the server's shared session keys.
 //!
 //! # Errors:
 //! An error will be returned if:
@@ -47,7 +46,8 @@
 //! - Failure to generate random bytes securely.
 //!
 //! # Security:
-//! - TODO
+//! - __**Avoid using**__ `unprotected_private_key()` unless strictly needed. The API is designed to be
+//! ephemeral and a [`PrivateKey`] should not be used more than once.
 //!
 //! # Example:
 //! ```rust
