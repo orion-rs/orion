@@ -74,6 +74,7 @@
 
 pub use crate::hazardous::ecc::x25519::PublicKey;
 pub use crate::hazardous::ecc::x25519::SharedKey;
+pub use crate::hazardous::ecc::x25519::PrivateKey;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
@@ -83,7 +84,7 @@ use core::convert::TryFrom;
 #[derive(Debug, PartialEq)]
 /// A key pair used to establish shared keys for a single session.
 pub struct EphemeralClientSession {
-    private_key: x25519::PrivateKey,
+    private_key: PrivateKey,
     public_key: PublicKey,
 }
 
@@ -102,6 +103,11 @@ impl EphemeralClientSession {
     /// Get copy of the public key.
     pub fn get_public(&self) -> PublicKey {
         self.public_key.clone()
+    }
+
+    /// Get reference to the private key.
+    pub fn unprotected_private_key(&self) -> &PrivateKey {
+        &self.private_key
     }
 
     /// Establish session keys with a server. This moves `self` to ensure that the keys
@@ -123,7 +129,7 @@ impl EphemeralClientSession {
 #[derive(Debug, PartialEq)]
 /// A key pair used to establish shared keys for a single session.
 pub struct EphemeralServerSession {
-    private_key: x25519::PrivateKey,
+    private_key: PrivateKey,
     public_key: PublicKey,
 }
 
@@ -142,6 +148,11 @@ impl EphemeralServerSession {
     /// Get copy of the public key.
     pub fn get_public(&self) -> PublicKey {
         self.public_key.clone()
+    }
+
+    /// Get reference to the private key.
+    pub fn unprotected_private_key(&self) -> &PrivateKey {
+        &self.private_key
     }
 
     /// Establish session keys with a client. This moves `self` to ensure that the keys
