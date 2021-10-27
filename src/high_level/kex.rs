@@ -46,8 +46,7 @@
 //! - Failure to generate random bytes securely.
 //!
 //! # Security:
-//! - __**Avoid using**__ `unprotected_private_key()` unless strictly needed. The API is designed to be
-//! ephemeral and a [`PrivateKey`] should not be used more than once.
+//! - The API is designed to be ephemeral and a [`PrivateKey`] should not be used more than once.
 //!
 //! # Example:
 //! ```rust
@@ -100,13 +99,13 @@ impl EphemeralClientSession {
         })
     }
 
-    /// Get reference to the public key.
+    /// Get a reference to the [`PublicKey`].
     pub fn public_key(&self) -> &PublicKey {
         &self.public_key
     }
 
-    /// Get reference to the private key.
-    pub fn unprotected_private_key(&self) -> &PrivateKey {
+    /// Get a reference to the [`PrivateKey`].
+    pub fn private_key(&self) -> &PrivateKey {
         &self.private_key
     }
 
@@ -145,13 +144,13 @@ impl EphemeralServerSession {
         })
     }
 
-    /// Get reference to the public key.
+    /// Get a reference to the [`PublicKey`].
     pub fn public_key(&self) -> &PublicKey {
         &self.public_key
     }
 
-    /// Get reference to the private key.
-    pub fn unprotected_private_key(&self) -> &PrivateKey {
+    /// Get a reference to the [`PrivateKey`].
+    pub fn private_key(&self) -> &PrivateKey {
         &self.private_key
     }
 
@@ -216,10 +215,7 @@ mod public {
         let session_client = EphemeralClientSession::new().unwrap();
         let client_public_key = session_client.public_key().clone();
 
-        assert_ne!(
-            session_client.unprotected_private_key(),
-            session_server.unprotected_private_key()
-        );
+        assert_ne!(session_client.private_key(), session_server.private_key());
 
         let client = session_client
             .establish_with_server(server_public_key)
