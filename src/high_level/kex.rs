@@ -71,9 +71,9 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
+pub use super::hltypes::SecretKey;
 pub use crate::hazardous::ecc::x25519::PrivateKey;
 pub use crate::hazardous::ecc::x25519::PublicKey;
-pub use crate::hazardous::ecc::x25519::SharedKey;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
@@ -90,7 +90,7 @@ pub struct EphemeralClientSession {
 impl EphemeralClientSession {
     /// Generate a new random key pair.
     pub fn new() -> Result<Self, UnknownCryptoError> {
-        let privkey = x25519::PrivateKey::generate();
+        let privkey = PrivateKey::generate();
         let pubkey: PublicKey = PublicKey::try_from(&privkey)?;
 
         Ok(Self {
@@ -119,8 +119,8 @@ impl EphemeralClientSession {
         let keys = establish_session_keys(&q, &self.public_key, server_public_key)?;
 
         Ok(SessionKeys {
-            rx: SharedKey::from_slice(&keys.as_ref()[..32])?,
-            tx: SharedKey::from_slice(&keys.as_ref()[32..])?,
+            rx: SecretKey::from_slice(&keys.as_ref()[..32])?,
+            tx: SecretKey::from_slice(&keys.as_ref()[32..])?,
         })
     }
 }
@@ -135,7 +135,7 @@ pub struct EphemeralServerSession {
 impl EphemeralServerSession {
     /// Generate a new random key pair.
     pub fn new() -> Result<Self, UnknownCryptoError> {
-        let privkey = x25519::PrivateKey::generate();
+        let privkey = PrivateKey::generate();
         let pubkey: PublicKey = PublicKey::try_from(&privkey)?;
 
         Ok(Self {
@@ -164,8 +164,8 @@ impl EphemeralServerSession {
         let keys = establish_session_keys(&q, client_public_key, &self.public_key)?;
 
         Ok(SessionKeys {
-            rx: SharedKey::from_slice(&keys.as_ref()[32..])?,
-            tx: SharedKey::from_slice(&keys.as_ref()[..32])?,
+            rx: SecretKey::from_slice(&keys.as_ref()[32..])?,
+            tx: SecretKey::from_slice(&keys.as_ref()[..32])?,
         })
     }
 }
@@ -173,25 +173,25 @@ impl EphemeralServerSession {
 #[derive(Debug, PartialEq)]
 /// A set of shared secrets for either transmitting to this entity or send to another party.
 pub struct SessionKeys {
-    rx: SharedKey,
-    tx: SharedKey,
+    rx: SecretKey,
+    tx: SecretKey,
 }
 
 impl SessionKeys {
     /// Get the shared secret intended to be used for receiving data from the other party.
-    pub fn get_receiving(&self) -> &SharedKey {
+    pub fn get_receiving(&self) -> &SecretKey {
         &self.rx
     }
 
     /// Get the shared secret intended to be used for transporting data to the other party.
-    pub fn get_transport(&self) -> &SharedKey {
+    pub fn get_transport(&self) -> &SecretKey {
         &self.tx
     }
 }
 
 /// Using BLAKE2b, derive two shared secret from a scalarmult computation.
 fn establish_session_keys(
-    shared_secret: &SharedKey,
+    shared_secret: &x25519::SharedKey,
     client_pk: &PublicKey,
     server_pk: &PublicKey,
 ) -> Result<Digest, UnknownCryptoError> {
@@ -264,10 +264,10 @@ mod public {
         let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
         let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SharedKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SharedKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SharedKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SharedKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
@@ -319,10 +319,10 @@ mod public {
         let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
         let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SharedKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SharedKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SharedKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SharedKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
@@ -374,10 +374,10 @@ mod public {
         let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
         let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SharedKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SharedKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SharedKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SharedKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
@@ -429,10 +429,10 @@ mod public {
         let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
         let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SharedKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SharedKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SharedKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SharedKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
@@ -484,10 +484,10 @@ mod public {
         let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
         let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SharedKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SharedKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SharedKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SharedKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
