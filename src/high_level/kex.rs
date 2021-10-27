@@ -51,6 +51,7 @@
 //! # Example:
 //! ```rust
 //! use orion::kex::*;
+//! use orion::aead;
 //!
 //! /// The server initializes their ephemeral session keys
 //! let session_server = EphemeralServerSession::new()?;
@@ -68,6 +69,16 @@
 //!
 //! assert_eq!(client_keys.get_receiving(), server_keys.get_transport());
 //! assert_eq!(client_keys.get_transport(), server_keys.get_receiving());
+//!
+//! // The client can now "send" encrypted data to the server and vice versa
+//!
+//! // Client sends an encrypted message which the server decrypts:
+//! let client_msg = aead::seal(client_keys.get_transport(), b"Hello, server!")?;
+//! assert_eq!(aead::open(server_keys.get_receiving(), &client_msg)?, b"Hello, server!");
+//!
+//! // Server responds and client decrypts the received message:
+//! let server_msg = aead::seal(server_keys.get_transport(), b"Hello, client!")?;
+//! assert_eq!(aead::open(client_keys.get_receiving(), &server_msg)?, b"Hello, client!");
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 

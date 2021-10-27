@@ -71,8 +71,10 @@
 //! use orion::aead;
 //!
 //! let secret_key = aead::SecretKey::default();
-//! let ciphertext = aead::seal(&secret_key, "Secret message".as_bytes())?;
+//! let ciphertext = aead::seal(&secret_key, b"Secret message")?;
 //! let decrypted_data = aead::open(&secret_key, &ciphertext)?;
+//!
+//! assert_eq!(decrypted_data, b"Secret message");
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
