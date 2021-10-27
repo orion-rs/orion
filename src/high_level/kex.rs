@@ -26,7 +26,7 @@
 //! `orion::kex` can be used to establish a pair of shared keys between two parties.
 //!
 //! # About:
-//! - Both [`EphemeralClientSession`] and [`EphemeralServerSession`] consume `slef` when shared keys
+//! - Both [`EphemeralClientSession`] and [`EphemeralServerSession`] consume `self` when shared keys
 //! are being established. You can therefore never use the same private key for more than a single
 //! key exchange.
 //!
@@ -55,14 +55,14 @@
 //!
 //! /// The server initializes their ephemeral session keys
 //! let session_server = EphemeralServerSession::new()?;
-//! let server_public_key = session_server.get_public();
+//! let server_public_key = session_server.public_key();
 //!
 //! /// The client initializes their ephemeral session keys
 //! let session_client = EphemeralClientSession::new()?;
-//! let client_public_key = session_client.get_public();
+//! let client_public_key = session_client.public_key().clone();
 //!
 //! let client_keys: SessionKeys = session_client
-//!     .establish_with_server(&server_public_key)?;
+//!     .establish_with_server(server_public_key)?;
 //!
 //! let server_keys: SessionKeys = session_server
 //!     .establish_with_client(&client_public_key)?;
@@ -100,9 +100,9 @@ impl EphemeralClientSession {
         })
     }
 
-    /// Get copy of the public key.
-    pub fn get_public(&self) -> PublicKey {
-        self.public_key.clone()
+    /// Get reference to the public key.
+    pub fn public_key(&self) -> &PublicKey {
+        &self.public_key
     }
 
     /// Get reference to the private key.
@@ -145,9 +145,9 @@ impl EphemeralServerSession {
         })
     }
 
-    /// Get copy of the public key.
-    pub fn get_public(&self) -> PublicKey {
-        self.public_key.clone()
+    /// Get reference to the public key.
+    pub fn public_key(&self) -> &PublicKey {
+        &self.public_key
     }
 
     /// Get reference to the private key.
@@ -211,10 +211,10 @@ mod public {
     #[test]
     fn test_basic_key_exchange() {
         let session_server = EphemeralServerSession::new().unwrap();
-        let server_public_key = session_server.get_public();
+        let server_public_key = session_server.public_key();
 
         let session_client = EphemeralClientSession::new().unwrap();
-        let client_public_key = session_client.get_public();
+        let client_public_key = session_client.public_key().clone();
 
         assert_ne!(
             session_client.unprotected_private_key(),
@@ -222,7 +222,7 @@ mod public {
         );
 
         let client = session_client
-            .establish_with_server(&server_public_key)
+            .establish_with_server(server_public_key)
             .unwrap();
         let server = session_server
             .establish_with_client(&client_public_key)
