@@ -61,10 +61,10 @@
 //! let session_client = EphemeralClientSession::new()?;
 //! let client_public_key = session_client.get_public();
 //!
-//! let client_keys = session_client
+//! let client_keys: SessionKeys = session_client
 //!     .establish_with_server(&server_public_key)?;
 //!
-//! let server_keys = session_server
+//! let server_keys: SessionKeys = session_server
 //!     .establish_with_client(&client_public_key)?;
 //!
 //! assert_eq!(client_keys.get_receiving(), server_keys.get_transport());
