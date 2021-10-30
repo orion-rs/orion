@@ -67,18 +67,18 @@
 //! let server_keys: SessionKeys = session_server
 //!     .establish_with_client(&client_public_key)?;
 //!
-//! assert_eq!(client_keys.get_receiving(), server_keys.get_transport());
-//! assert_eq!(client_keys.get_transport(), server_keys.get_receiving());
+//! assert_eq!(client_keys.receiving(), server_keys.transport());
+//! assert_eq!(client_keys.transport(), server_keys.receiving());
 //!
 //! // The client can now "send" encrypted data to the server and vice versa
 //!
 //! // Client sends an encrypted message which the server decrypts:
-//! let client_msg = aead::seal(client_keys.get_transport(), b"Hello, server!")?;
-//! assert_eq!(aead::open(server_keys.get_receiving(), &client_msg)?, b"Hello, server!");
+//! let client_msg = aead::seal(client_keys.transport(), b"Hello, server!")?;
+//! assert_eq!(aead::open(server_keys.receiving(), &client_msg)?, b"Hello, server!");
 //!
 //! // Server responds and client decrypts the received message:
-//! let server_msg = aead::seal(server_keys.get_transport(), b"Hello, client!")?;
-//! assert_eq!(aead::open(client_keys.get_receiving(), &server_msg)?, b"Hello, client!");
+//! let server_msg = aead::seal(server_keys.transport(), b"Hello, client!")?;
+//! assert_eq!(aead::open(client_keys.receiving(), &server_msg)?, b"Hello, client!");
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
@@ -190,12 +190,12 @@ pub struct SessionKeys {
 
 impl SessionKeys {
     /// Get the shared secret intended to be used for receiving data from the other party.
-    pub fn get_receiving(&self) -> &SecretKey {
+    pub fn receiving(&self) -> &SecretKey {
         &self.rx
     }
 
     /// Get the shared secret intended to be used for transporting data to the other party.
-    pub fn get_transport(&self) -> &SecretKey {
+    pub fn transport(&self) -> &SecretKey {
         &self.tx
     }
 }
@@ -235,11 +235,11 @@ mod public {
             .establish_with_client(&client_public_key)
             .unwrap();
 
-        assert_eq!(client.get_receiving(), server.get_transport());
-        assert_eq!(client.get_transport(), server.get_receiving());
+        assert_eq!(client.receiving(), server.transport());
+        assert_eq!(client.transport(), server.receiving());
 
-        assert_ne!(client.get_receiving(), server.get_receiving());
-        assert_ne!(client.get_transport(), server.get_transport());
+        assert_ne!(client.receiving(), server.receiving());
+        assert_ne!(client.transport(), server.transport());
     }
 
     #[test]
