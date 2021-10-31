@@ -676,6 +676,7 @@ macro_rules! construct_public {
 
         impl_ct_partialeq_trait!($name, as_ref);
         impl_normal_debug_trait!($name);
+        impl_try_from_trait!($name);
         impl_asref_trait!($name);
 
         #[cfg(feature = "serde")]
