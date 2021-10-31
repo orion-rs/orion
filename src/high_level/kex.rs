@@ -82,6 +82,8 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
+#![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+
 pub use super::hltypes::SecretKey;
 pub use crate::hazardous::ecc::x25519::PrivateKey;
 pub use crate::hazardous::ecc::x25519::PublicKey;

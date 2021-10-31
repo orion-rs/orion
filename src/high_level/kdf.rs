@@ -71,6 +71,8 @@
 //! ```
 //! [libsodium's docs]: https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters
 
+#![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+
 pub use super::hltypes::{Password, Salt, SecretKey};
 use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2i, pwhash::MIN_ITERATIONS};
 
