@@ -715,7 +715,7 @@ mod test_word {
     // On 32-bit platforms, due to the on-by-default #[deny(arithmetic_overflow)]
     // this won't compile because of `(u32::MAX as usize) + 1)`, not the from call.
     fn w32_panic_on_above_from() {
-        WordU32::from((u32::MAX as usize) + 1);
+        let _ = WordU32::from((u32::MAX as usize) + 1);
     }
 
     #[test]

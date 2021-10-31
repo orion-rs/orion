@@ -11,6 +11,7 @@ pub(crate) struct WycheproofX25519Tests {
     numberOfTests: u64,
     header: Vec<String>,
     #[serde(skip)]
+    #[allow(dead_code)]
     notes: Vec<String>,
     schema: String,
     testGroups: Vec<X25519TestGroup>,
