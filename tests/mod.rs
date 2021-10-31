@@ -67,6 +67,7 @@ pub struct TestCaseReader {
     /// A reader over all lines in a file
     lines: Lines<BufReader<File>>,
     test_case_count: u64,
+    #[allow(dead_code)]
     test_cases_skipped: u64,
     // All fields that define a test case: Eg. Key, Nonce, etc
     // NOTE: They MUST be in correct order from beginning to end.

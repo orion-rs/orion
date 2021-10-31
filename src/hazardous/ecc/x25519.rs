@@ -62,6 +62,7 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`PrivateKey::generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
+//! [`orion::kex`]: crate::kex
 
 use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
