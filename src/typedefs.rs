@@ -678,6 +678,9 @@ macro_rules! construct_public {
         impl_normal_debug_trait!($name);
         impl_asref_trait!($name);
 
+        #[cfg(feature = "serde")]
+        impl_serde_traits!($name, as_ref);
+
         impl $name {
             func_from_slice!($name, $lower_bound, $upper_bound);
             func_generate!($name, $upper_bound, $gen_length);
@@ -692,6 +695,9 @@ macro_rules! construct_public {
             test_from_slice!($name, $lower_bound, $upper_bound);
             test_as_bytes_and_get_length!($name, $lower_bound, $upper_bound, as_ref);
             test_partial_eq!($name, $upper_bound);
+
+            #[cfg(feature = "serde")]
+            test_serde_impls!($name, $upper_bound);
 
             #[cfg(test)]
             #[cfg(feature = "safe_api")]
