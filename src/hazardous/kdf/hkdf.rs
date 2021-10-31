@@ -148,7 +148,7 @@ where
 pub mod sha256 {
     use super::*;
     use crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE;
-    use crate::hazardous::mac::hmac::sha256::Tag;
+    pub use crate::hazardous::mac::hmac::sha256::Tag;
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF extract step.
@@ -224,7 +224,7 @@ pub mod sha256 {
 pub mod sha384 {
     use super::*;
     use crate::hazardous::hash::sha2::sha384::SHA384_OUTSIZE;
-    use crate::hazardous::mac::hmac::sha384::Tag;
+    pub use crate::hazardous::mac::hmac::sha384::Tag;
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF extract step.
@@ -300,7 +300,7 @@ pub mod sha384 {
 pub mod sha512 {
     use super::*;
     use crate::hazardous::hash::sha2::sha512::SHA512_OUTSIZE;
-    use crate::hazardous::mac::hmac::sha512::Tag;
+    pub use crate::hazardous::mac::hmac::sha512::Tag;
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF extract step.
