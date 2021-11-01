@@ -413,6 +413,10 @@ impl From<[u8; PUBLIC_KEY_SIZE]> for PublicKey {
     }
 }
 
+impl_try_from_trait!(PublicKey);
+#[cfg(feature = "serde")]
+impl_serde_traits!(PublicKey, to_bytes);
+
 impl core::convert::TryFrom<&PrivateKey> for PublicKey {
     type Error = UnknownCryptoError;
 
