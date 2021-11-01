@@ -97,7 +97,7 @@ macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
         where
             S: serde::ser::Serializer,
         {
-            let bytes: &[u8] = self.$bytes_function();
+            let bytes: &[u8] = &self.$bytes_function();
             bytes.serialize(serializer)
         }
     }
