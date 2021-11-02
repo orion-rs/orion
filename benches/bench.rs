@@ -446,10 +446,39 @@ mod kdf {
     }
 }
 
+mod ecc {
+    use super::*;
+    use core::convert::TryFrom;
+    use orion::hazardous::ecc::x25519;
+
+    pub fn bench_x25519(c: &mut Criterion) {
+        let mut group = c.benchmark_group("X25519");
+
+        let alice_sk = x25519::PrivateKey::generate();
+        let alice_pk = x25519::PublicKey::try_from(&alice_sk).unwrap();
+
+        group.sample_size(100);
+        group.bench_function("key_agreement", move |b| {
+            b.iter_with_setup(
+                || x25519::PrivateKey::generate(),
+                |bob_sk| x25519::key_agreement(&bob_sk, &alice_pk).unwrap(),
+            )
+        });
+    }
+
+    criterion_group! {
+        name = ecc_benches;
+        config = Criterion::default();
+        targets =
+        bench_x25519
+    }
+}
+
 criterion_main!(
     mac::mac_benches,
     aead::aead_benches,
     hash::hash_benches,
     stream::stream_benches,
     kdf::kdf_benches,
+    ecc::ecc_benches,
 );
