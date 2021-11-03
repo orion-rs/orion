@@ -54,6 +54,8 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
+#![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+
 pub use crate::hazardous::hash::blake2b::Digest;
 use crate::{errors::UnknownCryptoError, hazardous::hash::blake2b};
 

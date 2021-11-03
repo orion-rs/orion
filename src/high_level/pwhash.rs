@@ -87,6 +87,8 @@
 //! [encoding format here]: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md
 //! [libsodium's docs]: https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters
 
+#![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+
 pub use super::hltypes::Password;
 use super::hltypes::Salt;
 use crate::{
