@@ -44,7 +44,7 @@ features = ["alloc"]
 Can be viewed [here](https://docs.rs/orion) or built with:
 
 ```
-cargo doc --no-deps
+RUSTDOCFLAGS='--cfg docsrs' cargo +nightly doc --no-deps --all-features
 ```
 
 ### Tests and Fuzzing
