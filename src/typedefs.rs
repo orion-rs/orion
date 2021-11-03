@@ -88,6 +88,8 @@ macro_rules! impl_normal_debug_trait (($name:ident) => (
 /// Macro that implements the `serde::{Serialize, Deserialize}` traits.
 #[cfg(feature = "serde")]
 macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
+
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     /// This type tries to serialize as a `&[u8]` would. Note that the serialized
     /// type likely does not have the same protections that orion provides, such
     /// as constant-time operations. A good rule of thumb is to only serialize
@@ -102,6 +104,7 @@ macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
         }
     }
 
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     /// This type tries to deserialize as a `Vec<u8>` would. If it succeeds, the digest
     /// will be built using `Self::from_slice`.
     ///
@@ -114,27 +117,6 @@ macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
             let bytes = Vec::<u8>::deserialize(deserializer)?;
             std::convert::TryFrom::try_from(bytes.as_slice()).map_err(serde::de::Error::custom)
         }
-    }
-));
-
-#[cfg(test)]
-#[cfg(feature = "serde")]
-macro_rules! test_serde_impls (($name:ident, $gen_length:expr) => (
-    #[test]
-    fn test_serde_serialized_equivalence_to_bytes_fn() {
-        let bytes = &[38u8; $gen_length][..];
-        let orion_type = $name::from_slice(bytes).unwrap();
-        let serialized_from_bytes = serde_json::to_value(bytes).unwrap();
-        let serialized_from_orion_type = serde_json::to_value(&orion_type).unwrap();
-        assert_eq!(serialized_from_bytes, serialized_from_orion_type);
-    }
-
-    #[test]
-    fn test_serde_deserialized_equivalence_to_bytes_fn() {
-        let bytes = &[38u8; $gen_length][..];
-        let serialized_from_bytes = serde_json::to_value(bytes).unwrap();
-        let orion_type: $name = serde_json::from_value(serialized_from_bytes).unwrap();
-        assert_eq!(orion_type, bytes);
     }
 ));
 
@@ -308,6 +290,27 @@ macro_rules! func_generate_variable_size (($name:ident) => (
 
 ///
 /// Test implementation macros
+
+#[cfg(test)]
+#[cfg(feature = "serde")]
+macro_rules! test_serde_impls (($name:ident, $gen_length:expr) => (
+    #[test]
+    fn test_serde_serialized_equivalence_to_bytes_fn() {
+        let bytes = &[38u8; $gen_length][..];
+        let orion_type = $name::from_slice(bytes).unwrap();
+        let serialized_from_bytes = serde_json::to_value(bytes).unwrap();
+        let serialized_from_orion_type = serde_json::to_value(&orion_type).unwrap();
+        assert_eq!(serialized_from_bytes, serialized_from_orion_type);
+    }
+
+    #[test]
+    fn test_serde_deserialized_equivalence_to_bytes_fn() {
+        let bytes = &[38u8; $gen_length][..];
+        let serialized_from_bytes = serde_json::to_value(bytes).unwrap();
+        let orion_type: $name = serde_json::from_value(serialized_from_bytes).unwrap();
+        assert_eq!(orion_type, bytes);
+    }
+));
 
 #[cfg(test)]
 macro_rules! test_bound_parameters (($name:ident, $lower_bound:expr, $upper_bound:expr, $gen_length:expr) => (
