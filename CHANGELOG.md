@@ -1,3 +1,23 @@
+### 0.16.1
+
+__Date:__ TBD
+
+__Changelog:__
+
+- Add support for X25519 using fiat-crypto Curve25519 field arithmetic (new modules `orion::hazardous::ecc` and `orion::kex`) ([#197](https://github.com/orion-rs/orion/pull/197)).
+- Implement serde `Serialize` and `Deserialize` for relevant types ([#192](https://github.com/orion-rs/orion/issues/192)) (by [Vince Mutolo](https://github.com/vlmutolo)).
+- Fix incorrect documentation of SHA256 streaming state ([#196](https://github.com/orion-rs/orion/issues/196)).
+- Add `is_empty()` to newtypes ([#206](https://github.com/orion-rs/orion/pull/206)).
+- Add documentation for correct use of streaming AEAD API with `StreamTag::Finish` ([#139](https://github.com/orion-rs/orion/issues/139)).
+- Convert uses of `assert!(a == b)` to `assert_eq!(a, b)` where possible ([#210](https://github.com/orion-rs/orion/issues/210)) (by [Emmanuel Leblond](https://github.com/touilleMan)).
+- Derive `Clone` + `Copy` for `StreamTag` ([#211](https://github.com/orion-rs/orion/issues/211)) (by [24seconds](https://github.com/24seconds)).
+- Harden security of GitHub Actions CI/CD ([#200](https://github.com/orion-rs/orion/issues/200)) (by [Vince Mutolo](https://github.com/vlmutolo)).
+- Re-export HMAC `Tag`s used in their corresponding HKDF API ([#224](https://github.com/orion-rs/orion/issues/224)).
+- Fix warnings from CI jobs and bump MSRV to `1.52.0` ([#222](https://github.com/orion-rs/orion/issues/222)) ([#223](https://github.com/orion-rs/orion/issues/223)).
+- Update benchmarks ([#214](https://github.com/orion-rs/orion/issues/214)).
+- Render feature badges for API on docs.rs ([#238](https://github.com/orion-rs/orion/issues/238)).
+- Add new Crate Features page to wiki ([#215](https://github.com/orion-rs/orion/issues/215)).
+
 ### 0.16.0
 
 __Date:__ March 29, 2021.
