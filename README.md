@@ -23,22 +23,13 @@ Rust 1.52 or later is supported however, the majority of testing happens with la
 MSRV may be changed at any point and will not be considered a SemVer breaking change.
 
 ### Crate Features
-By default Orion targets stable Rust with `std`. To use Orion in a `no_std` context, you need to specify the dependency as such:
-```toml
-orion = { version = "*", default-features = false }
-# Replace * with the most recent version
-```
 
-When Orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator. 
+- `default`/`safe_api`: All functionality, requires `std`.
+- `serde`: Requires either `alloc` or `default`/`safe_api`.
+- `alloc`: Argon2i in `hazardous` when `default`/`safe_api` is not available.
+- `no_std`: Implicit feature that represents no heap allocations. Enabled by disabling default features and not selecting any additional features.
 
-Argon2i is not available with `no_std` by default, but can be by enabling the `alloc` feature:
-
-```toml
-[dependencies.orion]
-version = "*" # Replace * with the most recent version
-default-features = false
-features = ["alloc"]
-```
+More detailed explanation of the features in the [wiki](https://github.com/orion-rs/orion/wiki/Crate-features).
 
 ### Documentation
 Can be viewed [here](https://docs.rs/orion) or built with:
