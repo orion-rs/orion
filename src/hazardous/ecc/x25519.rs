@@ -24,10 +24,6 @@
 //! - `private_key`: The private key used in key agreement.
 //! - `public_key`: The public key used in key agreement.
 //!
-//! NOTE: The types `PrivateKey`, `PublicKey` and `SharedKey` are only wrappers for raw-byte
-//! slices. All clamping, masking, etc. is done internally and does not affect the bytes held by these
-//! types.
-//!
 //! # Errors:
 //! An error will be returned if:
 //! - The `key_agreement()` operation results in an all-zero output.
