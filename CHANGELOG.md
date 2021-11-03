@@ -1,6 +1,6 @@
 ### 0.16.1
 
-__Date:__ TBD
+__Date:__ November 3, 2021.
 
 __Changelog:__
 
