@@ -57,7 +57,7 @@
 //! [`update()`]: sha512::Sha512::update
 //! [`reset()`]: sha512::Sha512::reset
 //! [`finalize()`]: sha512::Sha512::finalize
-//! [BLAKE2b]: super::blake2b
+//! [BLAKE2b]: super::blake2::blake2b
 
 use crate::errors::UnknownCryptoError;
 

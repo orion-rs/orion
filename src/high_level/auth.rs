@@ -42,6 +42,7 @@
 //! An error will be returned if:
 //! - The calculated [`Tag`] does not match the expected.
 //! - The [`SecretKey`] supplied is less than 32 bytes or greater than 64 bytes.
+//! - The expected [`Tag`] is not 32 bytes when verifying.
 //!
 //! # Panics:
 //! A panic will occur if:
@@ -71,10 +72,11 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
-pub use super::hltypes::{SecretKey, Tag};
+pub use super::hltypes::SecretKey;
+pub use crate::hazardous::mac::blake2b::Tag;
 use crate::{
     errors::UnknownCryptoError,
-    hazardous::hash::blake2b::{self, Blake2b, Digest},
+    hazardous::mac::blake2b::{self, Blake2b},
 };
 
 /// The Tag size (bytes) to be output by BLAKE2b in keyed mode.
@@ -89,10 +91,9 @@ pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownC
         return Err(UnknownCryptoError);
     }
     let blake2b_secret_key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
-    let mut state = Blake2b::new(Some(&blake2b_secret_key), BLAKE2B_TAG_SIZE)?;
+    let mut state = Blake2b::new(&blake2b_secret_key, BLAKE2B_TAG_SIZE)?;
     state.update(data)?;
-    let blake2b_digest = state.finalize()?;
-    Tag::from_slice(blake2b_digest.as_ref())
+    state.finalize()
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -102,12 +103,11 @@ pub fn authenticate_verify(
     secret_key: &SecretKey,
     data: &[u8],
 ) -> Result<(), UnknownCryptoError> {
-    if secret_key.len() < BLAKE2B_MIN_KEY_SIZE {
+    if secret_key.len() < BLAKE2B_MIN_KEY_SIZE || expected.len() != BLAKE2B_TAG_SIZE {
         return Err(UnknownCryptoError);
     }
     let key = blake2b::SecretKey::from_slice(secret_key.unprotected_as_bytes())?;
-    let expected_digest = Digest::from_slice(expected.unprotected_as_bytes())?;
-    Blake2b::verify(&expected_digest, &key, BLAKE2B_TAG_SIZE, data)
+    Blake2b::verify(expected, &key, BLAKE2B_TAG_SIZE, data)
 }
 
 // Testing public functions in the module.
@@ -189,6 +189,8 @@ mod public {
         authenticate_verify(&tag, &sk, b"Completely wrong input").is_err()
     }
 
+    use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_KEYSIZE;
+
     #[quickcheck]
     #[cfg(feature = "safe_api")]
     /// Verify the bounds of 32..=64 (inclusive) for the `SecretKey` used
@@ -201,7 +203,7 @@ mod public {
         let sec_key = sec_key_res.unwrap();
         let msg = "what do ya want for nothing?".as_bytes().to_vec();
         let auth_res = authenticate(&sec_key, &msg);
-        if input.len() >= BLAKE2B_MIN_KEY_SIZE && input.len() <= blake2b::BLAKE2B_KEYSIZE {
+        if input.len() >= BLAKE2B_MIN_KEY_SIZE && input.len() <= BLAKE2B_KEYSIZE {
             auth_res.is_ok()
         } else {
             auth_res.is_err()

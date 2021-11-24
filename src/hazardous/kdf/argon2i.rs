@@ -93,7 +93,8 @@
 //! [`zeroize` crate]: https://crates.io/crates/zeroize
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::hash::blake2b::{Blake2b, BLAKE2B_OUTSIZE};
+use crate::hazardous::hash::blake2::blake2b::Blake2b;
+use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
 use crate::util;
 use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 use zeroize::Zeroize;
@@ -178,7 +179,7 @@ fn initial_hash(
     // We save additional 8 bytes in H0 for when the first two blocks are processed,
     // so that this may contain two little-endian integers.
     let mut h0 = [0u8; 72];
-    let mut hasher = Blake2b::new(None, BLAKE2B_OUTSIZE)?;
+    let mut hasher = Blake2b::new(BLAKE2B_OUTSIZE)?;
 
     // Collect the first part to reduce times we update the hasher state.
     h0[0..4].copy_from_slice(&LANES.to_le_bytes());
@@ -211,12 +212,12 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError>
     let outlen = dst.len() as u32;
 
     if dst.len() <= BLAKE2B_OUTSIZE {
-        let mut ctx = Blake2b::new(None, dst.len())?;
+        let mut ctx = Blake2b::new(dst.len())?;
         ctx.update(&outlen.to_le_bytes())?;
         ctx.update(input)?;
         dst.copy_from_slice(ctx.finalize()?.as_ref());
     } else {
-        let mut ctx = Blake2b::new(None, BLAKE2B_OUTSIZE)?;
+        let mut ctx = Blake2b::new(BLAKE2B_OUTSIZE)?;
         ctx.update(&outlen.to_le_bytes())?;
         ctx.update(input)?;
 
@@ -227,7 +228,7 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError>
         let mut toproduce = dst.len() - BLAKE2B_OUTSIZE / 2;
 
         while toproduce > BLAKE2B_OUTSIZE {
-            ctx.reset(None)?;
+            ctx.reset()?;
             ctx.update(tmp.as_ref())?;
             tmp = ctx.finalize()?;
 
@@ -236,7 +237,7 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError>
             toproduce -= BLAKE2B_OUTSIZE / 2;
         }
 
-        ctx = Blake2b::new(None, toproduce)?;
+        ctx = Blake2b::new(toproduce)?;
         ctx.update(tmp.as_ref())?;
         tmp = ctx.finalize()?;
         dst[pos..outlen as usize].copy_from_slice(&tmp.as_ref()[..toproduce]);

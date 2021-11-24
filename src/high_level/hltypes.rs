@@ -58,17 +58,6 @@ construct_salt_variable_size! {
     (Salt, test_salt, 16)
 }
 
-construct_tag! {
-    /// A type to represent the `Tag` output by BLAKE2b-256 in keyed mode.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    (Tag, test_tag, 32, 32)
-}
-
-impl_from_trait!(Tag, 32);
-
 construct_secret_key_variable_size! {
     /// A type to represent the `Password` that Argon2i hashes and uses for key derivation.
     ///

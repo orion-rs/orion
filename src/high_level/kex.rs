@@ -90,7 +90,7 @@ pub use crate::hazardous::ecc::x25519::PublicKey;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
-use crate::hazardous::hash::blake2b::{Blake2b, Digest};
+use crate::hazardous::hash::blake2::blake2b::{Blake2b, Digest};
 use core::convert::TryFrom;
 
 #[derive(Debug, PartialEq)]
@@ -208,7 +208,7 @@ fn establish_session_keys(
     client_pk: &PublicKey,
     server_pk: &PublicKey,
 ) -> Result<Digest, UnknownCryptoError> {
-    let mut ctx = Blake2b::new(None, 64)?;
+    let mut ctx = Blake2b::new(64)?;
     ctx.update(shared_secret.unprotected_as_bytes())?;
     ctx.update(&client_pk.to_bytes())?;
     ctx.update(&server_pk.to_bytes())?;

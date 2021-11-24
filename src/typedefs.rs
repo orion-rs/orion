@@ -719,7 +719,7 @@ macro_rules! construct_public {
 macro_rules! construct_tag {
     ($(#[$meta:meta])*
     ($name:ident, $test_module_name:ident, $lower_bound:expr, $upper_bound:expr)) => (
-        #[derive(Clone, Copy)]
+        #[derive(Clone)]
         $(#[$meta])*
         ///
         /// # Security:
@@ -753,6 +753,7 @@ macro_rules! construct_tag {
         }
 
         impl_omitted_debug_trait!($name);
+        impl_drop_trait!($name);
         impl_ct_partialeq_trait!($name, unprotected_as_bytes);
         impl_try_from_trait!($name);
 
