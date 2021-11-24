@@ -64,7 +64,7 @@
     unused_qualifications,
     overflowing_literals
 )]
-#![doc(html_root_url = "https://docs.rs/orion/0.16.1")]
+#![doc(html_root_url = "https://docs.rs/orion/0.17.0")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(test)]

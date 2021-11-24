@@ -1,3 +1,13 @@
+### 0.17.0
+
+__Date:__ November 24, 2021.
+
+__Changelog:__
+
+- [Breaking change] Keyed and non-keyed BLAKE2b have been split into two separate modules (`orion::hazardous::mac::blake2b` and `orion::hazardous::hash::blake2::blake2b` respectively). The keyed now returns a `Tag` instead of `Digest` ([#208](https://github.com/orion-rs/orion/issues/208)).
+- [Breaking change] `Tag`s (not only those used by BLAKE2b, but all) now implement `Drop` but no longer implement `Copy` ([#208](https://github.com/orion-rs/orion/issues/208)).
+- [Breaking change] `seal_chunk()` used in streaming AEAD now take `StreamTag` by reference ([#212](https://github.com/orion-rs/orion/issues/212)) (by [24seconds](https://github.com/24seconds)).
+
 ### 0.16.1
 
 __Date:__ November 3, 2021.
