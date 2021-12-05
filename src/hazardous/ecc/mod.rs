@@ -27,9 +27,6 @@
     clippy::unused_unit,
     rustdoc::broken_intra_doc_links
 )]
-/// Formally verified  Curve25519 field arithmetic from: <https://github.com/mit-plv/fiat-crypto>
-/// Last taken at commit: <https://github.com/mit-plv/fiat-crypto/commit/626203aec9fcf5617631fb687d719e5e78dac09f>
-mod fiat_curve25519_u64;
 
 /// Diffie-Hellman key exchange over Curve25519 as specified in the [RFC 7748](https://datatracker.ietf.org/doc/html/rfc7748).
 pub mod x25519;
