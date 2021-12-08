@@ -411,7 +411,7 @@ pub(crate) mod w32 {
     use core::ops::*;
     use zeroize::Zeroize;
 
-    #[derive(Debug, PartialEq, Copy, Clone)]
+    #[derive(Debug, PartialEq, Copy, Clone, Default)]
     pub(crate) struct WordU32(pub(crate) u32);
 
     impl Zeroize for WordU32 {
@@ -441,12 +441,6 @@ pub(crate) mod w32 {
 
         fn bitxor(self, rhs: Self) -> Self::Output {
             Self(self.0 ^ rhs.0)
-        }
-    }
-
-    impl Default for WordU32 {
-        fn default() -> Self {
-            Self(0u32)
         }
     }
 
@@ -559,7 +553,7 @@ pub(crate) mod w64 {
     use core::ops::*;
     use zeroize::Zeroize;
 
-    #[derive(Debug, PartialEq, Copy, Clone)]
+    #[derive(Debug, PartialEq, Copy, Clone, Default)]
     pub(crate) struct WordU64(pub(crate) u64);
 
     impl Zeroize for WordU64 {
@@ -589,12 +583,6 @@ pub(crate) mod w64 {
 
         fn bitxor(self, rhs: Self) -> Self::Output {
             Self(self.0 ^ rhs.0)
-        }
-    }
-
-    impl Default for WordU64 {
-        fn default() -> Self {
-            Self(0u64)
         }
     }
 
