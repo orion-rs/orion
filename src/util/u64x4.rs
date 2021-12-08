@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub(crate) struct U64x4(
     pub(crate) u64,
     pub(crate) u64,
@@ -48,12 +48,6 @@ impl core::ops::BitXorAssign for U64x4 {
         self.1 ^= _rhs.1;
         self.2 ^= _rhs.2;
         self.3 ^= _rhs.3;
-    }
-}
-
-impl Default for U64x4 {
-    fn default() -> Self {
-        Self(0, 0, 0, 0)
     }
 }
 
