@@ -29,5 +29,8 @@ pub mod poly1305;
 /// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
 pub mod blake2b;
 
+#[allow(dead_code)]
+#[allow(clippy::unused_unit)]
+#[allow(clippy::unnecessary_cast)]
 /// TODO: https://github.com/orion-rs/orion/pull/252
 mod fiat_poly1305_32;

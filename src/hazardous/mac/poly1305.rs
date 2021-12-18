@@ -71,12 +71,14 @@
 //! [poly1305-donna]: https://github.com/floodyberry/poly1305-donna
 //! [Cryptographic Right Answers]: https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html
 
+use crate::hazardous::mac::fiat_poly1305_32::{
+    fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_loose_field_element,
+    fiat_poly1305_tight_field_element,
+};
 use crate::{
     errors::UnknownCryptoError,
     util::endianness::{load_u32_le, store_u32_into_le},
 };
-use crate::hazardous::mac::fiat_poly1305_32::{fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_loose_field_element, fiat_poly1305_selectznz, fiat_poly1305_tight_field_element, fiat_poly1305_u1};
-use crate::util::endianness::load_u32_into_le;
 
 /// The blocksize which Poly1305 operates on.
 const POLY1305_BLOCKSIZE: usize = 16;
@@ -145,7 +147,6 @@ impl core::fmt::Debug for Poly1305 {
 }
 
 impl Poly1305 {
-
     #[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
@@ -191,20 +192,16 @@ impl Poly1305 {
     /// Remaining processing after all data blocks have been processed.
     fn process_end_of_stream(&mut self) {
         // full carry h
-        let mut h0: u32 = self.a[0];
-        let mut h1: u32 = self.a[1];
-        let mut h2: u32 = self.a[2];
-        let mut h3: u32 = self.a[3];
-        let mut h4: u32 = self.a[4];
-
         let mut buf_h: fiat_poly1305_tight_field_element = [0u32; 5];
         fiat_poly1305_carry(&mut buf_h, &self.a);
-        h0 = buf_h[0]; h1 = buf_h[1];
-        h2 = buf_h[2]; h3 = buf_h[3];
-        h4 = buf_h[4];
+        let mut h0 = buf_h[0];
+        let mut h1 = buf_h[1];
+        let mut h2 = buf_h[2];
+        let mut h3 = buf_h[3];
+        let mut h4 = buf_h[4];
 
         // compute h + -p
-        let mut c: u32 = 0;
+        let mut c: u32;
         let mut g0: u32 = h0.wrapping_add(5); c = g0 >> 26; g0 &= 0x3ffffff;
         let mut g1: u32 = h1.wrapping_add(c); c = g1 >> 26; g1 &= 0x3ffffff;
         let mut g2: u32 = h2.wrapping_add(c); c = g2 >> 26; g2 &= 0x3ffffff;
