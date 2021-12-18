@@ -75,6 +75,8 @@ use crate::{
     errors::UnknownCryptoError,
     util::endianness::{load_u32_le, store_u32_into_le},
 };
+use crate::hazardous::mac::fiat_poly1305_32::{fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_loose_field_element, fiat_poly1305_selectznz, fiat_poly1305_tight_field_element, fiat_poly1305_u1};
+use crate::util::endianness::load_u32_into_le;
 
 /// The blocksize which Poly1305 operates on.
 const POLY1305_BLOCKSIZE: usize = 16;
@@ -143,6 +145,7 @@ impl core::fmt::Debug for Poly1305 {
 }
 
 impl Poly1305 {
+
     #[rustfmt::skip]
     #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
@@ -160,17 +163,6 @@ impl Poly1305 {
             1 << 24
         };
 
-        let r0: u32 = self.r[0];
-        let r1: u32 = self.r[1];
-        let r2: u32 = self.r[2];
-        let r3: u32 = self.r[3];
-        let r4: u32 = self.r[4];
-
-        let s1: u32 = r1 * 5;
-        let s2: u32 = r2 * 5;
-        let s3: u32 = r3 * 5;
-        let s4: u32 = r4 * 5;
-
         let mut h0: u32 = self.a[0];
         let mut h1: u32 = self.a[1];
         let mut h2: u32 = self.a[2];
@@ -184,52 +176,9 @@ impl Poly1305 {
         h3 += (load_u32_le(&data[9..13]) >> 6) & 0x3ffffff;
         h4 += (load_u32_le(&data[12..16]) >> 8) | hibit;
 
-        // h *= r
-        let d0: u64 =
-            (h0 as u64 * r0 as u64) +
-            (h1 as u64 * s4 as u64) +
-            (h2 as u64 * s3 as u64) +
-            (h3 as u64 * s2 as u64) +
-            (h4 as u64 * s1 as u64);
-        let mut d1: u64 =
-            (h0 as u64 * r1 as u64) +
-            (h1 as u64 * r0 as u64) +
-            (h2 as u64 * s4 as u64) +
-            (h3 as u64 * s3 as u64) +
-            (h4 as u64 * s2 as u64);
-        let mut d2: u64 =
-            (h0 as u64 * r2 as u64) +
-            (h1 as u64 * r1 as u64) +
-            (h2 as u64 * r0 as u64) +
-            (h3 as u64 * s4 as u64) +
-            (h4 as u64 * s3 as u64);
-        let mut d3: u64 =
-            (h0 as u64 * r3 as u64) +
-            (h1 as u64 * r2 as u64) +
-            (h2 as u64 * r1 as u64) +
-            (h3 as u64 * r0 as u64) +
-            (h4 as u64 * s4 as u64);
-        let mut d4: u64 =
-            (h0 as u64 * r4 as u64) +
-            (h1 as u64 * r3 as u64) +
-            (h2 as u64 * r2 as u64) +
-            (h3 as u64 * r1 as u64) +
-            (h4 as u64 * r0 as u64);
-
-        // (partial) h %= p
-        let mut c: u32 = (d0 >> 26) as u32; h0 = (d0 & 0x3ffffff) as u32;
-        d1 += c as u64; c = (d1 >> 26) as u32; h1 = (d1 & 0x3ffffff) as u32;
-        d2 += c as u64; c = (d2 >> 26) as u32; h2 = (d2 & 0x3ffffff) as u32;
-        d3 += c as u64; c = (d3 >> 26) as u32; h3 = (d3 & 0x3ffffff) as u32;
-        d4 += c as u64; c = (d4 >> 26) as u32; h4 = (d4 & 0x3ffffff) as u32;
-        h0 += c * 5; c = h0 >> 26; h0 = h0 & 0x3ffffff;
-        h1 += c;
-
-        self.a[0] = h0;
-        self.a[1] = h1;
-        self.a[2] = h2;
-        self.a[3] = h3;
-        self.a[4] = h4;
+        // h *= r with partial reduction modulo p
+        let tmp_h: fiat_poly1305_loose_field_element = [h0, h1, h2, h3, h4];
+        fiat_poly1305_carry_mul(&mut self.a, &tmp_h, &self.r);
 
         Ok(())
     }
@@ -248,14 +197,14 @@ impl Poly1305 {
         let mut h3: u32 = self.a[3];
         let mut h4: u32 = self.a[4];
 
-        let mut c: u32 = h1 >> 26; h1 = h1 & 0x3ffffff;
-        h2 += c; c = h2 >> 26; h2 = h2 & 0x3ffffff;
-        h3 += c; c = h3 >> 26; h3 = h3 & 0x3ffffff;
-        h4 += c; c = h4 >> 26; h4 = h4 & 0x3ffffff;
-        h0 += c * 5; c = h0 >> 26; h0 = h0 & 0x3ffffff;
-        h1 += c;
+        let mut buf_h: fiat_poly1305_tight_field_element = [0u32; 5];
+        fiat_poly1305_carry(&mut buf_h, &self.a);
+        h0 = buf_h[0]; h1 = buf_h[1];
+        h2 = buf_h[2]; h3 = buf_h[3];
+        h4 = buf_h[4];
 
         // compute h + -p
+        let mut c: u32 = 0;
         let mut g0: u32 = h0.wrapping_add(5); c = g0 >> 26; g0 &= 0x3ffffff;
         let mut g1: u32 = h1.wrapping_add(c); c = g1 >> 26; g1 &= 0x3ffffff;
         let mut g2: u32 = h2.wrapping_add(c); c = g2 >> 26; g2 &= 0x3ffffff;
@@ -263,6 +212,7 @@ impl Poly1305 {
         let mut g4: u32 = h4.wrapping_add(c).wrapping_sub(1 << 26);
 
         // select h if h < p, or h + -p if h >= p
+        // NOTE: mask is either zero or non-zero
         let mut mask = (g4 >> (32 - 1)).wrapping_sub(1);
         g0 &= mask;
         g1 &= mask;
