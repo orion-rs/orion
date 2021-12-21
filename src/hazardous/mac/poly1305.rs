@@ -147,22 +147,13 @@ impl core::fmt::Debug for Poly1305 {
 }
 
 impl Poly1305 {
-    #[rustfmt::skip]
-    #[allow(clippy::cast_lossless)]
-    #[allow(clippy::identity_op)]
-    #[allow(clippy::unreadable_literal)]
-    #[allow(clippy::assign_op_pattern)]
     /// Process a datablock of `POLY1305_BLOCKSIZE` length.
     fn process_block(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if data.len() != POLY1305_BLOCKSIZE {
             return Err(UnknownCryptoError);
         }
 
-        let hibit: u32 = if self.is_finalized {
-            0
-        } else {
-            1 << 24
-        };
+        let hibit: u32 = if self.is_finalized { 0 } else { 1 << 24 };
 
         let m: fiat_poly1305_tight_field_element = [
             (load_u32_le(&data[0..4])) & 0x3ffffff,
