@@ -72,7 +72,7 @@
 //! [Cryptographic Right Answers]: https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html
 
 use crate::hazardous::mac::fiat_poly1305_32::{
-    fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_loose_field_element,
+    fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul,
     fiat_poly1305_tight_field_element,
 };
 use crate::{
@@ -164,22 +164,19 @@ impl Poly1305 {
             1 << 24
         };
 
-        let mut h0: u32 = self.a[0];
-        let mut h1: u32 = self.a[1];
-        let mut h2: u32 = self.a[2];
-        let mut h3: u32 = self.a[3];
-        let mut h4: u32 = self.a[4];
+        let m: fiat_poly1305_tight_field_element = [
+            (load_u32_le(&data[0..4])) & 0x3ffffff,
+            (load_u32_le(&data[3..7]) >> 2) & 0x3ffffff,
+            (load_u32_le(&data[6..10]) >> 4) & 0x3ffffff,
+            (load_u32_le(&data[9..13]) >> 6) & 0x3ffffff,
+            (load_u32_le(&data[12..16]) >> 8) | hibit,
+        ];
 
         // h += m[i]
-        h0 += (load_u32_le(&data[0..4])) & 0x3ffffff;
-        h1 += (load_u32_le(&data[3..7]) >> 2) & 0x3ffffff;
-        h2 += (load_u32_le(&data[6..10]) >> 4) & 0x3ffffff;
-        h3 += (load_u32_le(&data[9..13]) >> 6) & 0x3ffffff;
-        h4 += (load_u32_le(&data[12..16]) >> 8) | hibit;
-
+        let mut h = [0u32; 5];
+        fiat_poly1305_add(&mut h, &self.a, &m);
         // h *= r with partial reduction modulo p
-        let tmp_h: fiat_poly1305_loose_field_element = [h0, h1, h2, h3, h4];
-        fiat_poly1305_carry_mul(&mut self.a, &tmp_h, &self.r);
+        fiat_poly1305_carry_mul(&mut self.a, &h, &self.r);
 
         Ok(())
     }
