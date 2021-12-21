@@ -72,8 +72,8 @@
 //! [Cryptographic Right Answers]: https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html
 
 use crate::hazardous::mac::fiat_poly1305_32::{
-    fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul,
-    fiat_poly1305_tight_field_element,
+    fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_from_bytes,
+    fiat_poly1305_loose_field_element, fiat_poly1305_tight_field_element,
 };
 use crate::{
     errors::UnknownCryptoError,
@@ -153,18 +153,15 @@ impl Poly1305 {
             return Err(UnknownCryptoError);
         }
 
-        let hibit: u32 = if self.is_finalized { 0 } else { 1 << 24 };
-
-        let m: fiat_poly1305_tight_field_element = [
-            (load_u32_le(&data[0..4])) & 0x3ffffff,
-            (load_u32_le(&data[3..7]) >> 2) & 0x3ffffff,
-            (load_u32_le(&data[6..10]) >> 4) & 0x3ffffff,
-            (load_u32_le(&data[9..13]) >> 6) & 0x3ffffff,
-            (load_u32_le(&data[12..16]) >> 8) | hibit,
-        ];
+        let mut mb = [0u8; 17];
+        mb[..16].copy_from_slice(data);
+        // One byte is appended to detect trailing zeroes if not last chunk.
+        mb[16] = if self.is_finalized { 0 } else { 1 };
+        let mut m: fiat_poly1305_tight_field_element = [0u32; 5];
+        fiat_poly1305_from_bytes(&mut m, &mb);
 
         // h += m[i]
-        let mut h = [0u32; 5];
+        let mut h: fiat_poly1305_loose_field_element = [0u32; 5];
         fiat_poly1305_add(&mut h, &self.a, &m);
         // h *= r with partial reduction modulo p
         fiat_poly1305_carry_mul(&mut self.a, &h, &self.r);
