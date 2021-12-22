@@ -60,10 +60,12 @@
 //! [`PrivateKey::generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
 //! [`orion::kex`]: crate::kex
 
-use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
 use crate::util::secure_cmp;
 use core::ops::{Add, Mul, Sub};
+
+/// Formally verified Curve25519 field arithmetic from: <https://github.com/mit-plv/fiat-crypto>.
+use fiat_crypto::curve25519_64 as fiat_curve25519_u64;
 
 /// The size of a public key used in X25519.
 pub const PUBLIC_KEY_SIZE: usize = 32;
