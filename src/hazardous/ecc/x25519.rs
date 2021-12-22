@@ -39,6 +39,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::ecc::x25519::{PrivateKey, PublicKey, SharedKey, key_agreement};
 //! use core::convert::TryFrom;
 //!
@@ -55,7 +56,7 @@
 //! let bob_shared = key_agreement(&bob_sk, &alice_pk)?;
 //!
 //! assert_eq!(alice_shared, bob_shared);
-//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
 //! ```
 //! [`PrivateKey::generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
 //! [`orion::kex`]: crate::kex
@@ -494,6 +495,7 @@ impl PublicKey {
 /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
 /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
 /// ```rust
+/// # #[cfg(feature = "safe_api")] {
 /// use orion::hazardous::ecc::x25519::PrivateKey;
 ///
 /// // Initialize a secret key with random bytes.
@@ -503,7 +505,7 @@ impl PublicKey {
 /// assert_ne!(secret_key, &[0; 32][..]);
 ///
 /// // Secure, constant-time comparison with another SecretKey
-/// assert_ne!(secret_key, PrivateKey::generate());
+/// assert_ne!(secret_key, PrivateKey::generate()); }
 /// ```
 #[derive(PartialEq)]
 pub struct PrivateKey {

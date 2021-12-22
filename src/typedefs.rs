@@ -495,6 +495,7 @@ macro_rules! construct_secret_key {
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
+        /// # #[cfg(feature = "safe_api")] {
         /// use orion::hazardous::stream::chacha20::SecretKey;
         ///
         /// // Initialize a secret key with random bytes.
@@ -504,7 +505,7 @@ macro_rules! construct_secret_key {
         /// assert_ne!(secret_key, &[0; 32][..]);
         ///
         /// // Secure, constant-time comparison with another SecretKey
-        /// assert_ne!(secret_key, SecretKey::generate());
+        /// assert_ne!(secret_key, SecretKey::generate()); }
         /// ```
         pub struct $name {
             value: [u8; $upper_bound],
@@ -808,6 +809,7 @@ macro_rules! construct_hmac_key {
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
+        /// # #[cfg(feature = "safe_api")] {
         /// use orion::hazardous::mac::hmac::sha512::SecretKey;
         ///
         /// // Initialize a secret key with random bytes.
@@ -817,7 +819,7 @@ macro_rules! construct_hmac_key {
         /// assert_ne!(secret_key, &[0; 32][..]);
         ///
         /// // Secure, constant-time comparison with another SecretKey
-        /// assert_ne!(secret_key, SecretKey::generate());
+        /// assert_ne!(secret_key, SecretKey::generate()); }
         /// ```
         pub struct $name {
             value: [u8; $size],

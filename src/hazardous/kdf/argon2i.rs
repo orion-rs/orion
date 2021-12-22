@@ -65,6 +65,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::{hazardous::kdf::argon2i, util};
 //!
 //! let mut salt = [0u8; 16];
@@ -87,7 +88,7 @@
 //!     &mut dst_out
 //! )
 //! .is_ok());
-//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
 //! ```
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
 //! [`zeroize` crate]: https://crates.io/crates/zeroize

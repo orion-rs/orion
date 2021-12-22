@@ -48,6 +48,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::mac::blake2b::{Blake2b, SecretKey};
 //!
 //! let key = SecretKey::generate();
@@ -57,7 +58,7 @@
 //! let tag = state.finalize()?;
 //!
 //! assert!(Blake2b::verify(&tag, &key, 64, b"Some data").is_ok());
-//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
 //! ```
 //! [`update()`]: blake2b::Blake2b::update
 //! [`reset()`]: blake2b::Blake2b::reset
