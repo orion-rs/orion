@@ -20,13 +20,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[allow(
-    dead_code,
-    non_camel_case_types,
-    clippy::unnecessary_cast,
-    clippy::unused_unit,
-    rustdoc::broken_intra_doc_links
-)]
-
 /// Diffie-Hellman key exchange over Curve25519 as specified in the [RFC 7748](https://datatracker.ietf.org/doc/html/rfc7748).
 pub mod x25519;
