@@ -56,7 +56,8 @@
 //! let bob_shared = key_agreement(&bob_sk, &alice_pk)?;
 //!
 //! assert_eq!(alice_shared, bob_shared);
-//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`PrivateKey::generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
 //! [`orion::kex`]: crate::kex
@@ -505,7 +506,9 @@ impl PublicKey {
 /// assert_ne!(secret_key, &[0; 32][..]);
 ///
 /// // Secure, constant-time comparison with another SecretKey
-/// assert_ne!(secret_key, PrivateKey::generate()); }
+/// assert_ne!(secret_key, PrivateKey::generate());
+/// # }
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 #[derive(PartialEq)]
 pub struct PrivateKey {

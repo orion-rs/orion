@@ -66,7 +66,8 @@
 //! let expected_dk = dst_out;
 //!
 //! assert!(pbkdf2::sha512::verify(&expected_dk, &password, &salt, 10000, &mut dst_out).is_ok());
-//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Password::generate()`]: pbkdf2::sha512::Password::generate
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes

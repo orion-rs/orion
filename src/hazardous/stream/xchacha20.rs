@@ -76,7 +76,8 @@
 //! xchacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt, message);
-//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: xchacha20::SecretKey::generate()
 //! [`Nonce::generate()`]: xchacha20::Nonce::generate()

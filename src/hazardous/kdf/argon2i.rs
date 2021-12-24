@@ -88,7 +88,8 @@
 //!     &mut dst_out
 //! )
 //! .is_ok());
-//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
 //! [`zeroize` crate]: https://crates.io/crates/zeroize

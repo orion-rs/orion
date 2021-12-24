@@ -53,7 +53,8 @@
 //! let tag = state.finalize()?;
 //!
 //! assert!(HmacSha512::verify(&tag, &key, b"Some message.").is_ok());
-//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: hmac::sha512::HmacSha512::update
 //! [`reset()`]: hmac::sha512::HmacSha512::reset

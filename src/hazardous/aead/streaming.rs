@@ -83,7 +83,8 @@
 //!
 //! assert_eq!(tag, StreamTag::Message);
 //! assert_eq!(dst_out_pt.as_ref(), message);
-//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate
 //! [`Nonce::generate()`]: super::stream::xchacha20::Nonce::generate

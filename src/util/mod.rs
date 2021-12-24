@@ -109,7 +109,8 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 ///
 /// util::secure_rand_bytes(&mut rnd_bytes)?;
 /// assert!(util::secure_cmp(&rnd_bytes, &[0u8; 64]).is_err());
-/// # Ok::<(), orion::errors::UnknownCryptoError>(()) }
+/// # }
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 pub fn secure_cmp(a: &[u8], b: &[u8]) -> Result<(), errors::UnknownCryptoError> {
     if a.ct_eq(b).into() {

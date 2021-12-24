@@ -78,7 +78,8 @@
 //! aead::xchacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt.as_ref(), message.as_ref());
-//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate
 //! [`Nonce::generate()`]: super::stream::xchacha20::Nonce::generate

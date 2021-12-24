@@ -51,7 +51,8 @@
 //!
 //! hkdf::sha512::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out)?;
 //!
-//! # Ok::<(), orion::errors::UnknownCryptoError>(()) }
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
 
