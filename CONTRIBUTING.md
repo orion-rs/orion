@@ -41,7 +41,7 @@ Before submitting a pull request, please make sure you have done the following:
 - [ ] Ensure that all tests pass when running:
   
   - `cargo test`
-  - `cargo +nightly test --tests --no-default-features`
+  - `cargo +nightly test --no-default-features`
 
 - [ ] The formatting is correct and clippy does not show warnings by running:
 
