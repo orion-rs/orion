@@ -57,7 +57,7 @@ jobs:
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
-          args: --no-default-features --tests
+          args: --no-default-features
       
       - name: Test debug-mode, alloc feature
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
@@ -81,7 +81,7 @@ jobs:
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
-          args: --release --no-default-features --tests
+          args: --release --no-default-features
       
       - name: Test release-mode, alloc feature
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
