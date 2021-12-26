@@ -59,6 +59,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::stream::xchacha20;
 //!
 //! let secret_key = xchacha20::SecretKey::generate();
@@ -75,6 +76,7 @@
 //! xchacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt, message);
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: xchacha20::SecretKey::generate()

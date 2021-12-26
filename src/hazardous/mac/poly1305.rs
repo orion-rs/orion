@@ -49,6 +49,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::mac::poly1305::{OneTimeKey, Poly1305};
 //!
 //! let one_time_key = OneTimeKey::generate();
@@ -59,6 +60,7 @@
 //! let tag = poly1305_state.finalize()?;
 //!
 //! assert!(Poly1305::verify(&tag, &one_time_key, msg.as_bytes()).is_ok());
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: poly1305::Poly1305::update

@@ -53,6 +53,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::{hazardous::kdf::pbkdf2, util};
 //!
 //! let mut salt = [0u8; 64];
@@ -65,6 +66,7 @@
 //! let expected_dk = dst_out;
 //!
 //! assert!(pbkdf2::sha512::verify(&expected_dk, &password, &salt, 10000, &mut dst_out).is_ok());
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`Password::generate()`]: pbkdf2::sha512::Password::generate
