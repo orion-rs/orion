@@ -71,13 +71,13 @@
 //! [poly1305-donna]: https://github.com/floodyberry/poly1305-donna
 //! [Cryptographic Right Answers]: https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html
 
-use crate::hazardous::mac::fiat_poly1305_32::{
-    fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_from_bytes,
-    fiat_poly1305_loose_field_element, fiat_poly1305_tight_field_element,
-};
 use crate::{
     errors::UnknownCryptoError,
     util::endianness::{load_u32_le, store_u32_into_le},
+};
+use fiat_crypto::poly1305_32::{
+    fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_from_bytes,
+    fiat_poly1305_loose_field_element, fiat_poly1305_tight_field_element,
 };
 
 /// The blocksize which Poly1305 operates on.
