@@ -6,6 +6,7 @@ description = "Usable, easy and safe pure-Rust crypto"
 keywords = [ "cryptography", "crypto", "aead", "hash", "mac" ]
 categories = [ "cryptography", "no-std" ]
 edition = "2018"
+rust-version = "1.52" # Update CI test along with this.
 readme = "README.md"
 repository = "https://github.com/orion-rs/orion"
 documentation = "https://docs.rs/orion"
