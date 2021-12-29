@@ -1,6 +1,7 @@
 name: Security audit (audit-check)
 permissions:
   contents: read
+  issues: write
 
 on:
   schedule:
