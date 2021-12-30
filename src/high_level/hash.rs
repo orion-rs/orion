@@ -48,11 +48,23 @@
 //! - BLAKE2b is not suitable for password hashing. See [`orion::pwhash`](super::pwhash)
 //!   instead.
 //!
-//! # Example:
+//! # Examples
+//!
+//! ## Hashing in-memory data
 //! ```rust
 //! use orion::hash::{digest, Digest};
 //!
 //! let hash: Digest = digest(b"Some data")?;
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! ```
+//!
+//! ## Hashing data from an arbitrary reader
+//! ```rust
+//! use orion::hash::{digest_from_reader, Digest};
+//!
+//! // `reader` could instead be `File::open("file.txt")?`
+//! let reader = std::io::Cursor::new(b"some data");
+//! let hash: Digest = digest_from_reader(reader)?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 
@@ -67,6 +79,27 @@ pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
     blake2b::Hasher::Blake2b256.digest(data)
 }
 
+/// Hash data from `impl Read` using BLAKE2b-256.
+///
+/// See the [module-level docs](crate::hash) for an example of how to use this function.
+/// Internally calls `std::io::copy()` to move data from the reader into the Blake2b writer.
+/// The `std::io::copy` function buffers reads, so passing in a `BufReader` may be unnecessary.
+///
+/// For lower-level control over reads, writes, buffer sizes, *etc.*, consider using the
+/// [`Blake2b`](crate::hazardous::hash::blake2::blake2b::Blake2b) type and its
+/// [`Write`](std::io::Write) implementation directly. See the Blake2b type's source code
+/// for an example.
+///
+/// Note that if an error is returned, data may still have been consumed
+/// from the given reader.
+#[cfg(feature = "safe_api")]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+pub fn digest_from_reader(mut reader: impl std::io::Read) -> Result<Digest, UnknownCryptoError> {
+    let mut hasher = blake2b::Blake2b::new(32)?;
+    std::io::copy(&mut reader, &mut hasher).map_err(|_| UnknownCryptoError)?;
+    hasher.finalize()
+}
+
 // Testing public functions in the module.
 #[cfg(feature = "safe_api")]
 #[cfg(test)]
@@ -77,6 +110,15 @@ mod public {
     /// Hashing twice with same input should always produce same output.
     fn prop_digest_same_result(input: Vec<u8>) -> bool {
         digest(&input[..]).unwrap() == digest(&input[..]).unwrap()
+    }
+
+    #[quickcheck]
+    /// Hashing all input should be the same as wrapping it in a
+    /// cursor and using digest_from_reader.
+    fn prop_digest_same_as_digest_from_reader(input: Vec<u8>) -> bool {
+        let digest_a = digest_from_reader(std::io::Cursor::new(&input)).unwrap();
+        let digest_b = digest(&input).unwrap();
+        digest_a == digest_b
     }
 
     #[quickcheck]
