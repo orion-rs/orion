@@ -951,7 +951,7 @@ mod public {
             let mut salt_mod = dk.salt.as_ref().to_vec();
             salt_mod[0..16].copy_from_slice(&[0u8; 16]);
             let modified =
-                PasswordHash::from_slice(&dk.unprotected_as_bytes(), &salt_mod, 3, 4096).unwrap();
+                PasswordHash::from_slice(dk.unprotected_as_bytes(), &salt_mod, 3, 4096).unwrap();
 
             assert!(hash_password_verify(&modified, &password).is_err());
         }

@@ -358,7 +358,7 @@ mod public {
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
             assert!(sha256::verify(
                 &okm_out,
                 &password_256,
@@ -368,7 +368,7 @@ mod public {
             )
             .is_ok());
 
-            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
             assert!(sha384::verify(
                 &okm_out,
                 &password_384,
@@ -378,7 +378,7 @@ mod public {
             )
             .is_ok());
 
-            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
             assert!(sha512::verify(
                 &okm_out,
                 &password_512,
@@ -400,7 +400,7 @@ mod public {
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
             assert!(sha256::verify(
                 &okm_out,
                 &password_256,
@@ -410,7 +410,7 @@ mod public {
             )
             .is_err());
 
-            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
             assert!(sha384::verify(
                 &okm_out,
                 &password_384,
@@ -420,7 +420,7 @@ mod public {
             )
             .is_err());
 
-            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
             assert!(sha512::verify(
                 &okm_out,
                 &password_512,
@@ -441,7 +441,7 @@ mod public {
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
             assert!(sha256::verify(
                 &okm_out,
                 &sha256::Password::from_slice(b"pass").unwrap(),
@@ -451,7 +451,7 @@ mod public {
             )
             .is_err());
 
-            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
             assert!(sha384::verify(
                 &okm_out,
                 &sha384::Password::from_slice(b"pass").unwrap(),
@@ -461,7 +461,7 @@ mod public {
             )
             .is_err());
 
-            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
             assert!(sha512::verify(
                 &okm_out,
                 &sha512::Password::from_slice(b"pass").unwrap(),
@@ -483,7 +483,7 @@ mod public {
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 32];
 
-            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
             assert!(sha256::verify(
                 &okm_out,
                 &password_256,
@@ -493,7 +493,7 @@ mod public {
             )
             .is_err());
 
-            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
             assert!(sha384::verify(
                 &okm_out,
                 &password_384,
@@ -503,7 +503,7 @@ mod public {
             )
             .is_err());
 
-            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
             assert!(sha512::verify(
                 &okm_out,
                 &password_512,
@@ -525,17 +525,17 @@ mod public {
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            sha256::derive_key(&password_256, &salt, iterations, &mut okm_out).unwrap();
+            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
             assert!(
                 sha256::verify(&okm_out, &password_256, salt, 127, &mut okm_out_verify).is_err()
             );
 
-            sha384::derive_key(&password_384, &salt, iterations, &mut okm_out).unwrap();
+            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
             assert!(
                 sha384::verify(&okm_out, &password_384, salt, 127, &mut okm_out_verify).is_err()
             );
 
-            sha512::derive_key(&password_512, &salt, iterations, &mut okm_out).unwrap();
+            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
             assert!(
                 sha512::verify(&okm_out, &password_512, salt, 127, &mut okm_out_verify).is_err()
             );

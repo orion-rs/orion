@@ -9,7 +9,7 @@ fn test_blake2b_kat() {
     let stream = Deserializer::from_reader(reader).into_iter::<Value>();
 
     for test_collection in stream {
-        for test_object in test_collection.unwrap().as_array() {
+        if let Some(test_object) = test_collection.unwrap().as_array() {
             for test_case in test_object {
                 // Only test BLAKE2b test vectors
                 if test_case.get("hash").unwrap() == "blake2b" {

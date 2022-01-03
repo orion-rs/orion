@@ -112,13 +112,13 @@ fn test_unknown_crypto_from_decode_error() {
     // Tests Debug impl through "{:?}" and Display impl though "{}"
     let err = format!(
         "{:?}:{}",
-        UnknownCryptoError::from(err_one.clone()),
+        UnknownCryptoError::from(err_one),
         UnknownCryptoError::from(err_one)
     );
     assert_eq!(err, "UnknownCryptoError:UnknownCryptoError");
     let err = format!(
         "{:?}:{}",
-        UnknownCryptoError::from(err_two.clone()),
+        UnknownCryptoError::from(err_two),
         UnknownCryptoError::from(err_two)
     );
     assert_eq!(err, "UnknownCryptoError:UnknownCryptoError");

@@ -13,7 +13,7 @@ fn test_nist_cavp() {
 
     let mut nist_cavp_reader = TestCaseReader::new(
         "./tests/test_data/third_party/nist/HMAC.rsp",
-        nist_cavp_fields.clone(),
+        nist_cavp_fields,
         "=",
     );
     // Set variant separators.

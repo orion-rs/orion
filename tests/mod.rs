@@ -32,6 +32,12 @@ pub struct TestCase {
     pub test_case_number: u64,
 }
 
+impl Default for TestCase {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl core::fmt::Display for TestCase {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
@@ -86,11 +92,12 @@ impl TestCaseReader {
         test_case_fields: Vec<String>,
         test_case_field_separator: &str,
     ) -> Self {
-        let test_file = File::open(path_to_test_file)
-            .expect(format!("TestCaseReader: Unable to open file: {}", path_to_test_file).as_str());
+        let test_file = File::open(path_to_test_file).unwrap_or_else(|_| {
+            panic!("TestCaseReader: Unable to open file: {}", path_to_test_file)
+        });
 
         let reader = BufReader::new(test_file);
-        let lines = reader.lines().into_iter();
+        let lines = reader.lines();
 
         Self {
             lines,
@@ -110,7 +117,7 @@ impl TestCaseReader {
         }
 
         // If `data` is a string quoted with '"', remove quotes.
-        if data.contains("\'") || data.contains("\"") {
+        if data.contains('\'') || data.contains('\"') {
             data.replace("\"", "").as_bytes().to_vec()
         } else {
             match data {

@@ -569,10 +569,14 @@ mod public {
             x: Vec<u8>,
         ) -> bool {
             let passes = 1;
-            let mem = if kib < 8 || kib > 4096 { 1024 } else { kib };
+            let mem = if !(8..=4096).contains(&kib) {
+                1024
+            } else {
+                kib
+            };
             let salt = if s.len() < 8 { vec![37u8; 8] } else { s };
 
-            let mut dst_out = if hlen < 4 || hlen > 512 {
+            let mut dst_out = if !(4..=512).contains(&hlen) {
                 vec![0u8; 32]
             } else {
                 vec![0u8; hlen as usize]

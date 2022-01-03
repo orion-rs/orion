@@ -15,14 +15,14 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
         state.update(input).unwrap();
         let digest = state.finalize().unwrap();
         assert_eq!(digest.len(), output.len());
-        assert_eq!(digest.as_ref(), &output[..]);
+        assert_eq!(digest.as_ref(), output);
     } else {
         let secret_key = mac::blake2b::SecretKey::from_slice(key).unwrap();
         let mut state = mac::blake2b::Blake2b::new(&secret_key, output.len()).unwrap();
         state.update(input).unwrap();
         let tag = state.finalize().unwrap();
         assert_eq!(tag.len(), output.len());
-        assert_eq!(tag.unprotected_as_bytes(), &output[..]);
+        assert_eq!(tag.unprotected_as_bytes(), output);
     }
 }
 

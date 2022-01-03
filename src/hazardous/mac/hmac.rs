@@ -400,7 +400,8 @@ pub mod sha256 {
 
             impl TestableStreamingContext<Tag> for HmacSha256 {
                 fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                    Ok(self.reset())
+                    self.reset();
+                    Ok(())
                 }
 
                 fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
@@ -630,7 +631,8 @@ pub mod sha384 {
 
             impl TestableStreamingContext<Tag> for HmacSha384 {
                 fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                    Ok(self.reset())
+                    self.reset();
+                    Ok(())
                 }
 
                 fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
@@ -860,7 +862,8 @@ pub mod sha512 {
 
             impl TestableStreamingContext<Tag> for HmacSha512 {
                 fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                    Ok(self.reset())
+                    self.reset();
+                    Ok(())
                 }
 
                 fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {

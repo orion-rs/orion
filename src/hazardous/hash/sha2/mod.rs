@@ -912,29 +912,25 @@ mod test_word {
             let w32n1 = WordU32::from(n1);
             let w32n2 = WordU32::from(n2);
     
-            if !((w32n1 | w32n2).0  == n1 | n2)  { return false; }
-            if !((w32n1 & w32n2).0  == n1 & n2)  { return false; }
-            if !((w32n1 ^ w32n2).0  == n1 ^ n2)  { return false; }
+            if (w32n1 | w32n2).0 != n1 | n2  { return false; }
+            if (w32n1 & w32n2).0 != n1 & n2  { return false; }
+            if (w32n1 ^ w32n2).0 != n1 ^ n2  { return false; }
             // Test only specific values used with Shr (in sigma functions)
-            if !((w32n1 >> WordU32::from(10usize)).0 == n1 >> 10) { return false; }
-            if !((w32n1 >> WordU32::from(3usize)).0  == n1 >> 3)  { return false; }
-            if !w32n2.0 == 0 {
-                if !((w32n1 / w32n2).0  == n1 / n2)  { return false };
-            }
+            if (w32n1 >> WordU32::from(10usize)).0 != n1 >> 10 { return false; }
+            if (w32n1 >> WordU32::from(3usize)).0 != n1 >> 3  { return false; }
+            if w32n2.0 != 0 && ((w32n1 / w32n2).0 != n1 / n2) { return false }
     
             // WordU64
             let w64m1 = WordU64::from(m1);
             let w64m2 = WordU64::from(m2);
     
-            if !((w64m1 | w64m2).0  == m1 | m2)  { return false; }
-            if !((w64m1 & w64m2).0  == m1 & m2)  { return false; }
-            if !((w64m1 ^ w64m2).0  == m1 ^ m2)  { return false; }
+            if (w64m1 | w64m2).0 != m1 | m2  { return false; }
+            if (w64m1 & w64m2).0 != m1 & m2  { return false; }
+            if (w64m1 ^ w64m2).0 != m1 ^ m2  { return false; }
             // Test only specific values used with Shr (in sigma functions)
-            if !((w64m1 >> WordU64::from(7usize)).0 == m1 >> 7) { return false; }
-            if !((w64m1 >> WordU64::from(6usize)).0 == m1 >> 6) { return false; }
-            if !w64m2.0 == 0 {
-                if !((w64m1 / w64m2).0  == m1 / m2)  { return false };
-            }
+            if (w64m1 >> WordU64::from(7usize)).0 != m1 >> 7 { return false; }
+            if (w64m1 >> WordU64::from(6usize)).0 != m1 >> 6 { return false; }
+            if w64m2.0 != 0 && ((w64m1 / w64m2).0 != m1 / m2) { return false }
     
             true
         }
@@ -949,7 +945,7 @@ mod test_word {
             let w64m2 = WordU64::from(m2);
             let ret64 = w64m1.wrapping_add(w64m2).0 == m1.wrapping_add(m2);
 
-            (ret32 == true) && (ret64 == true)
+            ret32 && ret64
         }
 
         #[quickcheck]
@@ -970,7 +966,7 @@ mod test_word {
                 _ => false,
             };
 
-            (ret32 == true) && (ret64 == true)
+            ret32 && ret64
         }
 
         #[quickcheck]
@@ -991,7 +987,7 @@ mod test_word {
                 _ => false,
             };
 
-            (ret32 == true) && (ret64 == true)
+            ret32 && ret64
         }
 
         #[quickcheck]
@@ -1010,7 +1006,7 @@ mod test_word {
                 _ => false,
             };
 
-            (ret32 == true) && (ret64 == true)
+            ret32 && ret64
         }
 
         #[quickcheck]
@@ -1037,8 +1033,8 @@ mod test_word {
             w32n.as_be(&mut dest32);
             w64m.as_be(&mut dest64);
     
-            if &dest32 != &n.to_be_bytes() { return false; }
-            if &dest64 != &m.to_be_bytes() { return false; }
+            if dest32 != n.to_be_bytes() { return false; }
+            if dest64 != m.to_be_bytes() { return false; }
     
     
             if w32n.0 != u32::from_be_bytes(dest32) { return false; }
