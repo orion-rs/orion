@@ -48,6 +48,9 @@ Before submitting a pull request, please make sure you have done the following:
   - `cargo clippy`
   - `cargo fmt`
 
+- [ ] If you have changed or added tests, you can make sure these also pass CI by checking:
+  - `cargo clippy --tests`
+
 - [ ] If the pull request is a bugfix, try to include a regression test for the bug.
 
 All pull requests should be opened against the `master` branch.
