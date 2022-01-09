@@ -503,7 +503,8 @@ mod public {
 
         impl TestableStreamingContext<Tag> for Poly1305 {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                Ok(self.reset())
+                self.reset();
+                Ok(())
             }
 
             fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {

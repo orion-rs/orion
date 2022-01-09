@@ -1048,7 +1048,7 @@ mod test_vectors {
 
     // Convenience function for testing.
     fn init(key: &[u8], nonce: &[u8]) -> Result<ChaCha20, UnknownCryptoError> {
-        Ok(ChaCha20::new(key, nonce, true)?)
+        ChaCha20::new(key, nonce, true)
     }
     #[test]
     fn rfc8439_chacha20_block_results() {

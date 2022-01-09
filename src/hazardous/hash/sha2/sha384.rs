@@ -236,7 +236,8 @@ mod public {
 
         impl TestableStreamingContext<Digest> for Sha384 {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                Ok(self.reset())
+                self.reset();
+                Ok(())
             }
 
             fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {

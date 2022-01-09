@@ -989,7 +989,7 @@ mod private {
         let mut s = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
         // Change MAC
         let macpos = cipher1.len() - 1;
-        cipher1[macpos] = 0b1010_1010 | cipher1[macpos];
+        cipher1[macpos] |= 0b1010_1010;
         assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
     }
 
@@ -1006,7 +1006,7 @@ mod private {
         // Reset state
         let mut s = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
         // Change something in the ciphertext
-        cipher1[5] = 0b1010_1010 | cipher1[5];
+        cipher1[5] |= 0b1010_1010;
         assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
     }
 

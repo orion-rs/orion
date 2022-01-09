@@ -407,7 +407,7 @@ mod public {
         fn prop_same_hash_different_usage(data: Vec<u8>, size: usize) -> bool {
             use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
 
-            if size >= 1 && size <= BLAKE2B_OUTSIZE {
+            if (1..=BLAKE2B_OUTSIZE).contains(&size) {
                 // Will panic on incorrect results.
                 let sk = SecretKey::generate();
                 produces_same_hash(&sk, size, &data[..]);
@@ -423,7 +423,7 @@ mod public {
         fn prop_same_state_different_usage(data: Vec<u8>, size: usize) -> bool {
             use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
 
-            if size >= 1 && size <= BLAKE2B_OUTSIZE {
+            if (1..=BLAKE2B_OUTSIZE).contains(&size) {
                 // Will panic on incorrect results.
                 let sk = SecretKey::generate();
                 produces_same_state(&sk, size, &data[..]);
