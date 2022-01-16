@@ -261,8 +261,8 @@ impl io::Write for Sha512 {
         Ok(bytes.len())
     }
 
+    /// This type doesn't buffer writes, so flushing is a no-op.
     fn flush(&mut self) -> Result<(), std::io::Error> {
-        // This type doesn't buffer writes, so flushing is a no-op.
         Ok(())
     }
 }
