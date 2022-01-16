@@ -61,6 +61,9 @@
 
 use crate::errors::UnknownCryptoError;
 
+#[cfg(feature = "safe_api")]
+use std::io;
+
 construct_public! {
     /// A type to represent the `Digest` that SHA384 returns.
     ///
@@ -209,6 +212,38 @@ impl crate::hazardous::mac::hmac::HmacHashFunction for Sha384 {
     }
 }
 
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+/// Example: hashing from a `Read`er with SHA384.
+/// ```rust
+/// use orion::{
+///     hazardous::hash::sha2::sha384::{Sha384, Digest},
+///     errors::UnknownCryptoError,
+/// };
+/// use std::io::{self, Read, Write};
+///
+/// // `reader` could also be a `File::open(...)?`.
+/// let mut reader = io::Cursor::new(b"some data");
+/// let mut hasher = Sha384::new();
+/// std::io::copy(&mut reader, &mut hasher)?;
+///
+/// let digest: Digest = hasher.finalize()?;
+///
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[cfg(feature = "safe_api")]
+impl io::Write for Sha384 {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.update(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> Result<(), std::io::Error> {
+        // This type doesn't buffer writes, so flushing is a no-op.
+        Ok(())
+    }
+}
+
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -291,6 +326,26 @@ mod public {
             );
             test_runner.run_all_tests_property(&data);
             true
+        }
+    }
+
+    #[cfg(feature = "safe_api")]
+    mod test_io_impls {
+        use crate::hazardous::hash::sha2::sha384::Sha384;
+        use std::io::Write;
+
+        #[quickcheck]
+        fn prop_hasher_write_same_as_update(data: Vec<u8>) -> bool {
+            let mut hasher_a = Sha384::new();
+            let mut hasher_b = hasher_a.clone();
+
+            hasher_a.update(&data).unwrap();
+            hasher_b.write_all(&data).unwrap();
+
+            let hash_a = hasher_a.finalize().unwrap();
+            let hash_b = hasher_b.finalize().unwrap();
+
+            hash_a == hash_b
         }
     }
 }
