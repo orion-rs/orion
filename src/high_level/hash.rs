@@ -79,19 +79,24 @@ pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
     blake2b::Hasher::Blake2b256.digest(data)
 }
 
-/// Hash data from `impl Read` using BLAKE2b-256.
+/// Hash data from a [`Read`](std::io::Read)` type using BLAKE2b-256.
 ///
 /// See the [module-level docs](crate::hash) for an example of how to use this function.
-/// Internally calls `std::io::copy()` to move data from the reader into the Blake2b writer.
-/// The `std::io::copy` function buffers reads, so passing in a `BufReader` may be unnecessary.
+/// Internally calls [`std::io::copy`]() to move data from the reader into the Blake2b writer.
+/// Note that the [`std::io::copy`]() function buffers reads, so passing in a
+/// [`BufReader`](std::io::BufReader) may be unnecessary.
 ///
 /// For lower-level control over reads, writes, buffer sizes, *etc.*, consider using the
 /// [`Blake2b`](crate::hazardous::hash::blake2::blake2b::Blake2b) type and its
-/// [`Write`](std::io::Write) implementation directly. See the Blake2b type's source code
-/// for an example.
+/// [`Write`](std::io::Write) implementation directly. See `Blake2b`'s `Write` implementation
+/// and/or its `Write` documentation for an example.
 ///
-/// Note that if an error is returned, data may still have been consumed
-/// from the given reader.
+/// ## Errors:
+/// This function will only ever return the [`std::io::ErrorKind::Other`]()
+/// variant when it returns an error. Additionally, this will always contain Orion's
+/// [`UnknownCryptoError`](crate::errors::UnknownCryptoError) type.
+///
+/// Note that if an error is returned, data may still have been consumed from the given reader.
 #[cfg(feature = "safe_api")]
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 pub fn digest_from_reader(mut reader: impl std::io::Read) -> Result<Digest, UnknownCryptoError> {
