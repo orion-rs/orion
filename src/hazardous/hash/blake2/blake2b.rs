@@ -65,6 +65,9 @@ use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b_core;
 use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
 
+#[cfg(feature = "safe_api")]
+use std::io;
+
 construct_public! {
     /// A type to represent the `Digest` that BLAKE2b returns.
     ///
@@ -145,6 +148,48 @@ impl Hasher {
             Hasher::Blake2b384 => Blake2b::new(48),
             Hasher::Blake2b512 => Blake2b::new(64),
         }
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+/// Example: custom digest size.
+/// ```rust
+/// use orion::{
+///     hazardous::hash::blake2::blake2b::{Blake2b, Digest},
+///     errors::UnknownCryptoError,
+/// };
+/// use std::io::{self, Read, Write};
+///
+/// // `reader` could also be a `File::open(...)?`.
+/// let mut reader = io::Cursor::new(b"some data");
+/// let mut hasher = Blake2b::new(64)?; // 512-bit hash
+/// std::io::copy(&mut reader, &mut hasher)?;
+///
+/// let digest: Digest = hasher.finalize()?;
+///
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[cfg(feature = "safe_api")]
+impl io::Write for Blake2b {
+    /// Update the hasher's internal state with *all* of the bytes given.
+    /// If this function returns the `Ok` variant, it's guaranteed that it
+    /// will contain the length of the buffer passed to [`Write`](std::io::Write).
+    /// Note that this function is just a small wrapper over
+    /// [`Blake2b::update`](crate::hazardous::hash::blake2::blake2b::Blake2b::update).
+    ///
+    /// ## Errors:
+    /// This function will only ever return the [`std::io::ErrorKind::Other`]()
+    /// variant when it returns an error. Additionally, this will always contain Orion's
+    /// [`UnknownCryptoError`](crate::errors::UnknownCryptoError) type.
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.update(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        Ok(bytes.len())
+    }
+
+    /// This type doesn't buffer writes, so flushing is a no-op.
+    fn flush(&mut self) -> Result<(), std::io::Error> {
+        Ok(())
     }
 }
 
@@ -342,6 +387,26 @@ mod public {
             assert!(Blake2b::new(65).is_err());
             assert!(Blake2b::new(1).is_ok());
             assert!(Blake2b::new(64).is_ok());
+        }
+    }
+
+    #[cfg(feature = "safe_api")]
+    mod test_io_impls {
+        use crate::hazardous::hash::blake2::blake2b::Blake2b;
+        use std::io::Write;
+
+        #[quickcheck]
+        fn prop_hasher_write_same_as_update(data: Vec<u8>) -> bool {
+            let mut hasher_a = Blake2b::new(64).unwrap();
+            let mut hasher_b = hasher_a.clone();
+
+            hasher_a.update(&data).unwrap();
+            hasher_b.write_all(&data).unwrap();
+
+            let hash_a = hasher_a.finalize().unwrap();
+            let hash_b = hasher_b.finalize().unwrap();
+
+            hash_a == hash_b
         }
     }
 }
