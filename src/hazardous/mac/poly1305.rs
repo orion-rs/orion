@@ -197,6 +197,7 @@ impl Poly1305 {
         let mut g3: u32 = 0; let c = carry; fiat_poly1305_subborrowx_u26(&mut g3, &mut carry, c, buf_h[3], p[3]);
         let mut g4: u32 = 0; let c = carry; fiat_poly1305_subborrowx_u26(&mut g4, &mut carry, c, buf_h[4], p[4]);
 
+        // select h if h < p, or h + -p if h >= p
         let mut ret = [0u32; 5];
         fiat_poly1305_selectznz(&mut ret, carry,&[g0, g1, g2, g3, g4], &buf_h);
 
