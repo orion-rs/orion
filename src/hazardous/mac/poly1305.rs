@@ -77,7 +77,8 @@ use crate::{
 };
 use fiat_crypto::poly1305_32::{
     fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_from_bytes,
-    fiat_poly1305_loose_field_element, fiat_poly1305_tight_field_element,
+    fiat_poly1305_loose_field_element, fiat_poly1305_selectznz, fiat_poly1305_subborrowx_u26,
+    fiat_poly1305_tight_field_element, fiat_poly1305_u1,
 };
 
 /// The blocksize which Poly1305 operates on.
@@ -147,6 +148,11 @@ impl core::fmt::Debug for Poly1305 {
 }
 
 impl Poly1305 {
+    /// Prime 2^130-5 in little-endian.
+    const PRIME: [u8; 17] = [
+        251, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 3,
+    ];
+
     /// Process a datablock of `POLY1305_BLOCKSIZE` length.
     fn process_block(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if data.len() != POLY1305_BLOCKSIZE {
@@ -160,7 +166,7 @@ impl Poly1305 {
         let mut m: fiat_poly1305_tight_field_element = [0u32; 5];
         fiat_poly1305_from_bytes(&mut m, &mb);
 
-        // h += m[i]
+        // h += m
         let mut h: fiat_poly1305_loose_field_element = [0u32; 5];
         fiat_poly1305_add(&mut h, &self.a, &m);
         // h *= r with partial reduction modulo p
@@ -179,34 +185,26 @@ impl Poly1305 {
         // full carry h
         let mut buf_h: fiat_poly1305_tight_field_element = [0u32; 5];
         fiat_poly1305_carry(&mut buf_h, &self.a);
-        let mut h0 = buf_h[0];
-        let mut h1 = buf_h[1];
-        let mut h2 = buf_h[2];
-        let mut h3 = buf_h[3];
-        let mut h4 = buf_h[4];
 
         // compute h + -p
-        let mut c: u32;
-        let mut g0: u32 = h0.wrapping_add(5); c = g0 >> 26; g0 &= 0x3ffffff;
-        let mut g1: u32 = h1.wrapping_add(c); c = g1 >> 26; g1 &= 0x3ffffff;
-        let mut g2: u32 = h2.wrapping_add(c); c = g2 >> 26; g2 &= 0x3ffffff;
-        let mut g3: u32 = h3.wrapping_add(c); c = g3 >> 26; g3 &= 0x3ffffff;
-        let mut g4: u32 = h4.wrapping_add(c).wrapping_sub(1 << 26);
+        let mut p: fiat_poly1305_tight_field_element = [0u32; 5];
+        fiat_poly1305_from_bytes(&mut p, &Self::PRIME);
 
-        // select h if h < p, or h + -p if h >= p
-        // NOTE: mask is either zero or non-zero
-        let mut mask = (g4 >> (32 - 1)).wrapping_sub(1);
-        g0 &= mask;
-        g1 &= mask;
-        g2 &= mask;
-        g3 &= mask;
-        g4 &= mask;
-        mask = !mask;
-        h0 = (h0 & mask) | g0;
-    	h1 = (h1 & mask) | g1;
-    	h2 = (h2 & mask) | g2;
-    	h3 = (h3 & mask) | g3;
-    	h4 = (h4 & mask) | g4;
+        let mut carry: fiat_poly1305_u1 = 0;
+        let mut g0: u32 = 0; let c = carry; fiat_poly1305_subborrowx_u26(&mut g0, &mut carry, c, buf_h[0], p[0]);
+        let mut g1: u32 = 0; let c = carry; fiat_poly1305_subborrowx_u26(&mut g1, &mut carry, c, buf_h[1], p[1]);
+        let mut g2: u32 = 0; let c = carry; fiat_poly1305_subborrowx_u26(&mut g2, &mut carry, c, buf_h[2], p[2]);
+        let mut g3: u32 = 0; let c = carry; fiat_poly1305_subborrowx_u26(&mut g3, &mut carry, c, buf_h[3], p[3]);
+        let mut g4: u32 = 0; let c = carry; fiat_poly1305_subborrowx_u26(&mut g4, &mut carry, c, buf_h[4], p[4]);
+
+        let mut ret = [0u32; 5];
+        fiat_poly1305_selectznz(&mut ret, carry,&[g0, g1, g2, g3, g4], &buf_h);
+
+        let mut h0 = ret[0];
+        let mut h1 = ret[1];
+        let mut h2 = ret[2];
+        let mut h3 = ret[3];
+        let h4 = ret[4];
 
         // h = h % (2^128)
         h0 = ((h0) | (h1 << 26)) & 0xffffffff;
