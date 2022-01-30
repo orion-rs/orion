@@ -223,7 +223,11 @@ mod hash {
                 BenchmarkId::new("compute hash", *size),
                 &input,
                 |b, input_message| {
-                    b.iter(|| blake2::blake2b::Hasher::Blake2b512.digest(&input_message).unwrap())
+                    b.iter(|| {
+                        blake2::blake2b::Hasher::Blake2b512
+                            .digest(&input_message)
+                            .unwrap()
+                    })
                 },
             );
         }
