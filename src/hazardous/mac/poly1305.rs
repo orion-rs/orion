@@ -177,10 +177,7 @@ impl Poly1305 {
     }
 
     #[rustfmt::skip]
-    #[allow(clippy::cast_lossless)]
     #[allow(clippy::identity_op)]
-    #[allow(clippy::unreadable_literal)]
-    #[allow(clippy::assign_op_pattern)]
     /// Remaining processing after all data blocks have been processed.
     fn process_end_of_stream(&mut self) {
         // full carry h
