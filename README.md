@@ -41,7 +41,7 @@ RUSTDOCFLAGS='--cfg docsrs' cargo +nightly doc --no-deps --all-features
 ```
 
 ### Tests and Fuzzing
-The [wiki](https://github.com/orion-rs/orion/wiki/Testing-suite) has details on how orion is tested. To run all tests:
+The [wiki](https://github.com/orion-rs/orion/wiki/Testing-suite) has details on how Orion is tested. To run all tests:
 ```
 cargo test
 ```

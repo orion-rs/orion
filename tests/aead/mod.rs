@@ -85,7 +85,7 @@ fn wycheproof_test_runner(
                 let is_tag_same = dst_ct_out[input.len()..].as_ref() == tag;
                 let is_decrypted_same = dst_pt_out[..].as_ref() == input;
                 // In this case a test vector reported as invalid by Wycheproof would be
-                // accepted by orion.
+                // accepted by Orion.
                 if is_ct_same && is_decrypted_same && is_tag_same {
                     panic!("Un-allowed test result! {:?}", tcid);
                 }

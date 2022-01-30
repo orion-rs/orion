@@ -42,9 +42,9 @@
 //! [`orion::kex`] offers ephemeral key exchange using X25519 and BLAKE2b.
 //!
 //! ### A note on `no_std`:
-//! When orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator.
+//! When Orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator.
 //!
-//! More information about orion is available in the [wiki].
+//! More information about Orion is available in the [wiki].
 //!
 //! [`orion::aead`]: crate::aead
 //! [`orion::pwhash`]: crate::pwhash
@@ -86,7 +86,7 @@ mod typedefs;
 /// Utilities such as constant-time comparison.
 pub mod util;
 
-/// Errors for orion's cryptographic operations.
+/// Errors for Orion's cryptographic operations.
 pub mod errors;
 
 /// \[__**Caution**__\] Low-level API.
