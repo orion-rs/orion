@@ -1,3 +1,20 @@
+### 0.17.1
+
+__Date:__ January 30, 2022.
+
+__Changelog:__
+
+- Use fiat-crypto from their provided crate on crates.io ([#201](https://github.com/orion-rs/orion/issues/201)) (by [Vince Mutolo](https://github.com/vlmutolo)).
+- Doc-tests no longer fail if run with `cargo test --no-default-features`, as the erroneous usages have been feature-gated ([#254](https://github.com/orion-rs/orion/issues/254)).
+- Specify MSRV in `Cargo.toml` via `rust-version` field ([#250](https://github.com/orion-rs/orion/issues/250)).
+- `audit-check` GitHub Action added in addition to `cargo-audit` ([#257](https://github.com/orion-rs/orion/issues/257)).
+- Updated copyright year to 2022 ([#267](https://github.com/orion-rs/orion/issues/267)).
+- Implement `std::io::Write` for BLAKE2 and SHA2, also adding `orion::hash::digest_from_reader` ([#228](https://github.com/orion-rs/orion/pull/228)) (by [Vince Mutolo](https://github.com/vlmutolo)).
+- Implement Poly1305 using fiat-crypto ([#198](https://github.com/orion-rs/orion/issues/198)).
+- Correct capitalization of crate name in docs, README and wiki ([#259](https://github.com/orion-rs/orion/issues/259)).
+- Fix the benchmarking targets that failed to compile after `0.17.0` ([#270](https://github.com/orion-rs/orion/pull/270)).
+- Various internal cleanups and improvements.
+
 ### 0.17.0
 
 __Date:__ November 24, 2021.
