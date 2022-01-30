@@ -91,7 +91,7 @@ macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
 
     #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     /// This type tries to serialize as a `&[u8]` would. Note that the serialized
-    /// type likely does not have the same protections that orion provides, such
+    /// type likely does not have the same protections that Orion provides, such
     /// as constant-time operations. A good rule of thumb is to only serialize
     /// these types for storage. Don't operate on the serialized types.
     impl serde::Serialize for $name {

@@ -45,7 +45,7 @@ pub(crate) mod u64x4;
 /// # About:
 /// This function can be used to generate cryptographic keys, salts or other
 /// values that rely on strong randomness. Please note that most keys and other
-/// types used throughout orion, implement their own `generate()` function and
+/// types used throughout Orion, implement their own `generate()` function and
 /// it is strongly preferred to use those, compared to [`secure_rand_bytes()`].
 ///
 /// This uses [`getrandom`].
