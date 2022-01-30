@@ -162,6 +162,7 @@ impl Poly1305 {
         let mut mb = [0u8; 17];
         mb[..16].copy_from_slice(data);
         // One byte is appended to detect trailing zeroes if not last chunk.
+        // See https://cr.yp.to/mac/poly1305-20050329.pdf, Section 2 "Conversion and padding".
         mb[16] = if self.is_finalized { 0 } else { 1 };
         let mut m: fiat_poly1305_tight_field_element = [0u32; 5];
         fiat_poly1305_from_bytes(&mut m, &mb);
