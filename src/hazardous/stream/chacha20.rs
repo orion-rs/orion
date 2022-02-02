@@ -108,6 +108,7 @@ const HCHACHA_OUTSIZE: usize = 32;
 /// The nonce size for HChaCha20.
 pub(crate) const HCHACHA_NONCESIZE: usize = 16;
 
+/*
 construct_secret_key! {
     /// A type to represent the `SecretKey` that Chacha20, XChaCha20, ChaCha20-Poly1305 and
     /// XChaCha20-Poly1305 use.
@@ -121,6 +122,11 @@ construct_secret_key! {
     /// - Failure to generate random bytes securely.
     (SecretKey, test_secret_key, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE)
 }
+ */
+
+/// Const-generic
+pub type SecretKey =
+    crate::const_newtypes::Secret<{ CHACHA_KEYSIZE }, { CHACHA_KEYSIZE }, { CHACHA_KEYSIZE }>;
 
 impl_from_trait!(SecretKey, CHACHA_KEYSIZE);
 

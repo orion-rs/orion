@@ -116,3 +116,5 @@ pub use high_level::kex;
 #[doc(hidden)]
 /// Testing framework.
 pub mod test_framework;
+
+mod const_newtypes;
