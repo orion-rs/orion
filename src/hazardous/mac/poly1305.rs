@@ -90,6 +90,7 @@ pub const POLY1305_KEYSIZE: usize = 32;
 /// Type for a Poly1305 tag.
 type Poly1305Tag = [u8; POLY1305_OUTSIZE];
 
+/*
 construct_secret_key! {
     /// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
     ///
@@ -102,8 +103,13 @@ construct_secret_key! {
     /// - Failure to generate random bytes securely.
     (OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
 }
+ */
 
-impl_from_trait!(OneTimeKey, POLY1305_KEYSIZE);
+/// Const-generic
+pub type OneTimeKey =
+    crate::const_newtypes::Secret<{ POLY1305_KEYSIZE }, { POLY1305_KEYSIZE }, { POLY1305_KEYSIZE }>;
+
+// impl_from_trait!(OneTimeKey, POLY1305_KEYSIZE);
 
 construct_tag! {
     /// A type to represent the `Tag` that Poly1305 returns.

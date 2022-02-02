@@ -3,6 +3,7 @@ pub mod rfc_chacha20;
 pub mod rfc_xchacha20;
 
 use chacha20::SecretKey;
+use orion::hazardous::mac::poly1305::OneTimeKey;
 use orion::hazardous::stream::chacha20::CHACHA_KEYSIZE;
 use orion::hazardous::stream::chacha20::{self, IETF_CHACHA_NONCESIZE};
 use orion::hazardous::stream::xchacha20::{self, XCHACHA_NONCESIZE};
@@ -16,7 +17,7 @@ pub fn chacha_test_runner(
     output: &[u8],
 ) {
     if key.len() != CHACHA_KEYSIZE {
-        assert!(SecretKey::from_slice(key).is_err());
+        assert!(OneTimeKey::from_slice(key).is_err());
         return;
     }
     if input.is_empty() || output.is_empty() {
