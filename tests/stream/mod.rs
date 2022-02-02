@@ -24,7 +24,7 @@ pub fn chacha_test_runner(
         return;
     }
 
-    let sk = SecretKey::from_slice(key).unwrap();
+    let sk = OneTimeKey::from_slice(key).unwrap();
 
     // Selecting variant based on nonce size
     if nonce.len() == IETF_CHACHA_NONCESIZE {
