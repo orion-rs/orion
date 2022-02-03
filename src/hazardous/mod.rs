@@ -44,3 +44,6 @@ pub mod stream;
 
 /// Elliptic-Curve Cryptography.
 pub mod ecc;
+
+/// TODO: This probably belongs somewhere else.
+pub mod base;

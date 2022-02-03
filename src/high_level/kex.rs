@@ -89,6 +89,7 @@ pub use crate::hazardous::ecc::x25519::PrivateKey;
 pub use crate::hazardous::ecc::x25519::PublicKey;
 
 use crate::errors::UnknownCryptoError;
+use crate::hazardous::base::Public;
 use crate::hazardous::ecc::x25519;
 use crate::hazardous::hash::blake2::blake2b::{Blake2b, Digest};
 use core::convert::TryFrom;

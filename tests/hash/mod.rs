@@ -5,6 +5,7 @@ pub mod sha384_nist_cavp;
 pub mod sha512_nist_cavp;
 
 use crate::TestCaseReader;
+use orion::hazardous::base::Public;
 use orion::hazardous::hash::{blake2, sha2::sha256, sha2::sha384, sha2::sha512};
 use orion::hazardous::mac;
 

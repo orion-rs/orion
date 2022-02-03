@@ -62,17 +62,37 @@
 //! [`mac::blake2b`]: crate::hazardous::mac::blake2b
 
 use crate::errors::UnknownCryptoError;
+use crate::hazardous::base::{OrionDeref, Public, PublicArray};
 use crate::hazardous::hash::blake2::blake2b_core;
 use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
 
-construct_public! {
-    /// A type to represent the `Digest` that BLAKE2b returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is empty.
-    /// - `slice` is greater than 64 bytes.
-    (Digest, test_digest, 1, BLAKE2B_OUTSIZE)
+// construct_public! {
+//     /// A type to represent the `Digest` that BLAKE2b returns.
+//     ///
+//     /// # Errors:
+//     /// An error will be returned if:
+//     /// - `slice` is empty.
+//     /// - `slice` is greater than 64 bytes.
+//     (Digest, test_digest, 1, BLAKE2B_OUTSIZE)
+// }
+
+type Blake2bArray = PublicArray<1, BLAKE2B_OUTSIZE>;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Digest(Blake2bArray);
+
+impl OrionDeref for Digest {
+    type Target = Blake2bArray;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<Blake2bArray> for Digest {
+    fn from(a: Blake2bArray) -> Self {
+        Self(a)
+    }
 }
 
 #[derive(Debug, Clone)]
