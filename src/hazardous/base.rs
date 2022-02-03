@@ -144,10 +144,6 @@ pub struct PublicVec {
     original_length: usize,
 }
 
-/// Anything that can be converted to/from a `PublicVec` will
-/// implement `Public` thanks to this auto implementation. The
-/// ability to be converted to/from a PublicAVecis expressed
-/// using the `PublicDynamic<Data = PublicVec<_,_>` trait bound.
 impl Public<Self> for PublicVec {
     fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
