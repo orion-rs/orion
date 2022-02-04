@@ -17,7 +17,7 @@ mod rfc8439_poly1305 {
             0x27, 0xa9,
         ];
 
-        poly1305_test_runner(&key, &message, &expected);
+        poly1305_test_runner(&key, message, &expected);
     }
 
     #[test]
@@ -48,7 +48,7 @@ mod rfc8439_poly1305 {
             0x86, 0x3e,
         ];
 
-        poly1305_test_runner(&key, &message, &expected);
+        poly1305_test_runner(&key, message, &expected);
     }
 
     #[test]
@@ -70,7 +70,7 @@ mod rfc8439_poly1305 {
             0x0c, 0xf0,
         ];
 
-        poly1305_test_runner(&key, &message, &expected);
+        poly1305_test_runner(&key, message, &expected);
     }
 
     #[test]
@@ -88,7 +88,7 @@ mod rfc8439_poly1305 {
             0xeb, 0x62,
         ];
 
-        poly1305_test_runner(&key, &message, &expected);
+        poly1305_test_runner(&key, message, &expected);
     }
 
     #[test]

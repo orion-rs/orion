@@ -13,7 +13,7 @@ fn test_nist_cavp() {
 
     let mut nist_cavp_reader = TestCaseReader::new(
         "./tests/test_data/third_party/nist/HMAC.rsp",
-        nist_cavp_fields.clone(),
+        nist_cavp_fields,
         "=",
     );
     // Set variant separators.
@@ -30,7 +30,7 @@ fn test_nist_cavp() {
         match test_case {
             Some(ref tc) => {
                 if current_variant.is_empty() {
-                    // We've found a test case and parse it, but Orion
+                    // We've found a test case and parsed it, but Orion
                     // doesn't support the variant.
                     continue;
                 }

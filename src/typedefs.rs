@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2021 The orion Developers
+// Copyright (c) 2018-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -91,7 +91,7 @@ macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
 
     #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     /// This type tries to serialize as a `&[u8]` would. Note that the serialized
-    /// type likely does not have the same protections that orion provides, such
+    /// type likely does not have the same protections that Orion provides, such
     /// as constant-time operations. A good rule of thumb is to only serialize
     /// these types for storage. Don't operate on the serialized types.
     impl serde::Serialize for $name {
@@ -495,6 +495,7 @@ macro_rules! construct_secret_key {
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
+        /// # #[cfg(feature = "safe_api")] {
         /// use orion::hazardous::stream::chacha20::SecretKey;
         ///
         /// // Initialize a secret key with random bytes.
@@ -505,6 +506,8 @@ macro_rules! construct_secret_key {
         ///
         /// // Secure, constant-time comparison with another SecretKey
         /// assert_ne!(secret_key, SecretKey::generate());
+        /// # }
+        /// # Ok::<(), orion::errors::UnknownCryptoError>(())
         /// ```
         pub struct $name {
             value: [u8; $upper_bound],
@@ -555,6 +558,7 @@ macro_rules! construct_secret_key {
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
+        /// # #[cfg(feature = "safe_api")] {
         /// use orion::hazardous::stream::chacha20::SecretKey;
         ///
         /// // Initialize a secret key with random bytes.
@@ -565,6 +569,8 @@ macro_rules! construct_secret_key {
         ///
         /// // Secure, constant-time comparison with another SecretKey
         /// assert_ne!(secret_key, SecretKey::generate());
+        /// # }
+        /// # Ok::<(), orion::errors::UnknownCryptoError>(())
         /// ```
         pub struct $name {
             value: [u8; $upper_bound],
@@ -733,9 +739,7 @@ macro_rules! construct_tag {
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
         /// use orion::hazardous::mac::hmac::sha512::Tag;
-        /// # use orion::errors::UnknownCryptoError;
         ///
-        /// # fn main() -> Result<(), Box<UnknownCryptoError>> {
         /// // Initialize an arbitrary, 64-byte tag.
         /// let tag = Tag::from_slice(&[1; 64])?;
         ///
@@ -744,8 +748,7 @@ macro_rules! construct_tag {
         ///
         /// // Secure, constant-time comparison with another Tag
         /// assert_eq!(tag, Tag::from_slice(&[1; 64])?);
-        /// # Ok(())
-        /// # }
+        /// # Ok::<(), orion::errors::UnknownCryptoError>(())
         /// ```
         pub struct $name {
             value: [u8; $upper_bound],
@@ -808,6 +811,7 @@ macro_rules! construct_hmac_key {
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
+        /// # #[cfg(feature = "safe_api")] {
         /// use orion::hazardous::mac::hmac::sha512::SecretKey;
         ///
         /// // Initialize a secret key with random bytes.
@@ -818,6 +822,8 @@ macro_rules! construct_hmac_key {
         ///
         /// // Secure, constant-time comparison with another SecretKey
         /// assert_ne!(secret_key, SecretKey::generate());
+        /// # }
+        /// # Ok::<(), orion::errors::UnknownCryptoError>(())
         /// ```
         pub struct $name {
             value: [u8; $size],
@@ -895,10 +901,9 @@ macro_rules! construct_secret_key_variable_size {
         /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
         /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
         /// ```rust
+        /// # #[cfg(feature = "safe_api")] {
         /// use orion::pwhash::Password;
-        /// # use orion::errors::UnknownCryptoError;
         ///
-        /// # fn main() -> Result<(), Box<UnknownCryptoError>> {
         /// // Initialize a password with 32 random bytes.
         /// let password = Password::generate(32)?;
         ///
@@ -907,9 +912,8 @@ macro_rules! construct_secret_key_variable_size {
         ///
         /// // Secure, constant-time comparison with another Password
         /// assert_ne!(password, Password::generate(32)?);
-        /// #
-        /// # Ok(())
         /// # }
+        /// # Ok::<(), orion::errors::UnknownCryptoError>(())
         /// ```
         pub struct $name {
             pub(crate) value: Vec<u8>,

@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2021 The orion Developers
+// Copyright (c) 2018-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +43,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::mac::hmac::sha512::{HmacSha512, SecretKey};
 //!
 //! let key = SecretKey::generate();
@@ -52,6 +53,7 @@
 //! let tag = state.finalize()?;
 //!
 //! assert!(HmacSha512::verify(&tag, &key, b"Some message.").is_ok());
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: hmac::sha512::HmacSha512::update
@@ -398,7 +400,8 @@ pub mod sha256 {
 
             impl TestableStreamingContext<Tag> for HmacSha256 {
                 fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                    Ok(self.reset())
+                    self.reset();
+                    Ok(())
                 }
 
                 fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
@@ -628,7 +631,8 @@ pub mod sha384 {
 
             impl TestableStreamingContext<Tag> for HmacSha384 {
                 fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                    Ok(self.reset())
+                    self.reset();
+                    Ok(())
                 }
 
                 fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
@@ -858,7 +862,8 @@ pub mod sha512 {
 
             impl TestableStreamingContext<Tag> for HmacSha512 {
                 fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                    Ok(self.reset())
+                    self.reset();
+                    Ok(())
                 }
 
                 fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {

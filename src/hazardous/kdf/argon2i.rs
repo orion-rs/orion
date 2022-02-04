@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2020-2021 The orion Developers
+// Copyright (c) 2020-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -65,6 +65,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::{hazardous::kdf::argon2i, util};
 //!
 //! let mut salt = [0u8; 16];
@@ -87,6 +88,7 @@
 //!     &mut dst_out
 //! )
 //! .is_ok());
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
@@ -567,10 +569,14 @@ mod public {
             x: Vec<u8>,
         ) -> bool {
             let passes = 1;
-            let mem = if kib < 8 || kib > 4096 { 1024 } else { kib };
+            let mem = if !(8..=4096).contains(&kib) {
+                1024
+            } else {
+                kib
+            };
             let salt = if s.len() < 8 { vec![37u8; 8] } else { s };
 
-            let mut dst_out = if hlen < 4 || hlen > 512 {
+            let mut dst_out = if !(4..=512).contains(&hlen) {
                 vec![0u8; 32]
             } else {
                 vec![0u8; hlen as usize]

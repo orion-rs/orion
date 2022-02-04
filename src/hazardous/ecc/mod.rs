@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2021 The orion Developers
+// Copyright (c) 2021-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,17 +19,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-#[allow(
-    dead_code,
-    non_camel_case_types,
-    clippy::unnecessary_cast,
-    clippy::unused_unit,
-    rustdoc::broken_intra_doc_links
-)]
-/// Formally verified  Curve25519 field arithmetic from: <https://github.com/mit-plv/fiat-crypto>
-/// Last taken at commit: <https://github.com/mit-plv/fiat-crypto/commit/626203aec9fcf5617631fb687d719e5e78dac09f>
-mod fiat_curve25519_u64;
 
 /// Diffie-Hellman key exchange over Curve25519 as specified in the [RFC 7748](https://datatracker.ietf.org/doc/html/rfc7748).
 pub mod x25519;

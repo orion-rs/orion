@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2021 The orion Developers
+// Copyright (c) 2018-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -223,7 +223,11 @@ mod hash {
                 BenchmarkId::new("compute hash", *size),
                 &input,
                 |b, input_message| {
-                    b.iter(|| blake2b::Hasher::Blake2b512.digest(&input_message).unwrap())
+                    b.iter(|| {
+                        blake2::blake2b::Hasher::Blake2b512
+                            .digest(&input_message)
+                            .unwrap()
+                    })
                 },
             );
         }

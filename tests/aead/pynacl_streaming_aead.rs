@@ -32,7 +32,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
 
     for test in tests.iter() {
         let key = SecretKey::from_slice(&decode(&test.key).unwrap()).unwrap();
-        let nonce = &Nonce::from_slice(&decode(&test.header).unwrap()).unwrap();
+        let nonce = Nonce::from_slice(&decode(&test.header).unwrap()).unwrap();
 
         let mut ctx_seal = StreamXChaCha20Poly1305::new(&key, &nonce);
         let mut ctx_open = StreamXChaCha20Poly1305::new(&key, &nonce);

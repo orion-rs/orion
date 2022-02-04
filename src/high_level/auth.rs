@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2020-2021 The orion Developers
+// Copyright (c) 2020-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -197,7 +197,7 @@ mod public {
     /// in `authenticate/authenticate_verify`.
     fn prop_authenticate_key_size(input: Vec<u8>) -> bool {
         let sec_key_res = SecretKey::from_slice(&input);
-        if input.len() == 0 || input.len() >= u32::MAX as usize {
+        if input.is_empty() || input.len() >= u32::MAX as usize {
             return sec_key_res.is_err();
         }
         let sec_key = sec_key_res.unwrap();

@@ -57,7 +57,7 @@ jobs:
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
-          args: --no-default-features --tests
+          args: --no-default-features
       
       - name: Test debug-mode, alloc feature
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
@@ -81,7 +81,7 @@ jobs:
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
         with:
           command: test
-          args: --release --no-default-features --tests
+          args: --release --no-default-features
       
       - name: Test release-mode, alloc feature
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
@@ -213,6 +213,6 @@ jobs:
     - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
       with:
         persist-credentials: false
-    - uses: EmbarkStudios/cargo-deny-action@f2d2f98857d524436b31aa639bac5edc10863b08
+    - uses: EmbarkStudios/cargo-deny-action@2a55392931cddc0ae1d7397515fd0951d39ebaf2
       with:
         command: check ${{ matrix.checks }}

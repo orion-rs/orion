@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2020-2021 The orion Developers
+// Copyright (c) 2020-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -60,6 +60,9 @@
 //! [BLAKE2b]: super::blake2::blake2b
 
 use crate::errors::UnknownCryptoError;
+
+#[cfg(feature = "safe_api")]
+use std::io;
 
 /// The blocksize for the hash function SHA256.
 pub const SHA256_BLOCKSIZE: usize = 64;
@@ -229,6 +232,48 @@ impl crate::hazardous::mac::hmac::HmacHashFunction for Sha256 {
     }
 }
 
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+/// Example: hashing from a [`Read`](std::io::Read)er with SHA256.
+/// ```rust
+/// use orion::{
+///     hazardous::hash::sha2::sha256::{Sha256, Digest},
+///     errors::UnknownCryptoError,
+/// };
+/// use std::io::{self, Read, Write};
+///
+/// // `reader` could also be a `File::open(...)?`.
+/// let mut reader = io::Cursor::new(b"some data");
+/// let mut hasher = Sha256::new();
+/// std::io::copy(&mut reader, &mut hasher)?;
+///
+/// let digest: Digest = hasher.finalize()?;
+///
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[cfg(feature = "safe_api")]
+impl io::Write for Sha256 {
+    /// Update the hasher's internal state with *all* of the bytes given.
+    /// If this function returns the `Ok` variant, it's guaranteed that it
+    /// will contain the length of the buffer passed to [`Write`](std::io::Write).
+    /// Note that this function is just a small wrapper over
+    /// [`Sha256::update`](crate::hazardous::hash::sha2::sha256::Sha256::update).
+    ///
+    /// ## Errors:
+    /// This function will only ever return the [`std::io::ErrorKind::Other`]()
+    /// variant when it returns an error. Additionally, this will always contain Orion's
+    /// [`UnknownCryptoError`](crate::errors::UnknownCryptoError) type.
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.update(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        Ok(bytes.len())
+    }
+
+    /// This type doesn't buffer writes, so flushing is a no-op.
+    fn flush(&mut self) -> Result<(), std::io::Error> {
+        Ok(())
+    }
+}
+
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -256,7 +301,8 @@ mod public {
 
         impl TestableStreamingContext<Digest> for Sha256 {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                Ok(self.reset())
+                self.reset();
+                Ok(())
             }
 
             fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
@@ -310,6 +356,26 @@ mod public {
             );
             test_runner.run_all_tests_property(&data);
             true
+        }
+    }
+
+    #[cfg(feature = "safe_api")]
+    mod test_io_impls {
+        use crate::hazardous::hash::sha2::sha256::Sha256;
+        use std::io::Write;
+
+        #[quickcheck]
+        fn prop_hasher_write_same_as_update(data: Vec<u8>) -> bool {
+            let mut hasher_a = Sha256::new();
+            let mut hasher_b = hasher_a.clone();
+
+            hasher_a.update(&data).unwrap();
+            hasher_b.write_all(&data).unwrap();
+
+            let hash_a = hasher_a.finalize().unwrap();
+            let hash_b = hasher_b.finalize().unwrap();
+
+            hash_a == hash_b
         }
     }
 }

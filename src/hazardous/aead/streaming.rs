@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2019-2021 The orion Developers
+// Copyright (c) 2019-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -58,6 +58,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::aead::streaming::*;
 //!
 //! let secret_key = SecretKey::generate();
@@ -82,6 +83,7 @@
 //!
 //! assert_eq!(tag, StreamTag::Message);
 //! assert_eq!(dst_out_pt.as_ref(), message);
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate
@@ -987,7 +989,7 @@ mod private {
         let mut s = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
         // Change MAC
         let macpos = cipher1.len() - 1;
-        cipher1[macpos] = 0b1010_1010 | cipher1[macpos];
+        cipher1[macpos] |= 0b1010_1010;
         assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
     }
 
@@ -1004,7 +1006,7 @@ mod private {
         // Reset state
         let mut s = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
         // Change something in the ciphertext
-        cipher1[5] = 0b1010_1010 | cipher1[5];
+        cipher1[5] |= 0b1010_1010;
         assert!(s.open_chunk(&cipher1, None, &mut plain_out1).is_err());
     }
 

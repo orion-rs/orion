@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2021 The orion Developers
+// Copyright (c) 2018-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -68,6 +68,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::aead;
 //!
 //! let secret_key = aead::chacha20poly1305::SecretKey::generate();
@@ -89,6 +90,7 @@
 //! aead::chacha20poly1305::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt.as_ref(), message.as_ref());
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate

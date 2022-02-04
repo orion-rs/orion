@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2021 The orion Developers
+// Copyright (c) 2018-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,7 @@ pub(crate) mod u64x4;
 /// # About:
 /// This function can be used to generate cryptographic keys, salts or other
 /// values that rely on strong randomness. Please note that most keys and other
-/// types used throughout orion, implement their own `generate()` function and
+/// types used throughout Orion, implement their own `generate()` function and
 /// it is strongly preferred to use those, compared to [`secure_rand_bytes()`].
 ///
 /// This uses [`getrandom`].
@@ -101,6 +101,7 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 ///
 /// # Example:
 /// ```rust
+/// # #[cfg(feature = "safe_api")] {
 /// use orion::util;
 ///
 /// let mut rnd_bytes = [0u8; 64];
@@ -108,6 +109,7 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
 ///
 /// util::secure_rand_bytes(&mut rnd_bytes)?;
 /// assert!(util::secure_cmp(&rnd_bytes, &[0u8; 64]).is_err());
+/// # }
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 pub fn secure_cmp(a: &[u8], b: &[u8]) -> Result<(), errors::UnknownCryptoError> {

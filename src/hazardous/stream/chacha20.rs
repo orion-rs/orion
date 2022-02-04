@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2021 The orion Developers
+// Copyright (c) 2018-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -66,6 +66,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::stream::chacha20;
 //!
 //! let secret_key = chacha20::SecretKey::generate();
@@ -85,6 +86,7 @@
 //! chacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt)?;
 //!
 //! assert_eq!(dst_out_pt, message);
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: chacha20::SecretKey::generate()
@@ -1046,7 +1048,7 @@ mod test_vectors {
 
     // Convenience function for testing.
     fn init(key: &[u8], nonce: &[u8]) -> Result<ChaCha20, UnknownCryptoError> {
-        Ok(ChaCha20::new(key, nonce, true)?)
+        ChaCha20::new(key, nonce, true)
     }
     #[test]
     fn rfc8439_chacha20_block_results() {

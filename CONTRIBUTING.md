@@ -41,12 +41,15 @@ Before submitting a pull request, please make sure you have done the following:
 - [ ] Ensure that all tests pass when running:
   
   - `cargo test`
-  - `cargo +nightly test --tests --no-default-features`
+  - `cargo +nightly test --no-default-features`
 
 - [ ] The formatting is correct and clippy does not show warnings by running:
 
   - `cargo clippy`
   - `cargo fmt`
+
+- [ ] If you have changed or added tests, you can make sure these also pass CI by checking:
+  - `cargo clippy --tests`
 
 - [ ] If the pull request is a bugfix, try to include a regression test for the bug.
 

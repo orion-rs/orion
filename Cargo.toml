@@ -1,11 +1,12 @@
 [package]
 name = "orion"
-version = "0.17.0" # Update html_root_url in lib.rs along with this.
+version = "0.17.1" # Update html_root_url in lib.rs along with this.
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Usable, easy and safe pure-Rust crypto"
 keywords = [ "cryptography", "crypto", "aead", "hash", "mac" ]
 categories = [ "cryptography", "no-std" ]
 edition = "2018"
+rust-version = "1.52" # Update CI test along with this.
 readme = "README.md"
 repository = "https://github.com/orion-rs/orion"
 documentation = "https://docs.rs/orion"
@@ -19,6 +20,7 @@ exclude = [
 [dependencies]
 subtle = { version = "^2.2.2", default-features = false }
 zeroize = { version = "1.1.0", default-features = false }
+fiat-crypto = {version = "0.1.11", default-features = false}
 getrandom = { version = "0.2.0", optional = true }
 ct-codecs = { version = "1.1.1", optional = true }
 

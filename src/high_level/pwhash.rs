@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2020-2021 The orion Developers
+// Copyright (c) 2020-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -372,7 +372,7 @@ impl_ct_partialeq_trait!(PasswordHash, unprotected_as_bytes);
 
 #[cfg(feature = "serde")]
 /// `PasswordHash` serializes as would a [`String`](std::string::String). Note that
-/// the serialized type likely does not have the same protections that orion
+/// the serialized type likely does not have the same protections that Orion
 /// provides, such as constant-time operations. A good rule of thumb is to only
 /// serialize these types for storage. Don't operate on the serialized types.
 impl Serialize for PasswordHash {
@@ -951,7 +951,7 @@ mod public {
             let mut salt_mod = dk.salt.as_ref().to_vec();
             salt_mod[0..16].copy_from_slice(&[0u8; 16]);
             let modified =
-                PasswordHash::from_slice(&dk.unprotected_as_bytes(), &salt_mod, 3, 4096).unwrap();
+                PasswordHash::from_slice(dk.unprotected_as_bytes(), &salt_mod, 3, 4096).unwrap();
 
             assert!(hash_password_verify(&modified, &password).is_err());
         }

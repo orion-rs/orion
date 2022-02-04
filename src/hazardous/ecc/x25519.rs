@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2021 The orion Developers
+// Copyright (c) 2021-2022 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,7 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::ecc::x25519::{PrivateKey, PublicKey, SharedKey, key_agreement};
 //! use core::convert::TryFrom;
 //!
@@ -55,15 +56,18 @@
 //! let bob_shared = key_agreement(&bob_sk, &alice_pk)?;
 //!
 //! assert_eq!(alice_shared, bob_shared);
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`PrivateKey::generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
 //! [`orion::kex`]: crate::kex
 
-use super::fiat_curve25519_u64;
 use crate::errors::UnknownCryptoError;
 use crate::util::secure_cmp;
 use core::ops::{Add, Mul, Sub};
+
+/// Formally verified Curve25519 field arithmetic from: <https://github.com/mit-plv/fiat-crypto>.
+use fiat_crypto::curve25519_64 as fiat_curve25519_u64;
 
 /// The size of a public key used in X25519.
 pub const PUBLIC_KEY_SIZE: usize = 32;
@@ -492,6 +496,7 @@ impl PublicKey {
 /// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
 /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
 /// ```rust
+/// # #[cfg(feature = "safe_api")] {
 /// use orion::hazardous::ecc::x25519::PrivateKey;
 ///
 /// // Initialize a secret key with random bytes.
@@ -502,6 +507,8 @@ impl PublicKey {
 ///
 /// // Secure, constant-time comparison with another SecretKey
 /// assert_ne!(secret_key, PrivateKey::generate());
+/// # }
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 #[derive(PartialEq)]
 pub struct PrivateKey {
