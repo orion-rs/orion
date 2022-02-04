@@ -1,176 +1,156 @@
 use crate::errors::UnknownCryptoError;
+use std::{convert::TryFrom, fmt, marker::PhantomData};
 
-/// This trait holds most of the behavior of types whose data are
-/// meant to be public. This is what users are expected to import
-/// in order to work with various Orion types that represent
-/// non-secret data.
-pub trait Public<D>: Sized {
-    /// Construct from a given byte slice.
-    ///
-    /// ## Errors
-    /// `UnknownCryptoError` will be returned if:
-    ///   - `slice` is empty
-    ///   - TODO: figure out how to express max length in the docs
-    fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError>;
+/// Marker trait for when a type contains some sensitive information.
+pub trait Secret {}
 
-    /// Return a byte slice representing the underlying data.
-    fn as_ref(&self) -> &[u8];
+/// Marker trait for when a type contains only non-sensitive information.
+/// Be careful if implementing this trait on your own. It cannot
+/// cause memory unsafety, and so is not marked `unsafe`. Implementing
+/// it can, however, lead to data types containing sensitive data ending
+/// up with APIs meant only for types containing only non-sensitive data.
+pub trait Public {}
 
-    /// Get the length of the underlying data in bytes.
-    fn len(&self) -> usize {
-        self.as_ref().len()
-    }
+/// A small trait containing static information about the minimum and
+/// maximum size (in bytes) of a type containing data.
+pub trait Bounded {
+    /// The largest number of bytes this type should be allowed to hold.
+    const MIN: Option<usize> = None;
 
-    /// Check if the length of the underlying data is 0.
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
+    /// The smallest number of bytes this type should be allowed to hold.
+    const MAX: Option<usize> = None;
 }
 
-/// This is a trait used to express the fact that a type can be interpreted
-/// as or converted from another type. It's used primarily to let us
-/// reinterpret simple wrappers over [`PublicArray`][0] as the `PublicArray`
-/// itself.
-///
-/// [0]: crate::hazardous::base::PublicArray
-pub trait Wrapper<T> {
-    /// This allows us to require that `Self` can return a reference to
-    /// the underlying `T`. It's functionally equivalent to `AsRef<T>`
-    fn data(&self) -> &T;
-
-    /// This allows us to require that `Self` can be constructed from
-    /// its underlying type without possibility of failure. It's
-    /// functionally equivalent to `From<T>`.
-    fn from(data: T) -> Self;
+/// A generic holder for types that are basically just a bag of bytes
+/// with extra semantic meaning and restriction on top. We parameterize
+/// over the byte storage with parameter `B`. We parameterize over the
+/// API-level semantics of the type with phantom type `K`.
+#[derive(Clone)]
+pub struct Data<B, K> {
+    bytes: B,
+    phantom: PhantomData<K>,
 }
 
-// TODO: Do we want to redefine Wrapper<T> as:
-// `trait Wrapper<T>: AsRef<T> + From<T> {}` ? It seems equivalent. If
-// we're going to use a macro to generate these `Wrapper` impls anyway, we
-// might as well just use the standard traits (?).
-
-/// `PublicArray` is a convenient type for storing public bytes in an array.
-/// It implements [`Public`](crate::hazardous::base::Public), so creating
-/// a newtype around it that also implements `Public` is fairly simple.
-///
-/// ```rust
-/// use orion::hazardous::base::{Public, PublicArray, Wrapper};
-///
-/// // Create a type that must be exactly 32 bytes long (32..=32).
-/// type ShaArray = PublicArray<32, 32>;
-/// struct ShaDigest(ShaArray);
-///
-/// // Implement Wrapper (only has to be imported for newtype creation).
-/// // This is the block we may want to have a macro derive for us.
-/// impl Wrapper<ShaArray> for ShaDigest {
-///     fn data(&self) -> &ShaArray { &self.0 }
-///     fn from(data: ShaArray) -> Self { Self(data) }
-/// }
-///
-/// // Thanks to an auto-impl, `ShaDigest` now implements `Public`.
-/// let digest = ShaDigest::from_slice(&[42; 32]);
-/// assert!(digest.is_ok());
-/// ```
-#[derive(Debug, Clone, PartialEq)]
-pub struct PublicArray<const MIN: usize, const MAX: usize> {
-    value: [u8; MAX],
-    original_length: usize,
-}
-
-impl<const MIN: usize, const MAX: usize> Public<Self> for PublicArray<MIN, MAX> {
-    fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        let slice_len = slice.len();
-
-        if !(MIN..=MAX).contains(&slice_len) {
+impl<'a, B, K> Data<B, K>
+where
+    B: TryFrom<&'a [u8], Error = UnknownCryptoError>,
+    K: Bounded,
+{
+    /// TODO
+    pub fn from_slice(slice: &'a [u8]) -> Result<Self, B::Error> {
+        let min = K::MIN.unwrap_or(0);
+        let max = K::MAX.unwrap_or(usize::MAX);
+        if slice.len() < min || slice.len() > max {
             return Err(UnknownCryptoError);
         }
 
-        let mut value = [0u8; MAX];
-        value[..slice_len].copy_from_slice(slice);
-
         Ok(Self {
-            value,
-            original_length: slice_len,
+            bytes: B::try_from(slice)?,
+            phantom: PhantomData,
         })
     }
-
-    fn as_ref(&self) -> &[u8] {
-        self.value.get(..self.original_length).unwrap()
-    }
 }
 
-/// Anything that can be converted to/from a `PublicArray` will
-/// implement `Public` thanks to this auto implementation. The
-/// ability to be converted to/from a PublicArray is expressed
-/// using the `PublicData<Data = PublicArray<_,_>` trait bound.
-impl<T, const MIN: usize, const MAX: usize> Public<PublicArray<MIN, MAX>> for T
+impl<'a, B, K> Data<B, K>
 where
-    T: Wrapper<PublicArray<MIN, MAX>>,
+    B: AsRef<[u8]>,
 {
-    fn from_slice(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
-        let a = PublicArray::from_slice(bytes)?;
-        Ok(Self::from(a))
+    /// Get the length of the contained byte slice.
+    pub fn len(&self) -> usize {
+        self.bytes.as_ref().len()
     }
 
+    /// Check if the contained byte slice is empty.
+    pub fn is_empty(&self) -> bool {
+        self.bytes.as_ref().is_empty()
+    }
+}
+
+impl<'a, B, K> AsRef<[u8]> for Data<B, K>
+where
+    B: AsRef<[u8]>,
+    K: Public,
+{
+    /// Get a reference to the underlying byte slice.
     fn as_ref(&self) -> &[u8] {
-        self.data().as_ref()
+        self.bytes.as_ref()
     }
 }
 
-/// `PublicVec` is a convenient type for storing public bytes in an `Vec`.
-/// It implements [`Public`](crate::hazardous::base::Public), so creating
-/// a newtype around it that also implements `Public` is fairly simple.
-///
-/// ```rust
-/// use orion::hazardous::base::{Public, PublicVec, Wrapper};
-///
-/// // Maybe you want your public key to be variable-sized.
-/// struct PublicKey(PublicVec);
-///
-/// // Implement Wrapper (only has to be imported for newtype creation).
-/// // This is the block we may want to have a macro derive for us.
-/// impl Wrapper<PublicVec> for PublicKey {
-///     fn data(&self) -> &PublicVec { &self.0 }
-///     fn from(data: PublicVec) -> Self { Self(data) }
-/// }
-///
-/// // Thanks to an auto-impl, `PublicKey` now implements `Public`.
-/// let digest = PublicKey::from_slice(&[42; 32]);
-/// assert!(digest.is_ok());
-/// ```
-#[derive(Debug, Clone, PartialEq)]
-pub struct PublicVec {
-    value: Vec<u8>,
-    original_length: usize,
+impl<'a, B, K> Data<B, K>
+where
+    B: AsRef<[u8]>,
+    K: Secret,
+{
+    /// TODO: Grab docs for `unprotected_as_bytes` and insert here.
+    pub fn unprotected_as_bytes(&self) -> &[u8] {
+        self.bytes.as_ref()
+    }
 }
 
-impl Public<Self> for PublicVec {
-    fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+// We implement this manually to skip over the PhantomData.
+impl<B, K> PartialEq for Data<B, K>
+where
+    B: PartialEq<B>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.bytes.eq(&other.bytes)
+    }
+}
+
+// We implement this manually to skip over the PhantomData.
+impl<B, K> fmt::Debug for Data<B, K>
+where
+    B: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.bytes.fmt(f)
+    }
+}
+
+/// A convenient type for holding data with a static upper bound on
+/// its size. The bytes are held with a static array.
+#[derive(Clone, Debug)]
+pub struct StaticData<const MAX: usize> {
+    bytes: [u8; MAX],
+    len: usize,
+}
+
+impl<const MAX: usize> TryFrom<&[u8]> for StaticData<MAX> {
+    type Error = UnknownCryptoError;
+
+    fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+        if slice.len() > MAX {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut bytes = [0u8; MAX];
+
+        // PANIC: This is ok because we just checked that the length
+        // was less than MAX above. Violating that condition is the
+        // only thing that would cause this to panic.
+        bytes
+            .get_mut(0..slice.len())
+            .unwrap()
+            .copy_from_slice(slice);
+
         Ok(Self {
-            value: Vec::from(slice),
-            original_length: slice.len(),
+            bytes,
+            len: slice.len(),
         })
     }
+}
 
+impl<const MAX: usize> AsRef<[u8]> for StaticData<MAX> {
     fn as_ref(&self) -> &[u8] {
-        self.value.get(..self.original_length).unwrap()
+        // PANIC: This unwrap is ok because the type's len is checked at
+        // construction time to be less than MAX.
+        self.bytes.get(..self.len).unwrap()
     }
 }
 
-/// Anything that can be converted to/from a `PublicVec` will
-/// implement `Public` thanks to this auto implementation. The
-/// ability to be converted to/from a PublicArray is expressed
-/// using the `Wrapper<PublicVec>` trait bound.
-impl<T> Public<PublicVec> for T
-where
-    T: Wrapper<PublicVec>,
-{
-    fn from_slice(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
-        let a = PublicVec::from_slice(bytes)?;
-        Ok(Self::from(a))
-    }
-
-    fn as_ref(&self) -> &[u8] {
-        self.data().as_ref()
+impl<const MAX: usize> PartialEq for StaticData<MAX> {
+    fn eq(&self, other: &Self) -> bool {
+        self.bytes.get(..self.len).eq(&other.bytes.get(..other.len))
     }
 }
