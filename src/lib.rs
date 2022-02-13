@@ -113,6 +113,9 @@ pub use high_level::kdf;
 #[cfg(feature = "safe_api")]
 pub use high_level::kex;
 
+#[cfg(feature = "safe_api")]
+pub use hazardous::base::Data;
+
 #[doc(hidden)]
 /// Testing framework.
 pub mod test_framework;

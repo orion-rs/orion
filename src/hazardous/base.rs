@@ -21,32 +21,126 @@ pub trait Bounded {
     const MAX: Option<usize> = None;
 }
 
-/// A generic holder for types that are basically just a bag of bytes
-/// with extra semantic meaning and restriction on top. We parameterize
-/// over the byte storage with parameter `B`. We parameterize over the
-/// API-level semantics of the type with phantom type `K`.
-#[derive(Clone)]
-pub struct Data<B, K> {
-    bytes: B,
-    phantom: PhantomData<K>,
+/// A trait to express the fact that a type can be (validly) generated
+/// from secure random bytes, and the length of that generated type.
+///
+/// Note that `Data<B, C>` implements `Default` if and only if
+/// `C` implements  
+pub trait Generate: Bounded {
+    /// The size in bytes of the type when generated randomly. Note that
+    /// it is a logical error for `SIZE` to be less than
+    /// `<Self as Bounded>::MIN` or `<Self as Bounded>::MAX`.
+    const SIZE: usize;
 }
 
-impl<'a, B, K> Data<B, K>
+/// A generic holder for types that are basically just a bag of bytes
+/// with extra semantic meaning and restriction on top. There are two
+/// important type parameters to consider:
+///
+/// ## Parameter: `B` (bytes)
+/// `B` parameterizes over the **byte storage**. In practice, this is
+/// either a [`ArrayData`][a] or [`VecData`][b]. This allows us
+/// to implement methods on any type that can be converted from
+/// or interpreted as a `&[u8]`. This makes it possible to add
+/// compatibility with, for example, the [`Bytes`][c] type for
+/// zero-copy creation of cryptographic types arriving from the network.
+///
+/// TODO: Add example showing how we can use different byte storages.
+///
+/// ## Parameter: `C` (context)
+/// `C` parameterizes over the **context** of the data. Primarily,
+/// this allows us to leverage the type system to protect against
+/// misuse of keys (e.g. using one key for two different primitives).
+/// In practice, `C` will be a unit struct named after an intended
+/// use of the data, such as `chacha::KeyContext`. This will prevent
+/// its use in a function that requires instead `aes::KeyContext`.
+///
+/// TODO: Add example showing how we cannnot misuse two Data types
+/// with different `C` (context) types.
+///
+/// ```rust
+/// use orion::hazardous::base::{Bounded, Data, Generate};
+///
+/// // Let's say you hypothetically had keys of two different types:
+/// // AES and DES secret keys. (Please don't use DES for anything real.)
+/// struct DesContext;
+/// struct AesContext;
+///
+/// impl Bounded for DesContext {
+///     const MIN: usize = 32;
+///     const MAX: usize = 32;
+/// }
+///
+/// impl Bounded for AesContext {
+///     const MIN: usize = 32;
+///     const MAX: usize = 32;
+/// }
+///
+/// impl Generate for DesContext {
+///     const SIZE: usize = 32;
+/// }
+///
+/// impl Generate for AesContext {
+///     const SIZE: usize = 32;
+/// }
+///
+/// let des_key0: Data<Vec<u8>, DesContext> = Data::default();
+/// let des_key1: Data<Vec<u8>, DesContext> = Data::default();
+///
+/// let aes_key0: Data<Vec<u8>, AesContext> = Data::default();
+/// let aes_key1: Data<Vec<u8>, AesContext> = Data::default();
+///
+/// // We can compare two DES keys.
+/// assert_eq!(&des_key0, &des_key0);
+/// assert_ne!(&des_key0, &des_key1);
+///
+/// // We can compare two DES keys.
+/// assert_eq!(&aes_key0, &aes_key0);
+/// assert_ne!(&aes_key0, &aes_key1);
+///
+/// // The below code will not compile. This is a good thing. Reusing
+/// // keys in different contexts is not only incorrect; it can be
+/// // disastrous cryptographically, and can even end up revealing
+/// // the secret keys themselves.
+/// //
+/// // Will error:
+/// // assert_eq!(&aes_key0, &des_key0);
+/// ```
+///
+/// [a]: crate::hazardous::base::ArrayData
+/// [b]: crate::hazardous::base::VecData
+/// [c]: https://docs.rs/bytes/latest/bytes/struct.Bytes.html
+///
+pub struct Data<B, C> {
+    bytes: B,
+    context: PhantomData<C>,
+}
+
+impl<'a, B, C> Data<B, C>
 where
     B: TryFrom<&'a [u8], Error = UnknownCryptoError>,
-    K: Bounded,
+    C: Bounded,
 {
-    /// TODO
+    /// Create `Data` from a byte slice. Only available when the context
+    /// type parameter is [`Bounded`](crate::hazardous::base::Bounded).
+    ///
+    /// ## Errors
+    /// This function will return an error if:
+    ///   - The length of the given `slice` is not contained by the range
+    ///     specified by `<C as Bounded>::MIN` and `<C as Bounded>::MAX`).
+    ///   - The underlying storage type did not have capacity to hold the
+    ///     given slice. In practice, this condition is usually a subset
+    ///     of the above and does not need to be considered separately.
     pub fn from_slice(slice: &'a [u8]) -> Result<Self, B::Error> {
-        let min = K::MIN.unwrap_or(0);
-        let max = K::MAX.unwrap_or(usize::MAX);
-        if slice.len() < min || slice.len() > max {
+        let min = C::MIN.unwrap_or(0);
+        let max = C::MAX.unwrap_or(usize::MAX);
+        if !(min..=max).contains(&slice.len()) {
             return Err(UnknownCryptoError);
         }
 
         Ok(Self {
             bytes: B::try_from(slice)?,
-            phantom: PhantomData,
+            context: PhantomData,
         })
     }
 }
@@ -109,14 +203,14 @@ where
 }
 
 /// A convenient type for holding data with a static upper bound on
-/// its size. The bytes are held with a static array.
+/// its size. The bytes are held with a static array (`[u8; MAX]`).
 #[derive(Clone, Debug)]
-pub struct StaticData<const MAX: usize> {
+pub struct ArrayData<const MAX: usize> {
     bytes: [u8; MAX],
     len: usize,
 }
 
-impl<const MAX: usize> TryFrom<&[u8]> for StaticData<MAX> {
+impl<const MAX: usize> TryFrom<&[u8]> for ArrayData<MAX> {
     type Error = UnknownCryptoError;
 
     fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
@@ -141,7 +235,7 @@ impl<const MAX: usize> TryFrom<&[u8]> for StaticData<MAX> {
     }
 }
 
-impl<const MAX: usize> AsRef<[u8]> for StaticData<MAX> {
+impl<const MAX: usize> AsRef<[u8]> for ArrayData<MAX> {
     fn as_ref(&self) -> &[u8] {
         // PANIC: This unwrap is ok because the type's len is checked at
         // construction time to be less than MAX.
@@ -149,8 +243,16 @@ impl<const MAX: usize> AsRef<[u8]> for StaticData<MAX> {
     }
 }
 
-impl<const MAX: usize> PartialEq for StaticData<MAX> {
+impl<const MAX: usize> PartialEq for ArrayData<MAX> {
     fn eq(&self, other: &Self) -> bool {
         self.bytes.get(..self.len).eq(&other.bytes.get(..other.len))
     }
+}
+
+/// A convenient type for holding data with a dynamic upper bound on
+/// its size. The bytes are held with a `Vec<u8>`.
+#[derive(Clone, Debug)]
+pub struct VecData<const MAX: usize> {
+    bytes: Vec<u8>,
+    len: usize,
 }
