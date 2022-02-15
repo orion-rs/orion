@@ -213,6 +213,6 @@ jobs:
     - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
       with:
         persist-credentials: false
-    - uses: EmbarkStudios/cargo-deny-action@2a55392931cddc0ae1d7397515fd0951d39ebaf2
+    - uses: EmbarkStudios/cargo-deny-action@8acbae97b5d01b0481ae14cee8fcd8f5aa9e374d
       with:
         command: check ${{ matrix.checks }}
