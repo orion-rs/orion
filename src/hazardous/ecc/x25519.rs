@@ -224,18 +224,13 @@ impl FieldElement {
     ///
     /// Ref: https://github.com/golang/crypto/blob/0c34fe9e7dc2486962ef9867e3edb3503537209f/curve25519/curve25519_generic.go#L718
     fn invert(&mut self) {
-        let mut t0: FieldElement;
-        let mut t1: FieldElement;
-        let mut t2: FieldElement;
-        let mut t3: FieldElement;
-
-        t0 = self.square();
-        t1 = t0.square();
+        let mut t0 = self.square();
+        let mut t1 = t0.square();
         t1 = t1.square();
 
         t1 = *self * t1;
         t0 = t0 * t1;
-        t2 = t0.square();
+        let mut t2 = t0.square();
 
         t1 = t1 * t2;
         t2 = t1.square();
@@ -248,7 +243,7 @@ impl FieldElement {
             t2 = t2.square();
         }
         t2 = t2 * t1;
-        t3 = t2.square();
+        let mut t3 = t2.square();
         for _ in 1..20 {
             t3 = t3.square();
         }
