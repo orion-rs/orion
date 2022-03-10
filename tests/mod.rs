@@ -118,7 +118,7 @@ impl TestCaseReader {
 
         // If `data` is a string quoted with '"', remove quotes.
         if data.contains('\'') || data.contains('\"') {
-            data.replace("\"", "").as_bytes().to_vec()
+            data.replace('\"', "").as_bytes().to_vec()
         } else {
             match data {
                 // This is the special case where decoding "00" doesn't give an empty array
