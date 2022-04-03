@@ -1,3 +1,96 @@
+//! ## Parameter: `B` (bytes)
+//! `B` parameterizes over the **byte storage**. In practice, this is
+//! either an [`ArrayData`][a] or [`VecData`][b]. This allows us
+//! to implement methods on any type that can be converted from
+//! or interpreted as a `&[u8]`. This also makes it possible to add
+//! compatibility with, for example, the [`Bytes`][c] type for
+//! zero-copy creation of cryptographic types arriving from the network.
+//!
+//! TODO: Add example showing how we can use different byte storages.
+//!
+//! ## Parameter: `C` (context)
+//! `C` parameterizes over the **context** of the data. Primarily,
+//! this allows us to leverage the type system to protect against
+//! misuse of keys (e.g. using one key for two different primitives).
+//! In practice, `C` will be a unit struct named after an intended
+//! use of the data, such as `chacha::Key`. This will prevent
+//! its use in a function that requires instead `aes::Key`.
+//!
+//! The following example demonstrates how we can leverage the type
+//! system and the concept of "contexts" to quickly create types
+//! that implement the functionality we want from byte storage objects,
+//! but are still logically separate from each other and, in that way,
+//! "misuse-resistant".
+//! ```rust
+//! use orion::hazardous::base::{
+//!     Bounded, Generate, NamedContext,
+//!     SecretData, VecData
+//! };
+//!
+//! // Let's say you hypothetically had keys of two different types:
+//! // AES and Ed25519 secret keys.
+//! struct AesContext;
+//! struct EdContext;
+//!
+//! const KEY_SIZE: usize = 32;
+//!
+//! impl Bounded for AesContext {
+//!     const MIN: usize = KEY_SIZE;
+//!     const MAX: usize = KEY_SIZE;
+//! }
+//!
+//! impl Bounded for EdContext {
+//!     const MIN: usize = KEY_SIZE;
+//!     const MAX: usize = KEY_SIZE;
+//! }
+//!
+//! impl Generate for AesContext {
+//!     const GEN_SIZE: usize = KEY_SIZE;
+//! }
+//!
+//! impl Generate for EdContext {
+//!     const GEN_SIZE: usize = KEY_SIZE;
+//! }
+//!
+//! impl NamedContext for AesContext {
+//!     const NAME: &'static str = "AesContext";
+//! }
+//!
+//! impl NamedContext for EdContext {
+//!     const NAME: &'static str = "EdContext";
+//! }
+//!
+//! type AesSecretKey = SecretData<VecData, AesContext>;
+//! type EdSecretKey = SecretData<VecData, EdContext>;
+//!
+//! let aes_key0 = AesSecretKey::default();
+//! let aes_key1 = AesSecretKey::default();
+//!
+//! let ed_key0 = EdSecretKey::default();
+//! let ed_key1 = EdSecretKey::default();
+//!
+//! // We can compare two Ed25519 keys.
+//! assert_eq!(&ed_key0, &ed_key0);
+//! assert_ne!(&ed_key0, &ed_key1);
+//!
+//! // We can compare two AES keys.
+//! assert_eq!(&aes_key0, &aes_key0);
+//! assert_ne!(&aes_key0, &aes_key1);
+//!
+//! // The below code will NOT compile. This is a good thing. Reusing
+//! // keys in different contexts is not only incorrect; it can be
+//! // disastrous cryptographically, and can even end up revealing
+//! // the secret keys themselves.
+//! //
+//! // Will error:
+//! // assert_eq!(&aes_key0, &des_key0);
+//! ```
+//!
+//! [a]: crate::hazardous::base::ArrayData
+//! [b]: crate::hazardous::base::VecData
+//! [c]: https://docs.rs/bytes/latest/bytes/struct.Bytes.html
+//!
+
 use crate::errors::UnknownCryptoError;
 use core::{convert::TryFrom, marker::PhantomData};
 
@@ -13,92 +106,6 @@ pub struct PublicData<B, C> {
 
 /// A simple container for bytes that contain sensitive information,
 /// such as secret keys.
-///
-/// ## Parameter: `B` (bytes)
-/// `B` parameterizes over the **byte storage**. In practice, this is
-/// either an [`ArrayData`][a] or [`VecData`][b]. This allows us
-/// to implement methods on any type that can be converted from
-/// or interpreted as a `&[u8]`. This also makes it possible to add
-/// compatibility with, for example, the [`Bytes`][c] type for
-/// zero-copy creation of cryptographic types arriving from the network.
-///
-/// TODO: Add example showing how we can use different byte storages.
-///
-/// ## Parameter: `C` (context)
-/// `C` parameterizes over the **context** of the data. Primarily,
-/// this allows us to leverage the type system to protect against
-/// misuse of keys (e.g. using one key for two different primitives).
-/// In practice, `C` will be a unit struct named after an intended
-/// use of the data, such as `chacha::KeyContext`. This will prevent
-/// its use in a function that requires instead `aes::KeyContext`.
-///
-/// TODO: Add example showing how we cannnot misuse two Data types
-/// with different `C` (context) types.
-///
-/// ```rust
-/// use orion::hazardous::base::{
-///     Bounded, Generate, NamedContext,
-///     SecretData, VecData
-/// };
-///
-/// // Let's say you hypothetically had keys of two different types:
-/// // AES and Ed25519 secret keys.
-/// struct AesContext;
-/// struct EdContext;
-///
-/// impl Bounded for AesContext {
-///     const MIN: usize = 32;
-///     const MAX: usize = 32;
-/// }
-///
-/// impl Bounded for EdContext {
-///     const MIN: usize = 32;
-///     const MAX: usize = 32;
-/// }
-///
-/// impl Generate for AesContext {
-///     const GEN_SIZE: usize = 32;
-/// }
-///
-/// impl Generate for EdContext {
-///     const GEN_SIZE: usize = 32;
-/// }
-///
-/// impl NamedContext for AesContext {
-///     const NAME: &'static str = "AesContext";
-/// }
-///
-/// impl NamedContext for EdContext {
-///     const NAME: &'static str = "EdContext";
-/// }
-///
-/// let ed_key0: SecretData<VecData, EdContext> = SecretData::default();
-/// let ed_key1: SecretData<VecData, EdContext> = SecretData::default();
-///
-/// let aes_key0: SecretData<VecData, AesContext> = SecretData::default();
-/// let aes_key1: SecretData<VecData, AesContext> = SecretData::default();
-///
-/// // We can compare two Ed25519 keys.
-/// assert_eq!(&ed_key0, &ed_key0);
-/// assert_ne!(&ed_key0, &ed_key1);
-///
-/// // We can compare two AES keys.
-/// assert_eq!(&aes_key0, &aes_key0);
-/// assert_ne!(&aes_key0, &aes_key1);
-///
-/// // The below code will not compile. This is a good thing. Reusing
-/// // keys in different contexts is not only incorrect; it can be
-/// // disastrous cryptographically, and can even end up revealing
-/// // the secret keys themselves.
-/// //
-/// // Will error:
-/// // assert_eq!(&aes_key0, &des_key0);
-/// ```
-///
-/// [a]: crate::hazardous::base::ArrayData
-/// [b]: crate::hazardous::base::VecData
-/// [c]: https://docs.rs/bytes/latest/bytes/struct.Bytes.html
-///
 pub struct SecretData<B, C> {
     bytes: B,
     context: PhantomData<C>,
@@ -195,7 +202,7 @@ where
     }
 }
 
-impl<'a, B, C> PublicData<B, C>
+impl<B, C> PublicData<B, C>
 where
     B: AsRef<[u8]>,
 {
@@ -210,7 +217,7 @@ where
     }
 }
 
-impl<'a, B, C> SecretData<B, C>
+impl<B, C> SecretData<B, C>
 where
     B: AsRef<[u8]>,
 {
@@ -225,7 +232,7 @@ where
     }
 }
 
-impl<'a, B, K> AsRef<[u8]> for PublicData<B, K>
+impl<B, K> AsRef<[u8]> for PublicData<B, K>
 where
     B: AsRef<[u8]>,
 {
@@ -235,7 +242,7 @@ where
     }
 }
 
-impl<'a, B, C> SecretData<B, C>
+impl<B, C> SecretData<B, C>
 where
     B: AsRef<[u8]>,
 {
@@ -246,7 +253,7 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-impl<'a, B, C> Default for PublicData<B, C>
+impl<B, C> Default for PublicData<B, C>
 where
     B: TryFromBytes,
     C: Bounded + Generate,
@@ -268,7 +275,7 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-impl<'a, B, C> Default for SecretData<B, C>
+impl<B, C> Default for SecretData<B, C>
 where
     B: TryFromBytes,
     C: Bounded + Generate,
@@ -344,7 +351,6 @@ where
     }
 }
 
-// We implement this manually to skip over the PhantomData.
 impl<B, C> PartialEq<[u8]> for SecretData<B, C>
 where
     B: AsRef<[u8]>,
@@ -355,7 +361,6 @@ where
     }
 }
 
-// We implement this manually to skip over the PhantomData.
 #[cfg(feature = "safe_api")]
 impl<B, C> fmt::Debug for PublicData<B, C>
 where
