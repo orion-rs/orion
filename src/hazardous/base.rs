@@ -1,47 +1,21 @@
 use crate::errors::UnknownCryptoError;
 use std::{convert::TryFrom, fmt, marker::PhantomData};
 
-/// Marker trait for when a type contains some sensitive information.
-pub trait Secret {}
-
-/// Marker trait for when a type contains only non-sensitive information.
-/// Be careful if implementing this trait on your own. It cannot
-/// cause memory unsafety, and so is not marked `unsafe`. Implementing
-/// it can, however, lead to data types containing sensitive data ending
-/// up with APIs meant only for types containing only non-sensitive data.
-pub trait Public {}
-
-/// A small trait containing static information about the minimum and
-/// maximum size (in bytes) of a type containing data.
-pub trait Bounded {
-    /// The largest number of bytes this type should be allowed to hold.
-    const MIN: Option<usize> = None;
-
-    /// The smallest number of bytes this type should be allowed to hold.
-    const MAX: Option<usize> = None;
+/// A simple container for bytes that are considered non-sensitive,
+/// such as message authentication codes (MACs).
+pub struct PublicData<B, C> {
+    bytes: B,
+    context: PhantomData<C>,
 }
 
-/// A trait to express the fact that a type can be (validly) generated
-/// from secure random bytes, and the length of that generated type.
-///
-/// Note that `Data<B, C>` implements `Default` if and only if
-/// `C` implements  
-pub trait Generate: Bounded {
-    /// The size in bytes of the type when generated randomly. Note that
-    /// it is a logical error for `SIZE` to be less than
-    /// `<Self as Bounded>::MIN` or `<Self as Bounded>::MAX`.
-    const SIZE: usize;
-}
-
-/// A generic holder for types that are basically just a bag of bytes
-/// with extra semantic meaning and restriction on top. There are two
-/// important type parameters to consider:
+/// A simple container for bytes that contain sensitive information,
+/// such as secret keys.
 ///
 /// ## Parameter: `B` (bytes)
 /// `B` parameterizes over the **byte storage**. In practice, this is
-/// either a [`ArrayData`][a] or [`VecData`][b]. This allows us
+/// either an [`ArrayData`][a] or [`VecData`][b]. This allows us
 /// to implement methods on any type that can be converted from
-/// or interpreted as a `&[u8]`. This makes it possible to add
+/// or interpreted as a `&[u8]`. This also makes it possible to add
 /// compatibility with, for example, the [`Bytes`][c] type for
 /// zero-copy creation of cryptographic types arriving from the network.
 ///
@@ -59,42 +33,53 @@ pub trait Generate: Bounded {
 /// with different `C` (context) types.
 ///
 /// ```rust
-/// use orion::hazardous::base::{Bounded, Data, Generate};
+/// use orion::hazardous::base::{
+///     Bounded, Generate, NamedContext,
+///     SecretData, VecData
+/// };
 ///
 /// // Let's say you hypothetically had keys of two different types:
-/// // AES and DES secret keys. (Please don't use DES for anything real.)
-/// struct DesContext;
+/// // AES and Ed25519 secret keys.
 /// struct AesContext;
-///
-/// impl Bounded for DesContext {
-///     const MIN: usize = 32;
-///     const MAX: usize = 32;
-/// }
+/// struct EdContext;
 ///
 /// impl Bounded for AesContext {
-///     const MIN: usize = 32;
-///     const MAX: usize = 32;
+///     const MIN: Option<usize> = Some(32);
+///     const MAX: Option<usize> = Some(32);
 /// }
 ///
-/// impl Generate for DesContext {
-///     const SIZE: usize = 32;
+/// impl Bounded for EdContext {
+///     const MIN: Option<usize> = Some(32);
+///     const MAX: Option<usize> = Some(32);
 /// }
 ///
 /// impl Generate for AesContext {
-///     const SIZE: usize = 32;
+///     const GEN_SIZE: usize = 32;
 /// }
 ///
-/// let des_key0: Data<Vec<u8>, DesContext> = Data::default();
-/// let des_key1: Data<Vec<u8>, DesContext> = Data::default();
+/// impl Generate for EdContext {
+///     const GEN_SIZE: usize = 32;
+/// }
 ///
-/// let aes_key0: Data<Vec<u8>, AesContext> = Data::default();
-/// let aes_key1: Data<Vec<u8>, AesContext> = Data::default();
+/// impl NamedContext for AesContext {
+///     const NAME: &'static str = "AesContext";
+/// }
 ///
-/// // We can compare two DES keys.
-/// assert_eq!(&des_key0, &des_key0);
-/// assert_ne!(&des_key0, &des_key1);
+/// impl NamedContext for EdContext {
+///     const NAME: &'static str = "EdContext";
+/// }
 ///
-/// // We can compare two DES keys.
+/// let ed_key0: SecretData<VecData, EdContext> = SecretData::default();
+/// let ed_key1: SecretData<VecData, EdContext> = SecretData::default();
+///
+/// let aes_key0: SecretData<VecData, AesContext> = SecretData::default();
+/// let aes_key1: SecretData<VecData, AesContext> = SecretData::default();
+///
+/// // We can compare two Ed25519 keys.
+/// assert_eq!(&ed_key0, &ed_key0);
+/// assert_ne!(&ed_key0, &ed_key1);
+///
+/// // We can compare two AES keys.
 /// assert_eq!(&aes_key0, &aes_key0);
 /// assert_ne!(&aes_key0, &aes_key1);
 ///
@@ -111,17 +96,54 @@ pub trait Generate: Bounded {
 /// [b]: crate::hazardous::base::VecData
 /// [c]: https://docs.rs/bytes/latest/bytes/struct.Bytes.html
 ///
-pub struct Data<B, C> {
+pub struct SecretData<B, C> {
     bytes: B,
     context: PhantomData<C>,
 }
 
-impl<'a, B, C> Data<B, C>
+/// A small trait containing static information about the minimum and
+/// maximum size (in bytes) of a type containing data.
+pub trait Bounded {
+    /// The largest number of bytes this type should be allowed to hold.
+    const MIN: Option<usize> = None;
+
+    /// The smallest number of bytes this type should be allowed to hold.
+    const MAX: Option<usize> = None;
+}
+
+/// A trait to express the fact that a type can be (validly) generated
+/// from secure random bytes, and the length of that generated type.
+///
+/// Note that `PublicData<B, C>` and `PrivateData<B, C>` implement
+/// `Default` if and only if `C` implements `Generate`.
+pub trait Generate: Bounded {
+    /// The size in bytes of the type when generated randomly. Note that
+    /// it is a logical error for `SIZE` to be less than
+    /// `<Self as Bounded>::MIN` or `<Self as Bounded>::MAX`.
+    const GEN_SIZE: usize;
+}
+
+/// A trait to give contexts a name. Used in Debug impls.
+pub trait NamedContext {
+    /// The type name that will appear in Debug impls.
+    const NAME: &'static str;
+}
+
+/// A stricter version of `TryFrom<&[u8]>`. By implementing this trait for
+/// a type `T`, we prove to the compiler that an *owned* `T` can be
+/// generated from a byte slice, versus `TryFrom<&[u8]>` which may be
+/// implemented even if the type holds a reference to the slice.
+pub trait TryFromBytes: Sized {
+    /// Convert from a byte slice to an owned `Data`.
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError>;
+}
+
+impl<B, C> PublicData<B, C>
 where
-    B: TryFrom<&'a [u8], Error = UnknownCryptoError>,
+    B: TryFromBytes,
     C: Bounded,
 {
-    /// Create `Data` from a byte slice. Only available when the context
+    /// Create a `PublicData` from a byte slice. Only available when the context
     /// type parameter is [`Bounded`](crate::hazardous::base::Bounded).
     ///
     /// ## Errors
@@ -131,7 +153,7 @@ where
     ///   - The underlying storage type did not have capacity to hold the
     ///     given slice. In practice, this condition is usually a subset
     ///     of the above and does not need to be considered separately.
-    pub fn from_slice(slice: &'a [u8]) -> Result<Self, B::Error> {
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         let min = C::MIN.unwrap_or(0);
         let max = C::MAX.unwrap_or(usize::MAX);
         if !(min..=max).contains(&slice.len()) {
@@ -139,13 +161,42 @@ where
         }
 
         Ok(Self {
-            bytes: B::try_from(slice)?,
+            bytes: B::try_from_bytes(slice)?,
             context: PhantomData,
         })
     }
 }
 
-impl<'a, B, K> Data<B, K>
+impl<B, C> SecretData<B, C>
+where
+    B: TryFromBytes,
+    C: Bounded,
+{
+    /// Create a `PrivateData` from a byte slice. Only available when the context
+    /// type parameter is [`Bounded`](crate::hazardous::base::Bounded).
+    ///
+    /// ## Errors
+    /// This function will return an error if:
+    ///   - The length of the given `slice` is not contained by the range
+    ///     specified by `<C as Bounded>::MIN` and `<C as Bounded>::MAX`).
+    ///   - The underlying storage type did not have capacity to hold the
+    ///     given slice. In practice, this condition is usually a subset
+    ///     of the above and does not need to be considered separately.
+    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        let min = C::MIN.unwrap_or(0);
+        let max = C::MAX.unwrap_or(usize::MAX);
+        if !(min..=max).contains(&slice.len()) {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok(Self {
+            bytes: B::try_from_bytes(slice)?,
+            context: PhantomData,
+        })
+    }
+}
+
+impl<'a, B, C> PublicData<B, C>
 where
     B: AsRef<[u8]>,
 {
@@ -160,10 +211,24 @@ where
     }
 }
 
-impl<'a, B, K> AsRef<[u8]> for Data<B, K>
+impl<'a, B, C> SecretData<B, C>
 where
     B: AsRef<[u8]>,
-    K: Public,
+{
+    /// Get the length of the contained byte slice.
+    pub fn len(&self) -> usize {
+        self.bytes.as_ref().len()
+    }
+
+    /// Check if the contained byte slice is empty.
+    pub fn is_empty(&self) -> bool {
+        self.bytes.as_ref().is_empty()
+    }
+}
+
+impl<'a, B, K> AsRef<[u8]> for PublicData<B, K>
+where
+    B: AsRef<[u8]>,
 {
     /// Get a reference to the underlying byte slice.
     fn as_ref(&self) -> &[u8] {
@@ -171,10 +236,9 @@ where
     }
 }
 
-impl<'a, B, K> Data<B, K>
+impl<'a, B, C> SecretData<B, C>
 where
     B: AsRef<[u8]>,
-    K: Secret,
 {
     /// TODO: Grab docs for `unprotected_as_bytes` and insert here.
     pub fn unprotected_as_bytes(&self) -> &[u8] {
@@ -182,8 +246,80 @@ where
     }
 }
 
+impl<'a, B, C> Default for PublicData<B, C>
+where
+    B: TryFromBytes,
+    C: Bounded + Generate,
+{
+    /// Use a CSPRNG to fill this type with secure random bytes.
+    ///
+    /// # Panic
+    /// This will panic if the underyling call to
+    /// [`secure_rand_bytes`](crate::util::secure_rand_bytes) fails;
+    /// see its documentation for more info.
+    fn default() -> Self {
+        let mut data = vec![0u8; C::GEN_SIZE];
+        crate::util::secure_rand_bytes(&mut data).unwrap();
+        Self {
+            bytes: B::try_from_bytes(data.as_slice()).unwrap(),
+            context: PhantomData,
+        }
+    }
+}
+
+impl<'a, B, C> Default for SecretData<B, C>
+where
+    B: TryFromBytes,
+    C: Bounded + Generate,
+{
+    /// Use a CSPRNG to fill this type with secure random bytes.
+    ///
+    /// # Panic
+    /// This will panic if the underyling call to
+    /// [`secure_rand_bytes`](crate::util::secure_rand_bytes) fails;
+    /// see its documentation for more info.
+    fn default() -> Self {
+        let mut data = vec![0u8; C::GEN_SIZE];
+        crate::util::secure_rand_bytes(&mut data).unwrap();
+        Self {
+            bytes: B::try_from_bytes(data.as_slice()).unwrap(),
+            context: PhantomData,
+        }
+    }
+}
+
+/// Delegates to [`B::from_bytes`](crate::hazardous::base::TryFromBytes) under the hood.
+impl<B, C> TryFrom<&[u8]> for PublicData<B, C>
+where
+    B: TryFromBytes,
+{
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        Ok(Self {
+            bytes: B::try_from_bytes(value).unwrap(),
+            context: PhantomData,
+        })
+    }
+}
+
+/// Delegates to [`B::from_bytes`](crate::hazardous::base::TryFromBytes) under the hood.
+impl<B, C> TryFrom<&[u8]> for SecretData<B, C>
+where
+    B: TryFromBytes,
+{
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        Ok(Self {
+            bytes: B::try_from_bytes(value).unwrap(),
+            context: PhantomData,
+        })
+    }
+}
+
 // We implement this manually to skip over the PhantomData.
-impl<B, K> PartialEq for Data<B, K>
+impl<B, C> PartialEq for PublicData<B, C>
 where
     B: PartialEq<B>,
 {
@@ -193,12 +329,50 @@ where
 }
 
 // We implement this manually to skip over the PhantomData.
-impl<B, K> fmt::Debug for Data<B, K>
+// TODO: Should this be less general? Maybe only implement
+// PartialEq<&Self> instead of any U: AsRef<u8>.
+impl<B, C> PartialEq for SecretData<B, C>
+where
+    B: AsRef<[u8]>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        use subtle::ConstantTimeEq;
+        self.unprotected_as_bytes()
+            .ct_eq(other.unprotected_as_bytes())
+            .into()
+    }
+}
+
+// We implement this manually to skip over the PhantomData.
+impl<B, C> PartialEq<[u8]> for SecretData<B, C>
+where
+    B: AsRef<[u8]>,
+{
+    fn eq(&self, other: &[u8]) -> bool {
+        use subtle::ConstantTimeEq;
+        self.unprotected_as_bytes().ct_eq(other).into()
+    }
+}
+
+// We implement this manually to skip over the PhantomData.
+impl<B, C> fmt::Debug for PublicData<B, C>
 where
     B: fmt::Debug,
+    C: NamedContext,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.bytes.fmt(f)
+        write!(f, "{{ {}: {:?} }}", C::NAME, self.bytes)
+    }
+}
+
+// We implement this manually to skip over the PhantomData.
+impl<B, C> fmt::Debug for SecretData<B, C>
+where
+    B: fmt::Debug,
+    C: NamedContext,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{ {}: {:?} }}", C::NAME, self.bytes)
     }
 }
 
@@ -210,10 +384,8 @@ pub struct ArrayData<const MAX: usize> {
     len: usize,
 }
 
-impl<const MAX: usize> TryFrom<&[u8]> for ArrayData<MAX> {
-    type Error = UnknownCryptoError;
-
-    fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+impl<const MAX: usize> TryFromBytes for ArrayData<MAX> {
+    fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() > MAX {
             return Err(UnknownCryptoError);
         }
@@ -243,16 +415,39 @@ impl<const MAX: usize> AsRef<[u8]> for ArrayData<MAX> {
     }
 }
 
+// NOTE: Using non-constant-time comparison here is okay becuase we don't use
+// it for timing-sensitive comparisons. `VecData` is always wrapped in a `Data`
+// struct which, when its "context" type parameter is marked as `Private`, will
+// implement comparisons using constant-time operations.
 impl<const MAX: usize> PartialEq for ArrayData<MAX> {
     fn eq(&self, other: &Self) -> bool {
         self.bytes.get(..self.len).eq(&other.bytes.get(..other.len))
     }
 }
 
-/// A convenient type for holding data with a dynamic upper bound on
-/// its size. The bytes are held with a `Vec<u8>`.
-#[derive(Clone, Debug)]
-pub struct VecData<const MAX: usize> {
+/// A convenient type for holding data in dynamically allocated buffer.
+// TODO: Should we just use a `Vec` here? We could implement all of the
+// same traits for a regular old Vec.
+//
+// NOTE: Deriving PartialEq here is okay becuase we don't use it for
+// timing-sensitive comparisons. `VecData` is always wrapped in a `Data`
+// struct which, when its "context" type parameter is marked as `Private`,
+// will implement comparisons using constant-time operations.
+#[derive(Clone, Debug, PartialEq)]
+pub struct VecData {
     bytes: Vec<u8>,
-    len: usize,
+}
+
+impl TryFromBytes for VecData {
+    fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        Ok(Self {
+            bytes: slice.into(),
+        })
+    }
+}
+
+impl AsRef<[u8]> for VecData {
+    fn as_ref(&self) -> &[u8] {
+        self.bytes.as_slice()
+    }
 }

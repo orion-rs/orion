@@ -62,7 +62,7 @@
 //! [`mac::blake2b`]: crate::hazardous::mac::blake2b
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::base::{ArrayData, Bounded, Data, Public};
+use crate::hazardous::base::{ArrayData, Bounded, NamedContext, PublicData};
 use crate::hazardous::hash::blake2::blake2b_core;
 use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
 
@@ -75,14 +75,18 @@ use std::io;
 /// An error will be returned if:
 /// - `slice` is empty.
 /// - `slice` is greater than 64 bytes.
-pub type Digest = Data<ArrayData<BLAKE2B_OUTSIZE>, BlakeDigest>;
+pub type Digest = PublicData<ArrayData<BLAKE2B_OUTSIZE>, BlakeDigest>;
 
 /// A marker type to declare that this data represents a Blake2b digest.
 pub struct BlakeDigest;
-impl Public for BlakeDigest {}
+
 impl Bounded for BlakeDigest {
     const MIN: Option<usize> = Some(1);
     const MAX: Option<usize> = Some(BLAKE2B_OUTSIZE);
+}
+
+impl NamedContext for BlakeDigest {
+    const NAME: &'static str = "Blake2bDigest";
 }
 
 #[derive(Debug, Clone)]
