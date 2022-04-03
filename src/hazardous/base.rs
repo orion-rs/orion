@@ -1,3 +1,16 @@
+//! # Base
+//!
+//! This module provides convenient, type-parameterized byte-storage types
+//! that can be used to quickly create newtypes for keys, digests, etc.
+//! The goal is to support all the various cryptography types that are
+//! basically just bags of bytes, but **absolutely cannot** afford to
+//! be confused with one another.
+//!
+//! To that end, we define two structs — `PublicData` and `SecretData` —
+//! to as generic containers for public and secret information, respectively.
+//! These containers are each parameterized by the same two type parameters:
+//! `B` (for "bytes") and `C` (for "context").
+//!
 //! ## Parameter: `B` (bytes)
 //! `B` parameterizes over the **byte storage**. In practice, this is
 //! either an [`ArrayData`][a] or [`VecData`][b]. This allows us
@@ -6,7 +19,32 @@
 //! compatibility with, for example, the [`Bytes`][c] type for
 //! zero-copy creation of cryptographic types arriving from the network.
 //!
-//! TODO: Add example showing how we can use different byte storages.
+//! The following example demonstrates how we can create a type with various
+//! types for storage.
+//! ```rust
+//! use orion::hazardous::base::{
+//!     Bounded, Generate, NamedContext,
+//!     PrivateData, VecData
+//! };
+//!
+//! struct Password;
+//!
+//! impl Bounded for Password {
+//!     const MIN: usize = 8;
+//!     const MAX: usize = usize::MAX;
+//! }
+//!
+//! impl Generate for Password {
+//!     const GEN_SIZE: usize = 32;
+//! }
+//!
+//! impl NamedContext for Password {
+//!     const NAME: &'static str = "Password";
+//! }
+//!
+//! type PasswordVec = PrivateData<VecData, Password>;
+//! type PasswordArray = PrivateData<ArrayData<32>, Password>;
+//! ```
 //!
 //! ## Parameter: `C` (context)
 //! `C` parameterizes over the **context** of the data. Primarily,
@@ -28,18 +66,14 @@
 //! };
 //!
 //! // Let's say you hypothetically had keys of two different types:
-//! // AES and Ed25519 secret keys.
-//! struct AesContext;
-//! struct EdContext;
 //!
 //! const KEY_SIZE: usize = 32;
 //!
-//! impl Bounded for AesContext {
-//!     const MIN: usize = KEY_SIZE;
-//!     const MAX: usize = KEY_SIZE;
-//! }
 //!
-//! impl Bounded for EdContext {
+//! // AES 256-bit keys
+//! struct AesContext;
+//!
+//! impl Bounded for AesContext {
 //!     const MIN: usize = KEY_SIZE;
 //!     const MAX: usize = KEY_SIZE;
 //! }
@@ -48,17 +82,27 @@
 //!     const GEN_SIZE: usize = KEY_SIZE;
 //! }
 //!
+//! impl NamedContext for AesContext {
+//!     const NAME: &'static str = "Aes256";
+//! }
+//!
+//!
+//! // Ed25519 256-bit keys
+//! struct EdContext;
+//!
+//! impl Bounded for EdContext {
+//!     const MIN: usize = KEY_SIZE;
+//!     const MAX: usize = KEY_SIZE;
+//! }
+//!
 //! impl Generate for EdContext {
 //!     const GEN_SIZE: usize = KEY_SIZE;
 //! }
 //!
-//! impl NamedContext for AesContext {
-//!     const NAME: &'static str = "AesContext";
+//! impl NamedContext for EdContext {
+//!     const NAME: &'static str = "Ed256";
 //! }
 //!
-//! impl NamedContext for EdContext {
-//!     const NAME: &'static str = "EdContext";
-//! }
 //!
 //! type AesSecretKey = SecretData<VecData, AesContext>;
 //! type EdSecretKey = SecretData<VecData, EdContext>;
@@ -232,7 +276,7 @@ where
     }
 }
 
-impl<B, K> AsRef<[u8]> for PublicData<B, K>
+impl<B, C> AsRef<[u8]> for PublicData<B, C>
 where
     B: AsRef<[u8]>,
 {
