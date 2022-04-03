@@ -1,5 +1,8 @@
 use crate::errors::UnknownCryptoError;
-use std::{convert::TryFrom, fmt, marker::PhantomData};
+use core::{convert::TryFrom, marker::PhantomData};
+
+#[cfg(feature = "safe_api")]
+use std::fmt;
 
 /// A simple container for bytes that are considered non-sensitive,
 /// such as message authentication codes (MACs).
@@ -44,13 +47,13 @@ pub struct PublicData<B, C> {
 /// struct EdContext;
 ///
 /// impl Bounded for AesContext {
-///     const MIN: Option<usize> = Some(32);
-///     const MAX: Option<usize> = Some(32);
+///     const MIN: usize = 32;
+///     const MAX: usize = 32;
 /// }
 ///
 /// impl Bounded for EdContext {
-///     const MIN: Option<usize> = Some(32);
-///     const MAX: Option<usize> = Some(32);
+///     const MIN: usize = 32;
+///     const MAX: usize = 32;
 /// }
 ///
 /// impl Generate for AesContext {
@@ -105,10 +108,10 @@ pub struct SecretData<B, C> {
 /// maximum size (in bytes) of a type containing data.
 pub trait Bounded {
     /// The largest number of bytes this type should be allowed to hold.
-    const MIN: Option<usize> = None;
+    const MIN: usize;
 
     /// The smallest number of bytes this type should be allowed to hold.
-    const MAX: Option<usize> = None;
+    const MAX: usize;
 }
 
 /// A trait to express the fact that a type can be (validly) generated
@@ -154,9 +157,7 @@ where
     ///     given slice. In practice, this condition is usually a subset
     ///     of the above and does not need to be considered separately.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        let min = C::MIN.unwrap_or(0);
-        let max = C::MAX.unwrap_or(usize::MAX);
-        if !(min..=max).contains(&slice.len()) {
+        if !(C::MIN..=C::MAX).contains(&slice.len()) {
             return Err(UnknownCryptoError);
         }
 
@@ -183,9 +184,7 @@ where
     ///     given slice. In practice, this condition is usually a subset
     ///     of the above and does not need to be considered separately.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        let min = C::MIN.unwrap_or(0);
-        let max = C::MAX.unwrap_or(usize::MAX);
-        if !(min..=max).contains(&slice.len()) {
+        if !(C::MIN..=C::MAX).contains(&slice.len()) {
             return Err(UnknownCryptoError);
         }
 
@@ -246,6 +245,7 @@ where
     }
 }
 
+#[cfg(feature = "safe_api")]
 impl<'a, B, C> Default for PublicData<B, C>
 where
     B: TryFromBytes,
@@ -267,6 +267,7 @@ where
     }
 }
 
+#[cfg(feature = "safe_api")]
 impl<'a, B, C> Default for SecretData<B, C>
 where
     B: TryFromBytes,
@@ -355,6 +356,7 @@ where
 }
 
 // We implement this manually to skip over the PhantomData.
+#[cfg(feature = "safe_api")]
 impl<B, C> fmt::Debug for PublicData<B, C>
 where
     B: fmt::Debug,
@@ -366,6 +368,7 @@ where
 }
 
 // We implement this manually to skip over the PhantomData.
+#[cfg(feature = "safe_api")]
 impl<B, C> fmt::Debug for SecretData<B, C>
 where
     B: fmt::Debug,
@@ -430,14 +433,15 @@ impl<const MAX: usize> PartialEq for ArrayData<MAX> {
 // same traits for a regular old Vec.
 //
 // NOTE: Deriving PartialEq here is okay becuase we don't use it for
-// timing-sensitive comparisons. `VecData` is always wrapped in a `Data`
-// struct which, when its "context" type parameter is marked as `Private`,
-// will implement comparisons using constant-time operations.
+// timing-sensitive comparisons. For sensitive types, `VecData` is always wrapped
+// in a `PrivateData` which implements comparisons using constant-time operations.
+#[cfg(feature = "safe_api")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct VecData {
     bytes: Vec<u8>,
 }
 
+#[cfg(feature = "safe_api")]
 impl TryFromBytes for VecData {
     fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
@@ -446,6 +450,7 @@ impl TryFromBytes for VecData {
     }
 }
 
+#[cfg(feature = "safe_api")]
 impl AsRef<[u8]> for VecData {
     fn as_ref(&self) -> &[u8] {
         self.bytes.as_slice()

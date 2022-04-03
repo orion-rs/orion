@@ -81,8 +81,8 @@ pub type Digest = PublicData<ArrayData<BLAKE2B_OUTSIZE>, BlakeDigest>;
 pub struct BlakeDigest;
 
 impl Bounded for BlakeDigest {
-    const MIN: Option<usize> = Some(1);
-    const MAX: Option<usize> = Some(BLAKE2B_OUTSIZE);
+    const MIN: usize = 1;
+    const MAX: usize = BLAKE2B_OUTSIZE;
 }
 
 impl NamedContext for BlakeDigest {
