@@ -7,7 +7,7 @@
 //! be confused with one another.
 //!
 //! To that end, we define two structs — `PublicData` and `SecretData` —
-//! to as generic containers for public and secret information, respectively.
+//! to act as generic containers for public and secret information, respectively.
 //! These containers are each parameterized by the same two type parameters:
 //! `B` (for "bytes") and `C` (for "context").
 //!
@@ -431,15 +431,42 @@ where
     }
 }
 
+/// A convenient type for holding data with a statically known size.
+/// The bytes are held with a static array (`[u8; LEN]`).
+//
+// NOTE: Deriving PartialEq here is okay becuase we don't use it for
+// timing-sensitive comparisons. `ArrayData` is always wrapped in a
+// [`SecretData`](crate::hazardous::base::SecretData) if it's used for
+// sensitive information, which implements constant-time comparisons.
+//
+// Same thing for Debug: the SecretData wrapper will handle it..
+#[derive(Clone, Debug, PartialEq)]
+pub struct ArrayData<const LEN: usize> {
+    bytes: [u8; LEN],
+}
+
+impl<const LEN: usize> TryFromBytes for ArrayData<LEN> {
+    fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        let bytes = <[u8; LEN]>::try_from(slice).map_err(|_| UnknownCryptoError)?;
+        Ok(Self { bytes })
+    }
+}
+
+impl<const LEN: usize> AsRef<[u8]> for ArrayData<LEN> {
+    fn as_ref(&self) -> &[u8] {
+        self.bytes.as_slice()
+    }
+}
+
 /// A convenient type for holding data with a static upper bound on
 /// its size. The bytes are held with a static array (`[u8; MAX]`).
 #[derive(Clone, Debug)]
-pub struct ArrayData<const MAX: usize> {
+pub struct ArrayVecData<const MAX: usize> {
     bytes: [u8; MAX],
     len: usize,
 }
 
-impl<const MAX: usize> TryFromBytes for ArrayData<MAX> {
+impl<const MAX: usize> TryFromBytes for ArrayVecData<MAX> {
     fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         if slice.len() > MAX {
             return Err(UnknownCryptoError);
@@ -462,7 +489,7 @@ impl<const MAX: usize> TryFromBytes for ArrayData<MAX> {
     }
 }
 
-impl<const MAX: usize> AsRef<[u8]> for ArrayData<MAX> {
+impl<const MAX: usize> AsRef<[u8]> for ArrayVecData<MAX> {
     fn as_ref(&self) -> &[u8] {
         // PANIC: This unwrap is ok because the type's len is checked at
         // construction time to be less than MAX.
@@ -470,11 +497,13 @@ impl<const MAX: usize> AsRef<[u8]> for ArrayData<MAX> {
     }
 }
 
-// NOTE: Using non-constant-time comparison here is okay becuase we don't use
-// it for timing-sensitive comparisons. `VecData` is always wrapped in a `Data`
-// struct which, when its "context" type parameter is marked as `Private`, will
-// implement comparisons using constant-time operations.
-impl<const MAX: usize> PartialEq for ArrayData<MAX> {
+// NOTE: Using non-constant-time comparison here is okay becuase we don't
+// use it for timing-sensitive comparisons. `ArrayVecData` is always wrapped
+// in a [`SecretData`](crate::hazardous::base::SecretData) if it's used for
+// sensitive information, which implements constant-time comparisons.
+//
+// Same thing for Debug: the SecretData wrapper will handle it..
+impl<const MAX: usize> PartialEq for ArrayVecData<MAX> {
     fn eq(&self, other: &Self) -> bool {
         self.bytes.get(..self.len).eq(&other.bytes.get(..other.len))
     }
@@ -485,8 +514,11 @@ impl<const MAX: usize> PartialEq for ArrayData<MAX> {
 // same traits for a regular old Vec.
 //
 // NOTE: Deriving PartialEq here is okay becuase we don't use it for
-// timing-sensitive comparisons. For sensitive types, `VecData` is always wrapped
-// in a `PrivateData` which implements comparisons using constant-time operations.
+// timing-sensitive comparisons. `VecData` is always wrapped in a
+// [`SecretData`](crate::hazardous::base::SecretData) if it's used for
+// sensitive information, which implements constant-time comparisons.
+//
+// Same thing for Debug: the SecretData wrapper will handle it..
 #[cfg(feature = "safe_api")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct VecData {
