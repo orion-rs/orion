@@ -45,5 +45,5 @@ pub mod stream;
 /// Elliptic-Curve Cryptography.
 pub mod ecc;
 
-/// TODO: This probably belongs somewhere else.
+/// Primary byte-container types used in the public API.
 pub mod base;
