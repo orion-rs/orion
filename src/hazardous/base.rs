@@ -371,26 +371,28 @@ where
 }
 
 // We define `PartialEq` such that we can compare only with
-// other `PublicData` that have the same "context".
-impl<B0, B1, C> PartialEq<PublicData<B1, C>> for PublicData<B0, C>
-where
-    B0: AsRef<[u8]>,
-    B1: AsRef<[u8]>,
+// other `Public` that have the same "context".
+impl<B: AsRef<[u8]>, C> PartialEq for Public<B, C>
 {
-    fn eq(&self, other: &PublicData<B1, C>) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.bytes.as_ref().eq(other.bytes.as_ref())
     }
 }
 
-// We implement this manually to skip over the PhantomData.
-// TODO: Should this be less general? Maybe only implement
-// PartialEq<&Self> instead of any U: AsRef<u8>.
-impl<B0, B1, C> PartialEq<SecretData<B1, C>> for SecretData<B0, C>
+impl<B, C> PartialEq<[u8]> for Public<B, C>
 where
-    B0: AsRef<[u8]>,
-    B1: AsRef<[u8]>,
+    B: AsRef<[u8]>,
 {
-    fn eq(&self, other: &SecretData<B1, C>) -> bool {
+    fn eq(&self, other: &[u8]) -> bool {
+        self.bytes.as_ref().eq(other)
+    }
+}
+
+// We define `PartialEq` such that we can compare only with
+// other `Public` that have the same "context".
+impl<B: AsRef<[u8]>, C> PartialEq for Secret<B, C>
+{
+    fn eq(&self, other: &Secret<B, C>) -> bool {
         use subtle::ConstantTimeEq;
         self.unprotected_as_bytes()
             .ct_eq(other.unprotected_as_bytes())
