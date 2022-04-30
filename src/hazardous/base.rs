@@ -6,7 +6,7 @@
 //! basically just bags of bytes, but **absolutely cannot** afford to
 //! be confused with one another.
 //!
-//! To that end, we define two structs — `PublicData` and `SecretData` —
+//! To that end, we define two structs — `Public` and `Secret` —
 //! to act as generic containers for public and secret information, respectively.
 //! These containers are each parameterized by the same two type parameters:
 //! `B` (for "bytes") and `C` (for "context").
@@ -24,7 +24,7 @@
 //! ```rust
 //! use orion::hazardous::base::{
 //!     Bounded, Generate, NamedContext,
-//!     PrivateData, VecData
+//!     Secret, ArrayData, VecData
 //! };
 //!
 //! struct Password;
@@ -42,8 +42,8 @@
 //!     const NAME: &'static str = "Password";
 //! }
 //!
-//! type PasswordVec = PrivateData<VecData, Password>;
-//! type PasswordArray = PrivateData<ArrayData<32>, Password>;
+//! type PasswordVec = Secret<VecData, Password>;
+//! type PasswordArray = Secret<ArrayData<32>, Password>;
 //! ```
 //!
 //! ## Parameter: `C` (context)
@@ -62,7 +62,7 @@
 //! ```rust
 //! use orion::hazardous::base::{
 //!     Bounded, Generate, NamedContext,
-//!     SecretData, VecData
+//!     Secret, VecData
 //! };
 //!
 //! // Let's say you hypothetically had keys of two different types:
@@ -104,8 +104,8 @@
 //! }
 //!
 //!
-//! type AesSecretKey = SecretData<VecData, AesContext>;
-//! type EdSecretKey = SecretData<VecData, EdContext>;
+//! type AesSecretKey = Secret<VecData, AesContext>;
+//! type EdSecretKey = Secret<VecData, EdContext>;
 //!
 //! let aes_key0 = AesSecretKey::default();
 //! let aes_key1 = AesSecretKey::default();
@@ -143,14 +143,14 @@ use std::fmt;
 
 /// A simple container for bytes that are considered non-sensitive,
 /// such as message authentication codes (MACs).
-pub struct PublicData<B, C> {
+pub struct Public<B, C> {
     bytes: B,
     context: PhantomData<C>,
 }
 
 /// A simple container for bytes that contain sensitive information,
 /// such as secret keys.
-pub struct SecretData<B, C> {
+pub struct Secret<B, C> {
     bytes: B,
     context: PhantomData<C>,
 }
@@ -168,7 +168,7 @@ pub trait Bounded {
 /// A trait to express the fact that a type can be (validly) generated
 /// from secure random bytes, and the length of that generated type.
 ///
-/// Note that `PublicData<B, C>` and `PrivateData<B, C>` implement
+/// Note that `Public<B, C>` and `Secret<B, C>` implement
 /// `Default` if and only if `C` implements `Generate`.
 pub trait Generate: Bounded {
     /// The size in bytes of the type when generated randomly. Note that
@@ -192,12 +192,12 @@ pub trait TryFromBytes: Sized {
     fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError>;
 }
 
-impl<B, C> PublicData<B, C>
+impl<B, C> Public<B, C>
 where
     B: TryFromBytes,
     C: Bounded,
 {
-    /// Create a `PublicData` from a byte slice. Only available when the context
+    /// Create a `Public` from a byte slice. Only available when the context
     /// type parameter is [`Bounded`](crate::hazardous::base::Bounded).
     ///
     /// ## Errors
@@ -219,12 +219,12 @@ where
     }
 }
 
-impl<B, C> SecretData<B, C>
+impl<B, C> Secret<B, C>
 where
     B: TryFromBytes,
     C: Bounded,
 {
-    /// Create a `PrivateData` from a byte slice. Only available when the context
+    /// Create a `Secret` from a byte slice. Only available when the context
     /// type parameter is [`Bounded`](crate::hazardous::base::Bounded).
     ///
     /// ## Errors
@@ -246,7 +246,7 @@ where
     }
 }
 
-impl<B, C> PublicData<B, C>
+impl<B, C> Public<B, C>
 where
     B: AsRef<[u8]>,
 {
@@ -261,7 +261,7 @@ where
     }
 }
 
-impl<B, C> SecretData<B, C>
+impl<B, C> Secret<B, C>
 where
     B: AsRef<[u8]>,
 {
@@ -276,7 +276,7 @@ where
     }
 }
 
-impl<B, C> AsRef<[u8]> for PublicData<B, C>
+impl<B, C> AsRef<[u8]> for Public<B, C>
 where
     B: AsRef<[u8]>,
 {
@@ -286,7 +286,7 @@ where
     }
 }
 
-impl<B, C> SecretData<B, C>
+impl<B, C> Secret<B, C>
 where
     B: AsRef<[u8]>,
 {
@@ -297,7 +297,7 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-impl<B, C> Default for PublicData<B, C>
+impl<B, C> Default for Public<B, C>
 where
     B: TryFromBytes,
     C: Bounded + Generate,
@@ -319,7 +319,7 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-impl<B, C> Default for SecretData<B, C>
+impl<B, C> Default for Secret<B, C>
 where
     B: TryFromBytes,
     C: Bounded + Generate,
@@ -341,7 +341,7 @@ where
 }
 
 /// Delegates to [`B::from_bytes`](crate::hazardous::base::TryFromBytes) under the hood.
-impl<B, C> TryFrom<&[u8]> for PublicData<B, C>
+impl<B, C> TryFrom<&[u8]> for Public<B, C>
 where
     B: TryFromBytes,
 {
@@ -356,7 +356,7 @@ where
 }
 
 /// Delegates to [`B::from_bytes`](crate::hazardous::base::TryFromBytes) under the hood.
-impl<B, C> TryFrom<&[u8]> for SecretData<B, C>
+impl<B, C> TryFrom<&[u8]> for Secret<B, C>
 where
     B: TryFromBytes,
 {
@@ -398,7 +398,7 @@ where
     }
 }
 
-impl<B, C> PartialEq<[u8]> for SecretData<B, C>
+impl<B, C> PartialEq<[u8]> for Secret<B, C>
 where
     B: AsRef<[u8]>,
 {
@@ -409,7 +409,7 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-impl<B, C> fmt::Debug for PublicData<B, C>
+impl<B, C> fmt::Debug for Public<B, C>
 where
     B: fmt::Debug,
     C: NamedContext,
@@ -421,7 +421,7 @@ where
 
 // We implement this manually to skip over the PhantomData.
 #[cfg(feature = "safe_api")]
-impl<B, C> fmt::Debug for SecretData<B, C>
+impl<B, C> fmt::Debug for Secret<B, C>
 where
     B: fmt::Debug,
     C: NamedContext,
@@ -436,10 +436,10 @@ where
 //
 // NOTE: Deriving PartialEq here is okay becuase we don't use it for
 // timing-sensitive comparisons. `ArrayData` is always wrapped in a
-// [`SecretData`](crate::hazardous::base::SecretData) if it's used for
+// [`Secret`](crate::hazardous::base::Secret) if it's used for
 // sensitive information, which implements constant-time comparisons.
 //
-// Same thing for Debug: the SecretData wrapper will handle it..
+// Same thing for Debug: the Secret wrapper will handle it..
 #[derive(Clone, Debug, PartialEq)]
 pub struct ArrayData<const LEN: usize> {
     bytes: [u8; LEN],
@@ -499,10 +499,10 @@ impl<const MAX: usize> AsRef<[u8]> for ArrayVecData<MAX> {
 
 // NOTE: Using non-constant-time comparison here is okay becuase we don't
 // use it for timing-sensitive comparisons. `ArrayVecData` is always wrapped
-// in a [`SecretData`](crate::hazardous::base::SecretData) if it's used for
+// in a [`Secret`](crate::hazardous::base::Secret) if it's used for
 // sensitive information, which implements constant-time comparisons.
 //
-// Same thing for Debug: the SecretData wrapper will handle it..
+// Same thing for Debug: the Secret wrapper will handle it..
 impl<const MAX: usize> PartialEq for ArrayVecData<MAX> {
     fn eq(&self, other: &Self) -> bool {
         self.bytes.get(..self.len).eq(&other.bytes.get(..other.len))
@@ -515,10 +515,10 @@ impl<const MAX: usize> PartialEq for ArrayVecData<MAX> {
 //
 // NOTE: Deriving PartialEq here is okay becuase we don't use it for
 // timing-sensitive comparisons. `VecData` is always wrapped in a
-// [`SecretData`](crate::hazardous::base::SecretData) if it's used for
+// [`Secret`](crate::hazardous::base::Secret) if it's used for
 // sensitive information, which implements constant-time comparisons.
 //
-// Same thing for Debug: the SecretData wrapper will handle it..
+// Same thing for Debug: the Secret wrapper will handle it..
 #[cfg(feature = "safe_api")]
 #[derive(Clone, Debug, PartialEq)]
 pub struct VecData {

@@ -114,7 +114,7 @@ pub use high_level::kdf;
 pub use high_level::kex;
 
 #[cfg(feature = "safe_api")]
-pub use hazardous::base::{PublicData, SecretData};
+pub use hazardous::base::{Public, Secret};
 
 #[doc(hidden)]
 /// Testing framework.
