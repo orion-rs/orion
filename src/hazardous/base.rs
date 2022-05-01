@@ -540,3 +540,65 @@ impl AsRef<[u8]> for VecData {
         self.bytes.as_slice()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const MIN_POW2_SIZE: usize = 4; //  2^4  =   16
+    const MAX_POW2_SIZE: usize = 10; // 2^10 = 1024
+    const MIN_SIZE: usize = 2usize.pow(MIN_POW2_SIZE as u32);
+    const MAX_SIZE: usize = 2usize.pow(MAX_POW2_SIZE as u32);
+
+    // Archetypal secret information.
+    type TestKey = Secret<ArrayVecData<MAX_SIZE>, TestContext>;
+
+    // Archetypal public information. Note that we would *NOT*
+    // normally reuse the same context for two different types.
+    // This is *ONLY FOR TESTING*.
+    type TestTag = Secret<ArrayVecData<MAX_SIZE>, TestContext>;
+
+    struct TestContext;
+
+    impl NamedContext for TestContext {
+        const NAME: &'static str = "Test";
+    }
+
+    impl Bounded for TestContext {
+        const MIN: usize = MIN_SIZE;
+        const MAX: usize = MAX_SIZE;
+    }
+
+    fn run_all_sizes<F>(mut f: F)
+    where
+        F: FnMut(usize, usize),
+    {
+        for min in (MIN_POW2_SIZE..MAX_POW2_SIZE).map(|n| 2usize.pow(n as u32)) {
+            for max in (MIN_POW2_SIZE..MAX_POW2_SIZE).map(|n| 2usize.pow(n as u32)) {
+                f(min, max)
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_omitted_debug() {
+        run_all_sizes(|_lower_bound, upper_bound| {
+            let data = vec![0u8; upper_bound];
+            let secret = format!("{:?}", data.as_slice());
+            let test_debug_contents = format!("{:?}", TestKey::from_slice(&data).unwrap());
+            assert_eq!(test_debug_contents.contains(&secret), false);
+        });
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_non_omitted_debug() {
+        run_all_sizes(|_lower_bound, upper_bound| {
+            let data = vec![0u8; upper_bound];
+            let public = format!("{:?}", data.as_slice());
+            let test_debug_contents = format!("{:?}", TestTag::from_slice(&data).unwrap());
+            assert_eq!(test_debug_contents.contains(&public), false);
+        });
+    }
+}
