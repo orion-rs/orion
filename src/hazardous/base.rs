@@ -143,16 +143,14 @@
 use crate::errors::UnknownCryptoError;
 use core::{convert::TryFrom, fmt, marker::PhantomData};
 
-/// A simple container for bytes that are considered non-sensitive,
-/// such as message authentication codes (MACs).
+/// A simple container for bytes that are considered non-sensitive.
 pub struct Public<B, C> {
     bytes: B,
     context: PhantomData<C>,
 }
 
-/// A simple container for bytes that contain sensitive information,
-/// such as secret keys.
-pub struct Secret<B, C> {
+/// A simple container for bytes that contain sensitive information.
+pub struct Secret<B: AsMut<[u8]>, C> {
     bytes: B,
     context: PhantomData<C>,
 }
@@ -304,7 +302,7 @@ where
     B: TryFromBytes,
     C: Bounded + Generate,
 {
-    /// Use a CSPRNG to fill this type with secure random bytes.
+    /// Use a CSPRNG to fill a new instance of this type with secure random bytes.
     ///
     /// # Panic
     /// This will panic if the underyling call to
@@ -326,7 +324,8 @@ where
     B: TryFromBytes,
     C: Bounded + Generate,
 {
-    /// Use a CSPRNG to fill this type with secure random bytes.
+    /// Use a CSPRNG to fill a new instance of this type with a given number
+    /// of secure random bytes.
     ///
     /// # Panic
     /// This will panic if the underyling call to
