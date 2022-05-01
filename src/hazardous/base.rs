@@ -22,6 +22,7 @@
 //! The following example demonstrates how we can create a type with various
 //! types for storage.
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::base::{
 //!     Bounded, Generate, NamedContext,
 //!     Secret, ArrayData, VecData
@@ -44,6 +45,7 @@
 //!
 //! type PasswordVec = Secret<VecData, Password>;
 //! type PasswordArray = Secret<ArrayData<32>, Password>;
+//! # }
 //! ```
 //!
 //! ## Parameter: `C` (context)
@@ -59,7 +61,9 @@
 //! that implement the functionality we want from byte storage objects,
 //! but are still logically separate from each other and, in that way,
 //! "misuse-resistant".
+//!
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::base::{
 //!     Bounded, Generate, NamedContext,
 //!     Secret, VecData
@@ -128,6 +132,7 @@
 //! //
 //! // Will error:
 //! // assert_eq!(&aes_key0, &des_key0);
+//! # }
 //! ```
 //!
 //! [a]: crate::hazardous::base::ArrayData
@@ -136,10 +141,7 @@
 //!
 
 use crate::errors::UnknownCryptoError;
-use core::{convert::TryFrom, marker::PhantomData};
-
-#[cfg(feature = "safe_api")]
-use std::fmt;
+use core::{convert::TryFrom, fmt, marker::PhantomData};
 
 /// A simple container for bytes that are considered non-sensitive,
 /// such as message authentication codes (MACs).
@@ -372,8 +374,7 @@ where
 
 // We define `PartialEq` such that we can compare only with
 // other `Public` that have the same "context".
-impl<B: AsRef<[u8]>, C> PartialEq for Public<B, C>
-{
+impl<B: AsRef<[u8]>, C> PartialEq for Public<B, C> {
     fn eq(&self, other: &Self) -> bool {
         self.bytes.as_ref().eq(other.bytes.as_ref())
     }
@@ -390,8 +391,7 @@ where
 
 // We define `PartialEq` such that we can compare only with
 // other `Public` that have the same "context".
-impl<B: AsRef<[u8]>, C> PartialEq for Secret<B, C>
-{
+impl<B: AsRef<[u8]>, C> PartialEq for Secret<B, C> {
     fn eq(&self, other: &Secret<B, C>) -> bool {
         use subtle::ConstantTimeEq;
         self.unprotected_as_bytes()
@@ -410,26 +410,24 @@ where
     }
 }
 
-#[cfg(feature = "safe_api")]
 impl<B, C> fmt::Debug for Public<B, C>
 where
-    B: fmt::Debug,
+    B: AsRef<[u8]>,
     C: NamedContext,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{{ {}: {:?} }}", C::NAME, self.bytes)
+        write!(f, "{}: {:?}", C::NAME, self.bytes.as_ref())
     }
 }
 
 // We implement this manually to skip over the PhantomData.
-#[cfg(feature = "safe_api")]
 impl<B, C> fmt::Debug for Secret<B, C>
 where
-    B: fmt::Debug,
+    B: AsRef<[u8]>,
     C: NamedContext,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{{ {}: {:?} }}", C::NAME, self.bytes)
+        write!(f, "{}: REDACTED", C::NAME)
     }
 }
 
