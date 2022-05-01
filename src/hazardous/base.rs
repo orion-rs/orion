@@ -170,10 +170,21 @@ pub trait Bounded {
 ///
 /// Note that `Public<B, C>` and `Secret<B, C>` implement
 /// `Default` if and only if `C` implements `Generate`.
+///
+/// When a context type `C` implements `Generate`, the following methods
+/// are implemented on `Public<B,C>` and `Secret<B,C>`. See those methods'
+/// documentation for usage information.
+///
+/// - [`Public::generate`](Public::generate)
+/// - [`Secret::generate`](Secret::generate)
+/// - [`Public::generate_with_size`](Public::generate_with_size)
+/// - [`Secret::generate_with_size`](Secret::generate_with_size)
+//
+// TODO: Does `Generate` need to have a `const` GEN_SIZE?
 pub trait Generate: Bounded {
     /// The size in bytes of the type when generated randomly. Note that
-    /// it is a logical error for `SIZE` to be less than
-    /// `<Self as Bounded>::MIN` or `<Self as Bounded>::MAX`.
+    /// it is a logical error for `GEN_SIZE` to be less than
+    /// `<Self as Bounded>::MIN` or greater than `<Self as Bounded>::MAX`.
     const GEN_SIZE: usize;
 }
 
@@ -308,7 +319,7 @@ where
     /// This will panic if the underyling call to
     /// [`secure_rand_bytes`](crate::util::secure_rand_bytes) fails;
     /// see its documentation for more info.
-    fn default() -> Self {
+    pub fn generate() -> Self {
         let mut data = vec![0u8; C::GEN_SIZE];
         crate::util::secure_rand_bytes(&mut data).unwrap();
         Self {
@@ -316,10 +327,35 @@ where
             context: PhantomData,
         }
     }
+
+    /// Use a CSPRNG to fill a new instance of this type with secure random bytes.
+    ///
+    /// # Errors
+    /// - If the passed `size` is less than `<C as Bounded>::MIN`.
+    /// - If the passed `size` is greater than `<C as Bounded>::MAX`.
+    /// - If the configured data storage parameter cannot hold `size` bytes.
+    ///
+    /// # Panic
+    /// This will panic if the underyling call to
+    /// [`secure_rand_bytes`](crate::util::secure_rand_bytes) fails;
+    /// see its documentation for more info.
+    pub fn generate_with_size(size: usize) -> Result<Self, UnknownCryptoError> {
+        if size < <C>::MIN || size > <C as Bounded>::MAX {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut data = vec![0u8; size];
+        crate::util::secure_rand_bytes(&mut data).unwrap();
+
+        Ok(Self {
+            bytes: B::try_from_bytes(data.as_slice())?,
+            context: PhantomData,
+        })
+    }
 }
 
 #[cfg(feature = "safe_api")]
-impl<B, C> Default for Secret<B, C>
+impl<B, C> Secret<B, C>
 where
     B: TryFromBytes,
     C: Bounded + Generate,
@@ -331,13 +367,39 @@ where
     /// This will panic if the underyling call to
     /// [`secure_rand_bytes`](crate::util::secure_rand_bytes) fails;
     /// see its documentation for more info.
-    fn default() -> Self {
+    pub fn generate() -> Self {
         let mut data = vec![0u8; C::GEN_SIZE];
         crate::util::secure_rand_bytes(&mut data).unwrap();
         Self {
             bytes: B::try_from_bytes(data.as_slice()).unwrap(),
             context: PhantomData,
         }
+    }
+
+    /// Use a CSPRNG to fill a new instance of this type with a given number
+    /// of secure random bytes.
+    ///
+    /// # Errors
+    /// - If the passed `size` is less than `<C as Bounded>::MIN`.
+    /// - If the passed `size` is greater than `<C as Bounded>::MAX`.
+    /// - If the configured data storage parameter cannot hold `size` bytes.
+    ///
+    /// # Panic
+    /// This will panic if the underyling call to
+    /// [`secure_rand_bytes`](crate::util::secure_rand_bytes) fails;
+    /// see its documentation for more info.
+    pub fn generate_with_size(size: usize) -> Result<Self, UnknownCryptoError> {
+        if size < <C>::MIN || size > <C as Bounded>::MAX {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut data = vec![0u8; size];
+        crate::util::secure_rand_bytes(&mut data).unwrap();
+
+        Ok(Self {
+            bytes: B::try_from_bytes(data.as_slice())?,
+            context: PhantomData,
+        })
     }
 }
 
