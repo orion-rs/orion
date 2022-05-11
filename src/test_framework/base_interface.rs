@@ -2,6 +2,7 @@ use crate::{
     hazardous::base::{Context, Data, Generate, VecData},
     Public, Secret,
 };
+use core::marker::PhantomData;
 
 pub(crate) fn test_omitted_debug<C, D>(secret: Secret<C, D>)
 where
@@ -86,7 +87,7 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-pub(crate) fn test_generate_public<C, D>()
+pub(crate) fn test_generate_public<C, D>(_phantom: PhantomData<Public<C, D>>)
 where
     C: Context + Generate,
     D: Data,
@@ -98,7 +99,7 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-pub(crate) fn test_generate_secret<C, D>()
+pub(crate) fn test_generate_secret<C, D>(_phantom: PhantomData<Public<C, D>>)
 where
     C: Context + Generate,
     D: Data,
@@ -116,7 +117,7 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-pub(crate) fn test_generate_with_size_public<C, D>()
+pub(crate) fn test_generate_with_size_public<C, D>(_phantom: PhantomData<Public<C, D>>)
 where
     C: Context + Generate,
     D: Data,

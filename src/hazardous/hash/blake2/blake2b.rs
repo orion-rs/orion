@@ -417,4 +417,27 @@ mod public {
             hash_a == hash_b
         }
     }
+
+    mod test_base {
+        use crate::{
+            hazardous::hash::blake2::blake2b::{Blake2b, Digest},
+            test_framework::base_interface,
+        };
+
+        fn example_digest() -> Digest {
+            let mut hasher = Blake2b::new(64).unwrap();
+            hasher.update(b"test data").unwrap();
+            hasher.finalize().unwrap()
+        }
+
+        #[test]
+        fn test_omitted_debug() {
+            base_interface::test_normal_debug(example_digest());
+        }
+
+        #[test]
+        fn test_as_bytes_public() {
+            base_interface::test_as_bytes_public(example_digest());
+        }
+    }
 }
