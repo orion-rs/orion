@@ -23,24 +23,20 @@ where
     assert!(debug_contents.contains(&public_data));
 }
 
-#[cfg(feature = "safe_api")]
-pub(crate) fn test_as_bytes_secret<C, D>()
+pub(crate) fn test_as_bytes_secret<C, D>(secret: Secret<C, D>)
 where
     C: Context,
     D: Data,
 {
     if C::MIN == C::MAX {
         // Test fixed-length definitions
-        let data = vec![0; C::MIN];
-        let secret = Secret::<C, D>::from_slice(&data).unwrap();
-
         assert_eq!(secret.unprotected_as_bytes().len(), secret.len());
         assert!(!secret.is_empty());
         assert_eq!(secret.len(), C::MIN);
         assert_eq!(secret.len(), C::MAX);
     } else {
         // Test non-fixed-length definitions
-        let data = vec![0; C::MAX];
+        let data = secret.unprotected_as_bytes();
         let secret_lower = Secret::<C, D>::from_slice(&data[..C::MIN]).unwrap();
         let secret_upper = Secret::<C, D>::from_slice(&data[..C::MAX]).unwrap();
 
@@ -61,24 +57,20 @@ where
     }
 }
 
-#[cfg(feature = "safe_api")]
-pub(crate) fn test_as_bytes_public<C, D>()
+pub(crate) fn test_as_bytes_public<C, D>(public: Public<C, D>)
 where
     C: Context,
     D: Data,
 {
     if C::MIN == C::MAX {
         // Test fixed-length definitions
-        let data = vec![0; C::MIN];
-        let public = Public::<C, D>::from_slice(&data).unwrap();
-
         assert_eq!(public.as_ref().len(), public.len());
         assert!(!public.is_empty());
         assert_eq!(public.len(), C::MIN);
         assert_eq!(public.len(), C::MAX);
     } else {
         // Test non-fixed-length definitions
-        let data = vec![0; C::MAX];
+        let data = public.as_ref();
         let public_lower = Public::<C, D>::from_slice(&data[..C::MIN]).unwrap();
         let public_upper = Public::<C, D>::from_slice(&data[..C::MAX]).unwrap();
 
