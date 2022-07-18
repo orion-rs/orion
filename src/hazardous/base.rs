@@ -160,10 +160,11 @@ pub trait Context {
     /// The type name that will appear in Debug impls.
     const NAME: &'static str;
 
-    /// The largest number of bytes this type should be allowed to hold.
+    /// The smallest number of bytes this type should be allowed to hold.
     const MIN: usize;
 
-    /// The smallest number of bytes this type should be allowed to hold.
+    // TODO: Should this be an exclusive bound?
+    /// The largest number of bytes this type should be allowed to hold.
     const MAX: usize;
 }
 
@@ -493,7 +494,6 @@ where
     }
 }
 
-// We implement this manually to skip over the PhantomData.
 impl<C, D> fmt::Debug for Secret<C, D>
 where
     C: Context,

@@ -80,11 +80,11 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
-pub use super::hltypes::SecretKey;
 use crate::{
     errors::UnknownCryptoError,
     hazardous::{
         aead,
+        base::{Context, Generate, Secret, VecData},
         mac::poly1305::POLY1305_OUTSIZE,
         stream::{
             chacha20,
@@ -92,6 +92,29 @@ use crate::{
         },
     },
 };
+
+/// A type to represent the `SecretKey` used in AEAD.
+pub type SecretKey = Secret<AeadKey, VecData>;
+
+/// A marker type to declare that this data represents an AEAD secret key.
+// TODO: Should this be named something more specific? Like `ChaChaKey`?
+pub struct AeadKey;
+
+impl Context for AeadKey {
+    const NAME: &'static str = "AeadKey";
+    const MIN: usize = 32; // TODO: Is this the right min size?
+    const MAX: usize = 1024 * 1024; // TODO: Is there a less arbitrary upper bound than a MB?
+}
+
+impl Generate for AeadKey {
+    const GEN_SIZE: usize = 32;
+}
+
+impl Default for SecretKey {
+    fn default() -> Self {
+        Self::generate()
+    }
+}
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Authenticated encryption using XChaCha20Poly1305.
@@ -399,7 +422,7 @@ mod public {
 
         #[test]
         fn test_secret_length_err() {
-            let key = SecretKey::generate(31).unwrap();
+            let key = SecretKey::generate_with_size(31).unwrap();
             let plaintext = "Secret message".as_bytes();
 
             assert!(seal(&key, plaintext).is_err());
@@ -513,7 +536,7 @@ mod public {
 
         #[test]
         fn test_secret_length_err() {
-            let key = SecretKey::generate(31).unwrap();
+            let key = SecretKey::generate_with_size(31).unwrap();
             assert!(StreamSealer::new(&key).is_err());
             assert!(StreamOpener::new(&key, &Nonce::generate()).is_err());
         }
@@ -627,5 +650,19 @@ mod public {
 
             open(&sk2, &ct).is_err()
         }
+    }
+
+    mod test_base {
+        use crate::{
+            hazardous::base::VecData,
+            high_level::aead::{AeadKey, SecretKey},
+        };
+
+        fn gen_test_data() -> SecretKey {
+            SecretKey::generate_with_size(64).unwrap()
+        }
+
+        crate::test_base!(SecretKey, gen_test_data, secret);
+        crate::test_generate!(AeadKey, VecData, secret);
     }
 }
