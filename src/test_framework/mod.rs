@@ -29,4 +29,6 @@ pub mod aead_interface;
 /// Tests for stream ciphers such as `chacha20`.
 pub mod streamcipher_interface;
 
+#[cfg(test)]
+#[macro_use]
 pub mod base_interface;

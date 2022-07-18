@@ -117,5 +117,6 @@ pub use high_level::kex;
 pub use hazardous::base::{Public, Secret};
 
 #[doc(hidden)]
+#[macro_use]
 /// Testing framework.
 pub mod test_framework;

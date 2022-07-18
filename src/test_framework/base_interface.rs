@@ -1,8 +1,39 @@
 use crate::{
-    hazardous::base::{Context, Data, Generate, VecData},
+    hazardous::base::{Context, Data, Generate},
     Public, Secret,
 };
 use core::marker::PhantomData;
+
+// TODO: Do we need to export this? Is it bad if we do?
+#[macro_export]
+macro_rules! test_base {
+    ($newtype_alias:ident, $gen_test_data:ident, public) => {
+        #[test]
+        fn test_normal_debug() {
+            crate::test_framework::base_interface::test_normal_debug($gen_test_data());
+        }
+
+        #[test]
+        fn test_as_bytes_public() {
+            crate::test_framework::base_interface::test_as_bytes_public($gen_test_data());
+        }
+    };
+
+    ($newtype_alias:ident, generate, public) => {
+        #[test]
+        fn test_normal_debug() {
+            let generated_newtype = $newtype_alias::generate();
+            crate::test_framework::base_interface::test_normal_debug($gen_test_data());
+        }
+
+        #[test]
+        fn test_as_bytes_public() {
+            crate::test_framework::base_interface::test_as_bytes_public($gen_test_data());
+        }
+    };
+
+    ($newtype_alias:ident, private, $newtype_mod:ident, $gen_test_data: ident) => {};
+}
 
 pub(crate) fn test_omitted_debug<C, D>(secret: Secret<C, D>)
 where
@@ -87,18 +118,6 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-pub(crate) fn test_generate_public<C, D>(_phantom: PhantomData<Public<C, D>>)
-where
-    C: Context + Generate,
-    D: Data,
-{
-    let generated = Public::<C, D>::generate();
-    assert!(!generated.as_ref().iter().copied().all(|b| b == 0));
-    assert_eq!(generated.len(), C::GEN_SIZE);
-    assert_eq!(generated.as_ref().len(), C::GEN_SIZE);
-}
-
-#[cfg(feature = "safe_api")]
 pub(crate) fn test_generate_secret<C, D>(_phantom: PhantomData<Public<C, D>>)
 where
     C: Context + Generate,
@@ -117,20 +136,15 @@ where
 }
 
 #[cfg(feature = "safe_api")]
-pub(crate) fn test_generate_with_size_public<C, D>(_phantom: PhantomData<Public<C, D>>)
+pub(crate) fn test_generate_public<C, D>(_phantom: PhantomData<Public<C, D>>)
 where
     C: Context + Generate,
     D: Data,
 {
-    // least, middle, greatest possible value
-    let sizes = Vec::from([C::MIN, (C::MIN + (C::MAX - C::MIN) / 2), C::MAX]);
-
-    for size in sizes {
-        let generated = Public::<C, D>::generate_with_size(size).unwrap();
-        assert!(!generated.as_ref().iter().copied().all(|b| b == 0));
-        assert_eq!(generated.len(), size);
-        assert_eq!(generated.as_ref().len(), size);
-    }
+    let generated = Public::<C, D>::generate();
+    assert!(!generated.as_ref().iter().copied().all(|b| b == 0));
+    assert_eq!(generated.len(), C::GEN_SIZE);
+    assert_eq!(generated.as_ref().len(), C::GEN_SIZE);
 }
 
 #[cfg(feature = "safe_api")]
@@ -151,5 +165,22 @@ where
             .all(|b| b == 0));
         assert_eq!(generated.len(), size);
         assert_eq!(generated.unprotected_as_bytes().len(), size);
+    }
+}
+
+#[cfg(feature = "safe_api")]
+pub(crate) fn test_generate_with_size_public<C, D>(_phantom: PhantomData<Public<C, D>>)
+where
+    C: Context + Generate,
+    D: Data,
+{
+    // least, middle, greatest possible value
+    let sizes = Vec::from([C::MIN, (C::MIN + (C::MAX - C::MIN) / 2), C::MAX]);
+
+    for size in sizes {
+        let generated = Public::<C, D>::generate_with_size(size).unwrap();
+        assert!(!generated.as_ref().iter().copied().all(|b| b == 0));
+        assert_eq!(generated.len(), size);
+        assert_eq!(generated.as_ref().len(), size);
     }
 }

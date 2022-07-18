@@ -140,6 +140,8 @@
 use crate::errors::UnknownCryptoError;
 use core::{convert::TryFrom, fmt, marker::PhantomData};
 
+pub use self::{array_data::ArrayData, array_vec_data::ArrayVecData, vec_data::VecData};
+
 /// A simple container for bytes that are considered non-sensitive.
 pub struct Public<C, D> {
     context: PhantomData<C>,
@@ -179,8 +181,6 @@ pub trait Context {
 /// - [`Secret::generate`](Secret::generate)
 /// - [`Public::generate_with_size`](Public::generate_with_size)
 /// - [`Secret::generate_with_size`](Secret::generate_with_size)
-//
-// TODO: Does `Generate` need to have a `const` GEN_SIZE?
 pub trait Generate: Context {
     /// The size in bytes of the type when generated randomly. Note that
     /// it is a logical error for `GEN_SIZE` to be less than
@@ -288,7 +288,9 @@ where
         self.data.as_ref().is_empty()
     }
 
-    /// TODO: Grab docs for `unprotected_as_bytes` and insert here.
+    /// Return the object as byte slice. __**Warning**__: Should not be
+    /// used unless strictly needed. This __**breaks protections**__ that
+    /// the type implements.
     pub fn unprotected_as_bytes(&self) -> &[u8] {
         self.data.as_ref()
     }
@@ -401,7 +403,7 @@ where
     }
 }
 
-/// Delegates to [`B::from_bytes`](crate::hazardous::base::TryFromBytes) under the hood.
+/// Delegates to [`B::try_from_bytes`](crate::hazardous::base::TryFromBytes) under the hood.
 impl<C, D> TryFrom<&[u8]> for Public<C, D>
 where
     C: Context,
@@ -417,7 +419,7 @@ where
     }
 }
 
-/// Delegates to [`B::from_bytes`](crate::hazardous::base::TryFromBytes) under the hood.
+/// Delegates to [`B::try_from_bytes`](crate::hazardous::base::TryFromBytes) under the hood.
 impl<C, D> TryFrom<&[u8]> for Secret<C, D>
 where
     C: Context,
@@ -502,150 +504,167 @@ where
     }
 }
 
-/// A convenient type for holding data with a statically known size.
-/// The bytes are held with a static array (`[u8; LEN]`).
-//
-// NOTE: Deriving PartialEq here is okay becuase we don't use it for
-// timing-sensitive comparisons. `ArrayData` is always wrapped in a
-// [`Secret`](crate::hazardous::base::Secret) if it's used for
-// sensitive information, which implements constant-time comparisons.
-//
-// Same thing for Debug: the Secret wrapper will handle it..
-#[derive(Clone, Debug, PartialEq)]
-pub struct ArrayData<const LEN: usize> {
-    bytes: [u8; LEN],
-}
+mod array_data {
+    use super::{Data, TryFromBytes};
+    use crate::errors::UnknownCryptoError;
+    use std::convert::TryFrom;
 
-impl<const LEN: usize> Data for ArrayData<LEN> {}
-
-impl<const LEN: usize> TryFromBytes for ArrayData<LEN> {
-    fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        let bytes = <[u8; LEN]>::try_from(slice).map_err(|_| UnknownCryptoError)?;
-        Ok(Self { bytes })
+    /// A convenient type for holding data with a statically known size.
+    /// The bytes are held with a static array (`[u8; LEN]`).
+    //
+    // NOTE: Deriving PartialEq here is okay becuase we don't use it for
+    // timing-sensitive comparisons. `ArrayData` is always wrapped in a
+    // [`Secret`](crate::hazardous::base::Secret) if it's used for
+    // sensitive information, which implements constant-time comparisons.
+    //
+    // Same thing for Debug: the Secret wrapper will handle it..
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct ArrayData<const LEN: usize> {
+        pub(crate) bytes: [u8; LEN],
     }
-}
 
-impl<const LEN: usize> AsRef<[u8]> for ArrayData<LEN> {
-    fn as_ref(&self) -> &[u8] {
-        self.bytes.as_slice()
-    }
-}
+    impl<const LEN: usize> Data for ArrayData<LEN> {}
 
-impl<const LEN: usize> AsMut<[u8]> for ArrayData<LEN> {
-    fn as_mut(&mut self) -> &mut [u8] {
-        &mut self.bytes
-    }
-}
-
-/// A convenient type for holding data with a static upper bound on
-/// its size. The bytes are held with a static array (`[u8; MAX]`).
-#[derive(Clone, Debug)]
-pub struct ArrayVecData<const MAX: usize> {
-    bytes: [u8; MAX],
-    len: usize,
-}
-
-impl<const MAX: usize> Data for ArrayVecData<MAX> {}
-
-impl<const MAX: usize> TryFromBytes for ArrayVecData<MAX> {
-    fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        if slice.len() > MAX {
-            return Err(UnknownCryptoError);
+    impl<const LEN: usize> TryFromBytes for ArrayData<LEN> {
+        fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+            let bytes = <[u8; LEN]>::try_from(slice).map_err(|_| UnknownCryptoError)?;
+            Ok(Self { bytes })
         }
+    }
 
-        let mut bytes = [0u8; MAX];
+    impl<const LEN: usize> AsRef<[u8]> for ArrayData<LEN> {
+        fn as_ref(&self) -> &[u8] {
+            self.bytes.as_slice()
+        }
+    }
 
-        // PANIC: This is ok because we just checked that the length
-        // was less than MAX above. Violating that condition is the
-        // only thing that would cause this to panic.
-        bytes
-            .get_mut(0..slice.len())
-            .unwrap()
-            .copy_from_slice(slice);
-
-        Ok(Self {
-            bytes,
-            len: slice.len(),
-        })
+    impl<const LEN: usize> AsMut<[u8]> for ArrayData<LEN> {
+        fn as_mut(&mut self) -> &mut [u8] {
+            &mut self.bytes
+        }
     }
 }
 
-impl<const MAX: usize> AsRef<[u8]> for ArrayVecData<MAX> {
-    fn as_ref(&self) -> &[u8] {
-        // PANIC: This unwrap is ok because the type's len is checked at
-        // construction time to be less than MAX.
-        self.bytes.get(..self.len).unwrap()
+mod array_vec_data {
+    use super::{Data, TryFromBytes};
+    use crate::errors::UnknownCryptoError;
+
+    /// A convenient type for holding data with a static upper bound on
+    /// its size. The bytes are held with a static array (`[u8; MAX]`).
+    #[derive(Clone, Debug)]
+    pub struct ArrayVecData<const MAX: usize> {
+        pub(crate) bytes: [u8; MAX],
+        pub(crate) len: usize,
+    }
+
+    impl<const MAX: usize> Data for ArrayVecData<MAX> {}
+
+    impl<const MAX: usize> TryFromBytes for ArrayVecData<MAX> {
+        fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+            if slice.len() > MAX {
+                return Err(UnknownCryptoError);
+            }
+
+            let mut bytes = [0u8; MAX];
+
+            // PANIC: This is ok because we just checked that the length
+            // was less than MAX above. Violating that condition is the
+            // only thing that would cause this to panic.
+            bytes
+                .get_mut(0..slice.len())
+                .unwrap()
+                .copy_from_slice(slice);
+
+            Ok(Self {
+                bytes,
+                len: slice.len(),
+            })
+        }
+    }
+
+    impl<const MAX: usize> AsRef<[u8]> for ArrayVecData<MAX> {
+        fn as_ref(&self) -> &[u8] {
+            // PANIC: This unwrap is ok because the type's len is checked at
+            // construction time to be less than MAX.
+            self.bytes.get(..self.len).unwrap()
+        }
+    }
+
+    impl<const MAX: usize> AsMut<[u8]> for ArrayVecData<MAX> {
+        fn as_mut(&mut self) -> &mut [u8] {
+            // PANIC: This unwrap is ok because the type's len is checked at
+            // construction time to be less than MAX.
+            self.bytes.get_mut(..self.len).unwrap()
+        }
     }
 }
 
-impl<const MAX: usize> AsMut<[u8]> for ArrayVecData<MAX> {
-    fn as_mut(&mut self) -> &mut [u8] {
-        // PANIC: This unwrap is ok because the type's len is checked at
-        // construction time to be less than MAX.
-        self.bytes.get_mut(..self.len).unwrap()
+// // NOTE: Using non-constant-time comparison here is okay becuase we don't
+// // use it for timing-sensitive comparisons. `ArrayVecData` is always wrapped
+// // in a [`Secret`](crate::hazardous::base::Secret) if it's used for
+// // sensitive information, which implements constant-time comparisons.
+// //
+// // Same thing for Debug: the Secret wrapper will handle it.
+// impl<const MAX: usize> PartialEq for ArrayVecData<MAX> {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.bytes.get(..self.len).eq(&other.bytes.get(..other.len))
+//     }
+// }
+
+mod vec_data {
+    use super::{Data, TryFromBytes};
+    use crate::errors::UnknownCryptoError;
+    use std::convert::TryFrom;
+
+    /// A convenient type for holding data in dynamically allocated buffer.
+    // TODO: Should we just use a `Vec` here? We could implement all of the
+    // same traits for a regular old Vec.
+    //
+    // NOTE: Deriving PartialEq here is okay becuase we don't use it for
+    // timing-sensitive comparisons. `VecData` is always wrapped in a
+    // [`Secret`](crate::hazardous::base::Secret) if it's used for
+    // sensitive information, which implements constant-time comparisons.
+    //
+    // Same thing for Debug: the Secret wrapper will handle it..
+    #[cfg(feature = "safe_api")]
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct VecData {
+        pub(crate) bytes: Vec<u8>,
     }
-}
 
-// NOTE: Using non-constant-time comparison here is okay becuase we don't
-// use it for timing-sensitive comparisons. `ArrayVecData` is always wrapped
-// in a [`Secret`](crate::hazardous::base::Secret) if it's used for
-// sensitive information, which implements constant-time comparisons.
-//
-// Same thing for Debug: the Secret wrapper will handle it.
-impl<const MAX: usize> PartialEq for ArrayVecData<MAX> {
-    fn eq(&self, other: &Self) -> bool {
-        self.bytes.get(..self.len).eq(&other.bytes.get(..other.len))
+    #[cfg(feature = "safe_api")]
+    impl Data for VecData {}
+
+    #[cfg(feature = "safe_api")]
+    impl TryFromBytes for VecData {
+        fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+            Ok(Self {
+                bytes: slice.into(),
+            })
+        }
     }
-}
 
-/// A convenient type for holding data in dynamically allocated buffer.
-// TODO: Should we just use a `Vec` here? We could implement all of the
-// same traits for a regular old Vec.
-//
-// NOTE: Deriving PartialEq here is okay becuase we don't use it for
-// timing-sensitive comparisons. `VecData` is always wrapped in a
-// [`Secret`](crate::hazardous::base::Secret) if it's used for
-// sensitive information, which implements constant-time comparisons.
-//
-// Same thing for Debug: the Secret wrapper will handle it..
-#[cfg(feature = "safe_api")]
-#[derive(Clone, Debug, PartialEq)]
-pub struct VecData {
-    bytes: Vec<u8>,
-}
-
-#[cfg(feature = "safe_api")]
-impl Data for VecData {}
-
-#[cfg(feature = "safe_api")]
-impl TryFromBytes for VecData {
-    fn try_from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        Ok(Self {
-            bytes: slice.into(),
-        })
+    #[cfg(feature = "safe_api")]
+    impl AsRef<[u8]> for VecData {
+        fn as_ref(&self) -> &[u8] {
+            self.bytes.as_slice()
+        }
     }
-}
 
-#[cfg(feature = "safe_api")]
-impl AsRef<[u8]> for VecData {
-    fn as_ref(&self) -> &[u8] {
-        self.bytes.as_slice()
+    #[cfg(feature = "safe_api")]
+    impl AsMut<[u8]> for VecData {
+        fn as_mut(&mut self) -> &mut [u8] {
+            &mut self.bytes
+        }
     }
-}
 
-#[cfg(feature = "safe_api")]
-impl AsMut<[u8]> for VecData {
-    fn as_mut(&mut self) -> &mut [u8] {
-        &mut self.bytes
-    }
-}
+    #[cfg(feature = "safe_api")]
+    impl<'a> TryFrom<&'a [u8]> for VecData {
+        type Error = UnknownCryptoError;
 
-#[cfg(feature = "safe_api")]
-impl<'a> TryFrom<&'a [u8]> for VecData {
-    type Error = UnknownCryptoError;
-
-    fn try_from(value: &'a [u8]) -> Result<Self, Self::Error> {
-        let bytes = Vec::from(value);
-        Ok(VecData { bytes })
+        fn try_from(value: &'a [u8]) -> Result<Self, Self::Error> {
+            let bytes = Vec::from(value);
+            Ok(VecData { bytes })
+        }
     }
 }
