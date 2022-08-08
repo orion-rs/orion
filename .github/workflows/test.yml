@@ -197,22 +197,3 @@ jobs:
         with:
           command: doc
           args: --no-deps --all-features
-  
-  cargo-deny:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        checks:
-          - advisories
-          - bans licenses sources
-
-    # Prevent sudden announcement of a new advisory from failing ci:
-    continue-on-error: ${{ matrix.checks == 'advisories' }}
-
-    steps:
-    - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
-      with:
-        persist-credentials: false
-    - uses: EmbarkStudios/cargo-deny-action@30ecad1d5873c1cc2cad10a33637371ca094768b
-      with:
-        command: check ${{ matrix.checks }}

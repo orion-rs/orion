@@ -1,18 +1,30 @@
-name: Security audit (audit-check)
+name: cargo deny (licenses, advisories, sources)
 permissions:
   contents: read
   issues: write
 
 on:
+  push:
+    # Check immediately if dependencies are altered
+    paths:
+      - '**/Cargo.toml'
+    # Check also at midnight each day
   schedule:
     - cron: '0 0 * * *'
+
 jobs:
-  audit:
+  cargo-deny:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
-        with:
-          persist-credentials: false
-      - uses: actions-rs/audit-check@35b7b53b1e25b55642157ac01b4adceb5b9ebef3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      with:
+        persist-credentials: false
+    - uses: EmbarkStudios/cargo-deny-action@7257a18a9c2fe3f92b85d41ae473520dff953c97
+      with:
+        command: check ${{ matrix.checks }}
