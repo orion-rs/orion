@@ -22,6 +22,7 @@
 
 use core::fmt;
 
+#[allow(clippy::derive_partial_eq_without_eq)]
 /// Opaque error.
 #[derive(Clone, Copy, PartialEq)]
 pub struct UnknownCryptoError;
