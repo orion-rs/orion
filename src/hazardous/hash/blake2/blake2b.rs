@@ -115,6 +115,7 @@ impl Blake2b {
     }
 }
 
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, PartialEq)]
 /// Convenience functions for common BLAKE2b operations.
 pub enum Hasher {

@@ -372,6 +372,7 @@ fn mont_ladder(scalar: &Scalar, point: FieldElement) -> FieldElement {
     x2
 }
 
+#[allow(clippy::derive_partial_eq_without_eq)]
 // NOTE: FieldElement contains a constant-time PartialEq<FieldElement> impl.
 /// A type that represents a `PublicKey` that X25519 uses.
 ///
@@ -465,6 +466,7 @@ impl PublicKey {
     }
 }
 
+#[allow(clippy::derive_partial_eq_without_eq)]
 // NOTE: Scalar contains a constant-time PartialEq<Scalar> impl.
 // NOTE: All newtypes impl Drop by default and Scalar has zeroizing Drop
 /// A type to represent the `PrivateKey` that X25519 uses.

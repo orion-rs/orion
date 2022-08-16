@@ -270,7 +270,6 @@ impl ChaCha20 {
 
         let mut iter = inplace.chunks_exact_mut(16);
 
-        #[allow(clippy::branches_sharing_code)]
         if self.is_ietf {
             wr0 = wr0.wrapping_add(self.state[0]);
             wr1 = wr1.wrapping_add(self.state[1]);
