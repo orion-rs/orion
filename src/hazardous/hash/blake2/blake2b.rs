@@ -115,14 +115,7 @@ impl Blake2b {
     }
 }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
 #[derive(Debug, PartialEq)]
->>>>>>> Stashed changes
-=======
-#[derive(Debug, PartialEq)]
->>>>>>> Stashed changes
 /// Convenience functions for common BLAKE2b operations.
 pub enum Hasher {
     /// Blake2b with `32` as `size`.
