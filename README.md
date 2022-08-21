@@ -46,7 +46,7 @@ The [wiki](https://github.com/orion-rs/orion/wiki/Testing-suite) has details on 
 cargo test
 ```
 
-Fuzzing is done using [honggfuzz-rs](https://github.com/rust-fuzz/honggfuzz-rs) in [orion-fuzz](https://github.com/orion-rs/orion-fuzz). See [orion-fuzz](https://github.com/orion-rs/orion-fuzz) on how to start fuzzing orion.
+Fuzzing is done using [honggfuzz-rs](https://github.com/rust-fuzz/honggfuzz-rs) in [orion-fuzz](https://github.com/orion-rs/orion-fuzz). See [orion-fuzz](https://github.com/orion-rs/orion-fuzz) on how to start fuzzing Orion.
 
 Constant-time execution tests can be found at [orion-dudect](https://github.com/orion-rs/orion-dudect) and [orion-sidefuzz](https://github.com/orion-rs/orion-sidefuzz).
 
