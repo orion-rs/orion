@@ -61,6 +61,15 @@ const PI: [usize; 24] = [
     10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4, 15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1,
 ];
 
+fn keccakf<const ROUNDS: usize>(state: &mut [u64; 25]) {
+    for round in 0..ROUNDS {
+        theta(state);
+        rho_and_pi(state);
+        chi(state);
+        iota(state, round);
+    }
+}
+
 // Theta (θ).
 fn theta(state: &mut [u64; 25]) {
     let mut buf = [0u64; 5];
