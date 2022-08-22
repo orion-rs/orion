@@ -4,7 +4,7 @@ __Date:__ August 16, 2022.
 
 __Changelog:__
 
-- BLAKE2b `Hasher` enum now implements `Debug + PartialEq` ([#278](https://github.com/orion-rs/orion/issues/278) (by @black-eagle17)).
+- BLAKE2b `Hasher` enum now implements `Debug + PartialEq` ([#278](https://github.com/orion-rs/orion/issues/278) (by [@black-eagle17](https://github.com/black-eagle17))).
 - Removed unmaintained `audit-check` and replaced with `cargo-deny` ([#292](https://github.com/orion-rs/orion/pull/292)).
 - Allow Unicode-DFS-2016 license in dev-dependency tree ([#291](https://github.com/orion-rs/orion/pull/291)).
 
