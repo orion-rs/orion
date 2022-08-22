@@ -191,6 +191,7 @@ fn chi(state: &mut [u64; 25]) {
 }
 
 // Iota (ι).
-fn iota(state: &mut [u64; 25]) {
-    todo!();
+fn iota(state: &mut [u64; 25], round: usize) {
+    debug_assert!(round <= 24);
+    state[0] ^= RC[round];
 }
