@@ -41,7 +41,7 @@ serde_json = "1.0.41"
 serde = { version = "1.0", features = ["derive"] }
 quickcheck = "1"
 quickcheck_macros = "1"
-criterion = "0.3.0"
+criterion = "0.4.0"
 
 [[bench]]
 name = "bench"
