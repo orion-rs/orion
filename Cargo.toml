@@ -6,7 +6,7 @@ description = "Usable, easy and safe pure-Rust crypto"
 keywords = [ "cryptography", "crypto", "aead", "hash", "mac" ]
 categories = [ "cryptography", "no-std" ]
 edition = "2018"
-rust-version = "1.56" # Update CI test along with this.
+rust-version = "1.56.1" # Update CI test along with this.
 readme = "README.md"
 repository = "https://github.com/orion-rs/orion"
 documentation = "https://docs.rs/orion"
@@ -41,7 +41,7 @@ serde_json = "1.0.41"
 serde = { version = "1.0", features = ["derive"] }
 quickcheck = "1"
 quickcheck_macros = "1"
-criterion = "0.3.0"
+criterion = "0.4.0"
 
 [[bench]]
 name = "bench"
