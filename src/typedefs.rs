@@ -166,7 +166,7 @@ macro_rules! impl_from_trait (($name:ident, $size:expr) => (
 /// implements the method `from_slice`.
 macro_rules! impl_try_from_trait (($name:ident) => (
     /// Delegates to `from_slice` implementation
-    impl core::convert::TryFrom<&[u8]> for $name {
+    impl TryFrom<&[u8]> for $name {
         type Error = UnknownCryptoError;
         fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
             Self::from_slice(slice)
