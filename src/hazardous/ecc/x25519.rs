@@ -389,8 +389,6 @@ pub struct PublicKey {
 
 impl PartialEq<&[u8]> for PublicKey {
     fn eq(&self, other: &&[u8]) -> bool {
-        use core::convert::TryInto;
-
         if other.len() != PUBLIC_KEY_SIZE {
             return false;
         }
@@ -413,7 +411,7 @@ impl_try_from_trait!(PublicKey);
 #[cfg(feature = "serde")]
 impl_serde_traits!(PublicKey, to_bytes);
 
-impl core::convert::TryFrom<&PrivateKey> for PublicKey {
+impl TryFrom<&PrivateKey> for PublicKey {
     type Error = UnknownCryptoError;
 
     fn try_from(private_key: &PrivateKey) -> Result<Self, Self::Error> {
@@ -431,8 +429,6 @@ impl PublicKey {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        use core::convert::TryInto;
-
         let slice_len = slice.len();
 
         if slice_len != PUBLIC_KEY_SIZE {
