@@ -311,7 +311,7 @@ impl PasswordHash {
         if salt.len() != SALT_LENGTH {
             return Err(UnknownCryptoError);
         }
-        let password_hash_raw = Base64NoPadding::decode_to_vec(&parts.next().unwrap(), None)?;
+        let password_hash_raw = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
         if password_hash_raw.len() != PWHASH_LENGTH {
             return Err(UnknownCryptoError);
         }
