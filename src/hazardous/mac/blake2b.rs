@@ -104,7 +104,7 @@ pub struct Blake2b {
 
 impl Blake2b {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Initialize a `Blake2b` struct with a given size and key.
+    /// Initialize a `Blake2b` struct with a given size (in bytes) and key.
     pub fn new(secret_key: &SecretKey, size: usize) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
             _state: blake2b_core::State::_new(secret_key.unprotected_as_bytes(), size)?,
