@@ -510,7 +510,7 @@ pub struct PrivateKey {
 
 impl PartialEq<&[u8]> for PrivateKey {
     fn eq(&self, other: &&[u8]) -> bool {
-        match Scalar::from_slice(*other) {
+        match Scalar::from_slice(other) {
             Ok(other_scalar) => self.scalar == other_scalar,
             Err(_) => false,
         }
