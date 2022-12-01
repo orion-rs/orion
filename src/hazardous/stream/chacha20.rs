@@ -236,6 +236,17 @@ impl ChaCha20 {
         })
     }
 
+    /// Check that we can produce one more keystream block, given the current state.
+    ///
+    /// If the internal counter would overflow, we return an error.
+    pub(crate) fn next_produceable(&self) -> Result<(), UnknownCryptoError> {
+        if self.internal_counter.checked_add(1).is_none() {
+            Err(UnknownCryptoError)
+        } else {
+            Ok(())
+        }
+    }
+
     /// Process the next keystream and copy into destination array.
     pub(crate) fn keystream_block(&mut self, block_counter: u32, inplace: &mut [u8]) {
         debug_assert!(if self.is_ietf {
@@ -1028,6 +1039,26 @@ mod private {
             for _ in 0..(128 + 1) {
                 chacha_state_ietf.keystream_block(0, &mut keystream_block);
             }
+        }
+
+        #[test]
+        fn test_error_if_internal_counter_would_overflow() {
+            let mut chacha_state = ChaCha20 {
+                state: [
+                    U32x4(0, 0, 0, 0),
+                    U32x4(0, 0, 0, 0),
+                    U32x4(0, 0, 0, 0),
+                    U32x4(0, 0, 0, 0),
+                ],
+                internal_counter: (u32::MAX - 2),
+                is_ietf: false,
+            };
+
+            assert!(chacha_state.next_produceable().is_ok());
+            chacha_state.internal_counter += 1;
+            assert!(chacha_state.next_produceable().is_ok());
+            chacha_state.internal_counter += 1;
+            assert!(chacha_state.next_produceable().is_err());
         }
     }
 }

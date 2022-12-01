@@ -166,20 +166,67 @@ pub fn seal(
         None => return Err(UnknownCryptoError),
     };
 
-    let mut enc_ctx =
+    let mut stream =
         ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
     let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
 
-    let pt_len = plaintext.len();
-    if pt_len != 0 {
-        dst_out[..pt_len].copy_from_slice(plaintext);
-        chacha20::xor_keystream(&mut enc_ctx, ENC_CTR, tmp.as_mut(), &mut dst_out[..pt_len])?;
+    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut stream, &mut tmp));
+    let ad = ad.unwrap_or(&[0u8; 0]);
+    let ad_len = ad.len();
+    let ct_len = plaintext.len();
+
+    auth_ctx.process_pad_to_blocksize(ad)?;
+
+    if ct_len != 0 {
+        for (ctr, (p_block, c_block)) in plaintext
+            .chunks(CHACHA_BLOCKSIZE)
+            .zip(dst_out.chunks_mut(CHACHA_BLOCKSIZE))
+            .enumerate()
+        {
+            match ENC_CTR.checked_add(ctr as u32) {
+                Some(counter) => {
+                    // See https://github.com/orion-rs/orion/issues/308
+                    stream.next_produceable()?;
+                    // We know at this point that:
+                    // 1) ENC_CTR + ctr does __not__ overflow/panic
+                    // 2) ChaCha20 instance will not panic on the next keystream produced
+
+                    // Copy keystream directly into the dst_out block in there is
+                    // enough space, too avoid copying from `tmp` each time and only
+                    // on the last block instead. `c_block` must be full blocksize,
+                    // or we leave behind keystream data in it, if `p_block` is not full length
+                    // while `c_block` is.
+                    if p_block.len() == CHACHA_BLOCKSIZE && c_block.len() == CHACHA_BLOCKSIZE {
+                        stream.keystream_block(counter, c_block);
+                        xor_slices!(p_block, c_block);
+                        auth_ctx.update(&c_block)?;
+                    }
+
+                    // We only pad this last block to the Poly1305 blocksize since `CHACHA_BLOCKSIZE`
+                    // already is evenly divisible by 16, so the previous full-length blocks do not matter.
+                    if p_block.len() < CHACHA_BLOCKSIZE {
+                        stream.keystream_block(counter, tmp.as_mut());
+                        xor_slices!(p_block, tmp.as_mut());
+                        c_block[..p_block.len()].copy_from_slice(&tmp.as_ref()[..p_block.len()]);
+                        auth_ctx.process_pad_to_blocksize(&c_block[..p_block.len()])?;
+                    }
+                }
+                None => return Err(UnknownCryptoError),
+            }
+        }
     }
 
-    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut enc_ctx, &mut tmp));
-    let ad = ad.unwrap_or(&[0u8; 0]);
-    process_authentication(&mut auth_ctx, ad, &dst_out[..pt_len])?;
-    dst_out[pt_len..(pt_len + POLY1305_OUTSIZE)]
+    let (adlen, ctlen): (u64, u64) = match (ad_len.try_into(), ct_len.try_into()) {
+        (Ok(alen), Ok(clen)) => (alen, clen),
+        _ => return Err(UnknownCryptoError),
+    };
+
+    let mut tmp_pad = [0u8; 16];
+    tmp_pad[0..8].copy_from_slice(&adlen.to_le_bytes());
+    tmp_pad[8..16].copy_from_slice(&ctlen.to_le_bytes());
+    auth_ctx.update(tmp_pad.as_ref())?;
+
+    dst_out[ct_len..(ct_len + POLY1305_OUTSIZE)]
         .copy_from_slice(auth_ctx.finalize()?.unprotected_as_bytes());
 
     Ok(())
