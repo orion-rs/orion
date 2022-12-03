@@ -419,7 +419,7 @@ mod public {
         let text = [b'x'; 128 + 4];
         let mut dst_out = [0u8; 128 + 4];
 
-        let err = encrypt(&k, &n, ic, &text, &mut dst_out).unwrap_err();
+        let _err = encrypt(&k, &n, ic, &text, &mut dst_out).unwrap_err();
 
         assert_ne!(&[b'x'; 4], &dst_out[dst_out.len() - 4..]);
     }
