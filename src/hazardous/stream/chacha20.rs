@@ -409,6 +409,7 @@ pub(super) fn hchacha20(
 mod public {
     use super::*;
 
+    #[cfg(feature = "safe_api")]
     #[test]
     // See https://github.com/orion-rs/orion/issues/308
     fn test_plaintext_left_in_dst_out() {
