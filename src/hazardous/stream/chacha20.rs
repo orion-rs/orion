@@ -409,6 +409,21 @@ pub(super) fn hchacha20(
 mod public {
     use super::*;
 
+    #[test]
+    // See https://github.com/orion-rs/orion/issues/308
+    fn test_plaintext_left_in_dst_out() {
+        let k = SecretKey::generate();
+        let n = Nonce::from_slice(&[0u8; 12]).unwrap();
+        let ic: u32 = u32::MAX - 1;
+
+        let text = [b'x'; 128 + 4];
+        let mut dst_out = [0u8; 128 + 4];
+
+        let err = encrypt(&k, &n, ic, &text, &mut dst_out).unwrap_err();
+
+        assert_ne!(&[b'x'; 4], &dst_out[dst_out.len() - 4..]);
+    }
+
     #[cfg(feature = "safe_api")]
     mod test_encrypt_decrypt {
         use super::*;
