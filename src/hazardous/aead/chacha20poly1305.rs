@@ -199,7 +199,7 @@ pub fn seal(
                     if p_block.len() == CHACHA_BLOCKSIZE && c_block.len() == CHACHA_BLOCKSIZE {
                         stream.keystream_block(counter, c_block);
                         xor_slices!(p_block, c_block);
-                        auth_ctx.update(&c_block)?;
+                        auth_ctx.update(c_block)?;
                     }
 
                     // We only pad this last block to the Poly1305 blocksize since `CHACHA_BLOCKSIZE`
