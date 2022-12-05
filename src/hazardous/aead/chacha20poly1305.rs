@@ -49,6 +49,9 @@
 //! - The received tag does not match the calculated tag when  calling [`open()`].
 //! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when  calling [`seal()`].
 //! - Converting `usize` to `u64` would be a lossy conversion.
+//! - `plaintext.len() >` [`P_MAX`]
+//! - `ad.len() >` [`A_MAX`]
+//! - `ciphertext_with_tag.len() >` [`C_MAX`]
 //!
 //! # Panics:
 //! A panic will occur if:
@@ -100,6 +103,9 @@
 //! [`open()`]: chacha20poly1305::open
 //! [RFC]: https://tools.ietf.org/html/rfc8439#section-3
 //! [libsodium docs]: https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data
+//! [`P_MAX`]: chacha20poly1305::P_MAX
+//! [`A_MAX`]: chacha20poly1305::A_MAX
+//! [`C_MAX`]: chacha20poly1305::C_MAX
 
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
@@ -118,6 +124,15 @@ const ENC_CTR: u32 = 1;
 
 /// The initial counter used for Poly1305 key generation.
 const AUTH_CTR: u32 = 0;
+
+/// The maximum size of the plaintext (see [RFC 8439](https://www.rfc-editor.org/rfc/rfc8439#section-2.8)).
+pub const P_MAX: u64 = (u32::MAX as u64) * 64;
+
+/// The maximum size of the ciphertext (see [RFC 8439](https://www.rfc-editor.org/rfc/rfc8439#section-2.8)).
+pub const C_MAX: u64 = P_MAX + (POLY1305_OUTSIZE as u64);
+
+/// The maximum size of the associated data (see [RFC 8439](https://www.rfc-editor.org/rfc/rfc8439#section-2.8)).
+pub const A_MAX: u64 = u64::MAX;
 
 /// Poly1305 key generation using IETF ChaCha20.
 pub(crate) fn poly1305_key_gen(
@@ -157,6 +172,15 @@ pub fn seal(
     ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
+    if u64::try_from(plaintext.len()).map_err(|_| UnknownCryptoError)? > P_MAX {
+        return Err(UnknownCryptoError);
+    }
+
+    let ad = ad.unwrap_or(&[0u8; 0]);
+    if u64::try_from(ad.len()).map_err(|_| UnknownCryptoError)? > A_MAX {
+        return Err(UnknownCryptoError);
+    }
+
     match plaintext.len().checked_add(POLY1305_OUTSIZE) {
         Some(out_min_len) => {
             if dst_out.len() < out_min_len {
@@ -177,7 +201,6 @@ pub fn seal(
     }
 
     let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut enc_ctx, &mut tmp));
-    let ad = ad.unwrap_or(&[0u8; 0]);
     process_authentication(&mut auth_ctx, ad, &dst_out[..pt_len])?;
     dst_out[pt_len..(pt_len + POLY1305_OUTSIZE)]
         .copy_from_slice(auth_ctx.finalize()?.unprotected_as_bytes());
@@ -194,6 +217,9 @@ pub fn open(
     ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
+    if u64::try_from(ciphertext_with_tag.len()).map_err(|_| UnknownCryptoError)? > C_MAX {
+        return Err(UnknownCryptoError);
+    }
     if ciphertext_with_tag.len() < POLY1305_OUTSIZE {
         return Err(UnknownCryptoError);
     }
