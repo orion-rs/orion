@@ -43,7 +43,10 @@
 //! - The received tag does not match the calculated tag when  calling [`open()`].
 //! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when  calling [`seal()`].
 //! - Converting `usize` to `u64` would be a lossy conversion.
-//!
+//! - `plaintext.len() >` [`chacha20poly1305::P_MAX`]
+//! - `ad.len() >` [`chacha20poly1305::A_MAX`]
+//! - `ciphertext_with_tag.len() >` [`chacha20poly1305::C_MAX`]
+//! 
 //! # Panics:
 //! A panic will occur if:
 //! - More than `2^32-1 * 64` bytes of data are processed.
