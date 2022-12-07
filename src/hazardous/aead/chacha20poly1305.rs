@@ -180,6 +180,7 @@ pub fn seal(
     }
 
     let ad = ad.unwrap_or(&[0u8; 0]);
+    #[allow(clippy::absurd_extreme_comparisons)]
     if u64::try_from(ad.len()).map_err(|_| UnknownCryptoError)? > A_MAX {
         return Err(UnknownCryptoError);
     }
@@ -271,6 +272,7 @@ pub fn open(
         return Err(UnknownCryptoError);
     }
     let ad = ad.unwrap_or(&[0u8; 0]);
+    #[allow(clippy::absurd_extreme_comparisons)]
     if u64::try_from(ad.len()).map_err(|_| UnknownCryptoError)? > A_MAX {
         return Err(UnknownCryptoError);
     }
