@@ -34,6 +34,9 @@
 //! timestamps or monotonically increasing counters in order to discard previous
 //! messages and prevent replay attacks." See [libsodium docs] for more information.
 //!
+//! `dst_out`: The output buffer may have a capacity greater than the input. If this is the case,
+//! only the first input length amount of bytes in `dst_out` are modified, while the rest remain untouched.
+//!
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` + [`POLY1305_OUTSIZE`] when calling [`seal()`].
@@ -43,6 +46,9 @@
 //! - The received tag does not match the calculated tag when  calling [`open()`].
 //! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when  calling [`seal()`].
 //! - Converting `usize` to `u64` would be a lossy conversion.
+//! - `plaintext.len() >` [`chacha20poly1305::P_MAX`]
+//! - `ad.len() >` [`chacha20poly1305::A_MAX`]
+//! - `ciphertext_with_tag.len() >` [`chacha20poly1305::C_MAX`]
 //!
 //! # Panics:
 //! A panic will occur if:
