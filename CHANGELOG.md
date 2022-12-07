@@ -1,3 +1,16 @@
+### 0.17.3
+
+__Date:__ December 7, 2022.
+
+__Changelog:__
+
+- Fix misuse issue in (X)ChaCha20 and (X)ChaCha20-Poly1305 APIs ([#308](https://github.com/orion-rs/orion/issues/308)).
+- Add benchmark check test without running any actual benchmarks ([#307](https://github.com/orion-rs/orion/pull/307)).
+- Improve `Balek2b::new()` docs ([#303](https://github.com/orion-rs/orion/pull/303)).
+- Migrated to Rust Edition 2021 ([#237](https://github.com/orion-rs/orion/issues/237)).
+- MSRV bumped to `1.57.0` and `criterion` updated ([#299](https://github.com/orion-rs/orion/pull/299)).
+- Added `serde` doc feature-tag to `PasswordHash` ser/deser impls ([#297](https://github.com/orion-rs/orion/pull/297)).
+
 ### 0.17.2
 
 __Date:__ August 16, 2022.
