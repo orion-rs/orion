@@ -220,6 +220,10 @@ pub fn open(
     if u64::try_from(ciphertext_with_tag.len()).map_err(|_| UnknownCryptoError)? > C_MAX {
         return Err(UnknownCryptoError);
     }
+    let ad = ad.unwrap_or(&[0u8; 0]);
+    if u64::try_from(ad.len()).map_err(|_| UnknownCryptoError)? > A_MAX {
+        return Err(UnknownCryptoError);
+    }
     if ciphertext_with_tag.len() < POLY1305_OUTSIZE {
         return Err(UnknownCryptoError);
     }
@@ -233,7 +237,6 @@ pub fn open(
     let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
-    let ad = ad.unwrap_or(&[0u8; 0]);
     process_authentication(&mut auth_ctx, ad, &ciphertext_with_tag[..ciphertext_len])?;
     util::secure_cmp(
         auth_ctx.finalize()?.unprotected_as_bytes(),
