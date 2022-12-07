@@ -15,6 +15,9 @@ ignore = [
     # serde_cbor is unmaintained, used in criterion.
     # See https://github.com/bheisler/criterion.rs/issues/534
     "RUSTSEC-2021-0127",
+    # atty has unaligned read, used in criterion.
+    # See https://github.com/bheisler/criterion.rs/issues/629
+    "RUSTSEC-2021-0145",
 ]
 
 [licenses]
