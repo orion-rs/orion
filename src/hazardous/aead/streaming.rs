@@ -34,6 +34,13 @@
 //! - `tag`: Indicates the type of message. The `tag` is a part of the output when encrypting. It
 //!   is encrypted and authenticated.
 //!
+//! `ad`: "A typical use for these data is to authenticate version numbers,
+//! timestamps or monotonically increasing counters in order to discard previous
+//! messages and prevent replay attacks." See [libsodium docs] for more information.
+//!
+//! `dst_out`: The output buffer may have a capacity greater than the input. If this is the case,
+//! only the first input length amount of bytes in `dst_out` are modified, while the rest remain untouched.
+//!
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` + [`ABYTES`] when calling [`seal_chunk()`].

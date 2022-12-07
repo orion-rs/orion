@@ -40,6 +40,9 @@
 //! counter encrypted with block ciphers with 128-bit or 256-bit blocks,
 //! because such a truncation may repeat after a short time." See [RFC] for more information.
 //!
+//! `dst_out`: The output buffer may have a capacity greater than the input. If this is the case,
+//! only the first input length amount of bytes in `dst_out` are modified, while the rest remain untouched.
+//!
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` + [`POLY1305_OUTSIZE`] when calling [`seal()`].
@@ -49,6 +52,9 @@
 //! - The received tag does not match the calculated tag when  calling [`open()`].
 //! - `plaintext.len()` + [`POLY1305_OUTSIZE`] overflows when  calling [`seal()`].
 //! - Converting `usize` to `u64` would be a lossy conversion.
+//! - `plaintext.len() >` [`P_MAX`]
+//! - `ad.len() >` [`A_MAX`]
+//! - `ciphertext_with_tag.len() >` [`C_MAX`]
 //!
 //! # Panics:
 //! A panic will occur if:
@@ -100,6 +106,9 @@
 //! [`open()`]: chacha20poly1305::open
 //! [RFC]: https://tools.ietf.org/html/rfc8439#section-3
 //! [libsodium docs]: https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data
+//! [`P_MAX`]: chacha20poly1305::P_MAX
+//! [`A_MAX`]: chacha20poly1305::A_MAX
+//! [`C_MAX`]: chacha20poly1305::C_MAX
 
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
@@ -118,6 +127,15 @@ const ENC_CTR: u32 = 1;
 
 /// The initial counter used for Poly1305 key generation.
 const AUTH_CTR: u32 = 0;
+
+/// The maximum size of the plaintext (see [RFC 8439](https://www.rfc-editor.org/rfc/rfc8439#section-2.8)).
+pub const P_MAX: u64 = (u32::MAX as u64) * 64;
+
+/// The maximum size of the ciphertext (see [RFC 8439](https://www.rfc-editor.org/rfc/rfc8439#section-2.8)).
+pub const C_MAX: u64 = P_MAX + (POLY1305_OUTSIZE as u64);
+
+/// The maximum size of the associated data (see [RFC 8439](https://www.rfc-editor.org/rfc/rfc8439#section-2.8)).
+pub const A_MAX: u64 = u64::MAX;
 
 /// Poly1305 key generation using IETF ChaCha20.
 pub(crate) fn poly1305_key_gen(
@@ -157,6 +175,16 @@ pub fn seal(
     ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
+    if u64::try_from(plaintext.len()).map_err(|_| UnknownCryptoError)? > P_MAX {
+        return Err(UnknownCryptoError);
+    }
+
+    let ad = ad.unwrap_or(&[0u8; 0]);
+    #[allow(clippy::absurd_extreme_comparisons)]
+    if u64::try_from(ad.len()).map_err(|_| UnknownCryptoError)? > A_MAX {
+        return Err(UnknownCryptoError);
+    }
+
     match plaintext.len().checked_add(POLY1305_OUTSIZE) {
         Some(out_min_len) => {
             if dst_out.len() < out_min_len {
@@ -166,20 +194,66 @@ pub fn seal(
         None => return Err(UnknownCryptoError),
     };
 
-    let mut enc_ctx =
+    let mut stream =
         ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
     let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
 
-    let pt_len = plaintext.len();
-    if pt_len != 0 {
-        dst_out[..pt_len].copy_from_slice(plaintext);
-        chacha20::xor_keystream(&mut enc_ctx, ENC_CTR, tmp.as_mut(), &mut dst_out[..pt_len])?;
+    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut stream, &mut tmp));
+    let ad_len = ad.len();
+    let ct_len = plaintext.len();
+
+    auth_ctx.process_pad_to_blocksize(ad)?;
+
+    if ct_len != 0 {
+        for (ctr, (p_block, c_block)) in plaintext
+            .chunks(CHACHA_BLOCKSIZE)
+            .zip(dst_out.chunks_mut(CHACHA_BLOCKSIZE))
+            .enumerate()
+        {
+            match ENC_CTR.checked_add(ctr as u32) {
+                Some(counter) => {
+                    // See https://github.com/orion-rs/orion/issues/308
+                    stream.next_produceable()?;
+                    // We know at this point that:
+                    // 1) ENC_CTR + ctr does __not__ overflow/panic
+                    // 2) ChaCha20 instance will not panic on the next keystream produced
+
+                    // Copy keystream directly into the dst_out block in there is
+                    // enough space, too avoid copying from `tmp` each time and only
+                    // on the last block instead. `c_block` must be full blocksize,
+                    // or we leave behind keystream data in it, if `p_block` is not full length
+                    // while `c_block` is.
+                    if p_block.len() == CHACHA_BLOCKSIZE && c_block.len() == CHACHA_BLOCKSIZE {
+                        stream.keystream_block(counter, c_block);
+                        xor_slices!(p_block, c_block);
+                        auth_ctx.update(c_block)?;
+                    }
+
+                    // We only pad this last block to the Poly1305 blocksize since `CHACHA_BLOCKSIZE`
+                    // already is evenly divisible by 16, so the previous full-length blocks do not matter.
+                    if p_block.len() < CHACHA_BLOCKSIZE {
+                        stream.keystream_block(counter, tmp.as_mut());
+                        xor_slices!(p_block, tmp.as_mut());
+                        c_block[..p_block.len()].copy_from_slice(&tmp.as_ref()[..p_block.len()]);
+                        auth_ctx.process_pad_to_blocksize(&c_block[..p_block.len()])?;
+                    }
+                }
+                None => return Err(UnknownCryptoError),
+            }
+        }
     }
 
-    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut enc_ctx, &mut tmp));
-    let ad = ad.unwrap_or(&[0u8; 0]);
-    process_authentication(&mut auth_ctx, ad, &dst_out[..pt_len])?;
-    dst_out[pt_len..(pt_len + POLY1305_OUTSIZE)]
+    let (adlen, ctlen): (u64, u64) = match (ad_len.try_into(), ct_len.try_into()) {
+        (Ok(alen), Ok(clen)) => (alen, clen),
+        _ => return Err(UnknownCryptoError),
+    };
+
+    let mut tmp_pad = [0u8; 16];
+    tmp_pad[0..8].copy_from_slice(&adlen.to_le_bytes());
+    tmp_pad[8..16].copy_from_slice(&ctlen.to_le_bytes());
+    auth_ctx.update(tmp_pad.as_ref())?;
+
+    dst_out[ct_len..(ct_len + POLY1305_OUTSIZE)]
         .copy_from_slice(auth_ctx.finalize()?.unprotected_as_bytes());
 
     Ok(())
@@ -194,6 +268,14 @@ pub fn open(
     ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
+    if u64::try_from(ciphertext_with_tag.len()).map_err(|_| UnknownCryptoError)? > C_MAX {
+        return Err(UnknownCryptoError);
+    }
+    let ad = ad.unwrap_or(&[0u8; 0]);
+    #[allow(clippy::absurd_extreme_comparisons)]
+    if u64::try_from(ad.len()).map_err(|_| UnknownCryptoError)? > A_MAX {
+        return Err(UnknownCryptoError);
+    }
     if ciphertext_with_tag.len() < POLY1305_OUTSIZE {
         return Err(UnknownCryptoError);
     }
@@ -207,7 +289,6 @@ pub fn open(
     let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
-    let ad = ad.unwrap_or(&[0u8; 0]);
     process_authentication(&mut auth_ctx, ad, &ciphertext_with_tag[..ciphertext_len])?;
     util::secure_cmp(
         auth_ctx.finalize()?.unprotected_as_bytes(),

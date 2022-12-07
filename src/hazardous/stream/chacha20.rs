@@ -36,6 +36,9 @@
 //! because such a truncation may repeat after a short time." See [RFC]
 //! for more information.
 //!
+//! `dst_out`: The output buffer may have a capacity greater than the input. If this is the case,
+//! only the first input length amount of bytes in `dst_out` are modified, while the rest remain untouched.
+//!
 //! # Errors:
 //! An error will be returned if:
 //! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
@@ -236,6 +239,17 @@ impl ChaCha20 {
         })
     }
 
+    /// Check that we can produce one more keystream block, given the current state.
+    ///
+    /// If the internal counter would overflow, we return an error.
+    pub(crate) fn next_produceable(&self) -> Result<(), UnknownCryptoError> {
+        if self.internal_counter.checked_add(1).is_none() {
+            Err(UnknownCryptoError)
+        } else {
+            Ok(())
+        }
+    }
+
     /// Process the next keystream and copy into destination array.
     pub(crate) fn keystream_block(&mut self, block_counter: u32, inplace: &mut [u8]) {
         debug_assert!(if self.is_ietf {
@@ -344,13 +358,29 @@ pub fn encrypt(
         return Err(UnknownCryptoError);
     }
 
-    dst_out[..plaintext.len()].copy_from_slice(plaintext);
-    encrypt_in_place(
-        secret_key,
-        nonce,
-        initial_counter,
-        &mut dst_out[..plaintext.len()],
-    )
+    let mut ctx = ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true)?;
+    let mut keystream_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+
+    for (ctr, (p_block, c_block)) in plaintext
+        .chunks(CHACHA_BLOCKSIZE)
+        .zip(dst_out.chunks_mut(CHACHA_BLOCKSIZE))
+        .enumerate()
+    {
+        match initial_counter.checked_add(ctr as u32) {
+            Some(counter) => {
+                // See https://github.com/orion-rs/orion/issues/308
+                ctx.next_produceable()?;
+
+                ctx.keystream_block(counter, keystream_block.as_mut());
+                xor_slices!(p_block, keystream_block.as_mut());
+                c_block[..p_block.len()]
+                    .copy_from_slice(&keystream_block.as_ref()[..p_block.len()]);
+            }
+            None => return Err(UnknownCryptoError),
+        }
+    }
+
+    Ok(())
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -381,6 +411,22 @@ pub(super) fn hchacha20(
 #[cfg(test)]
 mod public {
     use super::*;
+
+    #[cfg(feature = "safe_api")]
+    #[test]
+    // See https://github.com/orion-rs/orion/issues/308
+    fn test_plaintext_left_in_dst_out() {
+        let k = SecretKey::generate();
+        let n = Nonce::from_slice(&[0u8; 12]).unwrap();
+        let ic: u32 = u32::MAX - 1;
+
+        let text = [b'x'; 128 + 4];
+        let mut dst_out = [0u8; 128 + 4];
+
+        let _err = encrypt(&k, &n, ic, &text, &mut dst_out).unwrap_err();
+
+        assert_ne!(&[b'x'; 4], &dst_out[dst_out.len() - 4..]);
+    }
 
     #[cfg(feature = "safe_api")]
     mod test_encrypt_decrypt {
@@ -1028,6 +1074,26 @@ mod private {
             for _ in 0..(128 + 1) {
                 chacha_state_ietf.keystream_block(0, &mut keystream_block);
             }
+        }
+
+        #[test]
+        fn test_error_if_internal_counter_would_overflow() {
+            let mut chacha_state = ChaCha20 {
+                state: [
+                    U32x4(0, 0, 0, 0),
+                    U32x4(0, 0, 0, 0),
+                    U32x4(0, 0, 0, 0),
+                    U32x4(0, 0, 0, 0),
+                ],
+                internal_counter: (u32::MAX - 2),
+                is_ietf: false,
+            };
+
+            assert!(chacha_state.next_produceable().is_ok());
+            chacha_state.internal_counter += 1;
+            assert!(chacha_state.next_produceable().is_ok());
+            chacha_state.internal_counter += 1;
+            assert!(chacha_state.next_produceable().is_err());
         }
     }
 }
