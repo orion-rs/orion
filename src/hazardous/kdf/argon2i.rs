@@ -494,7 +494,7 @@ pub fn derive_key(
 
             for segment_idx in offset..segment_length {
                 let reference_idx = gidx.get_next(segment_idx, &mut working_block);
-                let current_idx = segment_n as u32 * segment_length + segment_idx as u32;
+                let current_idx = segment_n as u32 * segment_length + segment_idx;
                 let previous_idx = if current_idx > 0 {
                     current_idx - 1
                 } else {
