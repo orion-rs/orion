@@ -1481,7 +1481,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -1572,7 +1572,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -1666,7 +1666,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -1760,7 +1760,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -1851,7 +1851,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -1944,7 +1944,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -2038,7 +2038,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -2132,7 +2132,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -2224,7 +2224,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -2317,7 +2317,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -2411,7 +2411,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );
@@ -2505,7 +2505,7 @@ mod private {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
-                    gidx.get_next(idx as u32, &mut tmp_block),
+                    gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {}",
                     idx
                 );

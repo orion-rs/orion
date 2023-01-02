@@ -25,7 +25,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
     let tests: Vec<TestCase> = serde_json::from_reader(reader).unwrap();
 
     for test in tests {
-        let mut dst_out = vec![0u8; test.dgst_len as usize];
+        let mut dst_out = vec![0u8; test.dgst_len];
 
         assert!(argon2i::verify(
             &decode(&test.pwhash).unwrap(),
