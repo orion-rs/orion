@@ -44,8 +44,8 @@
 //! - Salts should always be generated using a CSPRNG.
 //!   [`secure_rand_bytes()`] can be used for this.
 //! - The recommended length for a salt is 64 bytes.
-//! - The iteration count should be set as high as feasible. The recommended
-//!   minimum is 100000.
+//! - The iteration count should be set as high as feasible. Please check [OWASP] for
+//! the recommended minimum amount (600000 at the time of writing).
 //! - Please note that when verifying, a copy of the computed password hash is placed into
 //! `dst_out`. If the derived hash is considered sensitive and you want to provide defense
 //! in depth against an attacker reading your application's private memory, then you as
@@ -72,6 +72,7 @@
 //! [`Password::generate()`]: pbkdf2::sha512::Password::generate
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
 //! [`zeroize` crate]: https://crates.io/crates/zeroize
+//! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
 
 use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
 
