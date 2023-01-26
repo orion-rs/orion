@@ -62,20 +62,28 @@
 //! [`mac::blake2b`]: crate::hazardous::mac::blake2b
 
 use crate::errors::UnknownCryptoError;
+use crate::hazardous::base::{ArrayVecData, Context, Public};
 use crate::hazardous::hash::blake2::blake2b_core;
 use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
 
 #[cfg(feature = "safe_api")]
 use std::io;
 
-construct_public! {
-    /// A type to represent the `Digest` that BLAKE2b returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is empty.
-    /// - `slice` is greater than 64 bytes.
-    (Digest, test_digest, 1, BLAKE2B_OUTSIZE)
+/// A type to represent the `Digest` that BLAKE2b returns.
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `slice` is empty.
+/// - `slice` is greater than 64 bytes.
+pub type Digest = Public<BlakeDigest, ArrayVecData<BLAKE2B_OUTSIZE>>;
+
+/// A marker type to declare that this data represents a Blake2b digest.
+pub struct BlakeDigest;
+
+impl Context for BlakeDigest {
+    const NAME: &'static str = "Blake2bDigest";
+    const MIN: usize = 1;
+    const MAX: usize = BLAKE2B_OUTSIZE;
 }
 
 #[derive(Debug, Clone)]
@@ -410,5 +418,15 @@ mod public {
 
             hash_a == hash_b
         }
+    }
+
+    mod test_base {
+        use crate::hazardous::hash::blake2::blake2b::{Blake2b, Digest};
+        fn gen_test_data() -> Digest {
+            let mut hasher = Blake2b::new(64).unwrap();
+            hasher.update(b"test data").unwrap();
+            hasher.finalize().unwrap()
+        }
+        crate::test_base!(Digest, gen_test_data, public);
     }
 }
