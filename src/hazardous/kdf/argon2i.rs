@@ -63,6 +63,9 @@
 //! in depth against an attacker reading your application's private memory, then you as
 //! the user are responsible for zeroing out this buffer (see the [`zeroize` crate]).
 //!
+//! The cost parameters were the recommended values at time of writing. Please be sure to also check
+//! [OWASP] for the latest recommended values.
+//!
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
@@ -93,6 +96,7 @@
 //! ```
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
 //! [`zeroize` crate]: https://crates.io/crates/zeroize
+//! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b::Blake2b;

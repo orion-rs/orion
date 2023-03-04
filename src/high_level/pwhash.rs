@@ -74,6 +74,8 @@
 //! - Choosing the correct cost parameters is important for security. Please refer to [libsodium's docs]
 //! for a description of how to do this.
 //!
+//! If the concrete cost parameters needed are unclear, please refer to [OWASP] for recommended minimum values.
+//!
 //! # Example:
 //! ```rust
 //! use orion::pwhash;
@@ -86,6 +88,7 @@
 //! ```
 //! [encoding format here]: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md
 //! [libsodium's docs]: https://download.libsodium.org/doc/password_hashing/default_phf#guidelines-for-choosing-the-parameters
+//! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
