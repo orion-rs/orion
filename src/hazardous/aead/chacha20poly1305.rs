@@ -123,10 +123,10 @@ use core::convert::TryInto;
 use zeroize::Zeroizing;
 
 /// The initial counter used for encryption and decryption.
-const ENC_CTR: u32 = 1;
+pub(crate) const ENC_CTR: u32 = 1;
 
 /// The initial counter used for Poly1305 key generation.
-const AUTH_CTR: u32 = 0;
+pub(crate) const AUTH_CTR: u32 = 0;
 
 /// The maximum size of the plaintext (see [RFC 8439](https://www.rfc-editor.org/rfc/rfc8439#section-2.8)).
 pub const P_MAX: u64 = (u32::MAX as u64) * 64;
@@ -147,7 +147,7 @@ pub(crate) fn poly1305_key_gen(
 }
 
 /// Authenticates the ciphertext, ad and their lengths.
-fn process_authentication(
+pub(crate) fn process_authentication(
     auth_ctx: &mut Poly1305,
     ad: &[u8],
     ciphertext: &[u8],

@@ -34,6 +34,7 @@ features = ["alloc"]
 default = [ "safe_api" ]
 safe_api = [ "getrandom", "ct-codecs" ]
 alloc = []
+experimental = []
 
 [dev-dependencies]
 hex = "0.4.0"
