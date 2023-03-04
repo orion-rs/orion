@@ -1,3 +1,16 @@
+### 0.17.4
+
+__Date:__ March 4, 2023.
+
+__Changelog:__
+
+- Update Wycheproof test vectors ([#320](https://github.com/orion-rs/orion/issues/320)).
+- Switch from `actions-rs/tarpaulin` to `cargo-tarpaulin` ([#322](https://github.com/orion-rs/orion/pull/322))
+- Update documentation for PBKDF2 and Argon2i cost parameter selection ([#316](https://github.com/orion-rs/orion/pull/316), [#321](https://github.com/orion-rs/orion/pull/321)).
+- Remove `cargo-audit` which was redundant to `cargo-deny` ([#311](https://github.com/orion-rs/orion/issues/311)).
+- Bump MSRV to `1.59.0`.
+- Remove `html_root_url` ([#325](https://github.com/orion-rs/orion/pull/325)).
+
 ### 0.17.3
 
 __Date:__ December 7, 2022.
