@@ -11,24 +11,18 @@ jobs:
   check:
     name: Code coverage
     runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
     steps:
       - name: Checkout repository
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
         with:
           persist-credentials: false
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
-        with:
-          toolchain: stable
-          override: true
-
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@044a1e5bdace8dd2f727b1af63c1d9a1d3572068
-        with:
-          timeout: '120'
-          out-type: 'Xml'
-          args: '-- --test-threads 1'
+      - name: Generate code coverage
+        run: |
+          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@d9f34f8cd5cb3b3eb79b3e4b5dae3a16df499a70
