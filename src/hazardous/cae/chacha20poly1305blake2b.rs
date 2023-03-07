@@ -20,6 +20,96 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # Parameters:
+//! - `secret_key`: The secret key.
+//! - `nonce`: The nonce value.
+//! - `ad`: Additional data to authenticate (this is not encrypted and can be [`None`]).
+//! - `ciphertext_with_tag`: The encrypted data with the corresponding 32 byte
+//!   BLAKE2b tag appended to it.
+//! - `plaintext`: The data to be encrypted.
+//! - `dst_out`: Destination array that will hold the
+//!   `ciphertext_with_tag`/`plaintext` after encryption/decryption.
+//!
+//! `ad`: "A typical use for these data is to authenticate version numbers,
+//! timestamps or monotonically increasing counters in order to discard previous
+//! messages and prevent replay attacks." See [libsodium docs] for more information.
+//!
+//! `nonce`: "Counters and LFSRs are both acceptable ways of generating unique
+//! nonces, as is encrypting a counter using a block cipher with a 64-bit block
+//! size such as DES.  Note that it is not acceptable to use a truncation of a
+//! counter encrypted with block ciphers with 128-bit or 256-bit blocks,
+//! because such a truncation may repeat after a short time." See [RFC] for more information.
+//!
+//! `dst_out`: The output buffer may have a capacity greater than the input. If this is the case,
+//! only the first input length amount of bytes in `dst_out` are modified, while the rest remain untouched.
+//!
+//! # Errors:
+//! An error will be returned if:
+//! - The length of `dst_out` is less than `plaintext` + [`TAG_SIZE`] when calling [`seal()`].
+//! - The length of `dst_out` is less than `ciphertext_with_tag` - [`TAG_SIZE`] when
+//!   calling [`open()`].
+//! - The length of `ciphertext_with_tag` is not at least [`TAG_SIZE`].
+//! - The received tag does not match the calculated tag when  calling [`open()`].
+//! - `plaintext.len()` + [`TAG_SIZE`] overflows when  calling [`seal()`].
+//! - Converting `usize` to `u64` would be a lossy conversion.
+//! - `plaintext.len() >` [`P_MAX`]
+//! - `ad.len() >` [`A_MAX`]
+//! - `ciphertext_with_tag.len() >` [`C_MAX`]
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - More than `2^32-1 * 64` bytes of data are processed.
+//!
+//! # Security:
+//! - It is critical for security that a given nonce is not re-used with a given
+//!   key. Should this happen, the security of all data that has been encrypted
+//!   with that given key is compromised.
+//! - Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated
+//!   using a CSPRNG.
+//! - To securely generate a strong key, use [`SecretKey::generate()`].
+//! - The length of the `plaintext` is not hidden, only its contents.
+//!
+//! # Recommendation:
+//! - It is recommended to use [`XChaCha20Poly1305`] when possible.
+//!
+//! # Example:
+//! ```rust
+//! # #[cfg(feature = "safe_api")] {
+//! use orion::hazardous::cae;
+//!
+//! let secret_key = cae::chacha20poly1305blake2b::SecretKey::generate();
+//!
+//! // WARNING: This nonce is only meant for demonstration and should not
+//! // be repeated. Please read the security section.
+//! let nonce = cae::chacha20poly1305blake2b::Nonce::from([0u8; 12]);
+//! let ad = "Additional data".as_bytes();
+//! let message = "Data to protect".as_bytes();
+//!
+//! // Length of the above message is 15 and then we accommodate 32 for the BLAKE2b
+//! // tag.
+//!
+//! let mut dst_out_ct = [0u8; 15 + 32];
+//! let mut dst_out_pt = [0u8; 15];
+//! // Encrypt and place ciphertext + tag in dst_out_ct
+//! cae::chacha20poly1305blake2b::seal(&secret_key, &nonce, message, Some(&ad), &mut dst_out_ct)?;
+//! // Verify tag, if correct then decrypt and place message in dst_out_pt
+//! cae::chacha20poly1305blake2b::open(&secret_key, &nonce, &dst_out_ct, Some(&ad), &mut dst_out_pt)?;
+//!
+//! assert_eq!(dst_out_pt.as_ref(), message.as_ref());
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! ```
+//! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate
+//! [`XChaCha20Poly1305`]: xchacha20poly1305
+//! [`TAG_SIZE`]: chacha20poly1305blake2b::TAG_SIZE
+//! [`seal()`]: chacha20poly1305blake2b::seal
+//! [`open()`]: chacha20poly1305blake2b::open
+//! [RFC]: https://tools.ietf.org/html/rfc8439#section-3
+//! [libsodium docs]: https://download.libsodium.org/doc/secret-key_cryptography/aead#additional-data
+//! [`P_MAX`]: chacha20poly1305blake2b::P_MAX
+//! [`A_MAX`]: chacha20poly1305blake2b::A_MAX
+//! [`C_MAX`]: chacha20poly1305blake2b::C_MAX
+
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead;
 use crate::hazardous::aead::chacha20poly1305::{poly1305_key_gen, process_authentication, ENC_CTR};
