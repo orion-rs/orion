@@ -8,33 +8,33 @@ use std::{fs::File, io::BufReader};
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct WycheproofAeadTests {
-    algorithm: String,
-    numberOfTests: u64,
-    testGroups: Vec<AeadTestGroup>,
+    pub(crate) algorithm: String,
+    pub(crate) numberOfTests: u64,
+    pub(crate) testGroups: Vec<AeadTestGroup>,
 }
 
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct AeadTestGroup {
-    ivSize: u64,
-    keySize: u64,
-    tagSize: u64,
-    tests: Vec<TestVector>,
+    pub(crate) ivSize: u64,
+    pub(crate) keySize: u64,
+    pub(crate) tagSize: u64,
+    pub(crate) tests: Vec<TestVector>,
 }
 
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct TestVector {
-    tcId: u64,
-    comment: String,
-    key: String,
-    iv: String,
-    aad: String,
-    msg: String,
-    ct: String,
-    tag: String,
-    result: String,
-    flags: Vec<String>,
+    pub(crate) tcId: u64,
+    pub(crate) comment: String,
+    pub(crate) key: String,
+    pub(crate) iv: String,
+    pub(crate) aad: String,
+    pub(crate) msg: String,
+    pub(crate) ct: String,
+    pub(crate) tag: String,
+    pub(crate) result: String,
+    pub(crate) flags: Vec<String>,
 }
 
 fn wycheproof_runner(path: &str) {
