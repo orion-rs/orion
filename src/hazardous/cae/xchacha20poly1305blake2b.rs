@@ -20,13 +20,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::errors::UnknownCryptoError;
+use crate::hazardous::aead;
 pub use crate::hazardous::aead::chacha20poly1305::A_MAX;
 pub use crate::hazardous::aead::chacha20poly1305::P_MAX;
+use crate::hazardous::aead::chacha20poly1305::{poly1305_key_gen, process_authentication, ENC_CTR};
 pub use crate::hazardous::cae::chacha20poly1305blake2b::{C_MAX, TAG_SIZE};
-use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
+use crate::hazardous::hash::blake2::blake2b::Blake2b;
+use crate::hazardous::mac::poly1305::{Poly1305, POLY1305_OUTSIZE};
+use crate::hazardous::stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE};
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
-use crate::{errors::UnknownCryptoError, hazardous::aead::chacha20poly1305};
+use crate::util;
+use zeroize::Zeroizing;
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// CTX XChaCha20Poly1305 with BLAKE2b-256.
@@ -47,7 +53,6 @@ pub fn seal(
         return Err(UnknownCryptoError);
     }
 
-    debug_assert!(POLY1305_OUTSIZE < TAG_SIZE);
     match plaintext.len().checked_add(TAG_SIZE) {
         Some(out_min_len) => {
             if dst_out.len() < out_min_len {
@@ -59,8 +64,8 @@ pub fn seal(
 
     let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
     aead::chacha20poly1305::seal(
-        subkey,
-        ietf_nonce,
+        &subkey,
+        &ietf_nonce,
         plaintext,
         Some(ad),
         &mut dst_out[..plaintext.len() + POLY1305_OUTSIZE],
@@ -70,7 +75,7 @@ pub fn seal(
     blake2b.update(secret_key.unprotected_as_bytes())?;
     blake2b.update(nonce.as_ref())?;
     blake2b.update(ad)?;
-    blake2b.update(dst_out[plaintext.len()..plaintext.len() + POLY1305_OUTSIZE])?;
+    blake2b.update(&dst_out[plaintext.len()..plaintext.len() + POLY1305_OUTSIZE])?;
     let tag = blake2b.finalize()?;
 
     dst_out[plaintext.len()..plaintext.len() + TAG_SIZE].copy_from_slice(tag.as_ref());
@@ -147,9 +152,10 @@ mod public {
     #[cfg(feature = "safe_api")]
     fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
         let secret_key = SecretKey::generate();
-        let nonce = Nonce::generate().unwrap();
+        let nonce = Nonce::generate();
         AeadTestRunner(seal, open, secret_key, nonce, &input, None, TAG_SIZE, &ad);
         test_diff_params_err(&seal, &open, &input, TAG_SIZE);
         true
     }
 }
+
