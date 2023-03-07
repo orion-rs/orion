@@ -40,7 +40,7 @@ pub const TAG_SIZE: usize = 32;
 /// The maximum size of the ciphertext.
 pub const C_MAX: u64 = P_MAX + (TAG_SIZE as u64);
 
-#[must_use = "SECURITY WARNING: Experimental feature."]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// CTX ChaCha20Poly1305 with BLAKE2b-256.
 pub fn seal(
     secret_key: &SecretKey,
@@ -89,7 +89,7 @@ pub fn seal(
     Ok(())
 }
 
-#[must_use = "SECURITY WARNING: Experimental feature."]
+#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// CTX ChaCha20Poly1305 with BLAKE2b-256.
 pub fn open(
     secret_key: &SecretKey,
