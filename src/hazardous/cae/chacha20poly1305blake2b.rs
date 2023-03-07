@@ -20,6 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # About
+//! This provides a fully committing AEAD, using the CTX construction proposed by Chan and Rogaway,
+//! in the ["On Committing Authenticated Encryption"] paper. Specifically, CTX is instantiated with BLAKE2b-256.
+//!
+//! A fully committing AEAD is important if attacks like the [partitioning oracle attack] are a part of the threat model.
+//!
 //! # Parameters:
 //! - `secret_key`: The secret key.
 //! - `nonce`: The nonce value.
@@ -109,6 +115,8 @@
 //! [`P_MAX`]: chacha20poly1305blake2b::P_MAX
 //! [`A_MAX`]: chacha20poly1305blake2b::A_MAX
 //! [`C_MAX`]: chacha20poly1305blake2b::C_MAX
+//! ["On Committing Authenticated Encryption"]: https://eprint.iacr.org/2022/1260
+//! [partitioning oracle attack]: https://www.usenix.org/conference/usenixsecurity21/presentation/len
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead;
