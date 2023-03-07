@@ -69,11 +69,6 @@ pub fn seal(
         None => return Err(UnknownCryptoError),
     };
 
-    let mut blake2b = Blake2b::new(32)?;
-    blake2b.update(secret_key.unprotected_as_bytes())?;
-    blake2b.update(nonce.as_ref())?;
-    blake2b.update(ad)?;
-
     aead::chacha20poly1305::seal(
         secret_key,
         nonce,
@@ -81,6 +76,11 @@ pub fn seal(
         Some(ad),
         &mut dst_out[..plaintext.len() + POLY1305_OUTSIZE],
     )?;
+
+    let mut blake2b = Blake2b::new(32)?;
+    blake2b.update(secret_key.unprotected_as_bytes())?;
+    blake2b.update(nonce.as_ref())?;
+    blake2b.update(ad)?;
     blake2b.update(&dst_out[plaintext.len()..plaintext.len() + POLY1305_OUTSIZE])?;
     let tag = blake2b.finalize()?;
 
@@ -163,3 +163,4 @@ mod public {
         true
     }
 }
+
