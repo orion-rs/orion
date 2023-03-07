@@ -59,7 +59,6 @@ pub fn seal(
         return Err(UnknownCryptoError);
     }
 
-    debug_assert!(POLY1305_OUTSIZE < TAG_SIZE);
     match plaintext.len().checked_add(TAG_SIZE) {
         Some(out_min_len) => {
             if dst_out.len() < out_min_len {
@@ -163,4 +162,3 @@ mod public {
         true
     }
 }
-
