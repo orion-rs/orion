@@ -40,12 +40,6 @@
 //! timestamps or monotonically increasing counters in order to discard previous
 //! messages and prevent replay attacks." See [libsodium docs] for more information.
 //!
-//! `nonce`: "Counters and LFSRs are both acceptable ways of generating unique
-//! nonces, as is encrypting a counter using a block cipher with a 64-bit block
-//! size such as DES.  Note that it is not acceptable to use a truncation of a
-//! counter encrypted with block ciphers with 128-bit or 256-bit blocks,
-//! because such a truncation may repeat after a short time." See [RFC] for more information.
-//!
 //! `dst_out`: The output buffer may have a capacity greater than the input. If this is the case,
 //! only the first input length amount of bytes in `dst_out` are modified, while the rest remain untouched.
 //!
@@ -71,7 +65,7 @@
 //!   key. Should this happen, the security of all data that has been encrypted
 //!   with that given key is compromised.
 //! - Only a nonce for XChaCha20Poly1305 is big enough to be randomly generated
-//!   using a CSPRNG.
+//!   using a CSPRNG. [`Nonce::generate()`] can be used for this.
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
 //! - The length of the `plaintext` is not hidden, only its contents.
 //!
