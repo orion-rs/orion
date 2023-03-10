@@ -5,6 +5,8 @@ use orion::hazardous::cae::{
     xchacha20poly1305blake2b,
 };
 use std::{fs::File, io::BufReader};
+mod ctx_test_vectors;
+use crate::cae::ctx_test_vectors::custom_ctx_runner;
 
 fn wycheproof_runner(path: &str) {
     let file = File::open(path).unwrap();
@@ -53,15 +55,25 @@ fn wycheproof_runner(path: &str) {
 }
 
 #[test]
-fn test_ct_equivalence_ctx_chacha20() {
+fn test_ctx_equivalence_ctx_chacha20() {
     wycheproof_runner(
         "./tests/test_data/third_party/google/wycheproof/wycheproof_chacha20_poly1305_test.json",
     );
 }
 
 #[test]
-fn test_ct_equivalence_ctx_xchacha20() {
+fn test_ctx_equivalence_ctx_xchacha20() {
     wycheproof_runner(
         "./tests/test_data/third_party/google/wycheproof/wycheproof_xchacha20_poly1305_test.json",
     );
+}
+
+#[test]
+fn test_ctx_custom_chacha20() {
+    custom_ctx_runner("./tests/test_data/experimental/ctx_chacha20_poly1305_blake2b_256.json");
+}
+
+#[test]
+fn test_ctx_custom_xchacha20() {
+    custom_ctx_runner("./tests/test_data/experimental/ctx_xchacha20_poly1305_blake2b_256.json");
 }
