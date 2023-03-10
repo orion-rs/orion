@@ -76,7 +76,7 @@
 //! - The length of the `plaintext` is not hidden, only its contents.
 //!
 //! # Recommendation:
-//! - It is recommended to use [`XChaCha20Poly1305`] when possible.
+//! - It is recommended to use [`XChaCha20Poly1305-BLAKE2b`] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -106,7 +106,7 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate
-//! [`XChaCha20Poly1305`]: xchacha20poly1305
+//! [`XChaCha20Poly1305-BLAKE2b`]: xchacha20poly1305blake2b
 //! [`TAG_SIZE`]: chacha20poly1305blake2b::TAG_SIZE
 //! [`seal()`]: chacha20poly1305blake2b::seal
 //! [`open()`]: chacha20poly1305blake2b::open

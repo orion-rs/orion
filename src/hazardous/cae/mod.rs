@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#![cfg_attr(docsrs, doc(cfg(feature = "experimental")))]
+
 /// Fully-committing ChaCha20-Poly1305 with BLAKE2b based on the [CTX] construction by John Chan & Phillip Rogaway.
 ///
 /// [CTX]: https://eprint.iacr.org/2022/1260

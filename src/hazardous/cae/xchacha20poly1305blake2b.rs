@@ -69,9 +69,6 @@
 //! - To securely generate a strong key, use [`SecretKey::generate()`].
 //! - The length of the `plaintext` is not hidden, only its contents.
 //!
-//! # Recommendation:
-//! - It is recommended to use [`XChaCha20Poly1305`] when possible.
-//!
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
@@ -97,7 +94,7 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: super::stream::chacha20::SecretKey::generate
-//! [`XChaCha20Poly1305`]: xchacha20poly1305
+//! [`Nonce::generate()`]: super::stream::xchacha20::Nonce::generate
 //! [`TAG_SIZE`]: xchacha20poly1305blake2b::TAG_SIZE
 //! [`seal()`]: xchacha20poly1305blake2b::seal
 //! [`open()`]: xchacha20poly1305blake2b::open

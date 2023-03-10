@@ -46,7 +46,5 @@ pub mod stream;
 pub mod ecc;
 
 #[cfg(feature = "experimental")]
-/// __WARNING:__ Experimental feature.
-///
-/// Fully-committing Authenticated Encryption.
+/// Fully-committing Authenticated Encryption. __WARNING:__ Experimental feature.
 pub mod cae;
