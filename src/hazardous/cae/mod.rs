@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2023 The orion Developers
+// Copyright (c) 2023 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,31 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! ### **Caution**:
-//! Usage of the `hazardous` module is __**only intended for advanced users**__.
-//! `hazardous` contains implementations with a much higher degree of control.
-//! It is also much easier to misuse those implementations. Only use `hazardous`
-//! if absolutely necessary.
+#![cfg_attr(docsrs, doc(cfg(feature = "experimental")))]
 
-/// AEADs (Authenticated Encryption with Associated Data).
-pub mod aead;
+/// Fully-committing ChaCha20-Poly1305 with BLAKE2b based on the [CTX] construction by John Chan & Phillip Rogaway.
+///
+/// [CTX]: https://eprint.iacr.org/2022/1260
+pub mod chacha20poly1305blake2b;
 
-/// Cryptographic hash functions.
-pub mod hash;
-
-/// MACs (Message Authentication Code).
-pub mod mac;
-
-/// KDFs (Key Derivation Function) and PBKDFs (Password-Based Key Derivation
-/// Function).
-pub mod kdf;
-
-/// Stream ciphers.
-pub mod stream;
-
-/// Elliptic-Curve Cryptography.
-pub mod ecc;
-
-#[cfg(feature = "experimental")]
-/// Fully-committing Authenticated Encryption. __WARNING:__ Experimental feature.
-pub mod cae;
+/// Fully-committing XChaCha20-Poly1305 with BLAKE2b based on the [CTX] construction by John Chan & Phillip Rogaway.
+///
+/// [CTX]: https://eprint.iacr.org/2022/1260
+pub mod xchacha20poly1305blake2b;

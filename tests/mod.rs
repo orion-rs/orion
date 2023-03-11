@@ -14,6 +14,10 @@ pub mod mac;
 #[cfg(test)]
 pub mod stream;
 
+#[cfg(all(feature = "safe_api", feature = "experimental"))]
+#[cfg(test)]
+pub mod cae;
+
 use hex::decode;
 
 use std::{

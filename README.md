@@ -5,12 +5,15 @@
 Orion is a cryptography library written in pure Rust. It aims to provide easy and usable crypto while trying to minimize the use of unsafe code. You can read more about Orion in the [wiki](https://github.com/orion-rs/orion/wiki).
 
 Currently supports:
-* **AEAD**: (X)ChaCha20Poly1305.
+* **AEAD**: (X)ChaCha20-Poly1305.
 * **Hashing**: BLAKE2b, SHA2.
 * **KDF**: HKDF, PBKDF2, Argon2i.
 * **Key exchange**: X25519.
 * **MAC**: HMAC, Poly1305.
 * **Stream ciphers**: (X)ChaCha20.
+
+Experimental support (with `experimental` feature enabled):
+* **Committing AEAD**: (X)ChaCha20-Poly1305-BLAKE2b.
 
 ### Security
 This library has **not undergone any third-party security audit**. Usage is at **own risk**.
@@ -30,6 +33,7 @@ MSRV may be changed at any point and will not be considered a SemVer breaking ch
 - `serde`: Requires either `alloc` or `default`/`safe_api`.
 - `alloc`: Argon2i in `hazardous` when `default`/`safe_api` is not available.
 - `no_std`: Implicit feature that represents no heap allocations. Enabled by disabling default features and not selecting any additional features.
+- `experimental`: These APIs may contain breaking changes in any non SemVer-breaking crate releases.
 
 More detailed explanation of the features in the [wiki](https://github.com/orion-rs/orion/wiki/Crate-features).
 
