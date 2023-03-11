@@ -1,3 +1,11 @@
+### 0.17.5 (unreleased)
+
+__Date:__ TBD.
+
+__Changelog:__
+- Add `experimental` crate feature.
+- Add support for fully-committing AEAD variants based on CTX ([#324](https://github.com/orion-rs/orion/pull/324)).
+
 ### 0.17.4
 
 __Date:__ March 4, 2023.
