@@ -8,6 +8,9 @@ use std::{fs::File, io::BufReader};
 mod ctx_test_vectors;
 use crate::cae::ctx_test_vectors::custom_ctx_runner;
 
+/// This test runner tests that CTX variants of ChaCha20Poly1305 XChaCha20Poly1305
+/// (with BLAKE2b) produce the same ciphertext as the non-CTX variants of them.
+/// Since CTX does not modify how the ciphertext is produced.
 fn wycheproof_runner(path: &str) {
     let file = File::open(path).unwrap();
     let reader = BufReader::new(file);
