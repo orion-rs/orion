@@ -387,44 +387,98 @@ fn test_full_round() {
 
 #[derive(Clone, Debug)]
 /// SHA3 streaming state.
-pub struct Sha3 {
+pub struct Sha3<const RATE: usize> {
     pub(crate) state: [u64; 25],
-    pub(crate) rate: usize,
+    pub(crate) buffer: [u8; RATE],
     pub(crate) capacity: usize,
-    offset: usize,
+    leftover: usize,
     is_finalized: bool,
 }
 
-impl Sha3 {
+impl<const RATE: usize> Sha3<RATE> {
     /// `capacity` should be in bytes.
-    pub(crate) fn new(capacity: usize) -> Self {
+    pub(crate) fn _new(capacity: usize) -> Self {
         Self {
             state: [0u64; 25],
-            rate: 200 - capacity,
+            buffer: [0u8; RATE],
             capacity,
-            offset: 0,
+            leftover: 0,
             is_finalized: false,
         }
     }
 
-    pub(crate) fn process_block(&mut self, data_block: &[u8]) -> Result<(), UnknownCryptoError> {
+    pub(crate) fn process_block(&mut self, data: Option<&[u8]>) {
+        // If `data.is_none()` then we want to process leftover data within `self.buffer`.
+        let data_block = match data {
+            Some(bytes) => {
+                debug_assert_eq!(bytes.len(), RATE);
+                bytes
+            }
+            None => &self.buffer,
+        };
+
         debug_assert_eq!(data_block.len() % 8, 0);
 
+        // We process data in terms of bitrate, but we need to XOR in an entire Keccak state.
+        // So the 25 - bitrate values will be zero. That's the same as not XORing those values
+        // so we leave it be as this.
         for (b, s) in data_block.chunks_exact(8).zip(self.state.iter_mut()) {
             *s ^= u64::from_le_bytes(b.try_into().unwrap());
         }
 
         keccakf::<24>(&mut self.state);
-
-        Ok(())
     }
 
-    pub(crate) fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+    /// Reset to `new()` state.
+    pub(crate) fn _reset(&mut self) {
+        self.state = [0u64; 25];
+        self.buffer = [0u8; RATE];
+        self.leftover = 0;
+        self.is_finalized = false;
+    }
+
+    pub(crate) fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
         if data.is_empty() {
             return Ok(());
+        }
+
+        let mut bytes = data;
+
+        if self.leftover != 0 {
+            debug_assert!(self.leftover <= RATE);
+
+            let mut want = RATE - self.leftover;
+            if want > bytes.len() {
+                want = bytes.len();
+            }
+
+            for (idx, itm) in bytes.iter().enumerate().take(want) {
+                self.buffer[self.leftover + idx] = *itm;
+            }
+
+            bytes = &bytes[want..];
+            self.leftover += want;
+
+            if self.leftover < RATE {
+                return Ok(());
+            }
+
+            self.process_block(None);
+            self.leftover = 0;
+        }
+
+        while bytes.len() >= RATE {
+            self.process_block(Some(bytes[..RATE].as_ref()));
+            bytes = &bytes[RATE..];
+        }
+
+        if !bytes.is_empty() {
+            debug_assert_eq!(self.leftover, 0);
+            self.buffer[..bytes.len()].copy_from_slice(bytes);
+            self.leftover = bytes.len();
         }
 
         Ok(())
