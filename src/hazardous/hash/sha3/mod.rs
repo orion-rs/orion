@@ -23,6 +23,8 @@
 // TODO:
 // - See if we can make this `const`
 
+use crate::errors::UnknownCryptoError;
+
 /// Round constants. See NIST intermediate test vectors for source.
 const RC: [u64; 24] = [
     0x0000000000000001,
@@ -52,7 +54,7 @@ const RC: [u64; 24] = [
 ];
 
 /// Rho offsets. See NIST intermediate test vectors for source.
-const RO: [u32; 24] = [
+const RHO: [u32; 24] = [
     1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,
 ];
 
@@ -63,17 +65,19 @@ const PI: [usize; 24] = [
 
 fn keccakf<const ROUNDS: usize>(state: &mut [u64; 25]) {
     for round in 0..ROUNDS {
-        theta(state);
-        rho_and_pi(state);
-        chi(state);
+        let mut buf = [0u64; 5];
+
+        theta(state, &mut buf);
+        rho_and_pi(state, &mut buf);
+        chi(state, &mut buf);
         iota(state, round);
     }
 }
 
+#[allow(clippy::erasing_op)]
+#[allow(clippy::identity_op)]
 // Theta (θ).
-fn theta(state: &mut [u64; 25]) {
-    let mut buf = [0u64; 5];
-
+fn theta(state: &mut [u64; 25], buf: &mut [u64; 5]) {
     buf[0] ^= state[0 + (0 * 5)];
     buf[0] ^= state[0 + (1 * 5)];
     buf[0] ^= state[0 + (2 * 5)];
@@ -136,121 +140,109 @@ fn theta(state: &mut [u64; 25]) {
 }
 
 // Rho (ρ) & Pi (π).
-fn rho_and_pi(state: &mut [u64; 25]) {
-    let mut buf = [0u64; 5];
+fn rho_and_pi(state: &mut [u64; 25], buf: &mut [u64; 5]) {
     let mut prev = state[1];
 
-    /*
-           unroll24!(x, {
-               array[0] = state[PI[x]];
-               state[PI[x]] = last.rotate_left(RHO[x]);
-               last = array[0];
-           });
-    */
-
-    // NOTE: If these fail test vectors it might require an additional iteration ( the last one )
-
     buf[0] = state[PI[0]];
-    state[PI[0]] = prev.rotate_left(RO[0]);
+    state[PI[0]] = prev.rotate_left(RHO[0]);
     prev = buf[0];
 
     buf[0] = state[PI[1]];
-    state[PI[1]] = prev.rotate_left(RO[1]);
+    state[PI[1]] = prev.rotate_left(RHO[1]);
     prev = buf[0];
 
     buf[0] = state[PI[2]];
-    state[PI[2]] = prev.rotate_left(RO[2]);
+    state[PI[2]] = prev.rotate_left(RHO[2]);
     prev = buf[0];
 
     buf[0] = state[PI[3]];
-    state[PI[3]] = prev.rotate_left(RO[3]);
+    state[PI[3]] = prev.rotate_left(RHO[3]);
     prev = buf[0];
 
     buf[0] = state[PI[4]];
-    state[PI[4]] = prev.rotate_left(RO[4]);
+    state[PI[4]] = prev.rotate_left(RHO[4]);
     prev = buf[0];
 
     buf[0] = state[PI[5]];
-    state[PI[5]] = prev.rotate_left(RO[5]);
+    state[PI[5]] = prev.rotate_left(RHO[5]);
     prev = buf[0];
 
     buf[0] = state[PI[6]];
-    state[PI[6]] = prev.rotate_left(RO[6]);
+    state[PI[6]] = prev.rotate_left(RHO[6]);
     prev = buf[0];
 
     buf[0] = state[PI[7]];
-    state[PI[7]] = prev.rotate_left(RO[7]);
+    state[PI[7]] = prev.rotate_left(RHO[7]);
     prev = buf[0];
 
     buf[0] = state[PI[8]];
-    state[PI[8]] = prev.rotate_left(RO[8]);
+    state[PI[8]] = prev.rotate_left(RHO[8]);
     prev = buf[0];
 
     buf[0] = state[PI[9]];
-    state[PI[9]] = prev.rotate_left(RO[9]);
+    state[PI[9]] = prev.rotate_left(RHO[9]);
     prev = buf[0];
 
     buf[0] = state[PI[10]];
-    state[PI[10]] = prev.rotate_left(RO[10]);
+    state[PI[10]] = prev.rotate_left(RHO[10]);
     prev = buf[0];
 
     buf[0] = state[PI[11]];
-    state[PI[11]] = prev.rotate_left(RO[11]);
+    state[PI[11]] = prev.rotate_left(RHO[11]);
     prev = buf[0];
 
     buf[0] = state[PI[12]];
-    state[PI[12]] = prev.rotate_left(RO[12]);
+    state[PI[12]] = prev.rotate_left(RHO[12]);
     prev = buf[0];
 
     buf[0] = state[PI[13]];
-    state[PI[13]] = prev.rotate_left(RO[13]);
+    state[PI[13]] = prev.rotate_left(RHO[13]);
     prev = buf[0];
 
     buf[0] = state[PI[14]];
-    state[PI[14]] = prev.rotate_left(RO[14]);
+    state[PI[14]] = prev.rotate_left(RHO[14]);
     prev = buf[0];
 
     buf[0] = state[PI[15]];
-    state[PI[15]] = prev.rotate_left(RO[15]);
+    state[PI[15]] = prev.rotate_left(RHO[15]);
     prev = buf[0];
 
     buf[0] = state[PI[16]];
-    state[PI[16]] = prev.rotate_left(RO[16]);
+    state[PI[16]] = prev.rotate_left(RHO[16]);
     prev = buf[0];
 
     buf[0] = state[PI[17]];
-    state[PI[17]] = prev.rotate_left(RO[17]);
+    state[PI[17]] = prev.rotate_left(RHO[17]);
     prev = buf[0];
 
     buf[0] = state[PI[18]];
-    state[PI[18]] = prev.rotate_left(RO[18]);
+    state[PI[18]] = prev.rotate_left(RHO[18]);
     prev = buf[0];
 
     buf[0] = state[PI[19]];
-    state[PI[19]] = prev.rotate_left(RO[19]);
+    state[PI[19]] = prev.rotate_left(RHO[19]);
     prev = buf[0];
 
     buf[0] = state[PI[20]];
-    state[PI[20]] = prev.rotate_left(RO[20]);
+    state[PI[20]] = prev.rotate_left(RHO[20]);
     prev = buf[0];
 
     buf[0] = state[PI[21]];
-    state[PI[21]] = prev.rotate_left(RO[21]);
+    state[PI[21]] = prev.rotate_left(RHO[21]);
     prev = buf[0];
 
     buf[0] = state[PI[22]];
-    state[PI[22]] = prev.rotate_left(RO[22]);
+    state[PI[22]] = prev.rotate_left(RHO[22]);
     prev = buf[0];
 
     buf[0] = state[PI[23]];
-    state[PI[23]] = prev.rotate_left(RO[23]);
+    state[PI[23]] = prev.rotate_left(RHO[23]);
     prev = buf[0];
 }
 
+#[allow(clippy::identity_op)]
 // Chi (χ).
-fn chi(state: &mut [u64; 25]) {
-    let mut buf = [0u64; 5];
-
+fn chi(state: &mut [u64; 25], buf: &mut [u64; 5]) {
     buf[0] = state[0 + 0];
     buf[1] = state[0 + 1];
     buf[2] = state[0 + 2];
@@ -316,4 +308,125 @@ fn chi(state: &mut [u64; 25]) {
 fn iota(state: &mut [u64; 25], round: usize) {
     debug_assert!(round <= 24);
     state[0] ^= RC[round];
+}
+
+fn state_to_bytes(state: &[u64; 25]) -> [u8; 200] {
+    let mut bytes = [0u8; 200];
+
+    for (b, s) in bytes.chunks_exact_mut(8).zip(state.iter()) {
+        b.copy_from_slice(&s.to_le_bytes());
+    }
+
+    bytes
+}
+
+// <https://github.com/XKCP/XKCP/blob/master/tests/TestVectors/KeccakF-1600-IntermediateValues.txt>
+#[test]
+fn test_full_round() {
+    let mut state = [0u64; 25];
+    let expected_state_from_zero = [
+        0xF1258F7940E1DDE7,
+        0x84D5CCF933C0478A,
+        0xD598261EA65AA9EE,
+        0xBD1547306F80494D,
+        0x8B284E056253D057,
+        0xFF97A42D7F8E6FD4,
+        0x90FEE5A0A44647C4,
+        0x8C5BDA0CD6192E76,
+        0xAD30A6F71B19059C,
+        0x30935AB7D08FFC64,
+        0xEB5AA93F2317D635,
+        0xA9A6E6260D712103,
+        0x81A57C16DBCF555F,
+        0x43B831CD0347C826,
+        0x01F22F1A11A5569F,
+        0x05E5635A21D9AE61,
+        0x64BEFEF28CC970F2,
+        0x613670957BC46611,
+        0xB87C5A554FD00ECB,
+        0x8C3EE88A1CCF32C8,
+        0x940C7922AE3A2614,
+        0x1841F924A2C509E4,
+        0x16F53526E70465C2,
+        0x75F644E97F30A13B,
+        0xEAF1FF7B5CECA249,
+    ];
+    let expected_state_rerun = [
+        0x2D5C954DF96ECB3C,
+        0x6A332CD07057B56D,
+        0x093D8D1270D76B6C,
+        0x8A20D9B25569D094,
+        0x4F9C4F99E5E7F156,
+        0xF957B9A2DA65FB38,
+        0x85773DAE1275AF0D,
+        0xFAF4F247C3D810F7,
+        0x1F1B9EE6F79A8759,
+        0xE4FECC0FEE98B425,
+        0x68CE61B6B9CE68A1,
+        0xDEEA66C4BA8F974F,
+        0x33C43D836EAFB1F5,
+        0xE00654042719DBD9,
+        0x7CF8A9F009831265,
+        0xFD5449A6BF174743,
+        0x97DDAD33D8994B40,
+        0x48EAD5FC5D0BE774,
+        0xE3B8C8EE55B7B03C,
+        0x91A0226E649E42E9,
+        0x900E3129E7BADD7B,
+        0x202A9EC5FAA3CCE8,
+        0x5B3402464E1C3DB6,
+        0x609F4E62A44C1059,
+        0x20D06CD26A8FBF5C,
+    ];
+
+    keccakf::<24>(&mut state);
+    assert_eq!(&state, &expected_state_from_zero);
+    keccakf::<24>(&mut state);
+    assert_eq!(&state, &expected_state_rerun);
+}
+
+#[derive(Clone, Debug)]
+/// SHA3 streaming state.
+pub struct Sha3 {
+    pub(crate) state: [u64; 25],
+    pub(crate) rate: usize,
+    pub(crate) capacity: usize,
+    offset: usize,
+    is_finalized: bool,
+}
+
+impl Sha3 {
+    /// `capacity` should be in bytes.
+    pub(crate) fn new(capacity: usize) -> Self {
+        Self {
+            state: [0u64; 25],
+            rate: 200 - capacity,
+            capacity,
+            offset: 0,
+            is_finalized: false,
+        }
+    }
+
+    pub(crate) fn process_block(&mut self, data_block: &[u8]) -> Result<(), UnknownCryptoError> {
+        debug_assert_eq!(data_block.len() % 8, 0);
+
+        for (b, s) in data_block.chunks_exact(8).zip(self.state.iter_mut()) {
+            *s ^= u64::from_le_bytes(b.try_into().unwrap());
+        }
+
+        keccakf::<24>(&mut self.state);
+
+        Ok(())
+    }
+
+    pub(crate) fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+        if data.is_empty() {
+            return Ok(());
+        }
+
+        Ok(())
+    }
 }

@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2023 The orion Developers
+// Copyright (c) 2023 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// SHA2 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
-pub mod sha2;
+//! # Parameters:
+//! - `data`: The data to be hashed.
+//!
+//! # Errors:
+//! An error will be returned if:
+//! - [`finalize()`] is called twice without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
+//!   between.
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - More than N __bits__ of data are hashed.
+//!
+//!
+//! # Example:
+//! ```rust
+//! use orion::hazardous::hash::sha3::sha512;
+//!
+//! // Using the streaming interface
+//! let mut state = Sha512::new();
+//! state.update(b"Hello world")?;
+//! let hash = state.finalize()?;
+//!
+//! // Using the one-shot function
+//! let hash_one_shot = Sha512::digest(b"Hello world")?;
+//!
+//! assert_eq!(hash, hash_one_shot);
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! ```
+//! [`update()`]: sha512::Sha512::update
+//! [`reset()`]: sha512::Sha512::reset
+//! [`finalize()`]: sha512::Sha512::finalize
 
-/// SHA3 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
-pub mod sha3;
-
-/// BLAKE2 hash functions.
-pub mod blake2;
+use crate::errors::UnknownCryptoError;
