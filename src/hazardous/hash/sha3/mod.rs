@@ -33,6 +33,8 @@ pub mod sha384;
 pub mod sha512;
 
 use crate::errors::UnknownCryptoError;
+use core::fmt::Debug;
+use zeroize::Zeroize;
 
 /// Round constants. See NIST intermediate test vectors for source.
 const RC: [u64; 24] = [
@@ -246,7 +248,6 @@ fn rho_and_pi(state: &mut [u64; 25], buf: &mut [u64; 5]) {
 
     buf[0] = state[PI[23]];
     state[PI[23]] = prev.rotate_left(RHO[23]);
-    prev = buf[0];
 }
 
 #[allow(clippy::identity_op)]
@@ -384,7 +385,7 @@ fn test_full_round() {
     assert_eq!(&state, &expected_state_rerun);
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 /// SHA3 streaming state.
 pub struct Sha3<const RATE: usize> {
     pub(crate) state: [u64; 25],
@@ -392,6 +393,25 @@ pub struct Sha3<const RATE: usize> {
     pub(crate) capacity: usize,
     leftover: usize,
     is_finalized: bool,
+}
+
+impl<const RATE: usize> Drop for Sha3<RATE> {
+    fn drop(&mut self) {
+        self.state.iter_mut().zeroize();
+        self.buffer.iter_mut().zeroize();
+        self.leftover.zeroize();
+    }
+}
+
+impl<const RATE: usize> Debug for Sha3<RATE> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "State {{ state: [***OMITTED***], buffer: [***OMITTED***], capacity: {:?}, leftover: {:?}, \
+            is_finalized: {:?} }}",
+            self.capacity, self.leftover, self.is_finalized
+        )
+    }
 }
 
 impl<const RATE: usize> Sha3<RATE> {

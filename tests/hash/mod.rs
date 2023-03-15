@@ -2,11 +2,11 @@ pub mod blake2b_kat;
 pub mod other_blake2b;
 pub mod sha256_nist_cavp;
 pub mod sha384_nist_cavp;
-pub mod sha512_nist_cavp;
 pub mod sha3_224_nist_cavp;
 pub mod sha3_256_nist_cavp;
 pub mod sha3_384_nist_cavp;
 pub mod sha3_512_nist_cavp;
+pub mod sha512_nist_cavp;
 
 use crate::TestCaseReader;
 use orion::hazardous::hash::{blake2, sha2, sha3};

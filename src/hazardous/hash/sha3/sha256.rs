@@ -54,6 +54,8 @@
 //! [`finalize()`]: sha256::Sha256::finalize
 
 use crate::errors::UnknownCryptoError;
+#[cfg(feature = "safe_api")]
+use std::io;
 
 use super::Sha3;
 
@@ -83,6 +85,48 @@ pub struct Sha256 {
 impl Default for Sha256 {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+/// Example: hashing from a [`Read`](std::io::Read)er with SHA3-256.
+/// ```rust
+/// use orion::{
+///     hazardous::hash::sha3::sha256::{Sha256, Digest},
+///     errors::UnknownCryptoError,
+/// };
+/// use std::io::{self, Read, Write};
+///
+/// // `reader` could also be a `File::open(...)?`.
+/// let mut reader = io::Cursor::new(b"some data");
+/// let mut hasher = Sha256::new();
+/// std::io::copy(&mut reader, &mut hasher)?;
+///
+/// let digest: Digest = hasher.finalize()?;
+///
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[cfg(feature = "safe_api")]
+impl io::Write for Sha256 {
+    /// Update the hasher's internal state with *all* of the bytes given.
+    /// If this function returns the `Ok` variant, it's guaranteed that it
+    /// will contain the length of the buffer passed to [`Write`](std::io::Write).
+    /// Note that this function is just a small wrapper over
+    /// [`Sha256::update`](crate::hazardous::hash::sha3::sha256::Sha256::update).
+    ///
+    /// ## Errors:
+    /// This function will only ever return the [`std::io::ErrorKind::Other`]()
+    /// variant when it returns an error. Additionally, this will always contain Orion's
+    /// [`UnknownCryptoError`](crate::errors::UnknownCryptoError) type.
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.update(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        Ok(bytes.len())
+    }
+
+    /// This type doesn't buffer writes, so flushing is a no-op.
+    fn flush(&mut self) -> Result<(), std::io::Error> {
+        Ok(())
     }
 }
 
@@ -125,5 +169,111 @@ impl Sha256 {
         let mut ctx = Self::new();
         ctx.update(data)?;
         ctx.finalize()
+    }
+}
+
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+    use super::*;
+
+    #[test]
+    fn test_default_equals_new() {
+        let new = Sha256::new();
+        let default = Sha256::default();
+        new._state.compare_state_to_other(&default._state);
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_debug_impl() {
+        let initial_state = Sha256::new();
+        let debug = format!("{:?}", initial_state);
+        let expected = "Sha256 { _state: State { state: [***OMITTED***], buffer: [***OMITTED***], capacity: 64, leftover: 0, is_finalized: false } }";
+        assert_eq!(debug, expected);
+    }
+
+    mod test_streaming_interface {
+        use super::*;
+        use crate::test_framework::incremental_interface::*;
+
+        impl TestableStreamingContext<Digest> for Sha256 {
+            fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+                self.reset();
+                Ok(())
+            }
+
+            fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+                self.update(input)
+            }
+
+            fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
+                self.finalize()
+            }
+
+            fn one_shot(input: &[u8]) -> Result<Digest, UnknownCryptoError> {
+                Sha256::digest(input)
+            }
+
+            fn verify_result(expected: &Digest, input: &[u8]) -> Result<(), UnknownCryptoError> {
+                let actual: Digest = Self::one_shot(input)?;
+
+                if &actual == expected {
+                    Ok(())
+                } else {
+                    Err(UnknownCryptoError)
+                }
+            }
+
+            fn compare_states(state_1: &Sha256, state_2: &Sha256) {
+                state_1._state.compare_state_to_other(&state_2._state);
+            }
+        }
+
+        #[test]
+        fn default_consistency_tests() {
+            let initial_state: Sha256 = Sha256::new();
+
+            let test_runner = StreamingContextConsistencyTester::<Digest, Sha256>::new(
+                initial_state,
+                SHA3_256_RATE,
+            );
+            test_runner.run_all_tests();
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
+        /// Test different streaming state usage patterns.
+        fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+            let initial_state: Sha256 = Sha256::new();
+
+            let test_runner = StreamingContextConsistencyTester::<Digest, Sha256>::new(
+                initial_state,
+                SHA3_256_RATE,
+            );
+            test_runner.run_all_tests_property(&data);
+            true
+        }
+    }
+
+    #[cfg(feature = "safe_api")]
+    mod test_io_impls {
+        use crate::hazardous::hash::sha3::sha256::Sha256;
+        use std::io::Write;
+
+        #[quickcheck]
+        fn prop_hasher_write_same_as_update(data: Vec<u8>) -> bool {
+            let mut hasher_a = Sha256::new();
+            let mut hasher_b = hasher_a.clone();
+
+            hasher_a.update(&data).unwrap();
+            hasher_b.write_all(&data).unwrap();
+
+            let hash_a = hasher_a.finalize().unwrap();
+            let hash_b = hasher_b.finalize().unwrap();
+
+            hash_a == hash_b
+        }
     }
 }
