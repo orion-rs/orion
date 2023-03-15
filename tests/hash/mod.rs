@@ -3,6 +3,10 @@ pub mod other_blake2b;
 pub mod sha256_nist_cavp;
 pub mod sha384_nist_cavp;
 pub mod sha512_nist_cavp;
+pub mod sha3_224_nist_cavp;
+pub mod sha3_256_nist_cavp;
+pub mod sha3_384_nist_cavp;
+pub mod sha3_512_nist_cavp;
 
 use crate::TestCaseReader;
 use orion::hazardous::hash::{blake2, sha2, sha3};
@@ -131,16 +135,20 @@ fn nist_cavp_runner(path: &str) {
             ran_any_runner = true;
         }
         if path.contains("SHA3_224") {
-            sha3_224_test_runner(&input[..], &expected_output[..])
+            sha3_224_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
         }
         if path.contains("SHA3_256") {
-            sha3_256_test_runner(&input[..], &expected_output[..])
+            sha3_256_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
         }
         if path.contains("SHA3_384") {
-            sha3_384_test_runner(&input[..], &expected_output[..])
+            sha3_384_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
         }
         if path.contains("SHA3_512") {
-            sha3_512_test_runner(&input[..], &expected_output[..])
+            sha3_512_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
         }
 
         assert!(ran_any_runner);
