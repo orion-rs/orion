@@ -529,11 +529,15 @@ impl<const RATE: usize> Sha3<RATE> {
         self.buffer[self.buffer.len() - 1] |= 0x80;
         self.process_block(None);
 
+        // The reason we can't work with chunks_exact here is that for SHA3-224
+        // the `dest` is not evenly divisible by 8/`core::mem::size_of::<u64>()`.
         for (out_chunk, state_value) in dest
-            .chunks_exact_mut(core::mem::size_of::<u64>())
+            .chunks_mut(core::mem::size_of::<u64>())
             .zip(self.state.iter())
         {
-            out_chunk.copy_from_slice(&state_value.to_be_bytes());
+            // We need to slice the state value in bytes here for same reason as mentioned
+            // above.
+            out_chunk.copy_from_slice(&state_value.to_le_bytes()[..out_chunk.len()]);
         }
 
         Ok(())
