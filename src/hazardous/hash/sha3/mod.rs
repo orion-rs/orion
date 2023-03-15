@@ -20,8 +20,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// TODO:
-// - See if we can make this `const`
+/// SHA3-224 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
+pub mod sha224;
+
+/// SHA3-256 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
+pub mod sha256;
+
+/// SHA3-384 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
+pub mod sha384;
+
+/// SHA3-512 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
+pub mod sha512;
 
 use crate::errors::UnknownCryptoError;
 
@@ -310,16 +319,6 @@ fn iota(state: &mut [u64; 25], round: usize) {
     state[0] ^= RC[round];
 }
 
-fn state_to_bytes(state: &[u64; 25]) -> [u8; 200] {
-    let mut bytes = [0u8; 200];
-
-    for (b, s) in bytes.chunks_exact_mut(8).zip(state.iter()) {
-        b.copy_from_slice(&s.to_le_bytes());
-    }
-
-    bytes
-}
-
 // <https://github.com/XKCP/XKCP/blob/master/tests/TestVectors/KeccakF-1600-IntermediateValues.txt>
 #[test]
 fn test_full_round() {
@@ -396,6 +395,7 @@ pub struct Sha3<const RATE: usize> {
 }
 
 impl<const RATE: usize> Sha3<RATE> {
+    /// Initialize a new state.
     /// `capacity` should be in bytes.
     pub(crate) fn _new(capacity: usize) -> Self {
         Self {
@@ -407,6 +407,7 @@ impl<const RATE: usize> Sha3<RATE> {
         }
     }
 
+    /// Process data in `self.buffer` or optionally `data`.
     pub(crate) fn process_block(&mut self, data: Option<&[u8]>) {
         // If `data.is_none()` then we want to process leftover data within `self.buffer`.
         let data_block = match data {
@@ -422,7 +423,10 @@ impl<const RATE: usize> Sha3<RATE> {
         // We process data in terms of bitrate, but we need to XOR in an entire Keccak state.
         // So the 25 - bitrate values will be zero. That's the same as not XORing those values
         // so we leave it be as this.
-        for (b, s) in data_block.chunks_exact(8).zip(self.state.iter_mut()) {
+        for (b, s) in data_block
+            .chunks_exact(core::mem::size_of::<u64>())
+            .zip(self.state.iter_mut())
+        {
             *s ^= u64::from_le_bytes(b.try_into().unwrap());
         }
 
@@ -437,6 +441,7 @@ impl<const RATE: usize> Sha3<RATE> {
         self.is_finalized = false;
     }
 
+    /// Update state with `data`. This can be called multiple times.
     pub(crate) fn _update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
@@ -482,5 +487,48 @@ impl<const RATE: usize> Sha3<RATE> {
         }
 
         Ok(())
+    }
+
+    /// Finalize the hash and put the final digest into `dest`.
+    pub(crate) fn _finalize(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+
+        self.is_finalized = true;
+        // self.leftover should not be greater than SHA3(256/384/512)_RATE
+        // as that would have been processed in the update call
+        debug_assert!(self.leftover < RATE);
+        // Set padding byte and pad with zeroes after
+        self.buffer[self.leftover] = 0x06;
+        self.leftover += 1;
+        for itm in self.buffer.iter_mut().skip(self.leftover) {
+            *itm = 0;
+        }
+
+        self.buffer[self.buffer.len() - 1] |= 0x80;
+        self.process_block(None);
+
+        for (out_chunk, state_value) in dest
+            .chunks_exact_mut(core::mem::size_of::<u64>())
+            .zip(self.state.iter())
+        {
+            out_chunk.copy_from_slice(&state_value.to_be_bytes());
+        }
+
+        Ok(())
+    }
+
+    #[cfg(test)]
+    /// Compare two Sha3 state objects to check if their fields
+    /// are the same.
+    pub(crate) fn compare_state_to_other(&self, other: &Self) {
+        for idx in 0..25 {
+            assert_eq!(self.state[idx], other.state[idx]);
+        }
+        assert_eq!(self.buffer, other.buffer);
+        assert_eq!(self.capacity, other.capacity);
+        assert_eq!(self.leftover, other.leftover);
+        assert_eq!(self.is_finalized, other.is_finalized);
     }
 }

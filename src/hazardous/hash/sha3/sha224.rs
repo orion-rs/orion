@@ -36,61 +36,61 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::hash::sha3::sha256;
+//! use orion::hazardous::hash::sha3::sha224;
 //!
 //! // Using the streaming interface
-//! let mut state = Sha256::new();
+//! let mut state = Sha224::new();
 //! state.update(b"Hello world")?;
 //! let hash = state.finalize()?;
 //!
 //! // Using the one-shot function
-//! let hash_one_shot = Sha256::digest(b"Hello world")?;
+//! let hash_one_shot = Sha224::digest(b"Hello world")?;
 //!
 //! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: sha256::Sha256::update
-//! [`reset()`]: sha256::Sha256::reset
-//! [`finalize()`]: sha256::Sha256::finalize
+//! [`update()`]: sha224::Sha224::update
+//! [`reset()`]: sha224::Sha224::reset
+//! [`finalize()`]: sha224::Sha224::finalize
 
 use crate::errors::UnknownCryptoError;
 
 use super::Sha3;
 
-/// Rate of SHA3-256.
-const SHA3_256_RATE: usize = 136;
+/// Rate of SHA3-224.
+const SHA3_224_RATE: usize = 144;
 
-/// Output size of SHA3-256 in bytes.
-pub const SHA3_256_OUTSIZE: usize = 32;
+/// Output size of SHA3-224 in bytes.
+pub const SHA3_224_OUTSIZE: usize = 28;
 
 construct_public! {
-    /// A type to represent the `Digest` that SHA3-256 returns.
+    /// A type to represent the `Digest` that SHA3-224 returns.
     ///
     /// # Errors:
     /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    (Digest, test_digest, SHA3_256_OUTSIZE, SHA3_256_OUTSIZE)
+    /// - `slice` is not 28 bytes.
+    (Digest, test_digest, SHA3_224_OUTSIZE, SHA3_224_OUTSIZE)
 }
 
-impl_from_trait!(Digest, SHA3_256_OUTSIZE);
+impl_from_trait!(Digest, SHA3_224_OUTSIZE);
 
 #[derive(Clone, Debug)]
-/// SHA3-256 streaming state.
-pub struct Sha256 {
-    pub(crate) _state: Sha3<{ SHA3_256_RATE }>,
+/// SHA3-224 streaming state.
+pub struct Sha224 {
+    pub(crate) _state: Sha3<{ SHA3_224_RATE }>,
 }
 
-impl Default for Sha256 {
+impl Default for Sha224 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Sha256 {
-    /// Initialize a `Sha256` struct.
+impl Sha224 {
+    /// Initialize a `Sha224` struct.
     pub fn new() -> Self {
         Self {
-            _state: Sha3::<{ SHA3_256_RATE }>::_new(64),
+            _state: Sha3::<{ SHA3_224_RATE }>::_new(56),
         }
     }
 
@@ -111,16 +111,16 @@ impl Sha256 {
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Return a SHA3-256 digest.
+    /// Return a SHA3-224 digest.
     pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
-        let mut digest = [0u8; SHA3_256_OUTSIZE];
+        let mut digest = [0u8; SHA3_224_OUTSIZE];
         self._finalize_internal(&mut digest)?;
 
         Ok(Digest::from(digest))
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Calculate a SHA3-256 digest of some `data`.
+    /// Calculate a SHA3-224 digest of some `data`.
     pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
         let mut ctx = Self::new();
         ctx.update(data)?;

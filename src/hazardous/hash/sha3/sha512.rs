@@ -54,3 +54,76 @@
 //! [`finalize()`]: sha512::Sha512::finalize
 
 use crate::errors::UnknownCryptoError;
+
+use super::Sha3;
+
+/// Rate of SHA3-512.
+const SHA3_512_RATE: usize = 72;
+
+/// Output size of SHA3-512 in bytes.
+pub const SHA3_512_OUTSIZE: usize = 64;
+
+construct_public! {
+    /// A type to represent the `Digest` that SHA3-512 returns.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 64 bytes.
+    (Digest, test_digest, SHA3_512_OUTSIZE, SHA3_512_OUTSIZE)
+}
+
+impl_from_trait!(Digest, SHA3_512_OUTSIZE);
+
+#[derive(Clone, Debug)]
+/// SHA3-512 streaming state.
+pub struct Sha512 {
+    pub(crate) _state: Sha3<{ SHA3_512_RATE }>,
+}
+
+impl Default for Sha512 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Sha512 {
+    /// Initialize a `Sha512` struct.
+    pub fn new() -> Self {
+        Self {
+            _state: Sha3::<{ SHA3_512_RATE }>::_new(128),
+        }
+    }
+
+    /// Reset to `new()` state.
+    pub fn reset(&mut self) {
+        self._state._reset();
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Update state with `data`. This can be called multiple times.
+    pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        self._state._update(data)
+    }
+
+    /// Finalize the hash and put the final digest into `dest`.
+    pub(crate) fn _finalize_internal(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        self._state._finalize(dest)
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Return a SHA3-512 digest.
+    pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
+        let mut digest = [0u8; SHA3_512_OUTSIZE];
+        self._finalize_internal(&mut digest)?;
+
+        Ok(Digest::from(digest))
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Calculate a SHA3-512 digest of some `data`.
+    pub fn digest(data: &[u8]) -> Result<Digest, UnknownCryptoError> {
+        let mut ctx = Self::new();
+        ctx.update(data)?;
+        ctx.finalize()
+    }
+}
