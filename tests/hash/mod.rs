@@ -5,7 +5,7 @@ pub mod sha384_nist_cavp;
 pub mod sha512_nist_cavp;
 
 use crate::TestCaseReader;
-use orion::hazardous::hash::{blake2, sha2::sha256, sha2::sha384, sha2::sha512};
+use orion::hazardous::hash::{blake2, sha2, sha3};
 use orion::hazardous::mac;
 
 fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
@@ -27,39 +27,83 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 }
 
 fn sha512_test_runner(data: &[u8], output: &[u8]) {
-    let mut state = sha512::Sha512::new();
+    let mut state = sha2::sha512::Sha512::new();
     state.update(data).unwrap();
     let digest = state.finalize().unwrap();
 
-    let digest_one_shot = sha512::Sha512::digest(data).unwrap();
+    let digest_one_shot = sha2::sha512::Sha512::digest(data).unwrap();
 
     assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
     assert_eq!(digest.as_ref(), output);
 }
 
 fn sha256_test_runner(data: &[u8], output: &[u8]) {
-    let mut state = sha256::Sha256::new();
+    let mut state = sha2::sha256::Sha256::new();
     state.update(data).unwrap();
     let digest = state.finalize().unwrap();
 
-    let digest_one_shot = sha256::Sha256::digest(data).unwrap();
+    let digest_one_shot = sha2::sha256::Sha256::digest(data).unwrap();
 
     assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
     assert_eq!(digest.as_ref(), output);
 }
 
 fn sha384_test_runner(data: &[u8], output: &[u8]) {
-    let mut state = sha384::Sha384::new();
+    let mut state = sha2::sha384::Sha384::new();
     state.update(data).unwrap();
     let digest = state.finalize().unwrap();
 
-    let digest_one_shot = sha384::Sha384::digest(data).unwrap();
+    let digest_one_shot = sha2::sha384::Sha384::digest(data).unwrap();
 
     assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
     assert_eq!(digest.as_ref(), output);
 }
 
-/// NISTs SHA256/384/512 Long/Short share the same format,
+fn sha3_224_test_runner(data: &[u8], output: &[u8]) {
+    let mut state = sha3::sha224::Sha224::new();
+    state.update(data).unwrap();
+    let digest = state.finalize().unwrap();
+
+    let digest_one_shot = sha3::sha224::Sha224::digest(data).unwrap();
+
+    assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
+    assert_eq!(digest.as_ref(), output);
+}
+
+fn sha3_256_test_runner(data: &[u8], output: &[u8]) {
+    let mut state = sha3::sha256::Sha256::new();
+    state.update(data).unwrap();
+    let digest = state.finalize().unwrap();
+
+    let digest_one_shot = sha3::sha256::Sha256::digest(data).unwrap();
+
+    assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
+    assert_eq!(digest.as_ref(), output);
+}
+
+fn sha3_384_test_runner(data: &[u8], output: &[u8]) {
+    let mut state = sha3::sha384::Sha384::new();
+    state.update(data).unwrap();
+    let digest = state.finalize().unwrap();
+
+    let digest_one_shot = sha3::sha384::Sha384::digest(data).unwrap();
+
+    assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
+    assert_eq!(digest.as_ref(), output);
+}
+
+fn sha3_512_test_runner(data: &[u8], output: &[u8]) {
+    let mut state = sha3::sha512::Sha512::new();
+    state.update(data).unwrap();
+    let digest = state.finalize().unwrap();
+
+    let digest_one_shot = sha3::sha512::Sha512::digest(data).unwrap();
+
+    assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
+    assert_eq!(digest.as_ref(), output);
+}
+
+/// NISTs SHA2/SHA3 Long/Short share the same format,
 /// so fields and separator remain the same.
 fn nist_cavp_runner(path: &str) {
     let nist_cavp_fields: Vec<String> = vec!["Len".into(), "Msg".into(), "MD".into()];
@@ -85,6 +129,18 @@ fn nist_cavp_runner(path: &str) {
         if path.contains("SHA512") {
             sha512_test_runner(&input[..], &expected_output[..]);
             ran_any_runner = true;
+        }
+        if path.contains("SHA3_224") {
+            sha3_224_test_runner(&input[..], &expected_output[..])
+        }
+        if path.contains("SHA3_256") {
+            sha3_256_test_runner(&input[..], &expected_output[..])
+        }
+        if path.contains("SHA3_384") {
+            sha3_384_test_runner(&input[..], &expected_output[..])
+        }
+        if path.contains("SHA3_512") {
+            sha3_512_test_runner(&input[..], &expected_output[..])
         }
 
         assert!(ran_any_runner);

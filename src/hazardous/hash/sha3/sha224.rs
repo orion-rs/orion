@@ -36,7 +36,7 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::hash::sha3::sha224;
+//! use orion::hazardous::hash::sha3::sha224::Sha224;
 //!
 //! // Using the streaming interface
 //! let mut state = Sha224::new();
