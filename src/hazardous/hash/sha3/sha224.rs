@@ -59,8 +59,8 @@ use std::io;
 
 use super::Sha3;
 
-/// Rate of SHA3-224.
-const SHA3_224_RATE: usize = 144;
+/// Rate of SHA3-224 (equivalent to blocksize in SHA2).
+pub const SHA3_224_RATE: usize = 144;
 
 /// Output size of SHA3-224 in bytes.
 pub const SHA3_224_OUTSIZE: usize = 28;
