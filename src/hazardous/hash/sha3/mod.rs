@@ -387,7 +387,7 @@ fn test_full_round() {
 
 #[derive(Clone)]
 /// SHA3 streaming state.
-pub struct Sha3<const RATE: usize> {
+pub(crate) struct Sha3<const RATE: usize> {
     pub(crate) state: [u64; 25],
     pub(crate) buffer: [u8; RATE],
     pub(crate) capacity: usize,
