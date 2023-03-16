@@ -29,11 +29,6 @@
 //! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
 //!   between.
 //!
-//! # Panics:
-//! A panic will occur if:
-//! - More than N __bits__ of data are hashed.
-//!
-//!
 //! # Example:
 //! ```rust
 //! use orion::hazardous::hash::sha3::sha512::Sha512;
