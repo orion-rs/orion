@@ -74,7 +74,7 @@ impl_from_trait!(Digest, SHA3_224_OUTSIZE);
 #[derive(Clone, Debug)]
 /// SHA3-224 streaming state.
 pub struct Sha224 {
-    pub(crate) _state: Sha3<{ SHA3_224_RATE }>,
+    pub(crate) _state: Sha3<SHA3_224_RATE>,
 }
 
 impl Default for Sha224 {

@@ -74,7 +74,7 @@ impl_from_trait!(Digest, SHA3_512_OUTSIZE);
 #[derive(Clone, Debug)]
 /// SHA3-512 streaming state.
 pub struct Sha512 {
-    pub(crate) _state: Sha3<{ SHA3_512_RATE }>,
+    pub(crate) _state: Sha3<SHA3_512_RATE>,
 }
 
 impl Default for Sha512 {
