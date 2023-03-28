@@ -88,7 +88,7 @@ const N_CONSTS: usize = 80;
 #[derive(Clone)]
 pub(crate) struct V384;
 
-impl Variant<WordU64, { N_CONSTS }> for V384 {
+impl Variant<WordU64, N_CONSTS> for V384 {
     /// The SHA384 constants as defined in FIPS 180-4.
     const K: [WordU64; N_CONSTS] = super::sha512::V512::K;
 
@@ -124,7 +124,7 @@ impl Variant<WordU64, { N_CONSTS }> for V384 {
 #[derive(Clone, Debug)]
 /// SHA384 streaming state.
 pub struct Sha384 {
-    pub(crate) _state: State<WordU64, V384, { SHA384_BLOCKSIZE }, { SHA384_OUTSIZE }, { N_CONSTS }>,
+    pub(crate) _state: State<WordU64, V384, SHA384_BLOCKSIZE, SHA384_OUTSIZE, N_CONSTS>,
 }
 
 impl Default for Sha384 {
@@ -137,9 +137,7 @@ impl Sha384 {
     /// Initialize a `Sha384` struct.
     pub fn new() -> Self {
         Self {
-            _state:
-                State::<WordU64, V384, { SHA384_BLOCKSIZE }, { SHA384_OUTSIZE }, { N_CONSTS }>::_new(
-                ),
+            _state: State::<WordU64, V384, SHA384_BLOCKSIZE, SHA384_OUTSIZE, N_CONSTS>::_new(),
         }
     }
 
