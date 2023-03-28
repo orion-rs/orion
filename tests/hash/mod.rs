@@ -64,44 +64,44 @@ fn sha384_test_runner(data: &[u8], output: &[u8]) {
 }
 
 fn sha3_224_test_runner(data: &[u8], output: &[u8]) {
-    let mut state = sha3::sha224::Sha224::new();
+    let mut state = sha3::sha3_224::Sha3_224::new();
     state.update(data).unwrap();
     let digest = state.finalize().unwrap();
 
-    let digest_one_shot = sha3::sha224::Sha224::digest(data).unwrap();
+    let digest_one_shot = sha3::sha3_224::Sha3_224::digest(data).unwrap();
 
     assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
     assert_eq!(digest.as_ref(), output);
 }
 
 fn sha3_256_test_runner(data: &[u8], output: &[u8]) {
-    let mut state = sha3::sha256::Sha256::new();
+    let mut state = sha3::sha3_256::Sha3_256::new();
     state.update(data).unwrap();
     let digest = state.finalize().unwrap();
 
-    let digest_one_shot = sha3::sha256::Sha256::digest(data).unwrap();
+    let digest_one_shot = sha3::sha3_256::Sha3_256::digest(data).unwrap();
 
     assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
     assert_eq!(digest.as_ref(), output);
 }
 
 fn sha3_384_test_runner(data: &[u8], output: &[u8]) {
-    let mut state = sha3::sha384::Sha384::new();
+    let mut state = sha3::sha3_384::Sha3_384::new();
     state.update(data).unwrap();
     let digest = state.finalize().unwrap();
 
-    let digest_one_shot = sha3::sha384::Sha384::digest(data).unwrap();
+    let digest_one_shot = sha3::sha3_384::Sha3_384::digest(data).unwrap();
 
     assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
     assert_eq!(digest.as_ref(), output);
 }
 
 fn sha3_512_test_runner(data: &[u8], output: &[u8]) {
-    let mut state = sha3::sha512::Sha512::new();
+    let mut state = sha3::sha3_512::Sha3_512::new();
     state.update(data).unwrap();
     let digest = state.finalize().unwrap();
 
-    let digest_one_shot = sha3::sha512::Sha512::digest(data).unwrap();
+    let digest_one_shot = sha3::sha3_512::Sha3_512::digest(data).unwrap();
 
     assert_eq!(digest.as_ref(), digest_one_shot.as_ref());
     assert_eq!(digest.as_ref(), output);

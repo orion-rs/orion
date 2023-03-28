@@ -31,22 +31,22 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::hazardous::hash::sha3::sha256::Sha256;
+//! use orion::hazardous::hash::sha3::sha3_256::Sha3_256;
 //!
 //! // Using the streaming interface
-//! let mut state = Sha256::new();
+//! let mut state = Sha3_256::new();
 //! state.update(b"Hello world")?;
 //! let hash = state.finalize()?;
 //!
 //! // Using the one-shot function
-//! let hash_one_shot = Sha256::digest(b"Hello world")?;
+//! let hash_one_shot = Sha3_256::digest(b"Hello world")?;
 //!
 //! assert_eq!(hash, hash_one_shot);
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: sha256::Sha256::update
-//! [`reset()`]: sha256::Sha256::reset
-//! [`finalize()`]: sha256::Sha256::finalize
+//! [`update()`]: sha3_256::Sha3_256::update
+//! [`reset()`]: sha3_256::Sha3_256::reset
+//! [`finalize()`]: sha3_256::Sha3_256::finalize
 
 use crate::errors::UnknownCryptoError;
 #[cfg(feature = "safe_api")]
@@ -73,11 +73,11 @@ impl_from_trait!(Digest, SHA3_256_OUTSIZE);
 
 #[derive(Clone, Debug)]
 /// SHA3-256 streaming state.
-pub struct Sha256 {
+pub struct Sha3_256 {
     pub(crate) _state: Sha3<SHA3_256_RATE>,
 }
 
-impl Default for Sha256 {
+impl Default for Sha3_256 {
     fn default() -> Self {
         Self::new()
     }
@@ -87,14 +87,14 @@ impl Default for Sha256 {
 /// Example: hashing from a [`Read`](std::io::Read)er with SHA3-256.
 /// ```rust
 /// use orion::{
-///     hazardous::hash::sha3::sha256::{Sha256, Digest},
+///     hazardous::hash::sha3::sha3_256::{Sha3_256, Digest},
 ///     errors::UnknownCryptoError,
 /// };
 /// use std::io::{self, Read, Write};
 ///
 /// // `reader` could also be a `File::open(...)?`.
 /// let mut reader = io::Cursor::new(b"some data");
-/// let mut hasher = Sha256::new();
+/// let mut hasher = Sha3_256::new();
 /// std::io::copy(&mut reader, &mut hasher)?;
 ///
 /// let digest: Digest = hasher.finalize()?;
@@ -102,12 +102,12 @@ impl Default for Sha256 {
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[cfg(feature = "safe_api")]
-impl io::Write for Sha256 {
+impl io::Write for Sha3_256 {
     /// Update the hasher's internal state with *all* of the bytes given.
     /// If this function returns the `Ok` variant, it's guaranteed that it
     /// will contain the length of the buffer passed to [`Write`](std::io::Write).
     /// Note that this function is just a small wrapper over
-    /// [`Sha256::update`](crate::hazardous::hash::sha3::sha256::Sha256::update).
+    /// [`Sha3_256::update`](crate::hazardous::hash::sha3::sha3_256::Sha3_256::update).
     ///
     /// ## Errors:
     /// This function will only ever return the [`std::io::ErrorKind::Other`]()
@@ -125,8 +125,8 @@ impl io::Write for Sha256 {
     }
 }
 
-impl Sha256 {
-    /// Initialize a `Sha256` struct.
+impl Sha3_256 {
+    /// Initialize a `Sha3_256` struct.
     pub fn new() -> Self {
         Self {
             _state: Sha3::<{ SHA3_256_RATE }>::_new(64),
@@ -174,17 +174,17 @@ mod public {
 
     #[test]
     fn test_default_equals_new() {
-        let new = Sha256::new();
-        let default = Sha256::default();
+        let new = Sha3_256::new();
+        let default = Sha3_256::default();
         new._state.compare_state_to_other(&default._state);
     }
 
     #[test]
     #[cfg(feature = "safe_api")]
     fn test_debug_impl() {
-        let initial_state = Sha256::new();
+        let initial_state = Sha3_256::new();
         let debug = format!("{:?}", initial_state);
-        let expected = "Sha256 { _state: State { state: [***OMITTED***], buffer: [***OMITTED***], capacity: 64, leftover: 0, is_finalized: false } }";
+        let expected = "Sha3_256 { _state: State { state: [***OMITTED***], buffer: [***OMITTED***], capacity: 64, leftover: 0, is_finalized: false } }";
         assert_eq!(debug, expected);
     }
 
@@ -243,7 +243,7 @@ mod public {
             0x32, 0x95, 0xb2, 0x51, 0x1a, 0xe9, 0x3e, 0x89, 0x9f, 0x0c, 0x79,
         ];
 
-        let mut ctx = Sha256::new();
+        let mut ctx = Sha3_256::new();
         ctx.update(&msg[..64]).unwrap();
         ctx.update(&msg[64..]).unwrap();
 
@@ -254,7 +254,7 @@ mod public {
         use super::*;
         use crate::test_framework::incremental_interface::*;
 
-        impl TestableStreamingContext<Digest> for Sha256 {
+        impl TestableStreamingContext<Digest> for Sha3_256 {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
                 self.reset();
                 Ok(())
@@ -269,7 +269,7 @@ mod public {
             }
 
             fn one_shot(input: &[u8]) -> Result<Digest, UnknownCryptoError> {
-                Sha256::digest(input)
+                Sha3_256::digest(input)
             }
 
             fn verify_result(expected: &Digest, input: &[u8]) -> Result<(), UnknownCryptoError> {
@@ -282,16 +282,16 @@ mod public {
                 }
             }
 
-            fn compare_states(state_1: &Sha256, state_2: &Sha256) {
+            fn compare_states(state_1: &Sha3_256, state_2: &Sha3_256) {
                 state_1._state.compare_state_to_other(&state_2._state);
             }
         }
 
         #[test]
         fn default_consistency_tests() {
-            let initial_state: Sha256 = Sha256::new();
+            let initial_state: Sha3_256 = Sha3_256::new();
 
-            let test_runner = StreamingContextConsistencyTester::<Digest, Sha256>::new(
+            let test_runner = StreamingContextConsistencyTester::<Digest, Sha3_256>::new(
                 initial_state,
                 SHA3_256_RATE,
             );
@@ -303,9 +303,9 @@ mod public {
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-            let initial_state: Sha256 = Sha256::new();
+            let initial_state: Sha3_256 = Sha3_256::new();
 
-            let test_runner = StreamingContextConsistencyTester::<Digest, Sha256>::new(
+            let test_runner = StreamingContextConsistencyTester::<Digest, Sha3_256>::new(
                 initial_state,
                 SHA3_256_RATE,
             );
@@ -316,12 +316,12 @@ mod public {
 
     #[cfg(feature = "safe_api")]
     mod test_io_impls {
-        use crate::hazardous::hash::sha3::sha256::Sha256;
+        use crate::hazardous::hash::sha3::sha3_256::Sha3_256;
         use std::io::Write;
 
         #[quickcheck]
         fn prop_hasher_write_same_as_update(data: Vec<u8>) -> bool {
-            let mut hasher_a = Sha256::new();
+            let mut hasher_a = Sha3_256::new();
             let mut hasher_b = hasher_a.clone();
 
             hasher_a.update(&data).unwrap();

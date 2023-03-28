@@ -21,16 +21,16 @@
 // SOFTWARE.
 
 /// SHA3-224 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
-pub mod sha224;
+pub mod sha3_224;
 
 /// SHA3-256 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
-pub mod sha256;
+pub mod sha3_256;
 
 /// SHA3-384 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
-pub mod sha384;
+pub mod sha3_384;
 
 /// SHA3-512 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
-pub mod sha512;
+pub mod sha3_512;
 
 use crate::errors::UnknownCryptoError;
 use core::fmt::Debug;
