@@ -88,7 +88,7 @@ const N_CONSTS: usize = 80;
 #[derive(Clone)]
 pub(crate) struct V512;
 
-impl Variant<WordU64, { N_CONSTS }> for V512 {
+impl Variant<WordU64, N_CONSTS> for V512 {
     #[rustfmt::skip]
     #[allow(clippy::unreadable_literal)]
     /// The SHA512 constants as defined in FIPS 180-4.
@@ -147,7 +147,7 @@ impl Variant<WordU64, { N_CONSTS }> for V512 {
 #[derive(Clone, Debug)]
 /// SHA512 streaming state.
 pub struct Sha512 {
-    pub(crate) _state: State<WordU64, V512, { SHA512_BLOCKSIZE }, { SHA512_OUTSIZE }, { N_CONSTS }>,
+    pub(crate) _state: State<WordU64, V512, SHA512_BLOCKSIZE, SHA512_OUTSIZE, N_CONSTS>,
 }
 
 impl Default for Sha512 {
@@ -160,9 +160,7 @@ impl Sha512 {
     /// Initialize a `Sha512` struct.
     pub fn new() -> Self {
         Self {
-            _state:
-                State::<WordU64, V512, { SHA512_BLOCKSIZE }, { SHA512_OUTSIZE }, { N_CONSTS }>::_new(
-                ),
+            _state: State::<WordU64, V512, SHA512_BLOCKSIZE, SHA512_OUTSIZE, N_CONSTS>::_new(),
         }
     }
 

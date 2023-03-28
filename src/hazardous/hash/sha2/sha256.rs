@@ -89,7 +89,7 @@ use super::w32::WordU32;
 /// SHA256 streaming state.
 pub(crate) struct V256;
 
-impl Variant<WordU32, { N_CONSTS }> for V256 {
+impl Variant<WordU32, N_CONSTS> for V256 {
     #[rustfmt::skip]
     #[allow(clippy::unreadable_literal)]
     /// The SHA256 constants as defined in FIPS 180-4.
@@ -144,7 +144,7 @@ impl Variant<WordU32, { N_CONSTS }> for V256 {
 #[derive(Clone, Debug)]
 /// SHA256 streaming state.
 pub struct Sha256 {
-    pub(crate) _state: State<WordU32, V256, { SHA256_BLOCKSIZE }, { SHA256_OUTSIZE }, { N_CONSTS }>,
+    pub(crate) _state: State<WordU32, V256, SHA256_BLOCKSIZE, SHA256_OUTSIZE, N_CONSTS>,
 }
 
 impl Default for Sha256 {
@@ -157,9 +157,7 @@ impl Sha256 {
     /// Initialize a `Sha256` struct.
     pub fn new() -> Self {
         Self {
-            _state:
-                State::<WordU32, V256, { SHA256_BLOCKSIZE }, { SHA256_OUTSIZE }, { N_CONSTS }>::_new(
-                ),
+            _state: State::<WordU32, V256, SHA256_BLOCKSIZE, SHA256_OUTSIZE, N_CONSTS>::_new(),
         }
     }
 
