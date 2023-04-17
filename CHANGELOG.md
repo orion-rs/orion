@@ -7,6 +7,7 @@ __Changelog:__
 - Add support for fully-committing AEAD variants based on CTX ([#324](https://github.com/orion-rs/orion/pull/324)).
 - Add support for SHA3 ([#327](https://github.com/orion-rs/orion/pull/327)).
 - Bump MSRV to `1.64`.
+- Add support for DHKEM(X25519, HKDF-SHA256) from HPKE [RFC 9180](https://www.rfc-editor.org/rfc/rfc9180).
 
 ### 0.17.4
 
