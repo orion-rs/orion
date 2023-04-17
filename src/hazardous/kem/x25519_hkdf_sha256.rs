@@ -136,12 +136,11 @@ impl DhKem {
     }
 
     fn extract_and_expand(dh: &[u8], kem_context: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-        let eae_prk = Self::labeled_extract(b"", b"eae_prk", dh).unwrap();
+        let eae_prk = Self::labeled_extract(b"", b"eae_prk", dh)?;
         let shared_secret =
-            Self::labeled_expand::<{ Self::N_SECRET }>(&eae_prk, b"shared_secret", kem_context)
-                .unwrap();
+            Self::labeled_expand::<{ Self::N_SECRET }>(&eae_prk, b"shared_secret", kem_context)?;
 
-        return Ok(shared_secret);
+        Ok(shared_secret)
     }
 
     /// Generate random X25519 keypair.
