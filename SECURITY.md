@@ -1,5 +1,5 @@
 ### Reporting security issues
-All security issues should be reported to the author at [brycx@protonmail.com](mailto:brycx@protonmail.com).
+All security issues should be reported using either GitHub [private vulnerability reporting](https://github.com/orion-rs/orion/security/advisories/new) or email the author at [brycx@protonmail.com](mailto:brycx@protonmail.com).
 
 We try to follow the [RFPolicy](https://en.wikipedia.org/wiki/RFPolicy), but with an initial response time of 2 weeks maximum. In practice, however, the initial response will most often be faster.
 
