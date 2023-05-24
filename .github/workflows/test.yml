@@ -22,7 +22,7 @@ jobs:
           - stable
           - beta
           - nightly
-          - 1.59.0 # MSRV
+          - 1.64.0 # MSRV
         os: 
           - ubuntu-latest
           - macos-latest
