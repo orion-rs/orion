@@ -6,6 +6,7 @@ __Changelog:__
 - Add `experimental` crate feature.
 - Add support for fully-committing AEAD variants based on CTX ([#324](https://github.com/orion-rs/orion/pull/324)).
 - Add support for SHA3 ([#327](https://github.com/orion-rs/orion/pull/327)).
+- Bump MSRV to `1.64`.
 
 ### 0.17.4
 
