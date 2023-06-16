@@ -30,7 +30,7 @@ macro_rules! impl_store_into {
             let type_alias_len = mem::size_of::<$type_alias>();
             // The length of src must be evenly divisible with the length of dst,
             // making sure .chunks_exact() leaves no remainder.
-            assert_eq!((type_alias_len * src.len()), dst.len());
+            assert_eq!(mem::size_of_val(src), dst.len());
 
             for (src_elem, dst_chunk) in src.iter().zip(dst.chunks_exact_mut(type_alias_len)) {
                 dst_chunk.copy_from_slice(&src_elem.$conv_function());
@@ -46,7 +46,7 @@ macro_rules! impl_load_into {
             let type_alias_len = mem::size_of::<$type_alias>();
             // The length of src must be evenly divisible with the length of dst,
             // making sure .chunks_exact() leaves no remainder.
-            assert_eq!((dst.len() * type_alias_len), src.len());
+            assert_eq!(mem::size_of_val(dst), src.len());
 
             for (src_chunk, dst_elem) in src.chunks_exact(type_alias_len).zip(dst.iter_mut()) {
                 // The above assert and this debug assert should prove that .unwrap()
