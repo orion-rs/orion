@@ -1,6 +1,6 @@
-### 0.17.5 (unreleased)
+### 0.17.5
 
-__Date:__ TBD.
+__Date:__ July 4, 2023.
 
 __Changelog:__
 - Add `experimental` crate feature.
