@@ -48,3 +48,6 @@ pub mod ecc;
 #[cfg(feature = "experimental")]
 /// Fully-committing Authenticated Encryption. __WARNING:__ Experimental feature.
 pub mod cae;
+
+/// Key Encapsulation Mechanisms (KEMs).
+pub mod kem;

@@ -11,6 +11,7 @@ Currently supports:
 * **Key exchange**: X25519.
 * **MAC**: HMAC, Poly1305.
 * **Stream ciphers**: (X)ChaCha20.
+* **KEM**: DHKEM(X25519, HKDF-SHA256).
 
 Experimental support (with `experimental` feature enabled):
 * **Committing AEAD**: (X)ChaCha20-Poly1305-BLAKE2b.

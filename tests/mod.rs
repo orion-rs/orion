@@ -6,6 +6,9 @@ pub mod ecc;
 #[cfg(feature = "safe_api")]
 #[cfg(test)]
 pub mod hash;
+#[cfg(feature = "safe_api")]
+#[cfg(test)]
+pub mod hpke;
 #[cfg(test)]
 pub mod kdf;
 #[cfg(test)]
