@@ -77,8 +77,8 @@ use crate::{
 };
 use fiat_crypto::poly1305_32::{
     fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_from_bytes,
-    fiat_poly1305_loose_field_element, fiat_poly1305_selectznz, fiat_poly1305_subborrowx_u26,
-    fiat_poly1305_tight_field_element, fiat_poly1305_u1,
+    fiat_poly1305_loose_field_element, fiat_poly1305_relax, fiat_poly1305_selectznz,
+    fiat_poly1305_subborrowx_u26, fiat_poly1305_tight_field_element, fiat_poly1305_u1,
 };
 
 /// The blocksize which Poly1305 operates on.
@@ -119,8 +119,8 @@ impl_from_trait!(Tag, POLY1305_OUTSIZE);
 #[derive(Clone)]
 /// Poly1305 streaming state.
 pub struct Poly1305 {
-    a: [u32; 5],
-    r: [u32; 5],
+    a: fiat_poly1305_tight_field_element,
+    r: fiat_poly1305_loose_field_element,
     s: [u32; 4],
     leftover: usize,
     buffer: [u8; POLY1305_BLOCKSIZE],
@@ -130,8 +130,8 @@ pub struct Poly1305 {
 impl Drop for Poly1305 {
     fn drop(&mut self) {
         use zeroize::Zeroize;
-        self.a.zeroize();
-        self.r.zeroize();
+        self.a.0.zeroize();
+        self.r.0.zeroize();
         self.s.zeroize();
         self.buffer.zeroize();
     }
@@ -164,11 +164,11 @@ impl Poly1305 {
         // One byte is appended to detect trailing zeroes if not last chunk.
         // See https://cr.yp.to/mac/poly1305-20050329.pdf, Section 2 "Conversion and padding".
         mb[16] = u8::from(!self.is_finalized);
-        let mut m: fiat_poly1305_tight_field_element = [0u32; 5];
+        let mut m = fiat_poly1305_tight_field_element([0u32; 5]);
         fiat_poly1305_from_bytes(&mut m, &mb);
 
         // h += m
-        let mut h: fiat_poly1305_loose_field_element = [0u32; 5];
+        let mut h = fiat_poly1305_loose_field_element([0u32; 5]);
         fiat_poly1305_add(&mut h, &self.a, &m);
         // h *= r with partial reduction modulo p
         fiat_poly1305_carry_mul(&mut self.a, &h, &self.r);
@@ -181,11 +181,13 @@ impl Poly1305 {
     /// Remaining processing after all data blocks have been processed.
     fn process_end_of_stream(&mut self) {
         // full carry h
-        let mut buf_h: fiat_poly1305_tight_field_element = [0u32; 5];
-        fiat_poly1305_carry(&mut buf_h, &self.a);
+        let mut buf_h = fiat_poly1305_tight_field_element([0u32; 5]);
+        let mut a_relaxed = fiat_poly1305_loose_field_element([0u32; 5]);
+        fiat_poly1305_relax(&mut a_relaxed, &self.a);
+        fiat_poly1305_carry(&mut buf_h, &a_relaxed);
 
         // compute h + -p
-        let mut p: fiat_poly1305_tight_field_element = [0u32; 5];
+        let mut p = fiat_poly1305_tight_field_element([0u32; 5]);
         fiat_poly1305_from_bytes(&mut p, &Self::PRIME);
 
         let mut carry: fiat_poly1305_u1 = 0;
@@ -197,7 +199,7 @@ impl Poly1305 {
 
         // select h if h < p, or h + -p if h >= p
         let mut ret = [0u32; 5];
-        fiat_poly1305_selectznz(&mut ret, carry,&[g0, g1, g2, g3, g4], &buf_h);
+        fiat_poly1305_selectznz(&mut ret, carry,&[g0, g1, g2, g3, g4], &buf_h.0);
 
         let mut h0 = ret[0];
         let mut h1 = ret[1];
@@ -228,8 +230,8 @@ impl Poly1305 {
     /// Initialize a `Poly1305` struct with a given one-time key.
     pub fn new(one_time_key: &OneTimeKey) -> Self {
         let mut state = Self {
-            a: [0u32; 5],
-            r: [0u32; 5],
+            a: fiat_poly1305_tight_field_element([0u32; 5]),
+            r: fiat_poly1305_loose_field_element([0u32; 5]),
             s: [0u32; 4],
             leftover: 0,
             buffer: [0u8; POLY1305_BLOCKSIZE],
@@ -280,7 +282,7 @@ impl Poly1305 {
 
     /// Reset to `new()` state.
     pub fn reset(&mut self) {
-        self.a = [0u32; 5];
+        self.a = fiat_poly1305_tight_field_element([0u32; 5]);
         self.leftover = 0;
         self.is_finalized = false;
         self.buffer = [0u8; POLY1305_BLOCKSIZE];
@@ -358,7 +360,7 @@ impl Poly1305 {
         }
 
         self.process_end_of_stream();
-        store_u32_into_le(&self.a[0..4], &mut local_buffer);
+        store_u32_into_le(&self.a.0[0..4], &mut local_buffer);
 
         Ok(Tag::from(local_buffer))
     }
@@ -455,8 +457,8 @@ mod public {
             }
 
             fn compare_states(state_1: &Poly1305, state_2: &Poly1305) {
-                assert_eq!(state_1.a, state_2.a);
-                assert_eq!(state_1.r, state_2.r);
+                assert_eq!(state_1.a.0, state_2.a.0);
+                assert_eq!(state_1.r.0, state_2.r.0);
                 assert_eq!(state_1.s, state_2.s);
                 assert_eq!(state_1.leftover, state_2.leftover);
                 assert_eq!(state_1.buffer[..], state_2.buffer[..]);

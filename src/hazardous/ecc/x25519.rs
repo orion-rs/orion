@@ -68,6 +68,11 @@ use core::ops::{Add, Mul, Sub};
 
 /// Formally verified Curve25519 field arithmetic from: <https://github.com/mit-plv/fiat-crypto>.
 use fiat_crypto::curve25519_64 as fiat_curve25519_u64;
+use fiat_curve25519_u64::{
+    fiat_25519_add, fiat_25519_carry, fiat_25519_carry_mul, fiat_25519_carry_scmul_121666,
+    fiat_25519_carry_square, fiat_25519_loose_field_element, fiat_25519_relax, fiat_25519_sub,
+    fiat_25519_tight_field_element,
+};
 
 /// The size of a public key used in X25519.
 pub const PUBLIC_KEY_SIZE: usize = 32;
@@ -86,9 +91,9 @@ const BASEPOINT: [u8; 32] = [
 /// The result of computing a shared secret with a low order point.
 const LOW_ORDER_POINT_RESULT: [u8; 32] = [0u8; 32];
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 /// Represent an element in the curve field.
-struct FieldElement([u64; 5]);
+struct FieldElement(fiat_25519_tight_field_element);
 
 impl Eq for FieldElement {}
 
@@ -99,15 +104,25 @@ impl PartialEq for FieldElement {
     }
 }
 
+impl core::fmt::Debug for FieldElement {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "FieldElement({:?})", &self.0 .0)
+    }
+}
+
 /// The function fiat_25519_carry_mul multiplies two field elements and reduces the result.
 impl Mul for FieldElement {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        use fiat_curve25519_u64::fiat_25519_carry_mul;
+        let mut ret = fiat_25519_tight_field_element([0u64; 5]);
+        let mut self_relaxed = fiat_25519_loose_field_element([0u64; 5]);
+        let mut rhs_relaxed = fiat_25519_loose_field_element([0u64; 5]);
 
-        let mut ret = [0u64; 5];
-        fiat_25519_carry_mul(&mut ret, &self.0, &rhs.0);
+        fiat_25519_relax(&mut self_relaxed, &self.0);
+        fiat_25519_relax(&mut rhs_relaxed, &rhs.0);
+
+        fiat_25519_carry_mul(&mut ret, &self_relaxed, &rhs_relaxed);
 
         Self(ret)
     }
@@ -118,12 +133,11 @@ impl Add for FieldElement {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        use fiat_curve25519_u64::{fiat_25519_add, fiat_25519_carry};
+        let mut ret = fiat_25519_tight_field_element([0u64; 5]);
+        let mut ret_add = fiat_25519_loose_field_element([0u64; 5]);
 
-        let mut ret = [0u64; 5];
-        fiat_25519_add(&mut ret, &self.0, &rhs.0);
-        let tmp = ret;
-        fiat_25519_carry(&mut ret, &tmp);
+        fiat_25519_add(&mut ret_add, &self.0, &rhs.0);
+        fiat_25519_carry(&mut ret, &ret_add);
 
         Self(ret)
     }
@@ -134,12 +148,11 @@ impl Sub for FieldElement {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        use fiat_curve25519_u64::{fiat_25519_carry, fiat_25519_sub};
+        let mut ret = fiat_25519_tight_field_element([0u64; 5]);
+        let mut ret_sub = fiat_25519_loose_field_element([0u64; 5]);
 
-        let mut ret = [0u64; 5];
-        fiat_25519_sub(&mut ret, &self.0, &rhs.0);
-        let tmp = ret;
-        fiat_25519_carry(&mut ret, &tmp);
+        fiat_25519_sub(&mut ret_sub, &self.0, &rhs.0);
+        fiat_25519_carry(&mut ret, &ret_sub);
 
         Self(ret)
     }
@@ -148,12 +161,16 @@ impl Sub for FieldElement {
 impl FieldElement {
     /// Create a `FieldElement` that is `0`.
     fn zero() -> Self {
-        Self([0u64, 0u64, 0u64, 0u64, 0u64])
+        Self(fiat_25519_tight_field_element([
+            0u64, 0u64, 0u64, 0u64, 0u64,
+        ]))
     }
 
     /// Create a `FieldElement` that is `1`.
     fn one() -> Self {
-        Self([1u64, 0u64, 0u64, 0u64, 0u64])
+        Self(fiat_25519_tight_field_element([
+            1u64, 0u64, 0u64, 0u64, 0u64,
+        ]))
     }
 
     /// Serialize the `FieldElement` as a byte-array.
@@ -179,7 +196,7 @@ impl FieldElement {
         temp[31] &= 127u8; // See RFC: "When receiving such an array, implementations of X25519
                            // (but not X448) MUST mask the most significant bit in the final byte."
 
-        let mut ret = [0u64; 5];
+        let mut ret = fiat_25519_tight_field_element([0u64; 5]);
         fiat_25519_from_bytes(&mut ret, &temp);
 
         Self(ret)
@@ -196,26 +213,28 @@ impl FieldElement {
         let tmp_a = *a;
         let tmp_b = *b;
 
-        fiat_25519_selectznz(&mut a.0, swap, &tmp_a.0, &tmp_b.0);
-        fiat_25519_selectznz(&mut b.0, swap, &tmp_b.0, &tmp_a.0);
+        fiat_25519_selectznz(&mut a.0 .0, swap, &tmp_a.0 .0, &tmp_b.0 .0);
+        fiat_25519_selectznz(&mut b.0 .0, swap, &tmp_b.0 .0, &tmp_a.0 .0);
     }
 
     /// Square the `FieldElement` and reduce the result.
     fn square(&self) -> Self {
-        use fiat_curve25519_u64::fiat_25519_carry_square;
+        let mut self_relaxed = fiat_25519_loose_field_element([0u64; 5]);
+        let mut ret = fiat_25519_tight_field_element([0u64; 5]);
 
-        let mut ret = [0u64; 5];
-        fiat_25519_carry_square(&mut ret, &self.0);
+        fiat_25519_relax(&mut self_relaxed, &self.0);
+        fiat_25519_carry_square(&mut ret, &self_relaxed);
 
         Self(ret)
     }
 
     /// Multiply the `FieldElement` by 121666 and reduce the result.
     fn mul_121666(&self) -> Self {
-        use fiat_curve25519_u64::fiat_25519_carry_scmul_121666;
+        let mut self_relaxed = fiat_25519_loose_field_element([0u64; 5]);
+        let mut ret = fiat_25519_tight_field_element([0u64; 5]);
 
-        let mut ret = [0u64; 5];
-        fiat_25519_carry_scmul_121666(&mut ret, &self.0);
+        fiat_25519_relax(&mut self_relaxed, &self.0);
+        fiat_25519_carry_scmul_121666(&mut ret, &self_relaxed);
 
         Self(ret)
     }
