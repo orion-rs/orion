@@ -4,6 +4,7 @@ __Date:__ TBD.
 
 __Changelog:__
 - Bump MSRV to `1.70.0`.
+- Bump `fiat-crypto` to `0.2.1`.
 
 ### 0.17.5
 
