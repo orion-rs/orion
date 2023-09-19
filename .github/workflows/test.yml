@@ -64,6 +64,12 @@ jobs:
         with:
           command: test
           args: --no-default-features --features alloc --tests
+
+      - name: Test debug-mode, experimental feature
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
+        with:
+          command: test
+          args: --features experimental
       
       - name: Test release-mode, default features
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
@@ -89,6 +95,11 @@ jobs:
           command: test
           args: --release --no-default-features --features alloc --tests
 
+      - name: Test release-mode, experimental feature
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
+        with:
+          command: test
+          args: --release --features experimental
 
   sanitizers:
     name:  Tests w. sanitizers

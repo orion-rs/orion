@@ -1,6 +1,6 @@
-### TBD
+### 0.17.6
 
-__Date:__ TBD.
+__Date:__ September 19, 2023.
 
 __Changelog:__
 - Bump MSRV to `1.70.0`.
