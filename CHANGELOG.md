@@ -1,3 +1,12 @@
+### 0.17.7
+
+__Date:__ TBD.
+
+__Changelog:__
+- Bump copyright year to 2024.
+- Bump MSRV to `1.74.0`.
+- Update CI dependencies.
+
 ### 0.17.6
 
 __Date:__ September 19, 2023.
