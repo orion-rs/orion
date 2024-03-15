@@ -183,8 +183,7 @@ pub(crate) mod sha2_core {
             #[cfg(any(debug_assertions, test))]
             debug_assert!(length.less_than_or_equal(W::MAX / W::from(8)));
 
-            // left-shift to get bit-sized representation of length
-            // using .unwrap() because it should not panic in practice
+            // Length in bits
             let len: W = match length.checked_mul(W::from(8)) {
                 Some(bitlen) => bitlen,
                 // Should be impossible for a user to trigger, because update() processes
