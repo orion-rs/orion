@@ -1,4 +1,4 @@
-on:  
+on:
   push:
     branches:
       - master
@@ -28,3 +28,5 @@ jobs:
         uses: codecov/codecov-action@0cfda1dd0a4ad9efc75517f399d859cd1ea4ced1
         with:
           fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
