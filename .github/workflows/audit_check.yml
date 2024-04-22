@@ -22,7 +22,7 @@ jobs:
           - bans licenses sources
 
     steps:
-    - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+    - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f
       with:
         persist-credentials: false
     - uses: EmbarkStudios/cargo-deny-action@b01e7a8cfb1f496c52d77361e84c1840d8246393
