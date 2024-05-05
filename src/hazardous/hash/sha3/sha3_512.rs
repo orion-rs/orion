@@ -120,7 +120,7 @@ impl io::Write for Sha3_512 {
     }
 
     /// This type doesn't buffer writes, so flushing is a no-op.
-    fn flush(&mut self) -> Result<(), std::io::Error> {
+    fn flush(&mut self) -> Result<(), io::Error> {
         Ok(())
     }
 }
