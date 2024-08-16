@@ -5,7 +5,7 @@
 **Changelog:**
 
 - Bump copyright year to 2024.
-- Bump MSRV to `1.74.0`.
+- Bump MSRV to `1.80.0`.
 - Update CI dependencies.
 - SHA2: Switch from `checked_shl(3)` to `checked_mul(8)` during `increment_mlen()` (internal) ([#376](https://github.com/orion-rs/orion/issues/376)).
 
