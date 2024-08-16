@@ -708,14 +708,6 @@ mod test_word {
     }
 
     #[test]
-    #[should_panic]
-    #[cfg(target_pointer_width = "128")]
-    // See above note.
-    fn w64_panic_on_above_from() {
-        WordU64::from((u64::MAX as usize) + 1);
-    }
-
-    #[test]
     fn equiv_max() {
         assert_eq!(WordU32::MAX.0, u32::MAX);
         assert_eq!(WordU64::MAX.0, u64::MAX);
