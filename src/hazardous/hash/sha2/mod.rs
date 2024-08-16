@@ -51,6 +51,7 @@ pub(crate) mod sha2_core {
         + PartialEq<Self>
         + Zeroize
     {
+        #[cfg(any(debug_assertions, test))]
         const MAX: Self;
 
         fn wrapping_add(&self, rhs: Self) -> Self;
@@ -476,6 +477,7 @@ pub(crate) mod w32 {
     }
 
     impl super::sha2_core::Word for WordU32 {
+        #[cfg(any(debug_assertions, test))]
         const MAX: Self = Self(u32::MAX);
 
         #[inline]
@@ -618,6 +620,7 @@ pub(crate) mod w64 {
     }
 
     impl super::sha2_core::Word for WordU64 {
+        #[cfg(any(debug_assertions, test))]
         const MAX: Self = Self(u64::MAX);
 
         #[inline]
