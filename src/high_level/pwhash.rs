@@ -37,7 +37,7 @@
 //!
 //! [`PasswordHash`] provides two ways of retrieving the hashed password:
 //! - [`PasswordHash::unprotected_as_encoded()`] returns the hashed password in an encoded form.
-//! The encoding specifies the settings used to hash the password.
+//!   The encoding specifies the settings used to hash the password.
 //! - [`PasswordHash::unprotected_as_bytes()`] returns only the hashed password in raw bytes.
 //!
 //! The following is an example of how the encoded password hash might look:
@@ -69,10 +69,10 @@
 //!
 //! # Security:
 //! - [`PasswordHash::unprotected_as_encoded()`] and [`PasswordHash::unprotected_as_bytes()`] should never
-//! be used to compare password hashes, as these will not run in constant-time.
-//! Either use [`hash_password_verify()`] or compare two [`PasswordHash`]es.
+//!   be used to compare password hashes, as these will not run in constant-time.
+//!   Either use [`hash_password_verify()`] or compare two [`PasswordHash`]es.
 //! - Choosing the correct cost parameters is important for security. Please refer to [libsodium's docs]
-//! for a description of how to do this.
+//!   for a description of how to do this.
 //!
 //! If the concrete cost parameters needed are unclear, please refer to [OWASP] for recommended minimum values.
 //!
@@ -118,38 +118,39 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 
 /// A type to represent the `PasswordHash` that Argon2i returns when used for password hashing.
 ///
-///  
+///
 /// # Errors:
 /// An error will be returned if:
 /// - The encoded password hash contains whitespace.
 /// - The encoded password hash has a parallelism count other than 1.
 /// - The encoded password contains any other fields than: The algorithm name,
-/// version, m, t, p and the salt and password hash.
+///   version, m, t, p and the salt and password hash.
 /// - The encoded password hash contains invalid Base64 encoding.
 /// - Any decimal parameter value, such as m, contains leading zeroes and is longer
-/// than a single character.
+///   than a single character.
 /// - `iterations` is less than 3.
 /// - `memory` is less than 8.
 /// - `password` is not 32 bytes.
 /// - `salt` is not 16 bytes.
 /// - The encoded password hash contains numerical values that cannot
-/// be represented as a `u32`.
+///   be represented as a `u32`.
 /// - The encoded password hash length is less than [`PasswordHash::MIN_ENCODED_LEN`] or greater than [`PasswordHash::MAX_ENCODED_LEN`].
 /// - The parameters in the encoded password hash are not correctly ordered. The ordering must be:
-/// `$argon2i$v=19$m=<value>,t=<value>,p=<value>$<salt>$<hash>`
+///   `$argon2i$v=19$m=<value>,t=<value>,p=<value>$<salt>$<hash>`
 /// # Panics:
 /// A panic will occur if:
 /// - Overflowing calculations happen on `usize` when decoding the password and salt from Base64.
 ///
 /// # Security:
 /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
-/// that the type implements.
+///   that the type implements.
 /// - Never use `unprotected_as_bytes()` or `unprotected_as_encoded()` to compare password hashes,
-/// as that will not run in constant-time. Compare `PasswordHash`es directly using `==` instead.
+///   as that will not run in constant-time. Compare `PasswordHash`es directly using `==` instead.
 /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
-/// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
-/// is implemented in such a way that the comparison happens in constant time. Thus, users should
-/// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+///   to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+///   is implemented in such a way that the comparison happens in constant time. Thus, users should
+///   prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+///
 /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
 /// ```rust
 /// use orion::hazardous::mac::hmac::sha512::Tag;

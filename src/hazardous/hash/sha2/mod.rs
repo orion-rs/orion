@@ -512,7 +512,7 @@ pub(crate) mod w32 {
 
         #[inline]
         fn size_of() -> usize {
-            core::mem::size_of::<u32>()
+            size_of::<u32>()
         }
 
         #[inline]
@@ -654,7 +654,7 @@ pub(crate) mod w64 {
 
         #[inline]
         fn size_of() -> usize {
-            core::mem::size_of::<u64>()
+            size_of::<u64>()
         }
 
         #[inline]
@@ -723,8 +723,8 @@ mod test_word {
 
     #[test]
     fn equiv_sizeof() {
-        assert_eq!(WordU32::size_of(), core::mem::size_of::<u32>());
-        assert_eq!(WordU64::size_of(), core::mem::size_of::<u64>());
+        assert_eq!(WordU32::size_of(), size_of::<u32>());
+        assert_eq!(WordU64::size_of(), size_of::<u64>());
     }
 
     #[test]
@@ -1029,8 +1029,8 @@ mod test_word {
             let w32n = WordU32::from(n);
             let w64m = WordU64::from(m);
 
-            let mut dest32 = [0u8; core::mem::size_of::<u32>()];
-            let mut dest64 = [0u8; core::mem::size_of::<u64>()];
+            let mut dest32 = [0u8; size_of::<u32>()];
+            let mut dest64 = [0u8; size_of::<u64>()];
             w32n.as_be(&mut dest32);
             w64m.as_be(&mut dest64);
 
