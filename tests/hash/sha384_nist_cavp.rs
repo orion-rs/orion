@@ -1,11 +1,11 @@
-use crate::hash::nist_cavp_runner;
+use crate::hash::sha_nist_cavp_runner;
 
 #[test]
 fn test_nist_cavp_long_msg() {
-    nist_cavp_runner("./tests/test_data/third_party/nist/SHA2/SHA384LongMsg.rsp");
+    sha_nist_cavp_runner("./tests/test_data/third_party/nist/SHA2/SHA384LongMsg.rsp");
 }
 
 #[test]
 fn test_nist_cavp_short_msg() {
-    nist_cavp_runner("./tests/test_data/third_party/nist/SHA2/SHA384ShortMsg.rsp");
+    sha_nist_cavp_runner("./tests/test_data/third_party/nist/SHA2/SHA384ShortMsg.rsp");
 }

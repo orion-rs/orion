@@ -32,6 +32,12 @@ pub mod sha3_384;
 /// SHA3-512 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
 pub mod sha3_512;
 
+/// SHAKE-128 XOF as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
+pub mod shake128;
+
+/// SHAKE-256 XOF as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
+pub mod shake256;
+
 use crate::errors::UnknownCryptoError;
 use core::fmt::Debug;
 use zeroize::Zeroize;
@@ -542,6 +548,178 @@ impl<const RATE: usize> Sha3<RATE> {
 
     #[cfg(test)]
     /// Compare two Sha3 state objects to check if their fields
+    /// are the same.
+    pub(crate) fn compare_state_to_other(&self, other: &Self) {
+        for idx in 0..25 {
+            assert_eq!(self.state[idx], other.state[idx]);
+        }
+        assert_eq!(self.buffer, other.buffer);
+        assert_eq!(self.capacity, other.capacity);
+        assert_eq!(self.leftover, other.leftover);
+        assert_eq!(self.is_finalized, other.is_finalized);
+    }
+}
+
+#[derive(Clone)]
+/// SHAKE streaming state.
+pub(crate) struct Shake<const RATE: usize> {
+    pub(crate) state: [u64; 25],
+    pub(crate) buffer: [u8; RATE],
+    pub(crate) capacity: usize,
+    leftover: usize,
+    is_finalized: bool,
+}
+
+impl<const RATE: usize> Drop for Shake<RATE> {
+    fn drop(&mut self) {
+        self.state.iter_mut().zeroize();
+        self.buffer.iter_mut().zeroize();
+        self.leftover.zeroize();
+    }
+}
+
+impl<const RATE: usize> Debug for Shake<RATE> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "State {{ state: [***OMITTED***], buffer: [***OMITTED***], capacity: {:?}, leftover: {:?}, \
+            is_finalized: {:?} }}",
+            self.capacity, self.leftover, self.is_finalized
+        )
+    }
+}
+
+impl<const RATE: usize> Shake<RATE> {
+    /// Initialize a new state.
+    /// `capacity` should be in bytes.
+    pub(crate) fn _new(capacity: usize) -> Self {
+        Self {
+            state: [0u64; 25],
+            buffer: [0u8; RATE],
+            capacity,
+            leftover: 0,
+            is_finalized: false,
+        }
+    }
+
+    /// Process data in `self.buffer` or optionally `data`.
+    pub(crate) fn process_block(&mut self, data: Option<&[u8]>) {
+        // If `data.is_none()` then we want to process leftover data within `self.buffer`.
+        let data_block = match data {
+            Some(bytes) => {
+                debug_assert_eq!(bytes.len(), RATE);
+                bytes
+            }
+            None => &self.buffer,
+        };
+
+        debug_assert_eq!(data_block.len() % 8, 0);
+
+        // We process data in terms of bitrate, but we need to XOR in an entire Keccak state.
+        // So the 25 - bitrate values will be zero. That's the same as not XORing those values
+        // so we leave it be as this.
+        for (b, s) in data_block
+            .chunks_exact(size_of::<u64>())
+            .zip(self.state.iter_mut())
+        {
+            *s ^= u64::from_le_bytes(b.try_into().unwrap());
+        }
+
+        keccakf::<24>(&mut self.state);
+    }
+
+    /// Reset to `new()` state.
+    pub(crate) fn _reset(&mut self) {
+        self.state = [0u64; 25];
+        self.buffer = [0u8; RATE];
+        self.leftover = 0;
+        self.is_finalized = false;
+    }
+
+    /// Update state with `data`. This can be called multiple times.
+    pub(crate) fn _absorb(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+        if data.is_empty() {
+            return Ok(());
+        }
+
+        let mut bytes = data;
+
+        if self.leftover != 0 {
+            debug_assert!(self.leftover <= RATE);
+
+            let mut want = RATE - self.leftover;
+            if want > bytes.len() {
+                want = bytes.len();
+            }
+
+            for (idx, itm) in bytes.iter().enumerate().take(want) {
+                self.buffer[self.leftover + idx] = *itm;
+            }
+
+            bytes = &bytes[want..];
+            self.leftover += want;
+
+            if self.leftover < RATE {
+                return Ok(());
+            }
+
+            self.process_block(None);
+            self.leftover = 0;
+        }
+
+        while bytes.len() >= RATE {
+            self.process_block(Some(bytes[..RATE].as_ref()));
+            bytes = &bytes[RATE..];
+        }
+
+        if !bytes.is_empty() {
+            debug_assert_eq!(self.leftover, 0);
+            self.buffer[..bytes.len()].copy_from_slice(bytes);
+            self.leftover = bytes.len();
+        }
+
+        Ok(())
+    }
+
+    /// Finalize the hash and put the final digest into `dest`.
+    pub(crate) fn _squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+
+        self.is_finalized = true;
+        // self.leftover should not be greater than SHA3(256/384/512)_RATE
+        // as that would have been processed in the update call
+        debug_assert!(self.leftover < RATE);
+        // Set padding byte and pad with zeroes after
+        self.buffer[self.leftover] = 0x1f;
+        self.leftover += 1;
+        for itm in self.buffer.iter_mut().skip(self.leftover) {
+            *itm = 0;
+        }
+
+        // TODO: For SHAKE, this happens only the first time squeeze() is called after updated.
+        // Any subsequent squeeze() calls should only apply Keccak permutation internally to
+        // to forward internal state.
+        self.buffer[self.buffer.len() - 1] |= 0x80;
+        self.process_block(None);
+
+        // The reason we can't work with chunks_exact here is that for SHA3-224
+        // the `dest` is not evenly divisible by 8/`core::mem::size_of::<u64>()`.
+        for (out_chunk, state_value) in dest.chunks_mut(size_of::<u64>()).zip(self.state.iter()) {
+            // We need to slice the state value in bytes here for same reason as mentioned
+            // above.
+            out_chunk.copy_from_slice(&state_value.to_le_bytes()[..out_chunk.len()]);
+        }
+
+        Ok(())
+    }
+
+    #[cfg(test)]
+    /// Compare two Shake state objects to check if their fields
     /// are the same.
     pub(crate) fn compare_state_to_other(&self, other: &Self) {
         for idx in 0..25 {
