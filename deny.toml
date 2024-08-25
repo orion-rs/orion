@@ -1,8 +1,9 @@
+[graph]
 targets = [
-    { triple = "x86_64-unknown-linux-gnu" },
-    { triple = "x86_64-unknown-linux-musl" },
-    { triple = "x86_64-apple-darwin" },
-    { triple = "x86_64-pc-windows-msvc" },
+    "x86_64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+    "x86_64-apple-darwin",
+    "x86_64-pc-windows-msvc",
 ]
 
 [advisories]
@@ -10,7 +11,6 @@ yanked = "deny"
 ignore = []
 
 [licenses]
-unlicensed = "deny"
 # We want really high confidence when inferring licenses from text
 confidence-threshold = 0.93
 allow = ["MIT", "BSD-3-Clause", "Apache-2.0"]
