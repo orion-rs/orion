@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2023 The orion Developers
+// Copyright (c) 2023-2024 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -444,7 +444,7 @@ impl<const RATE: usize> Sha3<RATE> {
         // So the 25 - bitrate values will be zero. That's the same as not XORing those values
         // so we leave it be as this.
         for (b, s) in data_block
-            .chunks_exact(core::mem::size_of::<u64>())
+            .chunks_exact(size_of::<u64>())
             .zip(self.state.iter_mut())
         {
             *s ^= u64::from_le_bytes(b.try_into().unwrap());
@@ -531,10 +531,7 @@ impl<const RATE: usize> Sha3<RATE> {
 
         // The reason we can't work with chunks_exact here is that for SHA3-224
         // the `dest` is not evenly divisible by 8/`core::mem::size_of::<u64>()`.
-        for (out_chunk, state_value) in dest
-            .chunks_mut(core::mem::size_of::<u64>())
-            .zip(self.state.iter())
-        {
+        for (out_chunk, state_value) in dest.chunks_mut(size_of::<u64>()).zip(self.state.iter()) {
             // We need to slice the state value in bytes here for same reason as mentioned
             // above.
             out_chunk.copy_from_slice(&state_value.to_le_bytes()[..out_chunk.len()]);

@@ -27,8 +27,8 @@
 //!
 //! # About:
 //! - Both [`EphemeralClientSession`] and [`EphemeralServerSession`] consume `self` when shared keys
-//! are being established. You can therefore never use the same private key for more than a single
-//! key exchange.
+//!   are being established. You can therefore never use the same private key for more than a single
+//!   key exchange.
 //!
 //! This implementation is based on and compatible with the
 //! [key exchange API](https://doc.libsodium.org/key_exchange) of libsodium.

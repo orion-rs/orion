@@ -104,8 +104,8 @@ impl U64x4 {
     }
 
     pub(crate) fn store_into_le(self, slice_in: &mut [u8]) {
-        debug_assert_eq!(slice_in.len(), core::mem::size_of::<u64>() * 4);
-        let mut iter = slice_in.chunks_exact_mut(core::mem::size_of::<u64>());
+        debug_assert_eq!(slice_in.len(), size_of::<u64>() * 4);
+        let mut iter = slice_in.chunks_exact_mut(size_of::<u64>());
         iter.next().unwrap().copy_from_slice(&self.0.to_le_bytes());
         iter.next().unwrap().copy_from_slice(&self.1.to_le_bytes());
         iter.next().unwrap().copy_from_slice(&self.2.to_le_bytes());

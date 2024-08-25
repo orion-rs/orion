@@ -51,7 +51,7 @@
 //! # Security:
 //! - The secret key should always be generated using a CSPRNG.
 //!   [`SecretKey::default()`] can be used for
-//! this; it will generate a [`SecretKey`] of 32 bytes.
+//!   this; it will generate a [`SecretKey`] of 32 bytes.
 //! - The required minimum length for a [`SecretKey`] is 32 bytes.
 //!
 //! # Example:

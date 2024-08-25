@@ -44,7 +44,7 @@
 //! # Security:
 //! - This interface does not support supplying BLAKE2b with a secret key, and
 //!   the hashes retrieved
-//! from using `orion::hash` are therefore not suitable as MACs.
+//!   from using `orion::hash` are therefore not suitable as MACs.
 //! - BLAKE2b is not suitable for password hashing. See [`orion::pwhash`](super::pwhash)
 //!   instead.
 //!

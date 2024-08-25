@@ -51,6 +51,7 @@ pub(crate) mod sha2_core {
         + PartialEq<Self>
         + Zeroize
     {
+        #[cfg(any(debug_assertions, test))]
         const MAX: Self;
 
         fn wrapping_add(&self, rhs: Self) -> Self;
@@ -476,6 +477,7 @@ pub(crate) mod w32 {
     }
 
     impl super::sha2_core::Word for WordU32 {
+        #[cfg(any(debug_assertions, test))]
         const MAX: Self = Self(u32::MAX);
 
         #[inline]
@@ -512,7 +514,7 @@ pub(crate) mod w32 {
 
         #[inline]
         fn size_of() -> usize {
-            core::mem::size_of::<u32>()
+            size_of::<u32>()
         }
 
         #[inline]
@@ -618,6 +620,7 @@ pub(crate) mod w64 {
     }
 
     impl super::sha2_core::Word for WordU64 {
+        #[cfg(any(debug_assertions, test))]
         const MAX: Self = Self(u64::MAX);
 
         #[inline]
@@ -654,7 +657,7 @@ pub(crate) mod w64 {
 
         #[inline]
         fn size_of() -> usize {
-            core::mem::size_of::<u64>()
+            size_of::<u64>()
         }
 
         #[inline]
@@ -708,14 +711,6 @@ mod test_word {
     }
 
     #[test]
-    #[should_panic]
-    #[cfg(target_pointer_width = "128")]
-    // See above note.
-    fn w64_panic_on_above_from() {
-        WordU64::from((u64::MAX as usize) + 1);
-    }
-
-    #[test]
     fn equiv_max() {
         assert_eq!(WordU32::MAX.0, u32::MAX);
         assert_eq!(WordU64::MAX.0, u64::MAX);
@@ -723,8 +718,8 @@ mod test_word {
 
     #[test]
     fn equiv_sizeof() {
-        assert_eq!(WordU32::size_of(), core::mem::size_of::<u32>());
-        assert_eq!(WordU64::size_of(), core::mem::size_of::<u64>());
+        assert_eq!(WordU32::size_of(), size_of::<u32>());
+        assert_eq!(WordU64::size_of(), size_of::<u64>());
     }
 
     #[test]
@@ -1029,8 +1024,8 @@ mod test_word {
             let w32n = WordU32::from(n);
             let w64m = WordU64::from(m);
 
-            let mut dest32 = [0u8; core::mem::size_of::<u32>()];
-            let mut dest64 = [0u8; core::mem::size_of::<u64>()];
+            let mut dest32 = [0u8; size_of::<u32>()];
+            let mut dest64 = [0u8; size_of::<u64>()];
             w32n.as_be(&mut dest32);
             w64m.as_be(&mut dest64);
 

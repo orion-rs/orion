@@ -500,12 +500,13 @@ impl PublicKey {
 ///
 /// # Security:
 /// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
-/// that the type implements.
+///   that the type implements.
 ///
 /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
-/// to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
-/// is implemented in such a way that the comparison happens in constant time. Thus, users should
-/// prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+///   to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+///   is implemented in such a way that the comparison happens in constant time. Thus, users should
+///   prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+///
 /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
 /// ```rust
 /// # #[cfg(feature = "safe_api")] {

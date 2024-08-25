@@ -254,14 +254,14 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError>
 
 #[rustfmt::skip]
 fn fill_block(w: &mut [u64; 128]) {
-	
+
 	let mut v0:  u64; let mut v1:  u64; let mut v2:  u64; let mut v3:  u64;
-	let mut v4:  u64; let mut v5:  u64; let mut v6:  u64; let mut v7:  u64; 
+	let mut v4:  u64; let mut v5:  u64; let mut v6:  u64; let mut v7:  u64;
 	let mut v8:  u64; let mut v9:  u64; let mut v10: u64; let mut v11: u64;
 	let mut v12: u64; let mut v13: u64; let mut v14: u64; let mut v15: u64;
 
 	let mut idx = 0;
-	
+
 	// Operate on columns.
 	while idx < 128 {
 		v0  = w[idx      ]; v1  = w[idx +  1]; v2  = w[idx +  2]; v3  = w[idx +  3];
@@ -270,9 +270,9 @@ fn fill_block(w: &mut [u64; 128]) {
 		v12 = w[idx +  12]; v13 = w[idx + 13]; v14 = w[idx + 14]; v15 = w[idx + 15];
 
 		permutation_p(
-			&mut v0,  &mut v1,  &mut v2,  &mut v3, 
-			&mut v4,  &mut v5,  &mut v6,  &mut v7, 
-			&mut v8,  &mut v9,  &mut v10, &mut v11, 
+			&mut v0,  &mut v1,  &mut v2,  &mut v3,
+			&mut v4,  &mut v5,  &mut v6,  &mut v7,
+			&mut v8,  &mut v9,  &mut v10, &mut v11,
 			&mut v12, &mut v13, &mut v14, &mut v15
 		);
 
@@ -293,9 +293,9 @@ fn fill_block(w: &mut [u64; 128]) {
 		v12 = w[idx + 96]; v13 = w[idx + 97]; v14 = w[idx + 112]; v15 = w[idx + 113];
 
 		permutation_p(
-			&mut v0,  &mut v1,  &mut v2,  &mut v3, 
-			&mut v4,  &mut v5,  &mut v6,  &mut v7, 
-			&mut v8,  &mut v9,  &mut v10, &mut v11, 
+			&mut v0,  &mut v1,  &mut v2,  &mut v3,
+			&mut v4,  &mut v5,  &mut v6,  &mut v7,
+			&mut v8,  &mut v9,  &mut v10, &mut v11,
 			&mut v12, &mut v13, &mut v14, &mut v15
 		);
 
@@ -464,23 +464,16 @@ pub fn derive_key(
         x,
     )?;
     let mut tmp = [0u8; 1024];
-    debug_assert_eq!(
-        h0.len(),
-        ((core::mem::size_of::<u32>() * 2) + BLAKE2B_OUTSIZE)
-    );
+    debug_assert_eq!(h0.len(), ((size_of::<u32>() * 2) + BLAKE2B_OUTSIZE));
     debug_assert!(
-        h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + core::mem::size_of::<u32>())]
-            == [0u8; core::mem::size_of::<u32>()]
+        h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + size_of::<u32>())] == [0u8; size_of::<u32>()]
     ); // Block 0
-    debug_assert!(
-        h0[BLAKE2B_OUTSIZE + core::mem::size_of::<u32>()..] == [0u8; core::mem::size_of::<u32>()]
-    ); // Lane
+    debug_assert!(h0[BLAKE2B_OUTSIZE + size_of::<u32>()..] == [0u8; size_of::<u32>()]); // Lane
 
     // H' into the first two blocks
     extended_hash(&h0, &mut tmp)?;
     load_u64_into_le(&tmp, &mut blocks[0]);
-    h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + core::mem::size_of::<u32>())]
-        .copy_from_slice(&1u32.to_le_bytes()); // Block 1
+    h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + size_of::<u32>())].copy_from_slice(&1u32.to_le_bytes()); // Block 1
     extended_hash(&h0, &mut tmp)?;
     load_u64_into_le(&tmp, &mut blocks[1]);
 

@@ -73,11 +73,11 @@ fn hpke_runner(path: &str) {
             2 => {
                 // We only have values for the sender in this mode
                 let secret_sender =
-                    PrivateKey::from_slice(&decode(&test.skSm.unwrap()).unwrap()).unwrap();
+                    PrivateKey::from_slice(&decode(test.skSm.unwrap()).unwrap()).unwrap();
                 let public_sender =
-                    PublicKey::from_slice(&decode(&test.pkSm.unwrap()).unwrap()).unwrap();
+                    PublicKey::from_slice(&decode(test.pkSm.unwrap()).unwrap()).unwrap();
                 let derived_kp =
-                    DhKem::derive_keypair(&decode(&test.ikmS.unwrap()).unwrap()).unwrap();
+                    DhKem::derive_keypair(&decode(test.ikmS.unwrap()).unwrap()).unwrap();
                 assert_eq!(secret_sender, derived_kp.0);
                 assert_eq!(public_sender, derived_kp.1);
 
