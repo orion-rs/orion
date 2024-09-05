@@ -120,12 +120,14 @@ fn shake128_test_runner(data: &[u8], output: &[u8]) {
         if rate_chunk.len() == rate {
             state.squeeze(rate_chunk).unwrap();
         } else {
-            let mut rate_block = [0u8; 136];
+            let mut rate_block = [0u8; 168];
             state.squeeze(&mut rate_block).unwrap();
 
             rate_chunk.copy_from_slice(&rate_block[..rate_chunk.len()]);
         }
     }
+
+    assert_eq!(digest.as_slice(), output);
 }
 
 fn shake256_test_runner(data: &[u8], output: &[u8]) {
