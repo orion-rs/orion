@@ -685,27 +685,42 @@ impl<const RATE: usize> Shake<RATE> {
     }
 
     /// Finalize the hash and put the final digest into `dest`.
+    ///
+    /// TODO: In order to keep this state-management simple, let's just output
+    /// the entire SHAKE block, so that we can process the internal state again after each call.
+    /// Then we don't have to track how much of the state has already been used, etc.
     pub(crate) fn _squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if self.is_finalized {
-            return Err(UnknownCryptoError);
-        }
+        // Finalized is fine, we should be able to keep squeezing.
+        // Remove this or keep track of when we're switching to a squeezing mode.
+        //if self.is_finalized {
+        //    return Err(UnknownCryptoError);
+        //}
 
-        self.is_finalized = true;
-        // self.leftover should not be greater than SHA3(256/384/512)_RATE
-        // as that would have been processed in the update call
-        debug_assert!(self.leftover < RATE);
-        // Set padding byte and pad with zeroes after
-        self.buffer[self.leftover] = 0x1f;
-        self.leftover += 1;
-        for itm in self.buffer.iter_mut().skip(self.leftover) {
-            *itm = 0;
-        }
+        // We have to do padding first time we switch from absorbing => squeezing
+        if !self.is_finalized {
+            // self.leftover should not be greater than SHA3(256/384/512)_RATE
+            // as that would have been processed in the update call
+            debug_assert!(self.leftover < RATE);
+            // Set padding byte and pad with zeroes after
+            self.buffer[self.leftover] = 0x1f;
+            self.leftover += 1;
+            for itm in self.buffer.iter_mut().skip(self.leftover) {
+                *itm = 0;
+            }
 
-        // TODO: For SHAKE, this happens only the first time squeeze() is called after updated.
-        // Any subsequent squeeze() calls should only apply Keccak permutation internally to
-        // to forward internal state.
-        self.buffer[self.buffer.len() - 1] |= 0x80;
-        self.process_block(None);
+            // TODO: For SHAKE, this happens only the first time squeeze() is called after updated.
+            // Any subsequent squeeze() calls should only apply Keccak permutation internally to
+            // to forward internal state.
+            self.buffer[self.buffer.len() - 1] |= 0x80;
+            // Keccakf permutation with XOR of state happens only in the first direction change.
+            // Thereafter, we apply keccakf permutation directly to the internal state.
+            self.process_block(None);
+
+            // Skip padding next time.
+            self.is_finalized = true;
+        } else {
+            keccakf::<24>(&mut self.state);
+        }
 
         // The reason we can't work with chunks_exact here is that for SHA3-224
         // the `dest` is not evenly divisible by 8/`core::mem::size_of::<u64>()`.
