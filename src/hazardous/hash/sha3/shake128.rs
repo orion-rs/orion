@@ -28,7 +28,7 @@
 //!
 //!
 //! # Security:
-//! - Minimum of 32 bytes of output are required to achieve 128-bit security.
+//! - 128-bit security against all attacks requires a minimum of 256 bits output (32 bytes).
 //!
 //! # Example:
 //! ```rust
@@ -38,9 +38,9 @@
 //! let mut state = Shake128::new();
 //! state.absorb(b"Hello world")?;
 //!
-//! let mut dest = [0u8; 64];
-//! state.squeeze(&mut dest[..32])?;
-//! state.squeeze(&mut dest[32..])?;
+//! let mut dest = [0u8; 32];
+//! state.squeeze(&mut dest[..16])?;
+//! state.squeeze(&mut dest[16..])?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: shake128::Shake128::absorb

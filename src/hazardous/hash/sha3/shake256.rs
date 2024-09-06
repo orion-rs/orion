@@ -28,7 +28,7 @@
 //!
 //!
 //! # Security:
-//! - Minimum of 64 bytes of output are required to achieve 256-bit security.
+//! - 256-bit security against all attacks requires a minimum of 512 bits output (64 bytes).
 //!
 //! # Example:
 //! ```rust
