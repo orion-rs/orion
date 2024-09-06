@@ -23,6 +23,9 @@
 /// Tests for a streaming context that offers incremental processing.
 pub mod incremental_interface;
 
+/// Tests for an eXtendable Output Function.
+pub mod xof_interface;
+
 /// Tests for AEAD interfaces such as `chacha20poly1305`.
 pub mod aead_interface;
 

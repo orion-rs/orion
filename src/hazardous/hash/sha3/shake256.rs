@@ -50,6 +50,8 @@
 
 use super::Shake;
 use crate::errors::UnknownCryptoError;
+#[cfg(feature = "safe_api")]
+use std::io;
 
 /// Rate of SHAKE-256.
 pub const SHAKE_256_RATE: usize = 136;
@@ -63,6 +65,49 @@ pub struct Shake256 {
 impl Default for Shake256 {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+/// Example: hashing from a [`Read`](std::io::Read)er with Shake256.
+/// ```rust
+/// use orion::{
+///     orion::hazardous::hash::sha3::shake256::Shake256,
+///     errors::UnknownCryptoError,
+/// };
+/// use std::io::{self, Read, Write};
+///
+/// // `reader` could also be a `File::open(...)?`.
+/// let mut reader = io::Cursor::new(b"some data");
+/// let mut hasher = Shake256::new();
+/// std::io::copy(&mut reader, &mut hasher)?;
+///
+/// let mut dest = [0u8; 64];
+/// hasher.squeeze(&mut dest)?;
+///
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[cfg(feature = "safe_api")]
+impl io::Write for Shake256 {
+    /// Update the hasher's internal state with *all* of the bytes given.
+    /// If this function returns the `Ok` variant, it's guaranteed that it
+    /// will contain the length of the buffer passed to [`Write`](std::io::Write).
+    /// Note that this function is just a small wrapper over
+    /// [`Shake256::absorb`](crate::hazardous::hash::sha3::shake256::Shake256::absorb).
+    ///
+    /// ## Errors:
+    /// This function will only ever return the [`std::io::ErrorKind::Other`]()
+    /// variant when it returns an error. Additionally, this will always contain Orion's
+    /// [`UnknownCryptoError`](crate::errors::UnknownCryptoError) type.
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.absorb(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        Ok(bytes.len())
+    }
+
+    /// This type doesn't buffer writes, so flushing is a no-op.
+    fn flush(&mut self) -> Result<(), io::Error> {
+        Ok(())
     }
 }
 
@@ -92,22 +137,99 @@ impl Shake256 {
     }
 }
 
-#[test]
-fn shake256_works() {
-    // Len = 120
-    // Msg = 765db6ab3af389b8c775c8eb99fe72
-    // Output = ccb6564a655c94d714f80b9f8de9e2610c4478778eac1b9256237dbf90e50581
+// Testing public functions in the module.
+#[cfg(test)]
+mod public {
+    use super::*;
 
-    let msg = hex::decode("765db6ab3af389b8c775c8eb99fe72").unwrap();
-    let expected_result =
-        hex::decode("ccb6564a655c94d714f80b9f8de9e2610c4478778eac1b9256237dbf90e50581").unwrap();
+    #[test]
+    fn test_default_equals_new() {
+        let new = Shake256::new();
+        let default = Shake256::default();
+        new._state.compare_state_to_other(&default._state);
+    }
 
-    debug_assert_eq!(expected_result.len(), 32);
-    let mut actual_result = [0u8; 32];
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_debug_impl() {
+        let initial_state = Shake256::new();
+        let debug = format!("{:?}", initial_state);
+        let expected = "Shake256 { _state: State { state: [***OMITTED***], buffer: [***OMITTED***], capacity: 64, until_absorb: 0, to_squeeze: 0, is_finalized: false } }";
+        assert_eq!(debug, expected);
+    }
 
-    let mut ctx = Shake256::new();
-    ctx.absorb(&msg).unwrap();
-    ctx.squeeze(&mut actual_result).unwrap();
+    mod test_streaming_interface {
+        use super::*;
+        use crate::test_framework::xof_interface::*;
 
-    assert_eq!(&expected_result[..], &actual_result);
+        // NOTE/TODO: Vec<u8> generic parameter is not needed here,
+        // but most of the generics were aorund this set up so this
+        // was just filled in.
+        impl TestableXofContext<Vec<u8>> for Shake256 {
+            fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+                self.reset();
+                Ok(())
+            }
+
+            fn absorb(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+                self.absorb(input)
+            }
+
+            fn squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+                self.squeeze(dest)
+            }
+
+            fn compare_states(state_1: &Shake256, state_2: &Shake256) {
+                state_1._state.compare_state_to_other(&state_2._state);
+            }
+        }
+
+        #[test]
+        fn default_consistency_tests() {
+            let initial_state: Shake256 = Shake256::new();
+
+            let test_runner = XofContextConsistencyTester::<Vec<u8>, Shake256>::new(
+                initial_state,
+                SHAKE_256_RATE,
+            );
+            test_runner.run_all_tests();
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        /// Related bug: https://github.com/orion-rs/orion/issues/46
+        /// Test different streaming state usage patterns.
+        fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+            let initial_state: Shake256 = Shake256::new();
+
+            let test_runner = XofContextConsistencyTester::<Vec<u8>, Shake256>::new(
+                initial_state,
+                SHAKE_256_RATE,
+            );
+            test_runner.run_all_tests_property(&data);
+            true
+        }
+    }
+
+    #[cfg(feature = "safe_api")]
+    mod test_io_impls {
+        use crate::hazardous::hash::sha3::shake256::Shake256;
+        use std::io::Write;
+
+        #[quickcheck]
+        fn prop_hasher_write_same_as_update(data: Vec<u8>, outlen: u16) -> bool {
+            let mut hasher_a = Shake256::new();
+            let mut hasher_b = hasher_a.clone();
+
+            hasher_a.absorb(&data).unwrap();
+            hasher_b.write_all(&data).unwrap();
+
+            let mut hash_a = vec![0u8; outlen as usize];
+            let mut hash_b = vec![0u8; outlen as usize];
+            hasher_a.squeeze(&mut hash_a).unwrap();
+            hasher_b.squeeze(&mut hash_b).unwrap();
+
+            hash_a == hash_b
+        }
+    }
 }

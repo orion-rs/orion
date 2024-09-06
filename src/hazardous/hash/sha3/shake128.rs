@@ -50,6 +50,8 @@
 
 use super::Shake;
 use crate::errors::UnknownCryptoError;
+#[cfg(feature = "safe_api")]
+use std::io;
 
 /// Rate of SHAKE-128.
 pub const SHAKE_128_RATE: usize = 168;
@@ -63,6 +65,49 @@ pub struct Shake128 {
 impl Default for Shake128 {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+/// Example: hashing from a [`Read`](std::io::Read)er with Shake128.
+/// ```rust
+/// use orion::{
+///     orion::hazardous::hash::sha3::shake128::Shake128,
+///     errors::UnknownCryptoError,
+/// };
+/// use std::io::{self, Read, Write};
+///
+/// // `reader` could also be a `File::open(...)?`.
+/// let mut reader = io::Cursor::new(b"some data");
+/// let mut hasher = Shake128::new();
+/// std::io::copy(&mut reader, &mut hasher)?;
+///
+/// let mut dest = [0u8; 32];
+/// hasher.squeeze(&mut dest)?;
+///
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[cfg(feature = "safe_api")]
+impl io::Write for Shake128 {
+    /// Update the hasher's internal state with *all* of the bytes given.
+    /// If this function returns the `Ok` variant, it's guaranteed that it
+    /// will contain the length of the buffer passed to [`Write`](std::io::Write).
+    /// Note that this function is just a small wrapper over
+    /// [`Shake128::absorb`](crate::hazardous::hash::sha3::shake128::Shake128::absorb).
+    ///
+    /// ## Errors:
+    /// This function will only ever return the [`std::io::ErrorKind::Other`]()
+    /// variant when it returns an error. Additionally, this will always contain Orion's
+    /// [`UnknownCryptoError`](crate::errors::UnknownCryptoError) type.
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.absorb(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        Ok(bytes.len())
+    }
+
+    /// This type doesn't buffer writes, so flushing is a no-op.
+    fn flush(&mut self) -> Result<(), io::Error> {
+        Ok(())
     }
 }
 
@@ -92,59 +137,6 @@ impl Shake128 {
     }
 }
 
-#[test]
-fn shake128_works() {
-    // Len = 160, 20 bytes
-    //
-    // Len = 160
-    // Msg = b0438cd9e8853e976cfc13abbbb62fb8b5a50d59
-    // Output = c3ffe9ea9fa6c9cf59ad26f44ea0b82a
-
-    let msg = hex::decode("b0438cd9e8853e976cfc13abbbb62fb8b5a50d59").unwrap();
-    let expected_result = hex::decode("c3ffe9ea9fa6c9cf59ad26f44ea0b82a").unwrap();
-
-    debug_assert_eq!(expected_result.len(), 16);
-    let mut actual_result = [0u8; 16];
-
-    let mut ctx = Shake128::new();
-    ctx.absorb(&msg).unwrap();
-    ctx.squeeze(&mut actual_result).unwrap();
-
-    assert_eq!(&expected_result[..], &actual_result);
-}
-
-// TODO!: Find test values/KATs for repeated squeeze() calls
-
-/*
-#[test]
-fn shake128_works_progessively() {
-    // From https://github.com/XKCP/XKCP/blob/master/tests/TestVectors/KeccakSpongeIntermediateValues_SHAKE128.txt
-
-    let msg = hex::decode("53587B19").unwrap();
-    let mut ctx = Shake128::new();
-    ctx.absorb(&msg).unwrap();
-
-    let expected_result_0 =
-        hex::decode("fe8c476993b47b10c98303a04c6212dfb341426d748d3926140aee0a151fc80fa1").unwrap();
-    let mut actual_result_0 = [0u8; 264usize / 8usize];
-    ctx.squeeze(&mut actual_result_0).unwrap();
-    assert_eq!(&expected_result_0[..], &actual_result_0);
-
-    let expected_result_1 =
-        hex::decode("0ed1e47c5a33592d182ccb6a28cac9b11d23d8038ddebbdd4ae6c584d7ec14269810b082a27655d073ac9bfda81650e18d972e5e96cf1b4279af91cf0bf61156ebf6f042fb70ba6f25be976880c257405e759e71790c5218d05985f5ffff05f9eb2da24053cb7df667").unwrap();
-    let mut actual_result_1 = [0u8; 840usize / 8usize];
-    ctx.squeeze(&mut actual_result_1).unwrap();
-    assert_eq!(&expected_result_1[..], &actual_result_1);
-
-    let expected_result_2 =
-        hex::decode("14cea805075b2e0cb19e803b799dbbbcf4381d9517fb3d11c54ad32fd67d10c7f8f59e0cf2eaec82bb237e14c835").unwrap();
-    let mut actual_result_2 = [0u8; 368usize / 8usize];
-    ctx.squeeze(&mut actual_result_2).unwrap();
-    assert_eq!(&expected_result_2[..], &actual_result_2);
-}
-*/
-/*
-
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
@@ -162,40 +154,29 @@ mod public {
     fn test_debug_impl() {
         let initial_state = Shake128::new();
         let debug = format!("{:?}", initial_state);
-        let expected = "Shake128 { _state: State { state: [***OMITTED***], buffer: [***OMITTED***], capacity: 32, leftover: 0, is_finalized: false } }";
+        let expected = "Shake128 { _state: State { state: [***OMITTED***], buffer: [***OMITTED***], capacity: 32, until_absorb: 0, to_squeeze: 0, is_finalized: false } }";
         assert_eq!(debug, expected);
     }
 
     mod test_streaming_interface {
         use super::*;
-        use crate::test_framework::incremental_interface::*;
+        use crate::test_framework::xof_interface::*;
 
-        impl TestableStreamingContext<Digest> for Shake128 {
+        // NOTE/TODO: Vec<u8> generic parameter is not needed here,
+        // but most of the generics were aorund this set up so this
+        // was just filled in.
+        impl TestableXofContext<Vec<u8>> for Shake128 {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
                 self.reset();
                 Ok(())
             }
 
-            fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
-                self.update(input)
+            fn absorb(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+                self.absorb(input)
             }
 
-            fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
-                self.finalize()
-            }
-
-            fn one_shot(input: &[u8]) -> Result<Digest, UnknownCryptoError> {
-                Sha3_224::digest(input)
-            }
-
-            fn verify_result(expected: &Digest, input: &[u8]) -> Result<(), UnknownCryptoError> {
-                let actual: Digest = Self::one_shot(input)?;
-
-                if &actual == expected {
-                    Ok(())
-                } else {
-                    Err(UnknownCryptoError)
-                }
+            fn squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+                self.squeeze(dest)
             }
 
             fn compare_states(state_1: &Shake128, state_2: &Shake128) {
@@ -207,7 +188,7 @@ mod public {
         fn default_consistency_tests() {
             let initial_state: Shake128 = Shake128::new();
 
-            let test_runner = StreamingContextConsistencyTester::<Digest, Shake128>::new(
+            let test_runner = XofContextConsistencyTester::<Vec<u8>, Shake128>::new(
                 initial_state,
                 SHAKE_128_RATE,
             );
@@ -221,7 +202,7 @@ mod public {
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
             let initial_state: Shake128 = Shake128::new();
 
-            let test_runner = StreamingContextConsistencyTester::<Digest, Shake128>::new(
+            let test_runner = XofContextConsistencyTester::<Vec<u8>, Shake128>::new(
                 initial_state,
                 SHAKE_128_RATE,
             );
@@ -236,18 +217,19 @@ mod public {
         use std::io::Write;
 
         #[quickcheck]
-        fn prop_hasher_write_same_as_update(data: Vec<u8>) -> bool {
+        fn prop_hasher_write_same_as_update(data: Vec<u8>, outlen: u16) -> bool {
             let mut hasher_a = Shake128::new();
             let mut hasher_b = hasher_a.clone();
 
-            hasher_a.update(&data).unwrap();
+            hasher_a.absorb(&data).unwrap();
             hasher_b.write_all(&data).unwrap();
 
-            let hash_a = hasher_a.finalize().unwrap();
-            let hash_b = hasher_b.finalize().unwrap();
+            let mut hash_a = vec![0u8; outlen as usize];
+            let mut hash_b = vec![0u8; outlen as usize];
+            hasher_a.squeeze(&mut hash_a).unwrap();
+            hasher_b.squeeze(&mut hash_b).unwrap();
 
             hash_a == hash_b
         }
     }
 }
-*/
