@@ -690,12 +690,6 @@ impl<const RATE: usize> Shake<RATE> {
     /// the entire SHAKE block, so that we can process the internal state again after each call.
     /// Then we don't have to track how much of the state has already been used, etc.
     pub(crate) fn _squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        // Finalized is fine, we should be able to keep squeezing.
-        // Remove this or keep track of when we're switching to a squeezing mode.
-        //if self.is_finalized {
-        //    return Err(UnknownCryptoError);
-        //}
-
         // We have to do padding first time we switch from absorbing => squeezing
         if !self.is_finalized {
             // self.leftover should not be greater than SHA3(256/384/512)_RATE
@@ -708,12 +702,7 @@ impl<const RATE: usize> Shake<RATE> {
                 *itm = 0;
             }
 
-            // TODO: For SHAKE, this happens only the first time squeeze() is called after updated.
-            // Any subsequent squeeze() calls should only apply Keccak permutation internally to
-            // to forward internal state.
             self.buffer[self.buffer.len() - 1] |= 0x80;
-            // Keccakf permutation with XOR of state happens only in the first direction change.
-            // Thereafter, we apply keccakf permutation directly to the internal state.
             self.process_block(None);
 
             // Skip padding next time.

@@ -25,7 +25,8 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//!
+//! - [`absorb()`] is called after [`squeeze()`] without a [`reset()`] in
+//!   between.
 //!
 //! # Security:
 //! - 128-bit security against all attacks requires a minimum of 256 bits output (32 bytes).
@@ -43,9 +44,9 @@
 //! state.squeeze(&mut dest[16..])?;
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: shake128::Shake128::absorb
+//! [`absorb()`]: shake128::Shake128::absorb
 //! [`reset()`]: shake128::Shake128::reset
-//! [`finalize()`]: shake128::Shake128::squeeze
+//! [`squeeze()`]: shake128::Shake128::squeeze
 
 use super::Shake;
 use crate::errors::UnknownCryptoError;
