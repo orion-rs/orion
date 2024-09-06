@@ -584,7 +584,7 @@ pub(crate) struct Shake<const RATE: usize> {
     // squeeze() multiple times, requesting data amounts that aren't a mulitple
     // of the `RATE`. As soon as `RATE` amount of bytes have been squeezed(),
     // we have to permute the internal state, before we can output more bytes
-    // `self.to_squeeze() == 0` indicates we need to permute again...
+    // `self.to_squeeze() == RATE` indicates we need to permute again...
     until_absorb: usize,
     to_squeeze: usize,
     // ... Lastly, `self.is_finalized` doesn't indicate no further operations
@@ -618,6 +618,18 @@ impl<const RATE: usize> Debug for Shake<RATE> {
 }
 
 impl<const RATE: usize> Shake<RATE> {
+    /// Serialize internal Keccak state into bytes for `self.buffer`.
+    fn state_to_buffer(&mut self) {
+        // Let `self.buffer` now hold the state bytes we can squeeze out.
+        for (buf_chunk, state_value) in self
+            .buffer
+            .chunks_exact_mut(size_of::<u64>())
+            .zip(self.state.iter().copied())
+        {
+            buf_chunk.copy_from_slice(&state_value.to_le_bytes());
+        }
+    }
+
     /// Initialize a new state.
     /// `capacity` should be in bytes.
     pub(crate) fn _new(capacity: usize) -> Self {
@@ -730,19 +742,29 @@ impl<const RATE: usize> Shake<RATE> {
 
             self.buffer[self.buffer.len() - 1] |= 0x80;
             self.process_block(None);
-
-            // Skip padding next time.
+            // Padding only happens going from absorbing to squuezing.
             self.is_finalized = true;
-        } else {
-            keccakf::<24>(&mut self.state);
+
+            // Prepare `self.buffer` for squeezing.
+            self.state_to_buffer();
         }
 
-        // The reason we can't work with chunks_exact here is that for SHA3-224
-        // the `dest` is not evenly divisible by 8/`core::mem::size_of::<u64>()`.
-        for (out_chunk, state_value) in dest.chunks_mut(size_of::<u64>()).zip(self.state.iter()) {
-            // We need to slice the state value in bytes here for same reason as mentioned
-            // above.
-            out_chunk.copy_from_slice(&state_value.to_le_bytes()[..out_chunk.len()]);
+        // TODO: Testing
+        // [1]: squeeze(RATE/2) => squeeze(RATE*2) <=> squeeze(RATE*2) => squeeze(RATE/2)
+        // [3]: squeeze(7) => squeeze(1) <=> squeeze(8)
+
+        for out_b in dest.iter_mut() {
+            debug_assert!(self.to_squeeze <= RATE);
+
+            if self.to_squeeze == RATE {
+                keccakf::<24>(&mut self.state);
+                self.state_to_buffer();
+                self.to_squeeze = 0;
+            }
+
+            // We need to wrap around due to length limitation on buffer
+            *out_b = self.buffer[self.to_squeeze];
+            self.to_squeeze += 1;
         }
 
         Ok(())
