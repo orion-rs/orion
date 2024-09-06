@@ -110,43 +110,21 @@ fn sha3_512_test_runner(data: &[u8], output: &[u8]) {
 }
 
 fn shake128_test_runner(data: &[u8], output: &[u8]) {
-    let rate: usize = 168;
-
     let mut state = sha3::shake128::Shake128::new();
     state.absorb(data).unwrap();
 
     let mut digest = vec![0u8; output.len()];
-    for rate_chunk in digest.chunks_mut(rate) {
-        if rate_chunk.len() == rate {
-            state.squeeze(rate_chunk).unwrap();
-        } else {
-            let mut rate_block = [0u8; 168];
-            state.squeeze(&mut rate_block).unwrap();
-
-            rate_chunk.copy_from_slice(&rate_block[..rate_chunk.len()]);
-        }
-    }
+    state.squeeze(&mut digest).unwrap();
 
     assert_eq!(digest.as_slice(), output);
 }
 
 fn shake256_test_runner(data: &[u8], output: &[u8]) {
-    let rate: usize = 136;
-
     let mut state = sha3::shake256::Shake256::new();
     state.absorb(data).unwrap();
 
     let mut digest = vec![0u8; output.len()];
-    for rate_chunk in digest.chunks_mut(rate) {
-        if rate_chunk.len() == rate {
-            state.squeeze(rate_chunk).unwrap();
-        } else {
-            let mut rate_block = [0u8; 136];
-            state.squeeze(&mut rate_block).unwrap();
-
-            rate_chunk.copy_from_slice(&rate_block[..rate_chunk.len()]);
-        }
-    }
+    state.squeeze(&mut digest).unwrap();
 
     assert_eq!(digest.as_slice(), output);
 }
