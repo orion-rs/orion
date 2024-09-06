@@ -23,7 +23,7 @@
 /// SHA2 as specified in the [FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
 pub mod sha2;
 
-/// SHA3 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
+/// SHA3 & SHAKE as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
 pub mod sha3;
 
 /// BLAKE2 hash functions.
