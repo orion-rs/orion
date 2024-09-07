@@ -4,6 +4,7 @@
 
 **Changelog:**
 
+- Add support for SHAKE128 and SHAKE256 from FIPS 202 ([#398](https://github.com/orion-rs/orion/pull/398)).
 - Bump copyright year to 2024.
 - Bump MSRV to `1.80.0`.
 - Update CI dependencies.

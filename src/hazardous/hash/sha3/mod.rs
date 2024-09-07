@@ -749,10 +749,6 @@ impl<const RATE: usize> Shake<RATE> {
             self.state_to_buffer();
         }
 
-        // TODO: Testing
-        // [1]: squeeze(RATE/2) => squeeze(RATE*2) <=> squeeze(RATE*2) => squeeze(RATE/2)
-        // [3]: squeeze(7) => squeeze(1) <=> squeeze(8)
-
         for out_b in dest.iter_mut() {
             debug_assert!(self.to_squeeze <= RATE);
 
