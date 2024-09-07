@@ -776,6 +776,7 @@ impl<const RATE: usize> Shake<RATE> {
         assert_eq!(self.buffer, other.buffer);
         assert_eq!(self.capacity, other.capacity);
         assert_eq!(self.until_absorb, other.until_absorb);
+        assert_eq!(self.to_squeeze, other.to_squeeze);
         assert_eq!(self.is_finalized, other.is_finalized);
     }
 }
