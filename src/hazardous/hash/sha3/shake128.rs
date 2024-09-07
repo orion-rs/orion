@@ -72,7 +72,7 @@ impl Default for Shake128 {
 /// Example: hashing from a [`Read`](std::io::Read)er with Shake128.
 /// ```rust
 /// use orion::{
-///     orion::hazardous::hash::sha3::shake128::Shake128,
+///     hazardous::hash::sha3::shake128::Shake128,
 ///     errors::UnknownCryptoError,
 /// };
 /// use std::io::{self, Read, Write};

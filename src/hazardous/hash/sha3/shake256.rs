@@ -72,7 +72,7 @@ impl Default for Shake256 {
 /// Example: hashing from a [`Read`](std::io::Read)er with Shake256.
 /// ```rust
 /// use orion::{
-///     orion::hazardous::hash::sha3::shake256::Shake256,
+///     hazardous::hash::sha3::shake256::Shake256,
 ///     errors::UnknownCryptoError,
 /// };
 /// use std::io::{self, Read, Write};
