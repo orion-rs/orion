@@ -162,10 +162,7 @@ mod public {
         use super::*;
         use crate::test_framework::xof_interface::*;
 
-        // NOTE/TODO: Vec<u8> generic parameter is not needed here,
-        // but most of the generics were aorund this set up so this
-        // was just filled in.
-        impl TestableXofContext<Vec<u8>> for Shake128 {
+        impl TestableXofContext for Shake128 {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
                 self.reset();
                 Ok(())
@@ -188,10 +185,8 @@ mod public {
         fn default_consistency_tests() {
             let initial_state: Shake128 = Shake128::new();
 
-            let test_runner = XofContextConsistencyTester::<Vec<u8>, Shake128>::new(
-                initial_state,
-                SHAKE_128_RATE,
-            );
+            let test_runner =
+                XofContextConsistencyTester::<Shake128>::new(initial_state, SHAKE_128_RATE);
             test_runner.run_all_tests();
         }
 
@@ -202,10 +197,8 @@ mod public {
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
             let initial_state: Shake128 = Shake128::new();
 
-            let test_runner = XofContextConsistencyTester::<Vec<u8>, Shake128>::new(
-                initial_state,
-                SHAKE_128_RATE,
-            );
+            let test_runner =
+                XofContextConsistencyTester::<Shake128>::new(initial_state, SHAKE_128_RATE);
             test_runner.run_all_tests_property(&data);
             true
         }

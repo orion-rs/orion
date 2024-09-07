@@ -21,13 +21,12 @@
 // SOFTWARE.
 
 use crate::errors::UnknownCryptoError;
-use core::marker::PhantomData;
 
 /// Trait to define default XOF contexts that can be tested.
 ///
 /// Based on `TestableStreamingContext` but with some corrections
 /// towards a XOF.
-pub trait TestableXofContext<T: PartialEq> {
+pub trait TestableXofContext {
     /// Streaming context function to reset the internal state.
     fn reset(&mut self) -> Result<(), UnknownCryptoError>;
 
@@ -43,23 +42,20 @@ pub trait TestableXofContext<T: PartialEq> {
 
 #[allow(dead_code)] // Allow because blocksize field is only used with std.
 /// A streaming context tester.
-pub struct XofContextConsistencyTester<R, T> {
-    _return_type: PhantomData<R>,
+pub struct XofContextConsistencyTester<T> {
     // The initial context to base further calls upon.
     _initial_context: T,
     blocksize: usize,
 }
 
-impl<R, T> XofContextConsistencyTester<R, T>
+impl<T> XofContextConsistencyTester<T>
 where
-    R: PartialEq + core::fmt::Debug,
-    T: TestableXofContext<R> + Clone,
+    T: TestableXofContext + Clone,
 {
     /// The streaming interface tester is created utilizing an initialized
     /// streaming state.
     pub fn new(streaming_context: T, blocksize: usize) -> Self {
         Self {
-            _return_type: PhantomData,
             _initial_context: streaming_context,
             blocksize,
         }
