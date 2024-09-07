@@ -257,7 +257,9 @@ where
         state.squeeze(&mut output2).unwrap();
         state.reset().unwrap();
 
-        for n_squeeze in (0..(self.blocksize * 3)).step_by(2) {
+        state.absorb(&input).unwrap();
+        // Squeeze byte-for-byte until we hit self.blocksize * 3
+        for n_squeeze in 0..(self.blocksize * 3) {
             state
                 .squeeze(&mut output1[n_squeeze..n_squeeze + 1])
                 .unwrap();

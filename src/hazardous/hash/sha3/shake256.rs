@@ -162,9 +162,6 @@ mod public {
         use super::*;
         use crate::test_framework::xof_interface::*;
 
-        // NOTE/TODO: Vec<u8> generic parameter is not needed here,
-        // but most of the generics were aorund this set up so this
-        // was just filled in.
         impl TestableXofContext for Shake256 {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
                 self.reset();
