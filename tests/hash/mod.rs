@@ -197,8 +197,6 @@ fn shake_nist_cavp_runner(path: &str) {
             ran_any_runner = true;
         }
         if path.contains("SHAKE256") {
-            dbg!(&tc);
-
             shake256_test_runner(&input[..], &expected_output[..]);
             ran_any_runner = true;
         }
