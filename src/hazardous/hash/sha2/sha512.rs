@@ -262,7 +262,7 @@ impl io::Write for Sha512 {
     /// ## Errors:
     /// This function will only ever return the [`std::io::ErrorKind::Other`]()
     /// variant when it returns an error. Additionally, this will always contain Orion's
-    /// [`UnknownCryptoError`](crate::errors::UnknownCryptoError) type.
+    /// [`UnknownCryptoError`] type.
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
         self.update(bytes)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
