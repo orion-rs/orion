@@ -32,6 +32,12 @@ pub mod sha3_384;
 /// SHA3-512 as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
 pub mod sha3_512;
 
+/// SHAKE-128 XOF as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
+pub mod shake128;
+
+/// SHAKE-256 XOF as specified in the [FIPS PUB 202](https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.202.pdf).
+pub mod shake256;
+
 use crate::errors::UnknownCryptoError;
 use core::fmt::Debug;
 use zeroize::Zeroize;
@@ -550,6 +556,227 @@ impl<const RATE: usize> Sha3<RATE> {
         assert_eq!(self.buffer, other.buffer);
         assert_eq!(self.capacity, other.capacity);
         assert_eq!(self.leftover, other.leftover);
+        assert_eq!(self.is_finalized, other.is_finalized);
+    }
+}
+
+#[derive(Clone)]
+/// SHAKE streaming state.
+pub(crate) struct Shake<const RATE: usize> {
+    pub(crate) state: [u64; 25],
+    pub(crate) buffer: [u8; RATE],
+    pub(crate) capacity: usize,
+    // There is a difference in the state handling here for SHAKE compared
+    // to the rest of the hashing/streaming states in Orion. This is
+    // because we're dealing with a XOF, enabling many calls to squeeze()
+    // data from the internal state, which is not possible with other
+    // streaming states in Orion, at the time of writing.
+    //
+    // What normally is called `self.leftover` has here been named to
+    // `self.until_absorb` to indicate a tracker, that counts how many
+    // bytes we can copy into `self.buffer`, before we need to XOR into
+    // internal state and permute. `self.until_absorb == RATE` time to XOR in
+    // `self.buffer`. The logic behind this tracker is exactly as before
+    // it was renamed.
+    //
+    // A new tracker is `self.to_squeeze` that indicates how many bytes
+    // are left to be squeezed out of the sponge. This is relevant when calling
+    // squeeze() multiple times, requesting data amounts that aren't a mulitple
+    // of the `RATE`. As soon as `RATE` amount of bytes have been squeezed(),
+    // we have to permute the internal state, before we can output more bytes
+    // `self.to_squeeze() == RATE` indicates we need to permute again...
+    until_absorb: usize,
+    to_squeeze: usize,
+    // ... Lastly, `self.is_finalized` doesn't indicate no further operations
+    // on this instance are possible (`reset()` is always possible), but instead that
+    // we are finished `absorbing()`ing data.
+    //
+    // I dislike these similar-looking states and their management be equal but
+    // now having variables mean different things. A TODO would be to come up with a
+    // better design for this.
+    is_finalized: bool,
+}
+
+impl<const RATE: usize> Drop for Shake<RATE> {
+    fn drop(&mut self) {
+        self.state.iter_mut().zeroize();
+        self.buffer.iter_mut().zeroize();
+        self.until_absorb.zeroize();
+        self.to_squeeze.zeroize();
+    }
+}
+
+impl<const RATE: usize> Debug for Shake<RATE> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "State {{ state: [***OMITTED***], buffer: [***OMITTED***], capacity: {:?}, until_absorb: {:?}, \
+            to_squeeze: {:?}, is_finalized: {:?} }}",
+            self.capacity, self.until_absorb, self.to_squeeze, self.is_finalized
+        )
+    }
+}
+
+impl<const RATE: usize> Shake<RATE> {
+    /// Serialize internal Keccak state into bytes for `self.buffer`.
+    fn state_to_buffer(&mut self) {
+        // Let `self.buffer` now hold the state bytes we can squeeze out.
+        for (buf_chunk, state_value) in self
+            .buffer
+            .chunks_exact_mut(size_of::<u64>())
+            .zip(self.state.iter().copied())
+        {
+            buf_chunk.copy_from_slice(&state_value.to_le_bytes());
+        }
+    }
+
+    /// Initialize a new state.
+    /// `capacity` should be in bytes.
+    pub(crate) fn _new(capacity: usize) -> Self {
+        Self {
+            state: [0u64; 25],
+            buffer: [0u8; RATE],
+            capacity,
+            until_absorb: 0,
+            to_squeeze: 0,
+            is_finalized: false,
+        }
+    }
+
+    /// Process data in `self.buffer` or optionally `data`.
+    pub(crate) fn process_block(&mut self, data: Option<&[u8]>) {
+        // If `data.is_none()` then we want to process to_absorb data within `self.buffer`.
+        let data_block = match data {
+            Some(bytes) => {
+                debug_assert_eq!(bytes.len(), RATE);
+                bytes
+            }
+            None => &self.buffer,
+        };
+
+        debug_assert_eq!(data_block.len() % 8, 0);
+
+        // We process data in terms of bitrate, but we need to XOR in an entire Keccak state.
+        // So the 25 - bitrate values will be zero. That's the same as not XORing those values
+        // so we leave it be as this.
+        for (b, s) in data_block
+            .chunks_exact(size_of::<u64>())
+            .zip(self.state.iter_mut())
+        {
+            *s ^= u64::from_le_bytes(b.try_into().unwrap());
+        }
+
+        keccakf::<24>(&mut self.state);
+    }
+
+    /// Reset to `new()` state.
+    pub(crate) fn _reset(&mut self) {
+        self.state = [0u64; 25];
+        self.buffer = [0u8; RATE];
+        self.until_absorb = 0;
+        self.to_squeeze = 0;
+        self.is_finalized = false;
+    }
+
+    /// Update state with `data`. This can be called multiple times.
+    pub(crate) fn _absorb(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+        if data.is_empty() {
+            return Ok(());
+        }
+
+        let mut bytes = data;
+
+        if self.until_absorb != 0 {
+            debug_assert!(self.until_absorb <= RATE);
+
+            let mut want = RATE - self.until_absorb;
+            if want > bytes.len() {
+                want = bytes.len();
+            }
+
+            for (idx, itm) in bytes.iter().enumerate().take(want) {
+                self.buffer[self.until_absorb + idx] = *itm;
+            }
+
+            bytes = &bytes[want..];
+            self.until_absorb += want;
+
+            if self.until_absorb < RATE {
+                return Ok(());
+            }
+
+            self.process_block(None);
+            self.until_absorb = 0;
+        }
+
+        while bytes.len() >= RATE {
+            self.process_block(Some(bytes[..RATE].as_ref()));
+            bytes = &bytes[RATE..];
+        }
+
+        if !bytes.is_empty() {
+            debug_assert_eq!(self.until_absorb, 0);
+            self.buffer[..bytes.len()].copy_from_slice(bytes);
+            self.until_absorb = bytes.len();
+        }
+
+        Ok(())
+    }
+
+    /// Finalize the hash and put the final digest into `dest`.
+    pub(crate) fn _squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        // We have to do padding first time we switch from absorbing => squeezing
+        if !self.is_finalized {
+            // self.to_absorb should not be greater than SHA3(256/384/512)_RATE
+            // as that would have been processed in the update call
+            debug_assert!(self.until_absorb < RATE);
+            // Set padding byte and pad with zeroes after
+            self.buffer[self.until_absorb] = 0x1f;
+            self.until_absorb += 1;
+            for itm in self.buffer.iter_mut().skip(self.until_absorb) {
+                *itm = 0;
+            }
+
+            self.buffer[self.buffer.len() - 1] |= 0x80;
+            self.process_block(None);
+            // Padding only happens going from absorbing to squuezing.
+            self.is_finalized = true;
+
+            // Prepare `self.buffer` for squeezing.
+            self.state_to_buffer();
+        }
+
+        for out_b in dest.iter_mut() {
+            debug_assert!(self.to_squeeze <= RATE);
+
+            if self.to_squeeze == RATE {
+                keccakf::<24>(&mut self.state);
+                self.state_to_buffer();
+                self.to_squeeze = 0;
+            }
+
+            // We need to wrap around due to length limitation on buffer
+            *out_b = self.buffer[self.to_squeeze];
+            self.to_squeeze += 1;
+        }
+
+        Ok(())
+    }
+
+    #[cfg(test)]
+    /// Compare two Shake state objects to check if their fields
+    /// are the same.
+    pub(crate) fn compare_state_to_other(&self, other: &Self) {
+        for idx in 0..25 {
+            assert_eq!(self.state[idx], other.state[idx]);
+        }
+        assert_eq!(self.buffer, other.buffer);
+        assert_eq!(self.capacity, other.capacity);
+        assert_eq!(self.until_absorb, other.until_absorb);
+        assert_eq!(self.to_squeeze, other.to_squeeze);
         assert_eq!(self.is_finalized, other.is_finalized);
     }
 }

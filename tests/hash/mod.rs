@@ -7,6 +7,8 @@ pub mod sha3_256_nist_cavp;
 pub mod sha3_384_nist_cavp;
 pub mod sha3_512_nist_cavp;
 pub mod sha512_nist_cavp;
+pub mod shake128_nist_cavp;
+pub mod shake256_nist_cavp;
 
 use crate::TestCaseReader;
 use orion::hazardous::hash::{blake2, sha2, sha3};
@@ -107,9 +109,29 @@ fn sha3_512_test_runner(data: &[u8], output: &[u8]) {
     assert_eq!(digest.as_ref(), output);
 }
 
+fn shake128_test_runner(data: &[u8], output: &[u8]) {
+    let mut state = sha3::shake128::Shake128::new();
+    state.absorb(data).unwrap();
+
+    let mut digest = vec![0u8; output.len()];
+    state.squeeze(&mut digest).unwrap();
+
+    assert_eq!(digest.as_slice(), output);
+}
+
+fn shake256_test_runner(data: &[u8], output: &[u8]) {
+    let mut state = sha3::shake256::Shake256::new();
+    state.absorb(data).unwrap();
+
+    let mut digest = vec![0u8; output.len()];
+    state.squeeze(&mut digest).unwrap();
+
+    assert_eq!(digest.as_slice(), output);
+}
+
 /// NISTs SHA2/SHA3 Long/Short share the same format,
 /// so fields and separator remain the same.
-fn nist_cavp_runner(path: &str) {
+fn sha_nist_cavp_runner(path: &str) {
     let nist_cavp_fields: Vec<String> = vec!["Len".into(), "Msg".into(), "MD".into()];
     let mut nist_cavp_reader = TestCaseReader::new(path, nist_cavp_fields, "=");
 
@@ -148,6 +170,34 @@ fn nist_cavp_runner(path: &str) {
         }
         if path.contains("SHA3_512") {
             sha3_512_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
+        }
+
+        assert!(ran_any_runner);
+        // Read the next one
+        test_case = nist_cavp_reader.next();
+    }
+}
+
+fn shake_nist_cavp_runner(path: &str) {
+    let nist_cavp_fields: Vec<String> = vec!["Msg".into(), "Output".into()];
+    let mut nist_cavp_reader = TestCaseReader::new(path, nist_cavp_fields, "=");
+
+    let mut test_case = nist_cavp_reader.next();
+    // Check that we actually ran any of the SHAKE test runners.
+    let mut ran_any_runner = false;
+    while test_case.is_some() {
+        let tc = test_case.unwrap();
+
+        let input: Vec<u8> = TestCaseReader::default_parse(tc.get_data("Msg"));
+        let expected_output: Vec<u8> = TestCaseReader::default_parse(tc.get_data("Output"));
+
+        if path.contains("SHAKE128") {
+            shake128_test_runner(&input[..], &expected_output[..]);
+            ran_any_runner = true;
+        }
+        if path.contains("SHAKE256") {
+            shake256_test_runner(&input[..], &expected_output[..]);
             ran_any_runner = true;
         }
 

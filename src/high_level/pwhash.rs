@@ -279,7 +279,7 @@ impl PasswordHash {
         let param_parts_split = parts
             .next()
             .unwrap()
-            .split(|v| v == '=' || v == ',')
+            .split(['=', ','])
             .collect::<Vec<&str>>();
         if param_parts_split.len() != 6 {
             return Err(UnknownCryptoError);
