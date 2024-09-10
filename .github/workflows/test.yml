@@ -140,7 +140,7 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.arch }}
 
-      - run: check --no-default-features --target ${{ matrix.arch }}
+      - run: cargo check --no-default-features --target ${{ matrix.arch }}
 
   docs:
     name: Build documentation
