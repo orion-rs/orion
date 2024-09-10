@@ -26,4 +26,4 @@ jobs:
         run: cargo clippy -- -D warnings
 
       - name: Run cargo clippy on tests
-        run: clippy --tests -- -D warnings
+        run: cargo clippy --tests -- -D warnings
