@@ -1,6 +1,6 @@
 ### 0.17.7
 
-**Date:** TBD.
+**Date:** September 10, 2024.
 
 **Changelog:**
 
