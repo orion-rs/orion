@@ -152,7 +152,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - run: cargo --no-deps --all-features
+      - run: cargo doc --no-deps --all-features
 
   benches:
     name: Build and check benchmarks
