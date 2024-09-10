@@ -4,7 +4,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Midnight of each day
+    - cron: "0 0 * * *" # Midnight of each day
 
 jobs:
   tests:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        rust:
+        toolchain:
           - stable
           - nightly
     steps:
@@ -22,13 +22,12 @@ jobs:
           persist-credentials: false
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
+          toolchain: ${{ matrix.toolchain }}
+
+      - name: Run cargo test - debug
+        run: cargo test --all-features
+
       - name: Run cargo test - release
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --release --all-features
+        run: cargo test --release --all-features
