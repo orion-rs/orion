@@ -17,7 +17,7 @@ jobs:
   test:
     strategy:
       matrix:
-        rust:
+        toolchain:
           - stable
           - beta
           - nightly
@@ -35,70 +35,33 @@ jobs:
           persist-credentials: false
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
+          toolchain: ${{ matrix.toolchain }}
 
       - name: Test debug-mode, default features
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
+        run: cargo test
 
       - name: Test debug-mode, all features
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --features serde
+        run: cargo test --all-features
 
       - name: Test debug-mode, no default features
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --no-default-features
+        run: cargo test --no-default-features
 
-      - name: Test debug-mode, alloc feature
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --no-default-features --features alloc --tests
-
-      - name: Test debug-mode, experimental feature
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --features experimental
+      - name: Test debug-mode, no-default + alloc feature
+        run: cargo test --no-default-features --features alloc --tests
 
       - name: Test release-mode, default features
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --release
+        run: cargo test --release
 
       - name: Test release-mode, all features
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --release --features serde
+        run: cargo test --release --all-features
 
       - name: Test release-mode, no default features
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --release --no-default-features
+        run: cargo test --release --no-default-features
 
-      - name: Test release-mode, alloc feature
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --release --no-default-features --features alloc --tests
-
-      - name: Test release-mode, experimental feature
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --release --features experimental
+      - name: Test release-mode, no-default + alloc feature
+        run: cargo test --release --no-default-features --features alloc --tests
 
   sanitizers:
     name: Tests w. sanitizers
@@ -110,11 +73,10 @@ jobs:
           persist-credentials: false
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
-          target: x86_64-unknown-linux-gnu
-          override: true
+          targets: x86_64-unknown-linux-gnu
 
       # Release (LeakSanitizer is enabled by default with AddressSanitizer for x86_64 Linux builds)
       # https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer
@@ -126,24 +88,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        rust:
+        toolchain:
           - stable
           - nightly
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           persist-credentials: false
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+
+      - uses: houseabsolute/actions-rust-cross@ad283b2fc65ad1f3a04fb8bf8b2b829aad4a9318
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          target: thumbv7em-none-eabi
-          override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          use-cross: true
           command: build
-          args: --release --no-default-features --target thumbv7em-none-eabi
+          target: thumbv7em-none-eabi
+          args: "--release --no-default-features"
 
   cross_compilation:
     name: Linux/ARM - Release tests
@@ -158,16 +115,12 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           persist-credentials: false
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+
+      - uses: houseabsolute/actions-rust-cross@ad283b2fc65ad1f3a04fb8bf8b2b829aad4a9318
         with:
-          toolchain: stable
-          target: ${{ matrix.arch }}
-          override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          use-cross: true
           command: test
-          args: --release --target ${{ matrix.arch }}
+          target: ${{ matrix.arch }}
+          args: "--release"
 
   # https://rustwasm.github.io/docs/book/reference/add-wasm-support-to-crate.html#maintaining-ongoing-support-for-webassembly
   web_assembly:
@@ -181,15 +134,13 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           persist-credentials: false
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          target: ${{ matrix.arch }}
-          override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: check
-          args: --no-default-features --target ${{ matrix.arch }}
+          targets: ${{ matrix.arch }}
+
+      - run: check --no-default-features --target ${{ matrix.arch }}
 
   docs:
     name: Build documentation
@@ -198,14 +149,10 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           persist-credentials: false
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
-        with:
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: doc
-          args: --no-deps --all-features
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - run: cargo --no-deps --all-features
 
   benches:
     name: Build and check benchmarks
@@ -214,11 +161,7 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           persist-credentials: false
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
-        with:
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505
-        with:
-          command: test
-          args: --benches
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - run: cargo test --benches
