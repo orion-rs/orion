@@ -168,16 +168,13 @@ impl Iterator for TestCaseReader {
             match current {
                 Some(Ok(mut string)) => {
                     // First check if a stop_flags are set and if we've encountered one.
-                    match &self.stop_flags {
-                        Some(flags) => {
-                            for flag in flags.iter() {
-                                if &string == flag {
-                                    self.stop_flag_hit = Some(flag.to_string());
-                                    return None;
-                                }
+                    if let Some(flags) = &self.stop_flags {
+                        for flag in flags.iter() {
+                            if &string == flag {
+                                self.stop_flag_hit = Some(flag.to_string());
+                                return None;
                             }
                         }
-                        None => (),
                     }
 
                     // Test case fields are ordered, so this is the beginning of a test case
