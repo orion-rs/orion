@@ -96,7 +96,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: houseabsolute/actions-rust-cross@e021eb0bd0406694c4c3bd14cfce45df810dfaa5
+      - uses: houseabsolute/actions-rust-cross@e35168ee8f31f83b4af8ba73d497bf25f3518a93
         with:
           command: build
           target: thumbv7em-none-eabi
@@ -116,7 +116,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: houseabsolute/actions-rust-cross@e021eb0bd0406694c4c3bd14cfce45df810dfaa5
+      - uses: houseabsolute/actions-rust-cross@e35168ee8f31f83b4af8ba73d497bf25f3518a93
         with:
           command: test
           target: ${{ matrix.arch }}
