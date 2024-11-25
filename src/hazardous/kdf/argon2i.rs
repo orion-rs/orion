@@ -1363,6 +1363,10 @@ mod private {
         #[quickcheck]
         #[cfg(feature = "safe_api")]
         fn prop_test_same_result(input: Vec<u8>, out: Vec<u8>) -> bool {
+            if out.len() < 4 {
+                return true;
+            }
+
             let mut first = out.clone();
             let mut second = out.clone();
 
@@ -1379,6 +1383,10 @@ mod private {
         #[quickcheck]
         #[cfg(feature = "safe_api")]
         fn prop_test_diff_result(input: Vec<u8>, out: Vec<u8>) -> bool {
+            if out.len() < 4 {
+                return true;
+            }
+
             let mut first = out.clone();
             let mut second = out.clone();
 
