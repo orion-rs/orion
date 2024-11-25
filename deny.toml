@@ -14,7 +14,7 @@ ignore = []
 # We want really high confidence when inferring licenses from text
 confidence-threshold = 0.93
 allow = ["MIT", "BSD-3-Clause", "Apache-2.0"]
-exceptions = [{ allow = ["Unicode-DFS-2016"], name = "unicode-ident" }]
+exceptions = [{ allow = ["Unicode-3.0"], name = "unicode-ident" }]
 
 [bans]
 multiple-versions = "allow" # We don't maintain Cargo lockfile, so this isn't really feasible to deny
