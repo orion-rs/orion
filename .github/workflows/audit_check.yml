@@ -1,7 +1,6 @@
 name: cargo deny (licenses, advisories, sources)
 permissions:
   contents: read
-  issues: write
 
 on:
   push:
