@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-///
-/// Trait implementation macros
+// Trait implementation macros
 
 #[cfg(feature = "safe_api")]
 /// Macro that implements the `Default` trait using a CSPRNG.
@@ -174,8 +173,7 @@ macro_rules! impl_try_from_trait (($name:ident) => (
     }
 ));
 
-///
-/// Function implementation macros
+// Function implementation macros
 
 /// Macro to implement a `from_slice()` function. Returns `UnknownCryptoError`
 /// if the slice length is not accepted.
@@ -463,8 +461,7 @@ macro_rules! test_generate_variable (($name:ident) => (
     }
 ));
 
-///
-/// Newtype implementation macros
+// Newtype implementation macros
 
 /// Macro to construct a type containing sensitive data, using a fixed-size
 /// array.
