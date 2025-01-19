@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
 
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@a54c7afa936fefeb4456b2dd8068152669aa8203
         with:
           toolchain: ${{ matrix.toolchain }}
 
