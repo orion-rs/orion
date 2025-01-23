@@ -25,7 +25,7 @@ jobs:
           cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303
+        uses: codecov/codecov-action@5a605bd92782ce0810fa3b8acc235c921b497052
         with:
           fail_ci_if_error: true
         env:
