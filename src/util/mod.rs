@@ -77,7 +77,7 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
         return Err(errors::UnknownCryptoError);
     }
 
-    getrandom::getrandom(dst).unwrap();
+    getrandom::fill(dst).unwrap();
 
     Ok(())
 }

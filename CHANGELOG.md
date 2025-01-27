@@ -1,3 +1,12 @@
+### 0.17.8
+
+**Date:** TBD.
+
+**Changelog:**
+
+- Bump `getrandom` to `0.3`.
+- Update CI dependencies.
+
 ### 0.17.7
 
 **Date:** September 10, 2024.
