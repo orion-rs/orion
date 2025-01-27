@@ -82,10 +82,9 @@ fn test_unknown_crypto_error_debug_display() {
 #[cfg(feature = "safe_api")]
 // format! is only available with std
 fn test_unknown_crypto_from_getrandom() {
-    use core::num::NonZeroU32;
     // Choose some random error code.
-    let err_code = NonZeroU32::new(12).unwrap();
-    let err_foreign: getrandom::Error = getrandom::Error::from(err_code);
+    let err_code: u16 = 12;
+    let err_foreign: getrandom::Error = getrandom::Error::new_custom(err_code);
 
     // Tests Debug impl through "{:?}"
     let err = format!("{:?}", UnknownCryptoError::from(err_foreign));
