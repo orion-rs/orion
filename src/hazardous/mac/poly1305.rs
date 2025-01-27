@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2024 The orion Developers
+// Copyright (c) 2018-2025 The orion Developers
 // Based on the algorithm from https://github.com/floodyberry/poly1305-donna
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
