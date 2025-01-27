@@ -1,10 +1,10 @@
 ### 0.17.8
 
-**Date:** TBD.
+**Date:** January 27, 2025.
 
 **Changelog:**
 
-- Bump `getrandom` to `0.3`.
+- Bump `getrandom` to `0.3.0`.
 - Update CI dependencies.
 
 ### 0.17.7
