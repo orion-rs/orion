@@ -478,6 +478,59 @@ mod ecc {
     }
 }
 
+mod kem {
+    use super::*;
+    use orion::hazardous::kem::{mlkem1024, mlkem512, mlkem768};
+
+    pub fn bench_mlkem512(c: &mut Criterion) {
+        let mut group = c.benchmark_group("ML-KEM-512");
+
+        let alice_kp = mlkem512::KeyPair::generate().unwrap();
+
+        group.sample_size(100);
+        group.bench_function("encap+decap", move |b| {
+            b.iter(|| {
+                let (_, ct) = alice_kp.public().encap().unwrap();
+                alice_kp.private().decap(&ct).unwrap();
+            })
+        });
+    }
+
+    pub fn bench_mlkem768(c: &mut Criterion) {
+        let mut group = c.benchmark_group("ML-KEM-768");
+
+        let alice_kp = mlkem768::KeyPair::generate().unwrap();
+
+        group.sample_size(100);
+        group.bench_function("encap+decap", move |b| {
+            b.iter(|| {
+                let (_, ct) = alice_kp.public().encap().unwrap();
+                alice_kp.private().decap(&ct).unwrap();
+            })
+        });
+    }
+
+    pub fn bench_mlkem1024(c: &mut Criterion) {
+        let mut group = c.benchmark_group("ML-KEM-1024");
+
+        let alice_kp = mlkem1024::KeyPair::generate().unwrap();
+
+        group.sample_size(100);
+        group.bench_function("encap+decap", move |b| {
+            b.iter(|| {
+                let (_, ct) = alice_kp.public().encap().unwrap();
+                alice_kp.private().decap(&ct).unwrap();
+            })
+        });
+    }
+
+    criterion_group! {
+        name = kem_benches;
+        config = Criterion::default();
+        targets = bench_mlkem512, bench_mlkem768, bench_mlkem1024
+    }
+}
+
 criterion_main!(
     mac::mac_benches,
     aead::aead_benches,
@@ -485,4 +538,5 @@ criterion_main!(
     stream::stream_benches,
     kdf::kdf_benches,
     ecc::ecc_benches,
+    kem::kem_benches,
 );

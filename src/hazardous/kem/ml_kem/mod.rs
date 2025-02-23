@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2023-2025 The orion Developers
+// Copyright (c) 2025 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,18 +20,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[cfg(feature = "safe_api")]
-/// DHKEM(X25519, HKDF-SHA256) as specified in HPKE [RFC 9180](https://www.rfc-editor.org/rfc/rfc9180.html).
-pub mod x25519_hkdf_sha256;
+use crate::errors::UnknownCryptoError;
 
-/// ML-KEM as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
-mod ml_kem;
+/// Internal implementation logic for ML-KEM.
+pub mod internal;
 
-#[cfg(feature = "safe_api")]
-pub use ml_kem::mlkem512;
+/// ML-KEM-512 as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
+pub mod mlkem512;
 
-#[cfg(feature = "safe_api")]
-pub use ml_kem::mlkem768;
+/// ML-KEM-768 as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
+pub mod mlkem768;
 
-#[cfg(feature = "safe_api")]
-pub use ml_kem::mlkem1024;
+/// ML-KEM-1024 as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
+pub mod mlkem1024;
+
+construct_secret_key! {
+    /// A type to represent the `d||z` seed used by ML-KEM to produce
+    /// a decapsulation key and its corresponding encapsulation key.
+    ///
+    /// It it crucial for the security of ML-KEM that these be generated
+    /// using a CSPRNG.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is not 64 bytes.
+    (Seed, test_ml_kem_seed, 64, 64, 64)
+}
