@@ -120,7 +120,7 @@ impl KeyPair {
     /// Generate a fresh [KeyPair].
     pub fn generate() -> Result<Self, UnknownCryptoError> {
         let seed = Seed::generate();
-        let (ek, dk) = KeyPairInternal::<MlKem512Internal>::mlkem_keygen::<2, 800, 1632>(&seed)?;
+        let (ek, dk) = KeyPairInternal::<MlKem512Internal>::from_seed::<2, 800, 1632>(&seed)?;
 
         Ok(Self {
             seed,

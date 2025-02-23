@@ -812,51 +812,6 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         Ok(())
     }
 
-    pub(crate) fn mlkem_keygen<
-        const K: usize,
-        const ENCODED_SIZE_EK: usize,
-        const ENCODED_SIZE_DK: usize,
-    >(
-        seed: &Seed,
-    ) -> Result<
-        (
-            EncapKey<K, ENCODED_SIZE_EK, Pke>,
-            DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>,
-        ),
-        UnknownCryptoError,
-    > {
-        let mut encap_key = EncapKey::<K, ENCODED_SIZE_EK, Pke> {
-            bytes: [0u8; ENCODED_SIZE_EK],
-            t_hat: [RingElementNTT::zero(); K],
-            mat_a: [[RingElementNTT::zero(); K]; K],
-            _phantom: PhantomData,
-        };
-        let mut decap_key = DecapKey::<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke> {
-            bytes: [0u8; ENCODED_SIZE_DK],
-            s_hat: [RingElementNTT::zero(); K],
-            _phantom: PhantomData,
-        };
-
-        // Step 1 + 2. (ekPKE, dkPKE) ← K-PKE.KeyGen(d)
-        Self::keygen(
-            &seed.unprotected_as_bytes()[..32],
-            &mut encap_key,
-            &mut decap_key,
-        )?;
-
-        // Step 3. dk ← (dkPKE‖ek‖H(ek)‖z)
-        decap_key.bytes[(ENCODE_SIZE_POLY * K)..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE]
-            .copy_from_slice(&encap_key.bytes);
-        decap_key.bytes
-            [(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32]
-            .copy_from_slice(Sha3_256::digest(&encap_key.bytes).unwrap().as_ref());
-        decap_key.bytes[(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32
-            ..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32 + 32]
-            .copy_from_slice(&seed.unprotected_as_bytes()[32..64]);
-
-        Ok((encap_key, decap_key))
-    }
-
     pub(crate) fn from_seed<
         const K: usize,
         const ENCODED_SIZE_EK: usize,

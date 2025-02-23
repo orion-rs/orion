@@ -27,11 +27,6 @@ pub mod x25519_hkdf_sha256;
 /// ML-KEM as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
 mod ml_kem;
 
-#[cfg(feature = "safe_api")]
-pub use ml_kem::mlkem512;
-
-#[cfg(feature = "safe_api")]
-pub use ml_kem::mlkem768;
-
-#[cfg(feature = "safe_api")]
 pub use ml_kem::mlkem1024;
+pub use ml_kem::mlkem512;
+pub use ml_kem::mlkem768;
