@@ -101,8 +101,8 @@ impl FieldElement {
         let mut quo: u32 = ((u64::from(div) * MUL) >> SHIFT) as u32;
         let rem: u32 = div - (quo * Q);
 
-        quo += (Q / 2).overflowing_sub(rem).0 >> 31 & 1;
-        quo += (Q + Q / 2 - rem) >> 31 & 1;
+        quo += ((Q / 2).overflowing_sub(rem).0 >> 31) & 1;
+        quo += ((Q + Q / 2 - rem) >> 31) & 1;
 
         let mask: u32 = (1 << d as u32) - 1;
 
@@ -121,7 +121,7 @@ impl FieldElement {
 
         let div: u32 = (y as u32) * Q;
         let mut quo: u32 = div >> d as u32;
-        quo += div >> (d as u32 - 1) & 1;
+        quo += (div >> (d as u32 - 1)) & 1;
 
         debug_assert!(quo <= Q);
 

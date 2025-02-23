@@ -46,7 +46,7 @@ pub fn bytes_to_bits(bytes: &[u8], bits: &mut [u8]) {
 
     for (by, bi) in bytes.iter().zip(bits.chunks_exact_mut(u8::BITS as usize)) {
         for (idx, exact_bit) in bi.iter_mut().enumerate() {
-            *exact_bit = by >> idx & 1;
+            *exact_bit = (by >> idx) & 1;
         }
     }
 
@@ -267,7 +267,7 @@ impl ByteSerialization {
         for (scalar, b) in coefficients.chunks(2).zip(out.chunks_exact_mut(3)) {
             let s1: u16 = (scalar[0].0 as u16) & 0xFFF;
             let s2: u16 = (scalar[1].0 as u16) & 0xFFF;
-            let bits: u32 = (s2 as u32) << 12 | s1 as u32;
+            let bits: u32 = ((s2 as u32) << 12) | s1 as u32;
 
             b[0] = (bits >> (8 * 0)) as u8;
             b[1] = (bits >> (8 * 1)) as u8;
