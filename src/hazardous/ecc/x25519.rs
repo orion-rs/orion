@@ -585,6 +585,7 @@ impl PrivateKey {
     }
 
     #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> PrivateKey {
         let mut value = [0u8; PRIVATE_KEY_SIZE];
