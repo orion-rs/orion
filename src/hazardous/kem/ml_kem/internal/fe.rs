@@ -43,20 +43,20 @@ pub fn barrett_reduce(value: u32) -> u32 {
     // conditional subtraction.
     debug_assert!((0..KYBER_Q * 2).contains(&r));
 
-    let ret = conditional_sub_i32(r as i32, KYBER_Q as i32) as u32;
+    let ret = conditional_sub_u32(r);
     debug_assert!((0..KYBER_Q).contains(&ret));
 
     ret
 }
 
 // Constant-time conditional subtraction
-fn conditional_sub_i32(a: i32, modulo: i32) -> i32 {
+fn conditional_sub_u32(a: u32) -> u32 {
     // Calculate a - mod
-    let t: i32 = a - modulo;
+    let t: u32 = a.overflowing_sub(KYBER_Q).0;
 
     // Check if a >= mod (if t is non-negative)
-    // If a >= mod, mask will be 0xFFFFFFFF, otherwise 0
-    let mask: i32 = t >> 31;
+    // If a >= mod, mask will be 0xFFFFFFF, otherwise 0
+    let mask: u32 = 0u32.overflowing_sub(t >> 31).0;
 
     // If mask is 0, return a (no subtraction), otherwise return t (a - mod)
     (t & !mask) | (a & mask)
@@ -138,7 +138,7 @@ impl Add for FieldElement {
 
     fn add(self, other: Self) -> Self {
         let x: u32 = self.0 + other.0;
-        Self(conditional_sub_i32(x as i32, KYBER_Q as i32) as u32)
+        Self(conditional_sub_u32(x))
     }
 }
 
@@ -147,7 +147,7 @@ impl Sub for FieldElement {
 
     fn sub(self, other: Self) -> Self {
         let x: u32 = self.0.overflowing_sub(other.0).0.overflowing_add(KYBER_Q).0;
-        Self(conditional_sub_i32(x as i32, KYBER_Q as i32) as u32)
+        Self(conditional_sub_u32(x))
     }
 }
 
@@ -218,16 +218,13 @@ mod test_field_modular_arithmetic {
     fn test_conditional_sub() {
         for a in 0..KYBER_Q * 2 {
             if a >= KYBER_Q {
-                assert_eq!(
-                    conditional_sub_i32(a as i32, KYBER_Q as i32),
-                    (a - KYBER_Q) as i32
-                );
+                assert_eq!(conditional_sub_u32(a), a - KYBER_Q);
                 assert_eq!(
                     conditional_sub_i16(a as i16, KYBER_Q as i16),
                     (a - KYBER_Q) as i16
                 );
             } else {
-                assert_eq!(conditional_sub_i32(a as i32, KYBER_Q as i32), a as i32);
+                assert_eq!(conditional_sub_u32(a), a);
                 assert_eq!(conditional_sub_i16(a as i16, KYBER_Q as i16), a as i16);
             }
         }
