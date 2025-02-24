@@ -387,7 +387,7 @@ mod tests {
     }
 
     #[test]
-    /// Basic no_std-compatiblle test.
+    /// Basic no_std-compatible test.
     fn basic_roundtrip() {
         let seed = Seed::from_slice(&[127u8; 64]).unwrap();
         let kp = KeyPair::try_from(&seed).unwrap();

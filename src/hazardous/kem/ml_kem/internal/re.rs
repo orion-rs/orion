@@ -89,7 +89,7 @@ impl RingElement {
 impl From<[FieldElement; 256]> for RingElement {
     fn from(value: [FieldElement; 256]) -> Self {
         if value.iter().any(|fe| fe.0 >= KYBER_Q) {
-            unreachable!("this should have been chekced before");
+            unreachable!("this should have been checked before");
         }
 
         Self {
@@ -187,7 +187,7 @@ impl RingElementNTT {
 impl From<[FieldElement; 256]> for RingElementNTT {
     fn from(value: [FieldElement; 256]) -> Self {
         if value.iter().any(|fe| fe.0 >= KYBER_Q) {
-            unreachable!("this should have been chekced before");
+            unreachable!("this should have been checked before");
         }
 
         Self {
