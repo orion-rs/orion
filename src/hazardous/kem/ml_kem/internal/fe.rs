@@ -121,7 +121,7 @@ impl FieldElement {
         let mut quo: u32 = div >> d as u32;
         quo += (div >> (d as u32 - 1)) & 1;
 
-        debug_assert!(quo <= KYBER_Q);
+        debug_assert!(quo < KYBER_Q);
 
         FieldElement(quo)
     }
