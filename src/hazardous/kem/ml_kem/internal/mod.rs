@@ -399,11 +399,6 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
 
         let mut n = 0;
 
-        // Step 3:
-        let mut rho = [0u8; 32];
-        let ek_len = self.bytes.len() - 32;
-        rho.copy_from_slice(&self.bytes[ek_len..]);
-
         // Steps 9..12
         let mut y = [RingElement::zero(); K];
         for y_re in y.iter_mut().take(Pke::K) {
