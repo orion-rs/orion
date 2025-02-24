@@ -21,28 +21,42 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - __TODO!__
+//! - `ek`: The public encapsulation key, for which a shared secret and ciphertext is generated.
+//! - `dk`: The secret decapsulation key, for which a ciphertext is used to derive a shared secret.
+//! - `c`: The public ciphertext, sent to the decapsulating party.
+//! - `eseed`: Explicit randomness used for encapsulation.
 //!
 //! # Errors:
 //! An error will be returned if:
 //! - `eseed` is not 64 bytes.
+//! - [`getrandom::fill()`] fails during encapsulation.
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - __TODO!__
+//! - [`getrandom::fill()`] fails during [`KeyPair::generate()`].
 //!
 //! # Security:
-//! - __TODO!__
+//! - It is critical that both the seed and explicit randomness `eseed`, used for key generation and encapsulation
+//! are generated using a strong CSPRNG.
+//! - Users should always prefer encapsulation without specifying explicit randomness, if possible. `encap_deterministic()`
+//! exists mainly for `no_std` usage.
 //!
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::kem::xwing::*;
 //!
+//! let keypair = KeyPair::generate()?;
+//!
+//! let (sender_shared_secret, sender_ciphertext) = XWing::encap(keypair.public())?;
+//! let recipient_shared_secret = XWing::decap(keypair.private(), &sender_ciphertext)?;
+//!
 //! assert_eq!(sender_shared_secret, recipient_shared_secret);
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`getrandom::fill()`]: getrandom::fill
+//! [`KeyPair::generate()`]: mlkem1024::KeyPair::generate
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
@@ -141,6 +155,14 @@ impl DecapsulationKey {
 pub struct KeyPair {
     ek: EncapsulationKey,
     dk: DecapsulationKey,
+}
+
+impl TryFrom<&Seed> for KeyPair {
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &Seed) -> Result<Self, Self::Error> {
+        KeyPair::generate_deterministic(value)
+    }
 }
 
 impl KeyPair {
@@ -275,5 +297,80 @@ impl XWing {
             ct_x,
             &dk.pk_x.to_bytes(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "safe_api")]
+    use crate::test_framework::kem_interface::{KemTester, TestableKem};
+
+    #[cfg(feature = "safe_api")]
+    impl TestableKem<SharedSecret, Ciphertext> for XWing {
+        fn keygen(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let kp = KeyPair::try_from(&Seed::from_slice(seed).unwrap()).unwrap();
+
+            Ok((
+                kp.ek.as_ref().to_vec(),
+                kp.dk.unprotected_as_bytes().to_vec(),
+            ))
+        }
+
+        fn parse_encap_key(ek: &[u8]) -> Result<(), UnknownCryptoError> {
+            EncapsulationKey::from_slice(ek)?;
+
+            Ok(())
+        }
+
+        fn parse_decap_key(dk: &[u8]) -> Result<(), UnknownCryptoError> {
+            Seed::from_slice(dk)?;
+
+            Ok(())
+        }
+
+        fn ciphertext_from_bytes(b: &[u8]) -> Result<Ciphertext, UnknownCryptoError> {
+            Ciphertext::from_slice(b)
+        }
+
+        fn encap(ek: &[u8]) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
+            let ek = EncapsulationKey::from_slice(ek).unwrap();
+            XWing::encap(&ek)
+        }
+
+        fn decap(dk: &[u8], c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
+            let kp = KeyPair::try_from(&Seed::from_slice(dk)?).unwrap();
+            XWing::decap(kp.private(), c)
+        }
+    }
+
+    #[cfg(feature = "safe_api")]
+    #[test]
+    fn run_basic_kem_tests() {
+        let seed = Seed::generate();
+        KemTester::<XWing, SharedSecret, Ciphertext>::run_all_tests(seed.unprotected_as_bytes());
+    }
+
+    #[test]
+    /// Basic no_std-compatible test.
+    fn basic_roundtrip() {
+        let seed = Seed::from_slice(&[127u8; 32]).unwrap();
+        let kp = KeyPair::try_from(&seed).unwrap();
+
+        let (k, c) = XWing::encap_deterministic(kp.public(), &[255u8; 64]).unwrap();
+        let k_prime = XWing::decap(kp.private(), &c).unwrap();
+
+        assert_eq!(k, k_prime);
+    }
+
+    #[test]
+    fn bad_eseed_lens() {
+        let seed = Seed::from_slice(&[127u8; 32]).unwrap();
+        let kp = KeyPair::try_from(&seed).unwrap();
+
+        assert!(XWing::encap_deterministic(kp.public(), &[255u8; 64]).is_ok());
+        assert!(XWing::encap_deterministic(kp.public(), &[255u8; 63]).is_err());
+        assert!(XWing::encap_deterministic(kp.public(), &[255u8; 65]).is_err());
     }
 }
