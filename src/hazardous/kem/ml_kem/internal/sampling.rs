@@ -47,11 +47,11 @@ pub fn sample_ntt(seed: &[u8; 32], ij: &[u8; 2]) -> Result<RingElementNTT, Unkno
         debug_assert!(d2 >= 0 || d2 < 2i16.pow(12));
 
         if d1 < KYBER_Q as i16 {
-            a_hat[j] = FieldElement(d1 as i32);
+            a_hat[j] = FieldElement(d1 as u32);
             j += 1;
         }
         if d2 < KYBER_Q as i16 && j < 256 {
-            a_hat[j] = FieldElement(d2 as i32);
+            a_hat[j] = FieldElement(d2 as u32);
             j += 1;
         }
     }
@@ -95,11 +95,10 @@ pub fn sample_poly_cbd(
         debug_assert!(x <= eta as u8);
         debug_assert!(y <= eta as u8);
 
-        f[i] = FieldElement::new(x as i32) - FieldElement::new(y as i32);
+        f[i] = FieldElement::new(x as u32) - FieldElement::new(y as u32);
 
         debug_assert!(
-            (0 <= f[i].0 && f[i].0 <= eta as i32)
-                || (KYBER_Q - (eta as i32) <= f[i].0 && f[i].0 < KYBER_Q)
+            (f[i].0 <= eta as u32) || (KYBER_Q - (eta as u32) <= f[i].0 && f[i].0 < KYBER_Q)
         );
     }
 

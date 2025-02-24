@@ -79,7 +79,7 @@ impl RingElement {
 
         for rand_coeff in coefficients.iter_mut() {
             let new = rng.random_range(0..KYBER_Q);
-            *rand_coeff = FieldElement::new(new as i32);
+            *rand_coeff = FieldElement::new(new);
         }
 
         Self { coefficients }
@@ -265,8 +265,7 @@ impl Mul for RingElementNTT {
             let a1 = self.coefficients[2 * i + 1];
             let b0 = other.coefficients[2 * i];
             let b1 = other.coefficients[2 * i + 1];
-            let (c0, c1) =
-                Self::base_case_multiply(a0, a1, b0, b1, FieldElement(GAMMA_ALL[i] as i32));
+            let (c0, c1) = Self::base_case_multiply(a0, a1, b0, b1, FieldElement(GAMMA_ALL[i]));
 
             h_hat[2 * i] = c0;
             h_hat[2 * i + 1] = c1;
@@ -279,7 +278,7 @@ impl Mul for RingElementNTT {
 #[allow(dead_code)]
 pub const ZETA_ROOT_OF_UNIT: u16 = 17;
 
-pub const ZETA_ALL: [u16; 128] = [
+pub const ZETA_ALL: [u32; 128] = [
     1, 1729, 2580, 3289, 2642, 630, 1897, 848, 1062, 1919, 193, 797, 2786, 3260, 569, 1746, 296,
     2447, 1339, 1476, 3046, 56, 2240, 1333, 1426, 2094, 535, 2882, 2393, 2879, 1974, 821, 289, 331,
     3253, 1756, 1197, 2304, 2277, 2055, 650, 1977, 2513, 632, 2865, 33, 1320, 1915, 2319, 1435,
@@ -291,7 +290,7 @@ pub const ZETA_ALL: [u16; 128] = [
 ];
 
 /// ζ2BitRev7(i)+1
-pub const GAMMA_ALL: [u16; 128] = [
+pub const GAMMA_ALL: [u32; 128] = [
     17, 3312, 2761, 568, 583, 2746, 2649, 680, 1637, 1692, 723, 2606, 2288, 1041, 1100, 2229, 1409,
     1920, 2662, 667, 3281, 48, 233, 3096, 756, 2573, 2156, 1173, 3015, 314, 3050, 279, 1703, 1626,
     1651, 1678, 2789, 540, 1789, 1540, 1847, 1482, 952, 2377, 1461, 1868, 2687, 642, 939, 2390,
@@ -311,7 +310,7 @@ pub fn to_ntt(f: &RingElement) -> RingElementNTT {
     while len >= 2 {
         let mut start = 0;
         while start < 256 {
-            let zeta = FieldElement::new(ZETA_ALL[i] as i32);
+            let zeta = FieldElement::new(ZETA_ALL[i]);
             i += 1;
 
             for j in start..(start + len) {
@@ -336,7 +335,7 @@ pub fn inverse_ntt(f_hat: &RingElementNTT) -> RingElement {
     while len <= 128 {
         let mut start = 0;
         while start < 256 {
-            let zeta = FieldElement::new(ZETA_ALL[i] as i32);
+            let zeta = FieldElement::new(ZETA_ALL[i]);
             i -= 1;
 
             for j in start..(start + len) {

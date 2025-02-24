@@ -81,14 +81,14 @@ impl ByteSerialization {
     #[allow(clippy::identity_op, clippy::eq_op, clippy::erasing_op)]
     pub fn decode_1(inbytes: &[u8], out: &mut [FieldElement]) {
         for (b, s) in inbytes.iter().zip(out.chunks_exact_mut(8)) {
-            s[0].0 = ((b & 0x01) >> (7 - 7) as u16) as i32;
-            s[1].0 = ((b & 0x02) >> (7 - 6) as u16) as i32;
-            s[2].0 = ((b & 0x04) >> (7 - 5) as u16) as i32;
-            s[3].0 = ((b & 0x08) >> (7 - 4) as u16) as i32;
-            s[4].0 = ((b & 0x10) >> (7 - 3) as u16) as i32;
-            s[5].0 = ((b & 0x20) >> (7 - 2) as u16) as i32;
-            s[6].0 = ((b & 0x40) >> (7 - 1) as u16) as i32;
-            s[7].0 = ((b & 0x80) >> (7 - 0) as u16) as i32;
+            s[0].0 = ((b & 0x01) >> (7 - 7) as u16) as u32;
+            s[1].0 = ((b & 0x02) >> (7 - 6) as u16) as u32;
+            s[2].0 = ((b & 0x04) >> (7 - 5) as u16) as u32;
+            s[3].0 = ((b & 0x08) >> (7 - 4) as u16) as u32;
+            s[4].0 = ((b & 0x10) >> (7 - 3) as u16) as u32;
+            s[5].0 = ((b & 0x20) >> (7 - 2) as u16) as u32;
+            s[6].0 = ((b & 0x40) >> (7 - 1) as u16) as u32;
+            s[7].0 = ((b & 0x80) >> (7 - 0) as u16) as u32;
         }
     }
 
@@ -110,8 +110,8 @@ impl ByteSerialization {
     #[allow(clippy::identity_op, clippy::eq_op, clippy::erasing_op)]
     pub fn decode_4(inbytes: &[u8], out: &mut [FieldElement]) {
         for (b, s) in inbytes.iter().zip(out.chunks_exact_mut(2)) {
-            s[0].0 = ((b & 0xF) as u16) as i32;
-            s[1].0 = ((b >> 4) as u16) as i32;
+            s[0].0 = ((b & 0xF) as u16) as u32;
+            s[1].0 = ((b >> 4) as u16) as u32;
         }
     }
 
@@ -151,14 +151,14 @@ impl ByteSerialization {
             bits |= (b[3] as u64) << (8 * (4 - 1));
             bits |= (b[4] as u64) << (8 * (4 - 0));
 
-            s[0].0 = (((bits >> (5 * (7 - 7))) & 0x1F) as u16) as i32;
-            s[1].0 = (((bits >> (5 * (7 - 6))) & 0x1F) as u16) as i32;
-            s[2].0 = (((bits >> (5 * (7 - 5))) & 0x1F) as u16) as i32;
-            s[3].0 = (((bits >> (5 * (7 - 4))) & 0x1F) as u16) as i32;
-            s[4].0 = (((bits >> (5 * (7 - 3))) & 0x1F) as u16) as i32;
-            s[5].0 = (((bits >> (5 * (7 - 2))) & 0x1F) as u16) as i32;
-            s[6].0 = (((bits >> (5 * (7 - 1))) & 0x1F) as u16) as i32;
-            s[7].0 = (((bits >> (5 * (7 - 0))) & 0x1F) as u16) as i32;
+            s[0].0 = (((bits >> (5 * (7 - 7))) & 0x1F) as u16) as u32;
+            s[1].0 = (((bits >> (5 * (7 - 6))) & 0x1F) as u16) as u32;
+            s[2].0 = (((bits >> (5 * (7 - 5))) & 0x1F) as u16) as u32;
+            s[3].0 = (((bits >> (5 * (7 - 4))) & 0x1F) as u16) as u32;
+            s[4].0 = (((bits >> (5 * (7 - 3))) & 0x1F) as u16) as u32;
+            s[5].0 = (((bits >> (5 * (7 - 2))) & 0x1F) as u16) as u32;
+            s[6].0 = (((bits >> (5 * (7 - 1))) & 0x1F) as u16) as u32;
+            s[7].0 = (((bits >> (5 * (7 - 0))) & 0x1F) as u16) as u32;
         }
     }
 
@@ -194,10 +194,10 @@ impl ByteSerialization {
             bits |= (b[3] as u64) << (8 * (4 - 1));
             bits |= (b[4] as u64) << (8 * (4 - 0));
 
-            s[0].0 = (((bits >> (10 * (3 - 3))) & 0x3FF) as u16) as i32;
-            s[1].0 = (((bits >> (10 * (3 - 2))) & 0x3FF) as u16) as i32;
-            s[2].0 = (((bits >> (10 * (3 - 1))) & 0x3FF) as u16) as i32;
-            s[3].0 = (((bits >> (10 * (3 - 0))) & 0x3FF) as u16) as i32;
+            s[0].0 = (((bits >> (10 * (3 - 3))) & 0x3FF) as u16) as u32;
+            s[1].0 = (((bits >> (10 * (3 - 2))) & 0x3FF) as u16) as u32;
+            s[2].0 = (((bits >> (10 * (3 - 1))) & 0x3FF) as u16) as u32;
+            s[3].0 = (((bits >> (10 * (3 - 0))) & 0x3FF) as u16) as u32;
         }
     }
 
@@ -249,14 +249,14 @@ impl ByteSerialization {
             bits |= (b[9] as u128) << (8 * (10 - 1));
             bits |= (b[10] as u128) << (8 * (10 - 0));
 
-            s[0].0 = (((bits >> (11 * (7 - 7))) & 0x7FF) as u16) as i32;
-            s[1].0 = (((bits >> (11 * (7 - 6))) & 0x7FF) as u16) as i32;
-            s[2].0 = (((bits >> (11 * (7 - 5))) & 0x7FF) as u16) as i32;
-            s[3].0 = (((bits >> (11 * (7 - 4))) & 0x7FF) as u16) as i32;
-            s[4].0 = (((bits >> (11 * (7 - 3))) & 0x7FF) as u16) as i32;
-            s[5].0 = (((bits >> (11 * (7 - 2))) & 0x7FF) as u16) as i32;
-            s[6].0 = (((bits >> (11 * (7 - 1))) & 0x7FF) as u16) as i32;
-            s[7].0 = (((bits >> (11 * (7 - 0))) & 0x7FF) as u16) as i32;
+            s[0].0 = (((bits >> (11 * (7 - 7))) & 0x7FF) as u16) as u32;
+            s[1].0 = (((bits >> (11 * (7 - 6))) & 0x7FF) as u16) as u32;
+            s[2].0 = (((bits >> (11 * (7 - 5))) & 0x7FF) as u16) as u32;
+            s[3].0 = (((bits >> (11 * (7 - 4))) & 0x7FF) as u16) as u32;
+            s[4].0 = (((bits >> (11 * (7 - 3))) & 0x7FF) as u16) as u32;
+            s[5].0 = (((bits >> (11 * (7 - 2))) & 0x7FF) as u16) as u32;
+            s[6].0 = (((bits >> (11 * (7 - 1))) & 0x7FF) as u16) as u32;
+            s[7].0 = (((bits >> (11 * (7 - 0))) & 0x7FF) as u16) as u32;
         }
     }
 
@@ -292,8 +292,8 @@ impl ByteSerialization {
             let s1: u16 = (bits & 0xFFF) as u16;
             let s2: u16 = ((bits >> 12) & 0xFFF) as u16;
 
-            s[0].0 = barrett_reduce(s1 as i32);
-            s[1].0 = barrett_reduce(s2 as i32);
+            s[0].0 = barrett_reduce(s1 as u32);
+            s[1].0 = barrett_reduce(s2 as u32);
         }
     }
 }

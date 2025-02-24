@@ -989,7 +989,7 @@ mod tests {
 
                 // Set the values of fields elements to something above q - 1
                 let mut illegal_elements = valid_elements;
-                illegal_elements[217].0 = 2i32.pow(12) - 1;
+                illegal_elements[217].0 = 2u32.pow(12) - 1;
                 let mut illegal_ek = [0u8; $pke::EK_SIZE];
                 ByteSerialization::encode_12(&illegal_elements, &mut illegal_ek[0..ENCODE_SIZE_POLY * $pke::K]);
                 assert!(
@@ -1000,7 +1000,7 @@ mod tests {
 
                 // Set the values of fields elements to something above q - 1
                 let mut illegal_elements = valid_elements;
-                illegal_elements[3].0 = 2i32.pow(16) - 1;
+                illegal_elements[3].0 = 2u32.pow(16) - 1;
                 let mut illegal_ek = [0u8; $pke::EK_SIZE];
                 ByteSerialization::encode_12(&illegal_elements, &mut illegal_ek[0..ENCODE_SIZE_POLY * $pke::K]);
                 assert!(
