@@ -86,21 +86,7 @@ pub fn g(c: &[&[u8]]) -> ([u8; 32], Zeroizing<[u8; 32]>) {
 }
 
 /// Internal PKE-related function, for generalizing over the three different PKE parameter-sets.
-pub(crate) trait PkeInternals {
-    fn sample_poly_cbd_eta1(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError>;
-
-    fn sample_poly_cbd_eta2(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError>;
-
-    fn encode_dv(coefficients: &[FieldElement], out: &mut [u8]);
-
-    fn encode_du(coefficients: &[FieldElement], out: &mut [u8]);
-
-    fn decode_dv(inbytes: &[u8], out: &mut [FieldElement]);
-
-    fn decode_du(inbytes: &[u8], out: &mut [FieldElement]);
-}
-
-pub(crate) trait PkeParameters: PkeInternals {
+pub(crate) trait PkeParameters {
     const N: usize = 256;
     const K: usize;
     const ETA_1: usize;
@@ -172,6 +158,18 @@ pub(crate) trait PkeParameters: PkeInternals {
 
         Ok(())
     }
+
+    fn sample_poly_cbd_eta1(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError>;
+
+    fn sample_poly_cbd_eta2(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError>;
+
+    fn encode_dv(coefficients: &[FieldElement], out: &mut [u8]);
+
+    fn encode_du(coefficients: &[FieldElement], out: &mut [u8]);
+
+    fn decode_dv(inbytes: &[u8], out: &mut [FieldElement]);
+
+    fn decode_du(inbytes: &[u8], out: &mut [FieldElement]);
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -189,9 +187,7 @@ impl PkeParameters for MlKem512Internal {
     const DK_SIZE: usize = 1632;
     const CIPHERTEXT_SIZE: usize = 768;
     const SHARED_SECRET_SIZE: usize = 32;
-}
 
-impl PkeInternals for MlKem512Internal {
     fn sample_poly_cbd_eta1(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError> {
         let mut prf_out = Zeroizing::new([0u8; 64 * Self::ETA_1]);
         let mut bits = Zeroizing::new([0u8; (64 * Self::ETA_1) * 8]);
@@ -240,9 +236,7 @@ impl PkeParameters for MlKem768Internal {
     const DK_SIZE: usize = 2400;
     const CIPHERTEXT_SIZE: usize = 1088;
     const SHARED_SECRET_SIZE: usize = 32;
-}
 
-impl PkeInternals for MlKem768Internal {
     fn sample_poly_cbd_eta1(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError> {
         let mut prf_out = Zeroizing::new([0u8; 64 * Self::ETA_1]);
         let mut bits = Zeroizing::new([0u8; (64 * Self::ETA_1) * 8]);
@@ -291,9 +285,7 @@ impl PkeParameters for MlKem1024Internal {
     const DK_SIZE: usize = 3168;
     const CIPHERTEXT_SIZE: usize = 1568;
     const SHARED_SECRET_SIZE: usize = 32;
-}
 
-impl PkeInternals for MlKem1024Internal {
     fn sample_poly_cbd_eta1(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError> {
         let mut prf_out = Zeroizing::new([0u8; 64 * Self::ETA_1]);
         let mut bits = Zeroizing::new([0u8; (64 * Self::ETA_1) * 8]);
