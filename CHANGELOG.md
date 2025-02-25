@@ -1,3 +1,12 @@
+### 0.17.9
+
+**Date:** TBD.
+
+**Changelog:**
+- Add support for post-quantum ML-KEM from FIPS-203 ([#431](https://github.com/orion-rs/orion/pull/431)).
+- Update CI dependencies.
+
+
 ### 0.17.8
 
 **Date:** January 27, 2025.

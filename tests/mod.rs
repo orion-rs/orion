@@ -11,6 +11,9 @@ pub mod hash;
 pub mod hpke;
 #[cfg(test)]
 pub mod kdf;
+#[cfg(feature = "safe_api")]
+#[cfg(test)]
+pub mod kem;
 #[cfg(test)]
 pub mod mac;
 #[cfg(feature = "safe_api")]
