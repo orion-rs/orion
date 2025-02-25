@@ -40,6 +40,7 @@ pub(crate) mod u64x4;
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 #[cfg(feature = "safe_api")]
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 /// Generate random bytes using a CSPRNG. Not available in `no_std` context.
 ///
 /// # About:

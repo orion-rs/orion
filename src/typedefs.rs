@@ -27,6 +27,7 @@
 macro_rules! impl_default_trait (($name:ident, $size:expr) => (
     impl Default for $name {
         #[cfg(feature = "safe_api")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
         /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
         fn default() -> $name {
             let mut value = vec![0u8; $size];
@@ -205,6 +206,7 @@ macro_rules! func_from_slice (($name:ident, $lower_bound:expr, $upper_bound:expr
 macro_rules! func_from_slice_variable_size (($name:ident) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Construct from a given byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<$name, UnknownCryptoError> {
         // See issue on `isize` limit: https://github.com/orion-rs/orion/issues/130
@@ -254,6 +256,7 @@ macro_rules! func_is_empty (() => (
 /// having a CSPRNG available to generate data of a fixed length $gen_length.
 macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) => (
     #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate() -> $name {
         let mut value = [0u8; $upper_bound];
@@ -271,6 +274,7 @@ macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) =
 macro_rules! func_generate_variable_size (($name:ident) => (
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Randomly generate using a CSPRNG. Not available in `no_std` context.
     pub fn generate(length: usize) -> Result<$name, UnknownCryptoError> {
         // See issue on `isize` limit: https://github.com/orion-rs/orion/issues/130

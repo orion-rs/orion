@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #[cfg(feature = "safe_api")]
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 /// DHKEM(X25519, HKDF-SHA256) as specified in HPKE [RFC 9180](https://www.rfc-editor.org/rfc/rfc9180.html).
 pub mod x25519_hkdf_sha256;
 
