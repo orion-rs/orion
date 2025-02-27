@@ -39,9 +39,8 @@ impl fmt::Debug for UnknownCryptoError {
     }
 }
 
-#[cfg(feature = "safe_api")]
-impl std::error::Error for UnknownCryptoError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for UnknownCryptoError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         None
     }
 }
@@ -95,9 +94,8 @@ fn test_unknown_crypto_from_getrandom() {
 }
 
 #[test]
-#[cfg(feature = "safe_api")]
 fn test_source() {
-    use std::error::Error;
+    use core::error::Error;
     assert!(UnknownCryptoError.source().is_none());
 }
 
