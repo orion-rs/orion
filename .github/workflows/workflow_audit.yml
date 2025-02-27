@@ -1,0 +1,36 @@
+name: GitHub Actions Security Analysis with zizmor 🌈
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  zizmor:
+    name: zizmor latest via PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      # required for workflows in private repositories
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@1edb52594c857e2b5b13128931090f0640537287
+
+      - name: Run zizmor 🌈
+        run: uvx zizmor --format sarif . > results.sarif 
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@b56ba49b26e50535fa1e7f7db0f4f7b4bf65d80d
+        with:
+          sarif_file: results.sarif
+          category: zizmor
