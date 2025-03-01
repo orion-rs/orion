@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: ["**"]
 
+permissions: {}
+
 jobs:
   zizmor:
     name: zizmor latest via PyPI
@@ -25,7 +27,7 @@ jobs:
         uses: astral-sh/setup-uv@1edb52594c857e2b5b13128931090f0640537287
 
       - name: Run zizmor 🌈
-        run: uvx zizmor --format sarif . > results.sarif 
+        run: uvx zizmor --persona=auditor --format sarif . > results.sarif 
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
 
