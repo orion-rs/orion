@@ -4,6 +4,8 @@
 
 **Changelog:**
 - Add support for post-quantum ML-KEM from FIPS-203 ([#431](https://github.com/orion-rs/orion/pull/431)).
+- Implement `core::error::Error` instead of the `std`-version ([#440](https://github.com/orion-rs/orion/pull/440)).
+- Bump MSRV to `1.81.0`.
 - Update CI dependencies.
 
 
