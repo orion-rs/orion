@@ -1,9 +1,9 @@
 [package]
 name = "orion"
-version = "0.17.8"
+version = "0.17.9"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Usable, easy and safe pure-Rust crypto"
-keywords = ["cryptography", "crypto", "aead", "hash", "mac"]
+keywords = ["cryptography", "crypto", "aead", "pqc", "kem"]
 categories = ["cryptography", "no-std"]
 edition = "2021"
 rust-version = "1.81"                                        # Update CI (MSRV) test + README along with this.
