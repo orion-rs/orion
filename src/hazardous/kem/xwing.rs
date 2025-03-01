@@ -79,6 +79,10 @@ pub const SHARED_SECRET_SIZE: usize = 32;
 
 construct_public! {
     /// A type to represent the public `EncapsulationKey` that X-Wing uses.
+    /// 
+    /// This type simply holds bytes and performs no checks whatsoever. If a invalid
+    /// ML-KEM-768 is part of the bytes parsed from this type, the check will first surface
+    /// when encapsulation is performed.
     ///
     /// # Errors:
     /// An error will be returned if:
