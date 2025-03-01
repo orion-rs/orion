@@ -166,7 +166,7 @@ impl TryFrom<&Seed> for KeyPair {
 }
 
 impl KeyPair {
-    /// Deterministically generate a [KeyPair] from a private [DecapsulationKey].
+    /// Deterministically generate a [KeyPair] from a private [Seed].
     pub fn generate_deterministic(seed: &Seed) -> Result<Self, UnknownCryptoError> {
         let mut expanded = Zeroizing::new([0u8; 96]);
 
@@ -362,6 +362,17 @@ mod tests {
         let k_prime = XWing::decap(kp.private(), &c).unwrap();
 
         assert_eq!(k, k_prime);
+    }
+
+    #[test]
+    fn get_decapskey_as_bytes_is_seed() {
+        let seed = Seed::from_slice(&[127u8; 32]).unwrap();
+        let kp = KeyPair::try_from(&seed).unwrap();
+
+        assert_eq!(
+            seed.unprotected_as_bytes(),
+            kp.private().unprotected_as_bytes()
+        );
     }
 
     #[test]
