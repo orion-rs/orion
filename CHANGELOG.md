@@ -4,6 +4,7 @@
 
 **Changelog:**
 - Add support for post-quantum ML-KEM from FIPS-203 ([#431](https://github.com/orion-rs/orion/pull/431)).
+- Add support for hybrid KEM X-Wing (draft06 version) ([#434](https://github.com/orion-rs/orion/issues/434)).
 - Update CI dependencies.
 
 
