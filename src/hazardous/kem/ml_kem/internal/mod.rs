@@ -86,7 +86,7 @@ pub fn g(c: &[&[u8]]) -> ([u8; 32], Zeroizing<[u8; 32]>) {
 }
 
 /// Internal PKE-related function, for generalizing over the three different PKE parameter-sets.
-pub(crate) trait PkeParameters {
+pub(crate) trait PkeParameters: Clone {
     const N: usize = 256;
     const K: usize;
     const ETA_1: usize;
@@ -518,7 +518,7 @@ pub(crate) struct DecapKey<
 > {
     bytes: [u8; ENCODED_SIZE_DK],
     s_hat: [RingElementNTT; K],
-    _phantom: PhantomData<Pke>,
+    ek: EncapKey<K, ENCODED_SIZE_EK, Pke>,
 }
 
 impl<
@@ -612,10 +612,15 @@ impl<
             ByteSerialization::decode_12(dk_part, &mut s_hat_poly.coefficients);
         }
 
+        // Save the encapsulation key, such that it doesn't need to be re-computed in MLKEM-decap_internal().
+        let ek = EncapKey::<K, ENCODED_SIZE_EK, Pke>::from_slice(
+            &slice[ENCODE_SIZE_POLY * K..(768 * K) + 32],
+        )?;
+
         Ok(Self {
             bytes: slice.try_into().unwrap(), // NOTE: Should never panic if decapsulation_key_check() succeeds.
             s_hat,
-            _phantom: PhantomData,
+            ek,
         })
     }
 
@@ -702,8 +707,9 @@ impl<
         xof.squeeze(k_bar.as_mut())?;
 
         // Step 8:
-        let ek = EncapKey::<K, ENCODED_SIZE_EK, Pke>::from_slice(ek_pke)?;
-        ek.encrypt(&m, r.as_ref(), c_prime)?;
+        debug_assert_eq!(self.get_encapsulation_key_bytes(), self.ek.as_ref());
+        debug_assert_eq!(self.get_encapsulation_key_bytes(), ek_pke);
+        self.ek.encrypt(&m, r.as_ref(), c_prime)?;
 
         // Step 9:
         let ct_choice = c.ct_ne(c_prime);
@@ -734,7 +740,6 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
     /// k \in [2, 3, 4]
     fn keygen<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize>(
         d: &[u8],
-        ek: &mut EncapKey<K, ENCODED_SIZE_EK, Pke>,
         dk: &mut DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>,
     ) -> Result<(), UnknownCryptoError> {
         let (rho, sigma) = g(&[d, &[Pke::K as u8]]);
@@ -743,7 +748,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         // Steps 3..7
         for i in 0..Pke::K {
             for j in 0..Pke::K {
-                ek.mat_a[i][j] = sample_ntt(&rho, &[j as u8, i as u8])?;
+                dk.ek.mat_a[i][j] = sample_ntt(&rho, &[j as u8, i as u8])?;
             }
         }
 
@@ -763,7 +768,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
 
         for i in 0..Pke::K {
             dk.s_hat[i] = to_ntt(&s[i]);
-            ek.t_hat[i] = to_ntt(&e[i]);
+            dk.ek.t_hat[i] = to_ntt(&e[i]);
         }
 
         s.zeroize();
@@ -771,21 +776,22 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         // t ← A ∘ ŝ + ê
         for i in 0..Pke::K {
             for j in 0..Pke::K {
-                ek.t_hat[i] += ek.mat_a[i][j] * dk.s_hat[j];
+                dk.ek.t_hat[i] += dk.ek.mat_a[i][j] * dk.s_hat[j];
             }
         }
 
         // Step 19
-        for (re, ek_part) in ek
+        for (re, ek_part) in dk
+            .ek
             .t_hat
             .iter()
-            .zip(ek.bytes.chunks_exact_mut(ENCODE_SIZE_POLY))
+            .zip(dk.ek.bytes.chunks_exact_mut(ENCODE_SIZE_POLY))
         {
             ByteSerialization::encode_12(&re.coefficients, ek_part);
         }
 
         let idx = ENCODED_SIZE_EK - rho.len();
-        ek.bytes[idx..].copy_from_slice(&rho);
+        dk.ek.bytes[idx..].copy_from_slice(&rho);
 
         // Step 20
         for (re, dk_part) in dk
@@ -812,34 +818,39 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         ),
         UnknownCryptoError,
     > {
-        let mut encap_key = EncapKey::<K, ENCODED_SIZE_EK, Pke> {
+        let ek = EncapKey::<K, ENCODED_SIZE_EK, Pke> {
             bytes: [0u8; ENCODED_SIZE_EK],
             t_hat: [RingElementNTT::zero(); K],
             mat_a: [[RingElementNTT::zero(); K]; K],
             _phantom: PhantomData,
         };
+        // Cache the ek separately as well for re-use in MLEKM.decap_internal().
+        // `ek` is used directly whithin dk during keygen.
         let mut decap_key = DecapKey::<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke> {
             bytes: [0u8; ENCODED_SIZE_DK],
             s_hat: [RingElementNTT::zero(); K],
-            _phantom: PhantomData,
+            ek,
         };
 
         // Step 1 + 2. (ekPKE, dkPKE) ← K-PKE.KeyGen(d)
-        Self::keygen(
-            &seed.unprotected_as_bytes()[..32],
-            &mut encap_key,
-            &mut decap_key,
-        )?;
+        Self::keygen(&seed.unprotected_as_bytes()[..32], &mut decap_key)?;
 
         // Step 3. dk ← (dkPKE‖ek‖H(ek)‖z)
+        let ek_bytes = decap_key.ek.as_ref();
         decap_key.bytes[(ENCODE_SIZE_POLY * K)..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE]
-            .copy_from_slice(&encap_key.bytes);
+            .copy_from_slice(ek_bytes);
         decap_key.bytes
             [(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32]
-            .copy_from_slice(Sha3_256::digest(&encap_key.bytes).unwrap().as_ref());
+            .copy_from_slice(Sha3_256::digest(ek_bytes).unwrap().as_ref());
         decap_key.bytes[(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32
             ..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32 + 32]
             .copy_from_slice(&seed.unprotected_as_bytes()[32..64]);
+
+        let encap_key = decap_key.ek.clone(); // TODO: Can we maybe get rid of this clone? Probably some internal API changes propagating upwards
+        debug_assert_eq!(
+            decap_key.get_encapsulation_key_bytes(),
+            decap_key.ek.as_ref()
+        );
 
         Ok((encap_key, decap_key))
     }
