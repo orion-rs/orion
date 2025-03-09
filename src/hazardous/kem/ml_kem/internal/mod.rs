@@ -86,7 +86,7 @@ pub fn g(c: &[&[u8]]) -> ([u8; 32], Zeroizing<[u8; 32]>) {
 }
 
 /// Internal PKE-related function, for generalizing over the three different PKE parameter-sets.
-pub(crate) trait PkeParameters {
+pub(crate) trait PkeParameters: Clone {
     const N: usize = 256;
     const K: usize;
     const ETA_1: usize;
@@ -518,7 +518,7 @@ pub(crate) struct DecapKey<
 > {
     bytes: [u8; ENCODED_SIZE_DK],
     s_hat: [RingElementNTT; K],
-    _phantom: PhantomData<Pke>,
+    ek: EncapKey<K, ENCODED_SIZE_EK, Pke>,
 }
 
 impl<
@@ -612,10 +612,15 @@ impl<
             ByteSerialization::decode_12(dk_part, &mut s_hat_poly.coefficients);
         }
 
+        // Save the encapsulation key, such that it doesn't need to be re-computed in MLKEM-decap_internal().
+        let ek = EncapKey::<K, ENCODED_SIZE_EK, Pke>::from_slice(
+            &slice[ENCODE_SIZE_POLY * K..(768 * K) + 32],
+        )?;
+
         Ok(Self {
             bytes: slice.try_into().unwrap(), // NOTE: Should never panic if decapsulation_key_check() succeeds.
             s_hat,
-            _phantom: PhantomData,
+            ek,
         })
     }
 
@@ -821,7 +826,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         let mut decap_key = DecapKey::<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke> {
             bytes: [0u8; ENCODED_SIZE_DK],
             s_hat: [RingElementNTT::zero(); K],
-            _phantom: PhantomData,
+            ek: encap_key.clone(),
         };
 
         // Step 1 + 2. (ekPKE, dkPKE) ← K-PKE.KeyGen(d)
@@ -830,6 +835,8 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
             &mut encap_key,
             &mut decap_key,
         )?;
+
+        decap_key.ek = encap_key.clone();
 
         // Step 3. dk ← (dkPKE‖ek‖H(ek)‖z)
         decap_key.bytes[(ENCODE_SIZE_POLY * K)..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE]
