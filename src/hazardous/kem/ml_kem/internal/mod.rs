@@ -707,8 +707,9 @@ impl<
         xof.squeeze(k_bar.as_mut())?;
 
         // Step 8:
-        let ek = EncapKey::<K, ENCODED_SIZE_EK, Pke>::from_slice(ek_pke)?;
-        ek.encrypt(&m, r.as_ref(), c_prime)?;
+        debug_assert_eq!(self.get_encapsulation_key_bytes(), self.ek.as_ref());
+        debug_assert_eq!(self.get_encapsulation_key_bytes(), ek_pke);
+        self.ek.encrypt(&m, r.as_ref(), c_prime)?;
 
         // Step 9:
         let ct_choice = c.ct_ne(c_prime);
@@ -836,8 +837,6 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
             &mut decap_key,
         )?;
 
-        decap_key.ek = encap_key.clone();
-
         // Step 3. dk ← (dkPKE‖ek‖H(ek)‖z)
         decap_key.bytes[(ENCODE_SIZE_POLY * K)..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE]
             .copy_from_slice(&encap_key.bytes);
@@ -847,6 +846,13 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         decap_key.bytes[(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32
             ..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32 + 32]
             .copy_from_slice(&seed.unprotected_as_bytes()[32..64]);
+
+        // Cache the ek separately as well for re-use in MLEKM.decap_internal().
+        decap_key.ek = encap_key.clone();
+        debug_assert_eq!(
+            decap_key.get_encapsulation_key_bytes(),
+            decap_key.ek.as_ref()
+        );
 
         Ok((encap_key, decap_key))
     }
