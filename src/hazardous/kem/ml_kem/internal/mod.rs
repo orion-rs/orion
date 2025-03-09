@@ -740,7 +740,6 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
     /// k \in [2, 3, 4]
     fn keygen<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize>(
         d: &[u8],
-        ek: &mut EncapKey<K, ENCODED_SIZE_EK, Pke>,
         dk: &mut DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>,
     ) -> Result<(), UnknownCryptoError> {
         let (rho, sigma) = g(&[d, &[Pke::K as u8]]);
@@ -749,7 +748,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         // Steps 3..7
         for i in 0..Pke::K {
             for j in 0..Pke::K {
-                ek.mat_a[i][j] = sample_ntt(&rho, &[j as u8, i as u8])?;
+                dk.ek.mat_a[i][j] = sample_ntt(&rho, &[j as u8, i as u8])?;
             }
         }
 
@@ -769,7 +768,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
 
         for i in 0..Pke::K {
             dk.s_hat[i] = to_ntt(&s[i]);
-            ek.t_hat[i] = to_ntt(&e[i]);
+            dk.ek.t_hat[i] = to_ntt(&e[i]);
         }
 
         s.zeroize();
@@ -777,21 +776,22 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         // t ← A ∘ ŝ + ê
         for i in 0..Pke::K {
             for j in 0..Pke::K {
-                ek.t_hat[i] += ek.mat_a[i][j] * dk.s_hat[j];
+                dk.ek.t_hat[i] += dk.ek.mat_a[i][j] * dk.s_hat[j];
             }
         }
 
         // Step 19
-        for (re, ek_part) in ek
+        for (re, ek_part) in dk
+            .ek
             .t_hat
             .iter()
-            .zip(ek.bytes.chunks_exact_mut(ENCODE_SIZE_POLY))
+            .zip(dk.ek.bytes.chunks_exact_mut(ENCODE_SIZE_POLY))
         {
             ByteSerialization::encode_12(&re.coefficients, ek_part);
         }
 
         let idx = ENCODED_SIZE_EK - rho.len();
-        ek.bytes[idx..].copy_from_slice(&rho);
+        dk.ek.bytes[idx..].copy_from_slice(&rho);
 
         // Step 20
         for (re, dk_part) in dk
@@ -818,37 +818,35 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         ),
         UnknownCryptoError,
     > {
-        let mut encap_key = EncapKey::<K, ENCODED_SIZE_EK, Pke> {
+        let ek = EncapKey::<K, ENCODED_SIZE_EK, Pke> {
             bytes: [0u8; ENCODED_SIZE_EK],
             t_hat: [RingElementNTT::zero(); K],
             mat_a: [[RingElementNTT::zero(); K]; K],
             _phantom: PhantomData,
         };
+        // Cache the ek separately as well for re-use in MLEKM.decap_internal().
+        // `ek` is used directly whithin dk during keygen.
         let mut decap_key = DecapKey::<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke> {
             bytes: [0u8; ENCODED_SIZE_DK],
             s_hat: [RingElementNTT::zero(); K],
-            ek: encap_key.clone(),
+            ek,
         };
 
         // Step 1 + 2. (ekPKE, dkPKE) ← K-PKE.KeyGen(d)
-        Self::keygen(
-            &seed.unprotected_as_bytes()[..32],
-            &mut encap_key,
-            &mut decap_key,
-        )?;
+        Self::keygen(&seed.unprotected_as_bytes()[..32], &mut decap_key)?;
 
         // Step 3. dk ← (dkPKE‖ek‖H(ek)‖z)
+        let ek_bytes = decap_key.ek.as_ref();
         decap_key.bytes[(ENCODE_SIZE_POLY * K)..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE]
-            .copy_from_slice(&encap_key.bytes);
+            .copy_from_slice(ek_bytes);
         decap_key.bytes
             [(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32]
-            .copy_from_slice(Sha3_256::digest(&encap_key.bytes).unwrap().as_ref());
+            .copy_from_slice(Sha3_256::digest(ek_bytes).unwrap().as_ref());
         decap_key.bytes[(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32
             ..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32 + 32]
             .copy_from_slice(&seed.unprotected_as_bytes()[32..64]);
 
-        // Cache the ek separately as well for re-use in MLEKM.decap_internal().
-        decap_key.ek = encap_key.clone();
+        let encap_key = decap_key.ek.clone(); // TODO: Can we maybe get rid of this clone? Probably some internal API changes propagating upwards
         debug_assert_eq!(
             decap_key.get_encapsulation_key_bytes(),
             decap_key.ek.as_ref()
