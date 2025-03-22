@@ -255,15 +255,11 @@ pub mod sha256 {
     }
 
     pub(crate) fn expand_with_parts(
-        prk: &Tag,
+        prk: &[u8],
         info: Option<&[&[u8]]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _expand_with_parts::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
-            prk.unprotected_as_bytes(),
-            info,
-            dst_out,
-        )
+        _expand_with_parts::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(prk, info, dst_out)
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]

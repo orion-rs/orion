@@ -1,5 +1,7 @@
 use hex::decode;
-use orion::hazardous::kem::x25519_hkdf_sha256::*;
+use orion::hazardous::hpke::HpkeMode;
+use orion::hazardous::hpke::DHKEM_X25519_SHA256_CHACHA20;
+use orion::hazardous::{hpke::Suite, kem::x25519_hkdf_sha256::*};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
 
@@ -16,6 +18,8 @@ pub(crate) struct HpkeTest {
     pub(crate) ikmS: Option<String>,
     pub(crate) skRm: String,
     pub(crate) skSm: Option<String>,
+    pub(crate) psk: Option<String>,
+    pub(crate) psk_id: Option<String>,
     pub(crate) skEm: String,
     pub(crate) pkRm: String,
     pub(crate) pkSm: Option<String>,
@@ -36,6 +40,7 @@ pub(crate) struct EncryptionTest {
     pub(crate) aad: String,
     pub(crate) ct: String,
     pub(crate) nonce: String,
+    pub(crate) pt: String,
 }
 
 fn hpke_runner(path: &str) {
@@ -45,10 +50,19 @@ fn hpke_runner(path: &str) {
 
     let mut test_counter = 0;
     for test in tests {
-        if test.kem_id != 32 {
-            // We don't support any KEM except X25519-HKDF-SHA256.
+        if test.kem_id as u16 != u16::from_be_bytes(DHKEM_X25519_SHA256_CHACHA20::KEM_ID)
+            || test.kdf_id as u16 != u16::from_be_bytes(DHKEM_X25519_SHA256_CHACHA20::KDF_ID)
+            || test.aead_id as u16 != u16::from_be_bytes(DHKEM_X25519_SHA256_CHACHA20::AEAD_ID)
+        {
+            // Currently only support DHKEM_X25519_SHA256_CHACHA20.
             continue;
         }
+
+        let info = hex::decode(test.info).unwrap();
+        let enc = hex::decode(test.enc).unwrap();
+        let shared_secret = hex::decode(test.shared_secret).unwrap();
+        let base_nonce = hex::decode(test.base_nonce).unwrap();
+        let exporter_secret = hex::decode(test.exporter_secret).unwrap();
 
         let secret_recip = PrivateKey::from_slice(&decode(&test.skRm).unwrap()).unwrap();
         let public_recip = PublicKey::from_slice(&decode(&test.pkRm).unwrap()).unwrap();
@@ -62,43 +76,106 @@ fn hpke_runner(path: &str) {
         assert_eq!(secret_eph, derived_kp.0);
         assert_eq!(public_eph, derived_kp.1);
 
-        match test.mode {
-            0 => {
-                let shared = DhKem::decap(&public_eph, &secret_recip).unwrap();
-                assert_eq!(
-                    shared.unprotected_as_bytes(),
-                    &decode(test.shared_secret).unwrap()
-                );
-            }
-            2 => {
-                // We only have values for the sender in this mode
-                let secret_sender =
-                    PrivateKey::from_slice(&decode(test.skSm.unwrap()).unwrap()).unwrap();
-                let public_sender =
-                    PublicKey::from_slice(&decode(test.pkSm.unwrap()).unwrap()).unwrap();
-                let derived_kp =
-                    DhKem::derive_keypair(&decode(test.ikmS.unwrap()).unwrap()).unwrap();
-                assert_eq!(secret_sender, derived_kp.0);
-                assert_eq!(public_sender, derived_kp.1);
+        let mode: HpkeMode =
+            HpkeMode::try_from(test.mode as u8).expect("invalid mode in test vectors");
 
-                let shared = DhKem::auth_decap(&public_eph, &secret_recip, &public_sender).unwrap();
-                assert_eq!(
-                    shared.unprotected_as_bytes(),
-                    &decode(test.shared_secret).unwrap()
-                );
+        let mut hpke_ctx: DHKEM_X25519_SHA256_CHACHA20 = match mode {
+            HpkeMode::Base => {
+                let ctx = DHKEM_X25519_SHA256_CHACHA20::setup_base_receiver(
+                    &enc,
+                    &secret_recip.unprotected_as_bytes(),
+                    &info,
+                )
+                .unwrap();
+
+                assert_eq!(ctx._testing_base_nonce(), &base_nonce);
+                assert_eq!(ctx._testing_exporter_secret(), &exporter_secret);
+
+                ctx
             }
-            _ => {
-                continue; // Unsupported mode
+            HpkeMode::Psk => {
+                assert!(test.psk.is_some());
+                assert!(test.psk_id.is_some());
+
+                let psk = hex::decode(test.psk.unwrap()).unwrap();
+                let psk_id = hex::decode(test.psk_id.unwrap()).unwrap();
+
+                let ctx = DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
+                    &enc,
+                    &secret_recip.unprotected_as_bytes(),
+                    &info,
+                    &psk,
+                    &psk_id,
+                )
+                .unwrap();
+
+                assert_eq!(ctx._testing_base_nonce(), &base_nonce);
+                assert_eq!(ctx._testing_exporter_secret(), &exporter_secret);
+
+                ctx
             }
+            HpkeMode::Auth => {
+                assert!(test.pkSm.is_some());
+                let public_sender =
+                    PublicKey::from_slice(&decode(&test.pkSm.unwrap()).unwrap()).unwrap();
+
+                let ctx = DHKEM_X25519_SHA256_CHACHA20::setup_auth_receiver(
+                    &enc,
+                    &secret_recip.unprotected_as_bytes(),
+                    &info,
+                    &public_sender.to_bytes(),
+                )
+                .unwrap();
+
+                assert_eq!(ctx._testing_base_nonce(), &base_nonce);
+                assert_eq!(ctx._testing_exporter_secret(), &exporter_secret);
+
+                ctx
+            }
+            HpkeMode::AuthPsk => {
+                assert!(test.pkSm.is_some());
+                assert!(test.psk.is_some());
+                assert!(test.psk_id.is_some());
+                let public_sender =
+                    PublicKey::from_slice(&decode(&test.pkSm.unwrap()).unwrap()).unwrap();
+
+                let psk = hex::decode(test.psk.unwrap()).unwrap();
+                let psk_id = hex::decode(test.psk_id.unwrap()).unwrap();
+
+                let ctx = DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
+                    &enc,
+                    &secret_recip.unprotected_as_bytes(),
+                    &info,
+                    &psk,
+                    &psk_id,
+                    &public_sender.to_bytes(),
+                )
+                .unwrap();
+
+                assert_eq!(ctx._testing_base_nonce(), &base_nonce);
+                assert_eq!(ctx._testing_exporter_secret(), &exporter_secret);
+
+                ctx
+            }
+        };
+
+        for encryption in test.encryptions.iter() {
+            let aad = hex::decode(&encryption.aad).unwrap();
+            let ct = hex::decode(&encryption.ct).unwrap();
+            let nonce = hex::decode(&encryption.nonce).unwrap();
+            let pt = hex::decode(&encryption.pt).unwrap();
+            let mut out = vec![0u8; ct.len() - 16];
+
+            hpke_ctx
+                .open(&ct, &aad, &mut out)
+                .expect("Failed decryption");
+            assert_eq!(&pt, &out);
         }
 
         test_counter += 1;
     }
 
-    assert_eq!(
-        test_counter, 16,
-        "There should be 32 tests for our KEM+mode. Have more been added?"
-    );
+    assert_eq!(test_counter, 4); // One test-set for each HPKE mode (4 modes), per scheme.
 }
 
 #[test]

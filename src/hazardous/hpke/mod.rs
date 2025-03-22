@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2025 The orion Developers
+// Copyright (c) 2025 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,37 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! ### **Caution**:
-//! Usage of the `hazardous` module is __**only intended for advanced users**__.
-//! `hazardous` contains implementations with a much higher degree of control.
-//! It is also much easier to misuse those implementations. Only use `hazardous`
-//! if absolutely necessary.
+mod mode;
+mod suite;
+mod x25519_sha256_chacha20poly1305;
 
-/// AEADs (Authenticated Encryption with Associated Data).
-pub mod aead;
-
-/// Cryptographic hash functions.
-pub mod hash;
-
-/// MACs (Message Authentication Code).
-pub mod mac;
-
-/// KDFs (Key Derivation Function) and PBKDFs (Password-Based Key Derivation
-/// Function).
-pub mod kdf;
-
-/// Stream ciphers.
-pub mod stream;
-
-/// Elliptic-Curve Cryptography.
-pub mod ecc;
-
-#[cfg(feature = "experimental")]
-/// Fully-committing Authenticated Encryption. __WARNING:__ Experimental feature.
-pub mod cae;
-
-/// Key Encapsulation Mechanisms (KEMs).
-pub mod kem;
-
-/// Hybrid Public Key Encryption (HPKE).
-pub mod hpke;
+pub use mode::HpkeMode;
+pub use suite::Suite;
+pub use x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20;
