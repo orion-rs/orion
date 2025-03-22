@@ -82,6 +82,25 @@ where
     Ok(dest)
 }
 
+fn _extract_with_parts<Hmac, const OUTSIZE: usize>(
+    salt: &[u8],
+    ikm: &[&[u8]],
+) -> Result<[u8; OUTSIZE], UnknownCryptoError>
+where
+    Hmac: hmac::HmacFunction,
+{
+    debug_assert_eq!(OUTSIZE, Hmac::HASH_FUNC_OUTSIZE);
+    let mut dest = [0u8; OUTSIZE];
+
+    let mut ctx = Hmac::_new(salt)?;
+    for ikm_part in ikm.iter() {
+        ctx._update(ikm_part)?;
+    }
+    ctx._finalize(&mut dest)?;
+
+    Ok(dest)
+}
+
 /// The HKDF expand step.
 fn _expand<Hmac, const OUTSIZE: usize>(
     prk: &[u8],
@@ -106,6 +125,56 @@ where
     let mut idx: u8 = 1;
     for hlen_block in dest.chunks_mut(Hmac::HASH_FUNC_OUTSIZE) {
         ctx._update(optional_info)?;
+        ctx._update(&[idx])?;
+        debug_assert!(!hlen_block.is_empty() && hlen_block.len() <= Hmac::HASH_FUNC_OUTSIZE);
+        ctx._finalize(&mut tmp)?;
+        hlen_block.copy_from_slice(&tmp[..hlen_block.len()]);
+
+        if hlen_block.len() < Hmac::HASH_FUNC_OUTSIZE {
+            break;
+        }
+        match idx.checked_add(1) {
+            Some(next) => {
+                idx = next;
+                ctx._reset();
+                ctx._update(hlen_block)?;
+            }
+            // If `idx` reaches 255, the maximum (255 * Hmac::HASH_FUNC_OUTSIZE)
+            // amount of blocks have been processed.
+            None => break,
+        };
+    }
+
+    tmp.iter_mut().zeroize();
+
+    Ok(())
+}
+
+fn _expand_with_parts<Hmac, const OUTSIZE: usize>(
+    prk: &[u8],
+    info: Option<&[&[u8]]>,
+    dest: &mut [u8],
+) -> Result<(), UnknownCryptoError>
+where
+    Hmac: hmac::HmacFunction,
+{
+    debug_assert_eq!(OUTSIZE, Hmac::HASH_FUNC_OUTSIZE);
+    debug_assert_eq!(prk.len(), Hmac::HASH_FUNC_OUTSIZE);
+    if dest.is_empty() || dest.len() > 255 * Hmac::HASH_FUNC_OUTSIZE {
+        return Err(UnknownCryptoError);
+    }
+
+    let optional_info = info.unwrap_or(&[]);
+    let mut ctx = Hmac::_new(prk)?;
+
+    // We require a temporary buffer in case the requested bytes
+    // to derive are lower than the HMAC functions output size.
+    let mut tmp = [0u8; OUTSIZE];
+    let mut idx: u8 = 1;
+    for hlen_block in dest.chunks_mut(Hmac::HASH_FUNC_OUTSIZE) {
+        for info_part in optional_info.iter() {
+            ctx._update(info_part)?;
+        }
         ctx._update(&[idx])?;
         debug_assert!(!hlen_block.is_empty() && hlen_block.len() <= Hmac::HASH_FUNC_OUTSIZE);
         ctx._finalize(&mut tmp)?;
@@ -161,6 +230,16 @@ pub mod sha256 {
         >(salt, ikm)?))
     }
 
+    pub(crate) fn extract_with_parts(
+        salt: &[u8],
+        ikm: &[&[u8]],
+    ) -> Result<Tag, UnknownCryptoError> {
+        Ok(Tag::from(_extract_with_parts::<
+            hmac::sha256::HmacSha256,
+            { SHA256_OUTSIZE },
+        >(salt, ikm)?))
+    }
+
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF expand step.
     pub fn expand(
@@ -169,6 +248,18 @@ pub mod sha256 {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
+            prk.unprotected_as_bytes(),
+            info,
+            dst_out,
+        )
+    }
+
+    pub(crate) fn expand_with_parts(
+        prk: &Tag,
+        info: Option<&[&[u8]]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        _expand_with_parts::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
             prk.unprotected_as_bytes(),
             info,
             dst_out,
