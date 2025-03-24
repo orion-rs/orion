@@ -21,7 +21,7 @@ fn libsodium_all_max_key() {
     poly1305_test_runner(&key, &input, &tag);
 }
 
-// https://github.com/LoupVaillant/Monocypher/blob/master/tests/vectors/poly1305
+// https://github.com/LoupVaillant/Monocypher/blob/master/tests/gen/vectors/poly1305
 
 #[test]
 fn monocypher_test_1() {
