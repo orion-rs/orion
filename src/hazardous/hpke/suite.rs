@@ -20,146 +20,141 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::errors::UnknownCryptoError;
-use crate::hazardous::hpke::mode::HpkeMode;
+pub(crate) mod private {
+    use crate::errors::UnknownCryptoError;
+    use crate::hazardous::hpke::mode::private::HpkeMode;
 
-/// Common trait for HPKE suite.
-pub trait Suite {
-    /// The size of the KEM ciphertext returned.
-    const KEM_CT_SIZE: usize;
+    /// Common trait for HPKE suite.
+    pub trait Suite {
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con>
+        fn key_schedule(
+            mode: &HpkeMode,
+            shared_secret: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized;
 
-    // TODO: Any function (except for setup_*) or consts should not be part of the public API.
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-cryptographic-dependencies>
+        fn labeled_extract(
+            salt: &[u8],
+            label: &[u8],
+            ikm: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError>;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con>
-    fn key_schedule(
-        mode: &HpkeMode,
-        shared_secret: &[u8],
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-    ) -> Result<Self, UnknownCryptoError>
-    where
-        Self: Sized;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-cryptographic-dependencies>
+        fn labeled_expand(
+            prk: &[u8],
+            label: &[u8],
+            info: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError>;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-cryptographic-dependencies>
-    fn labeled_extract(
-        salt: &[u8],
-        label: &[u8],
-        ikm: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError>;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
+        fn setup_base_sender(
+            pubkey_r: &[u8],
+            info: &[u8],
+            kem_ct_out: &mut [u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-cryptographic-dependencies>
-    fn labeled_expand<const L: usize>(
-        prk: &[u8],
-        label: &[u8],
-        info: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError>;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
+        fn setup_base_receiver(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
-    fn setup_base_sender(
-        pubkey_r: &[u8],
-        info: &[u8],
-        kem_ct_out: &mut [u8],
-    ) -> Result<Self, UnknownCryptoError>
-    where
-        Self: Sized;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
+        fn setup_psk_sender(
+            pubkey_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            kem_ct_out: &mut [u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
-    fn setup_base_receiver(
-        enc: &[u8],
-        secret_key_r: &[u8],
-        info: &[u8],
-    ) -> Result<Self, UnknownCryptoError>
-    where
-        Self: Sized;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
+        fn setup_psk_receiver(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
-    fn setup_psk_sender(
-        pubkey_r: &[u8],
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-        kem_ct_out: &mut [u8],
-    ) -> Result<Self, UnknownCryptoError>
-    where
-        Self: Sized;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
+        fn setup_auth_sender(
+            pubkey_r: &[u8],
+            info: &[u8],
+            secrety_key_s: &[u8],
+            kem_ct_out: &mut [u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
-    fn setup_psk_receiver(
-        enc: &[u8],
-        secret_key_r: &[u8],
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-    ) -> Result<Self, UnknownCryptoError>
-    where
-        Self: Sized;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
+        fn setup_auth_receiver(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            pubkey_s: &[u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
-    fn setup_auth_sender(
-        pubkey_r: &[u8],
-        info: &[u8],
-        secrety_key_s: &[u8],
-        kem_ct_out: &mut [u8],
-    ) -> Result<Self, UnknownCryptoError>
-    where
-        Self: Sized;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
+        fn setup_authpsk_sender(
+            pubkey_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            secrety_key_s: &[u8],
+            kem_ct_out: &mut [u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
-    fn setup_auth_receiver(
-        enc: &[u8],
-        secret_key_r: &[u8],
-        info: &[u8],
-        pubkey_s: &[u8],
-    ) -> Result<Self, UnknownCryptoError>
-    where
-        Self: Sized;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
+        fn setup_authpsk_receiver(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            pubkey_s: &[u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
-    fn setup_authpsk_sender(
-        pubkey_r: &[u8],
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-        secrety_key_s: &[u8],
-        kem_ct_out: &mut [u8],
-    ) -> Result<Self, UnknownCryptoError>
-    where
-        Self: Sized;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2>
+        fn seal(
+            &mut self,
+            plaintext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError>;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
-    fn setup_authpsk_receiver(
-        enc: &[u8],
-        secret_key_r: &[u8],
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-        pubkey_s: &[u8],
-    ) -> Result<Self, UnknownCryptoError>
-    where
-        Self: Sized;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2>
+        fn open(
+            &mut self,
+            ciphertext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError>;
 
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2>
-    fn seal(
-        &mut self,
-        plaintext: &[u8],
-        aad: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError>;
-
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2>
-    fn open(
-        &mut self,
-        ciphertext: &[u8],
-        aad: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError>;
-
-    /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export>
-    fn export<const L: usize>(
-        &self,
-        exporter_context: &[u8],
-    ) -> Result<[u8; L], UnknownCryptoError>;
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export>
+        fn export(&self, exporter_context: &[u8], out: &mut [u8])
+            -> Result<(), UnknownCryptoError>;
+    }
 }

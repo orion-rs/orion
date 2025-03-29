@@ -24,6 +24,9 @@ mod mode;
 mod suite;
 mod x25519_sha256_chacha20poly1305;
 
-pub use mode::HpkeMode;
-pub use suite::Suite;
+pub use mode::ModeAuth;
+pub use mode::ModeAuthPsk;
+pub use mode::ModeBase;
+pub use mode::ModePsk;
+
 pub use x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20;

@@ -23,12 +23,14 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead::chacha20poly1305;
 use crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE;
-use crate::hazardous::hpke::mode::HpkeMode;
-use crate::hazardous::hpke::suite::Suite;
+use crate::hazardous::hpke::mode::private::*;
+use crate::hazardous::hpke::suite::private::*;
 use crate::hazardous::kdf::hkdf;
 use crate::hazardous::kem::x25519_hkdf_sha256;
 use zeroize::Zeroizing;
 
+/// TODO: zeroize, Dorp, omitted Debu, CT-PartialEq.
+#[derive(Clone)]
 /// HPKE suite: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256 and ChaCha20Poly1305.
 pub struct DHKEM_X25519_SHA256_CHACHA20 {
     key: [u8; 32],
@@ -37,12 +39,23 @@ pub struct DHKEM_X25519_SHA256_CHACHA20 {
     exporter_secret: [u8; 32],
 }
 
+impl Base for DHKEM_X25519_SHA256_CHACHA20 {}
+impl Psk for DHKEM_X25519_SHA256_CHACHA20 {}
+impl Auth for DHKEM_X25519_SHA256_CHACHA20 {}
+impl AuthPsk for DHKEM_X25519_SHA256_CHACHA20 {}
+
 const fn key_schedule_ctx_size<const NK: usize>() -> usize {
     // Two hashes and one mode id
     (NK * 2) + 1
 }
 
 impl DHKEM_X25519_SHA256_CHACHA20 {
+    /// Size of the HPKE suite KEM ciphertext.
+    pub const KEM_CT_SIZE: usize = 32; // Equivalent to X25519 public key.
+
+    /// Size of the HPKE suite KEM sahred secret.
+    pub const KEM_SS_SIZE: usize = 32; // Equivalent to X25519 public key.
+
     /// Version identifier for this HPKE scheme.
     pub const VERSION_ID: &[u8; 7] = b"HPKE-v1";
 
@@ -95,8 +108,6 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
 }
 
 impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
-    const KEM_CT_SIZE: usize = 32; // Equivalent to X25519 public key.
-
     // TODO: Use the extract/expand_with_parts in the DH-KEM module as well to make it
     // no_std compatible.
 
@@ -127,18 +138,19 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Ok(())
     }
 
-    fn labeled_expand<const L: usize>(
+    fn labeled_expand(
         prk: &[u8],
         label: &[u8],
         info: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        debug_assert_eq!(out.len(), L);
+        let l: u16 = out.len().try_into().map_err(|_| UnknownCryptoError)?;
+
         // The `suite_id` is [b"HPKE" || KEM_ID || KDF_ID || AEAD_ID].
         hkdf::sha256::expand_with_parts(
             prk,
             Some(&[
-                &(L as u16).to_be_bytes(),
+                &l.to_be_bytes(),
                 Self::VERSION_ID,
                 b"HPKE",
                 &Self::KEM_ID,
@@ -178,7 +190,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::labeled_extract(shared_secret, b"secret", psk, secret.as_mut())?;
 
         let mut key = Zeroizing::new([0u8; 32]);
-        Self::labeled_expand::<32>(
+        Self::labeled_expand(
             secret.as_ref(),
             b"key",
             key_schedule_context.as_ref(),
@@ -186,7 +198,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         )?;
 
         let mut base_nonce = [0u8; 12];
-        Self::labeled_expand::<12>(
+        Self::labeled_expand(
             secret.as_ref(),
             b"base_nonce",
             key_schedule_context.as_ref(),
@@ -194,7 +206,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         )?;
 
         let mut exporter_secret = [0u8; 32];
-        Self::labeled_expand::<32>(
+        Self::labeled_expand(
             secret.as_ref(),
             b"exp",
             key_schedule_context.as_ref(),
@@ -383,13 +395,334 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         self.increment_seq()
     }
 
-    fn export<const L: usize>(
-        &self,
-        exporter_context: &[u8],
-    ) -> Result<[u8; L], UnknownCryptoError> {
-        let mut secret = [0u8; L];
-        Self::labeled_expand::<L>(&self.exporter_secret, b"sec", exporter_context, &mut secret)?;
+    fn export(&self, exporter_context: &[u8], out: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        Self::labeled_expand(&self.exporter_secret, b"sec", exporter_context, out)
+    }
+}
 
-        Ok(secret)
+#[cfg(feature = "safe_api")]
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::hazardous::kem::x25519_hkdf_sha256::*;
+    use crate::{
+        hazardous::hpke::*,
+        test_framework::hpke_interface::{HpkeTester, TestableHpke},
+    };
+
+    impl TestableHpke for ModeBase<DHKEM_X25519_SHA256_CHACHA20> {
+        const HPKE_MODE: u8 = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID;
+
+        fn kem_ct_size() -> usize {
+            DHKEM_X25519_SHA256_CHACHA20::KEM_CT_SIZE
+        }
+
+        fn gen_kp(seed: &[u8]) -> (Vec<u8>, Vec<u8>) {
+            let (sk, pk) = DhKem::derive_keypair(seed).unwrap();
+            (sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec())
+        }
+
+        fn setup_fresh_sender(
+            pubkey_r: &[u8],
+            info: &[u8],
+            _psk: &[u8],
+            _psk_id: &[u8],
+            _secret_key_s: &[u8],
+            public_ct_out: &mut [u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized,
+        {
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(pubkey_r, info, public_ct_out)
+        }
+
+        fn setup_fresh_receiver(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            _psk: &[u8],
+            _psk_id: &[u8],
+            _pubkey_s: &[u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized,
+        {
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(enc, secret_key_r, info)
+        }
+
+        fn seal(
+            &mut self,
+            plaintext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self.seal(plaintext, aad, out)
+        }
+
+        fn open(
+            &mut self,
+            ciphertext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self.open(ciphertext, aad, out)
+        }
+
+        fn export(&self, export_context: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self.export_secret(export_context, dst)
+        }
+    }
+
+    impl TestableHpke for ModePsk<DHKEM_X25519_SHA256_CHACHA20> {
+        const HPKE_MODE: u8 = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID;
+
+        fn kem_ct_size() -> usize {
+            DHKEM_X25519_SHA256_CHACHA20::KEM_CT_SIZE
+        }
+
+        fn gen_kp(seed: &[u8]) -> (Vec<u8>, Vec<u8>) {
+            let (sk, pk) = DhKem::derive_keypair(seed).unwrap();
+            (sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec())
+        }
+
+        fn setup_fresh_sender(
+            pubkey_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            _secret_key_s: &[u8],
+            public_ct_out: &mut [u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized,
+        {
+            ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
+                pubkey_r,
+                info,
+                psk,
+                psk_id,
+                public_ct_out,
+            )
+        }
+
+        fn setup_fresh_receiver(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            _pubkey_s: &[u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized,
+        {
+            ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+                enc,
+                secret_key_r,
+                info,
+                psk,
+                psk_id,
+            )
+        }
+
+        fn seal(
+            &mut self,
+            plaintext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self.seal(plaintext, aad, out)
+        }
+
+        fn open(
+            &mut self,
+            ciphertext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self.open(ciphertext, aad, out)
+        }
+
+        fn export(&self, export_context: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self.export_secret(export_context, dst)
+        }
+    }
+
+    impl TestableHpke for ModeAuth<DHKEM_X25519_SHA256_CHACHA20> {
+        const HPKE_MODE: u8 = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID;
+
+        fn kem_ct_size() -> usize {
+            DHKEM_X25519_SHA256_CHACHA20::KEM_CT_SIZE
+        }
+
+        fn gen_kp(seed: &[u8]) -> (Vec<u8>, Vec<u8>) {
+            let (sk, pk) = DhKem::derive_keypair(seed).unwrap();
+            (sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec())
+        }
+
+        fn setup_fresh_sender(
+            pubkey_r: &[u8],
+            info: &[u8],
+            _psk: &[u8],
+            _psk_id: &[u8],
+            secret_key_s: &[u8],
+            public_ct_out: &mut [u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized,
+        {
+            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
+                pubkey_r,
+                info,
+                secret_key_s,
+                public_ct_out,
+            )
+        }
+
+        fn setup_fresh_receiver(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            _psk: &[u8],
+            _psk_id: &[u8],
+            pubkey_s: &[u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized,
+        {
+            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+                enc,
+                secret_key_r,
+                info,
+                pubkey_s,
+            )
+        }
+
+        fn seal(
+            &mut self,
+            plaintext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self.seal(plaintext, aad, out)
+        }
+
+        fn open(
+            &mut self,
+            ciphertext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self.open(ciphertext, aad, out)
+        }
+
+        fn export(&self, export_context: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self.export_secret(export_context, dst)
+        }
+    }
+
+    impl TestableHpke for ModeAuthPsk<DHKEM_X25519_SHA256_CHACHA20> {
+        const HPKE_MODE: u8 = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID;
+
+        fn kem_ct_size() -> usize {
+            DHKEM_X25519_SHA256_CHACHA20::KEM_CT_SIZE
+        }
+
+        fn gen_kp(seed: &[u8]) -> (Vec<u8>, Vec<u8>) {
+            let (sk, pk) = DhKem::derive_keypair(seed).unwrap();
+            (sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec())
+        }
+
+        fn setup_fresh_sender(
+            pubkey_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            secret_key_s: &[u8],
+            public_ct_out: &mut [u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized,
+        {
+            ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
+                pubkey_r,
+                info,
+                psk,
+                psk_id,
+                secret_key_s,
+                public_ct_out,
+            )
+        }
+
+        fn setup_fresh_receiver(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            pubkey_s: &[u8],
+        ) -> Result<Self, UnknownCryptoError>
+        where
+            Self: Sized,
+        {
+            ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+                enc,
+                secret_key_r,
+                info,
+                psk,
+                psk_id,
+                pubkey_s,
+            )
+        }
+
+        fn seal(
+            &mut self,
+            plaintext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self.seal(plaintext, aad, out)
+        }
+
+        fn open(
+            &mut self,
+            ciphertext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError> {
+            self.open(ciphertext, aad, out)
+        }
+
+        fn export(&self, export_context: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self.export_secret(export_context, dst)
+        }
+    }
+
+    #[test]
+    fn default_consistency_tests_mode_base() {
+        let seed = 123456u64.to_le_bytes();
+        let mut tester_ctx = HpkeTester::<ModeBase<DHKEM_X25519_SHA256_CHACHA20>>::new(&seed);
+        tester_ctx.run_all_tests(&654321u64.to_le_bytes());
+    }
+
+    #[test]
+    fn default_consistency_tests_mode_psk() {
+        let seed = 123456u64.to_le_bytes();
+        let mut tester_ctx = HpkeTester::<ModePsk<DHKEM_X25519_SHA256_CHACHA20>>::new(&seed);
+        tester_ctx.run_all_tests(&654321u64.to_le_bytes());
+    }
+
+    #[test]
+    fn default_consistency_tests_mode_auth() {
+        let seed = 123456u64.to_le_bytes();
+        let mut tester_ctx = HpkeTester::<ModeAuth<DHKEM_X25519_SHA256_CHACHA20>>::new(&seed);
+        tester_ctx.run_all_tests(&654321u64.to_le_bytes());
+    }
+
+    #[test]
+    fn default_consistency_tests_mode_authpsk() {
+        let seed = 123456u64.to_le_bytes();
+        let mut tester_ctx = HpkeTester::<ModeAuthPsk<DHKEM_X25519_SHA256_CHACHA20>>::new(&seed);
+        tester_ctx.run_all_tests(&654321u64.to_le_bytes());
     }
 }
