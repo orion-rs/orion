@@ -226,6 +226,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         info: &[u8],
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
+        if info.len() > 64 {
+            return Err(UnknownCryptoError);
+        }
+
         debug_assert_eq!(
             crate::hazardous::ecc::x25519::PUBLIC_KEY_SIZE,
             public_ct_out.len()
@@ -244,6 +248,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         secret_key_r: &[u8],
         info: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
+        if info.len() > 64 {
+            return Err(UnknownCryptoError);
+        }
+
         let enc = x25519_hkdf_sha256::PublicKey::from_slice(enc)?;
         let skr = x25519_hkdf_sha256::PrivateKey::from_slice(secret_key_r)?;
         let ss = x25519_hkdf_sha256::DhKem::decap(&enc, &skr)?;
@@ -258,6 +266,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         psk_id: &[u8],
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
+        if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
+            return Err(UnknownCryptoError);
+        }
+
         debug_assert_eq!(
             crate::hazardous::ecc::x25519::PUBLIC_KEY_SIZE,
             public_ct_out.len()
@@ -278,6 +290,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         psk: &[u8],
         psk_id: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
+        if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
+            return Err(UnknownCryptoError);
+        }
+
         let enc = x25519_hkdf_sha256::PublicKey::from_slice(enc)?;
         let skr = x25519_hkdf_sha256::PrivateKey::from_slice(secret_key_r)?;
         let ss = x25519_hkdf_sha256::DhKem::decap(&enc, &skr)?;
@@ -291,6 +307,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         secrety_key_s: &[u8],
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
+        if info.len() > 64 {
+            return Err(UnknownCryptoError);
+        }
+
         debug_assert_eq!(
             crate::hazardous::ecc::x25519::PUBLIC_KEY_SIZE,
             public_ct_out.len()
@@ -311,6 +331,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         info: &[u8],
         pubkey_s: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
+        if info.len() > 64 {
+            return Err(UnknownCryptoError);
+        }
+
         let enc = x25519_hkdf_sha256::PublicKey::from_slice(enc)?;
         let pks = x25519_hkdf_sha256::PublicKey::from_slice(pubkey_s)?;
         let skr = x25519_hkdf_sha256::PrivateKey::from_slice(secret_key_r)?;
@@ -327,6 +351,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         secrety_key_s: &[u8],
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
+        if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
+            return Err(UnknownCryptoError);
+        }
+
         debug_assert_eq!(
             crate::hazardous::ecc::x25519::PUBLIC_KEY_SIZE,
             public_ct_out.len()
@@ -355,6 +383,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         psk_id: &[u8],
         pubkey_s: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
+        if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
+            return Err(UnknownCryptoError);
+        }
+
         let enc = x25519_hkdf_sha256::PublicKey::from_slice(enc)?;
         let pks = x25519_hkdf_sha256::PublicKey::from_slice(pubkey_s)?;
         let skr = x25519_hkdf_sha256::PrivateKey::from_slice(secret_key_r)?;
@@ -396,6 +428,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn export(&self, exporter_context: &[u8], out: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        if exporter_context.len() > 64 {
+            return Err(UnknownCryptoError);
+        }
+
         Self::labeled_expand(&self.exporter_secret, b"sec", exporter_context, out)
     }
 }
@@ -417,9 +453,9 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::KEM_CT_SIZE
         }
 
-        fn gen_kp(seed: &[u8]) -> (Vec<u8>, Vec<u8>) {
-            let (sk, pk) = DhKem::derive_keypair(seed).unwrap();
-            (sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec())
+        fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let (sk, pk) = DhKem::derive_keypair(seed)?;
+            Ok((sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec()))
         }
 
         fn setup_fresh_sender(
@@ -480,9 +516,9 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::KEM_CT_SIZE
         }
 
-        fn gen_kp(seed: &[u8]) -> (Vec<u8>, Vec<u8>) {
-            let (sk, pk) = DhKem::derive_keypair(seed).unwrap();
-            (sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec())
+        fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let (sk, pk) = DhKem::derive_keypair(seed)?;
+            Ok((sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec()))
         }
 
         fn setup_fresh_sender(
@@ -555,9 +591,9 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::KEM_CT_SIZE
         }
 
-        fn gen_kp(seed: &[u8]) -> (Vec<u8>, Vec<u8>) {
-            let (sk, pk) = DhKem::derive_keypair(seed).unwrap();
-            (sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec())
+        fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let (sk, pk) = DhKem::derive_keypair(seed)?;
+            Ok((sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec()))
         }
 
         fn setup_fresh_sender(
@@ -628,9 +664,9 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::KEM_CT_SIZE
         }
 
-        fn gen_kp(seed: &[u8]) -> (Vec<u8>, Vec<u8>) {
-            let (sk, pk) = DhKem::derive_keypair(seed).unwrap();
-            (sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec())
+        fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let (sk, pk) = DhKem::derive_keypair(seed)?;
+            Ok((sk.unprotected_as_bytes().to_vec(), pk.to_bytes().to_vec()))
         }
 
         fn setup_fresh_sender(

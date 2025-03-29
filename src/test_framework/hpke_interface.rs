@@ -30,7 +30,7 @@ pub trait TestableHpke: Clone {
 
     fn kem_ct_size() -> usize;
 
-    fn gen_kp(seed: &[u8]) -> (Vec<u8>, Vec<u8>);
+    fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError>;
 
     // Both steup functions have all parameters needed for AuthPsk, and all other modes.
     // If testing a mode that doesn't require all inputs, simply omit.
@@ -101,8 +101,8 @@ impl<T: TestableHpke> HpkeTester<T> {
         let kem_ikm_sender = Self::random_vector(&mut rng, 32..64);
         let kem_ikm_receiver = Self::random_vector(&mut rng, 32..64);
 
-        let (sender_priv, sender_pub) = T::gen_kp(&kem_ikm_sender);
-        let (receiver_priv, receiver_pub) = T::gen_kp(&kem_ikm_receiver);
+        let (sender_priv, sender_pub) = T::gen_kp(&kem_ikm_sender).unwrap();
+        let (receiver_priv, receiver_pub) = T::gen_kp(&kem_ikm_receiver).unwrap();
 
         let mut ct = vec![0u8; T::kem_ct_size()];
         let sender =
@@ -122,6 +122,7 @@ impl<T: TestableHpke> HpkeTester<T> {
     pub fn run_all_tests(&mut self, seed: &[u8]) {
         self.test_correct_internal_nonce_handling();
         self.test_replay_protection();
+        Self::test_kdf_input_limits();
     }
 
     fn test_correct_internal_nonce_handling(&mut self) {
@@ -231,7 +232,129 @@ impl<T: TestableHpke> HpkeTester<T> {
     }
 
     fn test_kdf_input_limits() {
-        todo!();
+        // we  use the recommended input length restriction of 64: https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2.1
+        let valid_info = &[0u8; 64];
+        let valid_psk = &[0u8; 64];
+        let valid_psk_id = &[0u8; 64];
+        let valid_kem_ikm_sender = &[0u8; 64];
+        let valid_kem_ikm_receiver = &[0u8; 64];
+
+        let (sender_priv, sender_pub) = T::gen_kp(valid_kem_ikm_sender).unwrap();
+        let (receiver_priv, receiver_pub) = T::gen_kp(valid_kem_ikm_receiver).unwrap();
+
+        let mut ct = vec![0u8; T::kem_ct_size()];
+        assert!(T::setup_fresh_sender(
+            &receiver_pub,
+            valid_info,
+            valid_psk,
+            valid_psk_id,
+            &sender_priv,
+            &mut ct
+        )
+        .is_ok());
+        assert!(T::setup_fresh_receiver(
+            &ct,
+            &receiver_priv,
+            valid_info,
+            valid_psk,
+            valid_psk_id,
+            &sender_pub
+        )
+        .is_ok());
+
+        // info (applies to all modes)
+        assert!(T::setup_fresh_sender(
+            &receiver_pub,
+            &[0u8; 65],
+            valid_psk,
+            valid_psk_id,
+            &sender_priv,
+            &mut ct
+        )
+        .is_err());
+        assert!(T::setup_fresh_receiver(
+            &ct,
+            &receiver_priv,
+            &[0u8; 65],
+            valid_psk,
+            valid_psk_id,
+            &sender_pub
+        )
+        .is_err());
+
+        // psk and psk_id
+        if T::HPKE_MODE == 0x01u8 || T::HPKE_MODE == 0x03u8 {
+            assert!(T::setup_fresh_sender(
+                &receiver_pub,
+                valid_info,
+                &[0u8; 65],
+                valid_psk_id,
+                &sender_priv,
+                &mut ct
+            )
+            .is_err());
+            assert!(T::setup_fresh_receiver(
+                &ct,
+                &receiver_priv,
+                valid_info,
+                &[0u8; 65],
+                valid_psk_id,
+                &sender_pub
+            )
+            .is_err());
+
+            assert!(T::setup_fresh_sender(
+                &receiver_pub,
+                valid_info,
+                valid_psk,
+                &[0u8; 65],
+                &sender_priv,
+                &mut ct
+            )
+            .is_err());
+            assert!(T::setup_fresh_receiver(
+                &ct,
+                &receiver_priv,
+                valid_info,
+                valid_psk,
+                &[0u8; 65],
+                &sender_pub
+            )
+            .is_err());
+        }
+
+        // ikm (we do NOT restrict this to 64 MAX)
+        // assert!(T::gen_kp(&[0u8; 64]).is_err());
+
+        let (sender_priv, sender_pub) = T::gen_kp(valid_kem_ikm_sender).unwrap();
+        let (receiver_priv, receiver_pub) = T::gen_kp(valid_kem_ikm_receiver).unwrap();
+
+        let mut ct = vec![0u8; T::kem_ct_size()];
+        let sender = T::setup_fresh_sender(
+            &receiver_pub,
+            valid_info,
+            valid_psk,
+            valid_psk_id,
+            &sender_priv,
+            &mut ct,
+        )
+        .unwrap();
+        let receiver = T::setup_fresh_receiver(
+            &ct,
+            &receiver_priv,
+            valid_info,
+            valid_psk,
+            valid_psk_id,
+            &sender_pub,
+        )
+        .unwrap();
+
+        // exporter_context
+        let mut dst = [0u8; 128];
+        assert!(sender.export(&[0u8; 64], &mut dst).is_ok());
+        assert!(receiver.export(&[0u8; 64], &mut dst).is_ok());
+        assert!(sender.export(&[0u8; 65], &mut dst).is_err());
+        assert!(receiver.export(&[0u8; 65], &mut dst).is_err());
     }
 
     fn test_psk_inclusion() {
