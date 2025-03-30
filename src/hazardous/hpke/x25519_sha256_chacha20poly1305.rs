@@ -507,6 +507,52 @@ mod test {
         fn export(&self, export_context: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
             self.export_secret(export_context, dst)
         }
+
+        fn oneshot_seal(
+            pubkey_r: &[u8],
+            info: &[u8],
+            _psk: &[u8],
+            _psk_id: &[u8],
+            _secret_key_s: &[u8],
+            plaintext: &[u8],
+            aad: &[u8],
+        ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let mut dst_kem_out = vec![0u8; 32];
+            let mut dst_out = vec![0u8; plaintext.len() + 16];
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::base_seal(
+                pubkey_r,
+                info,
+                &mut dst_kem_out,
+                plaintext,
+                aad,
+                &mut dst_out,
+            )?;
+
+            Ok((dst_kem_out, dst_out))
+        }
+
+        fn oneshot_open(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            _psk: &[u8],
+            _psk_id: &[u8],
+            _pubkey_s: &[u8],
+            ciphertext: &[u8],
+            aad: &[u8],
+        ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let mut dst_out = vec![0u8; ciphertext.len() - 16];
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::base_open(
+                enc,
+                secret_key_r,
+                info,
+                ciphertext,
+                aad,
+                &mut dst_out,
+            )?;
+
+            Ok(dst_out)
+        }
     }
 
     impl TestableHpke for ModePsk<DHKEM_X25519_SHA256_CHACHA20> {
@@ -582,6 +628,56 @@ mod test {
         fn export(&self, export_context: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
             self.export_secret(export_context, dst)
         }
+
+        fn oneshot_seal(
+            pubkey_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            _secret_key_s: &[u8],
+            plaintext: &[u8],
+            aad: &[u8],
+        ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let mut dst_kem_out = vec![0u8; 32];
+            let mut dst_out = vec![0u8; plaintext.len() + 16];
+            ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::psk_seal(
+                pubkey_r,
+                info,
+                psk,
+                psk_id,
+                &mut dst_kem_out,
+                plaintext,
+                aad,
+                &mut dst_out,
+            )?;
+
+            Ok((dst_kem_out, dst_out))
+        }
+
+        fn oneshot_open(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            _pubkey_s: &[u8],
+            ciphertext: &[u8],
+            aad: &[u8],
+        ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let mut dst_out = vec![0u8; ciphertext.len() - 16];
+            ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::psk_open(
+                enc,
+                secret_key_r,
+                info,
+                psk,
+                psk_id,
+                ciphertext,
+                aad,
+                &mut dst_out,
+            )?;
+
+            Ok(dst_out)
+        }
     }
 
     impl TestableHpke for ModeAuth<DHKEM_X25519_SHA256_CHACHA20> {
@@ -654,6 +750,54 @@ mod test {
 
         fn export(&self, export_context: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
             self.export_secret(export_context, dst)
+        }
+
+        fn oneshot_seal(
+            pubkey_r: &[u8],
+            info: &[u8],
+            _psk: &[u8],
+            _psk_id: &[u8],
+            secret_key_s: &[u8],
+            plaintext: &[u8],
+            aad: &[u8],
+        ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let mut dst_kem_out = vec![0u8; 32];
+            let mut dst_out = vec![0u8; plaintext.len() + 16];
+            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::auth_seal(
+                pubkey_r,
+                info,
+                secret_key_s,
+                &mut dst_kem_out,
+                plaintext,
+                aad,
+                &mut dst_out,
+            )?;
+
+            Ok((dst_kem_out, dst_out))
+        }
+
+        fn oneshot_open(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            _psk: &[u8],
+            _psk_id: &[u8],
+            pubkey_s: &[u8],
+            ciphertext: &[u8],
+            aad: &[u8],
+        ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let mut dst_out = vec![0u8; ciphertext.len() - 16];
+            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::auth_open(
+                enc,
+                secret_key_r,
+                info,
+                pubkey_s,
+                ciphertext,
+                aad,
+                &mut dst_out,
+            )?;
+
+            Ok(dst_out)
         }
     }
 
@@ -732,33 +876,85 @@ mod test {
         fn export(&self, export_context: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
             self.export_secret(export_context, dst)
         }
+
+        fn oneshot_seal(
+            pubkey_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            secret_key_s: &[u8],
+            plaintext: &[u8],
+            aad: &[u8],
+        ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let mut dst_kem_out = vec![0u8; 32];
+            let mut dst_out = vec![0u8; plaintext.len() + 16];
+            ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::authpsk_seal(
+                pubkey_r,
+                info,
+                psk,
+                psk_id,
+                secret_key_s,
+                &mut dst_kem_out,
+                plaintext,
+                aad,
+                &mut dst_out,
+            )?;
+
+            Ok((dst_kem_out, dst_out))
+        }
+
+        fn oneshot_open(
+            enc: &[u8],
+            secret_key_r: &[u8],
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            pubkey_s: &[u8],
+            ciphertext: &[u8],
+            aad: &[u8],
+        ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let mut dst_out = vec![0u8; ciphertext.len() - 16];
+            ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::authpsk_open(
+                enc,
+                secret_key_r,
+                info,
+                psk,
+                psk_id,
+                pubkey_s,
+                ciphertext,
+                aad,
+                &mut dst_out,
+            )?;
+
+            Ok(dst_out)
+        }
     }
 
     #[test]
     fn default_consistency_tests_mode_base() {
         let seed = 123456u64.to_le_bytes();
         let mut tester_ctx = HpkeTester::<ModeBase<DHKEM_X25519_SHA256_CHACHA20>>::new(&seed);
-        tester_ctx.run_all_tests(&654321u64.to_le_bytes());
+        tester_ctx.run_all_tests();
     }
 
     #[test]
     fn default_consistency_tests_mode_psk() {
         let seed = 123456u64.to_le_bytes();
         let mut tester_ctx = HpkeTester::<ModePsk<DHKEM_X25519_SHA256_CHACHA20>>::new(&seed);
-        tester_ctx.run_all_tests(&654321u64.to_le_bytes());
+        tester_ctx.run_all_tests();
     }
 
     #[test]
     fn default_consistency_tests_mode_auth() {
         let seed = 123456u64.to_le_bytes();
         let mut tester_ctx = HpkeTester::<ModeAuth<DHKEM_X25519_SHA256_CHACHA20>>::new(&seed);
-        tester_ctx.run_all_tests(&654321u64.to_le_bytes());
+        tester_ctx.run_all_tests();
     }
 
     #[test]
     fn default_consistency_tests_mode_authpsk() {
         let seed = 123456u64.to_le_bytes();
         let mut tester_ctx = HpkeTester::<ModeAuthPsk<DHKEM_X25519_SHA256_CHACHA20>>::new(&seed);
-        tester_ctx.run_all_tests(&654321u64.to_le_bytes());
+        tester_ctx.run_all_tests();
     }
 }
