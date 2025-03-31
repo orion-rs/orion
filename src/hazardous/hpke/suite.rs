@@ -27,6 +27,11 @@ pub(crate) mod private {
 
     /// Common trait for HPKE suite.
     pub trait Suite {
+        /// The private key used for this suite.
+        type Sk: HpkePrivateKey;
+        /// The public key used for this suite.
+        type Pk: HpkePublicKey;
+
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con>
         fn key_schedule(
             mode: &HpkeMode,
@@ -56,7 +61,7 @@ pub(crate) mod private {
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
         fn setup_base_sender(
-            pubkey_r: &[u8],
+            pubkey_r: &Self::Pk,
             info: &[u8],
             kem_ct_out: &mut [u8],
         ) -> Result<Self, UnknownCryptoError>
@@ -66,7 +71,7 @@ pub(crate) mod private {
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
         fn setup_base_receiver(
             enc: &[u8],
-            secret_key_r: &[u8],
+            secret_key_r: &Self::Sk,
             info: &[u8],
         ) -> Result<Self, UnknownCryptoError>
         where
@@ -74,7 +79,7 @@ pub(crate) mod private {
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
         fn setup_psk_sender(
-            pubkey_r: &[u8],
+            pubkey_r: &Self::Pk,
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
@@ -86,7 +91,7 @@ pub(crate) mod private {
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
         fn setup_psk_receiver(
             enc: &[u8],
-            secret_key_r: &[u8],
+            secret_key_r: &Self::Sk,
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
@@ -96,9 +101,9 @@ pub(crate) mod private {
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
         fn setup_auth_sender(
-            pubkey_r: &[u8],
+            pubkey_r: &Self::Pk,
             info: &[u8],
-            secrety_key_s: &[u8],
+            secrety_key_s: &Self::Sk,
             kem_ct_out: &mut [u8],
         ) -> Result<Self, UnknownCryptoError>
         where
@@ -107,20 +112,20 @@ pub(crate) mod private {
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
         fn setup_auth_receiver(
             enc: &[u8],
-            secret_key_r: &[u8],
+            secret_key_r: &Self::Sk,
             info: &[u8],
-            pubkey_s: &[u8],
+            pubkey_s: &Self::Pk,
         ) -> Result<Self, UnknownCryptoError>
         where
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
         fn setup_authpsk_sender(
-            pubkey_r: &[u8],
+            pubkey_r: &Self::Pk,
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
-            secrety_key_s: &[u8],
+            secrety_key_s: &Self::Sk,
             kem_ct_out: &mut [u8],
         ) -> Result<Self, UnknownCryptoError>
         where
@@ -129,11 +134,11 @@ pub(crate) mod private {
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
         fn setup_authpsk_receiver(
             enc: &[u8],
-            secret_key_r: &[u8],
+            secret_key_r: &Self::Sk,
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
-            pubkey_s: &[u8],
+            pubkey_s: &Self::Pk,
         ) -> Result<Self, UnknownCryptoError>
         where
             Self: Sized;

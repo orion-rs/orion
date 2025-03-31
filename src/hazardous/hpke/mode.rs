@@ -24,8 +24,6 @@ use crate::errors::UnknownCryptoError;
 use crate::hazardous::hpke::suite::private::*;
 use private::*;
 
-use super::private::{HpkePrivateKey, HpkePublicKey};
-
 pub(crate) mod private {
     use crate::errors::UnknownCryptoError;
 
@@ -168,24 +166,24 @@ impl<S> ModeBase<S> {
 
 impl<S: Suite + Base> ModeBase<S> {
     /// HPKE Base mode sender.
-    pub fn new_sender<Pk: HpkePublicKey>(
-        pubkey_r: &Pk,
+    pub fn new_sender(
+        pubkey_r: &S::Pk,
         info: &[u8],
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_base_sender(pubkey_r._as_bytes(), info, public_ct_out)?,
+            suite: S::setup_base_sender(pubkey_r, info, public_ct_out)?,
         })
     }
 
     /// HPKE Base mode receiver.
-    pub fn new_receiver<Sk: HpkePrivateKey>(
+    pub fn new_receiver(
         enc: &[u8],
-        secret_key_r: &Sk,
+        secret_key_r: &S::Sk,
         info: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_base_receiver(enc, secret_key_r._as_bytes(), info)?,
+            suite: S::setup_base_receiver(enc, secret_key_r, info)?,
         })
     }
 
@@ -210,8 +208,8 @@ impl<S: Suite + Base> ModeBase<S> {
     }
 
     /// One-shot API for HPKE Base mode `seal()` operation.
-    pub fn base_seal<Pk: HpkePublicKey>(
-        pubkey_r: &Pk,
+    pub fn base_seal(
+        pubkey_r: &S::Pk,
         info: &[u8],
         public_ct_out: &mut [u8],
         plaintext: &[u8],
@@ -223,9 +221,9 @@ impl<S: Suite + Base> ModeBase<S> {
     }
 
     /// One-shot API for HPKE Base mode `seal()` operation.
-    pub fn base_open<Sk: HpkePrivateKey>(
+    pub fn base_open(
         enc: &[u8],
-        secret_key_r: &Sk,
+        secret_key_r: &S::Sk,
         info: &[u8],
         ciphertext: &[u8],
         aad: &[u8],
@@ -258,28 +256,28 @@ impl<S> ModePsk<S> {
 
 impl<S: Suite + Psk> ModePsk<S> {
     /// HPKE Psk mode sender.
-    pub fn new_sender<Pk: HpkePublicKey>(
-        pubkey_r: &Pk,
+    pub fn new_sender(
+        pubkey_r: &S::Pk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_psk_sender(pubkey_r._as_bytes(), info, psk, psk_id, public_ct_out)?,
+            suite: S::setup_psk_sender(pubkey_r, info, psk, psk_id, public_ct_out)?,
         })
     }
 
     /// HPKE Psk mode receiver.
-    pub fn new_receiver<Sk: HpkePrivateKey>(
+    pub fn new_receiver(
         enc: &[u8],
-        secret_key_r: &Sk,
+        secret_key_r: &S::Sk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_psk_receiver(enc, secret_key_r._as_bytes(), info, psk, psk_id)?,
+            suite: S::setup_psk_receiver(enc, secret_key_r, info, psk, psk_id)?,
         })
     }
 
@@ -304,8 +302,8 @@ impl<S: Suite + Psk> ModePsk<S> {
     }
 
     /// One-shot API for HPKE Psk mode `seal()` operation.
-    pub fn psk_seal<Pk: HpkePublicKey>(
-        pubkey_r: &Pk,
+    pub fn psk_seal(
+        pubkey_r: &S::Pk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
@@ -319,9 +317,9 @@ impl<S: Suite + Psk> ModePsk<S> {
     }
 
     /// One-shot API for HPKE Psk mode `open()` operation.
-    pub fn psk_open<Sk: HpkePrivateKey>(
+    pub fn psk_open(
         enc: &[u8],
-        secret_key_r: &Sk,
+        secret_key_r: &S::Sk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
@@ -356,36 +354,26 @@ impl<S> ModeAuth<S> {
 
 impl<S: Suite + Auth> ModeAuth<S> {
     /// HPKE Auth mode sender.
-    pub fn new_sender<Sk: HpkePrivateKey, Pk: HpkePublicKey>(
-        pubkey_r: &Pk,
+    pub fn new_sender(
+        pubkey_r: &S::Pk,
         info: &[u8],
-        secret_key_s: &Sk,
+        secret_key_s: &S::Sk,
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_auth_sender(
-                pubkey_r._as_bytes(),
-                info,
-                secret_key_s._as_bytes(),
-                public_ct_out,
-            )?,
+            suite: S::setup_auth_sender(pubkey_r, info, secret_key_s, public_ct_out)?,
         })
     }
 
     /// HPKE Auth mode receiver.
-    pub fn new_receiver<Sk: HpkePrivateKey, Pk: HpkePublicKey>(
+    pub fn new_receiver(
         enc: &[u8],
-        secret_key_r: &Sk,
+        secret_key_r: &S::Sk,
         info: &[u8],
-        pubkey_s: &Pk,
+        pubkey_s: &S::Pk,
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_auth_receiver(
-                enc,
-                secret_key_r._as_bytes(),
-                info,
-                pubkey_s._as_bytes(),
-            )?,
+            suite: S::setup_auth_receiver(enc, secret_key_r, info, pubkey_s)?,
         })
     }
 
@@ -410,10 +398,10 @@ impl<S: Suite + Auth> ModeAuth<S> {
     }
 
     /// One-shot API for HPKE Auth mode `seal()` operation.
-    pub fn auth_seal<Sk: HpkePrivateKey, Pk: HpkePublicKey>(
-        pubkey_r: &Pk,
+    pub fn auth_seal(
+        pubkey_r: &S::Pk,
         info: &[u8],
-        secrety_key_s: &Sk,
+        secrety_key_s: &S::Sk,
         public_ct_out: &mut [u8],
         plaintext: &[u8],
         aad: &[u8],
@@ -424,11 +412,11 @@ impl<S: Suite + Auth> ModeAuth<S> {
     }
 
     /// One-shot API for HPKE Auth mode `open()` operation.
-    pub fn auth_open<Sk: HpkePrivateKey, Pk: HpkePublicKey>(
+    pub fn auth_open(
         enc: &[u8],
-        secret_key_r: &Sk,
+        secret_key_r: &S::Sk,
         info: &[u8],
-        pubkey_s: &Pk,
+        pubkey_s: &S::Pk,
         ciphertext: &[u8],
         aad: &[u8],
         out: &mut [u8],
@@ -460,44 +448,37 @@ impl<S> ModeAuthPsk<S> {
 
 impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
     /// HPKE AuthPsk mode sender.
-    pub fn new_sender<Sk: HpkePrivateKey, Pk: HpkePublicKey>(
-        pubkey_r: &Pk,
+    pub fn new_sender(
+        pubkey_r: &S::Pk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secret_key_s: &Sk,
+        secret_key_s: &S::Sk,
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
             suite: S::setup_authpsk_sender(
-                pubkey_r._as_bytes(),
+                pubkey_r,
                 info,
                 psk,
                 psk_id,
-                secret_key_s._as_bytes(),
+                secret_key_s,
                 public_ct_out,
             )?,
         })
     }
 
     /// HPKE AuthPsk mode receiver.
-    pub fn new_receiver<Sk: HpkePrivateKey, Pk: HpkePublicKey>(
+    pub fn new_receiver(
         enc: &[u8],
-        secret_key_r: &Sk,
+        secret_key_r: &S::Sk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        pubkey_s: &Pk,
+        pubkey_s: &S::Pk,
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_authpsk_receiver(
-                enc,
-                secret_key_r._as_bytes(),
-                info,
-                psk,
-                psk_id,
-                pubkey_s._as_bytes(),
-            )?,
+            suite: S::setup_authpsk_receiver(enc, secret_key_r, info, psk, psk_id, pubkey_s)?,
         })
     }
 
@@ -522,12 +503,12 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
     }
 
     /// One-shot API for HPKE AuthPsk mode `seal()` operation.
-    pub fn authpsk_seal<Sk: HpkePrivateKey, Pk: HpkePublicKey>(
-        pubkey_r: &Pk,
+    pub fn authpsk_seal(
+        pubkey_r: &S::Pk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secrety_key_s: &Sk,
+        secrety_key_s: &S::Sk,
         public_ct_out: &mut [u8],
         plaintext: &[u8],
         aad: &[u8],
@@ -538,13 +519,13 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
     }
 
     /// One-shot API for HPKE AuthPsk mode `open()` operation.
-    pub fn authpsk_open<Sk: HpkePrivateKey, Pk: HpkePublicKey>(
+    pub fn authpsk_open(
         enc: &[u8],
-        secret_key_r: &Sk,
+        secret_key_r: &S::Sk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        pubkey_s: &Pk,
+        pubkey_s: &S::Pk,
         ciphertext: &[u8],
         aad: &[u8],
         out: &mut [u8],

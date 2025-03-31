@@ -80,7 +80,7 @@ fn hpke_runner(path: &str) {
             ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
                 let mut hpke_ctx = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
                     &enc,
-                    &secret_recip.unprotected_as_bytes(),
+                    &secret_recip,
                     &info,
                 )
                 .unwrap();
@@ -113,7 +113,7 @@ fn hpke_runner(path: &str) {
 
                 let mut hpke_ctx = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
                     &enc,
-                    &secret_recip.unprotected_as_bytes(),
+                    &secret_recip,
                     &info,
                     &psk,
                     &psk_id,
@@ -146,9 +146,9 @@ fn hpke_runner(path: &str) {
 
                 let mut hpke_ctx = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
                     &enc,
-                    &secret_recip.unprotected_as_bytes(),
+                    &secret_recip,
                     &info,
-                    &public_sender.to_bytes(),
+                    &public_sender,
                 )
                 .unwrap();
 
@@ -183,11 +183,11 @@ fn hpke_runner(path: &str) {
 
                 let mut hpke_ctx = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
                     &enc,
-                    &secret_recip.unprotected_as_bytes(),
+                    &secret_recip,
                     &info,
                     &psk,
                     &psk_id,
-                    &public_sender.to_bytes(),
+                    &public_sender,
                 )
                 .unwrap();
 

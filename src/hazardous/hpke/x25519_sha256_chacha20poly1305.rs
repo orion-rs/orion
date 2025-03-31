@@ -108,6 +108,9 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
 }
 
 impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
+    type Sk = x25519_hkdf_sha256::PrivateKey;
+    type Pk = x25519_hkdf_sha256::PublicKey;
+
     // TODO: Use the extract/expand_with_parts in the DH-KEM module as well to make it
     // no_std compatible.
 
@@ -222,7 +225,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn setup_base_sender(
-        pubkey_r: &[u8],
+        pubkey_r: &Self::Pk,
         info: &[u8],
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
@@ -235,7 +238,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
             public_ct_out.len()
         );
 
-        let pkr = x25519_hkdf_sha256::PublicKey::from_slice(pubkey_r)?;
+        let pkr = pubkey_r;
         let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(&pkr)?;
         let ctx = Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_bytes(), info, &[], &[])?;
         public_ct_out.copy_from_slice(&enc.to_bytes());
@@ -245,7 +248,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
     fn setup_base_receiver(
         enc: &[u8],
-        secret_key_r: &[u8],
+        secret_key_r: &Self::Sk,
         info: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
         if info.len() > 64 {
@@ -253,14 +256,14 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         }
 
         let enc = x25519_hkdf_sha256::PublicKey::from_slice(enc)?;
-        let skr = x25519_hkdf_sha256::PrivateKey::from_slice(secret_key_r)?;
+        let skr = secret_key_r;
         let ss = x25519_hkdf_sha256::DhKem::decap(&enc, &skr)?;
 
         Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_bytes(), info, &[], &[])
     }
 
     fn setup_psk_sender(
-        pubkey_r: &[u8],
+        pubkey_r: &Self::Pk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
@@ -275,7 +278,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
             public_ct_out.len()
         );
 
-        let pkr = x25519_hkdf_sha256::PublicKey::from_slice(pubkey_r)?;
+        let pkr = pubkey_r;
         let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(&pkr)?;
         let ctx = Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_bytes(), info, psk, psk_id)?;
         public_ct_out.copy_from_slice(&enc.to_bytes());
@@ -285,7 +288,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
     fn setup_psk_receiver(
         enc: &[u8],
-        secret_key_r: &[u8],
+        secret_key_r: &Self::Sk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
@@ -295,16 +298,16 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         }
 
         let enc = x25519_hkdf_sha256::PublicKey::from_slice(enc)?;
-        let skr = x25519_hkdf_sha256::PrivateKey::from_slice(secret_key_r)?;
+        let skr = secret_key_r;
         let ss = x25519_hkdf_sha256::DhKem::decap(&enc, &skr)?;
 
         Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_bytes(), info, psk, psk_id)
     }
 
     fn setup_auth_sender(
-        pubkey_r: &[u8],
+        pubkey_r: &Self::Pk,
         info: &[u8],
-        secrety_key_s: &[u8],
+        secrety_key_s: &Self::Sk,
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
         if info.len() > 64 {
@@ -316,8 +319,8 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
             public_ct_out.len()
         );
 
-        let pkr = x25519_hkdf_sha256::PublicKey::from_slice(pubkey_r)?;
-        let sks = x25519_hkdf_sha256::PrivateKey::from_slice(secrety_key_s)?;
+        let pkr = pubkey_r;
+        let sks = secrety_key_s;
         let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(&pkr, &sks)?;
         let ctx = Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_bytes(), info, &[], &[])?;
         public_ct_out.copy_from_slice(&enc.to_bytes());
@@ -327,28 +330,28 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
     fn setup_auth_receiver(
         enc: &[u8],
-        secret_key_r: &[u8],
+        secret_key_r: &Self::Sk,
         info: &[u8],
-        pubkey_s: &[u8],
+        pubkey_s: &Self::Pk,
     ) -> Result<Self, UnknownCryptoError> {
         if info.len() > 64 {
             return Err(UnknownCryptoError);
         }
 
         let enc = x25519_hkdf_sha256::PublicKey::from_slice(enc)?;
-        let pks = x25519_hkdf_sha256::PublicKey::from_slice(pubkey_s)?;
-        let skr = x25519_hkdf_sha256::PrivateKey::from_slice(secret_key_r)?;
+        let pks = pubkey_s;
+        let skr = secret_key_r;
         let ss = x25519_hkdf_sha256::DhKem::auth_decap(&enc, &skr, &pks)?;
 
         Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_bytes(), info, &[], &[])
     }
 
     fn setup_authpsk_sender(
-        pubkey_r: &[u8],
+        pubkey_r: &Self::Pk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secrety_key_s: &[u8],
+        secrety_key_s: &Self::Sk,
         public_ct_out: &mut [u8],
     ) -> Result<Self, UnknownCryptoError> {
         if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
@@ -360,8 +363,8 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
             public_ct_out.len()
         );
 
-        let pkr = x25519_hkdf_sha256::PublicKey::from_slice(pubkey_r)?;
-        let sks = x25519_hkdf_sha256::PrivateKey::from_slice(secrety_key_s)?;
+        let pkr = pubkey_r;
+        let sks = secrety_key_s;
         let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(&pkr, &sks)?;
         let ctx = Self::key_schedule(
             &HpkeMode::AuthPsk,
@@ -377,19 +380,19 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
     fn setup_authpsk_receiver(
         enc: &[u8],
-        secret_key_r: &[u8],
+        secret_key_r: &Self::Sk,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        pubkey_s: &[u8],
+        pubkey_s: &Self::Pk,
     ) -> Result<Self, UnknownCryptoError> {
         if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
             return Err(UnknownCryptoError);
         }
 
         let enc = x25519_hkdf_sha256::PublicKey::from_slice(enc)?;
-        let pks = x25519_hkdf_sha256::PublicKey::from_slice(pubkey_s)?;
-        let skr = x25519_hkdf_sha256::PrivateKey::from_slice(secret_key_r)?;
+        let pks = pubkey_s;
+        let skr = secret_key_r;
         let ss = x25519_hkdf_sha256::DhKem::auth_decap(&enc, &skr, &pks)?;
 
         Self::key_schedule(
