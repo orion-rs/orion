@@ -404,6 +404,7 @@ fn mont_ladder(scalar: &Scalar, point: FieldElement) -> FieldElement {
 #[derive(PartialEq, Debug, Clone)]
 pub struct PublicKey {
     fe: FieldElement,
+    fe_bytes: [u8; 32],
 }
 
 impl PartialEq<&[u8]> for PublicKey {
@@ -420,9 +421,17 @@ impl PartialEq<&[u8]> for PublicKey {
 impl From<[u8; PUBLIC_KEY_SIZE]> for PublicKey {
     #[inline]
     fn from(bytes: [u8; PUBLIC_KEY_SIZE]) -> Self {
-        Self {
-            fe: FieldElement::from_bytes(&bytes),
-        }
+        let fe = FieldElement::from_bytes(&bytes);
+        let fe_bytes = fe.as_bytes();
+
+        Self { fe, fe_bytes }
+    }
+}
+
+impl AsRef<[u8]> for PublicKey {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.fe_bytes.as_ref()
     }
 }
 
@@ -454,9 +463,10 @@ impl PublicKey {
             return Err(UnknownCryptoError);
         }
 
-        Ok(Self {
-            fe: FieldElement::from_bytes(slice.try_into().unwrap()),
-        })
+        let fe = FieldElement::from_bytes(slice.try_into().unwrap());
+        let fe_bytes = fe.as_bytes();
+
+        Ok(Self { fe, fe_bytes })
     }
 
     #[inline]

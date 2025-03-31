@@ -28,5 +28,41 @@ pub use mode::ModeAuth;
 pub use mode::ModeAuthPsk;
 pub use mode::ModeBase;
 pub use mode::ModePsk;
+use private::HpkePrivateKey;
+use private::HpkePublicKey;
 
 pub use x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20;
+
+pub(crate) mod private {
+
+    /// Marker trait for a public key, for an HPKE private key `S`, that can be uses with HPKE.
+    pub trait HpkePublicKey<S> {
+        /// View as byte-slice.
+        fn _as_bytes(&self) -> &[u8];
+    }
+
+    // Marker trait for a cip key, for an HPKE private key `S`, that can be uses with HPKE.
+    //pub trait HpkeCiphertextKey<S> {
+    //
+    //}
+
+    /// Marker trait for a private key, that can be uses with HPKE.
+    pub trait HpkePrivateKey {
+        /// View as byte-slice.
+        fn _as_bytes(&self) -> &[u8];
+    }
+}
+
+impl HpkePrivateKey for crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey {
+    fn _as_bytes(&self) -> &[u8] {
+        self.unprotected_as_bytes()
+    }
+}
+
+impl HpkePublicKey<crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey>
+    for crate::hazardous::kem::x25519_hkdf_sha256::PublicKey
+{
+    fn _as_bytes(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
