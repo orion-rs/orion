@@ -36,7 +36,7 @@ pub use x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20;
 pub(crate) mod private {
 
     /// Marker trait for a public key, for an HPKE private key `S`, that can be uses with HPKE.
-    pub trait HpkePublicKey<S> {
+    pub trait HpkePublicKey {
         /// View as byte-slice.
         fn _as_bytes(&self) -> &[u8];
     }
@@ -59,9 +59,7 @@ impl HpkePrivateKey for crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey {
     }
 }
 
-impl HpkePublicKey<crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey>
-    for crate::hazardous::kem::x25519_hkdf_sha256::PublicKey
-{
+impl HpkePublicKey for crate::hazardous::kem::x25519_hkdf_sha256::PublicKey {
     fn _as_bytes(&self) -> &[u8] {
         self.as_ref()
     }

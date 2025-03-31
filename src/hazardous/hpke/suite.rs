@@ -23,6 +23,7 @@
 pub(crate) mod private {
     use crate::errors::UnknownCryptoError;
     use crate::hazardous::hpke::mode::private::HpkeMode;
+    use crate::hazardous::hpke::private::{HpkePrivateKey, HpkePublicKey};
 
     /// Common trait for HPKE suite.
     pub trait Suite {

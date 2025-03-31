@@ -469,7 +469,8 @@ mod test {
         where
             Self: Sized,
         {
-            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(pubkey_r, info, public_ct_out)
+            let pubkey_r = PublicKey::from_slice(pubkey_r)?;
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&pubkey_r, info, public_ct_out)
         }
 
         fn setup_fresh_receiver(
@@ -483,7 +484,8 @@ mod test {
         where
             Self: Sized,
         {
-            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(enc, secret_key_r, info)
+            let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(enc, &secret_key_r, info)
         }
 
         fn seal(
@@ -517,10 +519,11 @@ mod test {
             plaintext: &[u8],
             aad: &[u8],
         ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let pubkey_r = PublicKey::from_slice(pubkey_r)?;
             let mut dst_kem_out = vec![0u8; 32];
             let mut dst_out = vec![0u8; plaintext.len() + 16];
             ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::base_seal(
-                pubkey_r,
+                &pubkey_r,
                 info,
                 &mut dst_kem_out,
                 plaintext,
@@ -541,10 +544,11 @@ mod test {
             ciphertext: &[u8],
             aad: &[u8],
         ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
             let mut dst_out = vec![0u8; ciphertext.len() - 16];
             ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::base_open(
                 enc,
-                secret_key_r,
+                &secret_key_r,
                 info,
                 ciphertext,
                 aad,
@@ -578,8 +582,9 @@ mod test {
         where
             Self: Sized,
         {
+            let pubkey_r = PublicKey::from_slice(pubkey_r)?;
             ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
-                pubkey_r,
+                &pubkey_r,
                 info,
                 psk,
                 psk_id,
@@ -598,9 +603,10 @@ mod test {
         where
             Self: Sized,
         {
+            let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
             ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
                 enc,
-                secret_key_r,
+                &secret_key_r,
                 info,
                 psk,
                 psk_id,
@@ -638,10 +644,11 @@ mod test {
             plaintext: &[u8],
             aad: &[u8],
         ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let pubkey_r = PublicKey::from_slice(pubkey_r)?;
             let mut dst_kem_out = vec![0u8; 32];
             let mut dst_out = vec![0u8; plaintext.len() + 16];
             ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::psk_seal(
-                pubkey_r,
+                &pubkey_r,
                 info,
                 psk,
                 psk_id,
@@ -664,10 +671,11 @@ mod test {
             ciphertext: &[u8],
             aad: &[u8],
         ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
             let mut dst_out = vec![0u8; ciphertext.len() - 16];
             ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::psk_open(
                 enc,
-                secret_key_r,
+                &secret_key_r,
                 info,
                 psk,
                 psk_id,
@@ -703,10 +711,12 @@ mod test {
         where
             Self: Sized,
         {
+            let secret_key_s = PrivateKey::from_slice(secret_key_s)?;
+            let pubkey_r = PublicKey::from_slice(pubkey_r)?;
             ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
-                pubkey_r,
+                &pubkey_r,
                 info,
-                secret_key_s,
+                &secret_key_s,
                 public_ct_out,
             )
         }
@@ -722,11 +732,13 @@ mod test {
         where
             Self: Sized,
         {
+            let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
+            let pubkey_s = PublicKey::from_slice(pubkey_s)?;
             ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
                 enc,
-                secret_key_r,
+                &secret_key_r,
                 info,
-                pubkey_s,
+                &pubkey_s,
             )
         }
 
@@ -761,12 +773,14 @@ mod test {
             plaintext: &[u8],
             aad: &[u8],
         ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let secret_key_s = PrivateKey::from_slice(secret_key_s)?;
+            let pubkey_r = PublicKey::from_slice(pubkey_r)?;
             let mut dst_kem_out = vec![0u8; 32];
             let mut dst_out = vec![0u8; plaintext.len() + 16];
             ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::auth_seal(
-                pubkey_r,
+                &pubkey_r,
                 info,
-                secret_key_s,
+                &secret_key_s,
                 &mut dst_kem_out,
                 plaintext,
                 aad,
@@ -786,12 +800,14 @@ mod test {
             ciphertext: &[u8],
             aad: &[u8],
         ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
+            let pubkey_s = PublicKey::from_slice(pubkey_s)?;
             let mut dst_out = vec![0u8; ciphertext.len() - 16];
             ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::auth_open(
                 enc,
-                secret_key_r,
+                &secret_key_r,
                 info,
-                pubkey_s,
+                &pubkey_s,
                 ciphertext,
                 aad,
                 &mut dst_out,
@@ -824,12 +840,14 @@ mod test {
         where
             Self: Sized,
         {
+            let secret_key_s = PrivateKey::from_slice(secret_key_s)?;
+            let pubkey_r = PublicKey::from_slice(pubkey_r)?;
             ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
-                pubkey_r,
+                &pubkey_r,
                 info,
                 psk,
                 psk_id,
-                secret_key_s,
+                &secret_key_s,
                 public_ct_out,
             )
         }
@@ -845,13 +863,15 @@ mod test {
         where
             Self: Sized,
         {
+            let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
+            let pubkey_s = PublicKey::from_slice(pubkey_s)?;
             ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
                 enc,
-                secret_key_r,
+                &secret_key_r,
                 info,
                 psk,
                 psk_id,
-                pubkey_s,
+                &pubkey_s,
             )
         }
 
@@ -886,14 +906,16 @@ mod test {
             plaintext: &[u8],
             aad: &[u8],
         ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let secret_key_s = PrivateKey::from_slice(secret_key_s)?;
+            let pubkey_r = PublicKey::from_slice(pubkey_r)?;
             let mut dst_kem_out = vec![0u8; 32];
             let mut dst_out = vec![0u8; plaintext.len() + 16];
             ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::authpsk_seal(
-                pubkey_r,
+                &pubkey_r,
                 info,
                 psk,
                 psk_id,
-                secret_key_s,
+                &secret_key_s,
                 &mut dst_kem_out,
                 plaintext,
                 aad,
@@ -913,14 +935,16 @@ mod test {
             ciphertext: &[u8],
             aad: &[u8],
         ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
+            let pubkey_s = PublicKey::from_slice(pubkey_s)?;
             let mut dst_out = vec![0u8; ciphertext.len() - 16];
             ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::authpsk_open(
                 enc,
-                secret_key_r,
+                &secret_key_r,
                 info,
                 psk,
                 psk_id,
-                pubkey_s,
+                &pubkey_s,
                 ciphertext,
                 aad,
                 &mut dst_out,
