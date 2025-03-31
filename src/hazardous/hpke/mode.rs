@@ -104,6 +104,57 @@ pub(crate) mod private {
 
 #[derive(Clone)]
 /// HPKE Base mode.
+/// # Parameters:
+/// - TODO
+///
+/// # Errors:
+/// An error will be returned if:
+/// - TODo
+///
+/// # Panics:
+/// A panic will occur if:
+/// - TODO
+///
+/// # Security:
+/// - TODO
+///
+/// # Example:
+/// ```rust
+/// # #[cfg(feature = "safe_api")] {
+/// use orion::hazardous::hpke::{ModeBase, DHKEM_X25519_SHA256_CHACHA20};
+/// use orion::hazardous::kem::x25519_hkdf_sha256::DhKem;
+///
+/// let (sender_secret, sender_public) = DhKem::generate_keypair()?;
+/// let (recipient_secret, recipient_public) = DhKem::generate_keypair()?;
+///
+///
+/// // Streaming-based API
+/// let mut kem_ct_out = [0u8; DHKEM_X25519_SHA256_CHACHA20::KEM_CT_SIZE];
+/// let mut aead_ct_out0 = [0u8; 32];
+/// let mut aead_ct_out1 = [0u8; 32];
+/// let mut aead_ct_out2 = [0u8; 32];
+///
+/// let mut hpke_sender = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&recipient_public.to_bytes(), b"info parameter", &mut kem_ct_out)?;
+/// hpke_sender.seal(&[0u8; 16], b"aad parameter 0", &mut aead_ct_out0)?;
+/// hpke_sender.seal(&[1u8; 16], b"aad parameter 1", &mut aead_ct_out1)?;
+/// hpke_sender.seal(&[2u8; 16], b"aad parameter 2", &mut aead_ct_out2)?;
+///
+/// let mut hpke_receiver = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(&kem_ct_out, recipient_secret.unprotected_as_bytes(), b"info parameter")?;
+/// let mut aead_pt_out0 = [0u8; 16];
+/// let mut aead_pt_out1 = [0u8; 16];
+/// let mut aead_pt_out2 = [0u8; 16];
+/// hpke_receiver.open(&aead_ct_out0, b"aad parameter 0", &mut aead_pt_out0)?;
+/// hpke_receiver.open(&aead_ct_out1, b"aad parameter 1", &mut aead_pt_out1)?;
+/// hpke_receiver.open(&aead_ct_out2, b"aad parameter 2", &mut aead_pt_out2)?;
+///
+/// assert_eq!(&aead_pt_out0, &[0u8; 16]);
+/// assert_eq!(&aead_pt_out1, &[1u8; 16]);
+/// assert_eq!(&aead_pt_out2, &[2u8; 16]);
+///
+/// // One-shot API TODO
+/// # }
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
+/// ```
 pub struct ModeBase<S> {
     suite: S,
 }
