@@ -28,6 +28,7 @@ pub use mode::ModeAuth;
 pub use mode::ModeAuthPsk;
 pub use mode::ModeBase;
 pub use mode::ModePsk;
+use private::HpkeEncapKey;
 use private::HpkePrivateKey;
 use private::HpkePublicKey;
 
@@ -41,10 +42,11 @@ pub(crate) mod private {
         fn _as_bytes(&self) -> &[u8];
     }
 
-    // Marker trait for a cip key, for an HPKE private key `S`, that can be uses with HPKE.
-    //pub trait HpkeCiphertextKey<S> {
-    //
-    //}
+    /// Marker trait for a "encapsulated" key, for an HPKE private, that is generated with HPKE.
+    pub trait HpkeEncapKey {
+        /// View as byte-slice.
+        fn _as_bytes(&self) -> &[u8];
+    }
 
     /// Marker trait for a private key, that can be uses with HPKE.
     pub trait HpkePrivateKey {
@@ -60,6 +62,12 @@ impl HpkePrivateKey for crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey {
 }
 
 impl HpkePublicKey for crate::hazardous::kem::x25519_hkdf_sha256::PublicKey {
+    fn _as_bytes(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
+
+impl HpkeEncapKey for crate::hazardous::kem::x25519_hkdf_sha256::PublicKey {
     fn _as_bytes(&self) -> &[u8] {
         self.as_ref()
     }

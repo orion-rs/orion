@@ -66,6 +66,7 @@ fn hpke_runner(path: &str) {
 
         let secret_recip = PrivateKey::from_slice(&decode(&test.skRm).unwrap()).unwrap();
         let public_recip = PublicKey::from_slice(&decode(&test.pkRm).unwrap()).unwrap();
+        let kem_ciphertext = PublicKey::from_slice(&enc).unwrap();
         let derived_kp = DhKem::derive_keypair(&decode(&test.ikmR).unwrap()).unwrap();
         assert_eq!(secret_recip, derived_kp.0);
         assert_eq!(public_recip, derived_kp.1);
@@ -79,7 +80,7 @@ fn hpke_runner(path: &str) {
         match test.mode as u8 {
             ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
                 let mut hpke_ctx = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
-                    &enc,
+                    &kem_ciphertext,
                     &secret_recip,
                     &info,
                 )
@@ -112,7 +113,7 @@ fn hpke_runner(path: &str) {
                 let psk_id = hex::decode(test.psk_id.unwrap()).unwrap();
 
                 let mut hpke_ctx = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
-                    &enc,
+                    &kem_ciphertext,
                     &secret_recip,
                     &info,
                     &psk,
@@ -145,7 +146,7 @@ fn hpke_runner(path: &str) {
                     PublicKey::from_slice(&decode(&test.pkSm.unwrap()).unwrap()).unwrap();
 
                 let mut hpke_ctx = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
-                    &enc,
+                    &kem_ciphertext,
                     &secret_recip,
                     &info,
                     &public_sender,
@@ -182,7 +183,7 @@ fn hpke_runner(path: &str) {
                 let psk_id = hex::decode(test.psk_id.unwrap()).unwrap();
 
                 let mut hpke_ctx = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
-                    &enc,
+                    &kem_ciphertext,
                     &secret_recip,
                     &info,
                     &psk,
