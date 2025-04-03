@@ -29,7 +29,6 @@ use crate::hazardous::kdf::hkdf;
 use crate::hazardous::kem::x25519_hkdf_sha256;
 use zeroize::Zeroizing;
 
-/// TODO: zeroize, Dorp, omitted Debu, CT-PartialEq.
 #[derive(Clone)]
 /// HPKE suite: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256 and ChaCha20Poly1305.
 pub struct DHKEM_X25519_SHA256_CHACHA20 {
@@ -37,6 +36,35 @@ pub struct DHKEM_X25519_SHA256_CHACHA20 {
     base_nonce: [u8; 12],
     ctr: u64, // "sequence number"
     exporter_secret: [u8; 32],
+}
+
+impl PartialEq<DHKEM_X25519_SHA256_CHACHA20> for DHKEM_X25519_SHA256_CHACHA20 {
+    fn eq(&self, other: &DHKEM_X25519_SHA256_CHACHA20) -> bool {
+        use subtle::ConstantTimeEq;
+
+        (self.key.ct_eq(&other.key)
+            & self.base_nonce.ct_eq(&other.base_nonce)
+            & self.ctr.ct_eq(&other.ctr)
+            & self.exporter_secret.ct_eq(&other.exporter_secret))
+        .into()
+    }
+}
+
+impl Eq for DHKEM_X25519_SHA256_CHACHA20 {}
+
+impl core::fmt::Debug for DHKEM_X25519_SHA256_CHACHA20 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} key: {{***OMITTED***}}, base_nonce: {:?}, ctr: {:?}, exporter_secret: {{***OMITTED***}}", 
+            stringify!(DHKEM_X25519_SHA256_CHACHA20), &self.base_nonce, self.ctr)
+    }
+}
+
+impl Drop for DHKEM_X25519_SHA256_CHACHA20 {
+    fn drop(&mut self) {
+        use zeroize::Zeroize;
+        self.key.iter_mut().zeroize();
+        self.exporter_secret.iter_mut().zeroize();
+    }
 }
 
 impl Base for DHKEM_X25519_SHA256_CHACHA20 {}
@@ -73,14 +101,6 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
 
     const NN: usize = 12;
 
-    pub fn _testing_base_nonce(&self) -> &[u8] {
-        &self.base_nonce
-    }
-
-    pub fn _testing_exporter_secret(&self) -> &[u8] {
-        &self.exporter_secret
-    }
-
     fn compute_nonce(&self) -> chacha20poly1305::Nonce {
         // "Implementations MAY use a sequence number that is shorter than the nonce length (padding on the left with zero),
         // but MUST raise an error if the sequence number overflows." https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2
@@ -114,6 +134,21 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
     // TODO: Use the extract/expand_with_parts in the DH-KEM module as well to make it
     // no_std compatible.
+
+    #[cfg(test)]
+    fn testing_base_nonce(&self) -> &[u8] {
+        &self.base_nonce
+    }
+
+    #[cfg(test)]
+    fn testing_ctr(&self) -> u64 {
+        self.ctr
+    }
+
+    #[cfg(test)]
+    fn testing_exporter_secret(&self) -> &[u8] {
+        &self.exporter_secret
+    }
 
     fn labeled_extract(
         salt: &[u8],
@@ -416,6 +451,35 @@ mod test {
         hazardous::hpke::*,
         test_framework::hpke_interface::{HpkeTester, TestableHpke},
     };
+
+    #[test]
+    fn test_error_if_internal_counter_overflows() {
+        let info = b"info param";
+        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let (mut ctx, enc) = DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, info).unwrap();
+
+        ctx.ctr = u64::MAX - 1;
+
+        let plaintext = b"msg";
+        let mut dst_out = [0u8; b"msg".len() + 16];
+        assert!(ctx.seal(plaintext, b"", &mut dst_out).is_ok());
+        // Overflow:
+        assert!(ctx.seal(plaintext, b"", &mut dst_out).is_err());
+
+        let mut ctx = DHKEM_X25519_SHA256_CHACHA20::setup_base_receiver(&enc, &sk, info).unwrap();
+        ctx.ctr = u64::MAX - 1;
+
+        
+        let ciphertext = dst_out;
+        let mut dst_out = [0u8; b"msg".len()];
+        assert!(ctx.open(&ciphertext, b"", &mut dst_out).is_ok());
+        // Overflow:
+        assert!(ctx.open(&ciphertext, b"", &mut dst_out).is_ok());
+
+        assert_eq!(&dst_out, plaintext);
+    }
+
+
 
     impl TestableHpke for ModeBase<DHKEM_X25519_SHA256_CHACHA20> {
         const HPKE_MODE: u8 = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID;

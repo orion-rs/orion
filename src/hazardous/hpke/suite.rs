@@ -160,5 +160,14 @@ pub(crate) mod private {
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export>
         fn export(&self, exporter_context: &[u8], out: &mut [u8])
             -> Result<(), UnknownCryptoError>;
+
+        #[cfg(test)]
+        fn testing_base_nonce(&self) -> &[u8];
+
+        #[cfg(test)]
+        fn testing_ctr(&self) -> u64;
+
+        #[cfg(test)]
+        fn testing_exporter_secret(&self) -> &[u8];
     }
 }

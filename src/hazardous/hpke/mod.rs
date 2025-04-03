@@ -38,37 +38,37 @@ pub(crate) mod private {
 
     /// Marker trait for a public key, for an HPKE private key `S`, that can be uses with HPKE.
     pub trait HpkePublicKey {
-        /// View as byte-slice.
-        fn _as_bytes(&self) -> &[u8];
+        // View as byte-slice.
+        //fn _as_bytes(&self) -> &[u8];
     }
 
     /// Marker trait for a "encapsulated" key, for an HPKE private, that is generated with HPKE.
     pub trait HpkeEncapKey {
-        /// View as byte-slice.
-        fn _as_bytes(&self) -> &[u8];
+        // View as byte-slice.
+        //fn _as_bytes(&self) -> &[u8];
     }
 
     /// Marker trait for a private key, that can be uses with HPKE.
     pub trait HpkePrivateKey {
-        /// View as byte-slice.
-        fn _as_bytes(&self) -> &[u8];
+        // View as byte-slice.
+        //fn _as_bytes(&self) -> &[u8];
     }
 }
 
 impl HpkePrivateKey for crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey {
-    fn _as_bytes(&self) -> &[u8] {
-        self.unprotected_as_bytes()
-    }
+    //fn _as_bytes(&self) -> &[u8] {
+    //    self.unprotected_as_bytes()
+    //}
 }
 
 impl HpkePublicKey for crate::hazardous::kem::x25519_hkdf_sha256::PublicKey {
-    fn _as_bytes(&self) -> &[u8] {
-        self.as_ref()
-    }
+    //fn _as_bytes(&self) -> &[u8] {
+    //    self.as_ref()
+    //}
 }
 
 impl HpkeEncapKey for crate::hazardous::kem::x25519_hkdf_sha256::PublicKey {
-    fn _as_bytes(&self) -> &[u8] {
-        self.as_ref()
-    }
+    //fn _as_bytes(&self) -> &[u8] {
+    //    self.as_ref()
+    //}
 }
