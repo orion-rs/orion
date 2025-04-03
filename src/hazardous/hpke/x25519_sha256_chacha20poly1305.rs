@@ -112,6 +112,10 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
         chacha20poly1305::Nonce::from(n)
     }
 
+    fn would_overflow(&self) -> bool {
+        self.ctr.checked_add(1).is_none()
+    }
+
     fn increment_seq(&mut self) -> Result<(), UnknownCryptoError> {
         if let Some(next_seq) = self.ctr.checked_add(1) {
             self.ctr = next_seq;
@@ -413,6 +417,11 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        // Ensure we don't write anything to `out` if `increment_seq()` would fail.
+        if self.would_overflow() {
+            return Err(UnknownCryptoError);
+        }
+
         let key = chacha20poly1305::SecretKey::from(self.key);
         let nonce = self.compute_nonce();
         chacha20poly1305::seal(&key, &nonce, plaintext, Some(aad), out)?;
@@ -426,6 +435,11 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        // Ensure we don't write anything to `out` if `increment_seq()` would fail.
+        if self.would_overflow() {
+            return Err(UnknownCryptoError);
+        }
+
         let key = chacha20poly1305::SecretKey::from(self.key);
         let nonce = self.compute_nonce();
         chacha20poly1305::open(&key, &nonce, ciphertext, Some(aad), out)?;
@@ -474,7 +488,7 @@ mod test {
         let mut dst_out = [0u8; b"msg".len()];
         assert!(ctx.open(&ciphertext, b"", &mut dst_out).is_ok());
         // Overflow:
-        assert!(ctx.open(&ciphertext, b"", &mut dst_out).is_ok());
+        assert!(ctx.open(&ciphertext, b"", &mut dst_out).is_err());
 
         assert_eq!(&dst_out, plaintext);
     }
