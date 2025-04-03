@@ -28,11 +28,11 @@ pub(crate) mod private {
     /// Common trait for HPKE suite.
     pub trait Suite {
         /// The private key used for this suite.
-        type Sk: HpkePrivateKey;
+        type PrivateKey: HpkePrivateKey;
         /// The public key used for this suite.
-        type Pk: HpkePublicKey;
-        /// The "encapsulated" key used for this suite.
-        type Ek: HpkeEncapKey;
+        type PublicKey: HpkePublicKey;
+        /// The KEM ciphertext, i.e. the "encapsulated" key (in HPKE-terms) used for this suite.
+        type EncapsulatedKey: HpkeEncapKey;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con>
         fn key_schedule(
@@ -63,16 +63,16 @@ pub(crate) mod private {
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
         fn setup_base_sender(
-            pubkey_r: &Self::Pk,
+            pubkey_r: &Self::PublicKey,
             info: &[u8],
-        ) -> Result<(Self, Self::Ek), UnknownCryptoError>
+        ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
         fn setup_base_receiver(
-            enc: &Self::Ek,
-            secret_key_r: &Self::Sk,
+            enc: &Self::EncapsulatedKey,
+            secret_key_r: &Self::PrivateKey,
             info: &[u8],
         ) -> Result<Self, UnknownCryptoError>
         where
@@ -80,18 +80,18 @@ pub(crate) mod private {
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
         fn setup_psk_sender(
-            pubkey_r: &Self::Pk,
+            pubkey_r: &Self::PublicKey,
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
-        ) -> Result<(Self, Self::Ek), UnknownCryptoError>
+        ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
         fn setup_psk_receiver(
-            enc: &Self::Ek,
-            secret_key_r: &Self::Sk,
+            enc: &Self::EncapsulatedKey,
+            secret_key_r: &Self::PrivateKey,
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
@@ -101,42 +101,42 @@ pub(crate) mod private {
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
         fn setup_auth_sender(
-            pubkey_r: &Self::Pk,
+            pubkey_r: &Self::PublicKey,
             info: &[u8],
-            secrety_key_s: &Self::Sk,
-        ) -> Result<(Self, Self::Ek), UnknownCryptoError>
+            secrety_key_s: &Self::PrivateKey,
+        ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
         fn setup_auth_receiver(
-            enc: &Self::Ek,
-            secret_key_r: &Self::Sk,
+            enc: &Self::EncapsulatedKey,
+            secret_key_r: &Self::PrivateKey,
             info: &[u8],
-            pubkey_s: &Self::Pk,
+            pubkey_s: &Self::PublicKey,
         ) -> Result<Self, UnknownCryptoError>
         where
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
         fn setup_authpsk_sender(
-            pubkey_r: &Self::Pk,
+            pubkey_r: &Self::PublicKey,
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
-            secrety_key_s: &Self::Sk,
-        ) -> Result<(Self, Self::Ek), UnknownCryptoError>
+            secrety_key_s: &Self::PrivateKey,
+        ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
         fn setup_authpsk_receiver(
-            enc: &Self::Ek,
-            secret_key_r: &Self::Sk,
+            enc: &Self::EncapsulatedKey,
+            secret_key_r: &Self::PrivateKey,
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
-            pubkey_s: &Self::Pk,
+            pubkey_s: &Self::PublicKey,
         ) -> Result<Self, UnknownCryptoError>
         where
             Self: Sized;

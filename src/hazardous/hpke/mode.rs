@@ -165,7 +165,10 @@ impl<S> ModeBase<S> {
 
 impl<S: Suite + Base> ModeBase<S> {
     /// HPKE Base mode sender.
-    pub fn new_sender(pubkey_r: &S::Pk, info: &[u8]) -> Result<(Self, S::Ek), UnknownCryptoError> {
+    pub fn new_sender(
+        pubkey_r: &S::PublicKey,
+        info: &[u8],
+    ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_base_sender(pubkey_r, info)?;
 
         Ok(((Self { suite }), ek))
@@ -173,8 +176,8 @@ impl<S: Suite + Base> ModeBase<S> {
 
     /// HPKE Base mode receiver.
     pub fn new_receiver(
-        enc: &S::Ek,
-        secret_key_r: &S::Sk,
+        enc: &S::EncapsulatedKey,
+        secret_key_r: &S::PrivateKey,
         info: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
@@ -204,12 +207,12 @@ impl<S: Suite + Base> ModeBase<S> {
 
     /// One-shot API for HPKE Base mode `seal()` operation.
     pub fn base_seal(
-        pubkey_r: &S::Pk,
+        pubkey_r: &S::PublicKey,
         info: &[u8],
         plaintext: &[u8],
         aad: &[u8],
         out: &mut [u8],
-    ) -> Result<S::Ek, UnknownCryptoError> {
+    ) -> Result<S::EncapsulatedKey, UnknownCryptoError> {
         let (mut ctx, ek) = Self::new_sender(pubkey_r, info)?;
         ctx.seal(plaintext, aad, out)?;
 
@@ -218,8 +221,8 @@ impl<S: Suite + Base> ModeBase<S> {
 
     /// One-shot API for HPKE Base mode `seal()` operation.
     pub fn base_open(
-        enc: &S::Ek,
-        secret_key_r: &S::Sk,
+        enc: &S::EncapsulatedKey,
+        secret_key_r: &S::PrivateKey,
         info: &[u8],
         ciphertext: &[u8],
         aad: &[u8],
@@ -253,11 +256,11 @@ impl<S> ModePsk<S> {
 impl<S: Suite + Psk> ModePsk<S> {
     /// HPKE Psk mode sender.
     pub fn new_sender(
-        pubkey_r: &S::Pk,
+        pubkey_r: &S::PublicKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-    ) -> Result<(Self, S::Ek), UnknownCryptoError> {
+    ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_psk_sender(pubkey_r, info, psk, psk_id)?;
 
         Ok(((Self { suite }), ek))
@@ -265,8 +268,8 @@ impl<S: Suite + Psk> ModePsk<S> {
 
     /// HPKE Psk mode receiver.
     pub fn new_receiver(
-        enc: &S::Ek,
-        secret_key_r: &S::Sk,
+        enc: &S::EncapsulatedKey,
+        secret_key_r: &S::PrivateKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
@@ -298,14 +301,14 @@ impl<S: Suite + Psk> ModePsk<S> {
 
     /// One-shot API for HPKE Psk mode `seal()` operation.
     pub fn psk_seal(
-        pubkey_r: &S::Pk,
+        pubkey_r: &S::PublicKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
         plaintext: &[u8],
         aad: &[u8],
         out: &mut [u8],
-    ) -> Result<S::Ek, UnknownCryptoError> {
+    ) -> Result<S::EncapsulatedKey, UnknownCryptoError> {
         let (mut ctx, ek) = Self::new_sender(pubkey_r, info, psk, psk_id)?;
         ctx.seal(plaintext, aad, out)?;
 
@@ -314,8 +317,8 @@ impl<S: Suite + Psk> ModePsk<S> {
 
     /// One-shot API for HPKE Psk mode `open()` operation.
     pub fn psk_open(
-        enc: &S::Ek,
-        secret_key_r: &S::Sk,
+        enc: &S::EncapsulatedKey,
+        secret_key_r: &S::PrivateKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
@@ -351,10 +354,10 @@ impl<S> ModeAuth<S> {
 impl<S: Suite + Auth> ModeAuth<S> {
     /// HPKE Auth mode sender.
     pub fn new_sender(
-        pubkey_r: &S::Pk,
+        pubkey_r: &S::PublicKey,
         info: &[u8],
-        secret_key_s: &S::Sk,
-    ) -> Result<(Self, S::Ek), UnknownCryptoError> {
+        secret_key_s: &S::PrivateKey,
+    ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_auth_sender(pubkey_r, info, secret_key_s)?;
 
         Ok(((Self { suite }), ek))
@@ -362,10 +365,10 @@ impl<S: Suite + Auth> ModeAuth<S> {
 
     /// HPKE Auth mode receiver.
     pub fn new_receiver(
-        enc: &S::Ek,
-        secret_key_r: &S::Sk,
+        enc: &S::EncapsulatedKey,
+        secret_key_r: &S::PrivateKey,
         info: &[u8],
-        pubkey_s: &S::Pk,
+        pubkey_s: &S::PublicKey,
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
             suite: S::setup_auth_receiver(enc, secret_key_r, info, pubkey_s)?,
@@ -394,13 +397,13 @@ impl<S: Suite + Auth> ModeAuth<S> {
 
     /// One-shot API for HPKE Auth mode `seal()` operation.
     pub fn auth_seal(
-        pubkey_r: &S::Pk,
+        pubkey_r: &S::PublicKey,
         info: &[u8],
-        secrety_key_s: &S::Sk,
+        secrety_key_s: &S::PrivateKey,
         plaintext: &[u8],
         aad: &[u8],
         out: &mut [u8],
-    ) -> Result<S::Ek, UnknownCryptoError> {
+    ) -> Result<S::EncapsulatedKey, UnknownCryptoError> {
         let (mut ctx, ek) = Self::new_sender(pubkey_r, info, secrety_key_s)?;
         ctx.seal(plaintext, aad, out)?;
 
@@ -409,10 +412,10 @@ impl<S: Suite + Auth> ModeAuth<S> {
 
     /// One-shot API for HPKE Auth mode `open()` operation.
     pub fn auth_open(
-        enc: &S::Ek,
-        secret_key_r: &S::Sk,
+        enc: &S::EncapsulatedKey,
+        secret_key_r: &S::PrivateKey,
         info: &[u8],
-        pubkey_s: &S::Pk,
+        pubkey_s: &S::PublicKey,
         ciphertext: &[u8],
         aad: &[u8],
         out: &mut [u8],
@@ -445,12 +448,12 @@ impl<S> ModeAuthPsk<S> {
 impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
     /// HPKE AuthPsk mode sender.
     pub fn new_sender(
-        pubkey_r: &S::Pk,
+        pubkey_r: &S::PublicKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secret_key_s: &S::Sk,
-    ) -> Result<(Self, S::Ek), UnknownCryptoError> {
+        secret_key_s: &S::PrivateKey,
+    ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_authpsk_sender(pubkey_r, info, psk, psk_id, secret_key_s)?;
 
         Ok(((Self { suite }), ek))
@@ -458,12 +461,12 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
 
     /// HPKE AuthPsk mode receiver.
     pub fn new_receiver(
-        enc: &S::Ek,
-        secret_key_r: &S::Sk,
+        enc: &S::EncapsulatedKey,
+        secret_key_r: &S::PrivateKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        pubkey_s: &S::Pk,
+        pubkey_s: &S::PublicKey,
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
             suite: S::setup_authpsk_receiver(enc, secret_key_r, info, psk, psk_id, pubkey_s)?,
@@ -492,15 +495,15 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
 
     /// One-shot API for HPKE AuthPsk mode `seal()` operation.
     pub fn authpsk_seal(
-        pubkey_r: &S::Pk,
+        pubkey_r: &S::PublicKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secrety_key_s: &S::Sk,
+        secrety_key_s: &S::PrivateKey,
         plaintext: &[u8],
         aad: &[u8],
         out: &mut [u8],
-    ) -> Result<S::Ek, UnknownCryptoError> {
+    ) -> Result<S::EncapsulatedKey, UnknownCryptoError> {
         let (mut ctx, ek) = Self::new_sender(pubkey_r, info, psk, psk_id, secrety_key_s)?;
         ctx.seal(plaintext, aad, out)?;
 
@@ -509,12 +512,12 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
 
     /// One-shot API for HPKE AuthPsk mode `open()` operation.
     pub fn authpsk_open(
-        enc: &S::Ek,
-        secret_key_r: &S::Sk,
+        enc: &S::EncapsulatedKey,
+        secret_key_r: &S::PrivateKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        pubkey_s: &S::Pk,
+        pubkey_s: &S::PublicKey,
         ciphertext: &[u8],
         aad: &[u8],
         out: &mut [u8],

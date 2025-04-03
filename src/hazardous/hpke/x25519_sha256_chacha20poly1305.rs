@@ -132,9 +132,9 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
 }
 
 impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
-    type Sk = x25519_hkdf_sha256::PrivateKey;
-    type Pk = x25519_hkdf_sha256::PublicKey;
-    type Ek = x25519_hkdf_sha256::PublicKey;
+    type PrivateKey = x25519_hkdf_sha256::PrivateKey;
+    type PublicKey = x25519_hkdf_sha256::PublicKey;
+    type EncapsulatedKey = x25519_hkdf_sha256::PublicKey;
 
     // TODO: Use the extract/expand_with_parts in the DH-KEM module as well to make it
     // no_std compatible.
@@ -265,9 +265,9 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn setup_base_sender(
-        pubkey_r: &Self::Pk,
+        pubkey_r: &Self::PublicKey,
         info: &[u8],
-    ) -> Result<(Self, Self::Ek), UnknownCryptoError> {
+    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
         if info.len() > 64 {
             return Err(UnknownCryptoError);
         }
@@ -280,8 +280,8 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn setup_base_receiver(
-        enc: &Self::Ek,
-        secret_key_r: &Self::Sk,
+        enc: &Self::EncapsulatedKey,
+        secret_key_r: &Self::PrivateKey,
         info: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
         if info.len() > 64 {
@@ -295,11 +295,11 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn setup_psk_sender(
-        pubkey_r: &Self::Pk,
+        pubkey_r: &Self::PublicKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-    ) -> Result<(Self, Self::Ek), UnknownCryptoError> {
+    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
         if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
             return Err(UnknownCryptoError);
         }
@@ -312,8 +312,8 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn setup_psk_receiver(
-        enc: &Self::Ek,
-        secret_key_r: &Self::Sk,
+        enc: &Self::EncapsulatedKey,
+        secret_key_r: &Self::PrivateKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
@@ -328,10 +328,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn setup_auth_sender(
-        pubkey_r: &Self::Pk,
+        pubkey_r: &Self::PublicKey,
         info: &[u8],
-        secrety_key_s: &Self::Sk,
-    ) -> Result<(Self, Self::Ek), UnknownCryptoError> {
+        secrety_key_s: &Self::PrivateKey,
+    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
         if info.len() > 64 {
             return Err(UnknownCryptoError);
         }
@@ -345,10 +345,10 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn setup_auth_receiver(
-        enc: &Self::Ek,
-        secret_key_r: &Self::Sk,
+        enc: &Self::EncapsulatedKey,
+        secret_key_r: &Self::PrivateKey,
         info: &[u8],
-        pubkey_s: &Self::Pk,
+        pubkey_s: &Self::PublicKey,
     ) -> Result<Self, UnknownCryptoError> {
         if info.len() > 64 {
             return Err(UnknownCryptoError);
@@ -362,12 +362,12 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn setup_authpsk_sender(
-        pubkey_r: &Self::Pk,
+        pubkey_r: &Self::PublicKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secrety_key_s: &Self::Sk,
-    ) -> Result<(Self, Self::Ek), UnknownCryptoError> {
+        secrety_key_s: &Self::PrivateKey,
+    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
         if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
             return Err(UnknownCryptoError);
         }
@@ -387,12 +387,12 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn setup_authpsk_receiver(
-        enc: &Self::Ek,
-        secret_key_r: &Self::Sk,
+        enc: &Self::EncapsulatedKey,
+        secret_key_r: &Self::PrivateKey,
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        pubkey_s: &Self::Pk,
+        pubkey_s: &Self::PublicKey,
     ) -> Result<Self, UnknownCryptoError> {
         if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
             return Err(UnknownCryptoError);
@@ -483,7 +483,6 @@ mod test {
         let mut ctx = DHKEM_X25519_SHA256_CHACHA20::setup_base_receiver(&enc, &sk, info).unwrap();
         ctx.ctr = u64::MAX - 1;
 
-        
         let ciphertext = dst_out;
         let mut dst_out = [0u8; b"msg".len()];
         assert!(ctx.open(&ciphertext, b"", &mut dst_out).is_ok());
@@ -492,8 +491,6 @@ mod test {
 
         assert_eq!(&dst_out, plaintext);
     }
-
-
 
     impl TestableHpke for ModeBase<DHKEM_X25519_SHA256_CHACHA20> {
         const HPKE_MODE: u8 = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID;
