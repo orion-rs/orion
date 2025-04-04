@@ -100,6 +100,7 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
     pub const AEAD_ID: [u8; 2] = 0x0003u16.to_be_bytes();
 
     const NN: usize = 12;
+    const NH: usize = 32;
 
     fn compute_nonce(&self) -> chacha20poly1305::Nonce {
         // "Implementations MAY use a sequence number that is shorter than the nonce length (padding on the left with zero),
@@ -125,6 +126,25 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
 
         if self.ctr as u128 >= ((1u128 << (8u128 * Self::NN as u128)) - 1) {
             unreachable!("Internal u64 counter should have overflowed before this counter has!");
+        }
+
+        Ok(())
+    }
+
+    /// Minimum length: <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
+    /// Maximum length: <https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2.1>
+    fn check_psk_length(psk: &[u8], psk_id: &[u8]) -> Result<(), UnknownCryptoError> {
+        if psk.len() < 32 {
+            return Err(UnknownCryptoError);
+        }
+        Self::check_input_max_lengths(psk)?;
+        Self::check_input_max_lengths(psk_id)
+    }
+
+    /// Maximum length: <https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2.1>
+    fn check_input_max_lengths(input: &[u8]) -> Result<(), UnknownCryptoError> {
+        if input.len() > 64 {
+            return Err(UnknownCryptoError);
         }
 
         Ok(())
@@ -300,9 +320,8 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         psk: &[u8],
         psk_id: &[u8],
     ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
-            return Err(UnknownCryptoError);
-        }
+        Self::check_psk_length(psk, psk_id)?;
+        Self::check_input_max_lengths(info)?;
 
         let pkr = pubkey_r;
         let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(&pkr)?;
@@ -318,9 +337,8 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         psk: &[u8],
         psk_id: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
-        if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
-            return Err(UnknownCryptoError);
-        }
+        Self::check_psk_length(psk, psk_id)?;
+        Self::check_input_max_lengths(info)?;
 
         let skr = secret_key_r;
         let ss = x25519_hkdf_sha256::DhKem::decap(&enc, &skr)?;
@@ -332,9 +350,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         info: &[u8],
         secrety_key_s: &Self::PrivateKey,
     ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        if info.len() > 64 {
-            return Err(UnknownCryptoError);
-        }
+        Self::check_input_max_lengths(info)?;
 
         let pkr = pubkey_r;
         let sks = secrety_key_s;
@@ -350,9 +366,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         info: &[u8],
         pubkey_s: &Self::PublicKey,
     ) -> Result<Self, UnknownCryptoError> {
-        if info.len() > 64 {
-            return Err(UnknownCryptoError);
-        }
+        Self::check_input_max_lengths(info)?;
 
         let pks = pubkey_s;
         let skr = secret_key_r;
@@ -368,9 +382,8 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         psk_id: &[u8],
         secrety_key_s: &Self::PrivateKey,
     ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
-            return Err(UnknownCryptoError);
-        }
+        Self::check_psk_length(psk, psk_id)?;
+        Self::check_input_max_lengths(info)?;
 
         let pkr = pubkey_r;
         let sks = secrety_key_s;
@@ -394,9 +407,8 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         psk_id: &[u8],
         pubkey_s: &Self::PublicKey,
     ) -> Result<Self, UnknownCryptoError> {
-        if info.len() > 64 || psk.len() > 64 || psk_id.len() > 64 {
-            return Err(UnknownCryptoError);
-        }
+        Self::check_psk_length(psk, psk_id)?;
+        Self::check_input_max_lengths(info)?;
 
         let pks = pubkey_s;
         let skr = secret_key_r;
@@ -447,11 +459,15 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         self.increment_seq()
     }
 
+    // CHECK: This interface takes as input a context string exporter_context and a desired length L in bytes, and produces a secret derived from the internal exporter secret using the corresponding KDF Expand function. For the KDFs defined in this specification, L has a maximum value of 255*Nh.
+    // max-lenght on out (L), https://www.rfc-editor.org/rfc/rfc9180.html#section-5.3
+
     fn export(&self, exporter_context: &[u8], out: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if exporter_context.len() > 64 {
+        if out.len() > 255 * Self::NH {
             return Err(UnknownCryptoError);
         }
 
+        Self::check_input_max_lengths(exporter_context)?;
         Self::labeled_expand(&self.exporter_secret, b"sec", exporter_context, out)
     }
 }
@@ -465,6 +481,164 @@ mod test {
         hazardous::hpke::*,
         test_framework::hpke_interface::{HpkeTester, TestableHpke},
     };
+
+    #[test]
+    fn test_error_on_lengths_base() {
+        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let (ctx, enc) = DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
+        // Info
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 65]).is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_receiver(&enc, &sk, &[0u8; 64]).is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_receiver(&enc, &sk, &[0u8; 65]).is_err());
+
+        // Export
+        let mut out = [0u8; 64];
+        let mut out_max = [0u8; (255 * DHKEM_X25519_SHA256_CHACHA20::NH) + 1];
+        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
+    }
+
+    #[test]
+    fn test_error_on_lengths_psk() {
+        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        // Info
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 65], &[0u8; 64], b"")
+                .is_err()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"")
+                .is_ok()
+        );
+
+        // PSK
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 65], b"")
+                .is_err()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 31], b"")
+                .is_err()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 32], b"")
+                .is_ok()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"")
+                .is_ok()
+        );
+        let (ctx, enc) =
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"")
+                .unwrap();
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
+            &enc, &sk, &[0u8; 64], &[0u8; 31], b""
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
+            &enc, &sk, &[0u8; 64], &[0u8; 65], b""
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
+            &enc, &sk, &[0u8; 64], &[0u8; 32], b""
+        )
+        .is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
+            &enc, &sk, &[0u8; 64], &[0u8; 64], b""
+        )
+        .is_ok());
+
+        // Export
+        let mut out = [0u8; 64];
+        let mut out_max = [0u8; (255 * DHKEM_X25519_SHA256_CHACHA20::NH) + 1];
+        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
+    }
+
+    #[test]
+    fn test_error_on_lengths_auth() {
+        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let (ctx, enc) =
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(&pk, &[0u8; 64], &sk).unwrap();
+        // Info
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(&pk, &[0u8; 64], &sk).is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(&pk, &[0u8; 65], &sk).is_err());
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_receiver(&enc, &sk, &[0u8; 64], &pk).is_ok()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_receiver(&enc, &sk, &[0u8; 65], &pk).is_err()
+        );
+
+        // Export
+        let mut out = [0u8; 64];
+        let mut out_max = [0u8; (255 * DHKEM_X25519_SHA256_CHACHA20::NH) + 1];
+        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
+    }
+
+    #[test]
+    fn test_error_on_lengths_authpsk() {
+        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        // Info
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
+            &pk, &[0u8; 65], &[0u8; 64], b"", &sk
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
+            &pk, &[0u8; 64], &[0u8; 64], b"", &sk
+        )
+        .is_ok());
+
+        // PSK
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
+            &pk, &[0u8; 64], &[0u8; 65], b"", &sk
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
+            &pk, &[0u8; 64], &[0u8; 31], b"", &sk
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
+            &pk, &[0u8; 64], &[0u8; 32], b"", &sk
+        )
+        .is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
+            &pk, &[0u8; 64], &[0u8; 64], b"", &sk
+        )
+        .is_ok());
+        let (ctx, enc) = DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
+            &pk, &[0u8; 64], &[0u8; 64], b"", &sk,
+        )
+        .unwrap();
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
+            &enc, &sk, &[0u8; 64], &[0u8; 31], b"", &pk
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
+            &enc, &sk, &[0u8; 64], &[0u8; 65], b"", &pk
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
+            &enc, &sk, &[0u8; 64], &[0u8; 32], b"", &pk
+        )
+        .is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
+            &enc, &sk, &[0u8; 64], &[0u8; 64], b"", &pk
+        )
+        .is_ok());
+
+        // Export
+        let mut out = [0u8; 64];
+        let mut out_max = [0u8; (255 * DHKEM_X25519_SHA256_CHACHA20::NH) + 1];
+        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
+    }
 
     #[test]
     fn test_error_if_internal_counter_overflows() {

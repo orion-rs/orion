@@ -103,7 +103,7 @@ pub(crate) mod private {
 }
 
 #[derive(Clone)]
-/// HPKE Base mode.
+/// HPKE Base mode. Encrypt data to a public key, without sender authentication.
 /// # Parameters:
 /// - TODO
 ///
@@ -243,7 +243,7 @@ impl<S: Suite + Base> ModeBase<S> {
 }
 
 #[derive(Clone)]
-/// HPKE Psk mode.
+/// HPKE Psk mode. Encrypt data to a public key, using a preshared-key providing sender authentication.
 pub struct ModePsk<S> {
     suite: S,
 }
@@ -341,7 +341,7 @@ impl<S: Suite + Psk> ModePsk<S> {
 }
 
 #[derive(Clone)]
-/// HPKE Auth mode.
+/// HPKE Auth mode. Encrypt data to a public key with sender authentication.
 pub struct ModeAuth<S> {
     suite: S,
 }
@@ -435,7 +435,7 @@ impl<S: Suite + Auth> ModeAuth<S> {
 }
 
 #[derive(Clone)]
-/// HPKE AuthPsk mode.
+/// HPKE AuthPsk mode. Encrypt data to a public key, with sender authentication and an additional preshared-key.
 pub struct ModeAuthPsk<S> {
     suite: S,
 }

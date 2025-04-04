@@ -25,6 +25,9 @@ pub(crate) mod private {
     use crate::hazardous::hpke::mode::private::HpkeMode;
     use crate::hazardous::hpke::private::{HpkeEncapKey, HpkePrivateKey, HpkePublicKey};
 
+    // TODO: Find a way to track a Suite instance direction: Sender, Recipient, as they are not allowed
+    // to be mixed.
+
     /// Common trait for HPKE suite.
     pub trait Suite {
         /// The private key used for this suite.

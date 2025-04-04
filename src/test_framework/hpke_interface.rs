@@ -120,7 +120,7 @@ impl<T: TestableHpke> HpkeTester<T> {
 
         let mut rng = SmallRng::seed_from_u64(u64::from_le_bytes(seedu64));
         let info = Self::random_vector(&mut rng, 0..64);
-        let psk = Self::random_vector(&mut rng, 0..64);
+        let psk = Self::random_vector(&mut rng, 32..64);
         let psk_id = Self::random_vector(&mut rng, 0..64);
 
         let kem_ikm_sender = Self::random_vector(&mut rng, 32..64);
@@ -246,7 +246,7 @@ impl<T: TestableHpke> HpkeTester<T> {
 
     fn test_oneshot_roundtrip(&mut self) {
         let valid_info = Self::random_vector(&mut self.rng, 1..64);
-        let valid_psk = Self::random_vector(&mut self.rng, 1..64);
+        let valid_psk = Self::random_vector(&mut self.rng, 32..64);
         let valid_psk_id = Self::random_vector(&mut self.rng, 1..64);
         let valid_kem_ikm_sender = Self::random_vector(&mut self.rng, 32..64);
         let valid_kem_ikm_receiver = Self::random_vector(&mut self.rng, 32..64);
@@ -334,7 +334,7 @@ impl<T: TestableHpke> HpkeTester<T> {
 
     fn test_modified_aead_tag(&mut self) {
         let valid_info = Self::random_vector(&mut self.rng, 1..64);
-        let valid_psk = Self::random_vector(&mut self.rng, 1..64);
+        let valid_psk = Self::random_vector(&mut self.rng, 32..64);
         let valid_psk_id = Self::random_vector(&mut self.rng, 1..64);
         let valid_kem_ikm_sender = Self::random_vector(&mut self.rng, 32..64);
         let valid_kem_ikm_receiver = Self::random_vector(&mut self.rng, 32..64);
@@ -375,7 +375,7 @@ impl<T: TestableHpke> HpkeTester<T> {
 
     fn test_modified_aead_aad(&mut self) {
         let valid_info = Self::random_vector(&mut self.rng, 1..64);
-        let valid_psk = Self::random_vector(&mut self.rng, 1..64);
+        let valid_psk = Self::random_vector(&mut self.rng, 32..64);
         let valid_psk_id = Self::random_vector(&mut self.rng, 1..64);
         let valid_kem_ikm_sender = Self::random_vector(&mut self.rng, 32..64);
         let valid_kem_ikm_receiver = Self::random_vector(&mut self.rng, 32..64);
@@ -545,7 +545,7 @@ impl<T: TestableHpke> HpkeTester<T> {
         }
 
         let valid_info = Self::random_vector(&mut self.rng, 1..64);
-        let valid_psk = Self::random_vector(&mut self.rng, 1..64);
+        let valid_psk = Self::random_vector(&mut self.rng, 32..64);
         let valid_psk_id = Self::random_vector(&mut self.rng, 1..64);
         let valid_kem_ikm_sender = Self::random_vector(&mut self.rng, 32..64);
         let valid_kem_ikm_receiver = Self::random_vector(&mut self.rng, 32..64);
@@ -591,7 +591,7 @@ impl<T: TestableHpke> HpkeTester<T> {
 
     fn test_export_context_inclusion(&mut self) {
         let valid_info = Self::random_vector(&mut self.rng, 1..64);
-        let valid_psk = Self::random_vector(&mut self.rng, 1..64);
+        let valid_psk = Self::random_vector(&mut self.rng, 32..64);
         let valid_psk_id = Self::random_vector(&mut self.rng, 1..64);
         let valid_kem_ikm_sender = Self::random_vector(&mut self.rng, 32..64);
         let valid_kem_ikm_receiver = Self::random_vector(&mut self.rng, 32..64);
@@ -635,7 +635,7 @@ impl<T: TestableHpke> HpkeTester<T> {
         }
 
         let valid_info = Self::random_vector(&mut self.rng, 1..64);
-        let valid_psk = Self::random_vector(&mut self.rng, 1..64);
+        let valid_psk = Self::random_vector(&mut self.rng, 32..64);
         let valid_psk_id = Self::random_vector(&mut self.rng, 1..64);
         let valid_kem_ikm_sender = Self::random_vector(&mut self.rng, 32..64);
         let valid_kem_ikm_receiver = Self::random_vector(&mut self.rng, 32..64);
