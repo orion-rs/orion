@@ -302,7 +302,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Ok((ctx, enc))
     }
 
-    fn setup_base_receiver(
+    fn setup_base_recipient(
         enc: &Self::EncapsulatedKey,
         secret_key_r: &Self::PrivateKey,
         info: &[u8],
@@ -333,7 +333,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Ok((ctx, enc))
     }
 
-    fn setup_psk_receiver(
+    fn setup_psk_recipient(
         enc: &Self::EncapsulatedKey,
         secret_key_r: &Self::PrivateKey,
         info: &[u8],
@@ -363,7 +363,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Ok((ctx, enc))
     }
 
-    fn setup_auth_receiver(
+    fn setup_auth_recipient(
         enc: &Self::EncapsulatedKey,
         secret_key_r: &Self::PrivateKey,
         info: &[u8],
@@ -402,7 +402,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Ok((ctx, enc))
     }
 
-    fn setup_authpsk_receiver(
+    fn setup_authpsk_recipient(
         enc: &Self::EncapsulatedKey,
         secret_key_r: &Self::PrivateKey,
         info: &[u8],
@@ -492,8 +492,8 @@ mod test {
         // Info
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).is_ok());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 65]).is_err());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_receiver(&enc, &sk, &[0u8; 64]).is_ok());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_receiver(&enc, &sk, &[0u8; 65]).is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, &sk, &[0u8; 64]).is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, &sk, &[0u8; 65]).is_err());
 
         // Export
         let mut out = [0u8; 64];
@@ -536,19 +536,19 @@ mod test {
         let (ctx, enc) =
             DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"psk_id")
                 .unwrap();
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_recipient(
             &enc, &sk, &[0u8; 64], &[0u8; 31], b"psk_id"
         )
         .is_err());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_recipient(
             &enc, &sk, &[0u8; 64], &[0u8; 65], b"psk_id"
         )
         .is_err());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_recipient(
             &enc, &sk, &[0u8; 64], &[0u8; 32], b"psk_id"
         )
         .is_ok());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_recipient(
             &enc, &sk, &[0u8; 64], &[0u8; 64], b"psk_id"
         )
         .is_ok());
@@ -570,10 +570,10 @@ mod test {
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(&pk, &[0u8; 64], &sk).is_ok());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(&pk, &[0u8; 65], &sk).is_err());
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_auth_receiver(&enc, &sk, &[0u8; 64], &pk).is_ok()
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_recipient(&enc, &sk, &[0u8; 64], &pk).is_ok()
         );
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_auth_receiver(&enc, &sk, &[0u8; 65], &pk).is_err()
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_recipient(&enc, &sk, &[0u8; 65], &pk).is_err()
         );
 
         // Export
@@ -618,19 +618,19 @@ mod test {
             &pk, &[0u8; 64], &[0u8; 64], b"psk_id", &sk,
         )
         .unwrap();
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_recipient(
             &enc, &sk, &[0u8; 64], &[0u8; 31], b"psk_id", &pk
         )
         .is_err());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_recipient(
             &enc, &sk, &[0u8; 64], &[0u8; 65], b"psk_id", &pk
         )
         .is_err());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_recipient(
             &enc, &sk, &[0u8; 64], &[0u8; 32], b"psk_id", &pk
         )
         .is_ok());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_recipient(
             &enc, &sk, &[0u8; 64], &[0u8; 64], b"psk_id", &pk
         )
         .is_ok());
@@ -657,7 +657,7 @@ mod test {
         // Overflow:
         assert!(ctx.seal(plaintext, b"", &mut dst_out).is_err());
 
-        let mut ctx = DHKEM_X25519_SHA256_CHACHA20::setup_base_receiver(&enc, &sk, info).unwrap();
+        let mut ctx = DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, &sk, info).unwrap();
         ctx.ctr = u64::MAX - 1;
 
         let ciphertext = dst_out;
@@ -699,7 +699,7 @@ mod test {
             Ok(ctx)
         }
 
-        fn setup_fresh_receiver(
+        fn setup_fresh_recipient(
             enc: &[u8],
             secret_key_r: &[u8],
             info: &[u8],
@@ -712,7 +712,7 @@ mod test {
         {
             let enc = PublicKey::from_slice(enc)?;
             let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
-            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(&enc, &secret_key_r, info)
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, &secret_key_r, info)
         }
 
         fn seal(
@@ -818,7 +818,7 @@ mod test {
             Ok(ctx)
         }
 
-        fn setup_fresh_receiver(
+        fn setup_fresh_recipient(
             enc: &[u8],
             secret_key_r: &[u8],
             info: &[u8],
@@ -831,7 +831,7 @@ mod test {
         {
             let enc = PublicKey::from_slice(enc)?;
             let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
-            ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+            ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
                 &enc,
                 &secret_key_r,
                 info,
@@ -951,7 +951,7 @@ mod test {
             Ok(ctx)
         }
 
-        fn setup_fresh_receiver(
+        fn setup_fresh_recipient(
             enc: &[u8],
             secret_key_r: &[u8],
             info: &[u8],
@@ -965,7 +965,7 @@ mod test {
             let enc = PublicKey::from_slice(enc)?;
             let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
             let pubkey_s = PublicKey::from_slice(pubkey_s)?;
-            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
                 &enc,
                 &secret_key_r,
                 info,
@@ -1086,7 +1086,7 @@ mod test {
             Ok(ctx)
         }
 
-        fn setup_fresh_receiver(
+        fn setup_fresh_recipient(
             enc: &[u8],
             secret_key_r: &[u8],
             info: &[u8],
@@ -1100,7 +1100,7 @@ mod test {
             let enc = PublicKey::from_slice(enc)?;
             let secret_key_r = PrivateKey::from_slice(secret_key_r)?;
             let pubkey_s = PublicKey::from_slice(pubkey_s)?;
-            ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+            ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
                 &enc,
                 &secret_key_r,
                 info,

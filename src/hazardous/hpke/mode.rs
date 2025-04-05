@@ -146,13 +146,13 @@ pub(crate) mod private {
 /// hpke_sender.seal(&[1u8; 16], b"aad parameter 1", &mut aead_ct_out1)?;
 /// hpke_sender.seal(&[2u8; 16], b"aad parameter 2", &mut aead_ct_out2)?;
 ///
-/// let mut hpke_receiver = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(&kem_ct, &recipient_secret, b"info parameter")?;
+/// let mut hpke_recipient = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&kem_ct, &recipient_secret, b"info parameter")?;
 /// let mut aead_pt_out0 = [0u8; 16];
 /// let mut aead_pt_out1 = [0u8; 16];
 /// let mut aead_pt_out2 = [0u8; 16];
-/// hpke_receiver.open(&aead_ct_out0, b"aad parameter 0", &mut aead_pt_out0)?;
-/// hpke_receiver.open(&aead_ct_out1, b"aad parameter 1", &mut aead_pt_out1)?;
-/// hpke_receiver.open(&aead_ct_out2, b"aad parameter 2", &mut aead_pt_out2)?;
+/// hpke_recipient.open(&aead_ct_out0, b"aad parameter 0", &mut aead_pt_out0)?;
+/// hpke_recipient.open(&aead_ct_out1, b"aad parameter 1", &mut aead_pt_out1)?;
+/// hpke_recipient.open(&aead_ct_out2, b"aad parameter 2", &mut aead_pt_out2)?;
 ///
 /// assert_eq!(&aead_pt_out0, &[0u8; 16]);
 /// assert_eq!(&aead_pt_out1, &[1u8; 16]);
@@ -189,14 +189,14 @@ impl<S: Suite + Base> ModeBase<S> {
         ))
     }
 
-    /// HPKE Base mode receiver.
-    pub fn new_receiver(
+    /// HPKE Base mode recipient.
+    pub fn new_recipient(
         enc: &S::EncapsulatedKey,
         secret_key_r: &S::PrivateKey,
         info: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_base_receiver(enc, secret_key_r, info)?,
+            suite: S::setup_base_recipient(enc, secret_key_r, info)?,
             role: Role::Recipient,
         })
     }
@@ -252,7 +252,7 @@ impl<S: Suite + Base> ModeBase<S> {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        let mut ctx = Self::new_receiver(enc, secret_key_r, info)?;
+        let mut ctx = Self::new_recipient(enc, secret_key_r, info)?;
         ctx.open(ciphertext, aad, out)
     }
 
@@ -330,8 +330,8 @@ impl<S: Suite + Psk> ModePsk<S> {
         ))
     }
 
-    /// HPKE Psk mode receiver.
-    pub fn new_receiver(
+    /// HPKE Psk mode recipient.
+    pub fn new_recipient(
         enc: &S::EncapsulatedKey,
         secret_key_r: &S::PrivateKey,
         info: &[u8],
@@ -339,7 +339,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         psk_id: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_psk_receiver(enc, secret_key_r, info, psk, psk_id)?,
+            suite: S::setup_psk_recipient(enc, secret_key_r, info, psk, psk_id)?,
             role: Role::Recipient,
         })
     }
@@ -399,7 +399,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        let mut ctx = Self::new_receiver(enc, secret_key_r, info, psk, psk_id)?;
+        let mut ctx = Self::new_recipient(enc, secret_key_r, info, psk, psk_id)?;
         ctx.open(ciphertext, aad, out)
     }
 
@@ -473,15 +473,15 @@ impl<S: Suite + Auth> ModeAuth<S> {
         ))
     }
 
-    /// HPKE Auth mode receiver.
-    pub fn new_receiver(
+    /// HPKE Auth mode recipient.
+    pub fn new_recipient(
         enc: &S::EncapsulatedKey,
         secret_key_r: &S::PrivateKey,
         info: &[u8],
         pubkey_s: &S::PublicKey,
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_auth_receiver(enc, secret_key_r, info, pubkey_s)?,
+            suite: S::setup_auth_recipient(enc, secret_key_r, info, pubkey_s)?,
             role: Role::Recipient,
         })
     }
@@ -539,7 +539,7 @@ impl<S: Suite + Auth> ModeAuth<S> {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        let mut ctx = Self::new_receiver(enc, secret_key_r, info, pubkey_s)?;
+        let mut ctx = Self::new_recipient(enc, secret_key_r, info, pubkey_s)?;
         ctx.open(ciphertext, aad, out)
     }
 
@@ -618,8 +618,8 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         ))
     }
 
-    /// HPKE AuthPsk mode receiver.
-    pub fn new_receiver(
+    /// HPKE AuthPsk mode recipient.
+    pub fn new_recipient(
         enc: &S::EncapsulatedKey,
         secret_key_r: &S::PrivateKey,
         info: &[u8],
@@ -628,7 +628,7 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         pubkey_s: &S::PublicKey,
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            suite: S::setup_authpsk_receiver(enc, secret_key_r, info, psk, psk_id, pubkey_s)?,
+            suite: S::setup_authpsk_recipient(enc, secret_key_r, info, psk, psk_id, pubkey_s)?,
             role: Role::Recipient,
         })
     }
@@ -690,7 +690,7 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        let mut ctx = Self::new_receiver(enc, secret_key_r, info, psk, psk_id, pubkey_s)?;
+        let mut ctx = Self::new_recipient(enc, secret_key_r, info, psk, psk_id, pubkey_s)?;
         ctx.open(ciphertext, aad, out)
     }
 
@@ -721,7 +721,7 @@ mod test {
         let (mut ctx_s, enc) =
             ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&pk_r, &[0u8; 64]).unwrap();
         let mut ctx_r =
-            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(&enc, &sk_r, &[0u8; 64])
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, &sk_r, &[0u8; 64])
                 .unwrap();
 
         assert!(ctx_r.seal(&pt, b"", &mut out_ct).is_err());
@@ -741,7 +741,7 @@ mod test {
             &pk_r, &[0u8; 64], &[1u8; 32], b"psk_id",
         )
         .unwrap();
-        let mut ctx_r = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+        let mut ctx_r = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
             &enc, &sk_r, &[0u8; 64], &[1u8; 32], b"psk_id",
         )
         .unwrap();
@@ -762,7 +762,7 @@ mod test {
         let (mut ctx_s, enc) =
             ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&pk_r, &[0u8; 64], &sk_s).unwrap();
         let mut ctx_r =
-            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(&enc, &sk_r, &[0u8; 64], &pk_s)
+            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, &sk_r, &[0u8; 64], &pk_s)
                 .unwrap();
 
         assert!(ctx_r.seal(&pt, b"", &mut out_ct).is_err());
@@ -777,11 +777,12 @@ mod test {
         ctx_r.export_secret(b"some context", &mut export_r).unwrap();
         assert_eq!(export_s, export_r);
 
+        // ModeAuthPsk
         let (mut ctx_s, enc) = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
             &pk_r, &[0u8; 64], &[1u8; 32], b"psk_id", &sk_s,
         )
         .unwrap();
-        let mut ctx_r = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+        let mut ctx_r = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
             &enc, &sk_r, &[0u8; 64], &[1u8; 32], b"psk_id", &pk_s,
         )
         .unwrap();

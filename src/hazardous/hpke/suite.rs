@@ -25,9 +25,6 @@ pub(crate) mod private {
     use crate::hazardous::hpke::mode::private::HpkeMode;
     use crate::hazardous::hpke::private::{HpkeEncapKey, HpkePrivateKey, HpkePublicKey};
 
-    // TODO: Find a way to track a Suite instance direction: Sender, Recipient, as they are not allowed
-    // to be mixed.
-
     /// Common trait for HPKE suite.
     pub trait Suite {
         /// The private key used for this suite.
@@ -73,7 +70,7 @@ pub(crate) mod private {
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
-        fn setup_base_receiver(
+        fn setup_base_recipient(
             enc: &Self::EncapsulatedKey,
             secret_key_r: &Self::PrivateKey,
             info: &[u8],
@@ -92,7 +89,7 @@ pub(crate) mod private {
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
-        fn setup_psk_receiver(
+        fn setup_psk_recipient(
             enc: &Self::EncapsulatedKey,
             secret_key_r: &Self::PrivateKey,
             info: &[u8],
@@ -112,7 +109,7 @@ pub(crate) mod private {
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
-        fn setup_auth_receiver(
+        fn setup_auth_recipient(
             enc: &Self::EncapsulatedKey,
             secret_key_r: &Self::PrivateKey,
             info: &[u8],
@@ -133,7 +130,7 @@ pub(crate) mod private {
             Self: Sized;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
-        fn setup_authpsk_receiver(
+        fn setup_authpsk_recipient(
             enc: &Self::EncapsulatedKey,
             secret_key_r: &Self::PrivateKey,
             info: &[u8],

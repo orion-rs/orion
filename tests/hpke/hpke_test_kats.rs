@@ -79,7 +79,7 @@ fn hpke_runner(path: &str) {
 
         match test.mode as u8 {
             ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
-                let mut hpke_ctx = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+                let mut hpke_ctx = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
                     &kem_ciphertext,
                     &secret_recip,
                     &info,
@@ -112,7 +112,7 @@ fn hpke_runner(path: &str) {
                 let psk = hex::decode(test.psk.unwrap()).unwrap();
                 let psk_id = hex::decode(test.psk_id.unwrap()).unwrap();
 
-                let mut hpke_ctx = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+                let mut hpke_ctx = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
                     &kem_ciphertext,
                     &secret_recip,
                     &info,
@@ -145,7 +145,7 @@ fn hpke_runner(path: &str) {
                 let public_sender =
                     PublicKey::from_slice(&decode(&test.pkSm.unwrap()).unwrap()).unwrap();
 
-                let mut hpke_ctx = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+                let mut hpke_ctx = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
                     &kem_ciphertext,
                     &secret_recip,
                     &info,
@@ -182,7 +182,7 @@ fn hpke_runner(path: &str) {
                 let psk = hex::decode(test.psk.unwrap()).unwrap();
                 let psk_id = hex::decode(test.psk_id.unwrap()).unwrap();
 
-                let mut hpke_ctx = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+                let mut hpke_ctx = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
                     &kem_ciphertext,
                     &secret_recip,
                     &info,
