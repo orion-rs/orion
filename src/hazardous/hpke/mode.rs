@@ -22,6 +22,7 @@
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hpke::suite::private::*;
+use crate::hazardous::hpke::Role;
 use private::*;
 
 pub(crate) mod private {
@@ -114,6 +115,8 @@ pub(crate) mod private {
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
 /// - `exporter_context` is longer than 64 bytes
 /// - The internal counter reaches `u64::MAX` and a call to `seal()`/`open()` is made
+/// - Calling `seal()` when the role is `Role::Recipient`
+/// - Calling `open()` when the role is `Role::Sender`
 /// - TODO: Do we want to restrict `ikm` for `derive_keypair` to 64 bytes as recommended but make this a breaking change? Or just save it for an upcoming breaking release?
 ///
 /// # Panics:
@@ -161,6 +164,7 @@ pub(crate) mod private {
 /// ```
 pub struct ModeBase<S> {
     suite: S,
+    role: Role,
 }
 
 impl<S> ModeBase<S> {
@@ -176,7 +180,13 @@ impl<S: Suite + Base> ModeBase<S> {
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_base_sender(pubkey_r, info)?;
 
-        Ok(((Self { suite }), ek))
+        Ok((
+            (Self {
+                suite,
+                role: Role::Sender,
+            }),
+            ek,
+        ))
     }
 
     /// HPKE Base mode receiver.
@@ -187,6 +197,7 @@ impl<S: Suite + Base> ModeBase<S> {
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
             suite: S::setup_base_receiver(enc, secret_key_r, info)?,
+            role: Role::Recipient,
         })
     }
 
@@ -197,16 +208,24 @@ impl<S: Suite + Base> ModeBase<S> {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        if self.role != Role::Sender {
+            return Err(UnknownCryptoError);
+        }
+
         self.suite.seal(plaintext, aad, out)
     }
 
-    /// Context-aware sealing operations.
+    /// Context-aware opening operations.
     pub fn open(
         &mut self,
         ciphertext: &[u8],
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        if self.role != Role::Recipient {
+            return Err(UnknownCryptoError);
+        }
+
         self.suite.open(ciphertext, aad, out)
     }
 
@@ -259,6 +278,8 @@ impl<S: Suite + Base> ModeBase<S> {
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
 /// - `exporter_context` is longer than 64 bytes
 /// - The internal counter reaches `u64::MAX` and a call to `seal()`/`open()` is made
+/// - Calling `seal()` when the role is `Role::Recipient`
+/// - Calling `open()` when the role is `Role::Sender`
 /// - `psk` or `psk_id` are empty
 /// - `psk` is less than 32 bytes or more than 64 bytes
 /// - `psk_id` is more than 64 bytes
@@ -282,6 +303,7 @@ impl<S: Suite + Base> ModeBase<S> {
 /// ```
 pub struct ModePsk<S> {
     suite: S,
+    role: Role,
 }
 
 impl<S> ModePsk<S> {
@@ -299,7 +321,13 @@ impl<S: Suite + Psk> ModePsk<S> {
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_psk_sender(pubkey_r, info, psk, psk_id)?;
 
-        Ok(((Self { suite }), ek))
+        Ok((
+            (Self {
+                suite,
+                role: Role::Sender,
+            }),
+            ek,
+        ))
     }
 
     /// HPKE Psk mode receiver.
@@ -312,6 +340,7 @@ impl<S: Suite + Psk> ModePsk<S> {
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
             suite: S::setup_psk_receiver(enc, secret_key_r, info, psk, psk_id)?,
+            role: Role::Recipient,
         })
     }
 
@@ -322,16 +351,24 @@ impl<S: Suite + Psk> ModePsk<S> {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        if self.role != Role::Sender {
+            return Err(UnknownCryptoError);
+        }
+
         self.suite.seal(plaintext, aad, out)
     }
 
-    /// Context-aware sealing operations.
+    /// Context-aware opening operations.
     pub fn open(
         &mut self,
         ciphertext: &[u8],
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        if self.role != Role::Recipient {
+            return Err(UnknownCryptoError);
+        }
+
         self.suite.open(ciphertext, aad, out)
     }
 
@@ -388,6 +425,8 @@ impl<S: Suite + Psk> ModePsk<S> {
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
 /// - `exporter_context` is longer than 64 bytes
 /// - The internal counter reaches `u64::MAX` and a call to `seal()`/`open()` is made
+/// - Calling `seal()` when the role is `Role::Recipient`
+/// - Calling `open()` when the role is `Role::Sender`
 /// - TODO: Do we want to restrict `ikm` for `derive_keypair` to 64 bytes as recommended but make this a breaking change? Or just save it for an upcoming breaking release?
 ///
 /// # Panics:
@@ -408,6 +447,7 @@ impl<S: Suite + Psk> ModePsk<S> {
 /// ```
 pub struct ModeAuth<S> {
     suite: S,
+    role: Role,
 }
 
 impl<S> ModeAuth<S> {
@@ -424,7 +464,13 @@ impl<S: Suite + Auth> ModeAuth<S> {
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_auth_sender(pubkey_r, info, secret_key_s)?;
 
-        Ok(((Self { suite }), ek))
+        Ok((
+            (Self {
+                suite,
+                role: Role::Sender,
+            }),
+            ek,
+        ))
     }
 
     /// HPKE Auth mode receiver.
@@ -436,6 +482,7 @@ impl<S: Suite + Auth> ModeAuth<S> {
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
             suite: S::setup_auth_receiver(enc, secret_key_r, info, pubkey_s)?,
+            role: Role::Recipient,
         })
     }
 
@@ -446,16 +493,24 @@ impl<S: Suite + Auth> ModeAuth<S> {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        if self.role != Role::Sender {
+            return Err(UnknownCryptoError);
+        }
+
         self.suite.seal(plaintext, aad, out)
     }
 
-    /// Context-aware sealing operations.
+    /// Context-aware opening operations.
     pub fn open(
         &mut self,
         ciphertext: &[u8],
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        if self.role != Role::Recipient {
+            return Err(UnknownCryptoError);
+        }
+
         self.suite.open(ciphertext, aad, out)
     }
 
@@ -509,7 +564,9 @@ impl<S: Suite + Auth> ModeAuth<S> {
 /// - `info` is longer than 64 bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
 /// - `exporter_context` is longer than 64 bytes
-//// - The internal counter reaches `u64::MAX` and a call to `seal()`/`open()` is made
+/// - The internal counter reaches `u64::MAX` and a call to `seal()`/`open()` is made
+/// - Calling `seal()` when the role is `Role::Recipient`
+/// - Calling `open()` when the role is `Role::Sender`
 /// - `psk` or `psk_id` are empty
 /// - `psk` is less than 32 bytes or more than 64 bytes
 /// - `psk_id` is more than 64 bytes
@@ -533,6 +590,7 @@ impl<S: Suite + Auth> ModeAuth<S> {
 /// ```
 pub struct ModeAuthPsk<S> {
     suite: S,
+    role: Role,
 }
 
 impl<S> ModeAuthPsk<S> {
@@ -551,7 +609,13 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_authpsk_sender(pubkey_r, info, psk, psk_id, secret_key_s)?;
 
-        Ok(((Self { suite }), ek))
+        Ok((
+            (Self {
+                suite,
+                role: Role::Sender,
+            }),
+            ek,
+        ))
     }
 
     /// HPKE AuthPsk mode receiver.
@@ -565,6 +629,7 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
     ) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
             suite: S::setup_authpsk_receiver(enc, secret_key_r, info, psk, psk_id, pubkey_s)?,
+            role: Role::Recipient,
         })
     }
 
@@ -575,16 +640,24 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        if self.role != Role::Sender {
+            return Err(UnknownCryptoError);
+        }
+
         self.suite.seal(plaintext, aad, out)
     }
 
-    /// Context-aware sealing operations.
+    /// Context-aware opening operations.
     pub fn open(
         &mut self,
         ciphertext: &[u8],
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        if self.role != Role::Recipient {
+            return Err(UnknownCryptoError);
+        }
+
         self.suite.open(ciphertext, aad, out)
     }
 
@@ -628,5 +701,101 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         self.suite.export(exporter_context, out)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::hazardous::{hpke::DHKEM_X25519_SHA256_CHACHA20, kem::x25519_hkdf_sha256::DhKem};
+
+    #[test]
+    fn test_error_on_mismatched_role() {
+        let (sk_s, pk_s) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let (sk_r, pk_r) = DhKem::derive_keypair(&[255u8; 64]).unwrap();
+
+        let mut pt = [1u8; 32];
+        let mut out_ct = [0u8; 32 + 16];
+
+        // ModeBase
+        let (mut ctx_s, enc) =
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&pk_r, &[0u8; 64]).unwrap();
+        let mut ctx_r =
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(&enc, &sk_r, &[0u8; 64])
+                .unwrap();
+
+        assert!(ctx_r.seal(&pt, b"", &mut out_ct).is_err());
+        ctx_s.seal(&pt, b"", &mut out_ct).unwrap();
+        assert!(ctx_s.open(&out_ct, b"", &mut pt).is_err());
+        ctx_r.open(&out_ct, b"", &mut pt).unwrap();
+        assert_eq!(&pt, &[1u8; 32]);
+        // Both can export and they should match
+        let mut export_s = [0u8; 64];
+        let mut export_r = [0u8; 64];
+        ctx_s.export_secret(b"some context", &mut export_s).unwrap();
+        ctx_r.export_secret(b"some context", &mut export_r).unwrap();
+        assert_eq!(export_s, export_r);
+
+        // ModePsk
+        let (mut ctx_s, enc) = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
+            &pk_r, &[0u8; 64], &[1u8; 32], b"psk_id",
+        )
+        .unwrap();
+        let mut ctx_r = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+            &enc, &sk_r, &[0u8; 64], &[1u8; 32], b"psk_id",
+        )
+        .unwrap();
+
+        assert!(ctx_r.seal(&pt, b"", &mut out_ct).is_err());
+        ctx_s.seal(&pt, b"", &mut out_ct).unwrap();
+        assert!(ctx_s.open(&out_ct, b"", &mut pt).is_err());
+        ctx_r.open(&out_ct, b"", &mut pt).unwrap();
+        assert_eq!(&pt, &[1u8; 32]);
+        // Both can export and they should match
+        let mut export_s = [0u8; 64];
+        let mut export_r = [0u8; 64];
+        ctx_s.export_secret(b"some context", &mut export_s).unwrap();
+        ctx_r.export_secret(b"some context", &mut export_r).unwrap();
+        assert_eq!(export_s, export_r);
+
+        // ModeAuth
+        let (mut ctx_s, enc) =
+            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&pk_r, &[0u8; 64], &sk_s).unwrap();
+        let mut ctx_r =
+            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(&enc, &sk_r, &[0u8; 64], &pk_s)
+                .unwrap();
+
+        assert!(ctx_r.seal(&pt, b"", &mut out_ct).is_err());
+        ctx_s.seal(&pt, b"", &mut out_ct).unwrap();
+        assert!(ctx_s.open(&out_ct, b"", &mut pt).is_err());
+        ctx_r.open(&out_ct, b"", &mut pt).unwrap();
+        assert_eq!(&pt, &[1u8; 32]);
+        // Both can export and they should match
+        let mut export_s = [0u8; 64];
+        let mut export_r = [0u8; 64];
+        ctx_s.export_secret(b"some context", &mut export_s).unwrap();
+        ctx_r.export_secret(b"some context", &mut export_r).unwrap();
+        assert_eq!(export_s, export_r);
+
+        let (mut ctx_s, enc) = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
+            &pk_r, &[0u8; 64], &[1u8; 32], b"psk_id", &sk_s,
+        )
+        .unwrap();
+        let mut ctx_r = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_receiver(
+            &enc, &sk_r, &[0u8; 64], &[1u8; 32], b"psk_id", &pk_s,
+        )
+        .unwrap();
+
+        assert!(ctx_r.seal(&pt, b"", &mut out_ct).is_err());
+        ctx_s.seal(&pt, b"", &mut out_ct).unwrap();
+        assert!(ctx_s.open(&out_ct, b"", &mut pt).is_err());
+        ctx_r.open(&out_ct, b"", &mut pt).unwrap();
+        assert_eq!(&pt, &[1u8; 32]);
+        // Both can export and they should match
+        let mut export_s = [0u8; 64];
+        let mut export_r = [0u8; 64];
+        ctx_s.export_secret(b"some context", &mut export_s).unwrap();
+        ctx_r.export_secret(b"some context", &mut export_r).unwrap();
+        assert_eq!(export_s, export_r);
     }
 }

@@ -244,6 +244,8 @@ impl<T: TestableHpke> HpkeTester<T> {
         assert_eq!(out_ct2, plaintexts[2]);
     }
 
+    // TODO: Test one-shot is equivalent to new() -> seal()/open
+
     fn test_oneshot_roundtrip(&mut self) {
         let valid_info = Self::random_vector(&mut self.rng, 1..64);
         let valid_psk = Self::random_vector(&mut self.rng, 32..64);
