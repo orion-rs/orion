@@ -29,7 +29,7 @@ use crate::hazardous::kdf::hkdf;
 use crate::hazardous::kem::x25519_hkdf_sha256;
 use zeroize::Zeroizing;
 
-#[derive(Clone)]
+#[cfg_attr(test, derive(Clone))]
 /// HPKE suite: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256 and ChaCha20Poly1305.
 pub struct DHKEM_X25519_SHA256_CHACHA20 {
     key: [u8; 32],
@@ -98,6 +98,9 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
 
     /// AEAD ID for this HPKE scheme's AEAD (in LE bytes).
     pub const AEAD_ID: [u8; 2] = 0x0003u16.to_be_bytes();
+
+    /// The maximum length of `export` secret that may be requested.
+    pub const EXPORT_SECRET_MAXLEN: usize = (255 * DHKEM_X25519_SHA256_CHACHA20::NH);
 
     const NN: usize = 12;
     const NH: usize = 32;
@@ -504,49 +507,49 @@ mod test {
     fn test_error_on_lengths_psk() {
         let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
         // Info
-        assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 65], &[0u8; 64], b"")
-                .is_err()
-        );
-        assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"")
-                .is_ok()
-        );
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+            &pk, &[0u8; 65], &[0u8; 64], b"psk_id"
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+            &pk, &[0u8; 64], &[0u8; 64], b"psk_id"
+        )
+        .is_ok());
 
         // PSK
-        assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 65], b"")
-                .is_err()
-        );
-        assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 31], b"")
-                .is_err()
-        );
-        assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 32], b"")
-                .is_ok()
-        );
-        assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"")
-                .is_ok()
-        );
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+            &pk, &[0u8; 64], &[0u8; 65], b"psk_id"
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+            &pk, &[0u8; 64], &[0u8; 31], b"psk_id"
+        )
+        .is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+            &pk, &[0u8; 64], &[0u8; 32], b"psk_id"
+        )
+        .is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+            &pk, &[0u8; 64], &[0u8; 64], b"psk_id"
+        )
+        .is_ok());
         let (ctx, enc) =
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"")
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"psk_id")
                 .unwrap();
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
-            &enc, &sk, &[0u8; 64], &[0u8; 31], b""
+            &enc, &sk, &[0u8; 64], &[0u8; 31], b"psk_id"
         )
         .is_err());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
-            &enc, &sk, &[0u8; 64], &[0u8; 65], b""
+            &enc, &sk, &[0u8; 64], &[0u8; 65], b"psk_id"
         )
         .is_err());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
-            &enc, &sk, &[0u8; 64], &[0u8; 32], b""
+            &enc, &sk, &[0u8; 64], &[0u8; 32], b"psk_id"
         )
         .is_ok());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_psk_receiver(
-            &enc, &sk, &[0u8; 64], &[0u8; 64], b""
+            &enc, &sk, &[0u8; 64], &[0u8; 64], b"psk_id"
         )
         .is_ok());
 
@@ -586,49 +589,49 @@ mod test {
         let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
         // Info
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-            &pk, &[0u8; 65], &[0u8; 64], b"", &sk
+            &pk, &[0u8; 65], &[0u8; 64], b"psk_id", &sk
         )
         .is_err());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-            &pk, &[0u8; 64], &[0u8; 64], b"", &sk
+            &pk, &[0u8; 64], &[0u8; 64], b"psk_id", &sk
         )
         .is_ok());
 
         // PSK
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-            &pk, &[0u8; 64], &[0u8; 65], b"", &sk
+            &pk, &[0u8; 64], &[0u8; 65], b"psk_id", &sk
         )
         .is_err());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-            &pk, &[0u8; 64], &[0u8; 31], b"", &sk
+            &pk, &[0u8; 64], &[0u8; 31], b"psk_id", &sk
         )
         .is_err());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-            &pk, &[0u8; 64], &[0u8; 32], b"", &sk
+            &pk, &[0u8; 64], &[0u8; 32], b"psk_id", &sk
         )
         .is_ok());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-            &pk, &[0u8; 64], &[0u8; 64], b"", &sk
+            &pk, &[0u8; 64], &[0u8; 64], b"psk_id", &sk
         )
         .is_ok());
         let (ctx, enc) = DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-            &pk, &[0u8; 64], &[0u8; 64], b"", &sk,
+            &pk, &[0u8; 64], &[0u8; 64], b"psk_id", &sk,
         )
         .unwrap();
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
-            &enc, &sk, &[0u8; 64], &[0u8; 31], b"", &pk
+            &enc, &sk, &[0u8; 64], &[0u8; 31], b"psk_id", &pk
         )
         .is_err());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
-            &enc, &sk, &[0u8; 64], &[0u8; 65], b"", &pk
+            &enc, &sk, &[0u8; 64], &[0u8; 65], b"psk_id", &pk
         )
         .is_err());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
-            &enc, &sk, &[0u8; 64], &[0u8; 32], b"", &pk
+            &enc, &sk, &[0u8; 64], &[0u8; 32], b"psk_id", &pk
         )
         .is_ok());
         assert!(DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_receiver(
-            &enc, &sk, &[0u8; 64], &[0u8; 64], b"", &pk
+            &enc, &sk, &[0u8; 64], &[0u8; 64], b"psk_id", &pk
         )
         .is_ok());
 

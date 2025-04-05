@@ -102,14 +102,18 @@ pub(crate) mod private {
     }
 }
 
-#[derive(Clone)]
+#[cfg_attr(test, derive(Clone))]
+#[derive(Debug, PartialEq)]
 /// HPKE Base mode. Encrypt data to a public key, without sender authentication.
 /// # Parameters:
 /// - TODO
 ///
 /// # Errors:
 /// An error will be returned if:
-/// - TODo
+/// - `info` is longer than 64 bytes
+/// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
+/// - `exporter_context` is longer than 64 bytes
+/// - TODO: Do we want to restrict `ikm` for `derive_keypair` to 64 bytes as recommended but make this a breaking change? Or just save it for an upcoming breaking release?
 ///
 /// # Panics:
 /// A panic will occur if:
@@ -242,8 +246,38 @@ impl<S: Suite + Base> ModeBase<S> {
     }
 }
 
-#[derive(Clone)]
+#[cfg_attr(test, derive(Clone))]
+#[derive(Debug, PartialEq)]
 /// HPKE Psk mode. Encrypt data to a public key, using a preshared-key providing sender authentication.
+/// # Parameters:
+/// - TODO
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `info` is longer than 64 bytes
+/// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
+/// - `exporter_context` is longer than 64 bytes
+/// - `psk` or `psk_id` are empty
+/// - `psk` is less than 32 bytes or more than 64 bytes
+/// - `psk_id` is more than 64 bytes
+/// - TODO: Do we want to restrict `ikm` for `derive_keypair` to 64 bytes as recommended but make this a breaking change? Or just save it for an upcoming breaking release?
+///
+/// # Panics:
+/// A panic will occur if:
+/// - TODO
+///
+/// # Security:
+/// - TODO
+///
+/// # Example:
+/// ```rust
+/// # #[cfg(feature = "safe_api")] {
+///
+///
+/// // One-shot API TODO
+/// # }
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
+/// ```
 pub struct ModePsk<S> {
     suite: S,
 }
@@ -340,8 +374,35 @@ impl<S: Suite + Psk> ModePsk<S> {
     }
 }
 
-#[derive(Clone)]
+#[cfg_attr(test, derive(Clone))]
+#[derive(Debug, PartialEq)]
 /// HPKE Auth mode. Encrypt data to a public key with sender authentication.
+/// # Parameters:
+/// - TODO
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `info` is longer than 64 bytes
+/// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
+/// - `exporter_context` is longer than 64 bytes
+/// - TODO: Do we want to restrict `ikm` for `derive_keypair` to 64 bytes as recommended but make this a breaking change? Or just save it for an upcoming breaking release?
+///
+/// # Panics:
+/// A panic will occur if:
+/// - TODO
+///
+/// # Security:
+/// - TODO
+///
+/// # Example:
+/// ```rust
+/// # #[cfg(feature = "safe_api")] {
+///
+///
+/// // One-shot API TODO
+/// # }
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
+/// ```
 pub struct ModeAuth<S> {
     suite: S,
 }
@@ -434,8 +495,38 @@ impl<S: Suite + Auth> ModeAuth<S> {
     }
 }
 
-#[derive(Clone)]
+#[cfg_attr(test, derive(Clone))]
+#[derive(Debug, PartialEq)]
 /// HPKE AuthPsk mode. Encrypt data to a public key, with sender authentication and an additional preshared-key.
+/// # Parameters:
+/// - TODO
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `info` is longer than 64 bytes
+/// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
+/// - `exporter_context` is longer than 64 bytes
+/// - `psk` or `psk_id` are empty
+/// - `psk` is less than 32 bytes or more than 64 bytes
+/// - `psk_id` is more than 64 bytes
+/// - TODO: Do we want to restrict `ikm` for `derive_keypair` to 64 bytes as recommended but make this a breaking change? Or just save it for an upcoming breaking release?
+///
+/// # Panics:
+/// A panic will occur if:
+/// - TODO
+///
+/// # Security:
+/// - TODO
+///
+/// # Example:
+/// ```rust
+/// # #[cfg(feature = "safe_api")] {
+///
+///
+/// // One-shot API TODO
+/// # }
+/// # Ok::<(), orion::errors::UnknownCryptoError>(())
+/// ```
 pub struct ModeAuthPsk<S> {
     suite: S,
 }
