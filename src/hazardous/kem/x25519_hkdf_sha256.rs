@@ -261,6 +261,13 @@ mod public {
     use crate::hazardous::kem::x25519_hkdf_sha256::*;
 
     #[test]
+    fn error_on_short_ikm() {
+        assert!(DhKem::derive_keypair(&[0u8; 31]).is_err());
+        assert!(DhKem::derive_keypair(&[0u8; 32]).is_ok());
+        assert!(DhKem::derive_keypair(&[0u8; 65]).is_ok());
+    }
+
+    #[test]
     fn encap_decap_roundtrip() {
         let recipient_secret = PrivateKey::generate();
         let recipient_public = PublicKey::try_from(&recipient_secret).unwrap();
