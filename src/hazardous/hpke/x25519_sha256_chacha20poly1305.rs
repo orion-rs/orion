@@ -160,9 +160,6 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     type PublicKey = x25519_hkdf_sha256::PublicKey;
     type EncapsulatedKey = x25519_hkdf_sha256::PublicKey;
 
-    // TODO: Use the extract/expand_with_parts in the DH-KEM module as well to make it
-    // no_std compatible.
-
     #[cfg(test)]
     fn testing_base_nonce(&self) -> &[u8] {
         &self.base_nonce

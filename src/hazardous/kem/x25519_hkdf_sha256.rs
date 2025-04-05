@@ -70,8 +70,8 @@
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
-use crate::hazardous::kdf::hkdf::sha256;
-use zeroize::Zeroize;
+use crate::hazardous::kdf::hkdf;
+use zeroize::Zeroizing;
 
 pub use crate::hazardous::ecc::x25519::PrivateKey;
 pub use crate::hazardous::ecc::x25519::PublicKey;
@@ -105,42 +105,53 @@ impl DhKem {
         salt: &[u8],
         label: &[u8; 7],
         ikm: &[u8],
-    ) -> Result<sha256::Tag, UnknownCryptoError> {
-        let mut labeled_ikm = Vec::<u8>::new();
-        labeled_ikm.extend_from_slice(Self::HPKE_VERSION_ID.as_bytes());
-        labeled_ikm.extend_from_slice(b"KEM");
-        labeled_ikm.extend_from_slice(&Self::KEM_ID.to_be_bytes());
-        labeled_ikm.extend_from_slice(label);
-        labeled_ikm.extend_from_slice(ikm);
-
-        sha256::extract(salt, &labeled_ikm)
+    ) -> Result<hkdf::sha256::Tag, UnknownCryptoError> {
+        hkdf::sha256::extract_with_parts(
+            salt,
+            &[
+                Self::HPKE_VERSION_ID.as_bytes(),
+                b"KEM",
+                &Self::KEM_ID.to_be_bytes(),
+                label,
+                ikm,
+            ],
+        )
     }
 
-    fn labeled_expand<const L: u16>(
-        prk: &sha256::Tag,
+    fn labeled_expand(
+        prk: &hkdf::sha256::Tag,
         label: &[u8],
         info: &[u8],
-    ) -> Result<Vec<u8>, UnknownCryptoError> {
-        let mut labeled_info = Vec::<u8>::new();
-        labeled_info.extend_from_slice(&L.to_be_bytes());
-        labeled_info.extend_from_slice(Self::HPKE_VERSION_ID.as_bytes());
-        labeled_info.extend_from_slice(b"KEM");
-        labeled_info.extend_from_slice(&Self::KEM_ID.to_be_bytes());
-        labeled_info.extend_from_slice(label);
-        labeled_info.extend_from_slice(info);
+        out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        let l: u16 = out.len().try_into().map_err(|_| UnknownCryptoError)?;
+        hkdf::sha256::expand_with_parts(
+            prk.unprotected_as_bytes(),
+            Some(&[
+                &l.to_be_bytes(),
+                Self::HPKE_VERSION_ID.as_bytes(),
+                b"KEM",
+                &Self::KEM_ID.to_be_bytes(),
+                label,
+                info,
+            ]),
+            out,
+        )?;
 
-        let mut out = vec![0u8; L as usize];
-        sha256::expand(prk, Some(&labeled_info), &mut out)?;
-
-        Ok(out)
+        Ok(())
     }
 
-    fn extract_and_expand(dh: &[u8], kem_context: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
-        let eae_prk = Self::labeled_extract(b"", b"eae_prk", dh)?;
-        let shared_secret =
-            Self::labeled_expand::<{ Self::N_SECRET }>(&eae_prk, b"shared_secret", kem_context)?;
+    fn extract_and_expand(
+        dh: &[u8],
+        kem_context: &[u8],
+        out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        debug_assert_eq!(out.len(), Self::N_SECRET as usize);
 
-        Ok(shared_secret)
+        let eae_prk = Self::labeled_extract(b"", b"eae_prk", dh)?;
+        Self::labeled_expand(&eae_prk, b"shared_secret", kem_context, out)?;
+
+        Ok(())
     }
 
     /// Generate random X25519 keypair.
@@ -158,7 +169,10 @@ impl DhKem {
         }
 
         let dkp_prk = Self::labeled_extract(b"", b"dkp_prk", ikm)?;
-        let sk = PrivateKey::from_slice(&Self::labeled_expand::<32>(&dkp_prk, b"sk", b"")?)?;
+        let mut sk_bytes = Zeroizing::new([0u8; x25519::PRIVATE_KEY_SIZE]);
+        Self::labeled_expand(&dkp_prk, b"sk", b"", sk_bytes.as_mut_slice())?;
+
+        let sk = PrivateKey::from_slice(sk_bytes.as_slice())?;
         let pk = PublicKey::try_from(&sk)?;
 
         Ok((sk, pk))
@@ -177,9 +191,14 @@ impl DhKem {
         kem_context[..32].copy_from_slice(&public_ephemeral.to_bytes());
         kem_context[32..64].copy_from_slice(&public_recipient.to_bytes());
 
-        let shared_secret = Self::extract_and_expand(dh.unprotected_as_bytes(), &kem_context)?;
+        let mut shared_secret = SharedSecret::from_slice(&[0u8; Self::N_SECRET as usize])?;
+        Self::extract_and_expand(
+            dh.unprotected_as_bytes(),
+            &kem_context,
+            &mut shared_secret.value,
+        )?;
 
-        Ok((SharedSecret::from_slice(&shared_secret)?, public_ephemeral))
+        Ok((shared_secret, public_ephemeral))
     }
 
     /// Decapsulate `public_ephemeral` and return the shared ephemeral secrety,
@@ -194,9 +213,14 @@ impl DhKem {
         kem_context[..32].copy_from_slice(&public_ephemeral.to_bytes());
         kem_context[32..64].copy_from_slice(&PublicKey::try_from(secret_recipient)?.to_bytes());
 
-        let shared_secret = Self::extract_and_expand(dh.unprotected_as_bytes(), &kem_context)?;
+        let mut shared_secret = SharedSecret::from_slice(&[0u8; Self::N_SECRET as usize])?;
+        Self::extract_and_expand(
+            dh.unprotected_as_bytes(),
+            &kem_context,
+            &mut shared_secret.value,
+        )?;
 
-        SharedSecret::from_slice(&shared_secret)
+        Ok(shared_secret)
     }
 
     /// Equivalent to [`Self::encap()`], additionally ensuring the holder of `secret_sender` was
@@ -208,7 +232,7 @@ impl DhKem {
         let secret_ehemeral = PrivateKey::generate();
         let public_ephemeral = PublicKey::try_from(&secret_ehemeral)?;
 
-        let mut dh = [0u8; 64];
+        let mut dh = Zeroizing::new([0u8; 64]);
         dh[..32].copy_from_slice(
             x25519::key_agreement(&secret_ehemeral, public_recipient)?.unprotected_as_bytes(),
         );
@@ -221,10 +245,10 @@ impl DhKem {
         kem_context[32..64].copy_from_slice(&public_recipient.to_bytes());
         kem_context[64..96].copy_from_slice(&PublicKey::try_from(secret_sender)?.to_bytes());
 
-        let shared_secret = Self::extract_and_expand(&dh, &kem_context)?;
-        dh.iter_mut().zeroize();
+        let mut shared_secret = SharedSecret::from_slice(&[0u8; Self::N_SECRET as usize])?;
+        Self::extract_and_expand(dh.as_slice(), &kem_context, &mut shared_secret.value)?;
 
-        Ok((SharedSecret::from_slice(&shared_secret)?, public_ephemeral))
+        Ok((shared_secret, public_ephemeral))
     }
 
     /// Equivalent to [`Self::decap()`], additionally ensuring the holder of `secret_sender` was
@@ -234,7 +258,7 @@ impl DhKem {
         secret_recipient: &PrivateKey,
         public_sender: &PublicKey,
     ) -> Result<SharedSecret, UnknownCryptoError> {
-        let mut dh = [0u8; 64];
+        let mut dh = Zeroizing::new([0u8; 64]);
         dh[..32].copy_from_slice(
             x25519::key_agreement(secret_recipient, public_ephemeral)?.unprotected_as_bytes(),
         );
@@ -247,10 +271,10 @@ impl DhKem {
         kem_context[32..64].copy_from_slice(&PublicKey::try_from(secret_recipient)?.to_bytes());
         kem_context[64..96].copy_from_slice(&public_sender.to_bytes());
 
-        let shared_secret = Self::extract_and_expand(&dh, &kem_context)?;
-        dh.iter_mut().zeroize();
+        let mut shared_secret = SharedSecret::from_slice(&[0u8; Self::N_SECRET as usize])?;
+        Self::extract_and_expand(dh.as_slice(), &kem_context, &mut shared_secret.value)?;
 
-        SharedSecret::from_slice(&shared_secret)
+        Ok(shared_secret)
     }
 }
 

@@ -65,7 +65,7 @@ fn conditional_sub_u32(a: u32) -> u32 {
 #[derive(Clone, Copy, PartialEq, Debug)]
 /// Element in the field Z_q.
 ///
-/// TODO(brycx): While for Kyber q = 3329 a field element would fit in u16, but Dilithium q = 8380417 which only fits in u32.
+/// NOTE(brycx): While for Kyber q = 3329 a field element would fit in u16, but Dilithium q = 8380417 which only fits in u32.
 /// Thus, for possible future re-usability, we use 32-bit integer here.
 pub struct FieldElement(pub(crate) u32);
 
