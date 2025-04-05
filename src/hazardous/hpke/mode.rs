@@ -113,6 +113,7 @@ pub(crate) mod private {
 /// - `info` is longer than 64 bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
 /// - `exporter_context` is longer than 64 bytes
+/// - The internal counter reaches `u64::MAX` and a call to `seal()`/`open()` is made
 /// - TODO: Do we want to restrict `ikm` for `derive_keypair` to 64 bytes as recommended but make this a breaking change? Or just save it for an upcoming breaking release?
 ///
 /// # Panics:
@@ -257,6 +258,7 @@ impl<S: Suite + Base> ModeBase<S> {
 /// - `info` is longer than 64 bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
 /// - `exporter_context` is longer than 64 bytes
+/// - The internal counter reaches `u64::MAX` and a call to `seal()`/`open()` is made
 /// - `psk` or `psk_id` are empty
 /// - `psk` is less than 32 bytes or more than 64 bytes
 /// - `psk_id` is more than 64 bytes
@@ -385,6 +387,7 @@ impl<S: Suite + Psk> ModePsk<S> {
 /// - `info` is longer than 64 bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
 /// - `exporter_context` is longer than 64 bytes
+/// - The internal counter reaches `u64::MAX` and a call to `seal()`/`open()` is made
 /// - TODO: Do we want to restrict `ikm` for `derive_keypair` to 64 bytes as recommended but make this a breaking change? Or just save it for an upcoming breaking release?
 ///
 /// # Panics:
@@ -506,6 +509,7 @@ impl<S: Suite + Auth> ModeAuth<S> {
 /// - `info` is longer than 64 bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with `Mode.export()`
 /// - `exporter_context` is longer than 64 bytes
+//// - The internal counter reaches `u64::MAX` and a call to `seal()`/`open()` is made
 /// - `psk` or `psk_id` are empty
 /// - `psk` is less than 32 bytes or more than 64 bytes
 /// - `psk_id` is more than 64 bytes
