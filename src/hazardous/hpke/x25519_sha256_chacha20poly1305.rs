@@ -79,7 +79,7 @@ const fn key_schedule_ctx_size<const NK: usize>() -> usize {
 }
 
 impl DHKEM_X25519_SHA256_CHACHA20 {
-    /// Size of the HPKE suite KEM ciphertext.
+    /// Size of the HPKE suite KEM ciphertext/encapsulated key.
     pub const KEM_CT_SIZE: usize = 32; // Equivalent to X25519 public key.
 
     /// Size of the HPKE suite KEM sahred secret.
@@ -101,10 +101,13 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
     pub const AEAD_ID: [u8; 2] = 0x0003u16.to_be_bytes();
 
     /// The maximum length of `export` secret that may be requested.
-    pub const EXPORT_SECRET_MAXLEN: usize = (255 * DHKEM_X25519_SHA256_CHACHA20::NH);
+    pub const EXPORT_SECRET_MAXLEN: usize = (255 * Self::NH);
 
-    const NN: usize = 12;
-    const NH: usize = 32;
+    /// Nonce size for this suite's AEAD (<https://www.rfc-editor.org/rfc/rfc9180.html#section-7.3>).
+    pub const NN: usize = 12;
+
+    /// Output size for this suite's KDF (<https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2>).
+    pub const NH: usize = 32;
 
     fn compute_nonce(&self) -> chacha20poly1305::Nonce {
         // "Implementations MAY use a sequence number that is shorter than the nonce length (padding on the left with zero),
@@ -269,12 +272,12 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
             &mut base_nonce,
         )?;
 
-        let mut exporter_secret = [0u8; 32];
+        let mut exporter_secret = Zeroizing::new([0u8; 32]);
         Self::labeled_expand(
             secret.as_ref(),
             b"exp",
             key_schedule_context.as_ref(),
-            &mut exporter_secret,
+            exporter_secret.as_mut_slice(),
         )?;
 
         Ok(Self {
@@ -459,9 +462,6 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
         self.increment_seq()
     }
-
-    // CHECK: This interface takes as input a context string exporter_context and a desired length L in bytes, and produces a secret derived from the internal exporter secret using the corresponding KDF Expand function. For the KDFs defined in this specification, L has a maximum value of 255*Nh.
-    // max-lenght on out (L), https://www.rfc-editor.org/rfc/rfc9180.html#section-5.3
 
     fn export(&self, exporter_context: &[u8], out: &mut [u8]) -> Result<(), UnknownCryptoError> {
         if out.len() > 255 * Self::NH {
