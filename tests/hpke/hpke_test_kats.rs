@@ -143,7 +143,7 @@ fn hpke_runner(path: &str) {
             ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
                 assert!(test.pkSm.is_some());
                 let public_sender =
-                    PublicKey::from_slice(&decode(&test.pkSm.unwrap()).unwrap()).unwrap();
+                    PublicKey::from_slice(&decode(test.pkSm.unwrap()).unwrap()).unwrap();
 
                 let mut hpke_ctx = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
                     &kem_ciphertext,
@@ -177,7 +177,7 @@ fn hpke_runner(path: &str) {
                 assert!(test.psk.is_some());
                 assert!(test.psk_id.is_some());
                 let public_sender =
-                    PublicKey::from_slice(&decode(&test.pkSm.unwrap()).unwrap()).unwrap();
+                    PublicKey::from_slice(&decode(test.pkSm.unwrap()).unwrap()).unwrap();
 
                 let psk = hex::decode(test.psk.unwrap()).unwrap();
                 let psk_id = hex::decode(test.psk_id.unwrap()).unwrap();

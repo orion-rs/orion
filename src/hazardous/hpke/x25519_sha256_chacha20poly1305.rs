@@ -29,6 +29,7 @@ use crate::hazardous::kdf::hkdf;
 use crate::hazardous::kem::x25519_hkdf_sha256;
 use zeroize::Zeroizing;
 
+#[allow(non_camel_case_types)]
 #[cfg_attr(test, derive(Clone))]
 /// HPKE suite: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256 and ChaCha20Poly1305.
 pub struct DHKEM_X25519_SHA256_CHACHA20 {
@@ -296,7 +297,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         }
 
         let pkr = pubkey_r;
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(&pkr)?;
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(pkr)?;
         let ctx = Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_bytes(), info, &[], &[])?;
 
         Ok((ctx, enc))
@@ -312,7 +313,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         }
 
         let skr = secret_key_r;
-        let ss = x25519_hkdf_sha256::DhKem::decap(&enc, &skr)?;
+        let ss = x25519_hkdf_sha256::DhKem::decap(enc, skr)?;
 
         Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_bytes(), info, &[], &[])
     }
@@ -327,7 +328,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::check_input_max_lengths(info)?;
 
         let pkr = pubkey_r;
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(&pkr)?;
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(pkr)?;
         let ctx = Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_bytes(), info, psk, psk_id)?;
 
         Ok((ctx, enc))
@@ -344,7 +345,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::check_input_max_lengths(info)?;
 
         let skr = secret_key_r;
-        let ss = x25519_hkdf_sha256::DhKem::decap(&enc, &skr)?;
+        let ss = x25519_hkdf_sha256::DhKem::decap(enc, skr)?;
         Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_bytes(), info, psk, psk_id)
     }
 
@@ -357,7 +358,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
         let pkr = pubkey_r;
         let sks = secrety_key_s;
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(&pkr, &sks)?;
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(pkr, sks)?;
         let ctx = Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_bytes(), info, &[], &[])?;
 
         Ok((ctx, enc))
@@ -373,7 +374,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
         let pks = pubkey_s;
         let skr = secret_key_r;
-        let ss = x25519_hkdf_sha256::DhKem::auth_decap(&enc, &skr, &pks)?;
+        let ss = x25519_hkdf_sha256::DhKem::auth_decap(enc, skr, pks)?;
 
         Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_bytes(), info, &[], &[])
     }
@@ -390,7 +391,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
         let pkr = pubkey_r;
         let sks = secrety_key_s;
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(&pkr, &sks)?;
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(pkr, sks)?;
         let ctx = Self::key_schedule(
             &HpkeMode::AuthPsk,
             ss.unprotected_as_bytes(),
@@ -415,7 +416,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
         let pks = pubkey_s;
         let skr = secret_key_r;
-        let ss = x25519_hkdf_sha256::DhKem::auth_decap(&enc, &skr, &pks)?;
+        let ss = x25519_hkdf_sha256::DhKem::auth_decap(enc, skr, pks)?;
 
         Self::key_schedule(
             &HpkeMode::AuthPsk,
@@ -879,7 +880,7 @@ mod test {
                 info,
                 psk,
                 psk_id,
-                &plaintext,
+                plaintext,
                 aad,
                 &mut dst_out,
             )?;

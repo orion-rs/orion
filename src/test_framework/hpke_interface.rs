@@ -68,6 +68,7 @@ pub trait TestableHpke: Clone {
     where
         Self: Sized;
 
+    #[allow(clippy::too_many_arguments)]
     fn oneshot_open(
         enc: &[u8],
         secret_key_r: &[u8],

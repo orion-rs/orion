@@ -388,6 +388,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         Ok(ek)
     }
 
+    #[allow(clippy::too_many_arguments)]
     /// One-shot API for HPKE Psk mode `open()` operation.
     pub fn psk_open(
         enc: &S::EncapsulatedKey,
@@ -661,6 +662,7 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         self.suite.open(ciphertext, aad, out)
     }
 
+    #[allow(clippy::too_many_arguments)]
     /// One-shot API for HPKE AuthPsk mode `seal()` operation.
     pub fn authpsk_seal(
         pubkey_r: &S::PublicKey,
@@ -678,6 +680,7 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         Ok(ek)
     }
 
+    #[allow(clippy::too_many_arguments)]
     /// One-shot API for HPKE AuthPsk mode `open()` operation.
     pub fn authpsk_open(
         enc: &S::EncapsulatedKey,
