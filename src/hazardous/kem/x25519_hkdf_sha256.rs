@@ -162,7 +162,7 @@ impl DhKem {
         Ok((sk, pk))
     }
 
-    /// Deterministically derive a X25519 keyapir from `ikm`.
+    /// Deterministically derive a X25519 keypair from `ikm`.
     pub fn derive_keypair(ikm: &[u8]) -> Result<(PrivateKey, PublicKey), UnknownCryptoError> {
         if ikm.len() < 32 {
             return Err(UnknownCryptoError);
@@ -201,7 +201,7 @@ impl DhKem {
         Ok((shared_secret, public_ephemeral))
     }
 
-    /// Decapsulate `public_ephemeral` and return the shared ephemeral secrety,
+    /// Decapsulate `public_ephemeral` and return the shared ephemeral secret,
     /// using `secret_recipient` private key.
     pub fn decap(
         public_ephemeral: &PublicKey,
