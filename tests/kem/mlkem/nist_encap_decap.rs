@@ -15,12 +15,12 @@ pub(crate) struct MlKemEncapDecap {
     mode: String,
     revision: String,
     isSample: bool,
-    testGroups: Vec<MlKemMlKemEncapDecapTestGroup>,
+    testGroups: Vec<MlKemEncapDecapTestGroup>,
 }
 
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct MlKemMlKemEncapDecapTestGroup {
+pub(crate) struct MlKemEncapDecapTestGroup {
     tgId: u32,
     testType: String,
     parameterSet: String,
