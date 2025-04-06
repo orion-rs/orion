@@ -160,6 +160,6 @@ fn mlkem_runner(path: &str) {
 }
 
 #[test]
-fn test_acvp_mlkem_encapdecap() {
+fn test_c2sp_wycheproof_mlkem() {
     mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_test.json");
 }
