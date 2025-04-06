@@ -5,6 +5,7 @@ use std::{
     io::{BufRead, BufReader},
 };
 
+pub mod c2sp_wycheproof;
 pub mod nist_encap_decap;
 pub mod nist_keygen;
 
