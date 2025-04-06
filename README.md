@@ -9,10 +9,12 @@ Currently supports:
 * **Hashing**: BLAKE2b, SHA2, SHA3.
 * **XOF**: SHAKE128, SHAKE256.
 * **KDF**: HKDF, PBKDF2, Argon2i.
-* **Key exchange**: X25519.
+* **ECDH**: X25519.
 * **MAC**: HMAC, Poly1305.
 * **Stream ciphers**: (X)ChaCha20.
 * **KEM**: X-Wing, ML-KEM, DHKEM(X25519, HKDF-SHA256).
+* **HPKE**: 
+    - DHKEM(X25519, HKDF-SHA256), HKDF-SHA256, ChaCha20Poly1305
 
 Experimental support (with `experimental` feature enabled):
 * **Committing AEAD**: (X)ChaCha20-Poly1305-BLAKE2b.

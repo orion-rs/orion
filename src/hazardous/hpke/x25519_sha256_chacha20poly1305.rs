@@ -293,12 +293,22 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         pubkey_r: &Self::PublicKey,
         info: &[u8],
     ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        if info.len() > 64 {
-            return Err(UnknownCryptoError);
-        }
+        Self::check_input_max_lengths(info)?;
 
-        let pkr = pubkey_r;
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(pkr)?;
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(pubkey_r)?;
+        let ctx = Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_bytes(), info, &[], &[])?;
+
+        Ok((ctx, enc))
+    }
+
+    fn setup_base_sender_deterministic(
+        pubkey_r: &Self::PublicKey,
+        info: &[u8],
+        secret_ephemeral: Self::PrivateKey,
+    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
+        Self::check_input_max_lengths(info)?;
+
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap_deterministic(pubkey_r, secret_ephemeral)?;
         let ctx = Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_bytes(), info, &[], &[])?;
 
         Ok((ctx, enc))
@@ -309,13 +319,9 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         secret_key_r: &Self::PrivateKey,
         info: &[u8],
     ) -> Result<Self, UnknownCryptoError> {
-        if info.len() > 64 {
-            return Err(UnknownCryptoError);
-        }
+        Self::check_input_max_lengths(info)?;
 
-        let skr = secret_key_r;
-        let ss = x25519_hkdf_sha256::DhKem::decap(enc, skr)?;
-
+        let ss = x25519_hkdf_sha256::DhKem::decap(enc, secret_key_r)?;
         Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_bytes(), info, &[], &[])
     }
 
@@ -328,8 +334,23 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::check_psk_length(psk, psk_id)?;
         Self::check_input_max_lengths(info)?;
 
-        let pkr = pubkey_r;
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(pkr)?;
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(pubkey_r)?;
+        let ctx = Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_bytes(), info, psk, psk_id)?;
+
+        Ok((ctx, enc))
+    }
+
+    fn setup_psk_sender_deterministic(
+        pubkey_r: &Self::PublicKey,
+        info: &[u8],
+        psk: &[u8],
+        psk_id: &[u8],
+        secret_ephemeral: Self::PrivateKey,
+    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
+        Self::check_psk_length(psk, psk_id)?;
+        Self::check_input_max_lengths(info)?;
+
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap_deterministic(pubkey_r, secret_ephemeral)?;
         let ctx = Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_bytes(), info, psk, psk_id)?;
 
         Ok((ctx, enc))
@@ -345,8 +366,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::check_psk_length(psk, psk_id)?;
         Self::check_input_max_lengths(info)?;
 
-        let skr = secret_key_r;
-        let ss = x25519_hkdf_sha256::DhKem::decap(enc, skr)?;
+        let ss = x25519_hkdf_sha256::DhKem::decap(enc, secret_key_r)?;
         Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_bytes(), info, psk, psk_id)
     }
 
@@ -357,9 +377,25 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
         Self::check_input_max_lengths(info)?;
 
-        let pkr = pubkey_r;
-        let sks = secrety_key_s;
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(pkr, sks)?;
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(pubkey_r, secrety_key_s)?;
+        let ctx = Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_bytes(), info, &[], &[])?;
+
+        Ok((ctx, enc))
+    }
+
+    fn setup_auth_sender_deterministic(
+        pubkey_r: &Self::PublicKey,
+        info: &[u8],
+        secrety_key_s: &Self::PrivateKey,
+        secret_ephemeral: Self::PrivateKey,
+    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
+        Self::check_input_max_lengths(info)?;
+
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap_deterministic(
+            pubkey_r,
+            secrety_key_s,
+            secret_ephemeral,
+        )?;
         let ctx = Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_bytes(), info, &[], &[])?;
 
         Ok((ctx, enc))
@@ -373,10 +409,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     ) -> Result<Self, UnknownCryptoError> {
         Self::check_input_max_lengths(info)?;
 
-        let pks = pubkey_s;
-        let skr = secret_key_r;
-        let ss = x25519_hkdf_sha256::DhKem::auth_decap(enc, skr, pks)?;
-
+        let ss = x25519_hkdf_sha256::DhKem::auth_decap(enc, secret_key_r, pubkey_s)?;
         Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_bytes(), info, &[], &[])
     }
 
@@ -390,9 +423,34 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::check_psk_length(psk, psk_id)?;
         Self::check_input_max_lengths(info)?;
 
-        let pkr = pubkey_r;
-        let sks = secrety_key_s;
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(pkr, sks)?;
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(pubkey_r, secrety_key_s)?;
+        let ctx = Self::key_schedule(
+            &HpkeMode::AuthPsk,
+            ss.unprotected_as_bytes(),
+            info,
+            psk,
+            psk_id,
+        )?;
+
+        Ok((ctx, enc))
+    }
+
+    fn setup_authpsk_sender_deterministic(
+        pubkey_r: &Self::PublicKey,
+        info: &[u8],
+        psk: &[u8],
+        psk_id: &[u8],
+        secrety_key_s: &Self::PrivateKey,
+        secret_ephemeral: Self::PrivateKey,
+    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
+        Self::check_psk_length(psk, psk_id)?;
+        Self::check_input_max_lengths(info)?;
+
+        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap_deterministic(
+            pubkey_r,
+            secrety_key_s,
+            secret_ephemeral,
+        )?;
         let ctx = Self::key_schedule(
             &HpkeMode::AuthPsk,
             ss.unprotected_as_bytes(),
@@ -415,10 +473,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::check_psk_length(psk, psk_id)?;
         Self::check_input_max_lengths(info)?;
 
-        let pks = pubkey_s;
-        let skr = secret_key_r;
-        let ss = x25519_hkdf_sha256::DhKem::auth_decap(enc, skr, pks)?;
-
+        let ss = x25519_hkdf_sha256::DhKem::auth_decap(enc, secret_key_r, pubkey_s)?;
         Self::key_schedule(
             &HpkeMode::AuthPsk,
             ss.unprotected_as_bytes(),

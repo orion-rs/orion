@@ -69,6 +69,14 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        fn setup_base_sender_deterministic(
+            pubkey_r: &Self::PublicKey,
+            info: &[u8],
+            secret_ephemeral: Self::PrivateKey,
+        ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
+        where
+            Self: Sized;
+
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
         fn setup_base_recipient(
             enc: &Self::EncapsulatedKey,
@@ -84,6 +92,16 @@ pub(crate) mod private {
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
+        ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
+        where
+            Self: Sized;
+
+        fn setup_psk_sender_deterministic(
+            pubkey_r: &Self::PublicKey,
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            secret_ephemeral: Self::PrivateKey,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
@@ -108,6 +126,15 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        fn setup_auth_sender_deterministic(
+            pubkey_r: &Self::PublicKey,
+            info: &[u8],
+            secrety_key_s: &Self::PrivateKey,
+            secret_ephemeral: Self::PrivateKey,
+        ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
+        where
+            Self: Sized;
+
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
         fn setup_auth_recipient(
             enc: &Self::EncapsulatedKey,
@@ -125,6 +152,17 @@ pub(crate) mod private {
             psk: &[u8],
             psk_id: &[u8],
             secrety_key_s: &Self::PrivateKey,
+        ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
+        where
+            Self: Sized;
+
+        fn setup_authpsk_sender_deterministic(
+            pubkey_r: &Self::PublicKey,
+            info: &[u8],
+            psk: &[u8],
+            psk_id: &[u8],
+            secrety_key_s: &Self::PrivateKey,
+            secret_ephemeral: Self::PrivateKey,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
