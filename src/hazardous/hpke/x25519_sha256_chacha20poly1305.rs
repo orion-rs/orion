@@ -82,7 +82,7 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
     /// Size of the HPKE suite KEM ciphertext/encapsulated key.
     pub const KEM_CT_SIZE: usize = 32; // Equivalent to X25519 public key.
 
-    /// Size of the HPKE suite KEM sahred secret.
+    /// Size of the HPKE suite KEM shared secret.
     pub const KEM_SS_SIZE: usize = 32; // Equivalent to X25519 public key.
 
     /// Version identifier for this HPKE scheme.
@@ -465,7 +465,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     }
 
     fn export(&self, exporter_context: &[u8], out: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if out.len() > 255 * Self::NH {
+        if out.len() > Self::EXPORT_SECRET_MAXLEN {
             return Err(UnknownCryptoError);
         }
 
@@ -483,6 +483,21 @@ mod test {
         hazardous::hpke::*,
         test_framework::hpke_interface::{HpkeTester, TestableHpke},
     };
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_omitted_debug() {
+        let (_sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let (ctx, _enc) = DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
+
+        let secret_key = format!("{:?}", &ctx.key);
+        let secret_export = format!("{:?}", &ctx.exporter_secret);
+
+        let test_debug_contents = format!("{:?}", &ctx);
+        assert!(!test_debug_contents.contains(&secret_key));
+        assert!(!test_debug_contents.contains(&secret_export));
+    }
 
     #[test]
     fn test_error_on_lengths_base() {

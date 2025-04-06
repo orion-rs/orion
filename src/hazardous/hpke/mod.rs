@@ -36,13 +36,13 @@ pub use x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20;
 
 pub(crate) mod private {
 
-    /// Marker trait for a public key, for an HPKE private key `S`, that can be uses with HPKE.
+    /// Marker trait for a public key, for a corresponding HPKE private key.
     pub trait HpkePublicKey {}
 
-    /// Marker trait for a "encapsulated" key, for an HPKE private, that is generated with HPKE.
+    /// Marker trait for an encapsulated key, that is generated with HPKE.
     pub trait HpkeEncapKey {}
 
-    /// Marker trait for a private key, that can be uses with HPKE.
+    /// Marker trait for a private key, that can be used with HPKE.
     pub trait HpkePrivateKey {}
 }
 

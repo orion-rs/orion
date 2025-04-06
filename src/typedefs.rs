@@ -416,7 +416,7 @@ macro_rules! test_omitted_debug (($name:ident, $upper_bound:expr) => (
     fn test_omitted_debug() {
         let secret = format!("{:?}", [0u8; $upper_bound].as_ref());
         let test_debug_contents = format!("{:?}", $name::from_slice(&[0u8; $upper_bound]).unwrap());
-        assert_eq!(test_debug_contents.contains(&secret), false);
+        assert!(!test_debug_contents.contains(&secret));
     }
 ));
 
