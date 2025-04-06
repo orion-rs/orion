@@ -1,5 +1,5 @@
 // c2sp_wycheproof/mlkem_test.json
-// Test vectors taken at commit: https://github.com/C2SP/wycheproof/commit/3bfb67fca7c7a2ef436e263da53cdabe0fa1dd36use orion::hazardous::kem::mlkem1024;
+// Test vectors taken at commit: https://github.com/C2SP/wycheproof/commit/3bfb67fca7c7a2ef436e263da53cdabe0fa1dd36
 
 use orion::hazardous::kem::mlkem1024;
 use orion::hazardous::kem::mlkem512;
