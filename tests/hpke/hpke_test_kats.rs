@@ -32,6 +32,7 @@ pub(crate) struct HpkeTest {
     pub(crate) base_nonce: String,
     pub(crate) exporter_secret: String,
     pub(crate) encryptions: Vec<EncryptionTest>,
+    pub(crate) exports: Vec<ExportTest>,
 }
 
 #[allow(non_snake_case)]
@@ -41,6 +42,14 @@ pub(crate) struct EncryptionTest {
     pub(crate) ct: String,
     pub(crate) nonce: String,
     pub(crate) pt: String,
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct ExportTest {
+    pub(crate) exporter_context: String,
+    pub(crate) L: usize,
+    pub(crate) exported_value: String,
 }
 
 fn hpke_runner(path: &str) {
@@ -147,6 +156,22 @@ fn hpke_runner(path: &str) {
                     assert_eq!(&pt, &out);
                 }
 
+                for export in test.exports.iter() {
+                    let expected_export = hex::decode(&export.exported_value).unwrap();
+                    let exporter_context = hex::decode(&export.exporter_context).unwrap();
+                    let mut export_out_from_s = vec![0u8; export.L];
+                    let mut export_out_from_r = vec![0u8; export.L];
+
+                    hpke_ctx_s
+                        .export_secret(&exporter_context, &mut export_out_from_s)
+                        .unwrap();
+                    hpke_ctx_r
+                        .export_secret(&exporter_context, &mut export_out_from_r)
+                        .unwrap();
+                    assert_eq!(export_out_from_s, export_out_from_r);
+                    assert_eq!(export_out_from_s, expected_export);
+                }
+
                 test_counter += 1;
             }
             ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
@@ -199,6 +224,22 @@ fn hpke_runner(path: &str) {
                     assert_eq!(&pt, &out);
                 }
 
+                for export in test.exports.iter() {
+                    let expected_export = hex::decode(&export.exported_value).unwrap();
+                    let exporter_context = hex::decode(&export.exporter_context).unwrap();
+                    let mut export_out_from_s = vec![0u8; export.L];
+                    let mut export_out_from_r = vec![0u8; export.L];
+
+                    hpke_ctx_s
+                        .export_secret(&exporter_context, &mut export_out_from_s)
+                        .unwrap();
+                    hpke_ctx_r
+                        .export_secret(&exporter_context, &mut export_out_from_r)
+                        .unwrap();
+                    assert_eq!(export_out_from_s, export_out_from_r);
+                    assert_eq!(export_out_from_s, expected_export);
+                }
+
                 test_counter += 1;
             }
             ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
@@ -248,6 +289,22 @@ fn hpke_runner(path: &str) {
                         .open(&ct, &aad, &mut out)
                         .expect("Failed decryption");
                     assert_eq!(&pt, &out);
+                }
+
+                for export in test.exports.iter() {
+                    let expected_export = hex::decode(&export.exported_value).unwrap();
+                    let exporter_context = hex::decode(&export.exporter_context).unwrap();
+                    let mut export_out_from_s = vec![0u8; export.L];
+                    let mut export_out_from_r = vec![0u8; export.L];
+
+                    hpke_ctx_s
+                        .export_secret(&exporter_context, &mut export_out_from_s)
+                        .unwrap();
+                    hpke_ctx_r
+                        .export_secret(&exporter_context, &mut export_out_from_r)
+                        .unwrap();
+                    assert_eq!(export_out_from_s, export_out_from_r);
+                    assert_eq!(export_out_from_s, expected_export);
                 }
 
                 test_counter += 1;
@@ -309,6 +366,22 @@ fn hpke_runner(path: &str) {
                         .open(&ct, &aad, &mut out)
                         .expect("Failed decryption");
                     assert_eq!(&pt, &out);
+                }
+
+                for export in test.exports.iter() {
+                    let expected_export = hex::decode(&export.exported_value).unwrap();
+                    let exporter_context = hex::decode(&export.exporter_context).unwrap();
+                    let mut export_out_from_s = vec![0u8; export.L];
+                    let mut export_out_from_r = vec![0u8; export.L];
+
+                    hpke_ctx_s
+                        .export_secret(&exporter_context, &mut export_out_from_s)
+                        .unwrap();
+                    hpke_ctx_r
+                        .export_secret(&exporter_context, &mut export_out_from_r)
+                        .unwrap();
+                    assert_eq!(export_out_from_s, export_out_from_r);
+                    assert_eq!(export_out_from_s, expected_export);
                 }
 
                 test_counter += 1;
