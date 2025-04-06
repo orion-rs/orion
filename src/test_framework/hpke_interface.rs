@@ -505,7 +505,7 @@ impl<T: TestableHpke> HpkeTester<T> {
             .is_err());
         }
 
-        // ikm (TODO: we do NOT restrict this to 64 MAX)
+        // ikm (NOTE/TODO: we do NOT restrict this to 64 MAX, this would be breaking change)
         // assert!(T::gen_kp(&[0u8; 64]).is_err());
 
         let (sender_priv, sender_pub) = T::gen_kp(valid_kem_ikm_sender).unwrap();

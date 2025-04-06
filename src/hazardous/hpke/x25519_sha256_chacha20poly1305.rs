@@ -164,21 +164,6 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     type PublicKey = x25519_hkdf_sha256::PublicKey;
     type EncapsulatedKey = x25519_hkdf_sha256::PublicKey;
 
-    #[cfg(test)]
-    fn testing_base_nonce(&self) -> &[u8] {
-        &self.base_nonce
-    }
-
-    #[cfg(test)]
-    fn testing_ctr(&self) -> u64 {
-        self.ctr
-    }
-
-    #[cfg(test)]
-    fn testing_exporter_secret(&self) -> &[u8] {
-        &self.exporter_secret
-    }
-
     fn labeled_extract(
         salt: &[u8],
         label: &[u8],

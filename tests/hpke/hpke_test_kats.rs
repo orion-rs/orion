@@ -111,12 +111,21 @@ fn hpke_runner(path: &str) {
 
         let info = hex::decode(test.info).unwrap();
         let shared_secret = hex::decode(test.shared_secret).unwrap();
-        let base_nonce = hex::decode(test.base_nonce).unwrap();
-        let exporter_secret = hex::decode(test.exporter_secret).unwrap();
+        // These two ignored value are implicit to the HPKE ctx and are tested
+        // implicitly through the encryption and export tests.
+        let _base_nonce = hex::decode(test.base_nonce).unwrap();
+        let _exporter_secret = hex::decode(test.exporter_secret).unwrap();
         let enc = PublicKey::from_slice(&hex::decode(test.enc).unwrap()).unwrap();
 
         match test.mode as u8 {
             ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
+                let (ss, _) = DhKem::encap_deterministic(
+                    &public_recip,
+                    PrivateKey::from_slice(&decode(&test.skEm).unwrap()).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(ss.unprotected_as_bytes(), &shared_secret);
+
                 let (mut hpke_ctx_s, actual_enc) =
                     ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender_deterministic(
                         &public_recip,
@@ -133,14 +142,11 @@ fn hpke_runner(path: &str) {
                 )
                 .unwrap();
 
-                // todo
-                //assert_eq!(hpke_ctx._testing_base_nonce(), &base_nonce);
-                //assert_eq!(hpke_ctx._testing_exporter_secret(), &exporter_secret);
-
                 for encryption in test.encryptions.iter() {
                     let aad = hex::decode(&encryption.aad).unwrap();
                     let ct = hex::decode(&encryption.ct).unwrap();
-                    let nonce = hex::decode(&encryption.nonce).unwrap();
+                    // Nonce is kept internal to the HPKE ctx.
+                    let _nonce = hex::decode(&encryption.nonce).unwrap();
                     let pt = hex::decode(&encryption.pt).unwrap();
                     let mut out = vec![0u8; ct.len() - 16];
                     let mut out_ct = vec![0u8; ct.len()];
@@ -175,6 +181,13 @@ fn hpke_runner(path: &str) {
                 test_counter += 1;
             }
             ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
+                let (ss, _) = DhKem::encap_deterministic(
+                    &public_recip,
+                    PrivateKey::from_slice(&decode(&test.skEm).unwrap()).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(ss.unprotected_as_bytes(), &shared_secret);
+
                 assert!(test.psk.is_some());
                 assert!(test.psk_id.is_some());
 
@@ -201,14 +214,11 @@ fn hpke_runner(path: &str) {
                 )
                 .unwrap();
 
-                // todo
-                //assert_eq!(hpke_ctx._testing_base_nonce(), &base_nonce);
-                //assert_eq!(hpke_ctx._testing_exporter_secret(), &exporter_secret);
-
                 for encryption in test.encryptions.iter() {
                     let aad = hex::decode(&encryption.aad).unwrap();
                     let ct = hex::decode(&encryption.ct).unwrap();
-                    let nonce = hex::decode(&encryption.nonce).unwrap();
+                    // Nonce is kept internal to the HPKE ctx.
+                    let _nonce = hex::decode(&encryption.nonce).unwrap();
                     let pt = hex::decode(&encryption.pt).unwrap();
                     let mut out = vec![0u8; ct.len() - 16];
                     let mut out_ct = vec![0u8; ct.len()];
@@ -250,6 +260,14 @@ fn hpke_runner(path: &str) {
                 let public_sender =
                     PublicKey::from_slice(&decode(test.pkSm.unwrap()).unwrap()).unwrap();
 
+                let (ss, _) = DhKem::auth_encap_deterministic(
+                    &public_recip,
+                    &secret_sender,
+                    PrivateKey::from_slice(&decode(&test.skEm).unwrap()).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(ss.unprotected_as_bytes(), &shared_secret);
+
                 let (mut hpke_ctx_s, actual_enc) =
                     ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_sender_deterministic(
                         &public_recip,
@@ -268,14 +286,11 @@ fn hpke_runner(path: &str) {
                 )
                 .unwrap();
 
-                // todo
-                //assert_eq!(hpke_ctx._testing_base_nonce(), &base_nonce);
-                //assert_eq!(hpke_ctx._testing_exporter_secret(), &exporter_secret);
-
                 for encryption in test.encryptions.iter() {
                     let aad = hex::decode(&encryption.aad).unwrap();
                     let ct = hex::decode(&encryption.ct).unwrap();
-                    let nonce = hex::decode(&encryption.nonce).unwrap();
+                    // Nonce is kept internal to the HPKE ctx.
+                    let _nonce = hex::decode(&encryption.nonce).unwrap();
                     let pt = hex::decode(&encryption.pt).unwrap();
                     let mut out = vec![0u8; ct.len() - 16];
                     let mut out_ct = vec![0u8; ct.len()];
@@ -323,6 +338,14 @@ fn hpke_runner(path: &str) {
                 let public_sender =
                     PublicKey::from_slice(&decode(test.pkSm.unwrap()).unwrap()).unwrap();
 
+                let (ss, _) = DhKem::auth_encap_deterministic(
+                    &public_recip,
+                    &secret_sender,
+                    PrivateKey::from_slice(&decode(&test.skEm).unwrap()).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(ss.unprotected_as_bytes(), &shared_secret);
+
                 let (mut hpke_ctx_s, actual_enc) =
                     ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender_deterministic(
                         &public_recip,
@@ -345,14 +368,11 @@ fn hpke_runner(path: &str) {
                 )
                 .unwrap();
 
-                // todo
-                //assert_eq!(hpke_ctx._testing_base_nonce(), &base_nonce);
-                //assert_eq!(hpke_ctx._testing_exporter_secret(), &exporter_secret);
-
                 for encryption in test.encryptions.iter() {
                     let aad = hex::decode(&encryption.aad).unwrap();
                     let ct = hex::decode(&encryption.ct).unwrap();
-                    let nonce = hex::decode(&encryption.nonce).unwrap();
+                    // Nonce is kept internal to the HPKE ctx.
+                    let _nonce = hex::decode(&encryption.nonce).unwrap();
                     let pt = hex::decode(&encryption.pt).unwrap();
                     let mut out = vec![0u8; ct.len() - 16];
                     let mut out_ct = vec![0u8; ct.len()];
@@ -390,7 +410,7 @@ fn hpke_runner(path: &str) {
         }
     }
 
-    assert_eq!(test_counter, 4); // One test-set for each HPKE mode (4 modes), per scheme.
+    assert_eq!(test_counter, 4); // One test-set for each HPKE mode (4 modes), per suite.
 }
 
 #[test]
