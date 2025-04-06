@@ -22,10 +22,10 @@
 
 //! # Parameters:
 //! - `public_recipient`: The public X25519 key of the recipient.
-//! - `public_ephemeral`: The ephemeral X25519 key fro this KEM operation.
+//! - `public_ephemeral`: The ephemeral X25519 key for this KEM operation.
 //! - `secret_recipient`: The private X25519 of the recipient.
 //! - `secret_sender`: The private X25519 of the sender.
-//! - `secret_ephemeral`: Ephemeral private key fro deterministic encapsulation.
+//! - `secret_ephemeral`: Ephemeral private key for deterministic encapsulation.
 //!
 //! # Errors:
 //! An error will be returned if:

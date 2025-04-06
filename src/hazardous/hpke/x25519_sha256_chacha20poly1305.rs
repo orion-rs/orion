@@ -289,6 +289,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         })
     }
 
+    #[cfg(feature = "safe_api")]
     fn setup_base_sender(
         pubkey_r: &Self::PublicKey,
         info: &[u8],
@@ -325,6 +326,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_bytes(), info, &[], &[])
     }
 
+    #[cfg(feature = "safe_api")]
     fn setup_psk_sender(
         pubkey_r: &Self::PublicKey,
         info: &[u8],
@@ -370,6 +372,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_bytes(), info, psk, psk_id)
     }
 
+    #[cfg(feature = "safe_api")]
     fn setup_auth_sender(
         pubkey_r: &Self::PublicKey,
         info: &[u8],
@@ -413,6 +416,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_bytes(), info, &[], &[])
     }
 
+    #[cfg(feature = "safe_api")]
     fn setup_authpsk_sender(
         pubkey_r: &Self::PublicKey,
         info: &[u8],

@@ -61,6 +61,7 @@ pub(crate) mod private {
             out: &mut [u8],
         ) -> Result<(), UnknownCryptoError>;
 
+        #[cfg(feature = "safe_api")]
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
         fn setup_base_sender(
             pubkey_r: &Self::PublicKey,
@@ -86,6 +87,7 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        #[cfg(feature = "safe_api")]
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre->
         fn setup_psk_sender(
             pubkey_r: &Self::PublicKey,
@@ -117,6 +119,7 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        #[cfg(feature = "safe_api")]
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
         fn setup_auth_sender(
             pubkey_r: &Self::PublicKey,
@@ -145,6 +148,7 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        #[cfg(feature = "safe_api")]
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
         fn setup_authpsk_sender(
             pubkey_r: &Self::PublicKey,
