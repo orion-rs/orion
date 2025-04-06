@@ -131,7 +131,8 @@ pub(crate) mod private {
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
-///     as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+///  as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+/// - The `ikm` used as input for [`derive_keypair()`] must never be reused.
 ///
 /// # Example:
 /// ```rust
@@ -310,7 +311,8 @@ impl<S: Suite + Base> ModeBase<S> {
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
-///     as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+///  as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+/// - The `ikm` used as input for [`derive_keypair()`] must never be reused.
 ///
 /// # Example:
 /// ```rust
@@ -496,7 +498,8 @@ impl<S: Suite + Psk> ModePsk<S> {
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
-///     as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+///  as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+/// - The `ikm` used as input for [`derive_keypair()`] must never be reused.
 ///
 /// # Example:
 /// ```rust
@@ -680,7 +683,8 @@ impl<S: Suite + Auth> ModeAuth<S> {
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
-///     as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+///  as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+/// - The `ikm` used as input for [`derive_keypair()`] must never be reused.
 ///
 /// # Example:
 /// ```rust
