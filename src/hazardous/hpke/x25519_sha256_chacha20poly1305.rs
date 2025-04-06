@@ -132,7 +132,8 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
         }
 
         if self.ctr as u128 >= ((1u128 << (8u128 * Self::NN as u128)) - 1) {
-            unreachable!("Internal u64 counter should have overflowed before this counter has!");
+            // unreachable: Internal u64 counter should have overflowed before this counter has!
+            return Err(UnknownCryptoError);
         }
 
         Ok(())
