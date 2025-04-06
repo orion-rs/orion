@@ -205,6 +205,23 @@ impl<S: Suite + Base> ModeBase<S> {
         ))
     }
 
+    /// HPKE Base mode sender with a supplied ephemeral private key, which is taken ownership of.
+    pub fn new_sender_deterministic(
+        pubkey_r: &S::PublicKey,
+        info: &[u8],
+        secret_ephemeral: S::PrivateKey,
+    ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
+        let (suite, ek) = S::setup_base_sender_deterministic(pubkey_r, info, secret_ephemeral)?;
+
+        Ok((
+            (Self {
+                suite,
+                role: Role::Sender,
+            }),
+            ek,
+        ))
+    }
+
     /// HPKE Base mode recipient.
     pub fn new_recipient(
         enc: &S::EncapsulatedKey,
@@ -384,6 +401,26 @@ impl<S: Suite + Psk> ModePsk<S> {
         psk_id: &[u8],
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_psk_sender(pubkey_r, info, psk, psk_id)?;
+
+        Ok((
+            (Self {
+                suite,
+                role: Role::Sender,
+            }),
+            ek,
+        ))
+    }
+
+    /// HPKE Psk mode sender with a supplied ephemeral private key, which is taken ownership of.
+    pub fn new_sender_deterministic(
+        pubkey_r: &S::PublicKey,
+        info: &[u8],
+        psk: &[u8],
+        psk_id: &[u8],
+        secret_ephemeral: S::PrivateKey,
+    ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
+        let (suite, ek) =
+            S::setup_psk_sender_deterministic(pubkey_r, info, psk, psk_id, secret_ephemeral)?;
 
         Ok((
             (Self {
@@ -584,6 +621,25 @@ impl<S: Suite + Auth> ModeAuth<S> {
         ))
     }
 
+    /// HPKE Auth mode sender with a supplied ephemeral private key, which is taken ownership of.
+    pub fn new_sender_deterministic(
+        pubkey_r: &S::PublicKey,
+        info: &[u8],
+        secret_key_s: &S::PrivateKey,
+        secret_ephemeral: S::PrivateKey,
+    ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
+        let (suite, ek) =
+            S::setup_auth_sender_deterministic(pubkey_r, info, secret_key_s, secret_ephemeral)?;
+
+        Ok((
+            (Self {
+                suite,
+                role: Role::Sender,
+            }),
+            ek,
+        ))
+    }
+
     /// HPKE Auth mode recipient.
     pub fn new_recipient(
         enc: &S::EncapsulatedKey,
@@ -769,6 +825,33 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         secret_key_s: &S::PrivateKey,
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_authpsk_sender(pubkey_r, info, psk, psk_id, secret_key_s)?;
+
+        Ok((
+            (Self {
+                suite,
+                role: Role::Sender,
+            }),
+            ek,
+        ))
+    }
+
+    /// HPKE AuthPsk mode sender with a supplied ephemeral private key, which is taken ownership of.
+    pub fn new_sender_deterministic(
+        pubkey_r: &S::PublicKey,
+        info: &[u8],
+        psk: &[u8],
+        psk_id: &[u8],
+        secret_key_s: &S::PrivateKey,
+        secret_ephemeral: S::PrivateKey,
+    ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
+        let (suite, ek) = S::setup_authpsk_sender_deterministic(
+            pubkey_r,
+            info,
+            psk,
+            psk_id,
+            secret_key_s,
+            secret_ephemeral,
+        )?;
 
         Ok((
             (Self {
