@@ -303,6 +303,7 @@ impl DhKem {
 
 #[cfg(test)]
 mod public {
+    #[cfg(feature = "safe_api")]
     use crate::hazardous::ecc::x25519::{PrivateKey, PublicKey};
     use crate::hazardous::kem::x25519_hkdf_sha256::*;
 

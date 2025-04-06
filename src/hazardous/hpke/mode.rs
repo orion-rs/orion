@@ -953,6 +953,7 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "safe_api")]
 mod test {
     use super::*;
     use crate::hazardous::{hpke::DHKEM_X25519_SHA256_CHACHA20, kem::x25519_hkdf_sha256::DhKem};
