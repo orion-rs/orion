@@ -1,3 +1,12 @@
+### 0.17.10
+
+**Date:** TBD.
+
+**Changelog:**
+- Add `encap_deterministic()` and `auth_encap_deterministic()` to `DhKem` in `hazardous::kem::x25519_hkdf_sha256::DhKem` [TODO PR](TODO PR).
+- Make `hazardous::kem::x25519_hkdf_sha256::DhKem` available in `[no_std]` context [TODO PR](TODO PR).
+- Add support for HPKE (RFC 9180) [TODO PR](TODO PR).
+
 ### 0.17.9
 
 **Date:** March 1, 2025.

@@ -25,6 +25,7 @@
 //! - `public_ephemeral`: The ephemeral X25519 key fro this KEM operation.
 //! - `secret_recipient`: The private X25519 of the recipient.
 //! - `secret_sender`: The private X25519 of the sender.
+//! - `secret_ephemeral`: Ephemeral private key fro deterministic encapsulation.
 //!
 //! # Errors:
 //! An error will be returned if:
@@ -37,6 +38,7 @@
 //!
 //! # Security:
 //! - The `ikm` used as input for [`derive_keypair()`] must never be reused.
+//! - The `secret_ephemeral` must never be reused.
 //! - This KEM is vulnerable to key-compromise impersonation attacks (KCI), meaning
 //! that if the recipients private key `secret_recipient` is leaked at any point, sender authentication
 //! no longer holds. See [KCI section](https://www.rfc-editor.org/rfc/rfc9180.html#section-9.1.1) of the RFC
@@ -65,8 +67,6 @@
 //! [`auth_decap()`]: x25519_hkdf_sha256::DhKem::auth_decap
 //! [`derive_keypair()`]: x25519_hkdf_sha256::DhKem::derive_keypair
 //! [`generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
-
-#![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
@@ -154,6 +154,8 @@ impl DhKem {
         Ok(())
     }
 
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Generate random X25519 keypair.
     pub fn generate_keypair() -> Result<(PrivateKey, PublicKey), UnknownCryptoError> {
         let sk = PrivateKey::generate();
@@ -178,12 +180,22 @@ impl DhKem {
         Ok((sk, pk))
     }
 
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Derive ephemeral shared secret and encapsulation thereof, which can be
     /// decapsulated by the holder of `public_recipient`.
     pub fn encap(
         public_recipient: &PublicKey,
     ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
         let secret_ephemeral = PrivateKey::generate();
+        Self::encap_deterministic(public_recipient, secret_ephemeral)
+    }
+
+    /// Equivalent to [`Self::encap()`], but with a one-time use provided ephemeral private key.
+    pub fn encap_deterministic(
+        public_recipient: &PublicKey,
+        secret_ephemeral: PrivateKey,
+    ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
         let public_ephemeral = PublicKey::try_from(&secret_ephemeral)?;
 
         let dh = x25519::key_agreement(&secret_ephemeral, public_recipient)?;
@@ -223,18 +235,29 @@ impl DhKem {
         Ok(shared_secret)
     }
 
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Equivalent to [`Self::encap()`], additionally ensuring the holder of `secret_sender` was
     /// the one to generate the shared secret.
     pub fn auth_encap(
         public_recipient: &PublicKey,
         secret_sender: &PrivateKey,
     ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
-        let secret_ehemeral = PrivateKey::generate();
-        let public_ephemeral = PublicKey::try_from(&secret_ehemeral)?;
+        let secret_ephemeral = PrivateKey::generate();
+        Self::auth_encap_deterministic(public_recipient, secret_sender, secret_ephemeral)
+    }
+
+    /// Equivalent to  [`Self::auth_encap()`], but with a one-time use provided ephemeral private key.
+    pub fn auth_encap_deterministic(
+        public_recipient: &PublicKey,
+        secret_sender: &PrivateKey,
+        secret_ephemeral: PrivateKey,
+    ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
+        let public_ephemeral = PublicKey::try_from(&secret_ephemeral)?;
 
         let mut dh = Zeroizing::new([0u8; 64]);
         dh[..32].copy_from_slice(
-            x25519::key_agreement(&secret_ehemeral, public_recipient)?.unprotected_as_bytes(),
+            x25519::key_agreement(&secret_ephemeral, public_recipient)?.unprotected_as_bytes(),
         );
         dh[32..64].copy_from_slice(
             x25519::key_agreement(secret_sender, public_recipient)?.unprotected_as_bytes(),
@@ -279,7 +302,6 @@ impl DhKem {
 }
 
 #[cfg(test)]
-#[cfg(feature = "safe_api")]
 mod public {
     use crate::hazardous::ecc::x25519::{PrivateKey, PublicKey};
     use crate::hazardous::kem::x25519_hkdf_sha256::*;
@@ -292,6 +314,22 @@ mod public {
     }
 
     #[test]
+    fn encap_deterministic() {
+        let (_secret, public) = DhKem::derive_keypair(&[123u8; 32]).unwrap();
+        let (secret_eph1, _public_eph) = DhKem::derive_keypair(&[123u8; 32]).unwrap();
+        let (secret_eph2, _public_eph) = DhKem::derive_keypair(&[123u8; 32]).unwrap();
+
+        let (shared_secret1, public_eph1) =
+            DhKem::encap_deterministic(&public, secret_eph1).unwrap();
+        let (shared_secret2, public_eph2) =
+            DhKem::encap_deterministic(&public, secret_eph2).unwrap();
+
+        assert_eq!(shared_secret1, shared_secret2);
+        assert_eq!(public_eph1, public_eph2);
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
     fn encap_decap_roundtrip() {
         let recipient_secret = PrivateKey::generate();
         let recipient_public = PublicKey::try_from(&recipient_secret).unwrap();
@@ -303,6 +341,7 @@ mod public {
     }
 
     #[test]
+    #[cfg(feature = "safe_api")]
     fn auth_encap_decap_roundtrip() {
         let sender_secret = PrivateKey::generate();
         let sender_public = PublicKey::try_from(&sender_secret).unwrap();
