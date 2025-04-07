@@ -147,7 +147,6 @@ pub fn open(
     Ok(dst_out)
 }
 
-#[allow(clippy::doc_lazy_continuation)]
 pub mod streaming {
     //! Streaming AEAD based on XChaCha20Poly1305.
     //!
@@ -167,6 +166,7 @@ pub mod streaming {
     //! - `ciphertext`: The encrypted data with a Poly1305 tag and a [`StreamTag`] indicating its function.
     //! - `tag`: Indicates the type of message. The `tag` is a part of the output when encrypting. It
     //!  is encrypted and authenticated.
+    //! - `tag`: Indicates the type of message. The `tag` is a part of the output when encrypting. It is encrypted and authenticated.
     //!
     //! # Errors:
     //! An error will be returned if:
