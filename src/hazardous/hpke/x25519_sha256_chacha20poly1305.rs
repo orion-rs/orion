@@ -33,13 +33,15 @@ use zeroize::Zeroizing;
 #[cfg_attr(test, derive(Clone))]
 /// HPKE suite: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256 and ChaCha20Poly1305.
 ///
-/// # Important note about serialized private keys for this suite
+/// # Note about serialized private keys for this suite
 /// RFC 9180 defines the format of X25519 serialized private keys as the clamped version. According to the standard,
 /// (de)serializing from/to a private key requires clamping input/output. This implementation adheres to this requirement,
 /// and as such, calling [`unprotected_as_bytes()`] on the private key used with this suite will return its clamped version.
 ///
 /// The original RFC 9180 test vectors for this suite do on the contrary not include this clamping, so if someone were to compare
 /// or otherwise use the output of [`unprotected_as_bytes()`], and expect it to be equal that of other implementations, it might not be.
+/// This does not affect interoperability in any other way, meaning HPKE data encrypted with Orion will still decrypt successfully with different
+/// HPKE implementations.
 ///
 /// The test-vector issues have been reported: <https://www.rfc-editor.org/errata/eid7121>, <https://github.com/cfrg/draft-irtf-cfrg-hpke/issues/255>
 ///
