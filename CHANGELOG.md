@@ -3,9 +3,9 @@
 **Date:** TBD.
 
 **Changelog:**
-- Add `encap_deterministic()` and `auth_encap_deterministic()` to `DhKem` in `hazardous::kem::x25519_hkdf_sha256::DhKem` [TODO PR](TODO PR).
-- Make `hazardous::kem::x25519_hkdf_sha256::DhKem` available in `[no_std]` context [TODO PR](TODO PR).
-- Add support for HPKE (RFC 9180) [TODO PR](TODO PR).
+- Add `encap_deterministic()` and `auth_encap_deterministic()` to `DhKem` in `hazardous::kem::x25519_hkdf_sha256::DhKem` [#458](https://github.com/orion-rs/orion/pull/458).
+- Make `hazardous::kem::x25519_hkdf_sha256::DhKem` available in `[no_std]` context [#458](https://github.com/orion-rs/orion/pull/458).
+- Add support for HPKE (RFC 9180) [#458](https://github.com/orion-rs/orion/pull/458).
 
 ### 0.17.9
 
