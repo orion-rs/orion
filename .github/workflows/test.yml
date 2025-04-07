@@ -178,6 +178,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: obi1kenobi/cargo-semver-checks-action@d29a72f04e7cf00e1e7300be9be17e9a355e5cc2
+      - uses: obi1kenobi/cargo-semver-checks-action@7272cc2caa468d3e009a2b0a9cc366839348237b
       
       - run: cargo semver-checks
