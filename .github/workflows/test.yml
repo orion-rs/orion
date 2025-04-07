@@ -169,3 +169,15 @@ jobs:
           toolchain: stable
 
       - run: cargo test --benches
+
+  semver_checks:
+    name: Check SemVer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - uses: obi1kenobi/cargo-semver-checks-action@7272cc2caa468d3e009a2b0a9cc366839348237b
+      
+      - run: cargo semver-checks
