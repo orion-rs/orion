@@ -32,6 +32,18 @@ use zeroize::Zeroizing;
 #[allow(non_camel_case_types)]
 #[cfg_attr(test, derive(Clone))]
 /// HPKE suite: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256 and ChaCha20Poly1305.
+///
+/// # Important note about serialized private keys for this suite
+/// RFC 9180 defines the format of X25519 serialized private keys as the clamped version. According to the standard,
+/// (de)serializing from/to a private key requires clamping input/output. This implementation adheres to this requirement,
+/// and as such, calling [`unprotected_as_bytes()`] on the private key used with this suite will return its clamped version.
+///
+/// The original RFC 9180 test vectors for this suite do on the contrary not include this clamping, so if someone were to compare
+/// or otherwise use the output of [`unprotected_as_bytes()`], and expect it to be equal that of other implementations, it might not be.
+///
+/// The test-vector issues have been reported: <https://www.rfc-editor.org/errata/eid7121>, <https://github.com/cfrg/draft-irtf-cfrg-hpke/issues/255>
+///
+/// [`unprotected_as_bytes()`]: crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey::unprotected_as_bytes
 pub struct DHKEM_X25519_SHA256_CHACHA20 {
     key: [u8; 32],
     base_nonce: [u8; 12],
