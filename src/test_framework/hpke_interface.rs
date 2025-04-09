@@ -152,6 +152,8 @@ impl<T: TestableHpke> HpkeTester<T> {
         self.test_generate_keypair_deterministic();
         self.test_generate_keypair_fresh();
         self.test_psk_inclusion();
+        self.test_info_inclusion();
+        self.test_kemct_inclusion();
         self.test_export_context_inclusion();
         self.test_modified_aead_tag();
         self.test_modified_aead_aad();
@@ -409,8 +411,8 @@ impl<T: TestableHpke> HpkeTester<T> {
         sender.seal(b"test msg", b"aad", &mut out).unwrap();
 
         let mut dst = [0u8; 24 - 16];
-        assert!(recipient.open(&out, b"aad", &mut dst).is_ok());
         assert!(recipient.open(&out, &[], &mut dst).is_err());
+        assert!(recipient.open(&out, b"aad", &mut dst).is_ok());
     }
 
     fn test_kdf_input_limits() {
@@ -539,6 +541,97 @@ impl<T: TestableHpke> HpkeTester<T> {
         assert!(recipient.export(&[0u8; 65], &mut dst).is_err());
     }
 
+    fn test_info_inclusion(&mut self) {
+        let valid_info = Self::random_vector(&mut self.rng, 1..64);
+        let valid_psk = Self::random_vector(&mut self.rng, 32..64);
+        let valid_psk_id = Self::random_vector(&mut self.rng, 1..64);
+        let valid_kem_ikm_sender = Self::random_vector(&mut self.rng, 32..64);
+        let valid_kem_ikm_recipient = Self::random_vector(&mut self.rng, 32..64);
+
+        let (sender_priv, sender_pub) = T::gen_kp(&valid_kem_ikm_sender).unwrap();
+        let (recipient_priv, recipient_pub) = T::gen_kp(&valid_kem_ikm_recipient).unwrap();
+
+        let mut ct = vec![0u8; T::kem_ct_size()];
+        let mut sender = T::setup_fresh_sender(
+            &recipient_pub,
+            &valid_info,
+            &valid_psk,
+            &valid_psk_id,
+            &sender_priv,
+            &mut ct,
+        )
+        .unwrap();
+
+        let mut bad_info = valid_info.clone();
+        bad_info[0] ^= 1;
+        let mut recipient_bad = T::setup_fresh_recipient(
+            &ct,
+            &recipient_priv,
+            &bad_info,
+            &valid_psk,
+            &valid_psk_id,
+            &sender_pub,
+        )
+        .unwrap();
+
+        let mut out = [0u8; b"test msg".len() + 16];
+        sender.seal(b"test msg", &[], &mut out).unwrap();
+
+        let mut dst = [0u8; 24 - 16];
+        assert!(recipient_bad.open(&out, &[], &mut dst).is_err());
+
+        let mut export_sender = [0u8; 32];
+        let mut export_recipient = [0u8; 32];
+        sender.export(b"exp", &mut export_sender).unwrap();
+        recipient_bad.export(b"exp", &mut export_recipient).unwrap();
+        assert_ne!(export_sender, export_recipient);
+    }
+
+    fn test_kemct_inclusion(&mut self) {
+        let valid_info = Self::random_vector(&mut self.rng, 1..64);
+        let valid_psk = Self::random_vector(&mut self.rng, 32..64);
+        let valid_psk_id = Self::random_vector(&mut self.rng, 1..64);
+        let valid_kem_ikm_sender = Self::random_vector(&mut self.rng, 32..64);
+        let valid_kem_ikm_recipient = Self::random_vector(&mut self.rng, 32..64);
+
+        let (sender_priv, sender_pub) = T::gen_kp(&valid_kem_ikm_sender).unwrap();
+        let (recipient_priv, recipient_pub) = T::gen_kp(&valid_kem_ikm_recipient).unwrap();
+
+        let mut bad_ct = vec![0u8; T::kem_ct_size()];
+        let mut sender = T::setup_fresh_sender(
+            &recipient_pub,
+            &valid_info,
+            &valid_psk,
+            &valid_psk_id,
+            &sender_priv,
+            &mut bad_ct,
+        )
+        .unwrap();
+
+        bad_ct[0] ^= 1;
+        let mut recipient_bad = T::setup_fresh_recipient(
+            &bad_ct,
+            &recipient_priv,
+            &valid_info,
+            &valid_psk,
+            &valid_psk_id,
+            &sender_pub,
+        )
+        .unwrap();
+
+        let mut out = [0u8; b"test msg".len() + 16];
+        sender.seal(b"test msg", &[], &mut out).unwrap();
+
+        let mut dst = [0u8; 24 - 16];
+        assert!(recipient_bad.open(&out, &[], &mut dst).is_err());
+
+        let mut export_sender = [0u8; 32];
+        let mut export_recipient = [0u8; 32];
+        sender.export(b"exp", &mut export_sender).unwrap();
+        recipient_bad.export(b"exp", &mut export_recipient).unwrap();
+        assert_ne!(export_sender, export_recipient);
+    }
+
     fn test_psk_inclusion(&mut self) {
         // only for Psk or AuthPsk modes
         if T::HPKE_MODE != 0x01u8 && T::HPKE_MODE != 0x03u8 {
@@ -579,6 +672,27 @@ impl<T: TestableHpke> HpkeTester<T> {
 
         let mut out = [0u8; b"test msg".len() + 16];
         sender.seal(b"test msg", &[], &mut out).unwrap();
+
+        let mut dst = [0u8; 24 - 16];
+        assert!(recipient_bad.open(&out, &[], &mut dst).is_err());
+
+        let mut export_sender = [0u8; 32];
+        let mut export_recipient = [0u8; 32];
+        sender.export(b"exp", &mut export_sender).unwrap();
+        recipient_bad.export(b"exp", &mut export_recipient).unwrap();
+        assert_ne!(export_sender, export_recipient);
+
+        let mut bad_psk_id = valid_psk_id.clone();
+        bad_psk_id[0] ^= 1;
+        let mut recipient_bad = T::setup_fresh_recipient(
+            &ct,
+            &recipient_priv,
+            &valid_info,
+            &valid_psk,
+            &bad_psk_id,
+            &sender_pub,
+        )
+        .unwrap();
 
         let mut dst = [0u8; 24 - 16];
         assert!(recipient_bad.open(&out, &[], &mut dst).is_err());
