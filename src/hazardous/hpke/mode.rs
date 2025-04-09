@@ -120,9 +120,10 @@ pub(crate) mod private {
 /// - `info` is longer than 64 bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
 /// - `exporter_context` is longer than 64 bytes
-/// - The internal counter reaches `u64::MAX` and a call to [`Self::seal()`]/[`Self::open()`] is made
-/// - Calling `seal()` when the role is `Role::Recipient`
-/// - Calling `open()` when the role is `Role::Sender`
+/// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
+/// - Calling [`Self::seal()`] when the role is `Role::Recipient`
+/// - Calling [`Self::open()`] when the role is `Role::Sender`
+/// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
 ///
@@ -320,9 +321,10 @@ impl<S: Suite + Base> ModeBase<S> {
 /// - `info` is longer than 64 bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
 /// - `exporter_context` is longer than 64 bytes
-/// - The internal counter reaches `u64::MAX` and a call to [`Self::seal()`]/[`Self::open()`] is made
-/// - Calling `seal()` when the role is `Role::Recipient`
-/// - Calling `open()` when the role is `Role::Sender`
+/// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
+/// - Calling [`Self::seal()`] when the role is `Role::Recipient`
+/// - Calling [`Self::open()`] when the role is `Role::Sender`
+/// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - `psk` or `psk_id` are empty
 /// - `psk` is less than 32 bytes or more than 64 bytes
 /// - `psk_id` is more than 64 bytes
@@ -536,9 +538,10 @@ impl<S: Suite + Psk> ModePsk<S> {
 /// - `info` is longer than 64 bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
 /// - `exporter_context` is longer than 64 bytes
-/// - The internal counter reaches `u64::MAX` and a call to [`Self::seal()`]/[`Self::open()`] is made
-/// - Calling `seal()` when the role is `Role::Recipient`
-/// - Calling `open()` when the role is `Role::Sender`
+/// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
+/// - Calling [`Self::seal()`] when the role is `Role::Recipient`
+/// - Calling [`Self::open()`] when the role is `Role::Sender`
+/// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
 ///
@@ -743,9 +746,10 @@ impl<S: Suite + Auth> ModeAuth<S> {
 /// - `info` is longer than 64 bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
 /// - `exporter_context` is longer than 64 bytes
-/// - The internal counter reaches `u64::MAX` and a call to [`Self::seal()`]/[`Self::open()`] is made
-/// - Calling `seal()` when the role is `Role::Recipient`
-/// - Calling `open()` when the role is `Role::Sender`
+/// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
+/// - Calling [`Self::seal()`] when the role is `Role::Recipient`
+/// - Calling [`Self::open()`] when the role is `Role::Sender`
+/// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - `psk` or `psk_id` are empty
 /// - `psk` is less than 32 bytes or more than 64 bytes
 /// - `psk_id` is more than 64 bytes
