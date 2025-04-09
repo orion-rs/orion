@@ -35,3 +35,7 @@ pub mod streamcipher_interface;
 #[cfg(feature = "safe_api")]
 /// Tests for KEMs such as `mlkem`.
 pub mod kem_interface;
+
+#[cfg(all(test, feature = "safe_api"))]
+/// Tests for HPKE.
+pub mod hpke_interface;

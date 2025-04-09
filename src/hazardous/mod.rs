@@ -51,3 +51,6 @@ pub mod cae;
 
 /// Key Encapsulation Mechanisms (KEMs).
 pub mod kem;
+
+/// Hybrid Public Key Encryption (HPKE).
+pub mod hpke;

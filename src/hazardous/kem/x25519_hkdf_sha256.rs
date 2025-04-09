@@ -22,9 +22,10 @@
 
 //! # Parameters:
 //! - `public_recipient`: The public X25519 key of the recipient.
-//! - `public_ephemeral`: The ephemeral X25519 key fro this KEM operation.
+//! - `public_ephemeral`: The ephemeral X25519 key for this KEM operation.
 //! - `secret_recipient`: The private X25519 of the recipient.
 //! - `secret_sender`: The private X25519 of the sender.
+//! - `secret_ephemeral`: Ephemeral private key for deterministic encapsulation.
 //!
 //! # Errors:
 //! An error will be returned if:
@@ -37,6 +38,7 @@
 //!
 //! # Security:
 //! - The `ikm` used as input for [`derive_keypair()`] must never be reused.
+//! - The `secret_ephemeral` must never be reused.
 //! - This KEM is vulnerable to key-compromise impersonation attacks (KCI), meaning
 //! that if the recipients private key `secret_recipient` is leaked at any point, sender authentication
 //! no longer holds. See [KCI section](https://www.rfc-editor.org/rfc/rfc9180.html#section-9.1.1) of the RFC
@@ -66,12 +68,10 @@
 //! [`derive_keypair()`]: x25519_hkdf_sha256::DhKem::derive_keypair
 //! [`generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
 
-#![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
-use crate::hazardous::kdf::hkdf::sha256;
-use zeroize::Zeroize;
+use crate::hazardous::kdf::hkdf;
+use zeroize::Zeroizing;
 
 pub use crate::hazardous::ecc::x25519::PrivateKey;
 pub use crate::hazardous::ecc::x25519::PublicKey;
@@ -105,44 +105,57 @@ impl DhKem {
         salt: &[u8],
         label: &[u8; 7],
         ikm: &[u8],
-    ) -> Result<sha256::Tag, UnknownCryptoError> {
-        let mut labeled_ikm = Vec::<u8>::new();
-        labeled_ikm.extend_from_slice(Self::HPKE_VERSION_ID.as_bytes());
-        labeled_ikm.extend_from_slice(b"KEM");
-        labeled_ikm.extend_from_slice(&Self::KEM_ID.to_be_bytes());
-        labeled_ikm.extend_from_slice(label);
-        labeled_ikm.extend_from_slice(ikm);
-
-        sha256::extract(salt, &labeled_ikm)
+    ) -> Result<hkdf::sha256::Tag, UnknownCryptoError> {
+        hkdf::sha256::extract_with_parts(
+            salt,
+            &[
+                Self::HPKE_VERSION_ID.as_bytes(),
+                b"KEM",
+                &Self::KEM_ID.to_be_bytes(),
+                label,
+                ikm,
+            ],
+        )
     }
 
-    fn labeled_expand<const L: u16>(
-        prk: &sha256::Tag,
+    fn labeled_expand(
+        prk: &hkdf::sha256::Tag,
         label: &[u8],
         info: &[u8],
-    ) -> Result<Vec<u8>, UnknownCryptoError> {
-        let mut labeled_info = Vec::<u8>::new();
-        labeled_info.extend_from_slice(&L.to_be_bytes());
-        labeled_info.extend_from_slice(Self::HPKE_VERSION_ID.as_bytes());
-        labeled_info.extend_from_slice(b"KEM");
-        labeled_info.extend_from_slice(&Self::KEM_ID.to_be_bytes());
-        labeled_info.extend_from_slice(label);
-        labeled_info.extend_from_slice(info);
+        out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        let l: u16 = out.len().try_into().map_err(|_| UnknownCryptoError)?;
+        hkdf::sha256::expand_with_parts(
+            prk.unprotected_as_bytes(),
+            Some(&[
+                &l.to_be_bytes(),
+                Self::HPKE_VERSION_ID.as_bytes(),
+                b"KEM",
+                &Self::KEM_ID.to_be_bytes(),
+                label,
+                info,
+            ]),
+            out,
+        )?;
 
-        let mut out = vec![0u8; L as usize];
-        sha256::expand(prk, Some(&labeled_info), &mut out)?;
-
-        Ok(out)
+        Ok(())
     }
 
-    fn extract_and_expand(dh: &[u8], kem_context: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+    fn extract_and_expand(
+        dh: &[u8],
+        kem_context: &[u8],
+        out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        debug_assert_eq!(out.len(), Self::N_SECRET as usize);
+
         let eae_prk = Self::labeled_extract(b"", b"eae_prk", dh)?;
-        let shared_secret =
-            Self::labeled_expand::<{ Self::N_SECRET }>(&eae_prk, b"shared_secret", kem_context)?;
+        Self::labeled_expand(&eae_prk, b"shared_secret", kem_context, out)?;
 
-        Ok(shared_secret)
+        Ok(())
     }
 
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Generate random X25519 keypair.
     pub fn generate_keypair() -> Result<(PrivateKey, PublicKey), UnknownCryptoError> {
         let sk = PrivateKey::generate();
@@ -151,25 +164,38 @@ impl DhKem {
         Ok((sk, pk))
     }
 
-    /// Deterministically derive a X25519 keyapir from `ikm`.
+    /// Deterministically derive a X25519 keypair from `ikm`.
     pub fn derive_keypair(ikm: &[u8]) -> Result<(PrivateKey, PublicKey), UnknownCryptoError> {
         if ikm.len() < 32 {
             return Err(UnknownCryptoError);
         }
 
         let dkp_prk = Self::labeled_extract(b"", b"dkp_prk", ikm)?;
-        let sk = PrivateKey::from_slice(&Self::labeled_expand::<32>(&dkp_prk, b"sk", b"")?)?;
+        let mut sk_bytes = Zeroizing::new([0u8; x25519::PRIVATE_KEY_SIZE]);
+        Self::labeled_expand(&dkp_prk, b"sk", b"", sk_bytes.as_mut_slice())?;
+
+        let sk = PrivateKey::from_slice(sk_bytes.as_slice())?;
         let pk = PublicKey::try_from(&sk)?;
 
         Ok((sk, pk))
     }
 
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Derive ephemeral shared secret and encapsulation thereof, which can be
     /// decapsulated by the holder of `public_recipient`.
     pub fn encap(
         public_recipient: &PublicKey,
     ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
         let secret_ephemeral = PrivateKey::generate();
+        Self::encap_deterministic(public_recipient, secret_ephemeral)
+    }
+
+    /// Equivalent to [`Self::encap()`], but with a one-time use provided ephemeral private key.
+    pub fn encap_deterministic(
+        public_recipient: &PublicKey,
+        secret_ephemeral: PrivateKey,
+    ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
         let public_ephemeral = PublicKey::try_from(&secret_ephemeral)?;
 
         let dh = x25519::key_agreement(&secret_ephemeral, public_recipient)?;
@@ -177,12 +203,17 @@ impl DhKem {
         kem_context[..32].copy_from_slice(&public_ephemeral.to_bytes());
         kem_context[32..64].copy_from_slice(&public_recipient.to_bytes());
 
-        let shared_secret = Self::extract_and_expand(dh.unprotected_as_bytes(), &kem_context)?;
+        let mut shared_secret = SharedSecret::from_slice(&[0u8; Self::N_SECRET as usize])?;
+        Self::extract_and_expand(
+            dh.unprotected_as_bytes(),
+            &kem_context,
+            &mut shared_secret.value,
+        )?;
 
-        Ok((SharedSecret::from_slice(&shared_secret)?, public_ephemeral))
+        Ok((shared_secret, public_ephemeral))
     }
 
-    /// Decapsulate `public_ephemeral` and return the shared ephemeral secrety,
+    /// Decapsulate `public_ephemeral` and return the shared ephemeral secret,
     /// using `secret_recipient` private key.
     pub fn decap(
         public_ephemeral: &PublicKey,
@@ -194,23 +225,39 @@ impl DhKem {
         kem_context[..32].copy_from_slice(&public_ephemeral.to_bytes());
         kem_context[32..64].copy_from_slice(&PublicKey::try_from(secret_recipient)?.to_bytes());
 
-        let shared_secret = Self::extract_and_expand(dh.unprotected_as_bytes(), &kem_context)?;
+        let mut shared_secret = SharedSecret::from_slice(&[0u8; Self::N_SECRET as usize])?;
+        Self::extract_and_expand(
+            dh.unprotected_as_bytes(),
+            &kem_context,
+            &mut shared_secret.value,
+        )?;
 
-        SharedSecret::from_slice(&shared_secret)
+        Ok(shared_secret)
     }
 
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Equivalent to [`Self::encap()`], additionally ensuring the holder of `secret_sender` was
     /// the one to generate the shared secret.
     pub fn auth_encap(
         public_recipient: &PublicKey,
         secret_sender: &PrivateKey,
     ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
-        let secret_ehemeral = PrivateKey::generate();
-        let public_ephemeral = PublicKey::try_from(&secret_ehemeral)?;
+        let secret_ephemeral = PrivateKey::generate();
+        Self::auth_encap_deterministic(public_recipient, secret_sender, secret_ephemeral)
+    }
 
-        let mut dh = [0u8; 64];
+    /// Equivalent to  [`Self::auth_encap()`], but with a one-time use provided ephemeral private key.
+    pub fn auth_encap_deterministic(
+        public_recipient: &PublicKey,
+        secret_sender: &PrivateKey,
+        secret_ephemeral: PrivateKey,
+    ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
+        let public_ephemeral = PublicKey::try_from(&secret_ephemeral)?;
+
+        let mut dh = Zeroizing::new([0u8; 64]);
         dh[..32].copy_from_slice(
-            x25519::key_agreement(&secret_ehemeral, public_recipient)?.unprotected_as_bytes(),
+            x25519::key_agreement(&secret_ephemeral, public_recipient)?.unprotected_as_bytes(),
         );
         dh[32..64].copy_from_slice(
             x25519::key_agreement(secret_sender, public_recipient)?.unprotected_as_bytes(),
@@ -221,10 +268,10 @@ impl DhKem {
         kem_context[32..64].copy_from_slice(&public_recipient.to_bytes());
         kem_context[64..96].copy_from_slice(&PublicKey::try_from(secret_sender)?.to_bytes());
 
-        let shared_secret = Self::extract_and_expand(&dh, &kem_context)?;
-        dh.iter_mut().zeroize();
+        let mut shared_secret = SharedSecret::from_slice(&[0u8; Self::N_SECRET as usize])?;
+        Self::extract_and_expand(dh.as_slice(), &kem_context, &mut shared_secret.value)?;
 
-        Ok((SharedSecret::from_slice(&shared_secret)?, public_ephemeral))
+        Ok((shared_secret, public_ephemeral))
     }
 
     /// Equivalent to [`Self::decap()`], additionally ensuring the holder of `secret_sender` was
@@ -234,7 +281,7 @@ impl DhKem {
         secret_recipient: &PrivateKey,
         public_sender: &PublicKey,
     ) -> Result<SharedSecret, UnknownCryptoError> {
-        let mut dh = [0u8; 64];
+        let mut dh = Zeroizing::new([0u8; 64]);
         dh[..32].copy_from_slice(
             x25519::key_agreement(secret_recipient, public_ephemeral)?.unprotected_as_bytes(),
         );
@@ -247,20 +294,43 @@ impl DhKem {
         kem_context[32..64].copy_from_slice(&PublicKey::try_from(secret_recipient)?.to_bytes());
         kem_context[64..96].copy_from_slice(&public_sender.to_bytes());
 
-        let shared_secret = Self::extract_and_expand(&dh, &kem_context)?;
-        dh.iter_mut().zeroize();
+        let mut shared_secret = SharedSecret::from_slice(&[0u8; Self::N_SECRET as usize])?;
+        Self::extract_and_expand(dh.as_slice(), &kem_context, &mut shared_secret.value)?;
 
-        SharedSecret::from_slice(&shared_secret)
+        Ok(shared_secret)
     }
 }
 
 #[cfg(test)]
-#[cfg(feature = "safe_api")]
 mod public {
+    #[cfg(feature = "safe_api")]
     use crate::hazardous::ecc::x25519::{PrivateKey, PublicKey};
     use crate::hazardous::kem::x25519_hkdf_sha256::*;
 
     #[test]
+    fn error_on_short_ikm() {
+        assert!(DhKem::derive_keypair(&[0u8; 31]).is_err());
+        assert!(DhKem::derive_keypair(&[0u8; 32]).is_ok());
+        assert!(DhKem::derive_keypair(&[0u8; 65]).is_ok());
+    }
+
+    #[test]
+    fn encap_deterministic() {
+        let (_secret, public) = DhKem::derive_keypair(&[123u8; 32]).unwrap();
+        let (secret_eph1, _public_eph) = DhKem::derive_keypair(&[123u8; 32]).unwrap();
+        let (secret_eph2, _public_eph) = DhKem::derive_keypair(&[123u8; 32]).unwrap();
+
+        let (shared_secret1, public_eph1) =
+            DhKem::encap_deterministic(&public, secret_eph1).unwrap();
+        let (shared_secret2, public_eph2) =
+            DhKem::encap_deterministic(&public, secret_eph2).unwrap();
+
+        assert_eq!(shared_secret1, shared_secret2);
+        assert_eq!(public_eph1, public_eph2);
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
     fn encap_decap_roundtrip() {
         let recipient_secret = PrivateKey::generate();
         let recipient_public = PublicKey::try_from(&recipient_secret).unwrap();
@@ -272,6 +342,7 @@ mod public {
     }
 
     #[test]
+    #[cfg(feature = "safe_api")]
     fn auth_encap_decap_roundtrip() {
         let sender_secret = PrivateKey::generate();
         let sender_public = PublicKey::try_from(&sender_secret).unwrap();
