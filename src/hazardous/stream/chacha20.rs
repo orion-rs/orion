@@ -428,6 +428,19 @@ mod public {
         assert_ne!(&[b'x'; 4], &dst_out[dst_out.len() - 4..]);
     }
 
+    #[test]
+    fn test_xor_keystream_err_initial_ctr_overflow() {
+        let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
+        let nonce = Nonce::from_slice(&[0u8; 12]).unwrap();
+        let mut chacha_state =
+            ChaCha20::new(sk.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+
+        let mut tmp_block = [0u8; CHACHA_BLOCKSIZE];
+        let mut bytes = [12u8; CHACHA_BLOCKSIZE * 2];
+        // Should return error on processing of second block.
+        assert!(xor_keystream(&mut chacha_state, u32::MAX, &mut tmp_block, &mut bytes).is_err());
+    }
+
     #[cfg(feature = "safe_api")]
     mod test_encrypt_decrypt {
         use super::*;
