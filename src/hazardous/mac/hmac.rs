@@ -93,9 +93,6 @@ pub(crate) trait HmacHashFunction: Clone {
 
 /// A trait used to define a HMAC function.
 pub(crate) trait HmacFunction {
-    // NOTE: Clippy complains this is not used, however it is used in both HKDF and PBKDF2. Perhaps a bug
-    // with min_const_generics?
-    #[allow(dead_code)]
     /// The output size of the internal hash function used.
     const HASH_FUNC_OUTSIZE: usize;
 
@@ -140,11 +137,6 @@ impl<S: HmacHashFunction, const BLOCKSIZE: usize> core::fmt::Debug for Hmac<S, B
 }
 
 impl<S: HmacHashFunction, const BLOCKSIZE: usize> Hmac<S, BLOCKSIZE> {
-    // NOTE: Clippy complains this is not used, however it is used in both HKDF and PBKDF2. Perhaps a bug
-    // with min_const_generics?
-    #[allow(dead_code)]
-    const HASH_FUNC_OUTSIZE: usize = S::_OUTSIZE;
-
     /// Construct a state from a `secret_key`. The `secret_key` may be pre-padded or not.
     ///
     /// Ref: https://brycx.github.io/2018/08/06/hmac-and-precomputation-optimization.html
