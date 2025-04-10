@@ -395,6 +395,7 @@ mod public {
     #[cfg(feature = "safe_api")]
     mod test_io_impls {
         use crate::hazardous::hash::blake2::blake2b::Blake2b;
+        use crate::hazardous::hash::blake2::blake2b_core::compare_blake2b_states;
         use std::io::Write;
 
         #[quickcheck]
@@ -405,8 +406,16 @@ mod public {
             hasher_a.update(&data).unwrap();
             hasher_b.write_all(&data).unwrap();
 
+            // Additionally make sure flush() is a no-op, which we expect.
+            hasher_b.flush().unwrap();
+            compare_blake2b_states(&hasher_a._state, &hasher_b._state);
+
             let hash_a = hasher_a.finalize().unwrap();
             let hash_b = hasher_b.finalize().unwrap();
+
+            // Additionally make sure flush() is a no-op, which we expect.
+            hasher_b.flush().unwrap();
+            compare_blake2b_states(&hasher_a._state, &hasher_b._state);
 
             hash_a == hash_b
         }
