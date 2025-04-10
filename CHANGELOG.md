@@ -4,9 +4,11 @@
 
 **Changelog:**
 - Add `encap_deterministic()` and `auth_encap_deterministic()` to `DhKem` in `hazardous::kem::x25519_hkdf_sha256::DhKem` [#458](https://github.com/orion-rs/orion/pull/458).
-- Make `hazardous::kem::x25519_hkdf_sha256::DhKem` available in `[no_std]` context [#458](https://github.com/orion-rs/orion/pull/458).
+- Make `hazardous::kem::x25519_hkdf_sha256::DhKem` available in `#![no_std]` context [#458](https://github.com/orion-rs/orion/pull/458).
 - Add support for HPKE (RFC 9180) [#458](https://github.com/orion-rs/orion/pull/458).
 - Switch to source-based code coverage [#462](https://github.com/orion-rs/orion/pull/462).
+- ML-KEM (internal): Cache hash of encapsulation key to save computation on multiple `encap()` operations [#464](https://github.com/orion-rs/orion/pull/464).
+- ML-KEM (internal): Cache encapsulation key within decapsulation key, to avoid re-computation after generation og decapsulation key [#447](https://github.com/orion-rs/orion/pull/447).
 
 ### 0.17.9
 
