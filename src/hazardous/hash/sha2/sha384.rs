@@ -350,8 +350,16 @@ mod public {
             hasher_a.update(&data).unwrap();
             hasher_b.write_all(&data).unwrap();
 
+            // Additionally make sure flush() is a no-op, which we expect.
+            hasher_b.flush().unwrap();
+            hasher_a._state.compare_state_to_other(&hasher_b._state);
+
             let hash_a = hasher_a.finalize().unwrap();
             let hash_b = hasher_b.finalize().unwrap();
+
+            // Additionally make sure flush() is a no-op, which we expect.
+            hasher_b.flush().unwrap();
+            hasher_a._state.compare_state_to_other(&hasher_b._state);
 
             hash_a == hash_b
         }

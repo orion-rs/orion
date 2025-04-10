@@ -630,9 +630,76 @@ pub fn key_agreement(
 
 #[cfg(test)]
 mod public {
+    use super::FieldElement;
     use crate::hazardous::ecc::x25519::{
-        key_agreement, PrivateKey, PublicKey, SharedKey, BASEPOINT,
+        key_agreement, PrivateKey, PublicKey, Scalar, SharedKey, BASEPOINT, PRIVATE_KEY_SIZE,
+        PUBLIC_KEY_SIZE,
     };
+
+    // NOTE(brycx): PrivateKey/PublicKey in X25519 are manual impls of types that are normally tested as
+    // part of typedefs, so we have some extra test code that here, that normally
+    // would be part of the macros.
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn testpublickey_partialeq_bytes() {
+        let k = PrivateKey::generate();
+        let pk = PublicKey::try_from(&k).unwrap();
+
+        assert_eq!(pk, pk.to_bytes().as_ref());
+        assert_ne!(pk, [0u8; PUBLIC_KEY_SIZE].as_ref()); // not zero, because generate()
+        assert_ne!(pk, [0u8; PUBLIC_KEY_SIZE - 1].as_ref()); // early abort on length mismatch
+        assert_ne!(pk, [0u8; PUBLIC_KEY_SIZE + 1].as_ref());
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn testprivate_partialeq_bytes() {
+        let k = PrivateKey::generate();
+        assert!(!k.is_empty());
+        assert_eq!(k.len(), PRIVATE_KEY_SIZE);
+
+        assert_eq!(k, k.unprotected_as_bytes());
+        assert_ne!(k, [0u8; PRIVATE_KEY_SIZE].as_ref()); // not zero, because generate()
+        assert_ne!(k, [0u8; PRIVATE_KEY_SIZE - 1].as_ref()); // early abort on length mismatch
+        assert_ne!(k, [0u8; PRIVATE_KEY_SIZE + 1].as_ref());
+    }
+
+    #[test]
+    fn test_scalar_length_from_slice() {
+        assert!(Scalar::from_slice(&[0u8; PRIVATE_KEY_SIZE]).is_ok());
+        assert!(Scalar::from_slice(&[0u8; PRIVATE_KEY_SIZE - 1]).is_err());
+        assert!(Scalar::from_slice(&[0u8; PRIVATE_KEY_SIZE + 1]).is_err());
+    }
+
+    #[test]
+    fn test_publickey_length_from_slice() {
+        assert!(PublicKey::from_slice(&[0u8; PUBLIC_KEY_SIZE]).is_ok());
+        assert!(PublicKey::from_slice(&[0u8; PUBLIC_KEY_SIZE - 1]).is_err());
+        assert!(PublicKey::from_slice(&[0u8; PUBLIC_KEY_SIZE + 1]).is_err());
+
+        let pk = PublicKey::from_slice(&[0u8; PUBLIC_KEY_SIZE]).unwrap();
+        assert!(!pk.is_empty());
+        assert_eq!(pk.len(), PUBLIC_KEY_SIZE);
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_field_element_debug_impl() {
+        let secret = format!("{:?}", [1u8; 32].as_ref());
+        let test_debug_contents = format!("{:?}", PrivateKey::from_slice(&[1u8; 32]).unwrap());
+        assert!(!test_debug_contents.contains(&secret));
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_privatekey_debug_impl() {
+        let value = format!("{:?}", [1u64, 0u64, 0u64, 0u64, 0u64,].as_ref());
+        let test_debug_contents = format!("{:?}", FieldElement::one());
+        assert!(test_debug_contents.contains(&value));
+    }
 
     #[test]
     fn test_public_key_ignores_highbit() {

@@ -26,10 +26,6 @@ use core::marker::PhantomData;
 pub trait TestableKem<K: PartialEq, C: PartialEq + AsRef<[u8]>> {
     fn keygen(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError>;
 
-    fn parse_encap_key(ek: &[u8]) -> Result<(), UnknownCryptoError>;
-
-    fn parse_decap_key(dk: &[u8]) -> Result<(), UnknownCryptoError>;
-
     fn ciphertext_from_bytes(b: &[u8]) -> Result<C, UnknownCryptoError>;
 
     fn encap(ek: &[u8]) -> Result<(K, C), UnknownCryptoError>;

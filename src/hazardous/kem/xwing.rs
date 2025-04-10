@@ -322,18 +322,6 @@ mod tests {
             ))
         }
 
-        fn parse_encap_key(ek: &[u8]) -> Result<(), UnknownCryptoError> {
-            EncapsulationKey::from_slice(ek)?;
-
-            Ok(())
-        }
-
-        fn parse_decap_key(dk: &[u8]) -> Result<(), UnknownCryptoError> {
-            Seed::from_slice(dk)?;
-
-            Ok(())
-        }
-
         fn ciphertext_from_bytes(b: &[u8]) -> Result<Ciphertext, UnknownCryptoError> {
             Ciphertext::from_slice(b)
         }

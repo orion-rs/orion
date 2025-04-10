@@ -217,10 +217,18 @@ mod public {
             hasher_a.absorb(&data).unwrap();
             hasher_b.write_all(&data).unwrap();
 
+            // Additionally make sure flush() is a no-op, which we expect.
+            hasher_b.flush().unwrap();
+            hasher_a._state.compare_state_to_other(&hasher_b._state);
+
             let mut hash_a = vec![0u8; outlen as usize];
             let mut hash_b = vec![0u8; outlen as usize];
             hasher_a.squeeze(&mut hash_a).unwrap();
             hasher_b.squeeze(&mut hash_b).unwrap();
+
+            // Additionally make sure flush() is a no-op, which we expect.
+            hasher_b.flush().unwrap();
+            hasher_a._state.compare_state_to_other(&hasher_b._state);
 
             hash_a == hash_b
         }

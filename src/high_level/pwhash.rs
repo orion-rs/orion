@@ -867,9 +867,10 @@ mod public {
             iterations: u32,
             memory: u32,
         ) -> bool {
-            let res = PasswordHash::from_slice(&password[..], &salt[..], iterations, memory);
-            if res.is_ok() {
-                assert!(PasswordHash::from_encoded(res.unwrap().unprotected_as_encoded()).is_ok());
+            if let Ok(res) = PasswordHash::from_slice(&password[..], &salt[..], iterations, memory)
+            {
+                assert!(PasswordHash::from_encoded(res.unprotected_as_encoded()).is_ok());
+                assert!(!res.is_empty());
             }
 
             true
@@ -885,6 +886,7 @@ mod public {
             let dk = hash_password(&password, 3, 4096).unwrap();
 
             assert!(hash_password_verify(&dk, &password).is_ok());
+            assert!(!dk.is_empty());
         }
 
         #[test]

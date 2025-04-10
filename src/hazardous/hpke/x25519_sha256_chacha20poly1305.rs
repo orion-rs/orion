@@ -558,6 +558,21 @@ mod test {
     }
 
     #[test]
+    fn test_partialeq_impl() {
+        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let (ctx_s, enc) =
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
+        let ctx_r =
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, &sk, &[0u8; 64]).unwrap();
+        assert_eq!(ctx_s, ctx_r);
+
+        let (_sk, pk) = DhKem::derive_keypair(&[1u8; 64]).unwrap();
+        let (ctx_s, _enc) =
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
+        assert_ne!(ctx_s, ctx_r);
+    }
+
+    #[test]
     fn test_error_on_lengths_base() {
         let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
         let (ctx, enc) = DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
@@ -727,6 +742,7 @@ mod test {
         let mut dst_out = [0u8; b"msg".len() + 16];
         assert!(ctx.seal(plaintext, b"", &mut dst_out).is_ok());
         // Overflow:
+        assert!(ctx.increment_seq().is_err());
         assert!(ctx.seal(plaintext, b"", &mut dst_out).is_err());
 
         let mut ctx = DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, &sk, info).unwrap();
@@ -736,6 +752,7 @@ mod test {
         let mut dst_out = [0u8; b"msg".len()];
         assert!(ctx.open(&ciphertext, b"", &mut dst_out).is_ok());
         // Overflow:
+        assert!(ctx.increment_seq().is_err());
         assert!(ctx.open(&ciphertext, b"", &mut dst_out).is_err());
 
         assert_eq!(&dst_out, plaintext);
