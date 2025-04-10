@@ -38,12 +38,12 @@ jobs:
       
       - name: Create coverage file
         run: |
-          grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/tests.lcov
+          grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o ./target/coverage.lcov
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574
         with:
           fail_ci_if_error: true
-          files: coverage/*.lcov
+          files: ./target/*.lcov
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
