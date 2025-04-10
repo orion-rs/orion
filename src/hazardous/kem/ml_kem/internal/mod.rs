@@ -918,6 +918,7 @@ mod tests {
     use crate::hazardous::kem::ml_kem::mlkem768::KeyPair as MlKem768KeyPair;
 
     #[test]
+    #[cfg(feature = "safe_api")]
     fn test_seed_and_dk_mismatch() {
         let seed = Seed::from_slice(&[128u8; 64]).unwrap();
         let bad_seed = Seed::from_slice(&[1u8; 64]).unwrap();
