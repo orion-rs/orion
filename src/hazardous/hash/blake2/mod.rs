@@ -364,6 +364,8 @@ pub(crate) mod blake2b_core {
 
 #[cfg(test)]
 mod private {
+    use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_KEYSIZE;
+
     use super::blake2b_core::State;
 
     #[test]
@@ -373,6 +375,18 @@ mod private {
         let debug = format!("{:?}", initial_state);
         let expected = "State { init_state: [***OMITTED***], internal_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, t: [0, 0], f: [0, 0], is_finalized: false, is_keyed: false, size: 64 }";
         assert_eq!(debug, expected);
+    }
+
+    #[test]
+    fn test_sk_len() {
+        assert!(State::_new(&[0u8; 0], 64).is_ok());
+        assert!(State::_new(&[0u8; 1], 64).is_ok());
+        assert!(State::_new(&[0u8; BLAKE2B_KEYSIZE], 64).is_ok());
+        assert!(State::_new(&[0u8; BLAKE2B_KEYSIZE + 1], 64).is_err());
+
+        let mut ctx = State::_new(&[], 64).unwrap();
+        assert!(ctx._reset(&[]).is_ok());
+        assert!(ctx._reset(&[0u8; BLAKE2B_KEYSIZE + 1]).is_err());
     }
 
     #[test]
