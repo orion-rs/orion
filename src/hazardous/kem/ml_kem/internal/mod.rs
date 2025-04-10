@@ -32,11 +32,11 @@ pub(crate) mod serialization;
 /// Sampling ring elements from seeds.
 pub(crate) mod sampling;
 
-use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::sha3::sha3_256::Sha3_256;
 use crate::hazardous::hash::sha3::sha3_512::Sha3_512;
 use crate::hazardous::hash::sha3::shake256;
 use crate::hazardous::kem::ml_kem::Seed;
+use crate::{errors::UnknownCryptoError, hazardous::hash::sha3::sha3_256::SHA3_256_OUTSIZE};
 use core::marker::PhantomData;
 use fe::*;
 use re::*;
@@ -323,6 +323,7 @@ impl PkeParameters for MlKem1024Internal {
 /// ML-KEM encapsulation key.
 pub(crate) struct EncapKey<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> {
     pub(crate) bytes: [u8; ENCODED_SIZE],
+    h_ek: [u8; SHA3_256_OUTSIZE],
     t_hat: [RingElementNTT; K],
     mat_a: [[RingElementNTT; K]; K],
     _phantom: PhantomData<Pke>,
@@ -371,8 +372,12 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
             }
         }
 
+        // Cache hash of the bytes so we don't need to re-compute for every encap().
+        let h_ek = Sha3_256::digest(slice)?;
+
         Ok(Self {
             bytes: slice.try_into().unwrap(), // NOTE: Should never panic if encapsulation_key_check() succeeds.
+            h_ek: h_ek.value,
             t_hat,
             mat_a,
             _phantom: PhantomData,
@@ -500,7 +505,7 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
         }
 
         // Step 1: (K, r) ← G(m‖H(ek))
-        let (k, r) = g(&[m, Sha3_256::digest(&self.bytes).unwrap().as_ref()]);
+        let (k, r) = g(&[m, self.h_ek.as_ref()]);
 
         // Step 2: c ← K-PKE.Encrypt(ek, m, r)
         self.encrypt(m, r.as_ref(), c)?;
@@ -793,6 +798,10 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         let idx = ENCODED_SIZE_EK - rho.len();
         dk.ek.bytes[idx..].copy_from_slice(&rho);
 
+        // Cache hash of ek so we don't need to re-compute for every encap().
+        let h_ek = Sha3_256::digest(&dk.ek.bytes)?;
+        dk.ek.h_ek = h_ek.value;
+
         // Step 20
         for (re, dk_part) in dk
             .s_hat
@@ -820,6 +829,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
     > {
         let ek = EncapKey::<K, ENCODED_SIZE_EK, Pke> {
             bytes: [0u8; ENCODED_SIZE_EK],
+            h_ek: [0u8; SHA3_256_OUTSIZE],
             t_hat: [RingElementNTT::zero(); K],
             mat_a: [[RingElementNTT::zero(); K]; K],
             _phantom: PhantomData,
