@@ -334,14 +334,6 @@ mod tests {
             ))
         }
 
-        fn parse_encap_key(ek: &[u8]) -> Result<(), UnknownCryptoError> {
-            MlKem512Internal::encapsulation_key_check(ek)
-        }
-
-        fn parse_decap_key(dk: &[u8]) -> Result<(), UnknownCryptoError> {
-            MlKem512Internal::decapsulation_key_check(dk)
-        }
-
         fn ciphertext_from_bytes(b: &[u8]) -> Result<Ciphertext, UnknownCryptoError> {
             Ciphertext::from_slice(b)
         }
@@ -366,17 +358,60 @@ mod tests {
 
     #[cfg(feature = "safe_api")]
     #[test]
+    fn test_bad_m_length() {
+        let kp = KeyPair::generate().unwrap();
+        let mut m = [0u8; 32];
+        getrandom::fill(m.as_mut()).unwrap();
+
+        // Using the same deterministic seed is in fact deterministic,
+        // also using correct length.
+        assert_eq!(
+            kp.public().encap_deterministic(&m).unwrap(),
+            kp.public().encap_deterministic(&m).unwrap()
+        );
+        assert!(kp.public().encap_deterministic(&[0u8; 31]).is_err());
+        assert!(kp.public().encap_deterministic(&[0u8; 33]).is_err());
+    }
+
+    #[cfg(feature = "safe_api")]
+    #[test]
+    fn test_dk_ek_partialeq() {
+        let s0 = Seed::generate();
+        let kp = KeyPair::try_from(&s0).unwrap();
+
+        let dk_bytes = kp.private().value.bytes;
+        let ek_bytes = kp.public().value.bytes;
+
+        assert_eq!(
+            KeyPair::try_from(&s0).unwrap().private(),
+            &dk_bytes.as_ref()
+        );
+        assert_eq!(KeyPair::try_from(&s0).unwrap().public(), &ek_bytes.as_ref());
+    }
+
+    #[cfg(feature = "safe_api")]
+    #[test]
     fn test_keypair_from_keys() {
         let s0 = Seed::generate();
         let s1 = Seed::generate();
 
         let kp0 = KeyPair::try_from(&s0).unwrap();
         let kp1 = KeyPair::try_from(&s1).unwrap();
+        assert_eq!(kp0.seed(), &s0);
+        assert_eq!(kp1.seed(), &s1);
 
         assert!(KeyPair::from_keys(&s0, kp0.private()).is_ok());
         assert!(KeyPair::from_keys(&s1, kp1.private()).is_ok());
         assert!(KeyPair::from_keys(&s1, kp0.private()).is_err());
         assert!(KeyPair::from_keys(&s0, kp1.private()).is_err());
+
+        let kp0_keys = KeyPair::from_keys(&s0, kp0.private()).unwrap();
+        let kp1_keys = KeyPair::from_keys(&s1, kp1.private()).unwrap();
+        assert_eq!(kp0.seed(), kp0_keys.seed());
+        assert_eq!(kp1.seed(), kp1_keys.seed());
+
+        assert_eq!(kp0.private(), kp0_keys.private());
+        assert_eq!(kp0.public(), kp0_keys.public());
     }
 
     #[cfg(feature = "safe_api")]

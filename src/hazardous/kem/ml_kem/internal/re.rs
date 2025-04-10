@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use super::fe::{FieldElement, KYBER_Q};
+use super::fe::FieldElement;
 use core::ops::{Add, AddAssign, Mul, Sub};
 use core::ops::{Index, IndexMut};
 use zeroize::Zeroize;
@@ -72,6 +72,7 @@ impl RingElement {
 
     #[cfg(all(test, feature = "safe_api"))]
     pub(crate) fn random_element() -> Self {
+        use crate::hazardous::kem::ml_kem::internal::fe::KYBER_Q;
         use rand::{prelude::*, rng};
 
         let mut rng = rng();
@@ -83,18 +84,6 @@ impl RingElement {
         }
 
         Self { coefficients }
-    }
-}
-
-impl From<[FieldElement; 256]> for RingElement {
-    fn from(value: [FieldElement; 256]) -> Self {
-        if value.iter().any(|fe| fe.0 >= KYBER_Q) {
-            unreachable!("this should have been checked before");
-        }
-
-        Self {
-            coefficients: value,
-        }
     }
 }
 
@@ -184,18 +173,6 @@ impl RingElementNTT {
     }
 }
 
-impl From<[FieldElement; 256]> for RingElementNTT {
-    fn from(value: [FieldElement; 256]) -> Self {
-        if value.iter().any(|fe| fe.0 >= KYBER_Q) {
-            unreachable!("this should have been checked before");
-        }
-
-        Self {
-            coefficients: value,
-        }
-    }
-}
-
 impl Index<usize> for RingElementNTT {
     type Output = FieldElement;
 
@@ -212,20 +189,6 @@ impl IndexMut<usize> for RingElementNTT {
     }
 }
 
-impl Add for RingElementNTT {
-    type Output = Self;
-
-    fn add(self, other: Self) -> Self {
-        let mut ret_add = Self::zero();
-        add_poly(
-            &self.coefficients,
-            &other.coefficients,
-            &mut ret_add.coefficients,
-        );
-        ret_add
-    }
-}
-
 impl AddAssign for RingElementNTT {
     fn add_assign(&mut self, other: Self) {
         add_poly(
@@ -233,20 +196,6 @@ impl AddAssign for RingElementNTT {
             &other.coefficients,
             &mut self.coefficients,
         );
-    }
-}
-
-impl Sub for RingElementNTT {
-    type Output = Self;
-
-    fn sub(self, other: Self) -> Self {
-        let mut ret_sub = Self::zero();
-        sub_poly(
-            &self.coefficients,
-            &other.coefficients,
-            &mut ret_sub.coefficients,
-        );
-        ret_sub
     }
 }
 

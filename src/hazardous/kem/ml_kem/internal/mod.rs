@@ -322,7 +322,7 @@ impl PkeParameters for MlKem1024Internal {
 #[derive(Debug, PartialEq, Clone)]
 /// ML-KEM encapsulation key.
 pub(crate) struct EncapKey<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> {
-    bytes: [u8; ENCODED_SIZE],
+    pub(crate) bytes: [u8; ENCODED_SIZE],
     t_hat: [RingElementNTT; K],
     mat_a: [[RingElementNTT; K]; K],
     _phantom: PhantomData<Pke>,
@@ -516,7 +516,7 @@ pub(crate) struct DecapKey<
     const ENCODED_SIZE_DK: usize,
     Pke: PkeParameters,
 > {
-    bytes: [u8; ENCODED_SIZE_DK],
+    pub(crate) bytes: [u8; ENCODED_SIZE_DK],
     s_hat: [RingElementNTT; K],
     ek: EncapKey<K, ENCODED_SIZE_EK, Pke>,
 }
@@ -900,6 +900,11 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         if bool::from(k.ct_eq(&k_prime)) {
             Ok((ek_regen, dk_regen))
         } else {
+            // NOTE(brycx): We do not hit this error in current tests and I'm not sure we can.
+            // Given that we re-gen both ek+dk based on the seed and check it reproduces,
+            // then that should suffice to "pair-wise consistency" this would normally check.
+            // This error should only be reachable if would be possible to create KeyPair
+            // without providing a seed. The API is designed to prevent this.
             Err(UnknownCryptoError)
         }
     }
@@ -911,6 +916,179 @@ mod tests {
     use crate::hazardous::kem::ml_kem::mlkem1024::KeyPair as MlKem1024KeyPair;
     use crate::hazardous::kem::ml_kem::mlkem512::KeyPair as MlKem512KeyPair;
     use crate::hazardous::kem::ml_kem::mlkem768::KeyPair as MlKem768KeyPair;
+
+    #[test]
+    fn test_seed_and_dk_mismatch() {
+        let seed = Seed::from_slice(&[128u8; 64]).unwrap();
+        let bad_seed = Seed::from_slice(&[1u8; 64]).unwrap();
+
+        // ML-KEM-512.
+        let kp = MlKem512KeyPair::try_from(&seed).unwrap();
+        let kp_bad = MlKem512KeyPair::try_from(&bad_seed).unwrap();
+        assert!(
+            KeyPairInternal::<MlKem512Internal>::from_keys::<2, 800, 1632, 768>(
+                &seed,
+                &kp.public().value,
+                &kp.private().value,
+            )
+            .is_ok()
+        );
+        assert!(
+            KeyPairInternal::<MlKem512Internal>::from_keys::<2, 800, 1632, 768>(
+                &seed,
+                &kp_bad.public().value,
+                &kp.private().value,
+            )
+            .is_err()
+        );
+        assert!(
+            KeyPairInternal::<MlKem512Internal>::from_keys::<2, 800, 1632, 768>(
+                &seed,
+                &kp.public().value,
+                &kp_bad.private().value,
+            )
+            .is_err()
+        );
+        assert!(
+            KeyPairInternal::<MlKem512Internal>::from_keys::<2, 800, 1632, 768>(
+                &seed,
+                &kp_bad.public().value,
+                &kp_bad.private().value,
+            )
+            .is_err()
+        );
+
+        // ML-KEM-768.
+        let kp = MlKem768KeyPair::try_from(&seed).unwrap();
+        let kp_bad = MlKem768KeyPair::try_from(&bad_seed).unwrap();
+        assert!(
+            KeyPairInternal::<MlKem768Internal>::from_keys::<3, 1184, 2400, 1088>(
+                &seed,
+                &kp.public().value,
+                &kp.private().value,
+            )
+            .is_ok()
+        );
+        assert!(
+            KeyPairInternal::<MlKem768Internal>::from_keys::<3, 1184, 2400, 1088>(
+                &seed,
+                &kp_bad.public().value,
+                &kp.private().value,
+            )
+            .is_err()
+        );
+        assert!(
+            KeyPairInternal::<MlKem768Internal>::from_keys::<3, 1184, 2400, 1088>(
+                &seed,
+                &kp.public().value,
+                &kp_bad.private().value,
+            )
+            .is_err()
+        );
+        assert!(
+            KeyPairInternal::<MlKem768Internal>::from_keys::<3, 1184, 2400, 1088>(
+                &seed,
+                &kp_bad.public().value,
+                &kp_bad.private().value,
+            )
+            .is_err()
+        );
+
+        // ML-KEM-1024.
+        let kp = MlKem1024KeyPair::try_from(&seed).unwrap();
+        let kp_bad = MlKem1024KeyPair::try_from(&bad_seed).unwrap();
+        assert!(
+            KeyPairInternal::<MlKem1024Internal>::from_keys::<4, 1568, 3168, 1568>(
+                &seed,
+                &kp.public().value,
+                &kp.private().value,
+            )
+            .is_ok()
+        );
+        assert!(
+            KeyPairInternal::<MlKem1024Internal>::from_keys::<4, 1568, 3168, 1568>(
+                &seed,
+                &kp_bad.public().value,
+                &kp.private().value,
+            )
+            .is_err()
+        );
+        assert!(
+            KeyPairInternal::<MlKem1024Internal>::from_keys::<4, 1568, 3168, 1568>(
+                &seed,
+                &kp.public().value,
+                &kp_bad.private().value,
+            )
+            .is_err()
+        );
+        assert!(
+            KeyPairInternal::<MlKem1024Internal>::from_keys::<4, 1568, 3168, 1568>(
+                &seed,
+                &kp_bad.public().value,
+                &kp_bad.private().value,
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_encap_internal_check_m() {
+        let testing_seed = Seed::from_slice(&[128u8; 64]).unwrap();
+
+        let keypair = MlKem512KeyPair::try_from(&testing_seed).unwrap();
+        let mut c = [0u8; MlKem512Internal::CIPHERTEXT_SIZE];
+        assert!(keypair
+            .public()
+            .value
+            .mlkem_encap_internal(&[0u8; 32], &mut c)
+            .is_ok());
+        assert!(keypair
+            .public()
+            .value
+            .mlkem_encap_internal(&[0u8; 31], &mut c)
+            .is_err());
+        assert!(keypair
+            .public()
+            .value
+            .mlkem_encap_internal(&[0u8; 33], &mut c)
+            .is_err());
+
+        let keypair = MlKem768KeyPair::try_from(&testing_seed).unwrap();
+        let mut c = [0u8; MlKem768Internal::CIPHERTEXT_SIZE];
+        assert!(keypair
+            .public()
+            .value
+            .mlkem_encap_internal(&[0u8; 32], &mut c)
+            .is_ok());
+        assert!(keypair
+            .public()
+            .value
+            .mlkem_encap_internal(&[0u8; 31], &mut c)
+            .is_err());
+        assert!(keypair
+            .public()
+            .value
+            .mlkem_encap_internal(&[0u8; 33], &mut c)
+            .is_err());
+
+        let keypair = MlKem1024KeyPair::try_from(&testing_seed).unwrap();
+        let mut c = [0u8; MlKem1024Internal::CIPHERTEXT_SIZE];
+        assert!(keypair
+            .public()
+            .value
+            .mlkem_encap_internal(&[0u8; 32], &mut c)
+            .is_ok());
+        assert!(keypair
+            .public()
+            .value
+            .mlkem_encap_internal(&[0u8; 31], &mut c)
+            .is_err());
+        assert!(keypair
+            .public()
+            .value
+            .mlkem_encap_internal(&[0u8; 33], &mut c)
+            .is_err());
+    }
 
     #[test]
     #[cfg(feature = "safe_api")]
