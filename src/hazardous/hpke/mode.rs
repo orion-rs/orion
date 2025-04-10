@@ -53,20 +53,6 @@ pub(crate) mod private {
         AuthPsk = 0x03u8,
     }
 
-    impl TryFrom<u8> for HpkeMode {
-        type Error = UnknownCryptoError;
-
-        fn try_from(value: u8) -> Result<Self, Self::Error> {
-            match value {
-                0x00 => Ok(Self::Base),
-                0x01 => Ok(Self::Psk),
-                0x02 => Ok(Self::Auth),
-                0x03 => Ok(Self::AuthPsk),
-                _ => Err(UnknownCryptoError),
-            }
-        }
-    }
-
     impl HpkeMode {
         pub(crate) fn verify_psk_inputs(
             &self,
@@ -961,6 +947,27 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
 mod test {
     use super::*;
     use crate::hazardous::{hpke::DHKEM_X25519_SHA256_CHACHA20, kem::x25519_hkdf_sha256::DhKem};
+
+    #[test]
+    fn test_internal_hpke_mode_verifier() {
+        assert!(HpkeMode::Base.verify_psk_inputs(b"", b"").is_ok());
+        assert!(HpkeMode::Base.verify_psk_inputs(b"", b"a").is_err());
+        assert!(HpkeMode::Base.verify_psk_inputs(b"a", b"").is_err());
+        assert!(HpkeMode::Base.verify_psk_inputs(b"a", b"a").is_err());
+        assert!(HpkeMode::Auth.verify_psk_inputs(b"", b"").is_ok());
+        assert!(HpkeMode::Auth.verify_psk_inputs(b"", b"a").is_err());
+        assert!(HpkeMode::Auth.verify_psk_inputs(b"a", b"").is_err());
+        assert!(HpkeMode::Auth.verify_psk_inputs(b"a", b"a").is_err());
+
+        assert!(HpkeMode::Psk.verify_psk_inputs(b"", b"").is_err());
+        assert!(HpkeMode::Psk.verify_psk_inputs(b"", b"a").is_err());
+        assert!(HpkeMode::Psk.verify_psk_inputs(b"a", b"").is_err());
+        assert!(HpkeMode::Psk.verify_psk_inputs(b"a", b"a").is_ok());
+        assert!(HpkeMode::AuthPsk.verify_psk_inputs(b"", b"").is_err());
+        assert!(HpkeMode::AuthPsk.verify_psk_inputs(b"", b"a").is_err());
+        assert!(HpkeMode::AuthPsk.verify_psk_inputs(b"a", b"").is_err());
+        assert!(HpkeMode::AuthPsk.verify_psk_inputs(b"a", b"a").is_ok());
+    }
 
     #[test]
     fn test_error_on_mismatched_role() {
