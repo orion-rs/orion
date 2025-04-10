@@ -2,6 +2,9 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - "*"    
 
 name: Code coverage
 permissions:
@@ -11,22 +14,36 @@ jobs:
   check:
     name: Code coverage
     runs-on: ubuntu-latest
-    container:
-      image: xd009642/tarpaulin:develop-nightly
-      options: --security-opt seccomp=unconfined
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: stable
+          components: llvm-tools-preview
 
+      - name: Install grcov
+        run: cargo install grcov
+      
       - name: Generate code coverage
+        env:
+          CARGO_INCREMENTAL: "0"
+          RUSTFLAGS: "-Cinstrument-coverage"
+          LLVM_PROFILE_FILE: "cargo-test-%p-%m.profraw"
+        run: cargo test --all-features
+      
+      - name: Create coverage file
         run: |
-          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+          grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o ./target/coverage.lcov
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574
         with:
           fail_ci_if_error: true
+          files: ./target/*.lcov
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
