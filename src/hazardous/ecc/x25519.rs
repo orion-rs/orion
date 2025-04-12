@@ -630,7 +630,6 @@ pub fn key_agreement(
 
 #[cfg(test)]
 mod public {
-    use super::FieldElement;
     use crate::hazardous::ecc::x25519::{
         key_agreement, PrivateKey, PublicKey, Scalar, SharedKey, BASEPOINT, PRIVATE_KEY_SIZE,
         PUBLIC_KEY_SIZE,
@@ -696,6 +695,7 @@ mod public {
     #[cfg(feature = "safe_api")]
     // format! is only available with std
     fn test_privatekey_debug_impl() {
+        use super::FieldElement;
         let value = format!("{:?}", [1u64, 0u64, 0u64, 0u64, 0u64,].as_ref());
         let test_debug_contents = format!("{:?}", FieldElement::one());
         assert!(test_debug_contents.contains(&value));
