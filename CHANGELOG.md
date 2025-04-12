@@ -1,6 +1,6 @@
 ### 0.17.10
 
-**Date:** TBD.
+**Date:** April 12, 2025.
 
 **Changelog:**
 - Add `encap_deterministic()` and `auth_encap_deterministic()` to `DhKem` in `hazardous::kem::x25519_hkdf_sha256::DhKem` [#458](https://github.com/orion-rs/orion/pull/458).
