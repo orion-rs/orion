@@ -581,7 +581,7 @@ pub(crate) struct Shake<const RATE: usize> {
     //
     // A new tracker is `self.to_squeeze` that indicates how many bytes
     // are left to be squeezed out of the sponge. This is relevant when calling
-    // squeeze() multiple times, requesting data amounts that aren't a mulitple
+    // squeeze() multiple times, requesting data amounts that aren't a multiple
     // of the `RATE`. As soon as `RATE` amount of bytes have been squeezed(),
     // we have to permute the internal state, before we can output more bytes
     // `self.to_squeeze() == RATE` indicates we need to permute again...
