@@ -261,7 +261,7 @@ mod public {
             .is_err());
     }
 
-    // The following are tests generated with sodiumoxide to test basic compatability with libsodium API.
+    // The following are tests generated with sodiumoxide to test basic compatibility with libsodium API.
     #[test]
     fn libsodium_compat_test_1() {
         let client_pk = "299283d8713b7d430376cb257e13cd5ad1a6e5ebe6135417f4bb3b45bf42f31a";
