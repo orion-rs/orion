@@ -111,7 +111,7 @@ pub(crate) trait PkeParameters {
     fn encapsulation_key_check(ek: &[u8]) -> Result<(), UnknownCryptoError> {
         debug_assert_eq!(Self::EK_SIZE, (ENCODE_SIZE_POLY * Self::K) + 32);
         // Encapsulation key check, Check 1.
-        // This should never actuallly happen, since the Encapsulation key newtype has already
+        // This should never actually happen, since the Encapsulation key newtype has already
         // had a check on length.
         if ek.len() != Self::EK_SIZE {
             return Err(UnknownCryptoError);
@@ -140,7 +140,7 @@ pub(crate) trait PkeParameters {
     /// automatically a part of that newtype.
     fn decapsulation_key_check(dk: &[u8]) -> Result<(), UnknownCryptoError> {
         // Decapsulation input check, Check 2.
-        // This should never actuallly happen, since the Decapsulation key newtype has already
+        // This should never actually happen, since the Decapsulation key newtype has already
         // had a check on length.
         if dk.len() != Self::DK_SIZE {
             return Err(UnknownCryptoError);
