@@ -786,7 +786,7 @@ impl<T: TestableHpke> HpkeTester<T> {
         let mut dst = [0u8; 24 - 16];
         assert!(recipient.open(&out, &[], &mut dst).is_err());
 
-        // Recevier uses bad Sender pub
+        // Receiver uses bad Sender pub
         let mut sender = T::setup_fresh_sender(
             &recipient_pub,
             &valid_info,
