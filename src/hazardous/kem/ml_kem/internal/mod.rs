@@ -844,7 +844,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
             _phantom: PhantomData,
         };
         // Cache the ek separately as well for re-use in MLEKM.decap_internal().
-        // `ek` is used directly whithin dk during keygen.
+        // `ek` is used directly within dk during keygen.
         let mut decap_key = DecapKey::<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke> {
             bytes: [0u8; ENCODED_SIZE_DK],
             s_hat: [RingElementNTT::zero(); K],
