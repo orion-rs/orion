@@ -30,6 +30,7 @@ features = ["alloc"]
 default = ["safe_api"]
 safe_api = ["getrandom", "ct-codecs"]
 alloc = []
+serde = ["dep:serde", "alloc"]
 experimental = []
 
 [dev-dependencies]

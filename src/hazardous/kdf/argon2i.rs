@@ -451,7 +451,7 @@ pub fn derive_key(
     // Divide by 4 (SEGMENTS_PER_LANE)
     let segment_length = n_blocks >> 2;
 
-    let mut blocks = vec![[0u64; 128]; n_blocks as usize];
+    let mut blocks = alloc::vec![[0u64; 128]; n_blocks as usize];
 
     // Fill first two blocks
     let mut h0 = initial_hash(
@@ -571,12 +571,12 @@ mod public {
             } else {
                 kib
             };
-            let salt = if s.len() < 8 { vec![37u8; 8] } else { s };
+            let salt = if s.len() < 8 { alloc::vec![37u8; 8] } else { s };
 
             let mut dst_out = if !(4..=512).contains(&hlen) {
-                vec![0u8; 32]
+                alloc::vec![0u8; 32]
             } else {
-                vec![0u8; hlen as usize]
+                alloc::vec![0u8; hlen as usize]
             };
 
             let mut dst_out_verify = dst_out.clone();

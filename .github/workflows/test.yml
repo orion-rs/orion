@@ -51,6 +51,9 @@ jobs:
       - name: Test debug-mode, no-default + alloc feature
         run: cargo test --no-default-features --features alloc --tests
 
+      - name: Test debug-mode, no-default + serde feature (enables alloc)
+        run: cargo test --no-default-features --features serde --tests
+
       - name: Test release-mode, default features
         run: cargo test --release
 
@@ -62,6 +65,9 @@ jobs:
 
       - name: Test release-mode, no-default + alloc feature
         run: cargo test --release --no-default-features --features alloc --tests
+
+      - name: Test release-mode, no-default + serde feature (enables alloc)
+        run: cargo test --release --no-default-features --features serde --tests
 
   sanitizers:
     name: Tests w. sanitizers
