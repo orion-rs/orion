@@ -114,8 +114,8 @@ macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
         where
             D: serde::de::Deserializer<'de>,
         {
-            let bytes = Vec::<u8>::deserialize(deserializer)?;
-            std::convert::TryFrom::try_from(bytes.as_slice()).map_err(serde::de::Error::custom)
+            let bytes = alloc::vec::Vec::<u8>::deserialize(deserializer)?;
+            core::convert::TryFrom::try_from(bytes.as_slice()).map_err(serde::de::Error::custom)
         }
     }
 ));
@@ -214,7 +214,7 @@ macro_rules! func_from_slice_variable_size (($name:ident) => (
             return Err(UnknownCryptoError);
         }
 
-        Ok($name { value: Vec::from(slice), original_length: slice.len() })
+        Ok($name { value: alloc::vec::Vec::from(slice), original_length: slice.len() })
     }
 ));
 
@@ -917,7 +917,7 @@ macro_rules! construct_secret_key_variable_size {
         /// # Ok::<(), orion::errors::UnknownCryptoError>(())
         /// ```
         pub struct $name {
-            pub(crate) value: Vec<u8>,
+            pub(crate) value: alloc::vec::Vec<u8>,
             original_length: usize,
         }
 
@@ -957,7 +957,7 @@ macro_rules! construct_salt_variable_size {
         $(#[$meta])*
         ///
         pub struct $name {
-            value: Vec<u8>,
+            value: alloc::vec::Vec<u8>,
             original_length: usize,
         }
 

@@ -75,8 +75,9 @@ extern crate quickcheck;
 extern crate quickcheck_macros;
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(feature = "alloc", macro_use)]
 extern crate alloc;
+#[cfg(all(not(feature = "alloc"), feature = "safe_api"))]
+extern crate std as alloc;
 
 #[macro_use]
 mod typedefs;
