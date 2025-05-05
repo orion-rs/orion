@@ -891,23 +891,31 @@ mod public {
     #[test]
     fn test_privatekey_edge_cases() {
         // all zeros - clamped in RFC 7748, should be accepted
-        assert!(PrivateKey::from_slice(&[0u8; PRIVATE_KEY_SIZE]).is_ok(), "all-zero key");
-    
+        assert!(
+            PrivateKey::from_slice(&[0u8; PRIVATE_KEY_SIZE]).is_ok(),
+            "all-zero key"
+        );
+
         // all ones - clamped, should be accepted
-        assert!(PrivateKey::from_slice(&[0xffu8; PRIVATE_KEY_SIZE]).is_ok(), "all-ones key");
-    
+        assert!(
+            PrivateKey::from_slice(&[0xffu8; PRIVATE_KEY_SIZE]).is_ok(),
+            "all-ones key"
+        );
+
         // alternating bits - arbitrary pattern, should be accepted
-        assert!(PrivateKey::from_slice(&[0b10101010u8; PRIVATE_KEY_SIZE]).is_ok(), "alternating-bits key");
-    
+        assert!(
+            PrivateKey::from_slice(&[0b10101010u8; PRIVATE_KEY_SIZE]).is_ok(),
+            "alternating-bits key"
+        );
+
         // only first byte set
         let mut first = [0u8; PRIVATE_KEY_SIZE];
         first[0] = 1;
         assert!(PrivateKey::from_slice(&first).is_ok(), "first-byte-set key");
-    
+
         // only last byte set
         let mut last = [0u8; PRIVATE_KEY_SIZE];
         last[PRIVATE_KEY_SIZE - 1] = 1;
         assert!(PrivateKey::from_slice(&last).is_ok(), "last-byte-set key");
     }
-
 }
