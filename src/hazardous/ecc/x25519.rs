@@ -887,4 +887,21 @@ mod public {
             shared.value.as_ref()
         );
     }
+
+    #[test]
+    fn test_privatekey_edge_cases() {
+        assert!(PrivateKey::from_slice(&[0u8; PRIVATE_KEY_SIZE]).is_ok());
+
+        assert!(PrivateKey::from_slice(&[0xffu8; PRIVATE_KEY_SIZE]).is_ok());
+
+        assert!(PrivateKey::from_slice(&[0b10101010u8; PRIVATE_KEY_SIZE]).is_ok());
+
+        let mut first = [0u8; PRIVATE_KEY_SIZE];
+        first[0] = 1;
+        assert!(PrivateKey::from_slice(&first).is_ok());
+
+        let mut last = [0u8; PRIVATE_KEY_SIZE];
+        last[PRIVATE_KEY_SIZE - 1] = 1;
+        assert!(PrivateKey::from_slice(&last).is_ok());
+    }
 }
