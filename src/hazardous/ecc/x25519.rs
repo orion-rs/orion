@@ -904,4 +904,20 @@ mod public {
         last[PRIVATE_KEY_SIZE - 1] = 1;
         assert!(PrivateKey::from_slice(&last).is_ok());
     }
+
+    #[test]
+    // Tests masking the most significant bit of the final byte when constructing a public key - RFC 7784 Section 5
+    fn test_masking_msb_final_byte_public_key() {
+        let u = [0xffu8; 32];
+
+        let mut msb_zero = u;
+        msb_zero[31] &= 0x7f;
+        let mut msb_one = u;
+        msb_one[31] |= 0x80;
+
+        let pk_zero = PublicKey::from_slice(&msb_zero).unwrap();
+        let pk_one = PublicKey::from_slice(&msb_one).unwrap();
+
+        assert_eq!(pk_zero.to_bytes(), pk_one.to_bytes());
+    }
 }
