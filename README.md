@@ -34,7 +34,7 @@ MSRV may be changed at any point and will not be considered a SemVer breaking ch
 ### Crate Features
 
 - `default`/`safe_api`: All functionality, requires `std`.
-- `serde`: Requires either `alloc` or `default`/`safe_api`.
+- `serde`: Automatically enables the `alloc` feature.
 - `alloc`: Argon2i in `hazardous` when `default`/`safe_api` is not available.
 - `no_std`: Implicit feature that represents no heap allocations. Enabled by disabling default features and not selecting any additional features.
 - `experimental`: These APIs may contain breaking changes in any non SemVer-breaking crate releases.
