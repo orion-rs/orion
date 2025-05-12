@@ -713,6 +713,10 @@ mod public {
         // These should equal each-other. The high bits differ, but should be ignored.
         assert_eq!(PublicKey::from(msb_zero), msb_one.as_ref());
         assert_eq!(PublicKey::from(msb_zero), PublicKey::from(msb_one));
+
+        let pk_zero = PublicKey::from_slice(&msb_zero).unwrap();
+        let pk_one = PublicKey::from_slice(&msb_one).unwrap();
+        assert_eq!(pk_zero.to_bytes(), pk_one.to_bytes());
     }
 
     #[test]
