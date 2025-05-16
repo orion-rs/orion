@@ -100,8 +100,7 @@ impl io::Write for Shake128 {
     /// variant when it returns an error. Additionally, this will always contain Orion's
     /// [`UnknownCryptoError`] type.
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        self.absorb(bytes)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        self.absorb(bytes).map_err(io::Error::other)?;
         Ok(bytes.len())
     }
 
