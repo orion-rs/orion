@@ -31,7 +31,6 @@ pub(crate) struct U64x4(
 impl core::ops::BitXor for U64x4 {
     type Output = Self;
 
-    #[must_use]
     fn bitxor(self, _rhs: Self) -> Self::Output {
         Self(
             self.0 ^ _rhs.0,
