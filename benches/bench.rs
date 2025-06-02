@@ -59,7 +59,7 @@ mod mac {
     pub fn bench_hmac_sha256(c: &mut Criterion) {
         let mut group = c.benchmark_group("HMAC-SHA256");
         // NOTE: Setting the key like this will pad it for HMAC.
-        // Padding is therefor not included in benchmarks.
+        // Padding is therefore not included in benchmarks.
         let key = hmac::sha256::SecretKey::generate();
 
         for size in INPUT_SIZES.iter() {
@@ -79,7 +79,7 @@ mod mac {
     pub fn bench_hmac_sha512(c: &mut Criterion) {
         let mut group = c.benchmark_group("HMAC-SHA512");
         // NOTE: Setting the key like this will pad it for HMAC.
-        // Padding is therefor not included in benchmarks.
+        // Padding is therefore not included in benchmarks.
         let key = hmac::sha512::SecretKey::generate();
 
         for size in INPUT_SIZES.iter() {
