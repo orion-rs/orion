@@ -16,7 +16,7 @@ exclude = [".gitignore", ".travis.yml", "tests/*"]
 [dependencies]
 subtle = { version = "^2.2.2", default-features = false }
 zeroize = { version = "1.1.0", default-features = false }
-fiat-crypto = { version = "0.2.1", default-features = false }
+fiat-crypto = { version = "0.3.0", default-features = false }
 getrandom = { version = "0.3.0", optional = true }
 ct-codecs = { version = "1.1.1", optional = true }
 
