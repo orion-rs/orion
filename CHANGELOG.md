@@ -1,3 +1,10 @@
+### 0.17.11
+
+**Date:** TBD.
+
+**Changelog:**
+- Bump `fiat-crypto` to `0.3.0`.
+
 ### 0.17.10
 
 **Date:** April 12, 2025.
