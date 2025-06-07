@@ -146,7 +146,7 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.arch }}
 
-      - run: cargo check --no-default-features --target${WASM_TARGET}
+      - run: cargo check --no-default-features --target ${WASM_TARGET}
         # Remediation for potential template-injection: https://docs.zizmor.sh/audits/#template-injection
         env:
           WASM_TARGET: ${{ matrix.arch }}
