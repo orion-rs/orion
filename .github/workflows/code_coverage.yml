@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
       
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
         with:
           toolchain: stable
           components: llvm-tools-preview
