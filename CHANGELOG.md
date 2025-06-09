@@ -1,3 +1,21 @@
+### 0.17.12
+
+**Date:** TBD.
+
+**Changelog:**
+- Add C2SP/Wycheproof test vectors to PBKDF2 implementation ([#495](https://github.com/orion-rs/orion/pull/495)).
+
+### 0.17.11
+
+**Date:** June 7, 2025.
+
+**Changelog:**
+- Bump `fiat-crypto` to `0.3.0` ([#491](https://github.com/orion-rs/orion/pull/491)).
+- Fix `zizmor`-reported template-injection risk in WASM CI run-path ([#490](https://github.com/orion-rs/orion/pull/490)).
+- Fix compiling with `cargo build --features serde,alloc --no-default-features` ([#473](https://github.com/orion-rs/orion/pull/473), credits: [@joseluis](https://github.com/joseluis)).
+- Additional X25519 unit-tests ([#477](https://github.com/orion-rs/orion/pull/477), [#478](https://github.com/orion-rs/orion/pull/478), credits: [@RoscoeEH](https://github.com/RoscoeEH)).
+- Improvements of documentation and typos ([#470](https://github.com/orion-rs/orion/pull/470), [#486](https://github.com/orion-rs/orion/pull/486), credits: [@leopardracer](https://github.com/leopardracer), [@davidjsonn](https://github.com/davidjsonn)).
+
 ### 0.17.10
 
 **Date:** April 12, 2025.

@@ -1,12 +1,12 @@
 [package]
 name = "orion"
-version = "0.17.10"
+version = "0.17.11"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Usable, easy and safe pure-Rust crypto"
 keywords = ["cryptography", "crypto", "aead", "pqc", "kem"]
 categories = ["cryptography", "no-std"]
 edition = "2021"
-rust-version = "1.81"                                        # Update CI (MSRV) test + README along with this.
+rust-version = "1.83"                                        # Update CI (MSRV) test + README along with this.
 readme = "README.md"
 repository = "https://github.com/orion-rs/orion"
 documentation = "https://docs.rs/orion"
@@ -16,7 +16,7 @@ exclude = [".gitignore", ".travis.yml", "tests/*"]
 [dependencies]
 subtle = { version = "^2.2.2", default-features = false }
 zeroize = { version = "1.1.0", default-features = false }
-fiat-crypto = { version = "0.2.1", default-features = false }
+fiat-crypto = { version = "0.3.0", default-features = false }
 getrandom = { version = "0.3.0", optional = true }
 ct-codecs = { version = "1.1.1", optional = true }
 
@@ -39,7 +39,7 @@ serde_json = "1.0.41"
 serde = { version = "1.0", features = ["derive"] }
 quickcheck = "1"
 quickcheck_macros = "1"
-criterion = "0.5.0"
+criterion = "0.6.0"
 rand = { version = "0.9.0", features = ["thread_rng", "small_rng"] }
 num-rational = { version = "0.4.2", default-features = false }
 
