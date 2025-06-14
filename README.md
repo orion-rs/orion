@@ -1,5 +1,5 @@
 # orion
-[![Tests](https://github.com/orion-rs/orion/workflows/Tests/badge.svg)](https://github.com/orion-rs/orion/actions) [![Daily tests](https://github.com/orion-rs/orion/workflows/Daily%20tests/badge.svg)](https://github.com/orion-rs/orion/actions) [![dudect](https://github.com/orion-rs/orion-dudect/actions/workflows/weekly.yml/badge.svg)](https://github.com/orion-rs/orion-dudect/actions/workflows/weekly.yml) [![Audit](https://github.com/orion-rs/orion/actions/workflows/audit_check.yml/badge.svg)](https://github.com/orion-rs/orion/actions/workflows/audit_check.yml) [![codecov](https://codecov.io/gh/orion-rs/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/orion-rs/orion) [![Documentation](https://docs.rs/orion/badge.svg)](https://docs.rs/orion/) [![Crates.io](https://img.shields.io/crates/v/orion.svg)](https://crates.io/crates/orion) [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/) [![MSRV](https://img.shields.io/badge/MSRV-1.81-informational.svg)](https://img.shields.io/badge/MSRV-1.81-informational) [![Matrix](https://img.shields.io/matrix/orion-rs:matrix.org.svg?logo=matrix)](https://matrix.to/#/#orion-rs:matrix.org)
+[![Daily tests](https://github.com/orion-rs/orion/actions/workflows/daily_tests.yml/badge.svg)](https://github.com/orion-rs/orion/actions/workflows/daily_tests.yml) [![dudect](https://github.com/orion-rs/orion-dudect/actions/workflows/weekly.yml/badge.svg)](https://github.com/orion-rs/orion-dudect/actions/workflows/weekly.yml) [![Audit](https://github.com/orion-rs/orion/actions/workflows/audit_check.yml/badge.svg)](https://github.com/orion-rs/orion/actions/workflows/audit_check.yml) [![codecov](https://codecov.io/gh/orion-rs/orion/branch/master/graph/badge.svg)](https://codecov.io/gh/orion-rs/orion) [![Documentation](https://docs.rs/orion/badge.svg)](https://docs.rs/orion/) [![Crates.io](https://img.shields.io/crates/v/orion.svg)](https://crates.io/crates/orion) [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/) [![MSRV](https://img.shields.io/badge/MSRV-1.81-informational.svg)](https://img.shields.io/badge/MSRV-1.81-informational) [![Matrix](https://img.shields.io/matrix/orion-rs:matrix.org.svg?logo=matrix)](https://matrix.to/#/#orion-rs:matrix.org)
 
 ### About
 Orion is a cryptography library written in pure Rust. It aims to provide easy and usable crypto while trying to minimize the use of unsafe code. You can read more about Orion in the [wiki](https://github.com/orion-rs/orion/wiki).
@@ -8,7 +8,7 @@ Currently supports:
 * **AEAD**: (X)ChaCha20-Poly1305.
 * **Hashing**: BLAKE2b, SHA2, SHA3.
 * **XOF**: SHAKE128, SHAKE256.
-* **KDF**: HKDF, PBKDF2, Argon2i.
+* **KDF**: HKDF, PBKDF2, Argon2i, scrypt.
 * **ECDH**: X25519.
 * **MAC**: HMAC, Poly1305.
 * **Stream ciphers**: (X)ChaCha20.

@@ -27,40 +27,90 @@
 // license that can be found in the LICENSE file.
 
 //! # About:
-//! scrypt as specified in RFC 7914
+//! scrypt as specified in [RFC 7914](https://datatracker.ietf.org/doc/html/rfc7914.html). This implementation is available with features `safe_api` and `alloc`.
 //!
 //! # Note:
 //! - This implementation is only supported on platforms with pointer sizes of
 //! at least 32 bits.
-//! - This implementation is single threaded. Values for `p > 1` will not
+//! - This implementation is single-threaded. Values for `p > 1` will not
 //!   benefit from the speedup of being run in parallel.
 //!
 //! # Parameters:
-//! - `n`: Parameter n must be larger than 1 and a power of 2
+//! - `password`: Password.
+//! - `salt`: Salt value.
+//! - `n`: The CPU/Memory cost parameter.
+//! - `r`: The blocksize parameter.
+//! - `p`: The parallelization parameter.
+//! - `dst_out`: Destination buffer for the derived key. The length of the
+//!   derived key is implied by the length of `dst_out`.
+//! - `expected`: The expected derived key.
+//!
+//! # Errors:
+//! An error will be returned if:
+//! - `n` is not larger than `1` or a power of `2`.
+//! - `r * p >=` [RP_MAX].
+//! - `r * 128 * p >=` [RP_BLK_MAX].
+//! - `r * 256 >=` [R_BLK_MAX].
+//! - `n * 128 * r >=` [N_MAX].
+//! - The length of `dst_out` is less than 1.
+//! - The hashed password does not match the expected when verifying.
 //!
 //! # Security
+//! - Salts should always be generated using a CSPRNG.
+//!   [`secure_rand_bytes()`] can be used for this.
+//! - Please note that when verifying, a copy of the computed password hash is placed into
+//! `dst_out`. If the derived hash is considered sensitive and you want to provide defense
+//! in depth against an attacker reading your application's private memory, then you as
+//! the user are responsible for zeroing out this buffer (see the [`zeroize` crate]).
+//! - The minimum recommended length for a salt is `16` bytes.
+//! - The minimum recommended length for a hashed password is `16` bytes.
+//! - The minimum recommended `n` is `2^17`/`131072`
+//! - The minimum recommended `r` is `8`.
+//! - The minimum recommended `p` is `1`.
+//! - Please check [OWASP] for changes to recommended cost parameters in the future.
 //!
-//! - The minimum recommended length for a salt is 16 bytes.
-//! - The minimum recommended length for a hashed password is 16 bytes.
-//! - The minimum recommended `n` is `16384`
-//! - The minimum recommended `r` is `8`
-//! - The minimum recommended `p` is `1`
+//! # Example:
+//! ```rust
+//! # #[cfg(feature = "safe_api")] {
+//! use orion::{hazardous::kdf::scrypt, util};
+//!
+//! let n: u32 = 1 << 17; // 2^17
+//! let r: u32 = 8;
+//! let p: u32 = 1;
+//!
+//! let mut salt = [0u8; 64];
+//! util::secure_rand_bytes(&mut salt)?;
+//!
+//! let mut dst_out = [0u8; 64];
+//! scrypt::derive_key(b"Secret Password", &salt, n, r, p, &mut dst_out)?;
+//!
+//! let mut verify_dst_out = [0u8; 64];
+//! assert!(scrypt::verify(&dst_out, b"Secret Password", &salt, n, r, p, &mut verify_dst_out).is_ok());
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! ```
+//! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
+//! [`zeroize` crate]: https://crates.io/crates/zeroize
+//! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#scrypt
+//! [RP_MAX]: crate::hazardous::kdf::scrypt::RP_MAX
+//! [RP_BLK_MAX]: crate::hazardous::kdf::scrypt::RP_BLK_MAX
+//! [R_BLK_MAX]: crate::hazardous::kdf::scrypt::R_BLK_MAX
+//! [N_MAX]: crate::hazardous::kdf::scrypt::N_MAX
 
 use alloc::vec;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::kdf::pbkdf2::sha256 as pbkdf2;
 use crate::util;
-
 use zeroize::Zeroize;
 
-/// scrypt r * p must be less than 2^30
+/// scrypt `r * p` must be less than `2^30`.
 pub const RP_MAX: u64 = 1 << 30;
-/// scrypt r * 128 * p must be less than i32::MAX
+/// scrypt `r * 128 * p` must be less than [i32::MAX].
 pub const RP_BLK_MAX: u32 = (i32::MAX as u32) / 128;
-/// scrypt r * 256 must be less than i32::MAX
+/// scrypt `r * 256` must be less than [i32::MAX].
 pub const R_BLK_MAX: u32 = (i32::MAX as u32) / 256;
-/// scrypt n * 128 * r must be less than i32::MAX
+/// scrypt `n * 128 * r` must be less than [i32::MAX].
 pub const N_MAX: u32 = (i32::MAX as u32) / 128;
 
 // Copies n numbers from src into dst
@@ -242,7 +292,7 @@ fn smix(b: &mut [u8], r: usize, N: usize, v: &mut [u32], x: &mut [u32], y: &mut 
 }
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// scrypt key derivation function as specified in RFC 7914
+/// scrypt key derivation function as specified in [RFC 7914](https://datatracker.ietf.org/doc/html/rfc7914.html).
 pub fn derive_key(
     password: &[u8],
     salt: &[u8],
@@ -335,6 +385,14 @@ mod tests {
             let mut dst_out = vec![0u8; DK_LEN];
             assert!(verify(&expected_dk, password, salt, n, r, p, &mut dst_out).is_ok());
             assert!(verify(&modified_dk, password, salt, n, r, p, &mut dst_out).is_err());
+            assert!(verify(&expected_dk, password, b"tlas", n, r, p, &mut dst_out).is_err());
+
+            let mut dkshort = [0u8; DK_LEN - 1];
+            let mut dklong = [0u8; DK_LEN + 1];
+            let mut dkzero = [0u8; 0];
+            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dkshort).is_err());
+            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dklong).is_err());
+            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dkzero).is_err());
         }
     }
 
