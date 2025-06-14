@@ -82,11 +82,10 @@
 //! util::secure_rand_bytes(&mut salt)?;
 //!
 //! let mut dst_out = [0u8; 64];
-//! scrypt::derive_key(b"Secret Password", &salt, n, r, p &mut dst_out)?;
+//! scrypt::derive_key(b"Secret Password", &salt, n, r, p, &mut dst_out)?;
 //!
 //! let mut verify_dst_out = [0u8; 64];
-//!
-//! assert!(scrypt::verify(&dst_out, b"Secret Password", &salt, n, r, p &mut verify_dst_out).is_ok());
+//! assert!(scrypt::verify(&dst_out, b"Secret Password", &salt, n, r, p, &mut verify_dst_out).is_ok());
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
@@ -386,6 +385,14 @@ mod tests {
             let mut dst_out = vec![0u8; DK_LEN];
             assert!(verify(&expected_dk, password, salt, n, r, p, &mut dst_out).is_ok());
             assert!(verify(&modified_dk, password, salt, n, r, p, &mut dst_out).is_err());
+            assert!(verify(&expected_dk, password, b"tlas", n, r, p, &mut dst_out).is_err());
+
+            let mut dkshort = [0u8; DK_LEN - 1];
+            let mut dklong = [0u8; DK_LEN + 1];
+            let mut dkzero = [0u8; 0];
+            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dkshort).is_err());
+            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dklong).is_err());
+            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dkzero).is_err());
         }
     }
 
