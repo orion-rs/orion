@@ -8,7 +8,7 @@ Currently supports:
 * **AEAD**: (X)ChaCha20-Poly1305.
 * **Hashing**: BLAKE2b, SHA2, SHA3.
 * **XOF**: SHAKE128, SHAKE256.
-* **KDF**: HKDF, PBKDF2, Argon2i.
+* **KDF**: HKDF, PBKDF2, Argon2i, scrypt.
 * **ECDH**: X25519.
 * **MAC**: HMAC, Poly1305.
 * **Stream ciphers**: (X)ChaCha20.
