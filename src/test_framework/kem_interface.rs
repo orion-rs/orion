@@ -49,7 +49,7 @@ where
         Self::keygen_encap_decap_rountrip(seed);
         Self::decap_wrong_key_implicit_reject(seed);
         Self::encap_twice_then_decap(seed);
-        Self::decap_wrong_cipertext_implicit_reject(seed);
+        Self::decap_wrong_ciphertext_implicit_reject(seed);
     }
 
     fn keygen_encap_decap_rountrip(seed: &[u8]) {
@@ -75,7 +75,7 @@ where
         assert_ne!(k, k_prime);
     }
 
-    fn decap_wrong_cipertext_implicit_reject(seed: &[u8]) {
+    fn decap_wrong_ciphertext_implicit_reject(seed: &[u8]) {
         let (ek1, dk1) = T::keygen(seed).unwrap();
 
         let (k, c) = T::encap(&ek1).unwrap();

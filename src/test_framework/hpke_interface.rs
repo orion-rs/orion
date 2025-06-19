@@ -32,7 +32,7 @@ pub trait TestableHpke: Clone {
 
     fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError>;
 
-    // Both steup functions have all parameters needed for AuthPsk, and all other modes.
+    // Both setup functions have all parameters needed for AuthPsk, and all other modes.
     // If testing a mode that doesn't require all inputs, simply omit.
     fn setup_fresh_sender(
         pubkey_r: &[u8],
