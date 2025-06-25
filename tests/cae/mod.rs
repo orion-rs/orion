@@ -27,7 +27,7 @@ fn wycheproof_runner(path: &str) {
             match test.result.as_str() {
                 "valid" => true,
                 // The only thing we want to test for CTX is that it still produces
-                // ciphertexts matching the underlying AE. Therefor, invalid test cases
+                // ciphertexts matching the underlying AE. Therefore, invalid test cases
                 // are of no interest here.
                 "invalid" => continue,
                 _ => panic!("Unexpected test outcome for Wycheproof test"),
