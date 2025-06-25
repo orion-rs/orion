@@ -341,7 +341,7 @@ impl Gidx {
         self.next_addresses(tmp_block);
 
         // The existing values in self.addresses are not read
-        // when generating a new address block. Therefor we
+        // when generating a new address block. Therefore we
         // do not have to zero it out.
     }
 
