@@ -8,7 +8,7 @@ An improvement that doesn't add new features or are breaking changes, may be sub
 
 Features that add new functionality or are breaking changes should preferably be discussed in a separate issue first.
 
-See [Rust API Guidelines](https://rust-lang-nursery.github.io/api-guidelines/checklist.html) and [Secure Rust Guidelines](https://anssi-fr.github.io/rust-guide/) for some checklists on how to implement new features.
+See [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/checklist.html) and [Secure Rust Guidelines](https://anssi-fr.github.io/rust-guide/) for some checklists on how to implement new features.
 
 #### 1.2 Testing
 One way to contribute to testing is by writing new unit-tests to cover code that isn't already being tested. Improvements to existing unit-tests is also an option.
@@ -23,7 +23,7 @@ Please refer to the [orion-fuzz](https://github.com/orion-rs/orion-fuzz) reposit
 #### 1.4 Documentation
 Quality of documentation is a vital part of this project. Contributions to this could include adding documentation where such is missing, clarifying documentation that is unclear or improving examples.
 
-Try to make changes adhere to the [Rust API Guidelines](https://rust-lang-nursery.github.io/api-guidelines/checklist.html) as much as possible.
+Try to make changes adhere to the [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/checklist.html) as much as possible.
 
 ### 2. Bug Reports and Feature Requests
 There are templates for both these scenarios, please see the `.github/ISSUE_TEMPLATE/` directory.
