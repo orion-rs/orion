@@ -267,7 +267,7 @@ mod public {
     #[cfg(feature = "safe_api")]
     fn test_debug_impl() {
         let initial_state = Sha384::new();
-        let debug = format!("{:?}", initial_state);
+        let debug = format!("{initial_state:?}");
         let expected = "Sha384 { _state: State { working_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, message_len: [WordU64(0), WordU64(0)], is_finalized: false } }";
         assert_eq!(debug, expected);
     }

@@ -1487,8 +1487,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -1578,8 +1577,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -1672,8 +1670,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -1766,8 +1763,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -1857,8 +1853,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -1950,8 +1945,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -2044,8 +2038,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -2138,8 +2131,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -2230,8 +2222,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -2323,8 +2314,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -2417,8 +2407,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }
@@ -2511,8 +2500,7 @@ mod private {
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
-                    "Invalid at {}",
-                    idx
+                    "Invalid at {idx}",
                 );
                 idx += 1;
             }

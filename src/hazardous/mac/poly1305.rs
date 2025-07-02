@@ -398,7 +398,7 @@ mod public {
     fn test_debug_impl() {
         let secret_key = OneTimeKey::generate();
         let initial_state = Poly1305::new(&secret_key);
-        let debug = format!("{:?}", initial_state);
+        let debug = format!("{initial_state:?}");
         let expected = "Poly1305 { a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***], leftover: [***OMITTED***], buffer: [***OMITTED***], is_finalized: false }";
         assert_eq!(debug, expected);
     }

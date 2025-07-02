@@ -399,7 +399,7 @@ mod public {
         let secret_key = SecretKey::generate();
         let nonce = Nonce::generate();
         let initial_state = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
-        let debug = format!("{:?}", initial_state);
+        let debug = format!("{initial_state:?}");
         let expected = "StreamXChaCha20Poly1305  { key: [***OMITTED***], counter: [***OMITTED***], inonce: [***OMITTED***]";
         assert_eq!(debug, expected);
     }
