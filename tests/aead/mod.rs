@@ -87,7 +87,7 @@ fn wycheproof_test_runner(
                 // In this case a test vector reported as invalid by Wycheproof would be
                 // accepted by Orion.
                 if is_ct_same && is_decrypted_same && is_tag_same {
-                    panic!("Un-allowed test result! {:?}", tcid);
+                    panic!("Un-allowed test result! {tcid:?}");
                 }
             }
         }

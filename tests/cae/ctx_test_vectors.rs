@@ -86,28 +86,26 @@ pub(crate) fn custom_ctx_runner(path: &str) {
 
             assert_eq!(dst_ct_out, output);
             assert_eq!(dst_pt_out[..].as_ref(), input);
+        } else if is_ietf {
+            let nonce = chacha20poly1305blake2b::Nonce::from_slice(nonce).unwrap();
+            assert!(chacha20poly1305blake2b::open(
+                &key,
+                &nonce,
+                &output,
+                Some(aad),
+                &mut dst_pt_out
+            )
+            .is_err())
         } else {
-            if is_ietf {
-                let nonce = chacha20poly1305blake2b::Nonce::from_slice(nonce).unwrap();
-                assert!(chacha20poly1305blake2b::open(
-                    &key,
-                    &nonce,
-                    &output,
-                    Some(aad),
-                    &mut dst_pt_out
-                )
-                .is_err())
-            } else {
-                let nonce = xchacha20poly1305blake2b::Nonce::from_slice(nonce).unwrap();
-                assert!(xchacha20poly1305blake2b::open(
-                    &key,
-                    &nonce,
-                    &output,
-                    Some(aad),
-                    &mut dst_pt_out
-                )
-                .is_err())
-            }
+            let nonce = xchacha20poly1305blake2b::Nonce::from_slice(nonce).unwrap();
+            assert!(xchacha20poly1305blake2b::open(
+                &key,
+                &nonce,
+                &output,
+                Some(aad),
+                &mut dst_pt_out
+            )
+            .is_err())
         }
     }
 }

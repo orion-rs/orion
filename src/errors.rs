@@ -70,10 +70,10 @@ impl From<core::num::ParseIntError> for UnknownCryptoError {
 // format! is only available with std
 fn test_unknown_crypto_error_debug_display() {
     // Tests Debug impl through "{:?}"
-    let err = format!("{:?}", UnknownCryptoError);
+    let err = format!("{UnknownCryptoError:?}");
     assert_eq!(err, "UnknownCryptoError");
     // Tests Display impl through "{}"
-    let err = format!("{}", UnknownCryptoError);
+    let err = format!("{UnknownCryptoError}");
     assert_eq!(err, "UnknownCryptoError");
 }
 

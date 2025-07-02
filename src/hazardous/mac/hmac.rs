@@ -360,7 +360,7 @@ pub mod sha256 {
         fn test_debug_impl() {
             let secret_key = SecretKey::generate();
             let initial_state = HmacSha256::new(&secret_key);
-            let debug = format!("{:?}", initial_state);
+            let debug = format!("{initial_state:?}");
             let expected = "HmacSha256 { _state: Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false } }";
             assert_eq!(debug, expected);
         }
@@ -591,7 +591,7 @@ pub mod sha384 {
         fn test_debug_impl() {
             let secret_key = SecretKey::generate();
             let initial_state = HmacSha384::new(&secret_key);
-            let debug = format!("{:?}", initial_state);
+            let debug = format!("{initial_state:?}");
             let expected = "HmacSha384 { _state: Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false } }";
             assert_eq!(debug, expected);
         }
@@ -822,7 +822,7 @@ pub mod sha512 {
         fn test_debug_impl() {
             let secret_key = SecretKey::generate();
             let initial_state = HmacSha512::new(&secret_key);
-            let debug = format!("{:?}", initial_state);
+            let debug = format!("{initial_state:?}");
             let expected = "HmacSha512 { _state: Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false } }";
             assert_eq!(debug, expected);
         }

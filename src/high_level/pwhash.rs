@@ -486,7 +486,7 @@ mod public {
     fn test_debug_impl() {
         let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         let password_hash = PasswordHash::from_encoded(valid).unwrap();
-        let debug = format!("{:?}", password_hash);
+        let debug = format!("{password_hash:?}");
         let expected = "PasswordHash { encoded_password_hash: [***OMITTED***], password_hash: [***OMITTED***], iterations: 3, memory: 65536 }";
         assert_eq!(debug, expected);
     }
@@ -500,7 +500,7 @@ mod public {
             let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
             let deserialized: PasswordHash =
-                serde_json::from_str(format!("\"{}\"", encoded_hash).as_str()).unwrap();
+                serde_json::from_str(format!("\"{encoded_hash}\"").as_str()).unwrap();
             assert_eq!(deserialized, expected);
         }
 
@@ -509,7 +509,7 @@ mod public {
             let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
             let hash = PasswordHash::from_encoded(encoded_hash).unwrap();
             let serialized: String = serde_json::to_string(&hash).unwrap();
-            assert_eq!(serialized, format!("\"{}\"", encoded_hash));
+            assert_eq!(serialized, format!("\"{encoded_hash}\""));
         }
     }
 

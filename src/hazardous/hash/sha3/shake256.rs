@@ -152,7 +152,7 @@ mod public {
     #[cfg(feature = "safe_api")]
     fn test_debug_impl() {
         let initial_state = Shake256::new();
-        let debug = format!("{:?}", initial_state);
+        let debug = format!("{initial_state:?}");
         let expected = "Shake256 { _state: State { state: [***OMITTED***], buffer: [***OMITTED***], capacity: 64, until_absorb: 0, to_squeeze: 0, is_finalized: false } }";
         assert_eq!(debug, expected);
     }

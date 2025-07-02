@@ -372,7 +372,7 @@ mod private {
     #[cfg(feature = "safe_api")]
     fn test_debug_impl() {
         let initial_state = State::_new(&[], 64).unwrap();
-        let debug = format!("{:?}", initial_state);
+        let debug = format!("{initial_state:?}");
         let expected = "State { init_state: [***OMITTED***], internal_state: [***OMITTED***], buffer: [***OMITTED***], leftover: 0, t: [0, 0], f: [0, 0], is_finalized: false, is_keyed: false, size: 64 }";
         assert_eq!(debug, expected);
     }

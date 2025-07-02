@@ -292,7 +292,6 @@ macro_rules! func_generate_variable_size (($name:ident) => (
 
 ///
 /// Test implementation macros
-
 #[cfg(test)]
 #[cfg(feature = "serde")]
 macro_rules! test_serde_impls (($name:ident, $gen_length:expr) => (
