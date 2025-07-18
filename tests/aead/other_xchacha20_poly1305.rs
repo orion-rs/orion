@@ -80,7 +80,7 @@ mod sodiumoxide_xchacha20_poly1305 {
     }
 }
 
-// Wireguard test vectors: https://git.zx2c4.com/wireguard-go/tree/xchacha20poly1305/xchacha20_test.go
+// Wireguard test vectors: https://github.com/golang/crypto/blob/master/chacha20poly1305/xchacha20poly1305.go
 // Pulled the 26th November 2018.
 #[cfg(test)]
 mod wireguard_xchacha20_poly1305 {
