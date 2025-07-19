@@ -61,7 +61,7 @@ pub fn sample_ntt(seed: &[u8; 32], ij: &[u8; 2]) -> Result<RingElementNTT, Unkno
 
 /// FIPS-203, Algorithm 8.
 ///
-/// This is combined iwth PRF_{eta n}.
+/// This is combined with PRF_{eta n}.
 ///
 /// See section (4.2) in FIPS 203 on the instiation of B^{65*eta} <=> PRF
 pub fn sample_poly_cbd(
