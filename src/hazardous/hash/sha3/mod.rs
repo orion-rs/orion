@@ -742,7 +742,7 @@ impl<const RATE: usize> Shake<RATE> {
 
             self.buffer[self.buffer.len() - 1] |= 0x80;
             self.process_block(None);
-            // Padding only happens going from absorbing to squuezing.
+            // Padding only happens going from absorbing to squeezing.
             self.is_finalized = true;
 
             // Prepare `self.buffer` for squeezing.
