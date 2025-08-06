@@ -55,7 +55,7 @@ fn conditional_sub_u32(a: u32) -> u32 {
     let t: u32 = a.overflowing_sub(KYBER_Q).0;
 
     // Check if a >= mod (if t is non-negative)
-    // If a >= mod, mask will be 0xFFFFFFF, otherwise 0
+    // If a >= mod, mask will be 0xFFFFFFFF, otherwise 0
     let mask: u32 = 0u32.overflowing_sub(t >> 31).0;
 
     // If mask is 0, return a (no subtraction), otherwise return t (a - mod)
