@@ -1,5 +1,5 @@
 /*
-    Taken from: https://pynacl.readthedocs.io/en/stable/vectors/secretstream_vectors/
+    Taken from: https://pynacl.readthedocs.io/en/latest/vectors/secretstream_vectors/
     26th October 2019.
 */
 
