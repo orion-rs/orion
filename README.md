@@ -72,4 +72,4 @@ Please refer to the [CHANGELOG.md](https://github.com/orion-rs/orion/blob/master
 Please refer to the guidelines in [CONTRIBUTING.md](https://github.com/orion-rs/orion/blob/master/CONTRIBUTING.md) for information on how to contribute to Orion.
 
 ### License
-Orion is licensed under the MIT license. See the `LICENSE` file for more information.
+Orion is licensed under the MIT license. See the [`LICENSE`](LICENSE) file for more information.
