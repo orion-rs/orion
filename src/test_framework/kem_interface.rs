@@ -46,13 +46,13 @@ where
     C: PartialEq + core::fmt::Debug + AsRef<[u8]>,
 {
     pub fn run_all_tests(seed: &[u8]) {
-        Self::keygen_encap_decap_rountrip(seed);
+        Self::keygen_encap_decap_roundtrip(seed);
         Self::decap_wrong_key_implicit_reject(seed);
         Self::encap_twice_then_decap(seed);
         Self::decap_wrong_ciphertext_implicit_reject(seed);
     }
 
-    fn keygen_encap_decap_rountrip(seed: &[u8]) {
+    fn keygen_encap_decap_roundtrip(seed: &[u8]) {
         let (ek1, dk1) = T::keygen(seed).unwrap();
 
         for _ in 0..100 {
