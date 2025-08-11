@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout sources
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
 
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
 
@@ -98,7 +98,7 @@ jobs:
           - stable
           - nightly
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
 
@@ -118,7 +118,7 @@ jobs:
           - armv7-unknown-linux-gnueabihf
           - powerpc64-unknown-linux-gnu
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
 
@@ -137,7 +137,7 @@ jobs:
         arch:
           - wasm32-unknown-unknown
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
 
@@ -155,7 +155,7 @@ jobs:
     name: Build documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
 
@@ -169,7 +169,7 @@ jobs:
     name: Build and check benchmarks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
 
@@ -183,7 +183,7 @@ jobs:
     name: Check SemVer
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
         with:
           persist-credentials: false
 
