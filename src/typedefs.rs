@@ -947,7 +947,7 @@ macro_rules! construct_secret_key_variable_size {
 }
 
 #[cfg(feature = "safe_api")]
-/// Macro to construct a type containing non-sensitive which is stored on the
+/// Macro to construct a type containing non-sensitive data which is stored on the
 /// heap.
 macro_rules! construct_salt_variable_size {
     ($(#[$meta:meta])*
