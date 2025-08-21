@@ -96,7 +96,7 @@ where
         let k1_prime = T::decap(&dk1, &c1).unwrap();
         let k2_prime = T::decap(&dk1, &c2).unwrap();
         assert_ne!(k1_prime, k2_prime);
-        // Repeat decap() to ensure the's no bad internal state-management.
+        // Repeat decap() to ensure there's no bad internal state-management.
         assert_eq!(k1_prime, T::decap(&dk1, &c1).unwrap());
         assert_eq!(k2_prime, T::decap(&dk1, &c2).unwrap());
     }

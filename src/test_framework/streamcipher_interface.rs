@@ -65,7 +65,7 @@ pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
 }
 
 #[cfg(feature = "safe_api")]
-/// Given a input length `a` find out how many times
+/// Given an input length `a` find out how many times
 /// the initial counter on encrypt()/decrypt() would
 /// increase.
 fn counter_increase_times(a: f32) -> u32 {
@@ -200,7 +200,7 @@ fn encrypt_decrypt_equals_expected<Encryptor, Decryptor, Key, Nonce>(
 }
 
 #[cfg(feature = "safe_api")]
-/// Test that a initial counter will not overflow the internal.
+/// Test that an initial counter will not overflow the internal.
 fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
     encryptor: &Encryptor,
     decryptor: &Decryptor,
