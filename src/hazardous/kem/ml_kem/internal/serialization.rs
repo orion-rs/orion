@@ -53,7 +53,7 @@ pub fn bytes_to_bits(bytes: &[u8], bits: &mut [u8]) {
     debug_assert!(bits.iter().all(|x| *x == 0 || *x == 1));
 }
 
-/// Encoding to an from FieldElements/bytes.
+/// Encoding to and from FieldElements/bytes.
 pub struct ByteSerialization;
 
 impl ByteSerialization {

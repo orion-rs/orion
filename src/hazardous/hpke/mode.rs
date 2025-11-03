@@ -28,16 +28,16 @@ use private::*;
 pub(crate) mod private {
     use crate::errors::UnknownCryptoError;
 
-    /// Marker trait for intended for a suite that implements this HPKE mode.
+    /// Marker trait intended for a suite that implements this HPKE mode.
     pub trait Base {}
 
-    /// Marker trait for intended for a suite that implements this HPKE mode.
+    /// Marker trait intended for a suite that implements this HPKE mode.
     pub trait Psk {}
 
-    /// Marker trait for intended for a suite that implements this HPKE mode.
+    /// Marker trait intended for a suite that implements this HPKE mode.
     pub trait Auth {}
 
-    /// Marker trait for intended for a suite that implements this HPKE mode.
+    /// Marker trait intended for a suite that implements this HPKE mode.
     pub trait AuthPsk {}
 
     #[repr(u8)]
