@@ -4,14 +4,14 @@ There are a variety of things that one may contribute to this project. Contribut
 
 #### 1.1 Features and Improvements
 Improvements to the library can come in many flavors: performance, security, usability, etc.
-An improvement that doesn't add new features or are breaking changes, may be submitted as pull requests directly.
+An improvement that doesn't add new features or isn't a breaking change may be submitted as pull requests directly.
 
 Features that add new functionality or are breaking changes should preferably be discussed in a separate issue first.
 
 See [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/checklist.html) and [Secure Rust Guidelines](https://anssi-fr.github.io/rust-guide/) for some checklists on how to implement new features.
 
 #### 1.2 Testing
-One way to contribute to testing is by writing new unit-tests to cover code that isn't already being tested. Improvements to existing unit-tests is also an option.
+One way to contribute to testing is by writing new unit-tests to cover code that isn't already being tested. Improvements to existing unit-tests are also an option.
 
 Adding test vectors (located in `/tests`) is also a good way to improve the testing of the library. Test vectors can be official or generated using another crypto library.
 

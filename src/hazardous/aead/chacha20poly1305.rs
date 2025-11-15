@@ -218,8 +218,8 @@ pub fn seal(
                     // 1) ENC_CTR + ctr does __not__ overflow/panic
                     // 2) ChaCha20 instance will not panic on the next keystream produced
 
-                    // Copy keystream directly into the dst_out block in there is
-                    // enough space, too avoid copying from `tmp` each time and only
+                    // Copy keystream directly into the dst_out block if there is
+                    // enough space, to avoid copying from `tmp` each time and only
                     // on the last block instead. `c_block` must be full blocksize,
                     // or we leave behind keystream data in it, if `p_block` is not full length
                     // while `c_block` is.
