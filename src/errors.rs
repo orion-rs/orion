@@ -107,7 +107,7 @@ fn test_unknown_crypto_from_decode_error() {
     let err_one = Error::InvalidInput;
     let err_two = Error::Overflow;
 
-    // Tests Debug impl through "{:?}" and Display impl though "{}"
+    // Tests Debug impl through "{:?}" and Display impl through "{}"
     let err = format!(
         "{:?}:{}",
         UnknownCryptoError::from(err_one),
@@ -127,7 +127,7 @@ fn test_unknown_crypto_from_decode_error() {
 fn test_unknown_crypto_from_parseint_error() {
     let err_foreign = "j".parse::<u32>().unwrap_err();
 
-    // Tests Debug impl through "{:?}" and Display impl though "{}"
+    // Tests Debug impl through "{:?}" and Display impl through "{}"
     let err = format!(
         "{:?}:{}",
         UnknownCryptoError::from(err_foreign.clone()),

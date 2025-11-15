@@ -710,7 +710,7 @@ mod public {
         let mut msb_one = u;
         msb_one[31] |= 128u8;
 
-        // These should equal each-other. The high bits differ, but should be ignored.
+        // These should equal each other. The high bits differ, but should be ignored.
         assert_eq!(PublicKey::from(msb_zero), msb_one.as_ref());
         assert_eq!(PublicKey::from(msb_zero), PublicKey::from(msb_one));
 
