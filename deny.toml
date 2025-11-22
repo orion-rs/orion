@@ -18,7 +18,7 @@ exceptions = [{ allow = ["Unicode-3.0"], name = "unicode-ident" }]
 
 [bans]
 multiple-versions = "allow" # We don't maintain Cargo lockfile, so this isn't really feasible to deny
-wildcards = "deny"          # Dependencies should not have be specified with '*'
+wildcards = "deny"          # Dependencies should not be specified with '*'
 
 [sources]
 unknown-registry = "deny" # crates.io is allowed and a known register by default
