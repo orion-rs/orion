@@ -91,7 +91,7 @@ pub(crate) trait HmacHashFunction: Clone {
     fn compare_state_to_other(&self, other: &Self);
 }
 
-/// A trait used to define a HMAC function.
+/// A trait used to define an HMAC function.
 pub(crate) trait HmacFunction {
     /// The output size of the internal hash function used.
     const HASH_FUNC_OUTSIZE: usize;
@@ -282,7 +282,7 @@ pub mod sha256 {
             self._state._update(data)
         }
 
-        /// Return a HMAC-SHA256 tag.
+        /// Return an HMAC-SHA256 tag.
         pub(crate) fn _finalize_internal(
             &mut self,
             dest: &mut [u8],
@@ -291,7 +291,7 @@ pub mod sha256 {
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Return a HMAC-SHA256 tag.
+        /// Return an HMAC-SHA256 tag.
         pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
             let mut dest = [0u8; sha256::SHA256_OUTSIZE];
             self._finalize_internal(&mut dest)?;
@@ -308,7 +308,7 @@ pub mod sha256 {
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Verify a HMAC-SHA256 tag in constant time.
+        /// Verify an HMAC-SHA256 tag in constant time.
         pub fn verify(
             expected: &Tag,
             secret_key: &SecretKey,
@@ -513,7 +513,7 @@ pub mod sha384 {
             self._state._update(data)
         }
 
-        /// Return a HMAC-SHA384 tag.
+        /// Return an HMAC-SHA384 tag.
         pub(crate) fn _finalize_internal(
             &mut self,
             dest: &mut [u8],
@@ -522,7 +522,7 @@ pub mod sha384 {
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Return a HMAC-SHA384 tag.
+        /// Return an HMAC-SHA384 tag.
         pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
             let mut dest = [0u8; sha384::SHA384_OUTSIZE];
             self._finalize_internal(&mut dest)?;
@@ -539,7 +539,7 @@ pub mod sha384 {
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Verify a HMAC-SHA384 tag in constant time.
+        /// Verify an HMAC-SHA384 tag in constant time.
         pub fn verify(
             expected: &Tag,
             secret_key: &SecretKey,
@@ -744,7 +744,7 @@ pub mod sha512 {
             self._state._update(data)
         }
 
-        /// Return a HMAC-SHA512 tag.
+        /// Return an HMAC-SHA512 tag.
         pub(crate) fn _finalize_internal(
             &mut self,
             dest: &mut [u8],
@@ -753,7 +753,7 @@ pub mod sha512 {
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Return a HMAC-SHA512 tag.
+        /// Return an HMAC-SHA512 tag.
         pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
             let mut dest = [0u8; sha512::SHA512_OUTSIZE];
             self._finalize_internal(&mut dest)?;
@@ -770,7 +770,7 @@ pub mod sha512 {
         }
 
         #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Verify a HMAC-SHA512 tag in constant time.
+        /// Verify an HMAC-SHA512 tag in constant time.
         pub fn verify(
             expected: &Tag,
             secret_key: &SecretKey,

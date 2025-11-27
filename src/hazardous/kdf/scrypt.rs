@@ -343,7 +343,7 @@ pub fn derive_key(
 
 #[allow(clippy::too_many_arguments)]
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Verify an scrypt derived key in constant time.
+/// Verify a scrypt derived key in constant time.
 pub fn verify(
     expected: &[u8],
     password: &[u8],
