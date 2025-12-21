@@ -6,7 +6,7 @@ description = "Usable, easy and safe pure-Rust crypto"
 keywords = ["cryptography", "crypto", "aead", "pqc", "kem"]
 categories = ["cryptography", "no-std"]
 edition = "2021"
-rust-version = "1.83"                                        # Update CI (MSRV) test + README along with this.
+rust-version = "1.86"                                        # Update CI (MSRV) test + README along with this.
 readme = "README.md"
 repository = "https://github.com/orion-rs/orion"
 documentation = "https://docs.rs/orion"
@@ -39,7 +39,7 @@ serde_json = "1.0.41"
 serde = { version = "1.0", features = ["derive"] }
 quickcheck = "1"
 quickcheck_macros = "1"
-criterion = "0.7.0"
+criterion = "0.8.1"
 rand = { version = "0.9.0", features = ["thread_rng", "small_rng"] }
 num-rational = { version = "0.4.2", default-features = false }
 

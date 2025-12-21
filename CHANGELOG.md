@@ -5,6 +5,7 @@
 **Changelog:**
 - Add C2SP/Wycheproof test vectors to PBKDF2 implementation ([#495](https://github.com/orion-rs/orion/pull/495)).
 - Add support for scrypt password key-derivation function ([#493](https://github.com/orion-rs/orion/pull/493), credits: [@finfet](https://github.com/finfet)).
+- Bump MSRV to `1.86.0`.
 
 ### 0.17.11
 

@@ -12,8 +12,14 @@ on:
   schedule:
     - cron: "0 0 * * *"
 
+# We don't need to run older workflows for the same PR's, since we always want the output of the newest ones.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cargo-deny:
+    name: EmbarkStudios/cargo-deny
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -22,7 +28,7 @@ jobs:
           - bans licenses sources
 
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
         with:
           persist-credentials: false
       - uses: EmbarkStudios/cargo-deny-action@76cd80eb775d7bbbd2d80292136d74d39e1b4918

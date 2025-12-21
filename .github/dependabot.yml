@@ -9,6 +9,8 @@ updates:
     commit-message:
       # Prefix all commit messages with "deps:"
       prefix: "deps:"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -19,3 +21,5 @@ updates:
     commit-message:
       # Prefix all commit messages with "ci:"
       prefix: "ci:"
+    cooldown:
+      default-days: 7
