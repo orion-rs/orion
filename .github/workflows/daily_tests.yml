@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: "0 0 * * *" # Midnight of each day
 
+# We don't need to run older workflows for the same PR's, since we always want the output of the newest ones.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   tests:
     name: Test Suite

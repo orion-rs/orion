@@ -7,6 +7,11 @@ on:
     branches:
       - master
 
+# We don't need to run older workflows for the same PR's, since we always want the output of the newest ones.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 # NOTE: Should we use fail-fast: false?
 
 name: Tests
@@ -15,6 +20,7 @@ permissions:
 
 jobs:
   test:
+    name: Test release + debug and features
     strategy:
       matrix:
         toolchain:

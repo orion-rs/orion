@@ -4,6 +4,11 @@ name: Lints
 permissions:
   contents: read
 
+# We don't need to run older workflows for the same PR's, since we always want the output of the newest ones.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lints:
     name: rustfmt and clippy
