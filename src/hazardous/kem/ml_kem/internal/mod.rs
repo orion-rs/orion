@@ -1174,7 +1174,6 @@ mod tests {
                     $pke::encapsulation_key_check(&illegal_ek)
                         .is_err()
                 );
-                illegal_elements[0] = FieldElement::random();
 
                 // Set the values of fields elements to something above q - 1
                 let mut illegal_elements = valid_elements;
@@ -1185,7 +1184,6 @@ mod tests {
                     $pke::encapsulation_key_check(&illegal_ek)
                         .is_err()
                 );
-                illegal_elements[128] = FieldElement::random();
 
                 // Set the values of fields elements to something above q - 1
                 let mut illegal_elements = valid_elements;
@@ -1196,7 +1194,6 @@ mod tests {
                     $pke::encapsulation_key_check(&illegal_ek)
                         .is_err()
                 );
-                illegal_elements[217] = FieldElement::random();
 
                 // Set the values of fields elements to something above q - 1
                 let mut illegal_elements = valid_elements;
@@ -1207,6 +1204,7 @@ mod tests {
                     $pke::encapsulation_key_check(&illegal_ek)
                         .is_err()
                 );
+                // Reset bad element to ensure that it's now a valid representation.
                 illegal_elements[3] = FieldElement::random();
 
 
