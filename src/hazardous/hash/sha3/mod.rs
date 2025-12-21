@@ -568,7 +568,7 @@ pub(crate) struct Shake<const RATE: usize> {
     pub(crate) capacity: usize,
     // There is a difference in the state handling here for SHAKE compared
     // to the rest of the hashing/streaming states in Orion. This is
-    // because we're dealing with a XOF, enabling many calls to squeeze()
+    // because we're dealing with an XOF, enabling many calls to squeeze()
     // data from the internal state, which is not possible with other
     // streaming states in Orion, at the time of writing.
     //
