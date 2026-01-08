@@ -1,11 +1,14 @@
 ### 0.17.12
 
-**Date:** TBD.
+**Date:** January 8, 2026.
 
 **Changelog:**
 - Add C2SP/Wycheproof test vectors to PBKDF2 implementation ([#495](https://github.com/orion-rs/orion/pull/495)).
 - Add support for scrypt password key-derivation function ([#493](https://github.com/orion-rs/orion/pull/493), credits: [@finfet](https://github.com/finfet)).
 - Bump MSRV to `1.86.0`.
+- Update C2SP/Wycheproof for MLKEM ([#583](https://github.com/orion-rs/orion/pull/583)).
+- Update dev-dependencies.
+- Bump copyright year to 2026.
 
 ### 0.17.11
 
