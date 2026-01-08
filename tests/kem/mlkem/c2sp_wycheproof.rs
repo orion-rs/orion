@@ -87,7 +87,49 @@ fn mlkem_runner(path: &str) {
                     tests_run += 1;
                 }
 
-                // TODO: 768, 1024.
+                if test_group.parameterSet == "ML-KEM-768" {
+                    let mut ek_expected = [0u8; mlkem768::MlKem768::EK_SIZE];
+                    let mut dk_expected = [0u8; mlkem768::MlKem768::DK_SIZE];
+                    hex::decode_to_slice(test_vector.seed.as_ref().unwrap(), &mut seed).unwrap();
+                    hex::decode_to_slice(test_vector.ek.as_ref().unwrap(), &mut ek_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.dk.as_ref().unwrap(), &mut dk_expected)
+                        .unwrap();
+
+                    let keypair =
+                        mlkem768::KeyPair::try_from(&mlkem768::Seed::from_slice(&seed).unwrap())
+                            .unwrap();
+                    let ek = mlkem768::EncapsulationKey::from_slice(&ek_expected).unwrap();
+                    let dk =
+                        mlkem768::DecapsulationKey::unchecked_from_slice(&dk_expected).unwrap();
+
+                    assert_eq!(keypair.public(), &ek);
+                    assert_eq!(keypair.private(), &dk);
+
+                    tests_run += 1;
+                }
+
+                if test_group.parameterSet == "ML-KEM-1024" {
+                    let mut ek_expected = [0u8; mlkem1024::MlKem1024::EK_SIZE];
+                    let mut dk_expected = [0u8; mlkem1024::MlKem1024::DK_SIZE];
+                    hex::decode_to_slice(test_vector.seed.as_ref().unwrap(), &mut seed).unwrap();
+                    hex::decode_to_slice(test_vector.ek.as_ref().unwrap(), &mut ek_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.dk.as_ref().unwrap(), &mut dk_expected)
+                        .unwrap();
+
+                    let keypair =
+                        mlkem1024::KeyPair::try_from(&mlkem1024::Seed::from_slice(&seed).unwrap())
+                            .unwrap();
+                    let ek = mlkem1024::EncapsulationKey::from_slice(&ek_expected).unwrap();
+                    let dk =
+                        mlkem1024::DecapsulationKey::unchecked_from_slice(&dk_expected).unwrap();
+
+                    assert_eq!(keypair.public(), &ek);
+                    assert_eq!(keypair.private(), &dk);
+
+                    tests_run += 1;
+                }
             }
 
             if test_group.testType == "MLKEMEncapsTest" {
@@ -155,7 +197,47 @@ fn mlkem_runner(path: &str) {
                     tests_run += 1;
                 }
 
-                // TODO: 768, 1024.
+                if test_group.parameterSet == "ML-KEM-768" {
+                    let mut ek_expected = [0u8; mlkem768::MlKem768::EK_SIZE];
+                    let mut ct_expected = [0u8; mlkem768::MlKem768::CIPHERTEXT_SIZE];
+                    hex::decode_to_slice(test_vector.m.as_ref().unwrap(), &mut m).unwrap();
+                    hex::decode_to_slice(test_vector.K.as_ref().unwrap(), &mut shared_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.ek.as_ref().unwrap(), &mut ek_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.c.as_ref().unwrap(), &mut ct_expected)
+                        .unwrap();
+
+                    let ek = mlkem768::EncapsulationKey::from_slice(&ek_expected).unwrap();
+                    let ciphertext = mlkem768::Ciphertext::from_slice(&ct_expected).unwrap();
+                    let (k_actual, c_acutal) = ek.encap_deterministic(&m).unwrap();
+
+                    assert_eq!(ciphertext, c_acutal);
+                    assert_eq!(&shared_expected, k_actual.unprotected_as_bytes());
+
+                    tests_run += 1;
+                }
+
+                if test_group.parameterSet == "ML-KEM-1024" {
+                    let mut ek_expected = [0u8; mlkem1024::MlKem1024::EK_SIZE];
+                    let mut ct_expected = [0u8; mlkem1024::MlKem1024::CIPHERTEXT_SIZE];
+                    hex::decode_to_slice(test_vector.m.as_ref().unwrap(), &mut m).unwrap();
+                    hex::decode_to_slice(test_vector.K.as_ref().unwrap(), &mut shared_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.ek.as_ref().unwrap(), &mut ek_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.c.as_ref().unwrap(), &mut ct_expected)
+                        .unwrap();
+
+                    let ek = mlkem1024::EncapsulationKey::from_slice(&ek_expected).unwrap();
+                    let ciphertext = mlkem1024::Ciphertext::from_slice(&ct_expected).unwrap();
+                    let (k_actual, c_acutal) = ek.encap_deterministic(&m).unwrap();
+
+                    assert_eq!(ciphertext, c_acutal);
+                    assert_eq!(&shared_expected, k_actual.unprotected_as_bytes());
+
+                    tests_run += 1;
+                }
             }
 
             if test_group.testType == "MLKEMDecapsValidationTest"
@@ -202,7 +284,81 @@ fn mlkem_runner(path: &str) {
                     }
                 }
 
-                // TODO: 768, 1024.
+                if test_group.parameterSet == "ML-KEM-768" {
+                    if test_vector.result == "invalid" {
+                        match test_vector.tcId {
+                            2..=3 => {
+                                assert!(mlkem768::Ciphertext::from_slice(
+                                    &hex::decode(test_vector.c.as_ref().unwrap()).unwrap()
+                                )
+                                .is_err());
+                            }
+                            4..=7 => {
+                                assert!(mlkem768::DecapsulationKey::unchecked_from_slice(
+                                    &hex::decode(test_vector.dk.as_ref().unwrap()).unwrap()
+                                )
+                                .is_err());
+                            }
+                            _ => panic!("uncovered tcId - we need all for this test"),
+                        }
+
+                        tests_run += 1;
+                        continue;
+                    }
+
+                    if test_vector.result == "valid" {
+                        let mut dk_expected = [0u8; mlkem768::MlKem768::DK_SIZE];
+                        let mut ct_expected = [0u8; mlkem768::MlKem768::CIPHERTEXT_SIZE];
+                        hex::decode_to_slice(test_vector.dk.as_ref().unwrap(), &mut dk_expected)
+                            .unwrap();
+                        hex::decode_to_slice(test_vector.c.as_ref().unwrap(), &mut ct_expected)
+                            .unwrap();
+
+                        let dk =
+                            mlkem768::DecapsulationKey::unchecked_from_slice(&dk_expected).unwrap();
+                        let ciphertext = mlkem768::Ciphertext::from_slice(&ct_expected).unwrap();
+                        assert!(dk.decap(&ciphertext).is_ok());
+                        tests_run += 1;
+                    }
+                }
+
+                if test_group.parameterSet == "ML-KEM-1024" {
+                    if test_vector.result == "invalid" {
+                        match test_vector.tcId {
+                            2..=3 => {
+                                assert!(mlkem1024::Ciphertext::from_slice(
+                                    &hex::decode(test_vector.c.as_ref().unwrap()).unwrap()
+                                )
+                                .is_err());
+                            }
+                            4..=7 => {
+                                assert!(mlkem1024::DecapsulationKey::unchecked_from_slice(
+                                    &hex::decode(test_vector.dk.as_ref().unwrap()).unwrap()
+                                )
+                                .is_err());
+                            }
+                            _ => panic!("uncovered tcId - we need all for this test"),
+                        }
+
+                        tests_run += 1;
+                        continue;
+                    }
+
+                    if test_vector.result == "valid" {
+                        let mut dk_expected = [0u8; mlkem1024::MlKem1024::DK_SIZE];
+                        let mut ct_expected = [0u8; mlkem1024::MlKem1024::CIPHERTEXT_SIZE];
+                        hex::decode_to_slice(test_vector.dk.as_ref().unwrap(), &mut dk_expected)
+                            .unwrap();
+                        hex::decode_to_slice(test_vector.c.as_ref().unwrap(), &mut ct_expected)
+                            .unwrap();
+
+                        let dk = mlkem1024::DecapsulationKey::unchecked_from_slice(&dk_expected)
+                            .unwrap();
+                        let ciphertext = mlkem1024::Ciphertext::from_slice(&ct_expected).unwrap();
+                        assert!(dk.decap(&ciphertext).is_ok());
+                        tests_run += 1;
+                    }
+                }
             }
 
             if test_group.testType == "MLKEMTest" {
@@ -261,7 +417,101 @@ fn mlkem_runner(path: &str) {
                     tests_run += 1;
                 }
 
-                // TODO: 768, 1024.
+                if test_group.parameterSet == "ML-KEM-768" {
+                    if test_vector.result == "invalid" {
+                        match test_vector.comment.as_ref().unwrap().as_str() {
+                            "Private key too short" | "Private key too long" => {
+                                assert!(mlkem768::Seed::from_slice(
+                                    &hex::decode(test_vector.seed.as_ref().unwrap()).unwrap()
+                                )
+                                .is_err());
+                            }
+                            "Ciphertext too short" | "Ciphertext too long" => {
+                                assert!(mlkem768::Ciphertext::from_slice(
+                                    &hex::decode(test_vector.c.as_ref().unwrap()).unwrap()
+                                )
+                                .is_err());
+                            }
+                            _ => panic!("a test parameter set was unaccounted for"),
+                        }
+
+                        tests_run += 1;
+                        continue;
+                    }
+
+                    assert!(test_vector.ek.is_some());
+
+                    let mut ek_expected = [0u8; mlkem768::MlKem768::EK_SIZE];
+                    let mut ct_expected = [0u8; mlkem768::MlKem768::CIPHERTEXT_SIZE];
+                    hex::decode_to_slice(test_vector.seed.as_ref().unwrap(), &mut seed).unwrap();
+                    hex::decode_to_slice(test_vector.K.as_ref().unwrap(), &mut shared_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.ek.as_ref().unwrap(), &mut ek_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.c.as_ref().unwrap(), &mut ct_expected)
+                        .unwrap();
+
+                    let keypair =
+                        mlkem768::KeyPair::try_from(&mlkem768::Seed::from_slice(&seed).unwrap())
+                            .unwrap();
+                    let ek = mlkem768::EncapsulationKey::from_slice(&ek_expected).unwrap();
+                    assert_eq!(keypair.public(), &ek);
+
+                    let ciphertext = mlkem768::Ciphertext::from_slice(&ct_expected).unwrap();
+                    let k_actual =
+                        mlkem768::MlKem768::decap(keypair.private(), &ciphertext).unwrap();
+                    assert_eq!(&shared_expected, k_actual.unprotected_as_bytes());
+
+                    tests_run += 1;
+                }
+
+                if test_group.parameterSet == "ML-KEM-1024" {
+                    if test_vector.result == "invalid" {
+                        match test_vector.comment.as_ref().unwrap().as_str() {
+                            "Private key too short" | "Private key too long" => {
+                                assert!(mlkem1024::Seed::from_slice(
+                                    &hex::decode(test_vector.seed.as_ref().unwrap()).unwrap()
+                                )
+                                .is_err());
+                            }
+                            "Ciphertext too short" | "Ciphertext too long" => {
+                                assert!(mlkem1024::Ciphertext::from_slice(
+                                    &hex::decode(test_vector.c.as_ref().unwrap()).unwrap()
+                                )
+                                .is_err());
+                            }
+                            _ => panic!("a test parameter set was unaccounted for"),
+                        }
+
+                        tests_run += 1;
+                        continue;
+                    }
+
+                    assert!(test_vector.ek.is_some());
+
+                    let mut ek_expected = [0u8; mlkem1024::MlKem1024::EK_SIZE];
+                    let mut ct_expected = [0u8; mlkem1024::MlKem1024::CIPHERTEXT_SIZE];
+                    hex::decode_to_slice(test_vector.seed.as_ref().unwrap(), &mut seed).unwrap();
+                    hex::decode_to_slice(test_vector.K.as_ref().unwrap(), &mut shared_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.ek.as_ref().unwrap(), &mut ek_expected)
+                        .unwrap();
+                    hex::decode_to_slice(test_vector.c.as_ref().unwrap(), &mut ct_expected)
+                        .unwrap();
+
+                    let keypair =
+                        mlkem1024::KeyPair::try_from(&mlkem1024::Seed::from_slice(&seed).unwrap())
+                            .unwrap();
+                    let ek = mlkem1024::EncapsulationKey::from_slice(&ek_expected).unwrap();
+                    assert_eq!(keypair.public(), &ek);
+
+                    let ciphertext = mlkem1024::Ciphertext::from_slice(&ct_expected).unwrap();
+                    let k_actual =
+                        mlkem1024::MlKem1024::decap(keypair.private(), &ciphertext).unwrap();
+                    assert_eq!(&shared_expected, k_actual.unprotected_as_bytes());
+
+                    tests_run += 1;
+                }
             }
         }
     }
@@ -278,15 +528,23 @@ fn test_c2sp_wycheproof_mlkem_512() {
     );
     mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_512_test.json");
 }
-/*
+
 #[test]
-fn test_c2sp_wycheproof_mlkem() {
-    mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_test.json");
+fn test_c2sp_wycheproof_mlkem_768() {
+    mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_768_encaps_test.json");
+    mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_768_keygen_seed_test.json");
+    mlkem_runner(
+        "./tests/test_data/third_party/c2sp_wycheproof/mlkem_768_semi_expanded_decaps_test.json",
+    );
+    mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_768_test.json");
 }
-*/
-/*
+
 #[test]
-fn test_c2sp_wycheproof_mlkem() {
-    mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_test.json");
+fn test_c2sp_wycheproof_mlkem_1024() {
+    mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_1024_encaps_test.json");
+    mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_1024_keygen_seed_test.json");
+    mlkem_runner(
+        "./tests/test_data/third_party/c2sp_wycheproof/mlkem_1024_semi_expanded_decaps_test.json",
+    );
+    mlkem_runner("./tests/test_data/third_party/c2sp_wycheproof/mlkem_1024_test.json");
 }
-*/
