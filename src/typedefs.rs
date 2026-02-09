@@ -26,7 +26,6 @@
 /// Macro that implements the `Default` trait using a CSPRNG.
 macro_rules! impl_default_trait (($name:ident, $size:expr) => (
     impl Default for $name {
-        #[cfg(feature = "safe_api")]
         #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
         /// Randomly generate using a CSPRNG with recommended size. Not available in `no_std` context.
         fn default() -> $name {
