@@ -1,0 +1,8 @@
+{
+  "check": {
+    "extraArgs": ["--target-dir", "/tmp/ra-orion-check"]
+  },
+  "cargo": {
+    "targetDir": "/tmp/ra-orion-build"
+  }
+}

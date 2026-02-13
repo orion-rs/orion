@@ -40,6 +40,7 @@ pub mod shake256;
 
 use crate::errors::UnknownCryptoError;
 use core::fmt::Debug;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 /// Round constants. See NIST intermediate test vectors for source.
@@ -401,6 +402,7 @@ pub(crate) struct Sha3<const RATE: usize> {
     is_finalized: bool,
 }
 
+#[cfg(feature = "zeroize")]
 impl<const RATE: usize> Drop for Sha3<RATE> {
     fn drop(&mut self) {
         self.state.iter_mut().zeroize();
@@ -597,6 +599,7 @@ pub(crate) struct Shake<const RATE: usize> {
     is_finalized: bool,
 }
 
+#[cfg(feature = "zeroize")]
 impl<const RATE: usize> Drop for Shake<RATE> {
     fn drop(&mut self) {
         self.state.iter_mut().zeroize();

@@ -114,7 +114,8 @@ use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::xchacha20::Nonce;
 use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
-use zeroize::{Zeroize, Zeroizing};
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
 
 #[derive(Debug, Clone, Copy)]
 /// Tag that indicates the type of message.
@@ -233,7 +234,7 @@ impl StreamXChaCha20Poly1305 {
             true,
         )
         .unwrap();
-        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+        let mut tmp_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
         let mut pad = [0u8; 16];
         let mut poly = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block));
@@ -297,6 +298,7 @@ impl StreamXChaCha20Poly1305 {
         self.inonce
             .copy_from_slice(&new_key_and_inonce[CHACHA_KEYSIZE..]);
         self.counter = 1;
+        #[cfg(feature = "zeroize")]
         new_key_and_inonce.zeroize();
 
         Ok(())

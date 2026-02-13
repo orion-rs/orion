@@ -126,6 +126,7 @@ use crate::hazardous::mac::poly1305::Poly1305;
 use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
 use crate::hazardous::stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE};
 use crate::util;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroizing;
 
 pub use crate::hazardous::aead::chacha20poly1305::A_MAX;
@@ -217,7 +218,7 @@ pub fn open(
 
     let mut dec_ctx =
         ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
-    let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    let mut tmp = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
     let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
 
     let ciphertext_len = ciphertext_with_tag.len() - TAG_SIZE;

@@ -103,6 +103,7 @@ use crate::hazardous::hash::blake2::blake2b::Blake2b;
 use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
 use crate::util;
 use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 /// The Argon2 version (0x13).
@@ -519,9 +520,13 @@ pub fn derive_key(
     store_u64_into_le(blocks.get(n_blocks as usize - 1).unwrap(), &mut tmp);
     extended_hash(&tmp, dst_out)?;
 
+    #[cfg(feature = "zeroize")]
     working_block.zeroize();
+    #[cfg(feature = "zeroize")]
     tmp.zeroize();
+    #[cfg(feature = "zeroize")]
     h0.zeroize();
+    #[cfg(feature = "zeroize")]
     for block in blocks.iter_mut() {
         block.zeroize();
     }

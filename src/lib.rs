@@ -78,6 +78,7 @@ extern crate std as alloc;
 
 #[macro_use]
 mod typedefs;
+pub(crate) use typedefs::ZeroizeWrap;
 
 #[macro_use]
 /// Utilities such as constant-time comparison.

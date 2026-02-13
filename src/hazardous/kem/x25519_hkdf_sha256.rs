@@ -71,7 +71,6 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
 use crate::hazardous::kdf::hkdf;
-use zeroize::Zeroizing;
 
 pub use crate::hazardous::ecc::x25519::PrivateKey;
 pub use crate::hazardous::ecc::x25519::PublicKey;
@@ -171,7 +170,7 @@ impl DhKem {
         }
 
         let dkp_prk = Self::labeled_extract(b"", b"dkp_prk", ikm)?;
-        let mut sk_bytes = Zeroizing::new([0u8; x25519::PRIVATE_KEY_SIZE]);
+        let mut sk_bytes = zeroize_wrap!([0u8; x25519::PRIVATE_KEY_SIZE]);
         Self::labeled_expand(&dkp_prk, b"sk", b"", sk_bytes.as_mut_slice())?;
 
         let sk = PrivateKey::from_slice(sk_bytes.as_slice())?;
@@ -255,7 +254,7 @@ impl DhKem {
     ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
         let public_ephemeral = PublicKey::try_from(&secret_ephemeral)?;
 
-        let mut dh = Zeroizing::new([0u8; 64]);
+        let mut dh = zeroize_wrap!([0u8; 64]);
         dh[..32].copy_from_slice(
             x25519::key_agreement(&secret_ephemeral, public_recipient)?.unprotected_as_bytes(),
         );
@@ -281,7 +280,7 @@ impl DhKem {
         secret_recipient: &PrivateKey,
         public_sender: &PublicKey,
     ) -> Result<SharedSecret, UnknownCryptoError> {
-        let mut dh = Zeroizing::new([0u8; 64]);
+        let mut dh = zeroize_wrap!([0u8; 64]);
         dh[..32].copy_from_slice(
             x25519::key_agreement(secret_recipient, public_ephemeral)?.unprotected_as_bytes(),
         );

@@ -23,6 +23,7 @@
 use super::fe::FieldElement;
 use core::ops::{Add, AddAssign, Mul, Sub};
 use core::ops::{Index, IndexMut};
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 fn sub_poly(p1: &[FieldElement; 256], p2: &[FieldElement; 256], ret: &mut [FieldElement; 256]) {
@@ -50,6 +51,7 @@ pub struct RingElement {
     pub coefficients: [FieldElement; 256],
 }
 
+#[cfg(feature = "zeroize")]
 impl Zeroize for RingElement {
     fn zeroize(&mut self) {
         self.coefficients.iter_mut().zeroize();
@@ -138,6 +140,7 @@ pub struct RingElementNTT {
     pub coefficients: [FieldElement; 256],
 }
 
+#[cfg(feature = "zeroize")]
 impl Zeroize for RingElementNTT {
     fn zeroize(&mut self) {
         self.coefficients.iter_mut().zeroize();

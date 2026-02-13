@@ -34,7 +34,18 @@ pub(crate) mod sha2_core {
     use core::fmt::Debug;
     use core::marker::PhantomData;
     use core::ops::*;
+    #[cfg(feature = "zeroize")]
     use zeroize::Zeroize;
+
+    #[cfg(feature = "zeroize")]
+    pub(crate) trait MaybeZeroize: Zeroize {}
+    #[cfg(feature = "zeroize")]
+    impl<T: Zeroize> MaybeZeroize for T {}
+
+    #[cfg(not(feature = "zeroize"))]
+    pub(crate) trait MaybeZeroize {}
+    #[cfg(not(feature = "zeroize"))]
+    impl<T> MaybeZeroize for T {}
 
     /// Word used within the SHA2 internal state.
     pub(crate) trait Word:
@@ -49,7 +60,7 @@ pub(crate) mod sha2_core {
         + Copy
         + Debug
         + PartialEq<Self>
-        + Zeroize
+        + MaybeZeroize
     {
         #[cfg(any(debug_assertions, test))]
         const MAX: Self;
@@ -136,6 +147,7 @@ pub(crate) mod sha2_core {
         pub(crate) is_finalized: bool,
     }
 
+    #[cfg(feature = "zeroize")]
     impl<
             W: Word,
             T: Variant<W, { N_CONSTS }>,
@@ -411,11 +423,13 @@ pub(crate) mod sha2_core {
 pub(crate) mod w32 {
     use core::convert::{From, TryFrom, TryInto};
     use core::ops::*;
+    #[cfg(feature = "zeroize")]
     use zeroize::Zeroize;
 
     #[derive(Debug, PartialEq, Copy, Clone, Default)]
     pub(crate) struct WordU32(pub(crate) u32);
 
+    #[cfg(feature = "zeroize")]
     impl Zeroize for WordU32 {
         fn zeroize(&mut self) {
             self.0.zeroize();
@@ -554,11 +568,13 @@ pub(crate) mod w32 {
 pub(crate) mod w64 {
     use core::convert::{From, TryFrom, TryInto};
     use core::ops::*;
+    #[cfg(feature = "zeroize")]
     use zeroize::Zeroize;
 
     #[derive(Debug, PartialEq, Copy, Clone, Default)]
     pub(crate) struct WordU64(pub(crate) u64);
 
+    #[cfg(feature = "zeroize")]
     impl Zeroize for WordU64 {
         fn zeroize(&mut self) {
             self.0.zeroize();

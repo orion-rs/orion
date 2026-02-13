@@ -50,6 +50,7 @@ impl core::ops::BitXorAssign for U64x4 {
     }
 }
 
+#[cfg(feature = "zeroize")]
 impl zeroize::Zeroize for U64x4 {
     fn zeroize(&mut self) {
         self.0.zeroize();

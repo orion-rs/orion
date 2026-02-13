@@ -99,8 +99,6 @@ use crate::{
     hazardous::kdf::argon2i::{self, LANES, MIN_MEMORY},
 };
 use ct_codecs::{Base64NoPadding, Decoder, Encoder};
-use zeroize::Zeroizing;
-
 #[cfg(feature = "serde")]
 use serde::{
     de::{self, Deserialize, Deserializer},
@@ -416,7 +414,7 @@ pub fn hash_password(
 
     // Cannot panic as this is a valid size.
     let salt = Salt::generate(SALT_LENGTH).unwrap();
-    let mut buffer = Zeroizing::new([0u8; PWHASH_LENGTH]);
+    let mut buffer = zeroize_wrap!([0u8; PWHASH_LENGTH]);
 
     argon2i::derive_key(
         password.unprotected_as_bytes(),
@@ -462,7 +460,7 @@ pub fn hash_password_verify(
     expected: &PasswordHash,
     password: &Password,
 ) -> Result<(), UnknownCryptoError> {
-    let mut buffer = Zeroizing::new([0u8; PWHASH_LENGTH]);
+    let mut buffer = zeroize_wrap!([0u8; PWHASH_LENGTH]);
 
     argon2i::verify(
         expected.unprotected_as_bytes(),

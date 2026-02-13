@@ -63,7 +63,6 @@ use crate::hazardous::ecc::x25519;
 use crate::hazardous::hash::sha3::sha3_256;
 use crate::hazardous::hash::sha3::shake256::Shake256;
 use crate::hazardous::kem::ml_kem::mlkem768;
-use zeroize::Zeroizing;
 
 /// Size of private [DecapsulationKey].
 pub const PRIVATE_KEY_SIZE: usize = 32;
@@ -172,7 +171,7 @@ impl TryFrom<&Seed> for KeyPair {
 impl KeyPair {
     /// Deterministically generate a [KeyPair] from a private [Seed].
     pub fn generate_deterministic(seed: &Seed) -> Result<Self, UnknownCryptoError> {
-        let mut expanded = Zeroizing::new([0u8; 96]);
+        let mut expanded = zeroize_wrap!([0u8; 96]);
 
         let mut shake = Shake256::new();
         shake.absorb(seed.unprotected_as_bytes())?;
@@ -237,10 +236,10 @@ impl XWing {
         ctx.update(pk_x)?;
         ctx.update(Self::LABEL)?;
 
-        let mut digest = Zeroizing::new([0u8; 32]);
+        let mut digest = zeroize_wrap!([0u8; 32]);
         ctx._finalize_internal(digest.as_mut())?;
 
-        Ok(SharedSecret::from(*digest))
+        SharedSecret::from_slice(&digest[..])
     }
 
     /// Given the [EncapsulationKey] and securely generated randomness `eseed`, generate a [SharedSecret] and associated [Ciphertext].
@@ -277,7 +276,7 @@ impl XWing {
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Given the [EncapsulationKey], generate a [SharedSecret] and associated [Ciphertext].
     pub fn encap(ek: &EncapsulationKey) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
-        let mut eseed = Zeroizing::new([0u8; 64]);
+        let mut eseed = zeroize_wrap!([0u8; 64]);
         getrandom::fill(eseed.as_mut())?;
 
         Self::encap_deterministic(ek, eseed.as_ref())
