@@ -43,9 +43,10 @@ use re::*;
 use sampling::*;
 use serialization::*;
 
+use crate::ZeroizeWrap;
 use subtle::{ConditionallySelectable, ConstantTimeEq};
 #[cfg(feature = "zeroize")]
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroize;
 
 #[allow(dead_code)]
 /// Degree of polynomials.
@@ -71,7 +72,7 @@ pub fn mat_mul_vec_transposed<const K: usize>(
 }
 
 /// FIPS-203, Def. 4.5
-pub fn g(c: &[&[u8]]) -> ([u8; 32], Zeroizing<[u8; 32]>) {
+pub fn g(c: &[&[u8]]) -> ([u8; 32], ZeroizeWrap<[u8; 32]>) {
     let mut state = Sha3_512::new();
     for input in c.iter() {
         state.update(input).unwrap();
@@ -79,7 +80,7 @@ pub fn g(c: &[&[u8]]) -> ([u8; 32], Zeroizing<[u8; 32]>) {
     let hash = state.finalize().unwrap();
 
     let mut rho = [0u8; 32];
-    let mut sigma = Zeroizing::new([0u8; 32]);
+    let mut sigma = zeroize_wrap!([0u8; 32]);
     rho.copy_from_slice(&hash.as_ref()[0..32]);
     sigma.copy_from_slice(&hash.as_ref()[32..64]);
 
@@ -190,14 +191,14 @@ impl PkeParameters for MlKem512Internal {
     const SHARED_SECRET_SIZE: usize = 32;
 
     fn sample_poly_cbd_eta1(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError> {
-        let mut prf_out = Zeroizing::new([0u8; 64 * Self::ETA_1]);
-        let mut bits = Zeroizing::new([0u8; (64 * Self::ETA_1) * 8]);
+        let mut prf_out = zeroize_wrap!([0u8; 64 * Self::ETA_1]);
+        let mut bits = zeroize_wrap!([0u8; (64 * Self::ETA_1) * 8]);
         sample_poly_cbd(seed, b, prf_out.as_mut(), bits.as_mut(), Self::ETA_1)
     }
 
     fn sample_poly_cbd_eta2(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError> {
-        let mut prf_out = Zeroizing::new([0u8; 64 * Self::ETA_2]);
-        let mut bits = Zeroizing::new([0u8; (64 * Self::ETA_2) * 8]);
+        let mut prf_out = zeroize_wrap!([0u8; 64 * Self::ETA_2]);
+        let mut bits = zeroize_wrap!([0u8; (64 * Self::ETA_2) * 8]);
         sample_poly_cbd(seed, b, prf_out.as_mut(), bits.as_mut(), Self::ETA_2)
     }
 
@@ -239,14 +240,14 @@ impl PkeParameters for MlKem768Internal {
     const SHARED_SECRET_SIZE: usize = 32;
 
     fn sample_poly_cbd_eta1(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError> {
-        let mut prf_out = Zeroizing::new([0u8; 64 * Self::ETA_1]);
-        let mut bits = Zeroizing::new([0u8; (64 * Self::ETA_1) * 8]);
+        let mut prf_out = zeroize_wrap!([0u8; 64 * Self::ETA_1]);
+        let mut bits = zeroize_wrap!([0u8; (64 * Self::ETA_1) * 8]);
         sample_poly_cbd(seed, b, prf_out.as_mut(), bits.as_mut(), Self::ETA_1)
     }
 
     fn sample_poly_cbd_eta2(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError> {
-        let mut prf_out = Zeroizing::new([0u8; 64 * Self::ETA_2]);
-        let mut bits = Zeroizing::new([0u8; (64 * Self::ETA_2) * 8]);
+        let mut prf_out = zeroize_wrap!([0u8; 64 * Self::ETA_2]);
+        let mut bits = zeroize_wrap!([0u8; (64 * Self::ETA_2) * 8]);
         sample_poly_cbd(seed, b, prf_out.as_mut(), bits.as_mut(), Self::ETA_2)
     }
 
@@ -288,14 +289,14 @@ impl PkeParameters for MlKem1024Internal {
     const SHARED_SECRET_SIZE: usize = 32;
 
     fn sample_poly_cbd_eta1(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError> {
-        let mut prf_out = Zeroizing::new([0u8; 64 * Self::ETA_1]);
-        let mut bits = Zeroizing::new([0u8; (64 * Self::ETA_1) * 8]);
+        let mut prf_out = zeroize_wrap!([0u8; 64 * Self::ETA_1]);
+        let mut bits = zeroize_wrap!([0u8; (64 * Self::ETA_1) * 8]);
         sample_poly_cbd(seed, b, prf_out.as_mut(), bits.as_mut(), Self::ETA_1)
     }
 
     fn sample_poly_cbd_eta2(seed: &[u8], b: u8) -> Result<RingElement, UnknownCryptoError> {
-        let mut prf_out = Zeroizing::new([0u8; 64 * Self::ETA_2]);
-        let mut bits = Zeroizing::new([0u8; (64 * Self::ETA_2) * 8]);
+        let mut prf_out = zeroize_wrap!([0u8; 64 * Self::ETA_2]);
+        let mut bits = zeroize_wrap!([0u8; (64 * Self::ETA_2) * 8]);
         sample_poly_cbd(seed, b, prf_out.as_mut(), bits.as_mut(), Self::ETA_2)
     }
 
@@ -674,7 +675,7 @@ impl<
         }
 
         let mut w = v - inverse_ntt(&product);
-        product.zeroize();
+        zeroize_call!(product);
         let mut m = [0u8; 32];
         for fe in w.coefficients.iter_mut() {
             *fe = FieldElement::new(fe.compress(1));
@@ -713,7 +714,7 @@ impl<
         let (mut k, r) = g(&[&m, h]);
 
         // Step 7:
-        let mut k_bar = Zeroizing::new([0u8; 32]);
+        let mut k_bar = zeroize_wrap!([0u8; 32]);
         let mut xof = shake256::Shake256::new();
         xof.absorb(z)?;
         xof.absorb(c)?;
@@ -725,7 +726,7 @@ impl<
 
         // Step 9:
         let ct_choice = c.ct_ne(c_prime);
-        c_prime.zeroize(); // Discard c_prime, as we only need it as a buffer.
+        zeroize_call!(*c_prime); // Discard c_prime, as we only need it as a buffer.
 
         for (x, y) in k.iter_mut().zip(k_bar.iter()) {
             u8::conditional_assign(x, y, ct_choice);
@@ -797,7 +798,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
             ek.t_hat[i] = to_ntt(&e[i]);
         }
 
-        s.zeroize();
+        zeroize_call!(s);
 
         // t ← A ∘ ŝ + ê
         for i in 0..Pke::K {

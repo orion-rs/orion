@@ -79,8 +79,6 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::kem::ml_kem::internal::*;
 pub use crate::hazardous::kem::ml_kem::Seed;
-#[cfg(feature = "zeroize")]
-use zeroize::Zeroize;
 
 construct_secret_key! {
     /// A type to represent the `SharedSecret` that ML-KEM-768 produces.
@@ -231,7 +229,7 @@ impl DecapsulationKey {
         )?;
         let k = SharedSecret::from_slice(&k_internal)?;
         #[cfg(feature = "zeroize")]
-        k_internal.zeroize();
+        zeroize_call!(k_internal);
 
         Ok(k)
     }
@@ -279,10 +277,7 @@ impl EncapsulationKey {
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Given the [EncapsulationKey], generate a [SharedSecret] and associated [Ciphertext].
     pub fn encap(&self) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
-        #[cfg(feature = "zeroize")]
-        use zeroize::Zeroizing;
-
-        let mut m = Zeroizing::new([0u8; 32]);
+        let mut m = zeroize_wrap!([0u8; 32]);
         getrandom::fill(m.as_mut())?;
 
         self.encap_deterministic(m.as_ref())
@@ -300,7 +295,7 @@ impl EncapsulationKey {
         let mut c = Ciphertext::from_slice(&[0u8; MlKem768Internal::CIPHERTEXT_SIZE])?;
         let mut k_internal = self.value.mlkem_encap_internal(m.as_ref(), &mut c.value)?;
         let k = SharedSecret::from_slice(k_internal.as_slice())?;
-        k_internal.zeroize();
+        zeroize_call!(k_internal);
 
         Ok((k, c))
     }

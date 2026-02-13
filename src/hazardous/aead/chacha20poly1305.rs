@@ -111,6 +111,7 @@
 //! [`C_MAX`]: chacha20poly1305::C_MAX
 
 pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
+use crate::ZeroizeWrap;
 use crate::{
     errors::UnknownCryptoError,
     hazardous::{
@@ -120,8 +121,6 @@ use crate::{
     util,
 };
 use core::convert::TryInto;
-#[cfg(feature = "zeroize")]
-use zeroize::Zeroizing;
 
 /// The initial counter used for encryption and decryption.
 pub(crate) const ENC_CTR: u32 = 1;
@@ -141,7 +140,7 @@ pub const A_MAX: u64 = u64::MAX;
 /// Poly1305 key generation using IETF ChaCha20.
 pub(crate) fn poly1305_key_gen(
     ctx: &mut ChaCha20,
-    tmp_buffer: &mut Zeroizing<[u8; CHACHA_BLOCKSIZE]>,
+    tmp_buffer: &mut ZeroizeWrap<[u8; CHACHA_BLOCKSIZE]>,
 ) -> OneTimeKey {
     ctx.keystream_block(AUTH_CTR, tmp_buffer.as_mut());
     OneTimeKey::from_slice(&tmp_buffer[..POLY1305_KEYSIZE]).unwrap()
@@ -197,7 +196,7 @@ pub fn seal(
 
     let mut stream =
         ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
-    let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    let mut tmp = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
     let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut stream, &mut tmp));
     let ad_len = ad.len();
@@ -286,7 +285,7 @@ pub fn open(
 
     let mut dec_ctx =
         ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
-    let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    let mut tmp = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
     let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
@@ -356,7 +355,7 @@ mod test_vectors {
 
         let mut chacha20_ctx =
             ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
-        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+        let mut tmp_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
         assert_eq!(
             poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
@@ -384,7 +383,7 @@ mod test_vectors {
 
         let mut chacha20_ctx =
             ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
-        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+        let mut tmp_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
         assert_eq!(
             poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
@@ -412,7 +411,7 @@ mod test_vectors {
 
         let mut chacha20_ctx =
             ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
-        let mut tmp_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+        let mut tmp_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
         assert_eq!(
             poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),

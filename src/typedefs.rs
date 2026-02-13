@@ -269,6 +269,35 @@ macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) =
     }
 ));
 
+/// Wrap a value in `Zeroizing<T>` if the `zeroize` feature is enabled,
+/// otherwise return the value as-is.
+macro_rules! zeroize_wrap {
+    ($val:expr) => {{
+        #[cfg(feature = "zeroize")]
+        {
+            zeroize::Zeroizing::new($val)
+        }
+        #[cfg(not(feature = "zeroize"))]
+        {
+            $val
+        }
+    }};
+}
+
+#[cfg(feature = "zeroize")]
+pub(crate) type ZeroizeWrap<T> = zeroize::Zeroizing<T>;
+#[cfg(not(feature = "zeroize"))]
+pub(crate) type ZeroizeWrap<T> = T;
+
+macro_rules! zeroize_call {
+    ($val:expr) => {{
+        #[cfg(feature = "zeroize")]
+        {
+            zeroize::Zeroize::zeroize(&mut $val);
+        }
+    }};
+}
+
 #[cfg(feature = "safe_api")]
 /// Macro to implement a `generate()` function for objects that benefit from
 /// having a CSPRNG available to generate data of a variable length.

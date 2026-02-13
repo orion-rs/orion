@@ -37,6 +37,16 @@ pub(crate) mod sha2_core {
     #[cfg(feature = "zeroize")]
     use zeroize::Zeroize;
 
+    #[cfg(feature = "zeroize")]
+    pub(crate) trait MaybeZeroize: Zeroize {}
+    #[cfg(feature = "zeroize")]
+    impl<T: Zeroize> MaybeZeroize for T {}
+
+    #[cfg(not(feature = "zeroize"))]
+    pub(crate) trait MaybeZeroize {}
+    #[cfg(not(feature = "zeroize"))]
+    impl<T> MaybeZeroize for T {}
+
     /// Word used within the SHA2 internal state.
     pub(crate) trait Word:
         Sized
@@ -50,7 +60,7 @@ pub(crate) mod sha2_core {
         + Copy
         + Debug
         + PartialEq<Self>
-        + Zeroize
+        + MaybeZeroize
     {
         #[cfg(any(debug_assertions, test))]
         const MAX: Self;
@@ -137,6 +147,7 @@ pub(crate) mod sha2_core {
         pub(crate) is_finalized: bool,
     }
 
+    #[cfg(feature = "zeroize")]
     impl<
             W: Word,
             T: Variant<W, { N_CONSTS }>,
@@ -145,7 +156,6 @@ pub(crate) mod sha2_core {
             const N_CONSTS: usize,
         > Drop for State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
     {
-        #[cfg(feature = "zeroize")]
         fn drop(&mut self) {
             self.working_state.iter_mut().zeroize();
             self.buffer.iter_mut().zeroize();

@@ -301,8 +301,8 @@ impl FieldElement {
 /// Represents a Scalar decoded from a byte array.
 struct Scalar([u8; PRIVATE_KEY_SIZE]);
 
+#[cfg(feature = "zeroize")]
 impl Drop for Scalar {
-    #[cfg(feature = "zeroize")]
     fn drop(&mut self) {
         use zeroize::Zeroize;
         self.0.iter_mut().zeroize();
