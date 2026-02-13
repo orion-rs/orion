@@ -34,6 +34,7 @@ pub(crate) mod sha2_core {
     use core::fmt::Debug;
     use core::marker::PhantomData;
     use core::ops::*;
+    #[cfg(feature = "zeroize")]
     use zeroize::Zeroize;
 
     /// Word used within the SHA2 internal state.
@@ -144,6 +145,7 @@ pub(crate) mod sha2_core {
             const N_CONSTS: usize,
         > Drop for State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
     {
+        #[cfg(feature = "zeroize")]
         fn drop(&mut self) {
             self.working_state.iter_mut().zeroize();
             self.buffer.iter_mut().zeroize();
@@ -411,11 +413,13 @@ pub(crate) mod sha2_core {
 pub(crate) mod w32 {
     use core::convert::{From, TryFrom, TryInto};
     use core::ops::*;
+    #[cfg(feature = "zeroize")]
     use zeroize::Zeroize;
 
     #[derive(Debug, PartialEq, Copy, Clone, Default)]
     pub(crate) struct WordU32(pub(crate) u32);
 
+    #[cfg(feature = "zeroize")]
     impl Zeroize for WordU32 {
         fn zeroize(&mut self) {
             self.0.zeroize();
@@ -554,11 +558,13 @@ pub(crate) mod w32 {
 pub(crate) mod w64 {
     use core::convert::{From, TryFrom, TryInto};
     use core::ops::*;
+    #[cfg(feature = "zeroize")]
     use zeroize::Zeroize;
 
     #[derive(Debug, PartialEq, Copy, Clone, Default)]
     pub(crate) struct WordU64(pub(crate) u64);
 
+    #[cfg(feature = "zeroize")]
     impl Zeroize for WordU64 {
         fn zeroize(&mut self) {
             self.0.zeroize();

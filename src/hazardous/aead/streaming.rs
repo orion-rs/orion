@@ -114,6 +114,7 @@ use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::xchacha20::Nonce;
 use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
+#[cfg(feature = "zeroize")]
 use zeroize::{Zeroize, Zeroizing};
 
 #[derive(Debug, Clone, Copy)]
@@ -297,6 +298,7 @@ impl StreamXChaCha20Poly1305 {
         self.inonce
             .copy_from_slice(&new_key_and_inonce[CHACHA_KEYSIZE..]);
         self.counter = 1;
+        #[cfg(feature = "zeroize")]
         new_key_and_inonce.zeroize();
 
         Ok(())

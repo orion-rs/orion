@@ -302,6 +302,7 @@ impl FieldElement {
 struct Scalar([u8; PRIVATE_KEY_SIZE]);
 
 impl Drop for Scalar {
+    #[cfg(feature = "zeroize")]
     fn drop(&mut self) {
         use zeroize::Zeroize;
         self.0.iter_mut().zeroize();

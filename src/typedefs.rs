@@ -124,6 +124,7 @@ macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
 /// a field `value`. This `Drop` will zero out the field `value` when the
 /// objects destructor is called.
 macro_rules! impl_drop_trait (($name:ident) => (
+    #[cfg(feature = "zeroize")]
     impl Drop for $name {
         fn drop(&mut self) {
             use zeroize::Zeroize;

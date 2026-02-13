@@ -71,6 +71,7 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
 use crate::hazardous::kdf::hkdf;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroizing;
 
 pub use crate::hazardous::ecc::x25519::PrivateKey;

@@ -63,6 +63,7 @@ use crate::hazardous::ecc::x25519;
 use crate::hazardous::hash::sha3::sha3_256;
 use crate::hazardous::hash::sha3::shake256::Shake256;
 use crate::hazardous::kem::ml_kem::mlkem768;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroizing;
 
 /// Size of private [DecapsulationKey].

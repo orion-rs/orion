@@ -70,6 +70,7 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b_core::{self, BLAKE2B_KEYSIZE, BLAKE2B_OUTSIZE};
 use core::ops::DerefMut;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroizing;
 
 construct_secret_key! {

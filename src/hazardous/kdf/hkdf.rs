@@ -58,6 +58,7 @@
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::mac::hmac;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 /// The HKDF extract step.
@@ -145,6 +146,7 @@ where
         };
     }
 
+    #[cfg(feature = "zeroize")]
     tmp.iter_mut().zeroize();
 
     Ok(())

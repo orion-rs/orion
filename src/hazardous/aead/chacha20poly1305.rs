@@ -120,6 +120,7 @@ use crate::{
     util,
 };
 use core::convert::TryInto;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroizing;
 
 /// The initial counter used for encryption and decryption.

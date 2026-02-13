@@ -127,6 +127,7 @@ pub struct Poly1305 {
     is_finalized: bool,
 }
 
+#[cfg(feature = "zeroize")]
 impl Drop for Poly1305 {
     fn drop(&mut self) {
         use zeroize::Zeroize;

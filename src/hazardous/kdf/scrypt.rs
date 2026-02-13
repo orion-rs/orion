@@ -102,6 +102,7 @@ use alloc::vec;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::kdf::pbkdf2::sha256 as pbkdf2;
 use crate::util;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 /// scrypt `r * p` must be less than `2^30`.
@@ -324,6 +325,7 @@ pub fn derive_key(
     let blen: usize = p * 128 * r;
     let mut b = vec![0u8; blen];
 
+    #[cfg(feature = "zeroize")]
     pbkdf2::derive_key(&pass, salt, 1, &mut b).inspect_err(|_| {
         b.zeroize();
     })?;
@@ -332,6 +334,7 @@ pub fn derive_key(
         smix(&mut b[i * 128 * r..], r, n, &mut v, &mut x, &mut y);
     }
 
+    #[cfg(feature = "zeroize")]
     pbkdf2::derive_key(&pass, &b, 1, dst_out).inspect_err(|_| {
         b.zeroize();
     })?;

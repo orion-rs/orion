@@ -79,6 +79,7 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::kem::ml_kem::internal::*;
 pub use crate::hazardous::kem::ml_kem::Seed;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 construct_secret_key! {
@@ -229,6 +230,7 @@ impl DecapsulationKey {
             &self.cached_ek.value,
         )?;
         let k = SharedSecret::from_slice(&k_internal)?;
+        #[cfg(feature = "zeroize")]
         k_internal.zeroize();
 
         Ok(k)
@@ -277,6 +279,7 @@ impl EncapsulationKey {
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Given the [EncapsulationKey], generate a [SharedSecret] and associated [Ciphertext].
     pub fn encap(&self) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
+        #[cfg(feature = "zeroize")]
         use zeroize::Zeroizing;
 
         let mut m = Zeroizing::new([0u8; 32]);

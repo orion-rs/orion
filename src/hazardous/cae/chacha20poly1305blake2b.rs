@@ -126,6 +126,7 @@ use crate::hazardous::mac::poly1305::Poly1305;
 use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
 use crate::hazardous::stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE};
 use crate::util;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroizing;
 
 pub use crate::hazardous::aead::chacha20poly1305::A_MAX;

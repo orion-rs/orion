@@ -44,6 +44,7 @@ use sampling::*;
 use serialization::*;
 
 use subtle::{ConditionallySelectable, ConstantTimeEq};
+#[cfg(feature = "zeroize")]
 use zeroize::{Zeroize, Zeroizing};
 
 #[allow(dead_code)]
@@ -418,6 +419,7 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
         for i in 0..Pke::K {
             y_hat[i] = to_ntt(&y[i]);
         }
+        #[cfg(feature = "zeroize")]
         y.zeroize();
 
         // Step 19:
@@ -426,12 +428,14 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
         for (u_poly, tmp_poly) in u.iter_mut().zip(tmp.iter()) {
             *u_poly = inverse_ntt(tmp_poly);
         }
+        #[cfg(feature = "zeroize")]
         tmp.zeroize();
 
         for (uelem, e1elem) in u.iter_mut().zip(e1.iter()) {
             *uelem = *uelem + *e1elem;
         }
 
+        #[cfg(feature = "zeroize")]
         e1.zeroize();
 
         // Step 20:
@@ -450,9 +454,13 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
         v = v + e2;
         v = v + mu;
 
+        #[cfg(feature = "zeroize")]
         y_hat.zeroize();
+        #[cfg(feature = "zeroize")]
         e2.zeroize();
+        #[cfg(feature = "zeroize")]
         mu.zeroize();
+        #[cfg(feature = "zeroize")]
         product.zeroize();
 
         // Step 22:
@@ -475,6 +483,7 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
             Pke::encode_du(&u_poly.coefficients, c1_part);
         }
 
+        #[cfg(feature = "zeroize")]
         u.zeroize();
 
         // Step 23:
@@ -486,6 +495,7 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
             &mut c[Pke::CIPHERTEXT_SIZE - Pke::ENCODE_SIZE_D_V..Pke::CIPHERTEXT_SIZE],
         );
 
+        #[cfg(feature = "zeroize")]
         v.zeroize();
 
         Ok(())
@@ -526,6 +536,7 @@ pub(crate) struct DecapKey<
     _phantom: PhantomData<Pke>,
 }
 
+#[cfg(feature = "zeroize")]
 impl<
         const K: usize,
         const ENCODED_SIZE_EK: usize,

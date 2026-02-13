@@ -99,6 +99,7 @@ use crate::{
     hazardous::kdf::argon2i::{self, LANES, MIN_MEMORY},
 };
 use ct_codecs::{Base64NoPadding, Decoder, Encoder};
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroizing;
 
 #[cfg(feature = "serde")]

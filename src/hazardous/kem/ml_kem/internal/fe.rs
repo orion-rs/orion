@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 use core::ops::{Add, Mul, Sub};
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 pub(crate) const KYBER_Q: u32 = 3329;
@@ -69,6 +70,7 @@ fn conditional_sub_u32(a: u32) -> u32 {
 /// Thus, for possible future re-usability, we use 32-bit integer here.
 pub struct FieldElement(pub(crate) u32);
 
+#[cfg(feature = "zeroize")]
 impl Zeroize for FieldElement {
     fn zeroize(&mut self) {
         self.0.zeroize();

@@ -98,6 +98,7 @@
 use crate::errors::UnknownCryptoError;
 use crate::util::endianness::load_u32_le;
 use crate::util::u32x4::U32x4;
+#[cfg(feature = "zeroize")]
 use zeroize::{Zeroize, Zeroizing};
 
 /// The key size for ChaCha20.
@@ -178,6 +179,7 @@ pub(crate) struct ChaCha20 {
 }
 
 impl Drop for ChaCha20 {
+    #[cfg(feature = "zeroize")]
     fn drop(&mut self) {
         self.state.iter_mut().zeroize();
     }

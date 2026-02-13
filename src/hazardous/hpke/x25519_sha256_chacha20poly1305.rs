@@ -27,6 +27,7 @@ use crate::hazardous::hpke::mode::private::*;
 use crate::hazardous::hpke::suite::private::*;
 use crate::hazardous::kdf::hkdf;
 use crate::hazardous::kem::x25519_hkdf_sha256;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroizing;
 
 #[allow(non_camel_case_types)]
@@ -69,12 +70,13 @@ impl Eq for DHKEM_X25519_SHA256_CHACHA20 {}
 
 impl core::fmt::Debug for DHKEM_X25519_SHA256_CHACHA20 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{} key: {{***OMITTED***}}, base_nonce: {:?}, ctr: {:?}, exporter_secret: {{***OMITTED***}}", 
+        write!(f, "{} key: {{***OMITTED***}}, base_nonce: {:?}, ctr: {:?}, exporter_secret: {{***OMITTED***}}",
             stringify!(DHKEM_X25519_SHA256_CHACHA20), &self.base_nonce, self.ctr)
     }
 }
 
 impl Drop for DHKEM_X25519_SHA256_CHACHA20 {
+    #[cfg(feature = "zeroize")]
     fn drop(&mut self) {
         use zeroize::Zeroize;
         self.key.iter_mut().zeroize();

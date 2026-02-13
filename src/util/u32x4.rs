@@ -41,6 +41,7 @@ impl core::ops::BitXor for U32x4 {
     }
 }
 
+#[cfg(feature = "zeroize")]
 impl zeroize::Zeroize for U32x4 {
     fn zeroize(&mut self) {
         self.0.zeroize();

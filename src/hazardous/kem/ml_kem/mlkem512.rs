@@ -79,6 +79,7 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::kem::ml_kem::internal::*;
 pub use crate::hazardous::kem::ml_kem::Seed;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 construct_secret_key! {
@@ -228,6 +229,7 @@ impl DecapsulationKey {
             &self.cached_ek.value,
         )?;
         let k = SharedSecret::from_slice(&k_internal)?;
+        #[cfg(feature = "zeroize")]
         k_internal.zeroize();
 
         Ok(k)
