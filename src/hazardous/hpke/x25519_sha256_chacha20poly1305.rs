@@ -73,12 +73,14 @@ impl core::fmt::Debug for DHKEM_X25519_SHA256_CHACHA20 {
     }
 }
 
-#[cfg(feature = "zeroize")]
 impl Drop for DHKEM_X25519_SHA256_CHACHA20 {
     fn drop(&mut self) {
-        use zeroize::Zeroize;
-        self.key.iter_mut().zeroize();
-        self.exporter_secret.iter_mut().zeroize();
+        #[cfg(feature = "zeroize")]
+        {
+            use zeroize::Zeroize;
+            self.key.iter_mut().zeroize();
+            self.exporter_secret.iter_mut().zeroize();
+        }
     }
 }
 

@@ -227,7 +227,6 @@ impl DecapsulationKey {
             &self.cached_ek.value,
         )?;
         let k = SharedSecret::from_slice(&k_internal)?;
-        #[cfg(feature = "zeroize")]
         zeroize_call!(k_internal);
 
         Ok(k)

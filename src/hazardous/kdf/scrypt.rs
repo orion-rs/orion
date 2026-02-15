@@ -323,13 +323,17 @@ pub fn derive_key(
     let blen: usize = p * 128 * r;
     let mut b = vec![0u8; blen];
 
-    pbkdf2::derive_key(&pass, salt, 1, &mut b)?;
+    pbkdf2::derive_key(&pass, salt, 1, &mut b).inspect_err(|_| {
+        zeroize_call!(b);
+    })?;
 
     for i in 0..p {
         smix(&mut b[i * 128 * r..], r, n, &mut v, &mut x, &mut y);
     }
 
-    pbkdf2::derive_key(&pass, &b, 1, dst_out)?;
+    pbkdf2::derive_key(&pass, &b, 1, dst_out).inspect_err(|_| {
+        zeroize_call!(b);
+    })?;
 
     zeroize_call!(b);
 

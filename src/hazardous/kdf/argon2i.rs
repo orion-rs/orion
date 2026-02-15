@@ -521,14 +521,13 @@ pub fn derive_key(
     extended_hash(&tmp, dst_out)?;
 
     #[cfg(feature = "zeroize")]
-    working_block.zeroize();
-    #[cfg(feature = "zeroize")]
-    tmp.zeroize();
-    #[cfg(feature = "zeroize")]
-    h0.zeroize();
-    #[cfg(feature = "zeroize")]
-    for block in blocks.iter_mut() {
-        block.zeroize();
+    {
+        working_block.zeroize();
+        tmp.zeroize();
+        h0.zeroize();
+        for block in blocks.iter_mut() {
+            block.zeroize();
+        }
     }
 
     Ok(())

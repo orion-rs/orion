@@ -456,13 +456,12 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
         v = v + mu;
 
         #[cfg(feature = "zeroize")]
-        y_hat.zeroize();
-        #[cfg(feature = "zeroize")]
-        e2.zeroize();
-        #[cfg(feature = "zeroize")]
-        mu.zeroize();
-        #[cfg(feature = "zeroize")]
-        product.zeroize();
+        {
+            y_hat.zeroize();
+            e2.zeroize();
+            mu.zeroize();
+            product.zeroize();
+        }
 
         // Step 22:
         for re in u.iter_mut() {
