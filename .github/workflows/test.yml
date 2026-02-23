@@ -62,6 +62,9 @@ jobs:
 
       - name: Test debug-mode, no-default + safe_api (without zeroize)
         run: cargo test --no-default-features --features safe_api --tests
+      
+      - name: Test debug-mode, no-default + zeroize (zeroize-only)
+        run: cargo test --no-default-features --features zeroize --tests
 
       - name: Test release-mode, default features
         run: cargo test --release
@@ -80,6 +83,9 @@ jobs:
 
       - name: Test release-mode, no-default + safe_api (without zeroize)
         run: cargo test --release --no-default-features --features safe_api --tests
+      
+      - name: Test release-mode, no-default + zeroize (zeroize-only)
+        run: cargo test --release --no-default-features --features zeroize --tests
 
   sanitizers:
     name: Tests w. sanitizers
