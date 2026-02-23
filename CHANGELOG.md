@@ -5,6 +5,7 @@
 **Changelog:**
 - Make memory zeroization and optional feature (enabled by default - equivalent to before the change) ([#592](https://github.com/orion-rs/orion/pull/592), credits: [@achimcc](https://github.com/achimcc)).
 - Update `getrandom` to `0.4.1`.
+- Update `rand` (dev-dependency) to `0.10`.
 
 ### 0.17.12
 
