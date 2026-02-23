@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.17.12"
+version = "0.17.13"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Usable, easy and safe pure-Rust crypto"
 keywords = ["cryptography", "crypto", "aead", "pqc", "kem"]
