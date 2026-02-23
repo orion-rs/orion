@@ -22,7 +22,7 @@
 
 use crate::errors::UnknownCryptoError;
 use core::ops::Range;
-use rand::{rngs::SmallRng, Rng, SeedableRng};
+use rand::{rngs::SmallRng, Rng, RngExt, SeedableRng};
 
 /// A testable HPKE implementation. This is implemented separately for each HPKE mode.
 pub trait TestableHpke: Clone {

@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.17.12"
+version = "0.17.13"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Usable, easy and safe pure-Rust crypto"
 keywords = ["cryptography", "crypto", "aead", "pqc", "kem"]
@@ -17,7 +17,7 @@ exclude = [".gitignore", ".travis.yml", "tests/*"]
 subtle = { version = "^2.2.2", default-features = false }
 zeroize = { version = "1.1.0", optional = true, default-features = false }
 fiat-crypto = { version = "0.3.0", default-features = false }
-getrandom = { version = "0.3.0", optional = true }
+getrandom = { version = "0.4.1", optional = true }
 ct-codecs = { version = "1.1.1", optional = true }
 
 [dependencies.serde]
@@ -41,7 +41,7 @@ serde = { version = "1.0", features = ["derive"] }
 quickcheck = "1"
 quickcheck_macros = "1"
 criterion = "0.8.1"
-rand = { version = "0.9.0", features = ["thread_rng", "small_rng"] }
+rand = { version = "0.10.0", features = ["thread_rng"] }
 num-rational = { version = "0.4.2", default-features = false }
 
 [[bench]]
