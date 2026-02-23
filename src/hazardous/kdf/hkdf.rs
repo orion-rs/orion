@@ -58,7 +58,6 @@
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::mac::hmac;
-use zeroize::Zeroize;
 
 /// The HKDF extract step.
 ///
@@ -145,7 +144,7 @@ where
         };
     }
 
-    tmp.iter_mut().zeroize();
+    zeroize_call!(tmp.iter_mut());
 
     Ok(())
 }
@@ -195,7 +194,7 @@ where
         };
     }
 
-    tmp.iter_mut().zeroize();
+    zeroize_call!(tmp.iter_mut());
 
     Ok(())
 }

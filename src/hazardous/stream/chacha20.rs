@@ -98,7 +98,8 @@
 use crate::errors::UnknownCryptoError;
 use crate::util::endianness::load_u32_le;
 use crate::util::u32x4::U32x4;
-use zeroize::{Zeroize, Zeroizing};
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
 
 /// The key size for ChaCha20.
 pub const CHACHA_KEYSIZE: usize = 32;
@@ -177,6 +178,7 @@ pub(crate) struct ChaCha20 {
     is_ietf: bool,
 }
 
+#[cfg(feature = "zeroize")]
 impl Drop for ChaCha20 {
     fn drop(&mut self) {
         self.state.iter_mut().zeroize();
@@ -338,7 +340,7 @@ pub(crate) fn encrypt_in_place(
     }
 
     let mut ctx = ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true)?;
-    let mut keystream_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    let mut keystream_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
     xor_keystream(&mut ctx, initial_counter, keystream_block.as_mut(), bytes)
 }
 
@@ -359,7 +361,7 @@ pub fn encrypt(
     }
 
     let mut ctx = ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true)?;
-    let mut keystream_block = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    let mut keystream_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
     for (ctr, (p_block, c_block)) in plaintext
         .chunks(CHACHA_BLOCKSIZE)

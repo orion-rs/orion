@@ -63,6 +63,7 @@
 //! [Cryptographic Right Answers]: https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html
 
 use crate::errors::UnknownCryptoError;
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 /// A trait used to define a cryptographic hash function used by HMAC.
@@ -169,6 +170,7 @@ impl<S: HmacHashFunction, const BLOCKSIZE: usize> Hmac<S, BLOCKSIZE> {
         let mut oh = S::_new();
         oh._update(&ipad)?;
 
+        #[cfg(feature = "zeroize")]
         ipad.iter_mut().zeroize();
 
         Ok(Self {

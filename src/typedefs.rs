@@ -126,8 +126,11 @@ macro_rules! impl_serde_traits (($name:ident, $bytes_function:ident) => (
 macro_rules! impl_drop_trait (($name:ident) => (
     impl Drop for $name {
         fn drop(&mut self) {
-            use zeroize::Zeroize;
-            self.value.iter_mut().zeroize();
+            #[cfg(feature = "zeroize")]
+            {
+              use zeroize::Zeroize;
+              self.value.iter_mut().zeroize();
+            }
         }
     }
 ));
@@ -267,6 +270,35 @@ macro_rules! func_generate (($name:ident, $upper_bound:expr, $gen_length:expr) =
         $name { value, original_length: $gen_length }
     }
 ));
+
+/// Wrap a value in `Zeroizing<T>` if the `zeroize` feature is enabled,
+/// otherwise return the value as-is.
+macro_rules! zeroize_wrap {
+    ($val:expr) => {{
+        #[cfg(feature = "zeroize")]
+        {
+            zeroize::Zeroizing::new($val)
+        }
+        #[cfg(not(feature = "zeroize"))]
+        {
+            $val
+        }
+    }};
+}
+
+#[cfg(feature = "zeroize")]
+pub(crate) type ZeroizeWrap<T> = zeroize::Zeroizing<T>;
+#[cfg(not(feature = "zeroize"))]
+pub(crate) type ZeroizeWrap<T> = T;
+
+macro_rules! zeroize_call {
+    ($val:expr) => {{
+        #[cfg(feature = "zeroize")]
+        {
+            zeroize::Zeroize::zeroize(&mut $val);
+        }
+    }};
+}
 
 #[cfg(feature = "safe_api")]
 /// Macro to implement a `generate()` function for objects that benefit from

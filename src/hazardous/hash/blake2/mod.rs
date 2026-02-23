@@ -128,6 +128,7 @@ pub(crate) mod blake2b_core {
         pub(crate) size: usize,
     }
 
+    #[cfg(feature = "zeroize")]
     impl Drop for State {
         fn drop(&mut self) {
             use zeroize::Zeroize;

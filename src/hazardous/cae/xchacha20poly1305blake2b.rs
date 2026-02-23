@@ -118,7 +118,6 @@ use crate::hazardous::stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE};
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
 use crate::util;
-use zeroize::Zeroizing;
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// CTX XChaCha20Poly1305 with BLAKE2b-256.
@@ -201,7 +200,7 @@ pub fn open(
     let (subkey, ietf_nonce) = subkey_and_nonce(secret_key, nonce);
     let mut dec_ctx =
         ChaCha20::new(subkey.unprotected_as_bytes(), ietf_nonce.as_ref(), true).unwrap();
-    let mut tmp = Zeroizing::new([0u8; CHACHA_BLOCKSIZE]);
+    let mut tmp = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
     let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
 
     let ciphertext_len = ciphertext_with_tag.len() - TAG_SIZE;

@@ -69,8 +69,6 @@
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b_core::{self, BLAKE2B_KEYSIZE, BLAKE2B_OUTSIZE};
-use core::ops::DerefMut;
-use zeroize::Zeroizing;
 
 construct_secret_key! {
     /// A type to represent the secret key that BLAKE2b uses for keyed mode.
@@ -126,8 +124,8 @@ impl Blake2b {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Return a BLAKE2b tag.
     pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
-        let mut tmp: Zeroizing<[u8; BLAKE2B_OUTSIZE]> = Zeroizing::new([0u8; BLAKE2B_OUTSIZE]);
-        self._state._finalize(tmp.deref_mut())?;
+        let mut tmp = zeroize_wrap!([0u8; BLAKE2B_OUTSIZE]);
+        self._state._finalize(&mut tmp)?;
 
         Tag::from_slice(&tmp[..self._state.size])
     }

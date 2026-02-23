@@ -27,7 +27,6 @@ use crate::hazardous::hpke::mode::private::*;
 use crate::hazardous::hpke::suite::private::*;
 use crate::hazardous::kdf::hkdf;
 use crate::hazardous::kem::x25519_hkdf_sha256;
-use zeroize::Zeroizing;
 
 #[allow(non_camel_case_types)]
 #[cfg_attr(test, derive(Clone))]
@@ -69,16 +68,19 @@ impl Eq for DHKEM_X25519_SHA256_CHACHA20 {}
 
 impl core::fmt::Debug for DHKEM_X25519_SHA256_CHACHA20 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{} key: {{***OMITTED***}}, base_nonce: {:?}, ctr: {:?}, exporter_secret: {{***OMITTED***}}", 
+        write!(f, "{} key: {{***OMITTED***}}, base_nonce: {:?}, ctr: {:?}, exporter_secret: {{***OMITTED***}}",
             stringify!(DHKEM_X25519_SHA256_CHACHA20), &self.base_nonce, self.ctr)
     }
 }
 
 impl Drop for DHKEM_X25519_SHA256_CHACHA20 {
     fn drop(&mut self) {
-        use zeroize::Zeroize;
-        self.key.iter_mut().zeroize();
-        self.exporter_secret.iter_mut().zeroize();
+        #[cfg(feature = "zeroize")]
+        {
+            use zeroize::Zeroize;
+            self.key.iter_mut().zeroize();
+            self.exporter_secret.iter_mut().zeroize();
+        }
     }
 }
 
@@ -243,7 +245,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
         // NOTE: We hardcode NK here, is this an approach we want to keep?
         // key_schedule_context: [ mode || psk_id_hash || info_hash ]
-        let mut key_schedule_context = Zeroizing::new([0u8; key_schedule_ctx_size::<32>()]);
+        let mut key_schedule_context = zeroize_wrap!([0u8; key_schedule_ctx_size::<32>()]);
         key_schedule_context[0] = mode.mode_id();
         Self::labeled_extract(
             b"",
@@ -253,10 +255,11 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         )?;
         Self::labeled_extract(b"", b"info_hash", info, &mut key_schedule_context[33..65])?;
 
-        let mut secret = Zeroizing::new([0u8; 32]);
+        let mut secret = zeroize_wrap!([0u8; 32]);
         Self::labeled_extract(shared_secret, b"secret", psk, secret.as_mut())?;
 
-        let mut key = Zeroizing::new([0u8; 32]);
+        let mut key = zeroize_wrap!([0u8; 32]);
+
         Self::labeled_expand(
             secret.as_ref(),
             b"key",
@@ -272,7 +275,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
             &mut base_nonce,
         )?;
 
-        let mut exporter_secret = Zeroizing::new([0u8; 32]);
+        let mut exporter_secret = zeroize_wrap!([0u8; 32]);
         Self::labeled_expand(
             secret.as_ref(),
             b"exp",

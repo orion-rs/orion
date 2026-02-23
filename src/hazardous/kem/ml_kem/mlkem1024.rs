@@ -79,7 +79,6 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::kem::ml_kem::internal::*;
 pub use crate::hazardous::kem::ml_kem::Seed;
-use zeroize::Zeroize;
 
 construct_secret_key! {
     /// A type to represent the `SharedSecret` that ML-KEM-1024 produces.
@@ -223,13 +222,22 @@ impl DecapsulationKey {
     /// Perform decapsulation of a [Ciphertext].
     pub fn decap(&self, c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
         let mut c_prime_buf = [0u8; MlKem1024Internal::CIPHERTEXT_SIZE];
+
+        #[cfg(feature = "zeroize")]
         let mut k_internal = self.value.mlkem_decap_internal_with_ek(
             c.as_ref(),
             &mut c_prime_buf,
             &self.cached_ek.value,
         )?;
+        #[cfg(not(feature = "zeroize"))]
+        let k_internal = self.value.mlkem_decap_internal_with_ek(
+            c.as_ref(),
+            &mut c_prime_buf,
+            &self.cached_ek.value,
+        )?;
+
         let k = SharedSecret::from_slice(&k_internal)?;
-        k_internal.zeroize();
+        zeroize_call!(k_internal);
 
         Ok(k)
     }
@@ -277,9 +285,7 @@ impl EncapsulationKey {
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Given the [EncapsulationKey], generate a [SharedSecret] and associated [Ciphertext].
     pub fn encap(&self) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
-        use zeroize::Zeroizing;
-
-        let mut m = Zeroizing::new([0u8; 32]);
+        let mut m = zeroize_wrap!([0u8; 32]);
         getrandom::fill(m.as_mut())?;
 
         self.encap_deterministic(m.as_ref())
@@ -295,9 +301,14 @@ impl EncapsulationKey {
         }
 
         let mut c = Ciphertext::from_slice(&[0u8; MlKem1024Internal::CIPHERTEXT_SIZE])?;
+
+        #[cfg(feature = "zeroize")]
         let mut k_internal = self.value.mlkem_encap_internal(m.as_ref(), &mut c.value)?;
+        #[cfg(not(feature = "zeroize"))]
+        let k_internal = self.value.mlkem_encap_internal(m.as_ref(), &mut c.value)?;
+
         let k = SharedSecret::from_slice(k_internal.as_slice())?;
-        k_internal.zeroize();
+        zeroize_call!(k_internal);
 
         Ok((k, c))
     }
