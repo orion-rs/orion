@@ -118,8 +118,6 @@ use crate::hazardous::stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE};
 use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::{chacha20::SecretKey, xchacha20::Nonce};
 use crate::util;
-#[cfg(feature = "zeroize")]
-use zeroize::Zeroizing;
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// CTX XChaCha20Poly1305 with BLAKE2b-256.

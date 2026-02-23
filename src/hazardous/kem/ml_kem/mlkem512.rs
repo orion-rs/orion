@@ -221,11 +221,20 @@ impl DecapsulationKey {
     /// Perform decapsulation of a [Ciphertext].
     pub fn decap(&self, c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
         let mut c_prime_buf = [0u8; MlKem512Internal::CIPHERTEXT_SIZE];
+
+        #[cfg(feature = "zeroize")]
         let mut k_internal = self.value.mlkem_decap_internal_with_ek(
             c.as_ref(),
             &mut c_prime_buf,
             &self.cached_ek.value,
         )?;
+        #[cfg(not(feature = "zeroize"))]
+        let k_internal = self.value.mlkem_decap_internal_with_ek(
+            c.as_ref(),
+            &mut c_prime_buf,
+            &self.cached_ek.value,
+        )?;
+
         let k = SharedSecret::from_slice(&k_internal)?;
         zeroize_call!(k_internal);
 
@@ -291,7 +300,12 @@ impl EncapsulationKey {
         }
 
         let mut c = Ciphertext::from_slice(&[0u8; MlKem512Internal::CIPHERTEXT_SIZE])?;
+
+        #[cfg(feature = "zeroize")]
         let mut k_internal = self.value.mlkem_encap_internal(m.as_ref(), &mut c.value)?;
+        #[cfg(not(feature = "zeroize"))]
+        let k_internal = self.value.mlkem_encap_internal(m.as_ref(), &mut c.value)?;
+
         let k = SharedSecret::from_slice(k_internal.as_slice())?;
         zeroize_call!(k_internal);
 

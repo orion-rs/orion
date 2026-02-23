@@ -413,7 +413,10 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
         }
 
         // Step 17
+        #[cfg(feature = "zeroize")]
         let mut e2: RingElement = Pke::sample_poly_cbd_eta2(r, n)?;
+        #[cfg(not(feature = "zeroize"))]
+        let e2: RingElement = Pke::sample_poly_cbd_eta2(r, n)?;
 
         // Step 18
         let mut y_hat = [RingElementNTT::zero(); K];
@@ -425,7 +428,12 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
 
         // Step 19:
         let mut u = [RingElement::zero(); K];
+
+        #[cfg(feature = "zeroize")]
         let mut tmp = mat_mul_vec_transposed::<K>(&self.mat_a, &y_hat);
+        #[cfg(not(feature = "zeroize"))]
+        let tmp = mat_mul_vec_transposed::<K>(&self.mat_a, &y_hat);
+
         for (u_poly, tmp_poly) in u.iter_mut().zip(tmp.iter()) {
             *u_poly = inverse_ntt(tmp_poly);
         }
