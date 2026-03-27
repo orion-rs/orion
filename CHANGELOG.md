@@ -1,3 +1,10 @@
+### 0.17.14
+
+**Date:** TBD.
+
+**Changelog:**
+- Add `TryFrom<&[u8]>` for `mlkem512::EncapsulationKey`, `mlkem768::EncapsulationKey` and `mlkem1024::EncapsulationKey`.
+
 ### 0.17.13
 
 **Date:** February 23, 2026.
