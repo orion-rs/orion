@@ -266,6 +266,17 @@ impl TryFrom<&DecapsulationKey> for EncapsulationKey {
     }
 }
 
+impl TryFrom<&[u8]> for EncapsulationKey {
+    type Error = UnknownCryptoError;
+
+    /// Instantiate a [EncapsulationKey] with key-checks from FIPS-203, section 7.2.
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        Ok(Self {
+            value: EncapKey::<2, 800, MlKem512Internal>::from_slice(value)?,
+        })
+    }
+}
+
 impl AsRef<[u8]> for EncapsulationKey {
     fn as_ref(&self) -> &[u8] {
         self.value.as_ref()
@@ -275,9 +286,7 @@ impl AsRef<[u8]> for EncapsulationKey {
 impl EncapsulationKey {
     /// Instantiate a [EncapsulationKey] with key-checks from FIPS-203, section 7.2.
     pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        Ok(Self {
-            value: EncapKey::<2, 800, MlKem512Internal>::from_slice(slice)?,
-        })
+        Self::try_from(slice)
     }
 
     #[cfg(feature = "safe_api")]
