@@ -37,6 +37,7 @@ MSRV may be changed at any point and will not be considered a SemVer breaking ch
 - `serde`: Automatically enables the `alloc` feature.
 - `alloc`: Argon2i in `hazardous` when `default`/`safe_api` is not available.
 - `no_std`: Implicit feature that represents no heap allocations. Enabled by disabling default features and not selecting any additional features.
+- `zeroize`: Toggles whether sensitive key material is zeroized internally. Enabled by default.
 - `experimental`: These APIs may contain breaking changes in any non SemVer-breaking crate releases.
 
 More detailed explanation of the features in the [wiki](https://github.com/orion-rs/orion/wiki/Crate-features).
