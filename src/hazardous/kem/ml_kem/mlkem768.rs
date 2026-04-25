@@ -85,6 +85,7 @@ use crate::hazardous::kem::ml_kem::internal::*;
 
 pub use crate::hazardous::kem::ml_kem::SEED_SIZE;
 pub use crate::hazardous::kem::ml_kem::Seed;
+pub use crate::hazardous::kem::ml_kem::MlKemSeed;
 
 /// Size of private [`EncapsulationKey`].
 pub const EK_SIZE: usize = MlKem768Internal::EK_SIZE;
