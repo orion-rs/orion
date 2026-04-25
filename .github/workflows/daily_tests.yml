@@ -22,14 +22,14 @@ jobs:
           - nightly
     steps:
       - name: Checkout sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
-        with:
-          toolchain: ${{ matrix.toolchain }}
+        env: 
+          TARGET_TOOLCHAIN: ${{ matrix.toolchain }}
+        run: rustup toolchain install "${TARGET_TOOLCHAIN}"
 
       - name: Run cargo test - debug
         run: cargo test --all-features

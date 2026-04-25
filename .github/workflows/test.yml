@@ -36,14 +36,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
-        with:
-          toolchain: ${{ matrix.toolchain }}
+        env: 
+          TARGET_TOOLCHAIN: ${{ matrix.toolchain }}
+        run: rustup toolchain install "${TARGET_TOOLCHAIN}"
 
       - name: Test debug-mode, default features
         run: cargo test
@@ -98,15 +98,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
-        with:
-          toolchain: nightly
-          targets: x86_64-unknown-linux-gnu
+        run: rustup toolchain install nightly && rustup target add x86_64-unknown-linux-gnu
 
       # Release (LeakSanitizer is enabled by default with AddressSanitizer for x86_64 Linux builds)
       # https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer
@@ -122,11 +119,11 @@ jobs:
           - stable
           - nightly
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: houseabsolute/actions-rust-cross@a8cc74d61047fa553b4e908b4b10e70029f00ca6
+      - uses: houseabsolute/actions-rust-cross@a8cc74d61047fa553b4e908b4b10e70029f00ca6 # v1.0.6
         with:
           command: build
           target: thumbv7em-none-eabi
@@ -142,11 +139,11 @@ jobs:
           - armv7-unknown-linux-gnueabihf
           - powerpc64-unknown-linux-gnu
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: houseabsolute/actions-rust-cross@a8cc74d61047fa553b4e908b4b10e70029f00ca6
+      - uses: houseabsolute/actions-rust-cross@a8cc74d61047fa553b4e908b4b10e70029f00ca6 # v1.0.6
         with:
           command: test
           target: ${{ matrix.arch }}
@@ -161,14 +158,14 @@ jobs:
         arch:
           - wasm32-unknown-unknown
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
-        with:
-          toolchain: stable
-          targets: ${{ matrix.arch }}
+      - name: Install toolchain
+        env: 
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: rustup toolchain install stable && rustup target add "${TARGET_ARCH}"
 
       - run: cargo check --no-default-features --target ${WASM_TARGET}
         # Remediation for potential template-injection: https://docs.zizmor.sh/audits/#template-injection
@@ -179,13 +176,12 @@ jobs:
     name: Build documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
-        with:
-          toolchain: stable
+      - name: Install toolchain
+        run: rustup toolchain install stable
 
       - run: cargo doc --no-deps --all-features
 
@@ -193,13 +189,12 @@ jobs:
     name: Build and check benchmarks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
-        with:
-          toolchain: stable
+      - name: Install toolchain
+        run: rustup toolchain install stable
 
       - run: cargo test --benches
 
@@ -207,7 +202,7 @@ jobs:
     name: Check SemVer
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
