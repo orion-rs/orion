@@ -62,21 +62,25 @@
 //! [`mac::blake2b`]: crate::hazardous::mac::blake2b
 
 use crate::errors::UnknownCryptoError;
+use crate::generics::sealed::Sealed;
+use crate::generics::{ByteArrayVecData, Public, TypeSpec};
 use crate::hazardous::hash::blake2::blake2b_core;
 use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
 
 #[cfg(feature = "safe_api")]
 use std::io;
 
-construct_public! {
-    /// A type to represent the `Digest` that BLAKE2b returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is empty.
-    /// - `slice` is greater than 64 bytes.
-    (Digest, test_digest, 1, BLAKE2B_OUTSIZE)
+#[derive(Debug, Clone, Copy)]
+/// Marker type for BLAKE2b digest. See [`Digest`] type for convenience.
+pub struct Blake2bDigest {}
+impl Sealed for Blake2bDigest {}
+
+impl TypeSpec for Blake2bDigest {
+    const NAME: &'static str = stringify!(Digest);
+    type TypeData = ByteArrayVecData<1, BLAKE2B_OUTSIZE>;
 }
+/// A type to represent the [`Digest`]/hash-output that BLAKE2b returns.
+pub type Digest = Public<Blake2bDigest>;
 
 #[derive(Debug, Clone)]
 /// BLAKE2b streaming state.
@@ -111,7 +115,7 @@ impl Blake2b {
         let mut tmp = [0u8; BLAKE2B_OUTSIZE];
         self._state._finalize(&mut tmp)?;
 
-        Digest::from_slice(&tmp[..self._state.size])
+        Digest::try_from(&tmp[..self._state.size])
     }
 }
 
@@ -196,11 +200,22 @@ impl io::Write for Blake2b {
 
 #[cfg(test)]
 mod public {
+
+    #[test]
+    fn test_blake2b_digest() {
+        use super::*;
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_no_generate::<1, BLAKE2B_OUTSIZE, Blake2bDigest>();
+
+        #[cfg(feature = "serde")]
+        PublicNewtype::test_serialization::<BLAKE2B_OUTSIZE, Blake2bDigest>();
+    }
+
     mod test_streaming_interface_no_key {
         use crate::errors::UnknownCryptoError;
         use crate::hazardous::hash::blake2::blake2b::{Blake2b, Digest};
         use crate::hazardous::hash::blake2::blake2b_core::{
-            compare_blake2b_states, BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE,
+            BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE, compare_blake2b_states,
         };
         use crate::test_framework::incremental_interface::{
             StreamingContextConsistencyTester, TestableStreamingContext,

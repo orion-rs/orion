@@ -60,20 +60,11 @@
 //! [BLAKE2b]: super::blake2::blake2b
 
 use crate::errors::UnknownCryptoError;
+use crate::generics::sealed::Sealed;
+use crate::generics::{ByteArrayData, Public, TypeSpec};
 
 #[cfg(feature = "safe_api")]
 use std::io;
-
-construct_public! {
-    /// A type to represent the `Digest` that SHA512 returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 64 bytes.
-    (Digest, test_digest, SHA512_OUTSIZE, SHA512_OUTSIZE)
-}
-
-impl_from_trait!(Digest, SHA512_OUTSIZE);
 
 use super::sha2_core::{State, Variant, Word};
 use super::w64::WordU64;
@@ -84,6 +75,25 @@ pub const SHA512_BLOCKSIZE: usize = 128;
 pub const SHA512_OUTSIZE: usize = 64;
 /// The number of constants for the hash function SHA512.
 const N_CONSTS: usize = 80;
+
+#[derive(Debug, Clone, Copy)]
+/// Marker type for SHA512 digest. See [`Digest`] type for convenience.
+pub struct Sha512Digest {}
+impl Sealed for Sha512Digest {}
+
+impl TypeSpec for Sha512Digest {
+    const NAME: &'static str = stringify!(Digest);
+    type TypeData = ByteArrayData<SHA512_OUTSIZE>;
+}
+
+impl From<[u8; SHA512_OUTSIZE]> for Public<Sha512Digest> {
+    fn from(value: [u8; SHA512_OUTSIZE]) -> Self {
+        Self::from_data(<Sha512Digest as TypeSpec>::TypeData::from(value))
+    }
+}
+
+/// A type to represent the [`Digest`]/hash-output that SHA512 returns.
+pub type Digest = Public<Sha512Digest>;
 
 #[derive(Clone)]
 pub(crate) struct V512;
@@ -278,6 +288,16 @@ impl io::Write for Sha512 {
 #[cfg(test)]
 mod public {
     use super::*;
+
+    #[test]
+    fn test_sha512_digest() {
+        use super::*;
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_no_generate::<SHA512_OUTSIZE, SHA512_OUTSIZE, Sha512Digest>();
+
+        #[cfg(feature = "serde")]
+        PublicNewtype::test_serialization::<SHA512_OUTSIZE, Sha512Digest>();
+    }
 
     #[test]
     fn test_default_equals_new() {

@@ -83,7 +83,7 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::cae;
 //!
-//! let secret_key = cae::chacha20poly1305blake2b::SecretKey::generate();
+//! let secret_key = cae::chacha20poly1305blake2b::SecretKey::generate()?;
 //!
 //! // WARNING: This nonce is only meant for demonstration and should not
 //! // be repeated. Please read the security section.
@@ -120,11 +120,11 @@
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead;
-use crate::hazardous::aead::chacha20poly1305::{poly1305_key_gen, process_authentication, ENC_CTR};
+use crate::hazardous::aead::chacha20poly1305::{ENC_CTR, poly1305_key_gen, process_authentication};
 use crate::hazardous::hash::blake2::blake2b::Blake2b;
-use crate::hazardous::mac::poly1305::Poly1305;
 use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
-use crate::hazardous::stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE};
+use crate::hazardous::mac::poly1305::Poly1305;
+use crate::hazardous::stream::chacha20::{self, CHACHA_BLOCKSIZE, ChaCha20};
 use crate::util;
 
 pub use crate::hazardous::aead::chacha20poly1305::A_MAX;
@@ -174,7 +174,7 @@ pub fn seal(
     )?;
 
     let mut blake2b = Blake2b::new(32)?;
-    blake2b.update(secret_key.unprotected_as_bytes())?;
+    blake2b.update(secret_key.unprotected_as_ref())?;
     blake2b.update(nonce.as_ref())?;
     blake2b.update(ad)?;
     blake2b.update(&dst_out[plaintext.len()..plaintext.len() + POLY1305_OUTSIZE])?;
@@ -210,19 +210,18 @@ pub fn open(
     }
 
     let mut blake2b = Blake2b::new(32)?;
-    blake2b.update(secret_key.unprotected_as_bytes())?;
+    blake2b.update(secret_key.unprotected_as_ref())?;
     blake2b.update(nonce.as_ref())?;
     blake2b.update(ad)?;
 
-    let mut dec_ctx =
-        ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+    let mut dec_ctx = ChaCha20::new(secret_key.unprotected_as_ref(), nonce.as_ref(), true)?;
     let mut tmp = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
-    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
+    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp)?);
 
     let ciphertext_len = ciphertext_with_tag.len() - TAG_SIZE;
     process_authentication(&mut auth_ctx, ad, &ciphertext_with_tag[..ciphertext_len])?;
 
-    blake2b.update(auth_ctx.finalize()?.unprotected_as_bytes())?;
+    blake2b.update(auth_ctx.finalize()?.unprotected_as_ref())?;
 
     util::secure_cmp(
         blake2b.finalize()?.as_ref(),
@@ -247,13 +246,13 @@ pub fn open(
 #[cfg(feature = "safe_api")]
 mod public {
     use super::*;
-    use crate::test_framework::aead_interface::{test_diff_params_err, AeadTestRunner};
+    use crate::test_framework::aead_interface::{AeadTestRunner, test_diff_params_err};
 
     #[quickcheck]
     #[cfg(feature = "safe_api")]
     fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
-        let secret_key = SecretKey::generate();
-        let nonce = Nonce::from_slice(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
+        let secret_key = SecretKey::generate().unwrap();
+        let nonce = Nonce::try_from(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
         AeadTestRunner(seal, open, secret_key, nonce, &input, None, TAG_SIZE, &ad);
         test_diff_params_err(&seal, &open, &input, TAG_SIZE);
         true

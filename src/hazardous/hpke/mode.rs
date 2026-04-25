@@ -21,8 +21,8 @@
 // SOFTWARE.
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::hpke::suite::private::*;
 use crate::hazardous::hpke::Role;
+use crate::hazardous::hpke::suite::private::*;
 use private::*;
 
 pub(crate) mod private {
@@ -40,6 +40,7 @@ pub(crate) mod private {
     /// Marker trait intended for a suite that implements this HPKE mode.
     pub trait AuthPsk {}
 
+    #[derive(Debug)]
     #[repr(u8)]
     /// HPKE modes utility.
     pub enum HpkeMode {
@@ -107,15 +108,12 @@ pub(crate) mod private {
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
 /// - `exporter_context` is longer than 64 bytes
 /// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
-/// - Calling [`Self::seal()`] when the role is `Role::Recipient`
-/// - Calling [`Self::open()`] when the role is `Role::Sender`
+/// - Calling [`Self::seal()`] when the role is [`Role::Recipient`]
+/// - Calling [`Self::open()`] when the role is [`Role::Sender`]
 /// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
-///
-/// # Panics:
-/// A panic will occur if:
-/// - `getrandom` panics during [`Self::new_sender()`] or [`Self::base_seal()`].
+/// - `getrandom` errors during [`Self::new_sender()`] or [`Self::base_seal()`].
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
@@ -308,18 +306,15 @@ impl<S: Suite + Base> ModeBase<S> {
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
 /// - `exporter_context` is longer than 64 bytes
 /// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
-/// - Calling [`Self::seal()`] when the role is `Role::Recipient`
-/// - Calling [`Self::open()`] when the role is `Role::Sender`
+/// - Calling [`Self::seal()`] when the role is [`Role::Recipient`]
+/// - Calling [`Self::open()`] when the role is [`Role::Sender`]
 /// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - `psk` or `psk_id` are empty
 /// - `psk` is less than 32 bytes or more than 64 bytes
 /// - `psk_id` is more than 64 bytes
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
-///
-/// # Panics:
-/// A panic will occur if:
-/// - `getrandom` panics during [`Self::new_sender()`] or [`Self::psk_seal()`].
+/// - `getrandom` errors during [`Self::new_sender()`] or [`Self::psk_seal()`].
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
@@ -525,15 +520,12 @@ impl<S: Suite + Psk> ModePsk<S> {
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
 /// - `exporter_context` is longer than 64 bytes
 /// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
-/// - Calling [`Self::seal()`] when the role is `Role::Recipient`
-/// - Calling [`Self::open()`] when the role is `Role::Sender`
+/// - Calling [`Self::seal()`] when the role is [`Role::Recipient`]
+/// - Calling [`Self::open()`] when the role is [`Role::Sender`]
 /// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
-///
-/// # Panics:
-/// A panic will occur if:
-/// - `getrandom` panics during [`Self::new_sender()`] or [`Self::auth_seal()`].
+/// - `getrandom` errors during [`Self::new_sender()`] or [`Self::auth_seal()`].
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
@@ -733,18 +725,15 @@ impl<S: Suite + Auth> ModeAuth<S> {
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
 /// - `exporter_context` is longer than 64 bytes
 /// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
-/// - Calling [`Self::seal()`] when the role is `Role::Recipient`
-/// - Calling [`Self::open()`] when the role is `Role::Sender`
+/// - Calling [`Self::seal()`] when the role is [`Role::Recipient`]
+/// - Calling [`Self::open()`] when the role is [`Role::Sender`]
 /// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - `psk` or `psk_id` are empty
 /// - `psk` is less than 32 bytes or more than 64 bytes
 /// - `psk_id` is more than 64 bytes
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
-///
-/// # Panics:
-/// A panic will occur if:
-/// - `getrandom` panics during [`Self::new_sender()`] or [`Self::authpsk_seal()`].
+/// - `getrandom` errors during [`Self::new_sender()`] or [`Self::authpsk_seal()`].
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy

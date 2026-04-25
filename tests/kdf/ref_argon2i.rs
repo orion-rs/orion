@@ -16,17 +16,19 @@ fn test_case_1() {
         hex::decode("1e14f98dce844e462a545ba81034494ce32ebba9a3f6a899ba83e98888e432b6").unwrap();
 
     let mut actual = vec![0u8; expected_hash.len()];
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        iterations,
-        memory,
-        Some(&secret),
-        Some(&ad),
-        &mut actual
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            iterations,
+            memory,
+            Some(&secret),
+            Some(&ad),
+            &mut actual
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -43,17 +45,19 @@ fn test_case_2() {
                 .unwrap();
 
     let mut actual = vec![0u8; expected_hash.len()];
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        iterations,
-        memory,
-        Some(&secret),
-        Some(&ad),
-        &mut actual
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            iterations,
+            memory,
+            Some(&secret),
+            Some(&ad),
+            &mut actual
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -70,15 +74,17 @@ fn test_case_3() {
                 .unwrap();
 
     let mut actual = vec![0u8; expected_hash.len()];
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        iterations,
-        memory,
-        Some(&secret),
-        Some(&ad),
-        &mut actual
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            iterations,
+            memory,
+            Some(&secret),
+            Some(&ad),
+            &mut actual
+        )
+        .is_ok()
+    );
 }

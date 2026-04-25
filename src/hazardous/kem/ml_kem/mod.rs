@@ -20,7 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::errors::UnknownCryptoError;
+use crate::generics::GenerateSecret;
+use crate::generics::{ByteArrayData, Secret, TypeSpec, sealed::Sealed};
+#[cfg(feature = "safe_api")]
+use crate::{errors::UnknownCryptoError, generics::sealed::Data};
 
 /// Internal implementation logic for ML-KEM.
 pub mod internal;
@@ -34,15 +37,49 @@ pub mod mlkem768;
 /// ML-KEM-1024 as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
 pub mod mlkem1024;
 
-construct_secret_key! {
-    /// A type to represent the `d||z` seed used by ML-KEM to produce
-    /// a decapsulation key and its corresponding encapsulation key.
-    ///
-    /// It it crucial for the security of ML-KEM that these be generated
-    /// using a CSPRNG.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 64 bytes.
-    (Seed, test_ml_kem_seed, 64, 64, 64)
+/// Size of the seed used in ML-KEM.
+pub const SEED_SIZE: usize = 64;
+
+#[derive(Debug)]
+/// ML-KEM seed implementation. See [`Seed`] type for convenience.
+pub struct MlKemSeed {}
+impl Sealed for MlKemSeed {}
+
+impl TypeSpec for MlKemSeed {
+    const NAME: &'static str = stringify!(Seed);
+    type TypeData = ByteArrayData<SEED_SIZE>;
+}
+
+impl From<[u8; SEED_SIZE]> for Secret<MlKemSeed> {
+    fn from(value: [u8; SEED_SIZE]) -> Self {
+        Self::from_data(<MlKemSeed as TypeSpec>::TypeData::from(value))
+    }
+}
+
+impl GenerateSecret for MlKemSeed {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Secret<MlKemSeed>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(SEED_SIZE)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Secret::from_data(data))
+    }
+}
+
+/// ML-KEM seed.
+///
+/// Represent the `d||z` seed used by ML-KEM to produce
+/// a decapsulation key and its corresponding encapsulation key.
+///
+/// **SECURITY**: It it crucial for the security of ML-KEM that these be generated
+/// using a CSPRNG.
+pub type Seed = Secret<MlKemSeed>;
+
+#[test]
+fn test_mlkem_seed() {
+    use crate::test_framework::newtypes::secret::SecretNewtype;
+    SecretNewtype::test_with_generate::<SEED_SIZE, SEED_SIZE, SEED_SIZE, MlKemSeed>();
+
+    // Test of From<[u8; N]>
+    assert_ne!(Seed::from([0u8; SEED_SIZE]), Seed::from([1u8; SEED_SIZE]));
 }

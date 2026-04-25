@@ -46,7 +46,7 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::mac::hmac::sha512::{HmacSha512, SecretKey};
 //!
-//! let key = SecretKey::generate();
+//! let key = SecretKey::generate()?;
 //!
 //! let mut state = HmacSha512::new(&key);
 //! state.update(b"Some message.")?;
@@ -222,34 +222,105 @@ impl<S: HmacHashFunction, const BLOCKSIZE: usize> Hmac<S, BLOCKSIZE> {
 /// HMAC-SHA256 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub mod sha256 {
     use super::*;
-    use crate::hazardous::hash::sha2::sha256::{self, Sha256};
+    use crate::generics::GenerateSecret;
+    use crate::{
+        generics::{ByteArrayData, Secret, TypeSpec, sealed::Data, sealed::Sealed},
+        hazardous::hash::sha2::sha256::{self, Sha256},
+    };
+    #[cfg(feature = "serde")]
+    use alloc::vec::Vec;
 
-    construct_hmac_key! {
-        /// A type to represent the `SecretKey` that HMAC uses for authentication.
-        ///
-        /// # Note:
-        /// `SecretKey` pads the secret key for use with HMAC to a length of 64, when initialized.
-        ///
-        /// Using `unprotected_as_bytes()` will return the secret key with padding.
-        ///
-        /// `len()` will return the length with padding (always 64).
-        ///
-        /// # Panics:
-        /// A panic will occur if:
-        /// - Failure to generate random bytes securely.
-        (SecretKey, Sha256, sha256::SHA256_OUTSIZE, test_hmac_key, sha256::SHA256_BLOCKSIZE)
+    #[derive(Debug)]
+    /// Marker type for HMAC-SHA256 secret key. See [`SecretKey`] type for convenience.
+    ///
+    /// # Note:
+    /// [`SecretKey`] pads the secret key for use with HMAC to a length of [`sha256::SHA256_BLOCKSIZE`], when initialized.
+    ///
+    /// Using [`SecretKey::unprotected_as_ref()`] will return the secret key with padding.
+    ///
+    /// [`SecretKey::len()`] will return the length with padding (always [`sha256::SHA256_BLOCKSIZE`]).
+    pub struct HmacSha256Key {}
+    impl Sealed for HmacSha256Key {}
+
+    impl TypeSpec for HmacSha256Key {
+        const NAME: &'static str = stringify!(SecretKey);
+        type TypeData = ByteArrayData<{ sha256::SHA256_BLOCKSIZE }>;
+
+        fn parse_bytes(bytes: &[u8]) -> Result<Self::TypeData, UnknownCryptoError> {
+            let mut data = ByteArrayData::new(sha256::SHA256_BLOCKSIZE)?;
+
+            if bytes.len() > sha256::SHA256_BLOCKSIZE {
+                Sha256::_digest(bytes, &mut data.bytes[..sha256::SHA256_OUTSIZE])?;
+            } else {
+                data.bytes[..bytes.len()].copy_from_slice(bytes);
+            }
+
+            Ok(data)
+        }
     }
 
-    construct_tag! {
-        /// A type to represent the `Tag` that HMAC returns.
-        ///
-        /// # Errors:
-        /// An error will be returned if:
-        /// - `slice` is not 32 bytes.
-        (Tag, test_tag, sha256::SHA256_OUTSIZE, sha256::SHA256_OUTSIZE)
+    impl GenerateSecret for HmacSha256Key {
+        #[cfg(feature = "safe_api")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+        fn generate() -> Result<Secret<HmacSha256Key>, UnknownCryptoError> {
+            let mut data = Self::TypeData::new(sha256::SHA256_BLOCKSIZE)?;
+            crate::util::secure_rand_bytes(&mut data.bytes)?;
+            Ok(Secret::from_data(data))
+        }
     }
 
-    impl_from_trait!(Tag, sha256::SHA256_OUTSIZE);
+    /// A type to represent the secret key that HMAC-SHA256 uses.
+    pub type SecretKey = Secret<HmacSha256Key>;
+
+    #[derive(Debug, Clone)]
+    /// Marker type for HMAC-SHA256 MAC/Tag. See [`Tag`] type for convenience.
+    pub struct HmacSha256Tag {}
+    impl Sealed for HmacSha256Tag {}
+    impl TypeSpec for HmacSha256Tag {
+        const NAME: &'static str = stringify!(Tag);
+        type TypeData = ByteArrayData<{ sha256::SHA256_OUTSIZE }>;
+    }
+
+    impl From<[u8; sha256::SHA256_OUTSIZE]> for Secret<HmacSha256Tag> {
+        fn from(value: [u8; sha256::SHA256_OUTSIZE]) -> Self {
+            Self::from_data(<HmacSha256Tag as TypeSpec>::TypeData::from(value))
+        }
+    }
+
+    /// A type to represent the MAC/Tag that HMAC-SHA256 returns.
+    pub type Tag = Secret<HmacSha256Tag>;
+
+    #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+    /// This type tries to serialize as a `&[u8]` would. Note that the serialized
+    /// type likely does not have the same protections that Orion provides, such
+    /// as constant-time operations. A good rule of thumb is to only serialize
+    /// these types for storage. Don't operate on the serialized types.
+    impl serde::Serialize for Tag {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::ser::Serializer,
+        {
+            let bytes: &[u8] = &self.data.as_ref();
+            bytes.serialize(serializer)
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+    /// This type tries to deserialize as a `Vec<u8>` would. If it succeeds, the public data
+    /// will be built using `Self::try_from`.
+    ///
+    /// Note that **this allocates** once to store the referenced bytes on the heap.
+    impl<'de> serde::Deserialize<'de> for Tag {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::de::Deserializer<'de>,
+        {
+            let bytes = Vec::<u8>::deserialize(deserializer)?;
+            TryFrom::try_from(bytes.as_slice()).map_err(serde::de::Error::custom)
+        }
+    }
 
     use super::Hmac;
 
@@ -270,7 +341,7 @@ pub mod sha256 {
         /// Initialize `HmacSha256` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
             // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
-            Self::_new(secret_key.unprotected_as_bytes()).unwrap()
+            Self::_new(secret_key.unprotected_as_ref()).unwrap()
         }
 
         /// Reset to `new()` state.
@@ -358,9 +429,51 @@ pub mod sha256 {
         use super::*;
 
         #[test]
+        fn test_key() {
+            use super::*;
+            use crate::test_framework::newtypes::secret::SecretNewtype;
+            SecretNewtype::test_with_generate::<
+                { sha256::SHA256_BLOCKSIZE },
+                { sha256::SHA256_BLOCKSIZE },
+                { sha256::SHA256_BLOCKSIZE },
+                HmacSha256Key,
+            >();
+        }
+
+        #[test]
+        fn test_tag() {
+            use super::*;
+            use crate::test_framework::newtypes::secret::SecretNewtype;
+            SecretNewtype::test_no_generate::<
+                { sha256::SHA256_OUTSIZE },
+                { sha256::SHA256_OUTSIZE },
+                HmacSha256Tag,
+            >();
+        }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn test_serde_serialized_equivalence_to_bytes_fn() {
+            let bytes = [38u8; sha256::SHA256_OUTSIZE];
+            let secret_type = Tag::try_from(&bytes).unwrap();
+            let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+            let serialized_from_secret_type = serde_json::to_value(&secret_type).unwrap();
+            assert_eq!(serialized_from_bytes, serialized_from_secret_type);
+        }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn test_serde_deserialized_equivalence_to_bytes_fn() {
+            let bytes = [38u8; sha256::SHA256_OUTSIZE];
+            let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+            let secret_type: Tag = serde_json::from_value(serialized_from_bytes).unwrap();
+            assert_eq!(secret_type.unprotected_as_ref(), bytes.as_slice());
+        }
+
+        #[test]
         #[cfg(feature = "safe_api")]
         fn test_debug_impl() {
-            let secret_key = SecretKey::generate();
+            let secret_key = SecretKey::generate().unwrap();
             let initial_state = HmacSha256::new(&secret_key);
             let debug = format!("{initial_state:?}");
             let expected = "HmacSha256 { _state: Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false } }";
@@ -376,11 +489,11 @@ pub mod sha256 {
             /// When using a different key, verify() should always yield an error.
             /// NOTE: Using different and same input data is tested with TestableStreamingContext.
             fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-                let sk = SecretKey::generate();
+                let sk = SecretKey::generate().unwrap();
                 let mut state = HmacSha256::new(&sk);
                 state.update(&data[..]).unwrap();
                 let tag = state.finalize().unwrap();
-                let bad_sk = SecretKey::generate();
+                let bad_sk = SecretKey::generate().unwrap();
 
                 HmacSha256::verify(&tag, &bad_sk, &data[..]).is_err()
             }
@@ -407,13 +520,17 @@ pub mod sha256 {
                 }
 
                 fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
-                    HmacSha256::hmac(&SecretKey::from_slice(&KEY).unwrap(), input)
+                    HmacSha256::hmac(&SecretKey::try_from(KEY.as_slice()).unwrap(), input)
                 }
 
                 fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
                     // This will only run verification tests on differing input. They do not
                     // include tests for different secret keys.
-                    HmacSha256::verify(expected, &SecretKey::from_slice(&KEY).unwrap(), input)
+                    HmacSha256::verify(
+                        expected,
+                        &SecretKey::try_from(KEY.as_slice()).unwrap(),
+                        input,
+                    )
                 }
 
                 fn compare_states(state_1: &HmacSha256, state_2: &HmacSha256) {
@@ -423,7 +540,7 @@ pub mod sha256 {
 
             #[test]
             fn default_consistency_tests() {
-                let initial_state = HmacSha256::new(&SecretKey::from_slice(&KEY).unwrap());
+                let initial_state = HmacSha256::new(&SecretKey::try_from(KEY.as_slice()).unwrap());
 
                 let test_runner = StreamingContextConsistencyTester::<Tag, HmacSha256>::new(
                     initial_state,
@@ -437,7 +554,7 @@ pub mod sha256 {
             /// Related bug: https://github.com/orion-rs/orion/issues/46
             /// Test different streaming state usage patterns.
             fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-                let initial_state = HmacSha256::new(&SecretKey::from_slice(&KEY).unwrap());
+                let initial_state = HmacSha256::new(&SecretKey::try_from(KEY.as_slice()).unwrap());
 
                 let test_runner = StreamingContextConsistencyTester::<Tag, HmacSha256>::new(
                     initial_state,
@@ -453,34 +570,105 @@ pub mod sha256 {
 /// HMAC-SHA384 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub mod sha384 {
     use super::*;
-    use crate::hazardous::hash::sha2::sha384::{self, Sha384};
+    use crate::generics::GenerateSecret;
+    use crate::{
+        generics::{ByteArrayData, Secret, TypeSpec, sealed::Data, sealed::Sealed},
+        hazardous::hash::sha2::sha384::{self, Sha384},
+    };
+    #[cfg(feature = "serde")]
+    use alloc::vec::Vec;
 
-    construct_hmac_key! {
-        /// A type to represent the `SecretKey` that HMAC uses for authentication.
-        ///
-        /// # Note:
-        /// `SecretKey` pads the secret key for use with HMAC to a length of 128, when initialized.
-        ///
-        /// Using `unprotected_as_bytes()` will return the secret key with padding.
-        ///
-        /// `len()` will return the length with padding (always 128).
-        ///
-        /// # Panics:
-        /// A panic will occur if:
-        /// - Failure to generate random bytes securely.
-        (SecretKey, Sha384, sha384::SHA384_OUTSIZE, test_hmac_key, sha384::SHA384_BLOCKSIZE)
+    #[derive(Debug)]
+    /// Marker type for HMAC-SHA384 secret key. See [`SecretKey`] type for convenience.
+    /// # Note:
+    /// [`SecretKey`] pads the secret key for use with HMAC to a length of [`sha384::SHA384_BLOCKSIZE`], when initialized.
+    ///
+    /// Using [`SecretKey::unprotected_as_ref()`] will return the secret key with padding.
+    ///
+    /// [`SecretKey::len()`] will return the length with padding (always [`sha384::SHA384_BLOCKSIZE`]).
+    pub struct HmacSha384Key {}
+    impl Sealed for HmacSha384Key {}
+
+    impl TypeSpec for HmacSha384Key {
+        const NAME: &'static str = stringify!(SecretKey);
+        type TypeData = ByteArrayData<{ sha384::SHA384_BLOCKSIZE }>;
+
+        fn parse_bytes(bytes: &[u8]) -> Result<Self::TypeData, UnknownCryptoError> {
+            let mut data = ByteArrayData::new(sha384::SHA384_BLOCKSIZE)?;
+
+            if bytes.len() > sha384::SHA384_BLOCKSIZE {
+                Sha384::_digest(bytes, &mut data.bytes[..sha384::SHA384_OUTSIZE])?;
+            } else {
+                data.bytes[..bytes.len()].copy_from_slice(bytes);
+            }
+
+            Ok(data)
+        }
     }
 
-    construct_tag! {
-        /// A type to represent the `Tag` that HMAC returns.
-        ///
-        /// # Errors:
-        /// An error will be returned if:
-        /// - `slice` is not 48 bytes.
-        (Tag, test_tag, sha384::SHA384_OUTSIZE, sha384::SHA384_OUTSIZE)
+    impl GenerateSecret for HmacSha384Key {
+        #[cfg(feature = "safe_api")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+        fn generate() -> Result<Secret<HmacSha384Key>, UnknownCryptoError> {
+            let mut data = Self::TypeData::new(sha384::SHA384_BLOCKSIZE)?;
+            crate::util::secure_rand_bytes(&mut data.bytes)?;
+            Ok(Secret::from_data(data))
+        }
     }
 
-    impl_from_trait!(Tag, sha384::SHA384_OUTSIZE);
+    /// A type to represent the secret key that HMAC-SHA384 uses.
+    pub type SecretKey = Secret<HmacSha384Key>;
+
+    #[derive(Debug, Clone)]
+    /// Marker type for HMAC-SHA384 MAC/Tag. See [`Tag`] type for convenience.
+    pub struct HmacSha384Tag {}
+    impl Sealed for HmacSha384Tag {}
+
+    impl TypeSpec for HmacSha384Tag {
+        const NAME: &'static str = stringify!(Tag);
+        type TypeData = ByteArrayData<{ sha384::SHA384_OUTSIZE }>;
+    }
+
+    impl From<[u8; sha384::SHA384_OUTSIZE]> for Secret<HmacSha384Tag> {
+        fn from(value: [u8; sha384::SHA384_OUTSIZE]) -> Self {
+            Self::from_data(<HmacSha384Tag as TypeSpec>::TypeData::from(value))
+        }
+    }
+
+    /// A type to represent the MAC/Tag that HMAC-SHA384 returns.
+    pub type Tag = Secret<HmacSha384Tag>;
+
+    #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+    /// This type tries to serialize as a `&[u8]` would. Note that the serialized
+    /// type likely does not have the same protections that Orion provides, such
+    /// as constant-time operations. A good rule of thumb is to only serialize
+    /// these types for storage. Don't operate on the serialized types.
+    impl serde::Serialize for Tag {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::ser::Serializer,
+        {
+            let bytes: &[u8] = &self.data.as_ref();
+            bytes.serialize(serializer)
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+    /// This type tries to deserialize as a `Vec<u8>` would. If it succeeds, the public data
+    /// will be built using `Self::try_from`.
+    ///
+    /// Note that **this allocates** once to store the referenced bytes on the heap.
+    impl<'de> serde::Deserialize<'de> for Tag {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::de::Deserializer<'de>,
+        {
+            let bytes = Vec::<u8>::deserialize(deserializer)?;
+            TryFrom::try_from(bytes.as_slice()).map_err(serde::de::Error::custom)
+        }
+    }
 
     use super::Hmac;
 
@@ -501,7 +689,7 @@ pub mod sha384 {
         /// Initialize `HmacSha384` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
             // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
-            Self::_new(secret_key.unprotected_as_bytes()).unwrap()
+            Self::_new(secret_key.unprotected_as_ref()).unwrap()
         }
 
         /// Reset to `new()` state.
@@ -589,9 +777,51 @@ pub mod sha384 {
         use super::*;
 
         #[test]
+        fn test_key() {
+            use super::*;
+            use crate::test_framework::newtypes::secret::SecretNewtype;
+            SecretNewtype::test_with_generate::<
+                { sha384::SHA384_BLOCKSIZE },
+                { sha384::SHA384_BLOCKSIZE },
+                { sha384::SHA384_BLOCKSIZE },
+                HmacSha384Key,
+            >();
+        }
+
+        #[test]
+        fn test_tag() {
+            use super::*;
+            use crate::test_framework::newtypes::secret::SecretNewtype;
+            SecretNewtype::test_no_generate::<
+                { sha384::SHA384_OUTSIZE },
+                { sha384::SHA384_OUTSIZE },
+                HmacSha384Tag,
+            >();
+        }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn test_serde_serialized_equivalence_to_bytes_fn() {
+            let bytes = [38u8; sha384::SHA384_OUTSIZE];
+            let secret_type = Tag::try_from(&bytes).unwrap();
+            let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+            let serialized_from_secret_type = serde_json::to_value(&secret_type).unwrap();
+            assert_eq!(serialized_from_bytes, serialized_from_secret_type);
+        }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn test_serde_deserialized_equivalence_to_bytes_fn() {
+            let bytes = [38u8; sha384::SHA384_OUTSIZE];
+            let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+            let secret_type: Tag = serde_json::from_value(serialized_from_bytes).unwrap();
+            assert_eq!(secret_type.unprotected_as_ref(), bytes.as_slice());
+        }
+
+        #[test]
         #[cfg(feature = "safe_api")]
         fn test_debug_impl() {
-            let secret_key = SecretKey::generate();
+            let secret_key = SecretKey::generate().unwrap();
             let initial_state = HmacSha384::new(&secret_key);
             let debug = format!("{initial_state:?}");
             let expected = "HmacSha384 { _state: Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false } }";
@@ -607,11 +837,11 @@ pub mod sha384 {
             /// When using a different key, verify() should always yield an error.
             /// NOTE: Using different and same input data is tested with TestableStreamingContext.
             fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-                let sk = SecretKey::generate();
+                let sk = SecretKey::generate().unwrap();
                 let mut state = HmacSha384::new(&sk);
                 state.update(&data[..]).unwrap();
                 let tag = state.finalize().unwrap();
-                let bad_sk = SecretKey::generate();
+                let bad_sk = SecretKey::generate().unwrap();
 
                 HmacSha384::verify(&tag, &bad_sk, &data[..]).is_err()
             }
@@ -638,13 +868,17 @@ pub mod sha384 {
                 }
 
                 fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
-                    HmacSha384::hmac(&SecretKey::from_slice(&KEY).unwrap(), input)
+                    HmacSha384::hmac(&SecretKey::try_from(KEY.as_slice()).unwrap(), input)
                 }
 
                 fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
                     // This will only run verification tests on differing input. They do not
                     // include tests for different secret keys.
-                    HmacSha384::verify(expected, &SecretKey::from_slice(&KEY).unwrap(), input)
+                    HmacSha384::verify(
+                        expected,
+                        &SecretKey::try_from(KEY.as_slice()).unwrap(),
+                        input,
+                    )
                 }
 
                 fn compare_states(state_1: &HmacSha384, state_2: &HmacSha384) {
@@ -654,7 +888,7 @@ pub mod sha384 {
 
             #[test]
             fn default_consistency_tests() {
-                let initial_state = HmacSha384::new(&SecretKey::from_slice(&KEY).unwrap());
+                let initial_state = HmacSha384::new(&SecretKey::try_from(KEY.as_slice()).unwrap());
 
                 let test_runner = StreamingContextConsistencyTester::<Tag, HmacSha384>::new(
                     initial_state,
@@ -668,7 +902,7 @@ pub mod sha384 {
             /// Related bug: https://github.com/orion-rs/orion/issues/46
             /// Test different streaming state usage patterns.
             fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-                let initial_state = HmacSha384::new(&SecretKey::from_slice(&KEY).unwrap());
+                let initial_state = HmacSha384::new(&SecretKey::try_from(KEY.as_slice()).unwrap());
 
                 let test_runner = StreamingContextConsistencyTester::<Tag, HmacSha384>::new(
                     initial_state,
@@ -684,34 +918,104 @@ pub mod sha384 {
 /// HMAC-SHA512 (Hash-based Message Authentication Code) as specified in the [RFC 2104](https://tools.ietf.org/html/rfc2104).
 pub mod sha512 {
     use super::*;
-    use crate::hazardous::hash::sha2::sha512::{self, Sha512};
+    use crate::generics::GenerateSecret;
+    use crate::{
+        generics::{ByteArrayData, Secret, TypeSpec, sealed::Data, sealed::Sealed},
+        hazardous::hash::sha2::sha512::{self, Sha512},
+    };
+    #[cfg(feature = "serde")]
+    use alloc::vec::Vec;
 
-    construct_hmac_key! {
-        /// A type to represent the `SecretKey` that HMAC uses for authentication.
-        ///
-        /// # Note:
-        /// `SecretKey` pads the secret key for use with HMAC to a length of 128, when initialized.
-        ///
-        /// Using `unprotected_as_bytes()` will return the secret key with padding.
-        ///
-        /// `len()` will return the length with padding (always 128).
-        ///
-        /// # Panics:
-        /// A panic will occur if:
-        /// - Failure to generate random bytes securely.
-        (SecretKey, Sha512, sha512::SHA512_OUTSIZE, test_hmac_key, sha512::SHA512_BLOCKSIZE)
+    #[derive(Debug)]
+    /// Marker type for HMAC-SHA512 secret key. See [`SecretKey`] type for convenience.
+    /// # Note:
+    /// [`SecretKey`] pads the secret key for use with HMAC to a length of [`sha512::SHA512_BLOCKSIZE`], when initialized.
+    ///
+    /// Using [`SecretKey::unprotected_as_ref()`] will return the secret key with padding.
+    ///
+    /// [`SecretKey::len()`] will return the length with padding (always [`sha512::SHA512_BLOCKSIZE`]).
+    pub struct HmacSha512Key {}
+    impl Sealed for HmacSha512Key {}
+
+    impl TypeSpec for HmacSha512Key {
+        const NAME: &'static str = stringify!(SecretKey);
+        type TypeData = ByteArrayData<{ sha512::SHA512_BLOCKSIZE }>;
+
+        fn parse_bytes(bytes: &[u8]) -> Result<Self::TypeData, UnknownCryptoError> {
+            let mut data = ByteArrayData::new(sha512::SHA512_BLOCKSIZE)?;
+
+            if bytes.len() > sha512::SHA512_BLOCKSIZE {
+                Sha512::_digest(bytes, &mut data.bytes[..sha512::SHA512_OUTSIZE])?;
+            } else {
+                data.bytes[..bytes.len()].copy_from_slice(bytes);
+            }
+
+            Ok(data)
+        }
     }
 
-    construct_tag! {
-        /// A type to represent the `Tag` that HMAC returns.
-        ///
-        /// # Errors:
-        /// An error will be returned if:
-        /// - `slice` is not 64 bytes.
-        (Tag, test_tag, sha512::SHA512_OUTSIZE, sha512::SHA512_OUTSIZE)
+    impl GenerateSecret for HmacSha512Key {
+        #[cfg(feature = "safe_api")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+        fn generate() -> Result<Secret<HmacSha512Key>, UnknownCryptoError> {
+            let mut data = Self::TypeData::new(sha512::SHA512_BLOCKSIZE)?;
+            crate::util::secure_rand_bytes(&mut data.bytes)?;
+            Ok(Secret::from_data(data))
+        }
     }
 
-    impl_from_trait!(Tag, sha512::SHA512_OUTSIZE);
+    /// A type to represent the secret key that HMAC-SHA512 uses.
+    pub type SecretKey = Secret<HmacSha512Key>;
+
+    #[derive(Debug, Clone)]
+    /// Marker type for HMAC-SHA512 MAC/Tag. See [`Tag`] type for convenience.
+    pub struct HmacSha512Tag {}
+    impl Sealed for HmacSha512Tag {}
+    impl TypeSpec for HmacSha512Tag {
+        const NAME: &'static str = stringify!(Tag);
+        type TypeData = ByteArrayData<{ sha512::SHA512_OUTSIZE }>;
+    }
+
+    impl From<[u8; sha512::SHA512_OUTSIZE]> for Secret<HmacSha512Tag> {
+        fn from(value: [u8; sha512::SHA512_OUTSIZE]) -> Self {
+            Self::from_data(<HmacSha512Tag as TypeSpec>::TypeData::from(value))
+        }
+    }
+
+    /// A type to represent the MAC/Tag that HMAC-SHA512 returns.
+    pub type Tag = Secret<HmacSha512Tag>;
+
+    #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+    /// This type tries to serialize as a `&[u8]` would. Note that the serialized
+    /// type likely does not have the same protections that Orion provides, such
+    /// as constant-time operations. A good rule of thumb is to only serialize
+    /// these types for storage. Don't operate on the serialized types.
+    impl serde::Serialize for Tag {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::ser::Serializer,
+        {
+            let bytes: &[u8] = &self.data.as_ref();
+            bytes.serialize(serializer)
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+    /// This type tries to deserialize as a `Vec<u8>` would. If it succeeds, the public data
+    /// will be built using `Self::try_from`.
+    ///
+    /// Note that **this allocates** once to store the referenced bytes on the heap.
+    impl<'de> serde::Deserialize<'de> for Tag {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::de::Deserializer<'de>,
+        {
+            let bytes = Vec::<u8>::deserialize(deserializer)?;
+            TryFrom::try_from(bytes.as_slice()).map_err(serde::de::Error::custom)
+        }
+    }
 
     use super::Hmac;
 
@@ -732,7 +1036,7 @@ pub mod sha512 {
         /// Initialize `HmacSha512` struct with a given key.
         pub fn new(secret_key: &SecretKey) -> Self {
             // NOTE: `secret_key` has been pre-padded so .unwrap() is OK.
-            Self::_new(secret_key.unprotected_as_bytes()).unwrap()
+            Self::_new(secret_key.unprotected_as_ref()).unwrap()
         }
 
         /// Reset to `new()` state.
@@ -820,9 +1124,51 @@ pub mod sha512 {
         use super::*;
 
         #[test]
+        fn test_key() {
+            use super::*;
+            use crate::test_framework::newtypes::secret::SecretNewtype;
+            SecretNewtype::test_with_generate::<
+                { sha512::SHA512_BLOCKSIZE },
+                { sha512::SHA512_BLOCKSIZE },
+                { sha512::SHA512_BLOCKSIZE },
+                HmacSha512Key,
+            >();
+        }
+
+        #[test]
+        fn test_tag() {
+            use super::*;
+            use crate::test_framework::newtypes::secret::SecretNewtype;
+            SecretNewtype::test_no_generate::<
+                { sha512::SHA512_OUTSIZE },
+                { sha512::SHA512_OUTSIZE },
+                HmacSha512Tag,
+            >();
+        }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn test_serde_serialized_equivalence_to_bytes_fn() {
+            let bytes = [38u8; sha512::SHA512_OUTSIZE];
+            let secret_type = Tag::try_from(&bytes).unwrap();
+            let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+            let serialized_from_secret_type = serde_json::to_value(&secret_type).unwrap();
+            assert_eq!(serialized_from_bytes, serialized_from_secret_type);
+        }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn test_serde_deserialized_equivalence_to_bytes_fn() {
+            let bytes = [38u8; sha512::SHA512_OUTSIZE];
+            let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+            let secret_type: Tag = serde_json::from_value(serialized_from_bytes).unwrap();
+            assert_eq!(secret_type.unprotected_as_ref(), bytes.as_slice());
+        }
+
+        #[test]
         #[cfg(feature = "safe_api")]
         fn test_debug_impl() {
-            let secret_key = SecretKey::generate();
+            let secret_key = SecretKey::generate().unwrap();
             let initial_state = HmacSha512::new(&secret_key);
             let debug = format!("{initial_state:?}");
             let expected = "HmacSha512 { _state: Hmac { working_hasher: [***OMITTED***], opad_hasher: [***OMITTED***], ipad_hasher: [***OMITTED***], is_finalized: false } }";
@@ -838,11 +1184,11 @@ pub mod sha512 {
             /// When using a different key, verify() should always yield an error.
             /// NOTE: Using different and same input data is tested with TestableStreamingContext.
             fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-                let sk = SecretKey::generate();
+                let sk = SecretKey::generate().unwrap();
                 let mut state = HmacSha512::new(&sk);
                 state.update(&data[..]).unwrap();
                 let tag = state.finalize().unwrap();
-                let bad_sk = SecretKey::generate();
+                let bad_sk = SecretKey::generate().unwrap();
 
                 HmacSha512::verify(&tag, &bad_sk, &data[..]).is_err()
             }
@@ -869,13 +1215,17 @@ pub mod sha512 {
                 }
 
                 fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
-                    HmacSha512::hmac(&SecretKey::from_slice(&KEY).unwrap(), input)
+                    HmacSha512::hmac(&SecretKey::try_from(KEY.as_slice()).unwrap(), input)
                 }
 
                 fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
                     // This will only run verification tests on differing input. They do not
                     // include tests for different secret keys.
-                    HmacSha512::verify(expected, &SecretKey::from_slice(&KEY).unwrap(), input)
+                    HmacSha512::verify(
+                        expected,
+                        &SecretKey::try_from(KEY.as_slice()).unwrap(),
+                        input,
+                    )
                 }
 
                 fn compare_states(state_1: &HmacSha512, state_2: &HmacSha512) {
@@ -885,7 +1235,7 @@ pub mod sha512 {
 
             #[test]
             fn default_consistency_tests() {
-                let initial_state = HmacSha512::new(&SecretKey::from_slice(&KEY).unwrap());
+                let initial_state = HmacSha512::new(&SecretKey::try_from(KEY.as_slice()).unwrap());
 
                 let test_runner = StreamingContextConsistencyTester::<Tag, HmacSha512>::new(
                     initial_state,
@@ -899,7 +1249,7 @@ pub mod sha512 {
             /// Related bug: https://github.com/orion-rs/orion/issues/46
             /// Test different streaming state usage patterns.
             fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-                let initial_state = HmacSha512::new(&SecretKey::from_slice(&KEY).unwrap());
+                let initial_state = HmacSha512::new(&SecretKey::try_from(KEY.as_slice()).unwrap());
 
                 let test_runner = StreamingContextConsistencyTester::<Tag, HmacSha512>::new(
                     initial_state,

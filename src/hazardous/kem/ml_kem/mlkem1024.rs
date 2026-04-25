@@ -25,6 +25,8 @@
 //! In general, it is highly recommended to use the [`KeyPair`] type to deal with decapsulating operations, or decapsulation keys in general.
 //!
 //! A [`KeyPair`] requires, or automatically generates, a [`Seed`]. It cannot be made solely from encoded/serialized decapsulation key in bytes, unless a [`Seed`] is also provided.
+//! [`KeyPair`] also internally caches the [`EncapsulationKey`] used during decapsulation, making it more efficient when used to decapsulate multiple
+//! KEM ciphertext with a given private [`DecapsulationKey`].
 //!
 //! A seed is only 64 bytes, is fully FIPS compliant, and hardens against attacks described [here](https://eprint.iacr.org/2024/523).
 //!
@@ -40,259 +42,159 @@
 //! # Errors:
 //! An error will be returned if:
 //! - [`getrandom::fill()`] fails during encapsulation.
-//! - `m` is not 32 bytes.
-//!
-//! # Panics:
-//! A panic will occur if:
 //! - [`getrandom::fill()`] fails during [`KeyPair::generate()`].
+//! - `m` is not 32 bytes.
 //!
 //! # Security:
 //! - It is critical that both the seed and explicit randomness `m`, used for key generation and encapsulation
 //! are generated using a strong CSPRNG.
-//! - Users should always prefer encapsulation without specifying explicit randomness, if possible. `encap_deterministic()`
+//! - Users should always prefer encapsulation without specifying explicit randomness, if possible. [`EncapsulationKey::encap_deterministic()`]
 //! exists mainly for `no_std` usage.
 //! - Prefer using [`KeyPair`] to create and use ML-KEM keys, which is MAL-BIND-K-CT secure.
 //!
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
+//! use orion::KP;
 //! use orion::hazardous::kem::mlkem1024::*;
 //!
-//! let keypair = KeyPair::generate()?;
+//! let kp = KeyPair::generate()?;
 //!
-//! let (sender_shared_secret, sender_ciphertext) = MlKem1024::encap(keypair.public())?;
-//! let recipient_shared_secret = MlKem1024::decap(keypair.private(), &sender_ciphertext)?;
+//! let ek = EncapsulationKey::try_from(kp.public().as_ref())?;
+//! let (sender_shared_secret, sender_ciphertext) = ek.encap()?;
+//! let recipient_shared_secret = kp.decap(&sender_ciphertext)?;
 //!
 //! assert_eq!(sender_shared_secret, recipient_shared_secret);
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`getrandom::fill()`]: getrandom::fill
-//! [`encap()`]: mlkem1024::MlKem1024::encap
-//! [`decap()`]: mlkem1024::MlKem1024::decap
 //! [`KeyPair::generate()`]: mlkem1024::KeyPair::generate
 //! [`KeyPair`]: mlkem1024::KeyPair
+//! [`EncapsulationKey`]: mlkem1024::EncapsulationKey
+//! [`EncapsulationKey::encap_deterministic()`]: mlkem1024::EncapsulationKey::encap_deterministic
 //! [`Seed`]: mlkem1024::Seed
 //! [`DecapsulationKey`]: mlkem1024::DecapsulationKey
-//! [`DecapsulationKey::unchecked_from_slice()`]:  mlkem1024::DecapsulationKey::unchecked_from_slice
+//! [`DecapsulationKey::unchecked_from_slice()`]: mlkem1024::DecapsulationKey::unchecked_from_slice
 
+use crate::KP;
 use crate::errors::UnknownCryptoError;
+use crate::generics::sealed::{Sealed, TryFromBytes};
+use crate::generics::{ByteArrayData, Public, Secret, TypeSpec};
 use crate::hazardous::kem::ml_kem::internal::*;
+
+pub use crate::hazardous::kem::ml_kem::SEED_SIZE;
 pub use crate::hazardous::kem::ml_kem::Seed;
 
-construct_secret_key! {
-    /// A type to represent the `SharedSecret` that ML-KEM-1024 produces.
-    ///
-    /// This type simply holds bytes. Creating an instance from slices or similar,
-    /// performs no checks whatsoever.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    (SharedSecret, test_shared_key, MlKem1024Internal::SHARED_SECRET_SIZE, MlKem1024Internal::SHARED_SECRET_SIZE)
+/// Size of private [`EncapsulationKey`].
+pub const EK_SIZE: usize = MlKem1024Internal::EK_SIZE;
+
+/// Size of public [`DecapsulationKey`].
+pub const DK_SIZE: usize = MlKem1024Internal::DK_SIZE;
+
+/// Size of public [`Ciphertext`].
+pub const CIPHERTEXT_SIZE: usize = MlKem1024Internal::CIPHERTEXT_SIZE;
+
+/// Size of private [`SharedSecret`].
+pub const SHARED_SECRET_SIZE: usize = MlKem1024Internal::SHARED_SECRET_SIZE;
+
+/// ML-KEM-1024 ciphertext.
+pub type Ciphertext = Public<Mlkem1024Ciphertext>;
+
+/// ML-KEM-1024 shared secret.
+pub type SharedSecret = Secret<MlKem1024SharedSecret>;
+
+/// ML-KEM-1024 encapsulation key.
+pub type EncapsulationKey = Public<MlKem1024EncapKey>;
+
+/// ML-KEM-1024 decapsulation key.
+pub type DecapsulationKey = Secret<MlKem1024DecapKey>;
+
+#[derive(Debug)]
+/// ML-KEM-1024 shared secret implementation. See [`SharedSecret`] type for convenience.
+pub struct MlKem1024SharedSecret {}
+impl Sealed for MlKem1024SharedSecret {}
+
+impl TypeSpec for MlKem1024SharedSecret {
+    const NAME: &'static str = stringify!(SharedSecret);
+    type TypeData = ByteArrayData<SHARED_SECRET_SIZE>;
 }
 
-impl_from_trait!(SharedSecret, MlKem1024Internal::SHARED_SECRET_SIZE);
-
-construct_public! {
-    /// A type to represent the KEM `Ciphertext` that ML-KEM-1024 returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 1568 bytes.
-    (Ciphertext, test_kem_ciphertext, MlKem1024Internal::CIPHERTEXT_SIZE, MlKem1024Internal::CIPHERTEXT_SIZE)
-}
-
-impl_from_trait!(Ciphertext, MlKem1024Internal::CIPHERTEXT_SIZE);
-
-#[derive(Debug, PartialEq)]
-/// A keypair of ML-KEM-1024 keys, that are derived from a given seed.
-pub struct KeyPair {
-    seed: Seed,
-    dk: DecapsulationKey,
-}
-
-impl KeyPair {
-    #[cfg(feature = "safe_api")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    /// Generate a fresh [KeyPair].
-    pub fn generate() -> Result<Self, UnknownCryptoError> {
-        let seed = Seed::generate();
-        let (ek, dk) = KeyPairInternal::<MlKem1024Internal>::from_seed::<4, 1568, 3168>(&seed)?;
-
-        Ok(Self {
-            seed,
-            dk: DecapsulationKey {
-                value: dk,
-                cached_ek: EncapsulationKey { value: ek },
-            },
-        })
-    }
-
-    #[cfg(feature = "safe_api")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    /// Instantiate a [KeyPair] with all key validation checks, described
-    /// in FIPS-203, Section 7.1, 7.2 and 7.3.
-    ///
-    /// The output keypair is the equivalent of using `KeyPair::try_from(seed: &Seed)`, but this
-    /// can be used, in order to check whether a decapsulation key
-    /// is valid in relation to the `seed` provided.
-    pub fn from_keys(seed: &Seed, dk: &DecapsulationKey) -> Result<Self, UnknownCryptoError> {
-        let unchecked_ek = EncapsulationKey::try_from(dk)?;
-        let (ek, dk) = KeyPairInternal::<MlKem1024Internal>::from_keys::<4, 1568, 3168, 1568>(
-            seed,
-            &unchecked_ek.value,
-            &dk.value,
-        )?;
-
-        Ok(Self {
-            seed: Seed::from_slice(seed.unprotected_as_bytes()).unwrap(),
-            dk: DecapsulationKey {
-                value: dk,
-                cached_ek: EncapsulationKey { value: ek },
-            },
-        })
-    }
-
-    /// Get the [Seed] used to generate this keypair. Use this function in order to store
-    /// the private part of the keypair and regenerate it, when needed.
-    pub fn seed(&self) -> &Seed {
-        &self.seed
-    }
-
-    /// Get the public [EncapsulationKey] corresponding to this keypair.
-    pub fn public(&self) -> &EncapsulationKey {
-        &self.dk.cached_ek
-    }
-
-    /// Get the private [DecapsulationKey] used to generate this keypair. In order to store the private
-    /// part of this [KeyPair], use [KeyPair::seed()] instead.
-    pub fn private(&self) -> &DecapsulationKey {
-        &self.dk
+impl From<[u8; SHARED_SECRET_SIZE]> for Secret<MlKem1024SharedSecret> {
+    fn from(value: [u8; SHARED_SECRET_SIZE]) -> Self {
+        Self::from_data(<MlKem1024SharedSecret as TypeSpec>::TypeData::from(value))
     }
 }
 
-impl TryFrom<&Seed> for KeyPair {
-    type Error = UnknownCryptoError;
+#[derive(Debug, Clone, Copy)]
+/// ML-KEM-1024 ciphertext implementation. See [`Ciphertext`] type for convenience.
+pub struct Mlkem1024Ciphertext {}
+impl Sealed for Mlkem1024Ciphertext {}
 
-    fn try_from(value: &Seed) -> Result<Self, Self::Error> {
-        let (ek, dk) = KeyPairInternal::<MlKem1024Internal>::from_seed::<4, 1568, 3168>(value)?;
+impl TypeSpec for Mlkem1024Ciphertext {
+    const NAME: &'static str = stringify!(Ciphertext);
+    type TypeData = ByteArrayData<CIPHERTEXT_SIZE>;
+}
 
-        Ok(Self {
-            seed: Seed::from_slice(value.unprotected_as_bytes()).unwrap(),
-            dk: DecapsulationKey {
-                value: dk,
-                cached_ek: EncapsulationKey { value: ek },
-            },
-        })
+impl From<[u8; CIPHERTEXT_SIZE]> for Public<Mlkem1024Ciphertext> {
+    fn from(value: [u8; CIPHERTEXT_SIZE]) -> Self {
+        Self::from_data(<Mlkem1024Ciphertext as TypeSpec>::TypeData::from(value))
     }
 }
 
-#[derive(Debug, PartialEq)]
-/// A type to represent the `DecapsulationKey` that ML-KEM-1024 produces.
-pub struct DecapsulationKey {
-    pub(crate) value: DecapKey<4, 1568, 3168, MlKem1024Internal>,
-    // NOTE(brycx): This is simply a cache of the encapsulation key, so we avoid recomputing it
-    // on decap() operations. This is not a part of PartialEq, AsRef<> implementations or other logic
-    // pertaining to the `DecapsulationKey`, serving a purely internal purpose.
-    pub(crate) cached_ek: EncapsulationKey,
+#[derive(Debug)]
+/// ML-KEM-1024 decapsulation key implementation. See [`DecapsulationKey`] type for convenience.
+pub struct MlKem1024DecapKey {}
+impl Sealed for MlKem1024DecapKey {}
+impl TypeSpec for MlKem1024DecapKey {
+    const NAME: &'static str = stringify!(DecapsulationKey);
+    // Key-check logic in Data-impl under [`DecapKey`] (applies to `parse_bytes()`).
+    type TypeData = DecapKey<
+        { MlKem1024Internal::K },
+        { MlKem1024Internal::EK_SIZE },
+        { MlKem1024Internal::DK_SIZE },
+        MlKem1024Internal,
+    >;
 }
 
-impl PartialEq<&[u8]> for DecapsulationKey {
-    fn eq(&self, other: &&[u8]) -> bool {
-        // Defer to DecapKey<> impl ct-eq
-        self.value == *other
+#[derive(Debug, Clone, Copy)]
+/// ML-KEM-1024 encapsulation key implementation. See [`EncapsulationKey`] type for convenience.
+pub struct MlKem1024EncapKey {}
+impl Sealed for MlKem1024EncapKey {}
+impl TypeSpec for MlKem1024EncapKey {
+    const NAME: &'static str = stringify!(EncapsulationKey);
+    // Key-check logic in Data-impl under [`DecapKey`] (applies to `parse_bytes()`).
+    type TypeData =
+        EncapKey<{ MlKem1024Internal::K }, { MlKem1024Internal::EK_SIZE }, MlKem1024Internal>;
+
+    /// SECURITY: Override to vartime-[`PartialEq`] on a non-secret type, with a var-time one
+    /// to selectively only compare the encoded representation of encapsulation key.
+    fn vartime_partial_eq(lhs: &Self::TypeData, rhs: &[u8]) -> bool {
+        // NOTE: This compares only the encoded encapsulation key, so make sure the other fields
+        // aren't modifiable after instantiation, otherwise the encoded bytes might not correspond
+        // to the RingElements/Polynomials.
+        lhs.bytes.as_ref() == rhs
     }
 }
 
-impl DecapsulationKey {
-    /// Instantiate a [DecapsulationKey] with only key-checks from FIPS-203, section 7.3. Not MAL-BIND-K-CT secure.
-    pub fn unchecked_from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        let dk_unchecked =
-            DecapKey::<4, 1568, 3168, MlKem1024Internal>::unchecked_from_slice(slice)?;
-        let ek_unchecked =
-            EncapsulationKey::from_slice(dk_unchecked.get_encapsulation_key_bytes())?;
-
-        Ok(Self {
-            value: dk_unchecked,
-            cached_ek: ek_unchecked,
-        })
-    }
-
-    /// Perform decapsulation of a [Ciphertext].
-    pub fn decap(&self, c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
-        let mut c_prime_buf = [0u8; MlKem1024Internal::CIPHERTEXT_SIZE];
-
-        #[cfg(feature = "zeroize")]
-        let mut k_internal = self.value.mlkem_decap_internal_with_ek(
-            c.as_ref(),
-            &mut c_prime_buf,
-            &self.cached_ek.value,
-        )?;
-        #[cfg(not(feature = "zeroize"))]
-        let k_internal = self.value.mlkem_decap_internal_with_ek(
-            c.as_ref(),
-            &mut c_prime_buf,
-            &self.cached_ek.value,
-        )?;
-
-        let k = SharedSecret::from_slice(&k_internal)?;
-        zeroize_call!(k_internal);
-
-        Ok(k)
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-/// A type to represent the `EncapsulationKey` that ML-KEM-1024 returns.
-pub struct EncapsulationKey {
-    pub(crate) value: EncapKey<4, 1568, MlKem1024Internal>,
-}
-
-impl PartialEq<&[u8]> for EncapsulationKey {
-    fn eq(&self, other: &&[u8]) -> bool {
-        self.value == *other
-    }
-}
-
-impl TryFrom<&DecapsulationKey> for EncapsulationKey {
+impl TryFrom<&DecapsulationKey> for Public<MlKem1024EncapKey> {
     type Error = UnknownCryptoError;
 
     fn try_from(value: &DecapsulationKey) -> Result<Self, Self::Error> {
-        Ok(Self {
-            value: EncapKey::<4, 1568, MlKem1024Internal>::from_slice(
-                value.value.get_encapsulation_key_bytes(),
-            )?,
-        })
-    }
-}
-
-impl TryFrom<&[u8]> for EncapsulationKey {
-    type Error = UnknownCryptoError;
-
-    /// Instantiate a [EncapsulationKey] with key-checks from FIPS-203, section 7.2.
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        Ok(Self {
-            value: EncapKey::<4, 1568, MlKem1024Internal>::from_slice(value)?,
-        })
-    }
-}
-
-impl AsRef<[u8]> for EncapsulationKey {
-    fn as_ref(&self) -> &[u8] {
-        self.value.as_ref()
+        Ok(Self::from_data(EncapKey::<
+            { MlKem1024Internal::K },
+            { MlKem1024Internal::EK_SIZE },
+            MlKem1024Internal,
+        >::from_bytes(
+            value.data.get_encapsulation_key_bytes()
+        )?))
     }
 }
 
 impl EncapsulationKey {
-    /// Instantiate a [EncapsulationKey] with key-checks from FIPS-203, section 7.2.
-    pub fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
-        Self::try_from(slice)
-    }
-
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    /// Given the [EncapsulationKey], generate a [SharedSecret] and associated [Ciphertext].
+    /// Given the [`EncapsulationKey`], generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap(&self) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
         let mut m = zeroize_wrap!([0u8; 32]);
         getrandom::fill(m.as_mut())?;
@@ -300,7 +202,7 @@ impl EncapsulationKey {
         self.encap_deterministic(m.as_ref())
     }
 
-    /// Given the [EncapsulationKey] and randomness `m`, generate a [SharedSecret] and associated [Ciphertext].
+    /// Given the [`EncapsulationKey`] and randomness `m`, generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap_deterministic(
         &self,
         m: &[u8],
@@ -309,47 +211,172 @@ impl EncapsulationKey {
             return Err(UnknownCryptoError);
         }
 
-        let mut c = Ciphertext::from_slice(&[0u8; MlKem1024Internal::CIPHERTEXT_SIZE])?;
+        let mut c = Ciphertext::try_from(&[0u8; MlKem1024Internal::CIPHERTEXT_SIZE])?;
 
         #[cfg(feature = "zeroize")]
-        let mut k_internal = self.value.mlkem_encap_internal(m.as_ref(), &mut c.value)?;
+        let mut k_internal = self
+            .data
+            .mlkem_encap_internal(m.as_ref(), c.data.as_mut())?;
         #[cfg(not(feature = "zeroize"))]
-        let k_internal = self.value.mlkem_encap_internal(m.as_ref(), &mut c.value)?;
+        let k_internal = self
+            .data
+            .mlkem_encap_internal(m.as_ref(), c.data.as_mut())?;
 
-        let k = SharedSecret::from_slice(k_internal.as_slice())?;
+        let k = SharedSecret::try_from(k_internal.as_slice())?;
         zeroize_call!(k_internal);
 
         Ok((k, c))
     }
 }
 
-#[derive(PartialEq, Debug)]
-/// ML-KEM-1024.
-pub struct MlKem1024;
+impl DecapsulationKey {
+    /// Instantiate a [`DecapsulationKey`] with only key-checks from FIPS-203, section 7.3. Not MAL-BIND-K-CT secure.
+    pub fn unchecked_from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+        let dk_unchecked = DecapKey::<
+            { MlKem1024Internal::K },
+            { MlKem1024Internal::EK_SIZE },
+            { MlKem1024Internal::DK_SIZE },
+            MlKem1024Internal,
+        >::try_from_bytes(slice)?;
 
-impl MlKem1024 {
-    /// Encapsulation key size (bytes).
-    pub const EK_SIZE: usize = MlKem1024Internal::EK_SIZE;
-    /// Decapsulation key size (bytes).
-    pub const DK_SIZE: usize = MlKem1024Internal::DK_SIZE;
-    /// Ciphertext size (bytes).
-    pub const CIPHERTEXT_SIZE: usize = MlKem1024Internal::CIPHERTEXT_SIZE;
-    /// Shared Secret size (bytes).
-    pub const SHARED_SECRET_SIZE: usize = MlKem1024Internal::SHARED_SECRET_SIZE;
+        Ok(Self::from_data(dk_unchecked))
+    }
+
+    /// Perform decapsulation of a [`Ciphertext`].
+    pub fn decap(&self, c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
+        let ek = Public::<MlKem1024EncapKey>::try_from(self.data.get_encapsulation_key_bytes())?;
+        let mut c_prime_buf = [0u8; MlKem1024Internal::CIPHERTEXT_SIZE];
+
+        #[cfg(feature = "zeroize")]
+        let mut k_internal =
+            self.data
+                .mlkem_decap_internal_with_ek(c.as_ref(), &mut c_prime_buf, &ek.data)?;
+        #[cfg(not(feature = "zeroize"))]
+        let k_internal =
+            self.data
+                .mlkem_decap_internal_with_ek(c.as_ref(), &mut c_prime_buf, &ek.data)?;
+
+        let k = SharedSecret::try_from(&k_internal)?;
+        zeroize_call!(k_internal);
+
+        Ok(k)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+/// ML-KEM-1024 keypair.
+///
+/// This type uses cached encapsulation keys, saving the computation involved when doing decapsulation.
+/// Meaning, once [`KeyPair`] has been instantiated, it is more efficient to use for decapsulation
+/// than the [`DecapsulationKey`] type directly.
+pub struct KeyPair {
+    seed: Seed,
+    private: DecapsulationKey,
+    public: EncapsulationKey,
+}
+
+impl KP<MlKem1024DecapKey, MlKem1024EncapKey> for KeyPair {
+    fn public(&self) -> &EncapsulationKey {
+        &self.public
+    }
+
+    fn private(&self) -> &DecapsulationKey {
+        &self.private
+    }
+}
+
+impl TryFrom<&Seed> for KeyPair {
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &Seed) -> Result<Self, Self::Error> {
+        let (ek, dk) = KeyPairInternal::<MlKem1024Internal>::from_seed::<
+            { MlKem1024Internal::K },
+            { MlKem1024Internal::EK_SIZE },
+            { MlKem1024Internal::DK_SIZE },
+        >(value)?;
+
+        Ok(Self {
+            seed: Seed::from_data(value.data.clone()),
+            private: Secret::<MlKem1024DecapKey>::from_data(dk),
+            public: Public::<MlKem1024EncapKey>::from_data(ek),
+        })
+    }
+}
+
+impl KeyPair {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    /// Generate a fresh [`KeyPair`].
+    pub fn generate() -> Result<Self, UnknownCryptoError> {
+        let seed = Seed::generate()?;
+        Self::new(seed)
+    }
+
+    /// Reference to the private [`Seed`].
+    pub fn seed(&self) -> &Seed {
+        &self.seed
+    }
+
+    /// Create a new instance from a private [`Seed`].
+    pub fn new(seed: Seed) -> Result<Self, UnknownCryptoError> {
+        let (ek, dk) = KeyPairInternal::<MlKem1024Internal>::from_seed::<
+            { MlKem1024Internal::K },
+            { MlKem1024Internal::EK_SIZE },
+            { MlKem1024Internal::DK_SIZE },
+        >(&seed)?;
+
+        Ok(Self {
+            seed,
+            private: DecapsulationKey::from_data(dk),
+            public: EncapsulationKey::from_data(ek),
+        })
+    }
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    /// Given the [EncapsulationKey], generate a [SharedSecret] and associated [Ciphertext].
-    pub fn encap(ek: &EncapsulationKey) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
-        ek.encap()
+    /// Instantiate a [`KeyPair`] with all key validation checks, described
+    /// in FIPS-203, Section 7.1, 7.2 and 7.3.
+    ///
+    /// The output keypair is the equivalent of using [`Self::try_from`], but this
+    /// can be used, in order to check whether a decapsulation key
+    /// is valid in relation to the `seed` provided.
+    pub fn from_keys(seed: &Seed, dk: &DecapsulationKey) -> Result<Self, UnknownCryptoError> {
+        let unchecked_ek = Public::<MlKem1024EncapKey>::try_from(dk)?;
+        let (ek, dk) = KeyPairInternal::<MlKem1024Internal>::from_keys::<
+            { MlKem1024Internal::K },
+            { MlKem1024Internal::EK_SIZE },
+            { MlKem1024Internal::DK_SIZE },
+            { MlKem1024Internal::CIPHERTEXT_SIZE },
+        >(seed, &unchecked_ek.data, &dk.data)?;
+
+        Ok(Self {
+            seed: Seed::from_data(seed.data.clone()),
+            private: Secret::<MlKem1024DecapKey>::from_data(dk),
+            public: Public::<MlKem1024EncapKey>::from_data(ek),
+        })
     }
 
-    /// Given the [DecapsulationKey], produce a [SharedSecret] using the [Ciphertext].
-    pub fn decap(
-        dk: &DecapsulationKey,
-        c: &Ciphertext,
-    ) -> Result<SharedSecret, UnknownCryptoError> {
-        dk.decap(c)
+    /// Perform decapsulation of a [`Ciphertext`], using internally cached [`EncapsulationKey`].
+    pub fn decap(&self, c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
+        let mut c_prime_buf = [0u8; MlKem1024Internal::CIPHERTEXT_SIZE];
+
+        #[cfg(feature = "zeroize")]
+        let mut k_internal = self.private.data.mlkem_decap_internal_with_ek(
+            c.as_ref(),
+            &mut c_prime_buf,
+            &self.public.data,
+        )?;
+        #[cfg(not(feature = "zeroize"))]
+        let k_internal = self.private.data.mlkem_decap_internal_with_ek(
+            c.as_ref(),
+            &mut c_prime_buf,
+            &self.public.data,
+        )?;
+
+        let k = SharedSecret::try_from(&k_internal)?;
+        zeroize_call!(k_internal);
+
+        Ok(k)
     }
 }
 
@@ -357,60 +384,100 @@ impl MlKem1024 {
 mod tests {
     use super::*;
 
+    // NOTE(brycx): SecretNewtype/PublicNewtype tests aren't run for Encapsulation/Decapsulation keys
+    // because their underling TypeData structure is not compatible with the generic tests.
+
+    #[test]
+    fn test_shared_secret() {
+        use crate::test_framework::newtypes::secret::SecretNewtype;
+        SecretNewtype::test_no_generate::<
+            SHARED_SECRET_SIZE,
+            SHARED_SECRET_SIZE,
+            MlKem1024SharedSecret,
+        >();
+        // Test of From<[u8; N]>
+        assert_ne!(
+            SharedSecret::from([0u8; SHARED_SECRET_SIZE]),
+            SharedSecret::from([1u8; SHARED_SECRET_SIZE])
+        )
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_encapuslation_key_serialization() {
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_serialization::<EK_SIZE, MlKem1024EncapKey>();
+    }
+
+    #[test]
+    fn test_ciphertext() {
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_no_generate::<CIPHERTEXT_SIZE, CIPHERTEXT_SIZE, Mlkem1024Ciphertext>();
+        // Test of From<[u8; N]>
+        assert_ne!(
+            Ciphertext::from([0u8; CIPHERTEXT_SIZE]),
+            Ciphertext::from([1u8; CIPHERTEXT_SIZE])
+        );
+
+        #[cfg(feature = "serde")]
+        PublicNewtype::test_serialization::<CIPHERTEXT_SIZE, Mlkem1024Ciphertext>();
+    }
+
     #[cfg(feature = "safe_api")]
     use crate::test_framework::kem_interface::{KemTester, TestableKem};
 
     #[cfg(feature = "safe_api")]
-    impl TestableKem<SharedSecret, Ciphertext> for MlKem1024 {
+    impl TestableKem<SharedSecret, Ciphertext> for KeyPair {
         fn keygen(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
-            let kp = KeyPair::try_from(&Seed::from_slice(seed).unwrap()).unwrap();
+            let kp = KeyPair::try_from(&Seed::try_from(seed)?)?;
 
             Ok((
-                kp.dk.cached_ek.as_ref().to_vec(),
-                kp.dk.value.unprotected_as_bytes().to_vec(),
+                kp.public.data.bytes.as_ref().to_vec(),
+                kp.private.data.bytes.as_ref().to_vec(),
             ))
         }
 
         fn ciphertext_from_bytes(b: &[u8]) -> Result<Ciphertext, UnknownCryptoError> {
-            Ciphertext::from_slice(b)
+            Ciphertext::try_from(b)
         }
 
         fn encap(ek: &[u8]) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
-            let ek = EncapsulationKey::from_slice(ek).unwrap();
+            let ek = Public::<MlKem1024EncapKey>::try_from(ek)?;
             ek.encap()
         }
 
         fn decap(dk: &[u8], c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
-            let dk = DecapsulationKey::unchecked_from_slice(dk).unwrap();
+            let dk = DecapsulationKey::unchecked_from_slice(dk)?;
             dk.decap(c)
         }
     }
 
     #[test]
     fn test_keypair_dk_ek_match_internal() {
-        let seed = Seed::from_slice(&[128u8; 64]).unwrap();
+        let seed = Seed::try_from(&[128u8; 64]).unwrap();
         let kp = KeyPair::try_from(&seed).unwrap();
-        assert_eq!(kp.public(), &kp.private().cached_ek);
+        assert_eq!(
+            &kp.public().as_ref(),
+            &kp.private().data.get_encapsulation_key_bytes()
+        );
+        assert_eq!(kp.seed(), &seed);
     }
 
     #[test]
     #[cfg(feature = "safe_api")]
     fn test_dk_cached_ek() {
-        let seed = Seed::from_slice(&[128u8; 64]).unwrap();
+        let seed = Seed::try_from(&[128u8; 64]).unwrap();
         let kp = KeyPair::try_from(&seed).unwrap();
         let (ss_pubapi, ct_pubapi) = kp.public().encap_deterministic(&[125u8; 32]).unwrap();
         let mut c_prime = [0u8; MlKem1024Internal::CIPHERTEXT_SIZE];
         // This call re-computes encap key internally from the bytes a decapkey would store.
         let ss_privapi = kp
             .private()
-            .value
+            .data
             .mlkem_decap_internal(ct_pubapi.as_ref(), &mut c_prime)
             .unwrap();
-        assert_eq!(ss_privapi.as_ref(), ss_pubapi.unprotected_as_bytes());
-        assert_eq!(
-            MlKem1024::decap(kp.private(), &ct_pubapi).unwrap(),
-            ss_pubapi
-        );
+        assert_eq!(ss_privapi.as_ref(), ss_pubapi.unprotected_as_ref());
+        assert_eq!(kp.decap(&ct_pubapi).unwrap(), ss_pubapi);
     }
 
     #[cfg(feature = "safe_api")]
@@ -418,8 +485,8 @@ mod tests {
     fn test_dk_to_ek_conversions() {
         let kp = KeyPair::generate().unwrap();
         assert_eq!(
-            kp.dk.cached_ek,
-            EncapsulationKey::try_from(kp.private()).unwrap()
+            Public::<MlKem1024EncapKey>::try_from(kp.private()).unwrap(),
+            kp.public.as_ref(),
         );
     }
 
@@ -443,11 +510,11 @@ mod tests {
     #[cfg(feature = "safe_api")]
     #[test]
     fn test_dk_ek_partialeq() {
-        let s0 = Seed::generate();
+        let s0 = Seed::generate().unwrap();
         let kp = KeyPair::try_from(&s0).unwrap();
 
-        let dk_bytes = kp.private().value.bytes;
-        let ek_bytes = kp.public().value.bytes;
+        let dk_bytes = kp.private().data.bytes;
+        let ek_bytes = kp.public().data.bytes;
 
         assert_eq!(
             KeyPair::try_from(&s0).unwrap().private(),
@@ -459,13 +526,11 @@ mod tests {
     #[cfg(feature = "safe_api")]
     #[test]
     fn test_keypair_from_keys() {
-        let s0 = Seed::generate();
-        let s1 = Seed::generate();
+        let s0 = Seed::generate().unwrap();
+        let s1 = Seed::generate().unwrap();
 
         let kp0 = KeyPair::try_from(&s0).unwrap();
         let kp1 = KeyPair::try_from(&s1).unwrap();
-        assert_eq!(kp0.seed(), &s0);
-        assert_eq!(kp1.seed(), &s1);
 
         assert!(KeyPair::from_keys(&s0, kp0.private()).is_ok());
         assert!(KeyPair::from_keys(&s1, kp1.private()).is_ok());
@@ -474,26 +539,24 @@ mod tests {
 
         let kp0_keys = KeyPair::from_keys(&s0, kp0.private()).unwrap();
         let kp1_keys = KeyPair::from_keys(&s1, kp1.private()).unwrap();
-        assert_eq!(kp0.seed(), kp0_keys.seed());
-        assert_eq!(kp1.seed(), kp1_keys.seed());
 
         assert_eq!(kp0.private(), kp0_keys.private());
         assert_eq!(kp0.public(), kp0_keys.public());
+        assert_eq!(kp1.private(), kp1_keys.private());
+        assert_eq!(kp1.public(), kp1_keys.public());
     }
 
     #[cfg(feature = "safe_api")]
     #[test]
     fn run_basic_kem_tests() {
-        let seed = Seed::generate();
-        KemTester::<MlKem1024, SharedSecret, Ciphertext>::run_all_tests(
-            seed.unprotected_as_bytes(),
-        );
+        let seed = Seed::generate().unwrap();
+        KemTester::<KeyPair, SharedSecret, Ciphertext>::run_all_tests(seed.unprotected_as_ref());
     }
 
     #[test]
     /// Basic no_std-compatible test.
     fn basic_roundtrip() {
-        let seed = Seed::from_slice(&[127u8; 64]).unwrap();
+        let seed = Seed::try_from(&[127u8; 64]).unwrap();
         let kp = KeyPair::try_from(&seed).unwrap();
 
         let (k, c) = kp.public().encap_deterministic(&[255u8; 32]).unwrap();

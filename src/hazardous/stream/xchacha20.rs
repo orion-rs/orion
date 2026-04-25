@@ -65,8 +65,8 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::stream::xchacha20;
 //!
-//! let secret_key = xchacha20::SecretKey::generate();
-//! let nonce = xchacha20::Nonce::generate();
+//! let secret_key = xchacha20::SecretKey::generate()?;
+//! let nonce = xchacha20::Nonce::generate()?;
 //! let message = "Data to protect".as_bytes();
 //!
 //! // Length of this message is 15
@@ -85,29 +85,47 @@
 //! [`SecretKey::generate()`]: xchacha20::SecretKey::generate()
 //! [`Nonce::generate()`]: xchacha20::Nonce::generate()
 //! [`XChaCha20Poly1305`]: super::aead::xchacha20poly1305
+use crate::generics::GeneratePublic;
+#[cfg(feature = "safe_api")]
+use crate::generics::sealed::Data;
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{
     errors::UnknownCryptoError,
-    hazardous::stream::chacha20::{self, Nonce as IETFNonce, IETF_CHACHA_NONCESIZE},
+    generics::{ByteArrayData, Public, TypeSpec, sealed::Sealed},
+    hazardous::stream::chacha20::{self, IETF_CHACHA_NONCESIZE, Nonce as IETFNonce},
 };
 
 /// The nonce size for XChaCha20.
 pub const XCHACHA_NONCESIZE: usize = 24;
 
-construct_public! {
-    /// A type that represents a `Nonce` that XChaCha20, XChaCha20-Poly1305 use.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 24 bytes.
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (Nonce, test_nonce, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE, XCHACHA_NONCESIZE)
+#[derive(Debug, Clone, Copy)]
+/// Marker type for ChaCha20 nonce. See [`Nonce`] type for convenience.
+pub struct XChaCha20Nonce {}
+impl Sealed for XChaCha20Nonce {}
+
+impl TypeSpec for XChaCha20Nonce {
+    const NAME: &'static str = stringify!(Nonce);
+    type TypeData = ByteArrayData<XCHACHA_NONCESIZE>;
 }
 
-impl_from_trait!(Nonce, XCHACHA_NONCESIZE);
+impl From<[u8; XCHACHA_NONCESIZE]> for Public<XChaCha20Nonce> {
+    fn from(value: [u8; XCHACHA_NONCESIZE]) -> Self {
+        Self::from_data(<XChaCha20Nonce as TypeSpec>::TypeData::from(value))
+    }
+}
+
+impl GeneratePublic for XChaCha20Nonce {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Public<XChaCha20Nonce>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(XCHACHA_NONCESIZE)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Public::from_data(data))
+    }
+}
+
+/// A type that represents a [`Nonce`] that XChaCha20 and XChaCha20-Poly1305 use.
+pub type Nonce = Public<XChaCha20Nonce>;
 
 /// Generate a subkey using HChaCha20 for XChaCha20 and corresponding nonce.
 pub(crate) fn subkey_and_nonce(secret_key: &SecretKey, nonce: &Nonce) -> (SecretKey, IETFNonce) {
@@ -152,21 +170,36 @@ pub fn decrypt(
 mod public {
     use super::*;
 
+    #[test]
+    fn test_xchacha20_nonce() {
+        use super::*;
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_with_generate::<
+            XCHACHA_NONCESIZE,
+            XCHACHA_NONCESIZE,
+            XCHACHA_NONCESIZE,
+            XChaCha20Nonce,
+        >();
+
+        #[cfg(feature = "serde")]
+        PublicNewtype::test_serialization::<XCHACHA_NONCESIZE, XChaCha20Nonce>();
+    }
+
     mod test_encrypt_decrypt {
         use super::*;
         use crate::test_framework::streamcipher_interface::*;
 
         impl TestingRandom for Nonce {
-            fn gen() -> Self {
-                Self::generate()
+            fn gen_new() -> Self {
+                Self::generate().unwrap()
             }
         }
 
         #[quickcheck]
         #[cfg(feature = "safe_api")]
         fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
-            let secret_key = SecretKey::generate();
-            let nonce = Nonce::generate();
+            let secret_key = SecretKey::generate().unwrap();
+            let nonce = Nonce::generate().unwrap();
             StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
             test_diff_params_diff_output(&encrypt, &decrypt);
 

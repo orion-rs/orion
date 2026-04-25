@@ -201,6 +201,6 @@ pub(crate) mod private {
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export>
         fn export(&self, exporter_context: &[u8], out: &mut [u8])
-            -> Result<(), UnknownCryptoError>;
+        -> Result<(), UnknownCryptoError>;
     }
 }

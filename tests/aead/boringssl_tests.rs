@@ -1,5 +1,5 @@
-use crate::aead::wycheproof_test_runner;
 use crate::TestCaseReader;
+use crate::aead::wycheproof_test_runner;
 use orion::hazardous::{
     mac::poly1305::POLY1305_OUTSIZE,
     stream::{
@@ -51,18 +51,20 @@ fn boringssl_runner(path: &str, is_ietf: bool) {
             tc.outcome = false;
         }
 
-        assert!(wycheproof_test_runner(
-            &key[..],
-            &nonce[..],
-            &ad[..],
-            &tag[..],
-            &input[..],
-            &expected_output[..],
-            tc.outcome,
-            tc.test_case_number,
-            is_ietf,
-        )
-        .is_ok());
+        assert!(
+            wycheproof_test_runner(
+                &key[..],
+                &nonce[..],
+                &ad[..],
+                &tag[..],
+                &input[..],
+                &expected_output[..],
+                tc.outcome,
+                tc.test_case_number,
+                is_ietf,
+            )
+            .is_ok()
+        );
 
         // Read the next one
         test_case = boringssl_reader.next();

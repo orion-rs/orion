@@ -51,7 +51,7 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::mac::blake2b::{Blake2b, SecretKey};
 //!
-//! let key = SecretKey::generate();
+//! let key = SecretKey::generate()?;
 //!
 //! let mut state = Blake2b::new(&key, 64)?;
 //! state.update(b"Some data")?;
@@ -68,30 +68,81 @@
 //! [`hash::blake2::blake2b`]: crate::hazardous::hash::blake2::blake2b
 
 use crate::errors::UnknownCryptoError;
+use crate::generics::GenerateSecret;
+#[cfg(feature = "safe_api")]
+use crate::generics::sealed::Data;
+use crate::generics::sealed::Sealed;
+use crate::generics::{ByteArrayVecData, Secret, TypeSpec};
 use crate::hazardous::hash::blake2::blake2b_core::{self, BLAKE2B_KEYSIZE, BLAKE2B_OUTSIZE};
+#[cfg(feature = "serde")]
+use alloc::vec::Vec;
 
-construct_secret_key! {
-    /// A type to represent the secret key that BLAKE2b uses for keyed mode.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is empty.
-    /// - `slice` is greater than 64 bytes.
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (SecretKey, test_secret_key, 1, BLAKE2B_KEYSIZE, 32)
+#[derive(Debug)]
+/// Marker type for BLAKE2b key. See [`SecretKey`] type for convenience.
+pub struct Blake2bKey {}
+impl Sealed for Blake2bKey {}
+
+impl TypeSpec for Blake2bKey {
+    const NAME: &'static str = stringify!(SecretKey);
+    type TypeData = ByteArrayVecData<1, BLAKE2B_KEYSIZE>;
 }
 
-construct_tag! {
-    /// A type to represent the `Tag` that BLAKE2b returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is empty.
-    /// - `slice` is greater than 64 bytes.
-    (Tag, test_tag, 1, BLAKE2B_OUTSIZE)
+impl GenerateSecret for Blake2bKey {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Secret<Blake2bKey>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(32)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Secret::from_data(data))
+    }
+}
+
+/// A type to represent the secret key that BLAKE2b uses for keyed mode.
+pub type SecretKey = Secret<Blake2bKey>;
+
+#[derive(Debug, Clone)]
+/// Marker type for BLAKE2b MAC/Tag. See [`Tag`] type for convenience.
+pub struct Blake2bTag {}
+impl Sealed for Blake2bTag {}
+
+impl TypeSpec for Blake2bTag {
+    const NAME: &'static str = stringify!(Tag);
+    type TypeData = ByteArrayVecData<1, BLAKE2B_OUTSIZE>;
+}
+
+/// A type to represent the MAC/Tag that BLAKE2b returns for keyed mode.
+pub type Tag = Secret<Blake2bTag>;
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+/// This type tries to serialize as a `&[u8]` would. Note that the serialized
+/// type likely does not have the same protections that Orion provides, such
+/// as constant-time operations. A good rule of thumb is to only serialize
+/// these types for storage. Don't operate on the serialized types.
+impl serde::Serialize for Tag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        let bytes: &[u8] = &self.data.as_ref();
+        bytes.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+/// This type tries to deserialize as a `Vec<u8>` would. If it succeeds, the public data
+/// will be built using `Self::try_from`.
+///
+/// Note that **this allocates** once to store the referenced bytes on the heap.
+impl<'de> serde::Deserialize<'de> for Tag {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let bytes = Vec::<u8>::deserialize(deserializer)?;
+        TryFrom::try_from(bytes.as_slice()).map_err(serde::de::Error::custom)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -105,14 +156,14 @@ impl Blake2b {
     /// Initialize a `Blake2b` struct with a given size (in bytes) and key.
     pub fn new(secret_key: &SecretKey, size: usize) -> Result<Self, UnknownCryptoError> {
         Ok(Self {
-            _state: blake2b_core::State::_new(secret_key.unprotected_as_bytes(), size)?,
+            _state: blake2b_core::State::_new(secret_key.unprotected_as_ref(), size)?,
         })
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Reset to `new()` state.
     pub fn reset(&mut self, secret_key: &SecretKey) -> Result<(), UnknownCryptoError> {
-        self._state._reset(secret_key.unprotected_as_bytes())
+        self._state._reset(secret_key.unprotected_as_ref())
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -127,7 +178,7 @@ impl Blake2b {
         let mut tmp = zeroize_wrap!([0u8; BLAKE2B_OUTSIZE]);
         self._state._finalize(&mut tmp)?;
 
-        Tag::from_slice(&tmp[..self._state.size])
+        Tag::try_from(&tmp[..self._state.size])
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -151,10 +202,43 @@ impl Blake2b {
 
 #[cfg(test)]
 mod public {
+    use super::*;
+
+    #[test]
+    fn test_blake2b_key() {
+        use crate::test_framework::newtypes::secret::SecretNewtype;
+        SecretNewtype::test_with_generate::<1, BLAKE2B_KEYSIZE, 32, Blake2bKey>();
+    }
+
+    #[test]
+    fn test_blake2b_tag() {
+        use crate::test_framework::newtypes::secret::SecretNewtype;
+        SecretNewtype::test_no_generate::<1, BLAKE2B_OUTSIZE, Blake2bTag>();
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_serde_serialized_equivalence_to_bytes_fn() {
+        let bytes = [38u8; BLAKE2B_OUTSIZE];
+        let secret_type = Tag::try_from(&bytes).unwrap();
+        let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+        let serialized_from_secret_type = serde_json::to_value(&secret_type).unwrap();
+        assert_eq!(serialized_from_bytes, serialized_from_secret_type);
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_serde_deserialized_equivalence_to_bytes_fn() {
+        let bytes = [38u8; BLAKE2B_OUTSIZE];
+        let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+        let secret_type: Tag = serde_json::from_value(serialized_from_bytes).unwrap();
+        assert_eq!(secret_type.unprotected_as_ref(), bytes.as_slice());
+    }
+
     mod test_streaming_interface_no_key {
         use crate::errors::UnknownCryptoError;
         use crate::hazardous::hash::blake2::blake2b_core::{
-            compare_blake2b_states, BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE,
+            BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE, compare_blake2b_states,
         };
         use crate::hazardous::mac::blake2b::{Blake2b, SecretKey, Tag};
         use crate::test_framework::incremental_interface::{
@@ -165,7 +249,7 @@ mod public {
 
         impl TestableStreamingContext<Tag> for Blake2b {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                let key = SecretKey::from_slice(&KEY).unwrap();
+                let key = SecretKey::try_from(KEY.as_slice()).unwrap();
                 self.reset(&key)
             }
 
@@ -178,7 +262,7 @@ mod public {
             }
 
             fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
-                let key = SecretKey::from_slice(&KEY).unwrap();
+                let key = SecretKey::try_from(KEY.as_slice()).unwrap();
                 let mut ctx = Blake2b::new(&key, BLAKE2B_OUTSIZE)?;
                 ctx.update(input)?;
                 ctx.finalize()
@@ -201,7 +285,7 @@ mod public {
 
         #[test]
         fn default_consistency_tests() {
-            let key = SecretKey::from_slice(&KEY).unwrap();
+            let key = SecretKey::try_from(KEY.as_slice()).unwrap();
             let initial_state: Blake2b = Blake2b::new(&key, BLAKE2B_OUTSIZE).unwrap();
 
             let test_runner = StreamingContextConsistencyTester::<Tag, Blake2b>::new(
@@ -216,7 +300,7 @@ mod public {
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-            let key = SecretKey::from_slice(&KEY).unwrap();
+            let key = SecretKey::try_from(KEY.as_slice()).unwrap();
             let initial_state: Blake2b = Blake2b::new(&key, BLAKE2B_OUTSIZE).unwrap();
 
             let test_runner = StreamingContextConsistencyTester::<Tag, Blake2b>::new(
@@ -233,7 +317,7 @@ mod public {
 
         #[test]
         fn test_init_size() {
-            let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
+            let sk = SecretKey::try_from([0u8; 32].as_slice()).unwrap();
             assert!(Blake2b::new(&sk, 0).is_err());
             assert!(Blake2b::new(&sk, 65).is_err());
             assert!(Blake2b::new(&sk, 1).is_ok());
@@ -250,11 +334,11 @@ mod public {
         /// When using a different key, verify() should always yield an error.
         /// NOTE: Using different and same input data is tested with TestableStreamingContext.
         fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-            let sk = SecretKey::generate();
+            let sk = SecretKey::generate().unwrap();
             let mut state = Blake2b::new(&sk, 64).unwrap();
             state.update(&data[..]).unwrap();
             let tag = state.finalize().unwrap();
-            let bad_sk = SecretKey::generate();
+            let bad_sk = SecretKey::generate().unwrap();
 
             Blake2b::verify(&tag, &bad_sk, 64, &data[..]).is_err()
         }
@@ -269,7 +353,7 @@ mod public {
                 (_, _) => (32, 64),
             };
 
-            let sk = SecretKey::generate();
+            let sk = SecretKey::generate().unwrap();
             let mut state = Blake2b::new(&sk, size_one).unwrap();
             state.update(&data[..]).unwrap();
             let tag = state.finalize().unwrap();
@@ -376,7 +460,7 @@ mod public {
         #[test]
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         fn test_produce_same_state() {
-            let sk = SecretKey::from_slice(b"Testing").unwrap();
+            let sk = SecretKey::try_from(b"Testing".as_slice()).unwrap();
             produces_same_state(&sk, 1, b"Tests");
             produces_same_state(&sk, 32, b"Tests");
             produces_same_state(&sk, 64, b"Tests");
@@ -386,7 +470,7 @@ mod public {
         #[test]
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         fn test_produce_same_hash() {
-            let sk = SecretKey::from_slice(b"Testing").unwrap();
+            let sk = SecretKey::try_from(b"Testing".as_slice()).unwrap();
             produces_same_hash(&sk, 1, b"Tests");
             produces_same_hash(&sk, 32, b"Tests");
             produces_same_hash(&sk, 64, b"Tests");
@@ -407,7 +491,7 @@ mod public {
 
             if (1..=BLAKE2B_OUTSIZE).contains(&size) {
                 // Will panic on incorrect results.
-                let sk = SecretKey::generate();
+                let sk = SecretKey::generate().unwrap();
                 produces_same_hash(&sk, size, &data[..]);
             }
 
@@ -423,7 +507,7 @@ mod public {
 
             if (1..=BLAKE2B_OUTSIZE).contains(&size) {
                 // Will panic on incorrect results.
-                let sk = SecretKey::generate();
+                let sk = SecretKey::generate().unwrap();
                 produces_same_state(&sk, size, &data[..]);
             }
 

@@ -408,7 +408,7 @@ mod private {
     }
 
     mod test_increment_offset {
-        use crate::hazardous::hash::blake2::blake2b_core::{State, BLAKE2B_BLOCKSIZE, IV};
+        use crate::hazardous::hash::blake2::blake2b_core::{BLAKE2B_BLOCKSIZE, IV, State};
         use crate::util::u64x4::U64x4;
 
         #[test]

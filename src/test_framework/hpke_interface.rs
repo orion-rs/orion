@@ -22,7 +22,7 @@
 
 use crate::errors::UnknownCryptoError;
 use core::ops::Range;
-use rand::{rngs::SmallRng, Rng, RngExt, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng, rngs::SmallRng};
 
 /// A testable HPKE implementation. This is implemented separately for each HPKE mode.
 pub trait TestableHpke: Clone {
@@ -99,6 +99,7 @@ pub trait TestableHpke: Clone {
     fn export(&self, export_context: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError>;
 }
 
+#[derive(Debug)]
 pub struct HpkeTester<T: TestableHpke> {
     hpke_sender: T,
     hpke_recipient: T,
@@ -186,15 +187,21 @@ impl<T: TestableHpke> HpkeTester<T> {
         let mut out_ct1 = vec![0u8; ciphertexts[1].len() - 16];
         let mut out_ct2 = vec![0u8; ciphertexts[2].len() - 16];
 
-        assert!(recipient
-            .open(&ciphertexts[0], &aads[0], &mut out_ct0)
-            .is_ok());
-        assert!(recipient
-            .open(&ciphertexts[1], &aads[1], &mut out_ct1)
-            .is_ok());
-        assert!(recipient
-            .open(&ciphertexts[2], &aads[2], &mut out_ct2)
-            .is_ok());
+        assert!(
+            recipient
+                .open(&ciphertexts[0], &aads[0], &mut out_ct0)
+                .is_ok()
+        );
+        assert!(
+            recipient
+                .open(&ciphertexts[1], &aads[1], &mut out_ct1)
+                .is_ok()
+        );
+        assert!(
+            recipient
+                .open(&ciphertexts[2], &aads[2], &mut out_ct2)
+                .is_ok()
+        );
         assert_eq!(out_ct0, plaintexts[0]);
         assert_eq!(out_ct1, plaintexts[1]);
         assert_eq!(out_ct2, plaintexts[2]);
@@ -205,18 +212,26 @@ impl<T: TestableHpke> HpkeTester<T> {
         let mut out_ct1 = vec![0u8; ciphertexts[1].len() - 16];
         let mut out_ct2 = vec![0u8; ciphertexts[2].len() - 16];
 
-        assert!(recipient
-            .open(&ciphertexts[0], &aads[0], &mut out_ct0)
-            .is_ok());
-        assert!(recipient
-            .open(&ciphertexts[2], &aads[2], &mut out_ct2)
-            .is_err());
-        assert!(recipient
-            .open(&ciphertexts[1], &aads[1], &mut out_ct1)
-            .is_ok());
-        assert!(recipient
-            .open(&ciphertexts[2], &aads[2], &mut out_ct2)
-            .is_ok());
+        assert!(
+            recipient
+                .open(&ciphertexts[0], &aads[0], &mut out_ct0)
+                .is_ok()
+        );
+        assert!(
+            recipient
+                .open(&ciphertexts[2], &aads[2], &mut out_ct2)
+                .is_err()
+        );
+        assert!(
+            recipient
+                .open(&ciphertexts[1], &aads[1], &mut out_ct1)
+                .is_ok()
+        );
+        assert!(
+            recipient
+                .open(&ciphertexts[2], &aads[2], &mut out_ct2)
+                .is_ok()
+        );
         assert_eq!(out_ct0, plaintexts[0]);
         assert_eq!(out_ct1, plaintexts[1]);
         assert_eq!(out_ct2, plaintexts[2]);
@@ -227,21 +242,31 @@ impl<T: TestableHpke> HpkeTester<T> {
         let mut out_ct1 = vec![0u8; ciphertexts[1].len() - 16];
         let mut out_ct2 = vec![0u8; ciphertexts[2].len() - 16];
 
-        assert!(recipient
-            .open(&ciphertexts[2], &aads[2], &mut out_ct2)
-            .is_err());
-        assert!(recipient
-            .open(&ciphertexts[1], &aads[1], &mut out_ct1)
-            .is_err());
-        assert!(recipient
-            .open(&ciphertexts[0], &aads[0], &mut out_ct0)
-            .is_ok());
-        assert!(recipient
-            .open(&ciphertexts[1], &aads[1], &mut out_ct1)
-            .is_ok());
-        assert!(recipient
-            .open(&ciphertexts[2], &aads[2], &mut out_ct2)
-            .is_ok());
+        assert!(
+            recipient
+                .open(&ciphertexts[2], &aads[2], &mut out_ct2)
+                .is_err()
+        );
+        assert!(
+            recipient
+                .open(&ciphertexts[1], &aads[1], &mut out_ct1)
+                .is_err()
+        );
+        assert!(
+            recipient
+                .open(&ciphertexts[0], &aads[0], &mut out_ct0)
+                .is_ok()
+        );
+        assert!(
+            recipient
+                .open(&ciphertexts[1], &aads[1], &mut out_ct1)
+                .is_ok()
+        );
+        assert!(
+            recipient
+                .open(&ciphertexts[2], &aads[2], &mut out_ct2)
+                .is_ok()
+        );
         assert_eq!(out_ct0, plaintexts[0]);
         assert_eq!(out_ct1, plaintexts[1]);
         assert_eq!(out_ct2, plaintexts[2]);
@@ -427,84 +452,100 @@ impl<T: TestableHpke> HpkeTester<T> {
         let (recipient_priv, recipient_pub) = T::gen_kp(valid_kem_ikm_recipient).unwrap();
 
         let mut ct = vec![0u8; T::kem_ct_size()];
-        assert!(T::setup_fresh_sender(
-            &recipient_pub,
-            valid_info,
-            valid_psk,
-            valid_psk_id,
-            &sender_priv,
-            &mut ct
-        )
-        .is_ok());
-        assert!(T::setup_fresh_recipient(
-            &ct,
-            &recipient_priv,
-            valid_info,
-            valid_psk,
-            valid_psk_id,
-            &sender_pub
-        )
-        .is_ok());
+        assert!(
+            T::setup_fresh_sender(
+                &recipient_pub,
+                valid_info,
+                valid_psk,
+                valid_psk_id,
+                &sender_priv,
+                &mut ct
+            )
+            .is_ok()
+        );
+        assert!(
+            T::setup_fresh_recipient(
+                &ct,
+                &recipient_priv,
+                valid_info,
+                valid_psk,
+                valid_psk_id,
+                &sender_pub
+            )
+            .is_ok()
+        );
 
         // info (applies to all modes)
-        assert!(T::setup_fresh_sender(
-            &recipient_pub,
-            &[0u8; 65],
-            valid_psk,
-            valid_psk_id,
-            &sender_priv,
-            &mut ct
-        )
-        .is_err());
-        assert!(T::setup_fresh_recipient(
-            &ct,
-            &recipient_priv,
-            &[0u8; 65],
-            valid_psk,
-            valid_psk_id,
-            &sender_pub
-        )
-        .is_err());
+        assert!(
+            T::setup_fresh_sender(
+                &recipient_pub,
+                &[0u8; 65],
+                valid_psk,
+                valid_psk_id,
+                &sender_priv,
+                &mut ct
+            )
+            .is_err()
+        );
+        assert!(
+            T::setup_fresh_recipient(
+                &ct,
+                &recipient_priv,
+                &[0u8; 65],
+                valid_psk,
+                valid_psk_id,
+                &sender_pub
+            )
+            .is_err()
+        );
 
         // psk and psk_id
         if T::HPKE_MODE == 0x01u8 || T::HPKE_MODE == 0x03u8 {
-            assert!(T::setup_fresh_sender(
-                &recipient_pub,
-                valid_info,
-                &[0u8; 65],
-                valid_psk_id,
-                &sender_priv,
-                &mut ct
-            )
-            .is_err());
-            assert!(T::setup_fresh_recipient(
-                &ct,
-                &recipient_priv,
-                valid_info,
-                &[0u8; 65],
-                valid_psk_id,
-                &sender_pub
-            )
-            .is_err());
+            assert!(
+                T::setup_fresh_sender(
+                    &recipient_pub,
+                    valid_info,
+                    &[0u8; 65],
+                    valid_psk_id,
+                    &sender_priv,
+                    &mut ct
+                )
+                .is_err()
+            );
+            assert!(
+                T::setup_fresh_recipient(
+                    &ct,
+                    &recipient_priv,
+                    valid_info,
+                    &[0u8; 65],
+                    valid_psk_id,
+                    &sender_pub
+                )
+                .is_err()
+            );
 
-            assert!(T::setup_fresh_sender(
-                &recipient_pub,
-                valid_info,
-                valid_psk,
-                &[0u8; 65],
-                &sender_priv,
-                &mut ct
-            )
-            .is_err());
-            assert!(T::setup_fresh_recipient(
-                &ct,
-                &recipient_priv,
-                valid_info,
-                valid_psk,
-                &[0u8; 65],
-                &sender_pub
-            )
-            .is_err());
+            assert!(
+                T::setup_fresh_sender(
+                    &recipient_pub,
+                    valid_info,
+                    valid_psk,
+                    &[0u8; 65],
+                    &sender_priv,
+                    &mut ct
+                )
+                .is_err()
+            );
+            assert!(
+                T::setup_fresh_recipient(
+                    &ct,
+                    &recipient_priv,
+                    valid_info,
+                    valid_psk,
+                    &[0u8; 65],
+                    &sender_pub
+                )
+                .is_err()
+            );
         }
 
         // ikm (NOTE/TODO: we do NOT restrict this to 64 MAX, this would be breaking change)

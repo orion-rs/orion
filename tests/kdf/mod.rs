@@ -28,7 +28,7 @@ macro_rules! impl_hkdf_test_runner (($name:ident, $extract:ident, $derive_key:id
     ) {
         if expected_prk.is_some() {
             let actual_prk = $extract(salt, &ikm).unwrap();
-            assert_eq!(actual_prk, $hmac_tag::from_slice(expected_prk.unwrap()).unwrap());
+            assert_eq!(actual_prk, $hmac_tag::try_from(expected_prk.unwrap()).unwrap());
         }
 
         let mut okm_out = vec![0u8; okm_len];
@@ -70,7 +70,7 @@ macro_rules! impl_pbkdf2_test_runner (($name:ident, $password:ident, $derive_key
         valid_result: bool,
     ) {
         let mut dk_out = vec![0u8; dk_len];
-        let password = $password::from_slice(password).unwrap();
+        let password = $password::try_from(password).unwrap();
 
         if valid_result {
             assert!($derive_key(&password, salt, iterations, &mut dk_out).is_ok());
@@ -81,17 +81,17 @@ macro_rules! impl_pbkdf2_test_runner (($name:ident, $password:ident, $derive_key
     }
 ));
 
-use pbkdf2::sha256::derive_key as pbkdf2_derive_key256;
 use pbkdf2::sha256::Password as Password256;
+use pbkdf2::sha256::derive_key as pbkdf2_derive_key256;
 
 impl_pbkdf2_test_runner!(pbkdf2_256_test_runner, Password256, pbkdf2_derive_key256);
 
-use pbkdf2::sha384::derive_key as pbkdf2_derive_key384;
 use pbkdf2::sha384::Password as Password384;
+use pbkdf2::sha384::derive_key as pbkdf2_derive_key384;
 
 impl_pbkdf2_test_runner!(pbkdf2_384_test_runner, Password384, pbkdf2_derive_key384);
 
-use pbkdf2::sha512::derive_key as pbkdf2_derive_key512;
 use pbkdf2::sha512::Password as Password512;
+use pbkdf2::sha512::derive_key as pbkdf2_derive_key512;
 
 impl_pbkdf2_test_runner!(pbkdf2_512_test_runner, Password512, pbkdf2_derive_key512);

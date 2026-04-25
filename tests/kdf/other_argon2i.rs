@@ -27,17 +27,19 @@ fn test_case_0() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -64,17 +66,19 @@ fn test_case_1() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -101,17 +105,19 @@ fn test_case_2() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -138,17 +144,19 @@ fn test_case_3() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -175,17 +183,19 @@ fn test_case_4() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -212,17 +222,19 @@ fn test_case_5() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -249,17 +261,19 @@ fn test_case_6() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -286,17 +300,19 @@ fn test_case_7() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -322,17 +338,19 @@ fn test_case_8() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -358,17 +376,19 @@ fn test_case_9() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -395,17 +415,19 @@ fn test_case_10() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -432,17 +454,19 @@ fn test_case_11() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -469,17 +493,19 @@ fn test_case_12() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -506,17 +532,19 @@ fn test_case_13() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }
 
 #[test]
@@ -543,15 +571,17 @@ fn test_case_14() {
     )
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
-    assert!(argon2i::verify(
-        &expected_hash,
-        &password,
-        &salt,
-        passes,
-        mem,
-        Some(secret_value),
-        Some(associated_data),
-        &mut actual_hash
-    )
-    .is_ok());
+    assert!(
+        argon2i::verify(
+            &expected_hash,
+            &password,
+            &salt,
+            passes,
+            mem,
+            Some(secret_value),
+            Some(associated_data),
+            &mut actual_hash
+        )
+        .is_ok()
+    );
 }

@@ -68,7 +68,7 @@ impl core::fmt::Debug for Blake3State {
 
 impl Blake3State {
     fn parse_key(key: &SecretKey) -> [u32; 8] {
-        let bytes = key.unprotected_as_bytes();
+        let bytes = key.unprotected_as_ref();
         core::array::from_fn(|i| {
             let start = i * 4;
             u32::from_le_bytes([
