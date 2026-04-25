@@ -83,9 +83,9 @@ use crate::generics::sealed::{Sealed, TryFromBytes};
 use crate::generics::{ByteArrayData, Public, Secret, TypeSpec};
 use crate::hazardous::kem::ml_kem::internal::*;
 
+pub use crate::hazardous::kem::ml_kem::MlKemSeed;
 pub use crate::hazardous::kem::ml_kem::SEED_SIZE;
 pub use crate::hazardous::kem::ml_kem::Seed;
-pub use crate::hazardous::kem::ml_kem::MlKemSeed;
 
 /// Size of private [`EncapsulationKey`].
 pub const EK_SIZE: usize = MlKem1024Internal::EK_SIZE;
