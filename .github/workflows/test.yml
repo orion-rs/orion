@@ -44,6 +44,7 @@ jobs:
         env: 
           TARGET_TOOLCHAIN: ${{ matrix.toolchain }}
         run: rustup toolchain install "${TARGET_TOOLCHAIN}"
+        shell: bash
 
       - name: Test debug-mode, default features
         run: cargo test
@@ -166,6 +167,7 @@ jobs:
         env: 
           TARGET_ARCH: ${{ matrix.arch }}
         run: rustup toolchain install stable && rustup target add "${TARGET_ARCH}"
+        shell: bash
 
       - run: cargo check --no-default-features --target ${WASM_TARGET}
         # Remediation for potential template-injection: https://docs.zizmor.sh/audits/#template-injection
