@@ -94,7 +94,7 @@ pub const PRIVATE_KEY_SIZE: usize = 32;
 pub const SHARED_KEY_SIZE: usize = 32;
 
 /// u-coordinate of the base point.
-const BASEPOINT: FieldElement = FieldElement::from_bytes(&[
+pub(crate) const BASEPOINT: FieldElement = FieldElement::from_bytes(&[
     9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ]);
 
@@ -103,7 +103,7 @@ const LOW_ORDER_POINT_RESULT: [u8; 32] = [0u8; 32];
 
 #[derive(Clone, Copy)]
 /// Represent an element in the curve field.
-struct FieldElement(fiat_25519_tight_field_element);
+pub(crate) struct FieldElement(fiat_25519_tight_field_element);
 
 impl core::fmt::Debug for FieldElement {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -175,7 +175,7 @@ impl FieldElement {
     }
 
     /// Serialize the `FieldElement` as a byte-array.
-    fn as_bytes(&self) -> [u8; 32] {
+    pub(crate) fn as_bytes(&self) -> [u8; 32] {
         // The function fiat_25519_to_bytes serializes a field element to bytes in little-endian order.
         use fiat_curve25519_u64::fiat_25519_to_bytes;
 
@@ -304,7 +304,7 @@ impl FieldElement {
 /// - <https://eprint.iacr.org/2020/956.pdf>
 /// - <https://eprint.iacr.org/2017/212.pdf>
 /// - <https://github.com/golang/crypto/blob/0c34fe9e7dc2486962ef9867e3edb3503537209f/curve25519/curve25519_generic.go#L779>
-fn mont_ladder(scalar: &[u8; PRIVATE_KEY_SIZE], point: FieldElement) -> FieldElement {
+pub(crate) fn mont_ladder(scalar: &[u8; PRIVATE_KEY_SIZE], point: FieldElement) -> FieldElement {
     debug_assert_eq!(
         point.as_bytes()[31] & 0x80,
         0,
@@ -365,17 +365,21 @@ impl Sealed for X25519PrivateKey {}
 
 impl X25519PrivateKey {
     /// Ref: <https://www.ietf.org/rfc/rfc7748.html#section-5>
+    pub(crate) const fn clamp_mut(k: &mut [u8; PRIVATE_KEY_SIZE]) {
+        // Clamp
+        k[0] &= 248;
+        k[31] &= 127;
+        k[31] |= 64;
+    }
+
     const fn clamp(k: &[u8; PRIVATE_KEY_SIZE]) -> [u8; PRIVATE_KEY_SIZE] {
         let mut scalar = *k;
-        // Clamp
-        scalar[0] &= 248;
-        scalar[31] &= 127;
-        scalar[31] |= 64;
+        Self::clamp_mut(&mut scalar);
 
         scalar
     }
 
-    fn is_clamped(scalar: &[u8; PRIVATE_KEY_SIZE]) -> bool {
+    pub(crate) fn is_clamped(scalar: &[u8; PRIVATE_KEY_SIZE]) -> bool {
         use subtle::ConstantTimeEq;
         ((scalar[0] & 7).ct_eq(&0) & ((scalar[31] & 0xC0).ct_eq(&0x40))).into()
     }
