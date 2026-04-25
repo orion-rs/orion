@@ -78,13 +78,11 @@ use crate::{errors::UnknownCryptoError, hazardous::mac::blake2b::Blake2b};
 
 /// The Tag size (bytes) to be output by BLAKE2b in keyed mode.
 const BLAKE2B_TAG_SIZE: usize = 32;
-/// The minimum `SecretKey` size (bytes) to be used by BLAKE2b in keyed mode.
-const BLAKE2B_MIN_KEY_SIZE: usize = 32;
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Authenticate a message using BLAKE2b-256 in keyed mode.
 pub fn authenticate(secret_key: &SecretKey, data: &[u8]) -> Result<Tag, UnknownCryptoError> {
-    if secret_key.len() < BLAKE2B_MIN_KEY_SIZE {
+    if secret_key.len() < 32 {
         return Err(UnknownCryptoError);
     }
     let mut state = Blake2b::new(secret_key, BLAKE2B_TAG_SIZE)?;
@@ -99,7 +97,7 @@ pub fn authenticate_verify(
     secret_key: &SecretKey,
     data: &[u8],
 ) -> Result<(), UnknownCryptoError> {
-    if secret_key.len() < BLAKE2B_MIN_KEY_SIZE || expected.len() != BLAKE2B_TAG_SIZE {
+    if secret_key.len() < 32 || expected.len() != BLAKE2B_TAG_SIZE {
         return Err(UnknownCryptoError);
     }
     Blake2b::verify(expected, secret_key, BLAKE2B_TAG_SIZE, data)
@@ -184,7 +182,7 @@ mod public {
         authenticate_verify(&tag, &sk, b"Completely wrong input").is_err()
     }
 
-    use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_KEYSIZE;
+    use crate::hazardous::hash::blake2::blake2b::BLAKE2B_MAX_KEYSIZE;
 
     #[quickcheck]
     #[cfg(feature = "safe_api")]
@@ -192,13 +190,13 @@ mod public {
     /// in `authenticate/authenticate_verify`.
     fn prop_authenticate_key_size(input: Vec<u8>) -> bool {
         let sec_key_res = SecretKey::try_from(&input);
-        if input.is_empty() || input.len() > BLAKE2B_KEYSIZE {
+        if input.is_empty() || input.len() > BLAKE2B_MAX_KEYSIZE {
             return sec_key_res.is_err();
         }
         let sec_key = sec_key_res.unwrap();
         let msg = "what do ya want for nothing?".as_bytes().to_vec();
         let auth_res = authenticate(&sec_key, &msg);
-        if input.len() >= BLAKE2B_MIN_KEY_SIZE && input.len() <= BLAKE2B_KEYSIZE {
+        if input.len() >= 32 && input.len() <= BLAKE2B_MAX_KEYSIZE {
             auth_res.is_ok()
         } else {
             auth_res.is_err()
