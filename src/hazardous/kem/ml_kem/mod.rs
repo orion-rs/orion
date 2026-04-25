@@ -37,7 +37,7 @@ pub mod mlkem768;
 /// ML-KEM-1024 as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
 pub mod mlkem1024;
 
-/// Size of the seed used in ML-KEM.
+/// Size of private [`Seed`].
 pub const SEED_SIZE: usize = 64;
 
 #[derive(Debug)]
