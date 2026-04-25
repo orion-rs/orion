@@ -52,7 +52,7 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::mac::poly1305::{OneTimeKey, Poly1305};
 //!
-//! let one_time_key = OneTimeKey::generate();
+//! let one_time_key = OneTimeKey::generate()?;
 //! let msg = "Some message.";
 //!
 //! let mut poly1305_state = Poly1305::new(&one_time_key);
@@ -71,15 +71,22 @@
 //! [poly1305-donna]: https://github.com/floodyberry/poly1305-donna
 //! [Cryptographic Right Answers]: https://latacora.micro.blog/2018/04/03/cryptographic-right-answers.html
 
+use crate::generics::GenerateSecret;
 use crate::{
     errors::UnknownCryptoError,
+    generics::{ByteArrayData, Secret, TypeSpec, sealed::Sealed},
     util::endianness::{load_u32_le, store_u32_into_le},
 };
+#[cfg(feature = "serde")]
+use alloc::vec::Vec;
 use fiat_crypto::poly1305_32::{
     fiat_poly1305_add, fiat_poly1305_carry, fiat_poly1305_carry_mul, fiat_poly1305_from_bytes,
     fiat_poly1305_loose_field_element, fiat_poly1305_relax, fiat_poly1305_selectznz,
     fiat_poly1305_subborrowx_u26, fiat_poly1305_tight_field_element, fiat_poly1305_u1,
 };
+
+#[cfg(feature = "safe_api")]
+use crate::generics::sealed::Data;
 
 /// The blocksize which Poly1305 operates on.
 const POLY1305_BLOCKSIZE: usize = 16;
@@ -87,34 +94,86 @@ const POLY1305_BLOCKSIZE: usize = 16;
 pub const POLY1305_OUTSIZE: usize = 16;
 /// The key size for Poly1305.
 pub const POLY1305_KEYSIZE: usize = 32;
-/// Type for a Poly1305 tag.
-type Poly1305Tag = [u8; POLY1305_OUTSIZE];
 
-construct_secret_key! {
-    /// A type to represent the `OneTimeKey` that Poly1305 uses for authentication.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (OneTimeKey, test_one_time_key, POLY1305_KEYSIZE, POLY1305_KEYSIZE, POLY1305_KEYSIZE)
+#[derive(Debug)]
+/// Marker type for Poly1305 onetime-key. See [`OneTimeKey`] type for convenience.
+pub struct Poly1305Key {}
+impl Sealed for Poly1305Key {}
+
+impl TypeSpec for Poly1305Key {
+    const NAME: &'static str = stringify!(OneTimeKey);
+    type TypeData = ByteArrayData<POLY1305_KEYSIZE>;
 }
 
-impl_from_trait!(OneTimeKey, POLY1305_KEYSIZE);
-
-construct_tag! {
-    /// A type to represent the `Tag` that Poly1305 returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 16 bytes.
-    (Tag, test_tag, POLY1305_OUTSIZE, POLY1305_OUTSIZE)
+impl From<[u8; POLY1305_KEYSIZE]> for Secret<Poly1305Key> {
+    fn from(value: [u8; POLY1305_KEYSIZE]) -> Self {
+        Self::from_data(<Poly1305Key as TypeSpec>::TypeData::from(value))
+    }
 }
 
-impl_from_trait!(Tag, POLY1305_OUTSIZE);
+impl GenerateSecret for Poly1305Key {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Secret<Poly1305Key>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(POLY1305_KEYSIZE)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Secret::from_data(data))
+    }
+}
+
+/// A type to represent the [`OneTimeKey`] that [`Poly1305`] uses for authentication.
+pub type OneTimeKey = Secret<Poly1305Key>;
+
+#[derive(Debug, Clone)]
+/// Marker type for Poly1305 MAC/Tag. See [`Tag`] type for convenience.
+pub struct Poly1305Tag {}
+impl Sealed for Poly1305Tag {}
+
+impl TypeSpec for Poly1305Tag {
+    const NAME: &'static str = stringify!(Tag);
+    type TypeData = ByteArrayData<POLY1305_OUTSIZE>;
+}
+
+impl From<[u8; POLY1305_OUTSIZE]> for Secret<Poly1305Tag> {
+    fn from(value: [u8; POLY1305_OUTSIZE]) -> Self {
+        Self::from_data(<Poly1305Tag as TypeSpec>::TypeData::from(value))
+    }
+}
+
+/// A type to represent the MAC/Tag that Poly1305 returns.
+pub type Tag = Secret<Poly1305Tag>;
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+/// This type tries to serialize as a `&[u8]` would. Note that the serialized
+/// type likely does not have the same protections that Orion provides, such
+/// as constant-time operations. A good rule of thumb is to only serialize
+/// these types for storage. Don't operate on the serialized types.
+impl serde::Serialize for Tag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        let bytes: &[u8] = &self.data.as_ref();
+        bytes.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+/// This type tries to deserialize as a `Vec<u8>` would. If it succeeds, the public data
+/// will be built using `Self::try_from`.
+///
+/// Note that **this allocates** once to store the referenced bytes on the heap.
+impl<'de> serde::Deserialize<'de> for Tag {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let bytes = Vec::<u8>::deserialize(deserializer)?;
+        TryFrom::try_from(bytes.as_slice()).map_err(serde::de::Error::custom)
+    }
+}
 
 #[derive(Clone)]
 /// Poly1305 streaming state.
@@ -241,16 +300,16 @@ impl Poly1305 {
             is_finalized: false,
         };
 
-        state.r[0] = (load_u32_le(&one_time_key.unprotected_as_bytes()[0..4])) & 0x3ffffff;
-        state.r[1] = (load_u32_le(&one_time_key.unprotected_as_bytes()[3..7]) >> 2) & 0x3ffff03;
-        state.r[2] = (load_u32_le(&one_time_key.unprotected_as_bytes()[6..10]) >> 4) & 0x3ffc0ff;
-        state.r[3] = (load_u32_le(&one_time_key.unprotected_as_bytes()[9..13]) >> 6) & 0x3f03fff;
-        state.r[4] = (load_u32_le(&one_time_key.unprotected_as_bytes()[12..16]) >> 8) & 0x00fffff;
+        state.r[0] = (load_u32_le(&one_time_key.unprotected_as_ref()[0..4])) & 0x3ffffff;
+        state.r[1] = (load_u32_le(&one_time_key.unprotected_as_ref()[3..7]) >> 2) & 0x3ffff03;
+        state.r[2] = (load_u32_le(&one_time_key.unprotected_as_ref()[6..10]) >> 4) & 0x3ffc0ff;
+        state.r[3] = (load_u32_le(&one_time_key.unprotected_as_ref()[9..13]) >> 6) & 0x3f03fff;
+        state.r[4] = (load_u32_le(&one_time_key.unprotected_as_ref()[12..16]) >> 8) & 0x00fffff;
 
-        state.s[0] = load_u32_le(&one_time_key.unprotected_as_bytes()[16..20]);
-        state.s[1] = load_u32_le(&one_time_key.unprotected_as_bytes()[20..24]);
-        state.s[2] = load_u32_le(&one_time_key.unprotected_as_bytes()[24..28]);
-        state.s[3] = load_u32_le(&one_time_key.unprotected_as_bytes()[28..32]);
+        state.s[0] = load_u32_le(&one_time_key.unprotected_as_ref()[16..20]);
+        state.s[1] = load_u32_le(&one_time_key.unprotected_as_ref()[20..24]);
+        state.s[2] = load_u32_le(&one_time_key.unprotected_as_ref()[24..28]);
+        state.s[3] = load_u32_le(&one_time_key.unprotected_as_ref()[28..32]);
 
         state
     }
@@ -346,7 +405,7 @@ impl Poly1305 {
 
         self.is_finalized = true;
 
-        let mut local_buffer: Poly1305Tag = self.buffer;
+        let mut local_buffer: [u8; POLY1305_OUTSIZE] = self.buffer;
 
         if self.leftover != 0 {
             local_buffer[self.leftover] = 1;
@@ -397,9 +456,57 @@ mod public {
     use super::*;
 
     #[test]
+    fn test_onetime_key() {
+        use super::*;
+        use crate::test_framework::newtypes::secret::SecretNewtype;
+        SecretNewtype::test_with_generate::<
+            POLY1305_KEYSIZE,
+            POLY1305_KEYSIZE,
+            POLY1305_KEYSIZE,
+            Poly1305Key,
+        >();
+        // Test of From<[u8; N]>
+        assert_ne!(
+            OneTimeKey::from([0u8; POLY1305_KEYSIZE]),
+            OneTimeKey::from([1u8; POLY1305_KEYSIZE])
+        )
+    }
+
+    #[test]
+    fn test_tag() {
+        use super::*;
+        use crate::test_framework::newtypes::secret::SecretNewtype;
+        SecretNewtype::test_no_generate::<POLY1305_OUTSIZE, POLY1305_OUTSIZE, Poly1305Tag>();
+        // Test of From<[u8; N]>
+        assert_ne!(
+            Tag::from([0u8; POLY1305_OUTSIZE]),
+            Tag::from([1u8; POLY1305_OUTSIZE])
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_serde_serialized_equivalence_to_bytes_fn() {
+        let bytes = [38u8; POLY1305_OUTSIZE];
+        let secret_type = Tag::try_from(&bytes).unwrap();
+        let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+        let serialized_from_secret_type = serde_json::to_value(&secret_type).unwrap();
+        assert_eq!(serialized_from_bytes, serialized_from_secret_type);
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_serde_deserialized_equivalence_to_bytes_fn() {
+        let bytes = [38u8; POLY1305_OUTSIZE];
+        let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
+        let secret_type: Tag = serde_json::from_value(serialized_from_bytes).unwrap();
+        assert_eq!(secret_type.unprotected_as_ref(), bytes.as_slice());
+    }
+
+    #[test]
     #[cfg(feature = "safe_api")]
     fn test_debug_impl() {
-        let secret_key = OneTimeKey::generate();
+        let secret_key = OneTimeKey::generate().unwrap();
         let initial_state = Poly1305::new(&secret_key);
         let debug = format!("{initial_state:?}");
         let expected = "Poly1305 { a: [***OMITTED***], r: [***OMITTED***], s: [***OMITTED***], leftover: [***OMITTED***], buffer: [***OMITTED***], is_finalized: false }";
@@ -415,11 +522,11 @@ mod public {
         /// When using a different key, verify() should always yield an error.
         /// NOTE: Using different and same input data is tested with TestableStreamingContext.
         fn prop_verify_diff_key_false(data: Vec<u8>) -> bool {
-            let sk = OneTimeKey::generate();
+            let sk = OneTimeKey::generate().unwrap();
             let mut state = Poly1305::new(&sk);
             state.update(&data[..]).unwrap();
             let tag = state.finalize().unwrap();
-            let bad_sk = OneTimeKey::generate();
+            let bad_sk = OneTimeKey::generate().unwrap();
 
             Poly1305::verify(&tag, &bad_sk, &data[..]).is_err()
         }
@@ -450,13 +557,13 @@ mod public {
             }
 
             fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
-                Poly1305::poly1305(&OneTimeKey::from_slice(&KEY).unwrap(), input)
+                Poly1305::poly1305(&OneTimeKey::try_from(&KEY).unwrap(), input)
             }
 
             fn verify_result(expected: &Tag, input: &[u8]) -> Result<(), UnknownCryptoError> {
                 // This will only run verification tests on differing input. They do not
                 // include tests for different secret keys.
-                Poly1305::verify(expected, &OneTimeKey::from_slice(&KEY).unwrap(), input)
+                Poly1305::verify(expected, &OneTimeKey::try_from(&KEY).unwrap(), input)
             }
 
             fn compare_states(state_1: &Poly1305, state_2: &Poly1305) {
@@ -471,7 +578,7 @@ mod public {
 
         #[test]
         fn default_consistency_tests() {
-            let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
+            let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::try_from(&KEY).unwrap());
 
             let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(
                 initial_state,
@@ -485,7 +592,7 @@ mod public {
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-            let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::from_slice(&KEY).unwrap());
+            let initial_state: Poly1305 = Poly1305::new(&OneTimeKey::try_from(&KEY).unwrap());
 
             let test_runner = StreamingContextConsistencyTester::<Tag, Poly1305>::new(
                 initial_state,
@@ -507,7 +614,7 @@ mod private {
 
         #[test]
         fn test_process_err_on_finalized() {
-            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let sk = OneTimeKey::try_from(&[0u8; 32]).unwrap();
             let mut state = Poly1305::new(&sk);
 
             state.process_pad_to_blocksize(&[0u8; 16]).unwrap();
@@ -517,7 +624,7 @@ mod private {
 
         #[test]
         fn test_process_pad_no_pad() {
-            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let sk = OneTimeKey::try_from(&[0u8; 32]).unwrap();
             let mut state_pad = Poly1305::new(&sk);
             let mut state_no_pad = Poly1305::new(&sk);
 
@@ -542,7 +649,7 @@ mod private {
             let block_2 = [0u8; 17];
             let block_3 = [0u8; 16];
 
-            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let sk = OneTimeKey::try_from(&[0u8; 32]).unwrap();
             let mut state = Poly1305::new(&sk);
 
             assert!(state.process_block(&block_0).is_err());
@@ -558,7 +665,7 @@ mod private {
         #[test]
         fn test_process_no_panic() {
             let block = [0u8; 16];
-            let sk = OneTimeKey::from_slice(&[0u8; 32]).unwrap();
+            let sk = OneTimeKey::try_from(&[0u8; 32]).unwrap();
             let mut state = Poly1305::new(&sk);
             // Should not panic
             state.process_end_of_stream();

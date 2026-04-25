@@ -319,23 +319,16 @@ pub fn derive_key(
     let mut x = vec![0u32; 32 * r];
     let mut y = vec![0u32; 32 * r];
     let mut v = vec![0u32; vlen];
-    let pass = pbkdf2::Password::from_slice(password)?;
+    let pass = pbkdf2::Password::try_from(password)?;
     let blen: usize = p * 128 * r;
-    let mut b = vec![0u8; blen];
-
-    pbkdf2::derive_key(&pass, salt, 1, &mut b).inspect_err(|_| {
-        zeroize_call!(b);
-    })?;
+    let mut b = zeroize_wrap!(vec![0u8; blen]);
+    pbkdf2::derive_key(&pass, salt, 1, b.as_mut())?;
 
     for i in 0..p {
         smix(&mut b[i * 128 * r..], r, n, &mut v, &mut x, &mut y);
     }
 
-    pbkdf2::derive_key(&pass, &b, 1, dst_out).inspect_err(|_| {
-        zeroize_call!(b);
-    })?;
-
-    zeroize_call!(b);
+    pbkdf2::derive_key(&pass, b.as_ref(), 1, dst_out)?;
 
     Ok(())
 }

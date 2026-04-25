@@ -25,6 +25,7 @@ extern crate orion;
 
 use criterion::*;
 
+use orion::KP;
 use orion::hazardous::{
     aead::{chacha20poly1305, xchacha20poly1305},
     hash::*,
@@ -40,7 +41,7 @@ mod mac {
 
     pub fn bench_poly1305(c: &mut Criterion) {
         let mut group = c.benchmark_group("Poly1305");
-        let key = poly1305::OneTimeKey::generate();
+        let key = poly1305::OneTimeKey::generate().unwrap();
 
         for size in INPUT_SIZES.iter() {
             let input = vec![0u8; *size];
@@ -60,7 +61,7 @@ mod mac {
         let mut group = c.benchmark_group("HMAC-SHA256");
         // NOTE: Setting the key like this will pad it for HMAC.
         // Padding is therefore not included in benchmarks.
-        let key = hmac::sha256::SecretKey::generate();
+        let key = hmac::sha256::SecretKey::generate().unwrap();
 
         for size in INPUT_SIZES.iter() {
             let input = vec![0u8; *size];
@@ -80,7 +81,7 @@ mod mac {
         let mut group = c.benchmark_group("HMAC-SHA512");
         // NOTE: Setting the key like this will pad it for HMAC.
         // Padding is therefore not included in benchmarks.
-        let key = hmac::sha512::SecretKey::generate();
+        let key = hmac::sha512::SecretKey::generate().unwrap();
 
         for size in INPUT_SIZES.iter() {
             let input = vec![0u8; *size];
@@ -111,8 +112,8 @@ mod aead {
 
     pub fn bench_chacha20poly1305(c: &mut Criterion) {
         let mut group = c.benchmark_group("ChaCha20-Poly1305");
-        let key = chacha20poly1305::SecretKey::generate();
-        let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]).unwrap();
+        let key = chacha20poly1305::SecretKey::generate().unwrap();
+        let nonce = chacha20poly1305::Nonce::try_from(&[0u8; 12]).unwrap();
 
         for size in INPUT_SIZES.iter() {
             let input = vec![0u8; *size];
@@ -134,8 +135,8 @@ mod aead {
 
     pub fn bench_xchacha20poly1305(c: &mut Criterion) {
         let mut group = c.benchmark_group("XChaCha20-Poly1305");
-        let key = xchacha20poly1305::SecretKey::generate();
-        let nonce = xchacha20poly1305::Nonce::generate();
+        let key = xchacha20poly1305::SecretKey::generate().unwrap();
+        let nonce = xchacha20poly1305::Nonce::generate().unwrap();
 
         for size in INPUT_SIZES.iter() {
             let input = vec![0u8; *size];
@@ -249,7 +250,7 @@ mod stream {
 
     pub fn bench_chacha20(c: &mut Criterion) {
         let mut group = c.benchmark_group("ChaCha20");
-        let key = chacha20poly1305::SecretKey::generate();
+        let key = chacha20poly1305::SecretKey::generate().unwrap();
         let nonce = chacha20poly1305::Nonce::from([0u8; 12]);
 
         for size in INPUT_SIZES.iter() {
@@ -269,8 +270,8 @@ mod stream {
 
     pub fn bench_xchacha20(c: &mut Criterion) {
         let mut group = c.benchmark_group("XChaCha20");
-        let key = xchacha20::SecretKey::generate();
-        let nonce = xchacha20::Nonce::generate();
+        let key = xchacha20::SecretKey::generate().unwrap();
+        let nonce = xchacha20::Nonce::generate().unwrap();
 
         for size in INPUT_SIZES.iter() {
             let input = vec![0u8; *size];
@@ -368,7 +369,7 @@ mod kdf {
                 |b, iter_count| {
                     b.iter(|| {
                         pbkdf2::sha256::derive_key(
-                            &pbkdf2::sha256::Password::from_slice(&salt).unwrap(),
+                            &pbkdf2::sha256::Password::try_from(&salt).unwrap(),
                             &ikm,
                             **iter_count,
                             &mut dk_out,
@@ -400,7 +401,7 @@ mod kdf {
                 |b, iter_count| {
                     b.iter(|| {
                         pbkdf2::sha512::derive_key(
-                            &pbkdf2::sha512::Password::from_slice(&salt).unwrap(),
+                            &pbkdf2::sha512::Password::try_from(&salt).unwrap(),
                             &ikm,
                             **iter_count,
                             &mut dk_out,
@@ -458,13 +459,13 @@ mod ecc {
     pub fn bench_x25519(c: &mut Criterion) {
         let mut group = c.benchmark_group("X25519");
 
-        let alice_sk = x25519::PrivateKey::generate();
+        let alice_sk = x25519::PrivateKey::generate().unwrap();
         let alice_pk = x25519::PublicKey::try_from(&alice_sk).unwrap();
 
         group.sample_size(100);
         group.bench_function("key_agreement", move |b| {
             b.iter_with_setup(
-                || x25519::PrivateKey::generate(),
+                || x25519::PrivateKey::generate().unwrap(),
                 |bob_sk| x25519::key_agreement(&bob_sk, &alice_pk).unwrap(),
             )
         });
@@ -480,7 +481,7 @@ mod ecc {
 
 mod kem {
     use super::*;
-    use orion::hazardous::kem::{mlkem1024, mlkem512, mlkem768};
+    use orion::hazardous::kem::{mlkem512, mlkem768, mlkem1024};
 
     pub fn bench_mlkem512(c: &mut Criterion) {
         let mut group = c.benchmark_group("ML-KEM-512");

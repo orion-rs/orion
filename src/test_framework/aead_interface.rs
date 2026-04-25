@@ -179,14 +179,16 @@ fn open_ciphertext_with_tag_length<Sealer, Opener, Key, Nonce>(
 
     assert!(opener(key, nonce, &[0u8; 0], default_aad, &mut dst_out_pt).is_err());
 
-    assert!(opener(
-        key,
-        nonce,
-        &vec![0u8; tag_size - 1],
-        default_aad,
-        &mut dst_out_pt
-    )
-    .is_err());
+    assert!(
+        opener(
+            key,
+            nonce,
+            &vec![0u8; tag_size - 1],
+            default_aad,
+            &mut dst_out_pt
+        )
+        .is_err()
+    );
 
     let mut dst_out_ct = vec![0u8; tag_size];
     sealer(key, nonce, &[0u8; 0], default_aad, &mut dst_out_ct).unwrap();
@@ -333,14 +335,16 @@ fn none_or_empty_some_aad_same_result<Sealer, Opener, Key, Nonce>(
     assert_eq!(dst_out_ct_none, dst_out_ct_some_empty);
 
     let mut dst_out_pt = vec![0u8; input.len()];
-    assert!(opener(
-        key,
-        nonce,
-        &dst_out_ct_none,
-        Some(&[0u8; 0]),
-        &mut dst_out_pt
-    )
-    .is_ok());
+    assert!(
+        opener(
+            key,
+            nonce,
+            &dst_out_ct_none,
+            Some(&[0u8; 0]),
+            &mut dst_out_pt
+        )
+        .is_ok()
+    );
     assert!(opener(key, nonce, &dst_out_ct_some_empty, None, &mut dst_out_pt).is_ok());
 }
 
@@ -358,12 +362,12 @@ pub fn test_diff_params_err<Sealer, Opener, Key, Nonce>(
     Sealer: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
     Opener: Fn(&Key, &Nonce, &[u8], Option<&[u8]>, &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
-    let sk1 = Key::gen();
-    let sk2 = Key::gen();
+    let sk1 = Key::gen_new();
+    let sk2 = Key::gen_new();
     assert!(sk1 != sk2);
 
-    let n1 = Nonce::gen();
-    let n2 = Nonce::gen();
+    let n1 = Nonce::gen_new();
+    let n2 = Nonce::gen_new();
     assert!(n1 != n2);
 
     let mut dst_out_ct = vec![0u8; input.len() + tag_size];

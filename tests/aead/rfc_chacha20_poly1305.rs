@@ -37,18 +37,20 @@ mod rfc_aead_chacha20_poly1305 {
             0x06, 0x91,
         ];
 
-        assert!(wycheproof_test_runner(
-            &key,
-            &nonce,
-            &aad,
-            &expected_tag,
-            plaintext,
-            &expected_ct,
-            true,
-            0,
-            true
-        )
-        .is_ok());
+        assert!(
+            wycheproof_test_runner(
+                &key,
+                &nonce,
+                &aad,
+                &expected_tag,
+                plaintext,
+                &expected_ct,
+                true,
+                0,
+                true
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -108,8 +110,8 @@ mod rfc_aead_chacha20_poly1305 {
         let mut dst_out_pt = vec![0u8; ciphertext.len()];
 
         aead::chacha20poly1305::open(
-            &aead::chacha20poly1305::SecretKey::from_slice(&key).unwrap(),
-            &aead::chacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            &aead::chacha20poly1305::SecretKey::try_from(&key).unwrap(),
+            &aead::chacha20poly1305::Nonce::try_from(&nonce).unwrap(),
             &ct_plus_tag,
             Some(&aad),
             &mut dst_out_pt,

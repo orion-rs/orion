@@ -48,7 +48,11 @@
 //! [`reset()`]: sha3_224::Sha3_224::reset
 //! [`finalize()`]: sha3_224::Sha3_224::finalize
 
-use crate::errors::UnknownCryptoError;
+use crate::{
+    errors::UnknownCryptoError,
+    generics::{ByteArrayData, Public, TypeSpec, sealed::Sealed},
+};
+
 #[cfg(feature = "safe_api")]
 use std::io;
 
@@ -60,16 +64,25 @@ pub const SHA3_224_RATE: usize = 144;
 /// Output size of SHA3-224 in bytes.
 pub const SHA3_224_OUTSIZE: usize = 28;
 
-construct_public! {
-    /// A type to represent the `Digest` that SHA3-224 returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 28 bytes.
-    (Digest, test_digest, SHA3_224_OUTSIZE, SHA3_224_OUTSIZE)
+#[derive(Debug, Clone, Copy)]
+#[allow(non_camel_case_types)]
+/// Marker type for SHA3_224 digest. See [`Digest`] type for convenience.
+pub struct Sha3_224_Digest {}
+impl Sealed for Sha3_224_Digest {}
+
+impl TypeSpec for Sha3_224_Digest {
+    const NAME: &'static str = stringify!(Digest);
+    type TypeData = ByteArrayData<SHA3_224_OUTSIZE>;
 }
 
-impl_from_trait!(Digest, SHA3_224_OUTSIZE);
+impl From<[u8; SHA3_224_OUTSIZE]> for Public<Sha3_224_Digest> {
+    fn from(value: [u8; SHA3_224_OUTSIZE]) -> Self {
+        Self::from_data(<Sha3_224_Digest as TypeSpec>::TypeData::from(value))
+    }
+}
+
+/// A type to represent the [`Digest`]/hash-output that SHA3-224 returns.
+pub type Digest = Public<Sha3_224_Digest>;
 
 #[derive(Clone, Debug)]
 /// SHA3-224 streaming state.
@@ -170,6 +183,16 @@ impl Sha3_224 {
 #[cfg(test)]
 mod public {
     use super::*;
+
+    #[test]
+    fn test_sha3_224_digest() {
+        use super::*;
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_no_generate::<SHA3_224_OUTSIZE, SHA3_224_OUTSIZE, Sha3_224_Digest>();
+
+        #[cfg(feature = "serde")]
+        PublicNewtype::test_serialization::<SHA3_224_OUTSIZE, Sha3_224_Digest>();
+    }
 
     #[test]
     fn test_default_equals_new() {

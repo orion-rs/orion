@@ -27,17 +27,19 @@ fn run_tests_from_json(path_to_vectors: &str) {
     for test in tests {
         let mut dst_out = vec![0u8; test.dgst_len];
 
-        assert!(argon2i::verify(
-            &decode(&test.pwhash).unwrap(),
-            test.passwd.as_bytes(),
-            test.salt.as_bytes(),
-            test.iters,
-            test.maxmem,
-            None,
-            None,
-            &mut dst_out
-        )
-        .is_ok());
+        assert!(
+            argon2i::verify(
+                &decode(&test.pwhash).unwrap(),
+                test.passwd.as_bytes(),
+                test.salt.as_bytes(),
+                test.iters,
+                test.maxmem,
+                None,
+                None,
+                &mut dst_out
+            )
+            .is_ok()
+        );
     }
 }
 

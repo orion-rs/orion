@@ -1,3 +1,28 @@
+### 0.18.0
+
+**Data:** TBD.
+
+**Changelog:**
+- [Breaking change] Rust Edition moved from `2021` to `2024`.
+- [Breaking change] `auth::SecretKey` has been changed to reference directly the hazardous type instead: `crate::hazardous::mac::blake2b::SecretKey`.
+- [Breaking change] `T::generate() -> Self` -> `T::generate() -> Result<T, UnknownCryptoError>` where this was not already the case. All `T::generate()` calls are now fallible and return `UnknownCryptoError` so all OS-related errors can be handled.
+- [Breaking change] `T::from_slice()` is no longer provided. Instead, all types provide: `TryFrom<&[u8]>`, `TryFrom<&Vec<u8>>` and `TryFrom<&[u8; N]>` + `From<[N]>` where applicable.
+- [Breaking change] `T::unprotected_as_bytes()` -> `T::unprotected_as_ref()`. 
+- [Breaking change] High-level types used in non-`hazardous` API no longer implement `Default` with a panicking CSPRNG call. Instead `generate() -> Result<Self, UnknownCryptoError>` is provided exclusively.
+- [Breaking change] High-level types used in non-`hazardous` API no longer implement `T::generate(length: usize)`.
+- [Breaking change] ML-KEM and X-Wing API have undergone large re-design:
+	- [Breaking change] `mlkem*:MlKem*` struct no longer exists, and all functionality has been moved to the respective `KeyPair`, `EncapsulationKey` and `DecapsulationKey` types.
+	- [Breaking change] ML-KEM `DecapsulatoinKeys` no longer themself perform key-caching. This has been moved to `KeyPair`. `KeyPair` therefor offers important performance benefits when decapsulating with the same secret more than once.
+	- [Breaking change] Constants previously associated with the zero-sized structs are now in `mlkem*::` modules.
+	- [Breaking change] `ML-KEM` `DecapuslationKey`s can now return the raw, encoded bytes.
+- [Breaking change] `orion::kdf::Password` and `orion::pwhash::Password`  no longer has `generate()` since it is meant to represent a user-supplied password (one of the many drawbacks of the older macro-based approach).
+- [Breaking change] Types that previously implemented `Copy` do not anymore. `Copy` in all cases requires copying a lot of bytes and could hide a performance penalty, so now only `Clone` is available for `Public<T>`. 
+- [Breaking change] `orion::hazardous::ecc::x25519::PublicKey` no longer stores the u-coordinate in masked form, but original byte slice. The `PartialEq` still respects (applies masking) the u-coordinate condition. Masking is applied before Montgomery ladder.
+- [Breaking change] `orion::hazardous::ecc::x25519::SecretKey` no longer stores the clamped scalar, but the original byte slice. This changes the inherited `PartialEq`, which now operates on the original bytes, not the clamped. Clamping is applied before Montgomery ladder.
+- [Breaking change] `orion::hazardous::ecc::x25519::SharedSecret` now  respects (applies masking) the u-coordinate condition for `PartialEq`.
+
+- MSRV bumped to `1.87`
+
 ### 0.17.14
 
 **Date:** April 25, 2026.

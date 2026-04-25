@@ -31,8 +31,8 @@ fn run_tests_from_json(path_to_vectors: &str) {
     let tests: Vec<TestCase> = serde_json::from_reader(reader).unwrap();
 
     for test in tests.iter() {
-        let key = SecretKey::from_slice(&decode(&test.key).unwrap()).unwrap();
-        let nonce = Nonce::from_slice(&decode(&test.header).unwrap()).unwrap();
+        let key = SecretKey::try_from(&decode(&test.key).unwrap()).unwrap();
+        let nonce = Nonce::try_from(&decode(&test.header).unwrap()).unwrap();
 
         let mut ctx_seal = StreamXChaCha20Poly1305::new(&key, &nonce);
         let mut ctx_open = StreamXChaCha20Poly1305::new(&key, &nonce);

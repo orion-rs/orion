@@ -1,9 +1,9 @@
 // ml_kem_encapdecap_internalProjection.json
 // taken at commit: https://github.com/usnistgov/ACVP-Server/commit/203f667c26e10a1be89dfe8da7a54498fde2d848
 
-use orion::hazardous::kem::mlkem1024;
 use orion::hazardous::kem::mlkem512;
 use orion::hazardous::kem::mlkem768;
+use orion::hazardous::kem::mlkem1024;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
 
@@ -61,49 +61,49 @@ fn mlkem_runner(path: &str) {
 
                     let mut k = [0u8; 32];
                     let mut m = [0u8; 32];
-                    let mut ek_expected = [0u8; mlkem512::MlKem512::EK_SIZE];
-                    let mut dk_expected = [0u8; mlkem512::MlKem512::DK_SIZE];
-                    let mut ct_expected = [0u8; mlkem512::MlKem512::CIPHERTEXT_SIZE];
+                    let mut ek_expected = [0u8; mlkem512::EK_SIZE];
+                    let mut dk_expected = [0u8; mlkem512::DK_SIZE];
+                    let mut ct_expected = [0u8; mlkem512::CIPHERTEXT_SIZE];
                     hex::decode_to_slice(&test.k, &mut k).unwrap();
                     hex::decode_to_slice(test.m.as_ref().unwrap(), &mut m).unwrap();
                     hex::decode_to_slice(test.ek.as_ref().unwrap(), &mut ek_expected).unwrap();
                     hex::decode_to_slice(test.dk.as_ref().unwrap(), &mut dk_expected).unwrap();
                     hex::decode_to_slice(&test.c, &mut ct_expected).unwrap();
 
-                    let ek = mlkem512::EncapsulationKey::from_slice(&ek_expected).unwrap();
+                    let ek = mlkem512::EncapsulationKey::try_from(&ek_expected).unwrap();
                     let (k_actual, ct_actual) = ek.encap_deterministic(&m).unwrap();
-                    assert_eq!(k, k_actual.unprotected_as_bytes());
+                    assert_eq!(k, k_actual.unprotected_as_ref());
                     assert_eq!(ct_expected, ct_actual.as_ref());
 
                     let dk =
                         mlkem512::DecapsulationKey::unchecked_from_slice(&dk_expected).unwrap();
                     let k_actual = dk
-                        .decap(&mlkem512::Ciphertext::from_slice(&ct_expected).unwrap())
+                        .decap(&mlkem512::Ciphertext::try_from(&ct_expected).unwrap())
                         .unwrap();
-                    assert_eq!(k, k_actual.unprotected_as_bytes());
+                    assert_eq!(k, k_actual.unprotected_as_ref());
 
                     tests_run += 1;
                 }
             }
 
             if test_group.function == "decapsulation" {
-                let mut ek_expected = [0u8; mlkem512::MlKem512::EK_SIZE];
-                let mut dk_expected = [0u8; mlkem512::MlKem512::DK_SIZE];
+                let mut ek_expected = [0u8; mlkem512::EK_SIZE];
+                let mut dk_expected = [0u8; mlkem512::DK_SIZE];
                 hex::decode_to_slice(test_group.ek.as_ref().unwrap(), &mut ek_expected).unwrap();
                 hex::decode_to_slice(test_group.dk.as_ref().unwrap(), &mut dk_expected).unwrap();
 
                 for test in test_group.tests.iter() {
                     let mut k = [0u8; 32];
-                    let mut ct_expected = [0u8; mlkem512::MlKem512::CIPHERTEXT_SIZE];
+                    let mut ct_expected = [0u8; mlkem512::CIPHERTEXT_SIZE];
                     hex::decode_to_slice(&test.k, &mut k).unwrap();
                     hex::decode_to_slice(&test.c, &mut ct_expected).unwrap();
 
                     let dk =
                         mlkem512::DecapsulationKey::unchecked_from_slice(&dk_expected).unwrap();
                     let k_actual = dk
-                        .decap(&mlkem512::Ciphertext::from_slice(&ct_expected).unwrap())
+                        .decap(&mlkem512::Ciphertext::try_from(&ct_expected).unwrap())
                         .unwrap();
-                    assert_eq!(k, k_actual.unprotected_as_bytes());
+                    assert_eq!(k, k_actual.unprotected_as_ref());
 
                     tests_run += 1;
                 }
@@ -118,49 +118,49 @@ fn mlkem_runner(path: &str) {
 
                     let mut k = [0u8; 32];
                     let mut m = [0u8; 32];
-                    let mut ek_expected = [0u8; mlkem768::MlKem768::EK_SIZE];
-                    let mut dk_expected = [0u8; mlkem768::MlKem768::DK_SIZE];
-                    let mut ct_expected = [0u8; mlkem768::MlKem768::CIPHERTEXT_SIZE];
+                    let mut ek_expected = [0u8; mlkem768::EK_SIZE];
+                    let mut dk_expected = [0u8; mlkem768::DK_SIZE];
+                    let mut ct_expected = [0u8; mlkem768::CIPHERTEXT_SIZE];
                     hex::decode_to_slice(&test.k, &mut k).unwrap();
                     hex::decode_to_slice(test.m.as_ref().unwrap(), &mut m).unwrap();
                     hex::decode_to_slice(test.ek.as_ref().unwrap(), &mut ek_expected).unwrap();
                     hex::decode_to_slice(test.dk.as_ref().unwrap(), &mut dk_expected).unwrap();
                     hex::decode_to_slice(&test.c, &mut ct_expected).unwrap();
 
-                    let ek = mlkem768::EncapsulationKey::from_slice(&ek_expected).unwrap();
+                    let ek = mlkem768::EncapsulationKey::try_from(&ek_expected).unwrap();
                     let (k_actual, ct_actual) = ek.encap_deterministic(&m).unwrap();
-                    assert_eq!(k, k_actual.unprotected_as_bytes());
+                    assert_eq!(k, k_actual.unprotected_as_ref());
                     assert_eq!(ct_expected, ct_actual.as_ref());
 
                     let dk =
                         mlkem768::DecapsulationKey::unchecked_from_slice(&dk_expected).unwrap();
                     let k_actual = dk
-                        .decap(&mlkem768::Ciphertext::from_slice(&ct_expected).unwrap())
+                        .decap(&mlkem768::Ciphertext::try_from(&ct_expected).unwrap())
                         .unwrap();
-                    assert_eq!(k, k_actual.unprotected_as_bytes());
+                    assert_eq!(k, k_actual.unprotected_as_ref());
 
                     tests_run += 1;
                 }
             }
 
             if test_group.function == "decapsulation" {
-                let mut ek_expected = [0u8; mlkem768::MlKem768::EK_SIZE];
-                let mut dk_expected = [0u8; mlkem768::MlKem768::DK_SIZE];
+                let mut ek_expected = [0u8; mlkem768::EK_SIZE];
+                let mut dk_expected = [0u8; mlkem768::DK_SIZE];
                 hex::decode_to_slice(test_group.ek.as_ref().unwrap(), &mut ek_expected).unwrap();
                 hex::decode_to_slice(test_group.dk.as_ref().unwrap(), &mut dk_expected).unwrap();
 
                 for test in test_group.tests.iter() {
                     let mut k = [0u8; 32];
-                    let mut ct_expected = [0u8; mlkem768::MlKem768::CIPHERTEXT_SIZE];
+                    let mut ct_expected = [0u8; mlkem768::CIPHERTEXT_SIZE];
                     hex::decode_to_slice(&test.k, &mut k).unwrap();
                     hex::decode_to_slice(&test.c, &mut ct_expected).unwrap();
 
                     let dk =
                         mlkem768::DecapsulationKey::unchecked_from_slice(&dk_expected).unwrap();
                     let k_actual = dk
-                        .decap(&mlkem768::Ciphertext::from_slice(&ct_expected).unwrap())
+                        .decap(&mlkem768::Ciphertext::try_from(&ct_expected).unwrap())
                         .unwrap();
-                    assert_eq!(k, k_actual.unprotected_as_bytes());
+                    assert_eq!(k, k_actual.unprotected_as_ref());
 
                     tests_run += 1;
                 }
@@ -176,49 +176,49 @@ fn mlkem_runner(path: &str) {
 
                     let mut k = [0u8; 32];
                     let mut m = [0u8; 32];
-                    let mut ek_expected = [0u8; mlkem1024::MlKem1024::EK_SIZE];
-                    let mut dk_expected = [0u8; mlkem1024::MlKem1024::DK_SIZE];
-                    let mut ct_expected = [0u8; mlkem1024::MlKem1024::CIPHERTEXT_SIZE];
+                    let mut ek_expected = [0u8; mlkem1024::EK_SIZE];
+                    let mut dk_expected = [0u8; mlkem1024::DK_SIZE];
+                    let mut ct_expected = [0u8; mlkem1024::CIPHERTEXT_SIZE];
                     hex::decode_to_slice(&test.k, &mut k).unwrap();
                     hex::decode_to_slice(test.m.as_ref().unwrap(), &mut m).unwrap();
                     hex::decode_to_slice(test.ek.as_ref().unwrap(), &mut ek_expected).unwrap();
                     hex::decode_to_slice(test.dk.as_ref().unwrap(), &mut dk_expected).unwrap();
                     hex::decode_to_slice(&test.c, &mut ct_expected).unwrap();
 
-                    let ek = mlkem1024::EncapsulationKey::from_slice(&ek_expected).unwrap();
+                    let ek = mlkem1024::EncapsulationKey::try_from(&ek_expected).unwrap();
                     let (k_actual, ct_actual) = ek.encap_deterministic(&m).unwrap();
-                    assert_eq!(k, k_actual.unprotected_as_bytes());
+                    assert_eq!(k, k_actual.unprotected_as_ref());
                     assert_eq!(ct_expected, ct_actual.as_ref());
 
                     let dk =
                         mlkem1024::DecapsulationKey::unchecked_from_slice(&dk_expected).unwrap();
                     let k_actual = dk
-                        .decap(&mlkem1024::Ciphertext::from_slice(&ct_expected).unwrap())
+                        .decap(&mlkem1024::Ciphertext::try_from(&ct_expected).unwrap())
                         .unwrap();
-                    assert_eq!(k, k_actual.unprotected_as_bytes());
+                    assert_eq!(k, k_actual.unprotected_as_ref());
 
                     tests_run += 1;
                 }
             }
 
             if test_group.function == "decapsulation" {
-                let mut ek_expected = [0u8; mlkem1024::MlKem1024::EK_SIZE];
-                let mut dk_expected = [0u8; mlkem1024::MlKem1024::DK_SIZE];
+                let mut ek_expected = [0u8; mlkem1024::EK_SIZE];
+                let mut dk_expected = [0u8; mlkem1024::DK_SIZE];
                 hex::decode_to_slice(test_group.ek.as_ref().unwrap(), &mut ek_expected).unwrap();
                 hex::decode_to_slice(test_group.dk.as_ref().unwrap(), &mut dk_expected).unwrap();
 
                 for test in test_group.tests.iter() {
                     let mut k = [0u8; 32];
-                    let mut ct_expected = [0u8; mlkem1024::MlKem1024::CIPHERTEXT_SIZE];
+                    let mut ct_expected = [0u8; mlkem1024::CIPHERTEXT_SIZE];
                     hex::decode_to_slice(&test.k, &mut k).unwrap();
                     hex::decode_to_slice(&test.c, &mut ct_expected).unwrap();
 
                     let dk =
                         mlkem1024::DecapsulationKey::unchecked_from_slice(&dk_expected).unwrap();
                     let k_actual = dk
-                        .decap(&mlkem1024::Ciphertext::from_slice(&ct_expected).unwrap())
+                        .decap(&mlkem1024::Ciphertext::try_from(&ct_expected).unwrap())
                         .unwrap();
-                    assert_eq!(k, k_actual.unprotected_as_bytes());
+                    assert_eq!(k, k_actual.unprotected_as_ref());
 
                     tests_run += 1;
                 }

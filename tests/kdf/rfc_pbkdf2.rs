@@ -9,7 +9,7 @@ mod rfc7914_test_vectors {
 
     #[test]
     fn test_case_1() {
-        let password_256 = sha256::Password::from_slice("passwd".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("passwd".as_bytes()).unwrap();
         let salt = "salt".as_bytes();
         let iter = 1;
         let mut dk_out = [0u8; 64];
@@ -22,7 +22,7 @@ mod rfc7914_test_vectors {
 
     #[test]
     fn test_case_2() {
-        let password_256 = sha256::Password::from_slice("Password".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("Password".as_bytes()).unwrap();
         let salt = "NaCl".as_bytes();
         let iter = 80000;
         let mut dk_out = [0u8; 64];

@@ -32,11 +32,13 @@ pub(crate) mod serialization;
 /// Sampling ring elements from seeds.
 pub(crate) mod sampling;
 
+use crate::generics::sealed::{Data, Sealed, TryFromBytes};
 use crate::hazardous::hash::sha3::sha3_256::Sha3_256;
 use crate::hazardous::hash::sha3::sha3_512::Sha3_512;
 use crate::hazardous::hash::sha3::shake256;
 use crate::hazardous::kem::ml_kem::Seed;
 use crate::{errors::UnknownCryptoError, hazardous::hash::sha3::sha3_256::SHA3_256_OUTSIZE};
+use core::fmt::Debug;
 use core::marker::PhantomData;
 use fe::*;
 use re::*;
@@ -88,7 +90,7 @@ pub fn g(c: &[&[u8]]) -> ([u8; 32], ZeroizeWrap<[u8; 32]>) {
 }
 
 /// Internal PKE-related function, for generalizing over the three different PKE parameter-sets.
-pub(crate) trait PkeParameters {
+pub trait PkeParameters: Debug {
     const N: usize = 256;
     const K: usize;
     const ETA_1: usize;
@@ -322,8 +324,8 @@ impl PkeParameters for MlKem1024Internal {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-/// ML-KEM encapsulation key.
-pub(crate) struct EncapKey<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> {
+/// Internal, generic representation of encapsulation key and operation logic.
+pub struct EncapKey<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> {
     pub(crate) bytes: [u8; ENCODED_SIZE],
     h_ek: [u8; SHA3_256_OUTSIZE],
     t_hat: [RingElementNTT; K],
@@ -348,7 +350,7 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> PartialEq<&[
 }
 
 impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, ENCODED_SIZE, Pke> {
-    pub(crate) fn from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
+    pub(crate) fn from_bytes(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         Pke::encapsulation_key_check(slice)?;
 
         let mut t_hat = [RingElementNTT::zero(); K];
@@ -379,7 +381,7 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
 
         Ok(Self {
             bytes: slice.try_into().unwrap(), // NOTE: Should never panic if encapsulation_key_check() succeeds.
-            h_ek: h_ek.value,
+            h_ek: h_ek.data.bytes,
             t_hat,
             mat_a,
             _phantom: PhantomData,
@@ -533,91 +535,48 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> EncapKey<K, 
     }
 }
 
-pub(crate) struct DecapKey<
+/// Internal, generic representation of decapsulation key and operation logic.
+pub struct DecapKey<
     const K: usize,
     const ENCODED_SIZE_EK: usize,
     const ENCODED_SIZE_DK: usize,
     Pke: PkeParameters,
 > {
     pub(crate) bytes: [u8; ENCODED_SIZE_DK],
-    s_hat: [RingElementNTT; K],
+    pub(crate) s_hat: [RingElementNTT; K],
     _phantom: PhantomData<Pke>,
 }
 
-#[cfg(feature = "zeroize")]
-impl<
-        const K: usize,
-        const ENCODED_SIZE_EK: usize,
-        const ENCODED_SIZE_DK: usize,
-        Pke: PkeParameters,
-    > Drop for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    Drop for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
 {
     fn drop(&mut self) {
-        use zeroize::Zeroize;
-        self.bytes.iter_mut().zeroize();
-        self.s_hat.iter_mut().zeroize();
+        #[cfg(feature = "zeroize")]
+        {
+            self.memzero();
+        }
     }
 }
 
-impl<
-        const K: usize,
-        const ENCODED_SIZE_EK: usize,
-        const ENCODED_SIZE_DK: usize,
-        Pke: PkeParameters,
-    > PartialEq<DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>>
-    for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+// SECURITY: Normal AsRef<[u8]> required due to implementation as Data.
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    AsRef<[u8]> for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
 {
-    fn eq(&self, other: &DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>) -> bool {
-        use subtle::ConstantTimeEq;
-
-        (self
-            .unprotected_as_bytes()
-            .ct_eq(other.unprotected_as_bytes()))
-        .into()
+    fn as_ref(&self) -> &[u8] {
+        self.bytes.as_ref()
     }
 }
 
-impl<
-        const K: usize,
-        const ENCODED_SIZE_EK: usize,
-        const ENCODED_SIZE_DK: usize,
-        Pke: PkeParameters,
-    > Eq for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
-{
-}
-
-impl<
-        const K: usize,
-        const ENCODED_SIZE_EK: usize,
-        const ENCODED_SIZE_DK: usize,
-        Pke: PkeParameters,
-    > PartialEq<&[u8]> for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
-{
-    fn eq(&self, other: &&[u8]) -> bool {
-        use subtle::ConstantTimeEq;
-
-        (self.unprotected_as_bytes().ct_eq(*other)).into()
-    }
-}
-
-impl<
-        const K: usize,
-        const ENCODED_SIZE_EK: usize,
-        const ENCODED_SIZE_DK: usize,
-        Pke: PkeParameters,
-    > core::fmt::Debug for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    Debug for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{} {{***OMITTED***}}", stringify!($name))
     }
 }
 
-impl<
-        const K: usize,
-        const ENCODED_SIZE_EK: usize,
-        const ENCODED_SIZE_DK: usize,
-        Pke: PkeParameters,
-    > DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
 {
     pub(crate) fn get_encapsulation_key_bytes(&self) -> &[u8] {
         &self.bytes[ENCODE_SIZE_POLY * K..(768 * K) + 32]
@@ -702,7 +661,7 @@ impl<
         c_prime: &mut [u8],
         ek: &EncapKey<K, ENCODED_SIZE_EK, Pke>,
     ) -> Result<[u8; 32], UnknownCryptoError> {
-        debug_assert_eq!(self.get_encapsulation_key_bytes(), ek.as_ref());
+        debug_assert_eq!(ek, &self.get_encapsulation_key_bytes());
         debug_assert_eq!(c.len(), Pke::CIPHERTEXT_SIZE);
 
         // Step 1:
@@ -750,13 +709,9 @@ impl<
     ) -> Result<[u8; 32], UnknownCryptoError> {
         // In this case we aren't provided a cached encapsulation key.
         let ek =
-            EncapKey::<K, ENCODED_SIZE_EK, Pke>::from_slice(self.get_encapsulation_key_bytes())?;
+            EncapKey::<K, ENCODED_SIZE_EK, Pke>::from_bytes(self.get_encapsulation_key_bytes())?;
 
         self.mlkem_decap_internal_with_ek(c, c_prime, &ek)
-    }
-
-    pub(crate) fn unprotected_as_bytes(&self) -> &[u8] {
-        &self.bytes
     }
 }
 
@@ -828,7 +783,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
 
         // Cache hash of ek so we don't need to re-compute for every encap().
         let h_ek = Sha3_256::digest(&ek.bytes)?;
-        ek.h_ek = h_ek.value;
+        ek.h_ek = h_ek.data.bytes;
 
         // Step 20
         for (re, dk_part) in dk
@@ -872,7 +827,7 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
 
         // Step 1 + 2. (ekPKE, dkPKE) ← K-PKE.KeyGen(d)
         Self::keygen(
-            &seed.unprotected_as_bytes()[..32],
+            &seed.unprotected_as_ref()[..32],
             &mut encap_key,
             &mut decap_key,
         )?;
@@ -885,9 +840,9 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
             .copy_from_slice(Sha3_256::digest(&encap_key.bytes).unwrap().as_ref());
         decap_key.bytes[(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32
             ..(ENCODE_SIZE_POLY * K) + Pke::EK_SIZE + 32 + 32]
-            .copy_from_slice(&seed.unprotected_as_bytes()[32..64]);
+            .copy_from_slice(&seed.unprotected_as_ref()[32..64]);
 
-        debug_assert_eq!(decap_key.get_encapsulation_key_bytes(), encap_key.as_ref());
+        debug_assert_eq!(encap_key, decap_key.get_encapsulation_key_bytes());
 
         Ok((encap_key, decap_key))
     }
@@ -947,18 +902,343 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
     }
 }
 
+// TypePrimitive + TypeData + Data impls for DecapKey and EncapKey
+
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    Sealed for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+{
+}
+
+impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> Sealed
+    for EncapKey<K, ENCODED_SIZE, Pke>
+{
+}
+
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    AsRef<[u8; ENCODED_SIZE_DK]> for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+{
+    fn as_ref(&self) -> &[u8; ENCODED_SIZE_DK] {
+        &self.bytes
+    }
+}
+
+impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> AsRef<[u8; ENCODED_SIZE]>
+    for EncapKey<K, ENCODED_SIZE, Pke>
+{
+    fn as_ref(&self) -> &[u8; ENCODED_SIZE] {
+        &self.bytes
+    }
+}
+
+// NOTE: unimplemented!() for trait-required methods that are not applicable to this
+// scenario using EncapKey<> and DecapKey<>.
+
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    AsMut<[u8]> for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+{
+    fn as_mut(&mut self) -> &mut [u8] {
+        unimplemented!("CORRECTNESS: DecapKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    AsMut<[u8; ENCODED_SIZE_DK]> for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+{
+    fn as_mut(&mut self) -> &mut [u8; ENCODED_SIZE_DK] {
+        unimplemented!("CORRECTNESS: DecapKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> AsMut<[u8]>
+    for EncapKey<K, ENCODED_SIZE, Pke>
+{
+    fn as_mut(&mut self) -> &mut [u8] {
+        unimplemented!("CORRECTNESS: EncapKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> AsMut<[u8; ENCODED_SIZE]>
+    for EncapKey<K, ENCODED_SIZE, Pke>
+{
+    fn as_mut(&mut self) -> &mut [u8; ENCODED_SIZE] {
+        unimplemented!("CORRECTNESS: EncapKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    Data for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+{
+    fn len(&self) -> usize {
+        debug_assert_eq!(self.bytes.len(), ENCODED_SIZE_DK);
+        ENCODED_SIZE_DK
+    }
+
+    fn is_empty(&self) -> bool {
+        ENCODED_SIZE_DK == 0
+    }
+
+    fn new(_size: usize) -> Result<Self, UnknownCryptoError> {
+        unimplemented!("CORRECTNESS: Not applicable for this type.")
+    }
+
+    #[cfg(feature = "zeroize")]
+    fn memzero(&mut self) {
+        use zeroize::Zeroize;
+        self.bytes.iter_mut().zeroize();
+        self.s_hat.iter_mut().zeroize();
+    }
+}
+
+impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> Data
+    for EncapKey<K, ENCODED_SIZE, Pke>
+{
+    fn len(&self) -> usize {
+        debug_assert_eq!(self.bytes.len(), ENCODED_SIZE);
+        ENCODED_SIZE
+    }
+
+    fn is_empty(&self) -> bool {
+        ENCODED_SIZE == 0
+    }
+
+    fn new(_size: usize) -> Result<Self, UnknownCryptoError> {
+        unimplemented!("CORRECTNESS: Not applicable for this type.")
+    }
+
+    #[cfg(feature = "zeroize")]
+    fn memzero(&mut self) {
+        unimplemented!(
+            "SECURITY: EncapKey<> is exposed as Public and should never need memzero as part of Drop."
+        );
+    }
+}
+
+impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize, Pke: PkeParameters>
+    TryFromBytes for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
+{
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
+        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // the TypeData::try_from_bytes(), which we define to be custom here.
+        Self::unchecked_from_slice(bytes)
+    }
+}
+
+impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> TryFromBytes
+    for EncapKey<K, ENCODED_SIZE, Pke>
+{
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
+        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // the TypeData::try_from_bytes(), which we define to be custom here.
+        Self::from_bytes(bytes)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hazardous::kem::ml_kem::mlkem1024::KeyPair as MlKem1024KeyPair;
+    use crate::KP;
     use crate::hazardous::kem::ml_kem::mlkem512::KeyPair as MlKem512KeyPair;
     use crate::hazardous::kem::ml_kem::mlkem768::KeyPair as MlKem768KeyPair;
+    use crate::hazardous::kem::ml_kem::mlkem1024::KeyPair as MlKem1024KeyPair;
+
+    #[test]
+    #[cfg(feature = "safe_api")] // format! is only available with std
+    fn test_omitted_debug_decapkey() {
+        let seed = Seed::try_from(&[128u8; 64]).unwrap();
+        let kp = MlKem768KeyPair::try_from(&seed).unwrap();
+
+        let dk = DecapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            { MlKem768Internal::DK_SIZE },
+            MlKem768Internal,
+        >::try_from_bytes(&kp.private().data.bytes)
+        .unwrap();
+
+        let ser = format!("{:?}", dk.bytes.as_ref());
+        let test_debug_contents = format!("{:?}", &dk);
+        assert!(!test_debug_contents.contains(&ser));
+        assert!(test_debug_contents.contains(&"{***OMITTED***}".to_string()));
+    }
+
+    #[test]
+    #[should_panic]
+    #[cfg(feature = "zeroize")]
+    fn test_encapkey_dataimpl_memzero() {
+        let mut ek = EncapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            MlKem768Internal,
+        >::from_bytes(&[0u8; MlKem768Internal::EK_SIZE])
+        .unwrap();
+        ek.memzero();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_encapkey_dataimpl_new() {
+        _ = EncapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            MlKem768Internal,
+        >::new(MlKem768Internal::EK_SIZE);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_encapkey_dataimpl_as_mut_const() {
+        let mut ek = EncapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            MlKem768Internal,
+        >::try_from_bytes(&[0u8; MlKem768Internal::EK_SIZE])
+        .unwrap();
+
+        assert_eq!(
+            <EncapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            MlKem768Internal,
+        > as AsMut<[u8; MlKem768Internal::EK_SIZE]>>::as_mut(&mut ek),
+            &[1u8; MlKem768Internal::EK_SIZE]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_encapkey_dataimpl_as_mut() {
+        let mut ek = EncapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            MlKem768Internal,
+        >::try_from_bytes(&[0u8; MlKem768Internal::EK_SIZE])
+        .unwrap();
+
+        assert_eq!(
+            <EncapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            MlKem768Internal,
+        > as AsMut<[u8]>>::as_mut(&mut ek),
+            &[1u8; MlKem768Internal::EK_SIZE]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_decapkey_dataimpl_as_mut_const() {
+        let seed = Seed::try_from(&[128u8; 64]).unwrap();
+        let kp = MlKem768KeyPair::try_from(&seed).unwrap();
+
+        let mut dk = DecapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            { MlKem768Internal::DK_SIZE },
+            MlKem768Internal,
+        >::try_from_bytes(&kp.private().data.bytes)
+        .unwrap();
+
+        assert_eq!(
+            <DecapKey::<
+                { MlKem768Internal::K },
+                { MlKem768Internal::EK_SIZE },
+                { MlKem768Internal::DK_SIZE },
+                MlKem768Internal,
+            > as AsMut<[u8; MlKem768Internal::DK_SIZE]>>::as_mut(&mut dk),
+            &[1u8; MlKem768Internal::DK_SIZE]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_decapkey_dataimpl_as_mut() {
+        let seed = Seed::try_from(&[128u8; 64]).unwrap();
+        let kp = MlKem768KeyPair::try_from(&seed).unwrap();
+
+        let mut dk = DecapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            { MlKem768Internal::DK_SIZE },
+            MlKem768Internal,
+        >::try_from_bytes(&kp.private().data.bytes)
+        .unwrap();
+
+        assert_eq!(
+            <DecapKey::<
+                { MlKem768Internal::K },
+                { MlKem768Internal::EK_SIZE },
+                { MlKem768Internal::DK_SIZE },
+                MlKem768Internal,
+            > as AsMut<[u8]>>::as_mut(&mut dk),
+            &[1u8; MlKem768Internal::DK_SIZE]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_decapkey_dataimpl_new() {
+        _ = DecapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            { MlKem768Internal::DK_SIZE },
+            MlKem768Internal,
+        >::new(MlKem768Internal::DK_SIZE);
+    }
+
+    #[test]
+    fn test_encapkey_dataimpl() {
+        let seed = Seed::try_from(&[128u8; 64]).unwrap();
+        let kp = MlKem768KeyPair::try_from(&seed).unwrap();
+
+        let valid_ek = EncapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            MlKem768Internal,
+        >::try_from_bytes(&kp.public().data.bytes)
+        .unwrap();
+
+        assert_eq!(valid_ek.len(), MlKem768Internal::EK_SIZE);
+        assert!(!valid_ek.is_empty());
+    }
+
+    #[test]
+    fn test_decapkey_dataimpl() {
+        let seed = Seed::try_from(&[128u8; 64]).unwrap();
+        let kp = MlKem768KeyPair::try_from(&seed).unwrap();
+
+        #[cfg(feature = "zeroize")]
+        let mut valid_dk = DecapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            { MlKem768Internal::DK_SIZE },
+            MlKem768Internal,
+        >::try_from_bytes(&kp.private().data.bytes)
+        .unwrap();
+
+        #[cfg(not(feature = "zeroize"))]
+        let valid_dk = DecapKey::<
+            { MlKem768Internal::K },
+            { MlKem768Internal::EK_SIZE },
+            { MlKem768Internal::DK_SIZE },
+            MlKem768Internal,
+        >::try_from_bytes(&kp.private().data.bytes)
+        .unwrap();
+
+        assert_eq!(valid_dk.len(), MlKem768Internal::DK_SIZE);
+        assert!(!valid_dk.is_empty());
+
+        #[cfg(feature = "zeroize")]
+        {
+            valid_dk.memzero();
+            assert_eq!(valid_dk.bytes, [0u8; MlKem768Internal::DK_SIZE]);
+        }
+    }
 
     #[test]
     #[cfg(feature = "safe_api")]
     fn test_seed_and_dk_mismatch() {
-        let seed = Seed::from_slice(&[128u8; 64]).unwrap();
-        let bad_seed = Seed::from_slice(&[1u8; 64]).unwrap();
+        let seed = Seed::try_from(&[128u8; 64]).unwrap();
+        let bad_seed = Seed::try_from(&[1u8; 64]).unwrap();
 
         // ML-KEM-512.
         let kp = MlKem512KeyPair::try_from(&seed).unwrap();
@@ -966,32 +1246,32 @@ mod tests {
         assert!(
             KeyPairInternal::<MlKem512Internal>::from_keys::<2, 800, 1632, 768>(
                 &seed,
-                &kp.public().value,
-                &kp.private().value,
+                &kp.public().data,
+                &kp.private().data,
             )
             .is_ok()
         );
         assert!(
             KeyPairInternal::<MlKem512Internal>::from_keys::<2, 800, 1632, 768>(
                 &seed,
-                &kp_bad.public().value,
-                &kp.private().value,
+                &kp_bad.public().data,
+                &kp.private().data,
             )
             .is_err()
         );
         assert!(
             KeyPairInternal::<MlKem512Internal>::from_keys::<2, 800, 1632, 768>(
                 &seed,
-                &kp.public().value,
-                &kp_bad.private().value,
+                &kp.public().data,
+                &kp_bad.private().data,
             )
             .is_err()
         );
         assert!(
             KeyPairInternal::<MlKem512Internal>::from_keys::<2, 800, 1632, 768>(
                 &seed,
-                &kp_bad.public().value,
-                &kp_bad.private().value,
+                &kp_bad.public().data,
+                &kp_bad.private().data,
             )
             .is_err()
         );
@@ -1002,32 +1282,32 @@ mod tests {
         assert!(
             KeyPairInternal::<MlKem768Internal>::from_keys::<3, 1184, 2400, 1088>(
                 &seed,
-                &kp.public().value,
-                &kp.private().value,
+                &kp.public().data,
+                &kp.private().data,
             )
             .is_ok()
         );
         assert!(
             KeyPairInternal::<MlKem768Internal>::from_keys::<3, 1184, 2400, 1088>(
                 &seed,
-                &kp_bad.public().value,
-                &kp.private().value,
+                &kp_bad.public().data,
+                &kp.private().data,
             )
             .is_err()
         );
         assert!(
             KeyPairInternal::<MlKem768Internal>::from_keys::<3, 1184, 2400, 1088>(
                 &seed,
-                &kp.public().value,
-                &kp_bad.private().value,
+                &kp.public().data,
+                &kp_bad.private().data,
             )
             .is_err()
         );
         assert!(
             KeyPairInternal::<MlKem768Internal>::from_keys::<3, 1184, 2400, 1088>(
                 &seed,
-                &kp_bad.public().value,
-                &kp_bad.private().value,
+                &kp_bad.public().data,
+                &kp_bad.private().data,
             )
             .is_err()
         );
@@ -1038,32 +1318,32 @@ mod tests {
         assert!(
             KeyPairInternal::<MlKem1024Internal>::from_keys::<4, 1568, 3168, 1568>(
                 &seed,
-                &kp.public().value,
-                &kp.private().value,
+                &kp.public().data,
+                &kp.private().data,
             )
             .is_ok()
         );
         assert!(
             KeyPairInternal::<MlKem1024Internal>::from_keys::<4, 1568, 3168, 1568>(
                 &seed,
-                &kp_bad.public().value,
-                &kp.private().value,
+                &kp_bad.public().data,
+                &kp.private().data,
             )
             .is_err()
         );
         assert!(
             KeyPairInternal::<MlKem1024Internal>::from_keys::<4, 1568, 3168, 1568>(
                 &seed,
-                &kp.public().value,
-                &kp_bad.private().value,
+                &kp.public().data,
+                &kp_bad.private().data,
             )
             .is_err()
         );
         assert!(
             KeyPairInternal::<MlKem1024Internal>::from_keys::<4, 1568, 3168, 1568>(
                 &seed,
-                &kp_bad.public().value,
-                &kp_bad.private().value,
+                &kp_bad.public().data,
+                &kp_bad.private().data,
             )
             .is_err()
         );
@@ -1071,80 +1351,98 @@ mod tests {
 
     #[test]
     fn test_encap_internal_check_m() {
-        let testing_seed = Seed::from_slice(&[128u8; 64]).unwrap();
+        let testing_seed = Seed::try_from(&[128u8; 64]).unwrap();
 
         let keypair = MlKem512KeyPair::try_from(&testing_seed).unwrap();
         let mut c = [0u8; MlKem512Internal::CIPHERTEXT_SIZE];
-        assert!(keypair
-            .public()
-            .value
-            .mlkem_encap_internal(&[0u8; 32], &mut c)
-            .is_ok());
-        assert!(keypair
-            .public()
-            .value
-            .mlkem_encap_internal(&[0u8; 31], &mut c)
-            .is_err());
-        assert!(keypair
-            .public()
-            .value
-            .mlkem_encap_internal(&[0u8; 33], &mut c)
-            .is_err());
+        assert!(
+            keypair
+                .public()
+                .data
+                .mlkem_encap_internal(&[0u8; 32], &mut c)
+                .is_ok()
+        );
+        assert!(
+            keypair
+                .public()
+                .data
+                .mlkem_encap_internal(&[0u8; 31], &mut c)
+                .is_err()
+        );
+        assert!(
+            keypair
+                .public()
+                .data
+                .mlkem_encap_internal(&[0u8; 33], &mut c)
+                .is_err()
+        );
 
         let keypair = MlKem768KeyPair::try_from(&testing_seed).unwrap();
         let mut c = [0u8; MlKem768Internal::CIPHERTEXT_SIZE];
-        assert!(keypair
-            .public()
-            .value
-            .mlkem_encap_internal(&[0u8; 32], &mut c)
-            .is_ok());
-        assert!(keypair
-            .public()
-            .value
-            .mlkem_encap_internal(&[0u8; 31], &mut c)
-            .is_err());
-        assert!(keypair
-            .public()
-            .value
-            .mlkem_encap_internal(&[0u8; 33], &mut c)
-            .is_err());
+        assert!(
+            keypair
+                .public()
+                .data
+                .mlkem_encap_internal(&[0u8; 32], &mut c)
+                .is_ok()
+        );
+        assert!(
+            keypair
+                .public()
+                .data
+                .mlkem_encap_internal(&[0u8; 31], &mut c)
+                .is_err()
+        );
+        assert!(
+            keypair
+                .public()
+                .data
+                .mlkem_encap_internal(&[0u8; 33], &mut c)
+                .is_err()
+        );
 
         let keypair = MlKem1024KeyPair::try_from(&testing_seed).unwrap();
         let mut c = [0u8; MlKem1024Internal::CIPHERTEXT_SIZE];
-        assert!(keypair
-            .public()
-            .value
-            .mlkem_encap_internal(&[0u8; 32], &mut c)
-            .is_ok());
-        assert!(keypair
-            .public()
-            .value
-            .mlkem_encap_internal(&[0u8; 31], &mut c)
-            .is_err());
-        assert!(keypair
-            .public()
-            .value
-            .mlkem_encap_internal(&[0u8; 33], &mut c)
-            .is_err());
+        assert!(
+            keypair
+                .public()
+                .data
+                .mlkem_encap_internal(&[0u8; 32], &mut c)
+                .is_ok()
+        );
+        assert!(
+            keypair
+                .public()
+                .data
+                .mlkem_encap_internal(&[0u8; 31], &mut c)
+                .is_err()
+        );
+        assert!(
+            keypair
+                .public()
+                .data
+                .mlkem_encap_internal(&[0u8; 33], &mut c)
+                .is_err()
+        );
     }
 
     #[test]
     #[cfg(feature = "safe_api")]
     fn test_omitted_debug() {
-        let testing_seed = Seed::from_slice(&[128u8; 64]).unwrap();
+        let testing_seed = Seed::try_from(&[128u8; 64]).unwrap();
 
         let keypair = MlKem512KeyPair::try_from(&testing_seed).unwrap();
-        let secret = format!("{:?}", keypair.private().value.bytes);
+        let secret = format!("{:?}", keypair.private().data.bytes);
         let test_debug_contents = format!("{:?}", keypair.private());
         assert!(!test_debug_contents.contains(&secret));
 
         let keypair = MlKem768KeyPair::try_from(&testing_seed).unwrap();
-        let secret = format!("{:?}", keypair.private().value.bytes);
+        let secret = format!("{:?}", keypair.private().data.bytes);
         let test_debug_contents = format!("{:?}", keypair.private());
         assert!(!test_debug_contents.contains(&secret));
 
         let keypair = MlKem1024KeyPair::try_from(&testing_seed).unwrap();
-        let secret = format!("{:?}", keypair.private().value.bytes);
+        let secret = format!("{:?}", keypair.private().data.bytes);
         let test_debug_contents = format!("{:?}", keypair.private());
         assert!(!test_debug_contents.contains(&secret));
     }
@@ -1254,11 +1552,11 @@ mod tests {
                     .is_err()
                 );
 
-                let testing_seed = Seed::from_slice(&[128u8; 64]).unwrap();
+                let testing_seed = Seed::try_from(&[128u8; 64]).unwrap();
                 let keypair = $keypair::try_from(&testing_seed).unwrap();
-                assert!($pke::encapsulation_key_check(&keypair.public().value.as_ref()).is_ok());
-                assert!($pke::decapsulation_key_check(&keypair.private().value.unprotected_as_bytes()).is_ok());
-                let mut dk = keypair.private().value.unprotected_as_bytes().to_vec();
+                assert!($pke::encapsulation_key_check(&keypair.public().as_ref()).is_ok());
+                assert!($pke::decapsulation_key_check(&keypair.private().unprotected_as_ref()).is_ok());
+                let mut dk = keypair.private().unprotected_as_ref().to_vec();
 
                 // Modify the hash part
                 let correct = dk[(768 * $pke::K) + 32];

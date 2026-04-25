@@ -1,3 +1,4 @@
+use orion::KP;
 use orion::hazardous::kem::xwing::*;
 
 #[test]
@@ -17,16 +18,18 @@ pub fn draft_06_testvector_1() {
         hex::decode("d2df0522128f09dd8e2c92b1e905c793d8f57a54c3da25861f10bf4ca613e384").unwrap();
 
     assert_eq!(seed, sk);
-    let dk = Seed::from_slice(&seed).unwrap();
-    let kp = KeyPair::generate_deterministic(&dk).unwrap();
+    let dk = DecapsulationKey::try_from(&seed).unwrap();
+    assert_eq!(&sk, dk.unprotected_as_ref());
+    let kp = KeyPair::try_from(&dk).unwrap();
     assert_eq!(&pk, kp.public().as_ref());
 
-    let (ss_actual, ct_actual) = XWing::encap_deterministic(kp.public(), &eseed).unwrap();
-    assert_eq!(&ss, ss_actual.unprotected_as_bytes());
+    let (ss_actual, ct_actual) = kp.public().encap_deterministic(&eseed).unwrap();
+    assert_eq!(&ss, ss_actual.unprotected_as_ref());
     assert_eq!(&ct, ct_actual.as_ref());
 
-    let ss_roundtrip = XWing::decap(kp.private(), &ct_actual).unwrap();
-    assert_eq!(&ss, ss_roundtrip.unprotected_as_bytes());
+    let ss_roundtrip = kp.decap(&ct_actual).unwrap();
+    assert_eq!(&ss, ss_roundtrip.unprotected_as_ref());
+    assert_eq!(&ss, dk.decap(&ct_actual).unwrap().unprotected_as_ref());
 }
 
 #[test]
@@ -51,16 +54,18 @@ pub fn draft_06_testvector_2() {
         hex::decode("f2e86241c64d60f6649fbc6c5b7d17180b780a3f34355e64a85749949c45f150").unwrap();
 
     assert_eq!(seed, sk);
-    let dk = Seed::from_slice(&seed).unwrap();
-    let kp = KeyPair::generate_deterministic(&dk).unwrap();
+    let dk = DecapsulationKey::try_from(&seed).unwrap();
+    assert_eq!(&sk, dk.unprotected_as_ref());
+    let kp = KeyPair::try_from(&dk).unwrap();
     assert_eq!(&pk, kp.public().as_ref());
 
-    let (ss_actual, ct_actual) = XWing::encap_deterministic(kp.public(), &eseed).unwrap();
-    assert_eq!(&ss, ss_actual.unprotected_as_bytes());
+    let (ss_actual, ct_actual) = kp.public().encap_deterministic(&eseed).unwrap();
+    assert_eq!(&ss, ss_actual.unprotected_as_ref());
     assert_eq!(&ct, ct_actual.as_ref());
 
-    let ss_roundtrip = XWing::decap(kp.private(), &ct_actual).unwrap();
-    assert_eq!(&ss, ss_roundtrip.unprotected_as_bytes());
+    let ss_roundtrip = kp.decap(&ct_actual).unwrap();
+    assert_eq!(&ss, ss_roundtrip.unprotected_as_ref());
+    assert_eq!(&ss, dk.decap(&ct_actual).unwrap().unprotected_as_ref());
 }
 
 #[test]
@@ -86,14 +91,16 @@ pub fn draft_06_testvector_3() {
         hex::decode("953f7f4e8c5b5049bdc771d1dffada0dd961477d1a2ae0988baa7ea6898d893f").unwrap();
 
     assert_eq!(seed, sk);
-    let dk = Seed::from_slice(&seed).unwrap();
-    let kp = KeyPair::generate_deterministic(&dk).unwrap();
+    let dk = DecapsulationKey::try_from(&seed).unwrap();
+    assert_eq!(&sk, dk.unprotected_as_ref());
+    let kp = KeyPair::try_from(&dk).unwrap();
     assert_eq!(&pk, kp.public().as_ref());
 
-    let (ss_actual, ct_actual) = XWing::encap_deterministic(kp.public(), &eseed).unwrap();
-    assert_eq!(&ss, ss_actual.unprotected_as_bytes());
+    let (ss_actual, ct_actual) = kp.public().encap_deterministic(&eseed).unwrap();
+    assert_eq!(&ss, ss_actual.unprotected_as_ref());
     assert_eq!(&ct, ct_actual.as_ref());
 
-    let ss_roundtrip = XWing::decap(kp.private(), &ct_actual).unwrap();
-    assert_eq!(&ss, ss_roundtrip.unprotected_as_bytes());
+    let ss_roundtrip = kp.decap(&ct_actual).unwrap();
+    assert_eq!(&ss, ss_roundtrip.unprotected_as_ref());
+    assert_eq!(&ss, dk.decap(&ct_actual).unwrap().unprotected_as_ref());
 }

@@ -68,8 +68,8 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::aead;
 //!
-//! let secret_key = aead::xchacha20poly1305::SecretKey::generate();
-//! let nonce = aead::xchacha20poly1305::Nonce::generate();
+//! let secret_key = aead::xchacha20poly1305::SecretKey::generate()?;
+//! let nonce = aead::xchacha20poly1305::Nonce::generate()?;
 //! let ad = "Additional data".as_bytes();
 //! let message = "Data to protect".as_bytes();
 //!
@@ -130,13 +130,13 @@ pub fn open(
 mod public {
     use super::*;
     use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
-    use crate::test_framework::aead_interface::{test_diff_params_err, AeadTestRunner};
+    use crate::test_framework::aead_interface::{AeadTestRunner, test_diff_params_err};
 
     #[quickcheck]
     #[cfg(feature = "safe_api")]
     fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
-        let secret_key = SecretKey::generate();
-        let nonce = Nonce::generate();
+        let secret_key = SecretKey::generate().unwrap();
+        let nonce = Nonce::generate().unwrap();
         AeadTestRunner(
             seal,
             open,

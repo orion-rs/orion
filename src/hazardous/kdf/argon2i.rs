@@ -48,9 +48,6 @@
 //! - `memory` is less than `8`.
 //! - The hashed password does not match the expected when verifying.
 //!
-//! # Panics:
-//! A panic will occur if:
-//!
 //! # Security:
 //! - Salts should always be generated using a CSPRNG.
 //!   [`secure_rand_bytes()`] can be used for this.
