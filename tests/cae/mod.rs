@@ -35,19 +35,19 @@ fn wycheproof_runner(path: &str) {
 
             let input = &decode(&test.msg).unwrap();
             let output = &decode(&test.ct).unwrap();
-            let key = SecretKey::from_slice(&decode(&test.key).unwrap()).unwrap();
+            let key = SecretKey::try_from(&decode(&test.key).unwrap()).unwrap();
             let aad = &decode(&test.aad).unwrap();
 
             let mut dst_ct_out = vec![0u8; input.len() + 32];
 
             if is_ietf {
                 let nonce =
-                    chacha20poly1305blake2b::Nonce::from_slice(&decode(&test.iv).unwrap()).unwrap();
+                    chacha20poly1305blake2b::Nonce::try_from(&decode(&test.iv).unwrap()).unwrap();
                 chacha20poly1305blake2b::seal(&key, &nonce, input, Some(aad), &mut dst_ct_out)
                     .unwrap();
             } else {
-                let nonce = xchacha20poly1305blake2b::Nonce::from_slice(&decode(&test.iv).unwrap())
-                    .unwrap();
+                let nonce =
+                    xchacha20poly1305blake2b::Nonce::try_from(&decode(&test.iv).unwrap()).unwrap();
                 xchacha20poly1305blake2b::seal(&key, &nonce, input, Some(aad), &mut dst_ct_out)
                     .unwrap();
             }

@@ -29,7 +29,7 @@ use crate::errors::UnknownCryptoError;
 #[cfg(feature = "safe_api")]
 pub trait TestingRandom {
     /// Randomly generate self.
-    fn gen() -> Self;
+    fn gen_new() -> Self;
 }
 
 #[cfg(feature = "safe_api")]
@@ -211,22 +211,26 @@ fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
     Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
     let mut dst_out = [0u8; 128];
-    assert!(encryptor(
-        key,
-        nonce,
-        u32::MAX,
-        &[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
-        &mut dst_out
-    )
-    .is_err());
-    assert!(decryptor(
-        key,
-        nonce,
-        u32::MAX,
-        &[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
-        &mut dst_out
-    )
-    .is_err());
+    assert!(
+        encryptor(
+            key,
+            nonce,
+            u32::MAX,
+            &[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
+            &mut dst_out
+        )
+        .is_err()
+    );
+    assert!(
+        decryptor(
+            key,
+            nonce,
+            u32::MAX,
+            &[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
+            &mut dst_out
+        )
+        .is_err()
+    );
 }
 
 #[cfg(feature = "safe_api")]
@@ -241,22 +245,26 @@ fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
     Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
 {
     let mut dst_out = [0u8; 64];
-    assert!(encryptor(
-        key,
-        nonce,
-        u32::MAX,
-        &[0u8; 64], // Only needs to process one keystream
-        &mut dst_out
-    )
-    .is_ok());
-    assert!(decryptor(
-        key,
-        nonce,
-        u32::MAX,
-        &[0u8; 64], // Only needs to process one keystream
-        &mut dst_out
-    )
-    .is_ok());
+    assert!(
+        encryptor(
+            key,
+            nonce,
+            u32::MAX,
+            &[0u8; 64], // Only needs to process one keystream
+            &mut dst_out
+        )
+        .is_ok()
+    );
+    assert!(
+        decryptor(
+            key,
+            nonce,
+            u32::MAX,
+            &[0u8; 64], // Only needs to process one keystream
+            &mut dst_out
+        )
+        .is_ok()
+    );
 }
 
 #[cfg(test)]
@@ -274,12 +282,12 @@ pub fn test_diff_params_diff_output<Encryptor, Decryptor, Key, Nonce>(
 {
     let input = &[0u8; 16];
 
-    let sk1 = Key::gen();
-    let sk2 = Key::gen();
+    let sk1 = Key::gen_new();
+    let sk2 = Key::gen_new();
     assert!(sk1 != sk2);
 
-    let n1 = Nonce::gen();
-    let n2 = Nonce::gen();
+    let n1 = Nonce::gen_new();
+    let n2 = Nonce::gen_new();
     assert!(n1 != n2);
 
     let c1 = 0u32;

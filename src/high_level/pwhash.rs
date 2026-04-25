@@ -38,7 +38,7 @@
 //! [`PasswordHash`] provides two ways of retrieving the hashed password:
 //! - [`PasswordHash::unprotected_as_encoded()`] returns the hashed password in an encoded form.
 //!   The encoding specifies the settings used to hash the password.
-//! - [`PasswordHash::unprotected_as_bytes()`] returns only the hashed password in raw bytes.
+//! - [`PasswordHash::unprotected_as_ref()`] returns only the hashed password in raw bytes.
 //!
 //! The following is an example of how the encoded password hash might look:
 //! ```text
@@ -62,13 +62,10 @@
 //! - `iterations` is less than 3.
 //! - The length of the `password` is greater than [`isize::MAX`].
 //! - The password hash does not match `expected`.
-//!
-//! # Panics:
-//! A panic will occur if:
-//! - Failure to generate random bytes securely.
+//! - Failure to generate random bytes securely during [`Salt::generate()`].
 //!
 //! # Security:
-//! - [`PasswordHash::unprotected_as_encoded()`] and [`PasswordHash::unprotected_as_bytes()`] should never
+//! - [`PasswordHash::unprotected_as_encoded()`] and [`PasswordHash::unprotected_as_ref()`] should never
 //!   be used to compare password hashes, as these will not run in constant-time.
 //!   Either use [`hash_password_verify()`] or compare two [`PasswordHash`]es.
 //! - Choosing the correct cost parameters is important for security. Please refer to [libsodium's docs]
@@ -80,7 +77,7 @@
 //! ```rust
 //! use orion::pwhash;
 //!
-//! let password = pwhash::Password::from_slice(b"Secret password")?;
+//! let password = pwhash::Password::try_from(b"Secret password")?;
 //!
 //! let hash = pwhash::hash_password(&password, 3, 1<<16)?;
 //! assert!(pwhash::hash_password_verify(&hash, &password).is_ok());
@@ -135,19 +132,20 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 /// - The encoded password hash length is less than [`PasswordHash::MIN_ENCODED_LEN`] or greater than [`PasswordHash::MAX_ENCODED_LEN`].
 /// - The parameters in the encoded password hash are not correctly ordered. The ordering must be:
 ///   `$argon2i$v=19$m=<value>,t=<value>,p=<value>$<salt>$<hash>`
+///
 /// # Panics:
 /// A panic will occur if:
 /// - Overflowing calculations happen on `usize` when decoding the password and salt from Base64.
 ///
 /// # Security:
-/// - __**Avoid using**__ `unprotected_as_bytes()` whenever possible, as it breaks all protections
+/// - __**Avoid using**__ `unprotected_as_ref()` whenever possible, as it breaks all protections
 ///   that the type implements.
-/// - Never use `unprotected_as_bytes()` or `unprotected_as_encoded()` to compare password hashes,
+/// - Never use `unprotected_as_ref()` or `unprotected_as_encoded()` to compare password hashes,
 ///   as that will not run in constant-time. Compare `PasswordHash`es directly using `==` instead.
 /// - The trait `PartialEq<&'_ [u8]>` is implemented for this type so that users are not tempted
-///   to call `unprotected_as_bytes` to compare this sensitive value to a byte slice. The trait
+///   to call `unprotected_as_ref` to compare this sensitive value to a byte slice. The trait
 ///   is implemented in such a way that the comparison happens in constant time. Thus, users should
-///   prefer `SecretType == &[u8]` over `SecretType.unprotected_as_bytes() == &[u8]`.
+///   prefer `SecretType == &[u8]` over `SecretType.unprotected_as_ref() == &[u8]`.
 ///
 /// Examples are shown below. The examples apply to any type that implements `PartialEq<&'_ [u8]>`.
 /// ```rust
@@ -156,13 +154,13 @@ pub(crate) const MIN_ITERATIONS: u32 = 3;
 ///
 /// # fn main() -> Result<(), Box<UnknownCryptoError>> {
 /// // Initialize an arbitrary, 64-byte tag.
-/// let tag = Tag::from_slice(&[1; 64])?;
+/// let tag = Tag::try_from(&[1; 64])?;
 ///
 /// // Secure, constant-time comparison with a byte slice
 /// assert_eq!(tag, &[1; 64][..]);
 ///
 /// // Secure, constant-time comparison with another Tag
-/// assert_eq!(tag, Tag::from_slice(&[1; 64])?);
+/// assert_eq!(tag, Tag::try_from(&[1; 64])?);
 /// # Ok(())
 /// # }
 /// ```
@@ -239,7 +237,7 @@ impl PasswordHash {
         Ok(Self {
             encoded_password_hash,
             password_hash: password_hash.into(),
-            salt: Salt::from_slice(salt)?,
+            salt: Salt::try_from(salt)?,
             iterations,
             memory,
         })
@@ -321,23 +319,23 @@ impl PasswordHash {
         Ok(Self {
             encoded_password_hash: password_hash.into(),
             password_hash: password_hash_raw,
-            salt: Salt::from_slice(&salt)?,
+            salt: Salt::try_from(&salt)?,
             iterations,
             memory,
         })
     }
 
     #[inline]
-    /// Return encoded password hash. __**Warning**__: Should not be used to verify
-    /// password hashes. This __**breaks protections**__ that the type implements.
+    /// Return encoded password hash. **Warning**: Should not be used to verify
+    /// password hashes. This **breaks protections** that the type implements.
     pub fn unprotected_as_encoded(&self) -> &str {
         self.encoded_password_hash.as_ref()
     }
 
     #[inline]
-    /// Return the password hash as byte slice. __**Warning**__: Should not be used unless strictly
-    /// needed. This __**breaks protections**__ that the type implements.
-    pub fn unprotected_as_bytes(&self) -> &[u8] {
+    /// Return the password hash as byte slice. **Warning**: Should not be used unless strictly
+    /// needed. This **breaks protections** that the type implements.
+    pub fn unprotected_as_ref(&self) -> &[u8] {
         self.password_hash.as_ref()
     }
 
@@ -353,8 +351,11 @@ impl PasswordHash {
     /// __NOTE__: This method should always return `false`, since there shouldn't be a way
     /// to create an empty password hash.
     pub fn is_empty(&self) -> bool {
-        debug_assert_eq!(self.encoded_password_hash.is_empty(), self.password_hash.is_empty(),
-                   "Both the encoded password hash and the raw hash must be non-empty or empty at the same time.");
+        debug_assert_eq!(
+            self.encoded_password_hash.is_empty(),
+            self.password_hash.is_empty(),
+            "Both the encoded password hash and the raw hash must be non-empty or empty at the same time."
+        );
         self.password_hash.is_empty()
     }
 }
@@ -370,7 +371,21 @@ impl core::fmt::Debug for PasswordHash {
     }
 }
 
-impl_ct_partialeq_trait!(PasswordHash, unprotected_as_bytes);
+impl PartialEq for PasswordHash {
+    fn eq(&self, other: &Self) -> bool {
+        use subtle::ConstantTimeEq;
+        (self.unprotected_as_ref().ct_eq(other.unprotected_as_ref())).into()
+    }
+}
+
+impl Eq for PasswordHash {}
+
+impl PartialEq<&[u8]> for PasswordHash {
+    fn eq(&self, other: &&[u8]) -> bool {
+        use subtle::ConstantTimeEq;
+        (self.unprotected_as_ref().ct_eq(*other)).into()
+    }
+}
 
 #[cfg(feature = "serde")]
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
@@ -413,11 +428,11 @@ pub fn hash_password(
     }
 
     // Cannot panic as this is a valid size.
-    let salt = Salt::generate(SALT_LENGTH).unwrap();
+    let salt = Salt::generate()?;
     let mut buffer = zeroize_wrap!([0u8; PWHASH_LENGTH]);
 
     argon2i::derive_key(
-        password.unprotected_as_bytes(),
+        password.unprotected_as_ref(),
         salt.as_ref(),
         iterations,
         memory,
@@ -439,8 +454,8 @@ pub fn hash_password(
 /// ```rust
 /// use orion::pwhash;
 ///
-/// let password = pwhash::Password::from_slice(b"Secret password")?;
-/// let wrong_password = pwhash::Password::from_slice(b"hunter2")?;
+/// let password = pwhash::Password::try_from(b"Secret password")?;
+/// let wrong_password = pwhash::Password::try_from(b"hunter2")?;
 ///
 /// // Pretend these are stored somewhere and out-of-mind, e.g. in a database.
 /// let hash1 = pwhash::hash_password(&password, 3, 1<<15)?;
@@ -463,8 +478,8 @@ pub fn hash_password_verify(
     let mut buffer = zeroize_wrap!([0u8; PWHASH_LENGTH]);
 
     argon2i::verify(
-        expected.unprotected_as_bytes(),
-        password.unprotected_as_bytes(),
+        expected.unprotected_as_ref(),
+        password.unprotected_as_ref(),
         expected.salt.as_ref(),
         expected.iterations,
         expected.memory,
@@ -519,67 +534,67 @@ mod public {
 
         #[test]
         fn test_encoding_and_verify_1() {
-            let password = Password::from_slice(b"password").unwrap();
+            let password = Password::try_from(b"password".as_slice()).unwrap();
             let raw_hash =
                 hex::decode("7d1b1163d3c0b791fea802ae5d1ccbd3fe896c54a1b0277ad96e5a1f311293f7")
                     .unwrap();
             let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_ref(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
         #[test]
         fn test_encoding_and_verify_2() {
-            let password = Password::from_slice(b"passwordPASSWORDPassword").unwrap();
+            let password = Password::try_from(b"passwordPASSWORDPassword".as_slice()).unwrap();
             let raw_hash =
                 hex::decode("ed4b0fd657e165f9ffe90f66ff315fbec878e629f03b2d6468d4b17a50c796aa")
                     .unwrap();
             let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$7UsP1lfhZfn/6Q9m/zFfvsh45inwOy1kaNSxelDHlqo";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_ref(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
         #[test]
         fn test_encoding_and_verify_3() {
             // Different salt from test 2
-            let password = Password::from_slice(b"passwordPASSWORDPassword").unwrap();
+            let password = Password::try_from(b"passwordPASSWORDPassword".as_slice()).unwrap();
             let raw_hash =
                 hex::decode("fa9ea96fecd0998251d698c1303edda4df3889a39bfa87cd5e7b8656ef61b510")
                     .unwrap();
             let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$U29tZVNhbHRTb21lU2FsdA$+p6pb+zQmYJR1pjBMD7dpN84iaOb+ofNXnuGVu9htRA";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_ref(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
         #[test]
         fn test_encoding_and_verify_4() {
-            let password = Password::from_slice(b"passwordPASSWORDPassword").unwrap();
+            let password = Password::try_from(b"passwordPASSWORDPassword".as_slice()).unwrap();
             let raw_hash =
                 hex::decode("fb3e0cdf7b10970bf6711c151861851566006f8986c9109ba2cdd5d98f9ca9d7")
                     .unwrap();
             let encoded_hash = "$argon2i$v=19$m=256,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$+z4M33sQlwv2cRwVGGGFFWYAb4mGyRCbos3V2Y+cqdc";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_ref(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
 
         #[test]
         fn test_encoding_and_verify_5() {
-            let password = Password::from_slice(b"passwordPASSWORDPassword").unwrap();
+            let password = Password::try_from(b"passwordPASSWORDPassword".as_slice()).unwrap();
             let raw_hash =
                 hex::decode("9b134c4c1c34e66170d1088c18be3a8e0f4a1837d4c069703ce62f85248b1e8f")
                     .unwrap();
             let encoded_hash = "$argon2i$v=19$m=256,t=4,p=1$c29tZXNhbHRzb21lc2FsdA$mxNMTBw05mFw0QiMGL46jg9KGDfUwGlwPOYvhSSLHo8";
 
             let expected = PasswordHash::from_encoded(encoded_hash).unwrap();
-            assert_eq!(expected.unprotected_as_bytes(), &raw_hash[..]);
+            assert_eq!(expected.unprotected_as_ref(), &raw_hash[..]);
             assert!(hash_password_verify(&expected, &password).is_ok());
         }
     }
@@ -592,7 +607,7 @@ mod public {
             let password_hash =
                 PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 1 << 16).unwrap();
             assert_eq!(password_hash.len(), 32);
-            assert_eq!(password_hash.unprotected_as_bytes(), &[0u8; 32]);
+            assert_eq!(password_hash.unprotected_as_ref(), &[0u8; 32]);
 
             let password_hash_again =
                 PasswordHash::from_encoded(password_hash.unprotected_as_encoded()).unwrap();
@@ -604,7 +619,7 @@ mod public {
             let password_hash =
                 PasswordHash::from_slice(&[0u8; 32], &[0u8; 16], 3, 1 << 16).unwrap();
             assert_eq!(password_hash.len(), 32);
-            assert_eq!(password_hash.unprotected_as_bytes(), &[0u8; 32]);
+            assert_eq!(password_hash.unprotected_as_ref(), &[0u8; 32]);
 
             let password_hash_again =
                 PasswordHash::from_slice(&[1u8; 32], &[0u8; 16], 3, 1 << 16).unwrap();
@@ -682,7 +697,10 @@ mod public {
             let exact_min = "$argon2i$v=19$m=8,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             let less = "$argon2i$v=19$m=7,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             // Throws error during parsing as u32
-            let u32_overflow = format!("$argon2i$v=19$m={},t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA", u64::MAX);
+            let u32_overflow = format!(
+                "$argon2i$v=19$m={},t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA",
+                u64::MAX
+            );
 
             assert!(PasswordHash::from_encoded(exact_min).is_ok());
             assert!(PasswordHash::from_encoded(less).is_err());
@@ -694,7 +712,10 @@ mod public {
             let exact_min = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             let less = "$argon2i$v=19$m=65536,t=2,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             // Throws error during parsing as u32
-            let u32_overflow = format!("$argon2i$v=19$m=65536,t={},p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA", u64::MAX);
+            let u32_overflow = format!(
+                "$argon2i$v=19$m=65536,t={},p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA",
+                u64::MAX
+            );
 
             assert!(PasswordHash::from_encoded(exact_min).is_ok());
             assert!(PasswordHash::from_encoded(less).is_err());
@@ -880,7 +901,7 @@ mod public {
 
         #[test]
         fn test_argon2i_verify() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from(&[0u8; 64][..]).unwrap();
             let dk = hash_password(&password, 3, 4096).unwrap();
 
             assert!(hash_password_verify(&dk, &password).is_ok());
@@ -889,10 +910,10 @@ mod public {
 
         #[test]
         fn test_argon2i_verify_err_modified_password() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from(&[0u8; 64][..]).unwrap();
 
             let dk = hash_password(&password, 3, 4096).unwrap();
-            let mut pwd_mod = dk.unprotected_as_bytes().to_vec();
+            let mut pwd_mod = dk.unprotected_as_ref().to_vec();
             pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
             let modified = PasswordHash::from_slice(&pwd_mod, dk.salt.as_ref(), 3, 4096).unwrap();
 
@@ -901,7 +922,7 @@ mod public {
 
         #[test]
         fn test_argon2i_verify_err_modified_memory() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from(&[0u8; 64][..]).unwrap();
 
             let dk = hash_password(&password, 3, 4096).unwrap();
             let encoded = dk.unprotected_as_encoded();
@@ -917,7 +938,7 @@ mod public {
 
         #[test]
         fn test_argon2i_verify_err_modified_iterations() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from(&[0u8; 64][..]).unwrap();
 
             let dk = hash_password(&password, 3, 4096).unwrap();
             let encoded = dk.unprotected_as_encoded();
@@ -933,7 +954,7 @@ mod public {
 
         #[test]
         fn test_argon2i_verify_err_modified_memory_and_iterations() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from(&[0u8; 64][..]).unwrap();
 
             let dk = hash_password(&password, 3, 4096).unwrap();
             let encoded = dk.unprotected_as_encoded();
@@ -951,23 +972,23 @@ mod public {
 
         #[test]
         fn test_argon2i_verify_err_modified_salt() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from(&[0u8; 64][..]).unwrap();
 
             let dk = hash_password(&password, 3, 4096).unwrap();
             let mut salt_mod = dk.salt.as_ref().to_vec();
             salt_mod[0..16].copy_from_slice(&[0u8; 16]);
             let modified =
-                PasswordHash::from_slice(dk.unprotected_as_bytes(), &salt_mod, 3, 4096).unwrap();
+                PasswordHash::from_slice(dk.unprotected_as_ref(), &salt_mod, 3, 4096).unwrap();
 
             assert!(hash_password_verify(&modified, &password).is_err());
         }
 
         #[test]
         fn test_argon2i_verify_err_modified_salt_and_password() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from(&[0u8; 64][..]).unwrap();
 
             let dk = hash_password(&password, 3, 4096).unwrap();
-            let mut pwd_mod = dk.unprotected_as_bytes().to_vec();
+            let mut pwd_mod = dk.unprotected_as_ref().to_vec();
             let mut salt_mod = dk.salt.as_ref().to_vec();
             pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
             salt_mod[0..16].copy_from_slice(&[0u8; 16]);
@@ -978,13 +999,13 @@ mod public {
 
         #[test]
         fn test_argon2i_invalid_iterations() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from(&[0u8; 64][..]).unwrap();
             assert!(hash_password(&password, MIN_ITERATIONS - 1, 4096).is_err());
         }
 
         #[test]
         fn test_argon2i_invalid_memory() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from(&[0u8; 64][..]).unwrap();
             assert!(hash_password(&password, MIN_ITERATIONS, MIN_MEMORY - 1).is_err());
         }
     }

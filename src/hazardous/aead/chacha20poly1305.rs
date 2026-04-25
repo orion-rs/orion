@@ -77,7 +77,7 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::aead;
 //!
-//! let secret_key = aead::chacha20poly1305::SecretKey::generate();
+//! let secret_key = aead::chacha20poly1305::SecretKey::generate()?;
 //!
 //! // WARNING: This nonce is only meant for demonstration and should not
 //! // be repeated. Please read the security section.
@@ -110,13 +110,13 @@
 //! [`A_MAX`]: chacha20poly1305::A_MAX
 //! [`C_MAX`]: chacha20poly1305::C_MAX
 
-pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::ZeroizeWrap;
+pub use crate::hazardous::stream::chacha20::{Nonce, SecretKey};
 use crate::{
     errors::UnknownCryptoError,
     hazardous::{
-        mac::poly1305::{OneTimeKey, Poly1305, POLY1305_KEYSIZE, POLY1305_OUTSIZE},
-        stream::chacha20::{self, ChaCha20, CHACHA_BLOCKSIZE},
+        mac::poly1305::{OneTimeKey, POLY1305_KEYSIZE, POLY1305_OUTSIZE, Poly1305},
+        stream::chacha20::{self, CHACHA_BLOCKSIZE, ChaCha20},
     },
     util,
 };
@@ -141,9 +141,9 @@ pub const A_MAX: u64 = u64::MAX;
 pub(crate) fn poly1305_key_gen(
     ctx: &mut ChaCha20,
     tmp_buffer: &mut ZeroizeWrap<[u8; CHACHA_BLOCKSIZE]>,
-) -> OneTimeKey {
+) -> Result<OneTimeKey, UnknownCryptoError> {
     ctx.keystream_block(AUTH_CTR, tmp_buffer.as_mut());
-    OneTimeKey::from_slice(&tmp_buffer[..POLY1305_KEYSIZE]).unwrap()
+    OneTimeKey::try_from(&tmp_buffer[..POLY1305_KEYSIZE])
 }
 
 /// Authenticates the ciphertext, ad and their lengths.
@@ -194,11 +194,10 @@ pub fn seal(
         None => return Err(UnknownCryptoError),
     };
 
-    let mut stream =
-        ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+    let mut stream = ChaCha20::new(secret_key.unprotected_as_ref(), nonce.as_ref(), true)?;
     let mut tmp = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
-    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut stream, &mut tmp));
+    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut stream, &mut tmp)?);
     let ad_len = ad.len();
     let ct_len = plaintext.len();
 
@@ -254,7 +253,7 @@ pub fn seal(
     auth_ctx.update(tmp_pad.as_ref())?;
 
     dst_out[ct_len..(ct_len + POLY1305_OUTSIZE)]
-        .copy_from_slice(auth_ctx.finalize()?.unprotected_as_bytes());
+        .copy_from_slice(auth_ctx.finalize()?.unprotected_as_ref());
 
     Ok(())
 }
@@ -283,15 +282,14 @@ pub fn open(
         return Err(UnknownCryptoError);
     }
 
-    let mut dec_ctx =
-        ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+    let mut dec_ctx = ChaCha20::new(secret_key.unprotected_as_ref(), nonce.as_ref(), true)?;
     let mut tmp = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
-    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp));
+    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp)?);
 
     let ciphertext_len = ciphertext_with_tag.len() - POLY1305_OUTSIZE;
     process_authentication(&mut auth_ctx, ad, &ciphertext_with_tag[..ciphertext_len])?;
     util::secure_cmp(
-        auth_ctx.finalize()?.unprotected_as_bytes(),
+        auth_ctx.finalize()?.unprotected_as_ref(),
         &ciphertext_with_tag[ciphertext_len..],
     )?;
 
@@ -313,13 +311,13 @@ pub fn open(
 #[cfg(feature = "safe_api")]
 mod public {
     use super::*;
-    use crate::test_framework::aead_interface::{test_diff_params_err, AeadTestRunner};
+    use crate::test_framework::aead_interface::{AeadTestRunner, test_diff_params_err};
 
     #[quickcheck]
     #[cfg(feature = "safe_api")]
     fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
-        let secret_key = SecretKey::generate();
-        let nonce = Nonce::from_slice(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
+        let secret_key = SecretKey::generate().unwrap();
+        let nonce = Nonce::try_from(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
         AeadTestRunner(
             seal,
             open,
@@ -342,8 +340,8 @@ mod test_vectors {
 
     #[test]
     fn rfc8439_poly1305_key_gen_1() {
-        let key = SecretKey::from_slice(&[0u8; 32]).unwrap();
-        let nonce = Nonce::from_slice(&[
+        let key = SecretKey::try_from(&[0u8; 32]).unwrap();
+        let nonce = Nonce::try_from(&[
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])
         .unwrap();
@@ -354,24 +352,26 @@ mod test_vectors {
         ];
 
         let mut chacha20_ctx =
-            ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+            ChaCha20::new(key.unprotected_as_ref(), nonce.as_ref(), true).unwrap();
         let mut tmp_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
         assert_eq!(
-            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
+            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block)
+                .unwrap()
+                .unprotected_as_ref(),
             expected.as_ref()
         );
     }
 
     #[test]
     fn rfc8439_poly1305_key_gen_2() {
-        let key = SecretKey::from_slice(&[
+        let key = SecretKey::try_from(&[
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x01,
         ])
         .unwrap();
-        let nonce = Nonce::from_slice(&[
+        let nonce = Nonce::try_from(&[
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
         ])
         .unwrap();
@@ -382,24 +382,26 @@ mod test_vectors {
         ];
 
         let mut chacha20_ctx =
-            ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+            ChaCha20::new(key.unprotected_as_ref(), nonce.as_ref(), true).unwrap();
         let mut tmp_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
         assert_eq!(
-            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
+            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block)
+                .unwrap()
+                .unprotected_as_ref(),
             expected.as_ref()
         );
     }
 
     #[test]
     fn rfc8439_poly1305_key_gen_3() {
-        let key = SecretKey::from_slice(&[
+        let key = SecretKey::try_from(&[
             0x1c, 0x92, 0x40, 0xa5, 0xeb, 0x55, 0xd3, 0x8a, 0xf3, 0x33, 0x88, 0x86, 0x04, 0xf6,
             0xb5, 0xf0, 0x47, 0x39, 0x17, 0xc1, 0x40, 0x2b, 0x80, 0x09, 0x9d, 0xca, 0x5c, 0xbc,
             0x20, 0x70, 0x75, 0xc0,
         ])
         .unwrap();
-        let nonce = Nonce::from_slice(&[
+        let nonce = Nonce::try_from(&[
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
         ])
         .unwrap();
@@ -410,11 +412,13 @@ mod test_vectors {
         ];
 
         let mut chacha20_ctx =
-            ChaCha20::new(key.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+            ChaCha20::new(key.unprotected_as_ref(), nonce.as_ref(), true).unwrap();
         let mut tmp_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
         assert_eq!(
-            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block).unprotected_as_bytes(),
+            poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block)
+                .unwrap()
+                .unprotected_as_ref(),
             expected.as_ref()
         );
     }

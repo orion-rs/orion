@@ -247,7 +247,7 @@ pub mod sha256 {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
-            prk.unprotected_as_bytes(),
+            prk.unprotected_as_ref(),
             info,
             dst_out,
         )
@@ -331,7 +331,7 @@ pub mod sha384 {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(
-            prk.unprotected_as_bytes(),
+            prk.unprotected_as_ref(),
             info,
             dst_out,
         )
@@ -407,7 +407,7 @@ pub mod sha512 {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(
-            prk.unprotected_as_bytes(),
+            prk.unprotected_as_ref(),
             info,
             dst_out,
         )
@@ -473,16 +473,40 @@ mod public {
         let mut okm_out = [0u8; 255 * SHA256_OUTSIZE + 1];
         let prk = sha256::extract(b"", b"").unwrap();
         assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(
+            _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
+                prk.unprotected_as_ref(),
+                Some(&[]),
+                &mut okm_out
+            )
+            .is_err()
+        );
         assert!(sha256::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
         let mut okm_out = [0u8; 255 * SHA384_OUTSIZE + 1];
         let prk = sha384::extract(b"", b"").unwrap();
         assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(
+            _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(
+                prk.unprotected_as_ref(),
+                Some(&[]),
+                &mut okm_out
+            )
+            .is_err()
+        );
         assert!(sha384::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
         let mut okm_out = [0u8; 255 * SHA512_OUTSIZE + 1];
         let prk = sha512::extract(b"", b"").unwrap();
         assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(
+            _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(
+                prk.unprotected_as_ref(),
+                Some(&[]),
+                &mut okm_out
+            )
+            .is_err()
+        );
         assert!(sha512::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
     }
 
@@ -491,16 +515,41 @@ mod public {
         let mut okm_out = [0u8; 255 * SHA256_OUTSIZE];
         let prk = sha256::extract(b"", b"").unwrap();
         assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_ok());
+        assert!(
+            _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
+                prk.unprotected_as_ref(),
+                Some(&[]),
+                &mut okm_out
+            )
+            .is_ok()
+        );
         assert!(sha256::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
 
         let mut okm_out = [0u8; 255 * SHA384_OUTSIZE];
         let prk = sha384::extract(b"", b"").unwrap();
         assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_ok());
+        assert!(
+            _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(
+                prk.unprotected_as_ref(),
+                Some(&[]),
+                &mut okm_out
+            )
+            .is_ok()
+        );
+
         assert!(sha384::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
 
         let mut okm_out = [0u8; 255 * SHA512_OUTSIZE];
         let prk = sha512::extract(b"", b"").unwrap();
         assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_ok());
+        assert!(
+            _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(
+                prk.unprotected_as_ref(),
+                Some(&[]),
+                &mut okm_out
+            )
+            .is_ok()
+        );
         assert!(sha512::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
     }
 
@@ -510,14 +559,41 @@ mod public {
 
         let prk = sha256::extract(b"", b"").unwrap();
         assert!(sha256::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(
+            _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
+                prk.unprotected_as_ref(),
+                Some(&[]),
+                &mut okm_out
+            )
+            .is_err()
+        );
+
         assert!(sha256::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
         let prk = sha384::extract(b"", b"").unwrap();
         assert!(sha384::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(
+            _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(
+                prk.unprotected_as_ref(),
+                Some(&[]),
+                &mut okm_out
+            )
+            .is_err()
+        );
+
         assert!(sha384::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
         let prk = sha512::extract(b"", b"").unwrap();
         assert!(sha512::expand(&prk, Some(b""), &mut okm_out).is_err());
+        assert!(
+            _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(
+                prk.unprotected_as_ref(),
+                Some(&[]),
+                &mut okm_out
+            )
+            .is_err()
+        );
+
         assert!(sha512::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
     }
 

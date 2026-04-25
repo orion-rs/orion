@@ -66,33 +66,44 @@ mod cvstack;
 mod internal;
 mod state;
 
+use crate::GenerateSecret;
+#[cfg(feature = "safe_api")]
+use crate::Secret;
 use crate::errors::UnknownCryptoError;
+use crate::generics::{ByteArrayData, TypeSpec};
+use crate::generics::sealed::{Sealed, Data};
 use crate::hazardous::hash::blake3::internal::{IV_BYTES, KEYED_HASH, KEY_SIZE};
 use crate::hazardous::hash::blake3::state::Blake3State;
 
 #[cfg(feature = "safe_api")]
 use std::io;
 
-construct_secret_key! {
-    /// A type to represent the secret key that BLAKE3 uses for keyed mode.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    ///
-    /// # Panics:
-    /// A panic will occur during:
-    /// - Failure to generate random bytes securely.
-    ///
-    (SecretKey, test_secret_key, KEY_SIZE, KEY_SIZE, KEY_SIZE)
+#[derive(Debug)]
+/// Marker type for BLAKE3 key. See [`SecretKey`] type for convenience.
+pub struct Blake3Key {}
+impl Sealed for Blake3Key {}
+
+impl TypeSpec for Blake3Key {
+    const NAME: &'static str = stringify!(SecretKey);
+    type TypeData = ByteArrayData<KEY_SIZE>;
 }
 
-impl From<[u8; 32]> for SecretKey {
+impl GenerateSecret for Blake3Key {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Secret<Blake3Key>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(KEY_SIZE)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Secret::from_data(data))
+    }
+}
+
+/// A type to represent the secret key that BLAKE3 uses for keyed mode.
+pub type SecretKey = Secret<Blake3Key>;
+
+impl From<[u8; KEY_SIZE]> for SecretKey {
     fn from(value: [u8; 32]) -> Self {
-        Self {
-            value,
-            original_length: 32,
-        }
+        Self::from_data(<Blake3Key as TypeSpec>::TypeData::from(value))
     }
 }
 
@@ -353,7 +364,7 @@ mod test_streaming_interface {
         }
 
         fn get_secret_key() -> SecretKey {
-            SecretKey::from_slice(&[0x42; 32]).unwrap()
+            SecretKey::from([0x42; 32])
         }
     }
 }

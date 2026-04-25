@@ -26,14 +26,14 @@ fn wycheproof_test_runner(
     let mut dst_pt_out = vec![0u8; input.len()];
 
     if result {
-        let key = SecretKey::from_slice(key)?;
+        let key = SecretKey::try_from(key)?;
 
         if is_ietf {
-            let nonce = chacha20poly1305::Nonce::from_slice(nonce)?;
+            let nonce = chacha20poly1305::Nonce::try_from(nonce)?;
             chacha20poly1305::seal(&key, &nonce, input, Some(aad), &mut dst_ct_out)?;
             chacha20poly1305::open(&key, &nonce, &dst_ct_out, Some(aad), &mut dst_pt_out)?;
         } else {
-            let nonce = xchacha20poly1305::Nonce::from_slice(nonce)?;
+            let nonce = xchacha20poly1305::Nonce::try_from(nonce)?;
             xchacha20poly1305::seal(&key, &nonce, input, Some(aad), &mut dst_ct_out)?;
             xchacha20poly1305::open(&key, &nonce, &dst_ct_out, Some(aad), &mut dst_pt_out)?;
         }
@@ -43,7 +43,7 @@ fn wycheproof_test_runner(
         assert_eq!(dst_pt_out[..].as_ref(), input);
     } else {
         // Tests that run here have a "invalid" flag set
-        let key = match SecretKey::from_slice(key) {
+        let key = match SecretKey::try_from(key) {
             Ok(k) => k,
             Err(UnknownCryptoError) => return Ok(()), // Invalid key size test
         };
@@ -54,7 +54,7 @@ fn wycheproof_test_runner(
         let openres: Result<(), UnknownCryptoError>;
 
         if is_ietf {
-            let nonce = match chacha20poly1305::Nonce::from_slice(nonce) {
+            let nonce = match chacha20poly1305::Nonce::try_from(nonce) {
                 Ok(n) => n,
                 Err(UnknownCryptoError) => return Ok(()), // Invalid nonce size test
             };
@@ -62,7 +62,7 @@ fn wycheproof_test_runner(
             sealres = chacha20poly1305::seal(&key, &nonce, input, Some(aad), &mut dst_ct_out);
             openres = chacha20poly1305::open(&key, &nonce, &dst_ct_out, Some(aad), &mut dst_pt_out);
         } else {
-            let nonce = match xchacha20poly1305::Nonce::from_slice(nonce) {
+            let nonce = match xchacha20poly1305::Nonce::try_from(nonce) {
                 Ok(n) => n,
                 Err(UnknownCryptoError) => return Ok(()), // Invalid nonce size test
             };

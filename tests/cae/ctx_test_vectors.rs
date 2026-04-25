@@ -36,7 +36,7 @@ pub(crate) fn custom_ctx_runner(path: &str) {
             _ => panic!("Unexpected test outcome for custom CTX tests"),
         };
 
-        let key = SecretKey::from_slice(&decode(&test.Key).unwrap()).unwrap();
+        let key = SecretKey::try_from(&decode(&test.Key).unwrap()).unwrap();
         let nonce = &decode(&test.Nonce).unwrap();
         let aad = &decode(&test.Ad).unwrap();
         let input = &decode(&test.Msg).unwrap();
@@ -59,7 +59,7 @@ pub(crate) fn custom_ctx_runner(path: &str) {
 
         if should_test_pass {
             if is_ietf {
-                let nonce = chacha20poly1305blake2b::Nonce::from_slice(nonce).unwrap();
+                let nonce = chacha20poly1305blake2b::Nonce::try_from(nonce).unwrap();
                 chacha20poly1305blake2b::seal(&key, &nonce, input, Some(aad), &mut dst_ct_out)
                     .unwrap();
                 chacha20poly1305blake2b::open(
@@ -71,7 +71,7 @@ pub(crate) fn custom_ctx_runner(path: &str) {
                 )
                 .unwrap();
             } else {
-                let nonce = xchacha20poly1305blake2b::Nonce::from_slice(nonce).unwrap();
+                let nonce = xchacha20poly1305blake2b::Nonce::try_from(nonce).unwrap();
                 xchacha20poly1305blake2b::seal(&key, &nonce, input, Some(aad), &mut dst_ct_out)
                     .unwrap();
                 xchacha20poly1305blake2b::open(
@@ -87,25 +87,17 @@ pub(crate) fn custom_ctx_runner(path: &str) {
             assert_eq!(dst_ct_out, output);
             assert_eq!(dst_pt_out[..].as_ref(), input);
         } else if is_ietf {
-            let nonce = chacha20poly1305blake2b::Nonce::from_slice(nonce).unwrap();
-            assert!(chacha20poly1305blake2b::open(
-                &key,
-                &nonce,
-                &output,
-                Some(aad),
-                &mut dst_pt_out
+            let nonce = chacha20poly1305blake2b::Nonce::try_from(nonce).unwrap();
+            assert!(
+                chacha20poly1305blake2b::open(&key, &nonce, &output, Some(aad), &mut dst_pt_out)
+                    .is_err()
             )
-            .is_err())
         } else {
-            let nonce = xchacha20poly1305blake2b::Nonce::from_slice(nonce).unwrap();
-            assert!(xchacha20poly1305blake2b::open(
-                &key,
-                &nonce,
-                &output,
-                Some(aad),
-                &mut dst_pt_out
+            let nonce = xchacha20poly1305blake2b::Nonce::try_from(nonce).unwrap();
+            assert!(
+                xchacha20poly1305blake2b::open(&key, &nonce, &output, Some(aad), &mut dst_pt_out)
+                    .is_err()
             )
-            .is_err())
         }
     }
 }

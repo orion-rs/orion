@@ -68,8 +68,8 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::aead::streaming::*;
 //!
-//! let secret_key = SecretKey::generate();
-//! let nonce = Nonce::generate();
+//! let secret_key = SecretKey::generate()?;
+//! let nonce = Nonce::generate()?;
 //! let ad = "Additional data".as_bytes();
 //! let message = "Data to protect".as_bytes();
 //!
@@ -104,14 +104,14 @@
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::aead::chacha20poly1305::poly1305_key_gen;
-use crate::hazardous::mac::poly1305::{Poly1305, Tag as Poly1305Tag, POLY1305_OUTSIZE};
+use crate::hazardous::mac::poly1305::{POLY1305_OUTSIZE, Poly1305, Tag as Poly1305Tag};
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::hazardous::stream::chacha20::{
-    encrypt as chacha20_enc, encrypt_in_place as chacha20_xor_stream, ChaCha20, Nonce as IETFNonce,
-    CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
+    CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, ChaCha20, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
+    Nonce as IETFNonce, encrypt as chacha20_enc, encrypt_in_place as chacha20_xor_stream,
 };
-use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 pub use crate::hazardous::stream::xchacha20::Nonce;
+use crate::hazardous::stream::xchacha20::subkey_and_nonce;
 use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
 
@@ -181,11 +181,7 @@ fn padding(input: usize) -> usize {
 
     let rem = input % 16;
 
-    if rem != 0 {
-        16 - rem
-    } else {
-        0
-    }
+    if rem != 0 { 16 - rem } else { 0 }
 }
 
 /// Streaming XChaCha20Poly1305 state.
@@ -227,15 +223,14 @@ impl StreamXChaCha20Poly1305 {
         debug_assert!(text.len() >= textpos + msglen);
 
         let mut chacha20_ctx = ChaCha20::new(
-            self.key.unprotected_as_bytes(),
+            self.key.unprotected_as_ref(),
             self.get_nonce().as_ref(),
             true,
-        )
-        .unwrap();
+        )?;
         let mut tmp_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
         let mut pad = [0u8; 16];
-        let mut poly = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block));
+        let mut poly = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block)?);
 
         poly.process_pad_to_blocksize(ad)?;
         poly.update(block)?;
@@ -260,7 +255,7 @@ impl StreamXChaCha20Poly1305 {
         mac: &Poly1305Tag,
         tag: &StreamTag,
     ) -> Result<(), UnknownCryptoError> {
-        xor_slices!(mac.unprotected_as_bytes()[..INONCEBYTES], self.inonce);
+        xor_slices!(mac.unprotected_as_ref()[..INONCEBYTES], self.inonce);
         self.counter = self.counter.wrapping_add(1);
         if bool::from(
             !(tag.as_byte() & StreamTag::Rekey.as_byte()).ct_eq(&0u8) | self.counter.ct_eq(&0u32),
@@ -287,12 +282,12 @@ impl StreamXChaCha20Poly1305 {
     /// Derives a new secret key used for encryption and decryption.
     pub fn rekey(&mut self) -> Result<(), UnknownCryptoError> {
         let mut new_key_and_inonce = [0u8; CHACHA_KEYSIZE + INONCEBYTES];
-        new_key_and_inonce[..CHACHA_KEYSIZE].copy_from_slice(self.key.unprotected_as_bytes());
+        new_key_and_inonce[..CHACHA_KEYSIZE].copy_from_slice(self.key.unprotected_as_ref());
         new_key_and_inonce[CHACHA_KEYSIZE..].copy_from_slice(&self.inonce);
 
         chacha20_xor_stream(&self.key, &self.get_nonce(), 0, &mut new_key_and_inonce)?;
 
-        self.key = SecretKey::from_slice(&new_key_and_inonce[..CHACHA_KEYSIZE]).unwrap();
+        self.key = SecretKey::try_from(&new_key_and_inonce[..CHACHA_KEYSIZE])?;
         self.inonce
             .copy_from_slice(&new_key_and_inonce[CHACHA_KEYSIZE..]);
         self.counter = 1;
@@ -335,7 +330,7 @@ impl StreamXChaCha20Poly1305 {
         }
 
         let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, TAG_SIZE)?;
-        dst_out[macpos..(macpos + POLY1305_OUTSIZE)].copy_from_slice(mac.unprotected_as_bytes());
+        dst_out[macpos..(macpos + POLY1305_OUTSIZE)].copy_from_slice(mac.unprotected_as_ref());
 
         self.advance_state(&mac, tag)
     }
@@ -369,7 +364,7 @@ impl StreamXChaCha20Poly1305 {
         let tag = StreamTag::try_from(block[0])?;
         block[0] = ciphertext[0];
         let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, TAG_SIZE)?;
-        if !(mac == &ciphertext[macpos..macpos + mac.len()]) {
+        if !(mac == ciphertext[macpos..macpos + mac.len()]) {
             return Err(UnknownCryptoError);
         }
         if msglen != 0 {
@@ -395,8 +390,8 @@ mod public {
     #[test]
     #[cfg(feature = "safe_api")]
     fn test_debug_impl() {
-        let secret_key = SecretKey::generate();
-        let nonce = Nonce::generate();
+        let secret_key = SecretKey::generate().unwrap();
+        let nonce = Nonce::generate().unwrap();
         let initial_state = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
         let debug = format!("{initial_state:?}");
         let expected = "StreamXChaCha20Poly1305  { key: [***OMITTED***], counter: [***OMITTED***], inonce: [***OMITTED***]";
@@ -407,10 +402,9 @@ mod public {
     mod proptest {
         use crate::errors::UnknownCryptoError;
         use crate::hazardous::aead::streaming::{
-            Nonce, SecretKey, StreamTag, StreamXChaCha20Poly1305, ABYTES,
+            ABYTES, Nonce, SecretKey, StreamTag, StreamXChaCha20Poly1305,
         };
         use crate::test_framework::aead_interface::*;
-        use core::convert::TryFrom;
 
         fn seal(
             sk: &SecretKey,
@@ -438,8 +432,8 @@ mod public {
 
         #[quickcheck]
         fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
-            let secret_key = SecretKey::generate();
-            let nonce = Nonce::generate();
+            let secret_key = SecretKey::generate().unwrap();
+            let nonce = Nonce::generate().unwrap();
             AeadTestRunner(seal, open, secret_key, nonce, &input, None, ABYTES, &ad);
 
             true
@@ -447,7 +441,10 @@ mod public {
 
         #[quickcheck]
         fn prop_same_input_twice_diff_output(input: Vec<u8>, ad: Vec<u8>) -> bool {
-            let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::generate(), &Nonce::generate());
+            let mut ctx = StreamXChaCha20Poly1305::new(
+                &SecretKey::generate().unwrap(),
+                &Nonce::generate().unwrap(),
+            );
 
             let mut ct1 = vec![0u8; input.len() + ABYTES];
             let mut ct2 = ct1.clone();
@@ -458,17 +455,6 @@ mod public {
                 .unwrap();
 
             ct1 != ct2
-        }
-
-        #[quickcheck]
-        fn prop_tag(byte: u8) -> bool {
-            match byte {
-                0u8 => StreamTag::try_from(byte).unwrap() == StreamTag::Message,
-                1u8 => StreamTag::try_from(byte).unwrap() == StreamTag::Push,
-                2u8 => StreamTag::try_from(byte).unwrap() == StreamTag::Rekey,
-                3u8 => StreamTag::try_from(byte).unwrap() == StreamTag::Finish,
-                _ => StreamTag::try_from(byte).is_err(),
-            }
         }
     }
 }
@@ -568,8 +554,8 @@ mod private {
             75u8, 188u8, 65u8, 41u8, 75u8,
         ];
 
-        let secret_key = SecretKey::from_slice(&sk).unwrap();
-        let nonce = Nonce::from_slice(&nonce).unwrap();
+        let secret_key = SecretKey::try_from(&sk).unwrap();
+        let nonce = Nonce::try_from(&nonce).unwrap();
 
         let mut state = StreamXChaCha20Poly1305::new(&secret_key, &nonce);
         let mut dst_out = [0u8; 96];
@@ -610,6 +596,11 @@ mod private {
         assert_eq!(StreamTag::Rekey.as_byte(), 2u8);
         assert_eq!(StreamTag::Finish.as_byte(), 3u8);
         assert!(StreamTag::try_from(4u8).is_err());
+
+        assert_eq!(StreamTag::try_from(0u8).unwrap(), StreamTag::Message);
+        assert_eq!(StreamTag::try_from(1u8).unwrap(), StreamTag::Push);
+        assert_eq!(StreamTag::try_from(2u8).unwrap(), StreamTag::Rekey);
+        assert_eq!(StreamTag::try_from(3u8).unwrap(), StreamTag::Finish);
     }
 
     #[test]
@@ -627,7 +618,10 @@ mod private {
         );
         assert_eq!(
             s.get_nonce(),
-            [1u8, 0u8, 0u8, 0u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,].as_ref()
+            [
+                1u8, 0u8, 0u8, 0u8, 97u8, 98u8, 97u8, 97u8, 98u8, 97u8, 98u8, 0u8,
+            ]
+            .as_ref()
         );
 
         // 1st StreamTag::Message
@@ -646,7 +640,10 @@ mod private {
         );
         assert_eq!(
             s.get_nonce(),
-            [2u8, 0u8, 0u8, 0u8, 88u8, 186u8, 23u8, 231u8, 10u8, 253u8, 79u8, 71u8,].as_ref()
+            [
+                2u8, 0u8, 0u8, 0u8, 88u8, 186u8, 23u8, 231u8, 10u8, 253u8, 79u8, 71u8,
+            ]
+            .as_ref()
         );
         assert_eq!(
             out1,
@@ -675,7 +672,10 @@ mod private {
         );
         assert_eq!(
             s.get_nonce(),
-            [3u8, 0u8, 0u8, 0u8, 73u8, 199u8, 255u8, 159u8, 213u8, 205u8, 201u8, 51u8,].as_ref()
+            [
+                3u8, 0u8, 0u8, 0u8, 73u8, 199u8, 255u8, 159u8, 213u8, 205u8, 201u8, 51u8,
+            ]
+            .as_ref()
         );
         assert_eq!(
             out2.as_ref(),
@@ -704,7 +704,10 @@ mod private {
         );
         assert_eq!(
             s.get_nonce(),
-            [4u8, 0u8, 0u8, 0u8, 229u8, 134u8, 216u8, 143u8, 117u8, 43u8, 216u8, 142u8,].as_ref()
+            [
+                4u8, 0u8, 0u8, 0u8, 229u8, 134u8, 216u8, 143u8, 117u8, 43u8, 216u8, 142u8,
+            ]
+            .as_ref()
         );
         assert_eq!(
             out3.as_ref(),
@@ -728,7 +731,10 @@ mod private {
         );
         assert_eq!(
             s.get_nonce(),
-            [1u8, 0u8, 0u8, 0u8, 250u8, 25u8, 191u8, 166u8, 103u8, 98u8, 187u8, 196u8,].as_ref()
+            [
+                1u8, 0u8, 0u8, 0u8, 250u8, 25u8, 191u8, 166u8, 103u8, 98u8, 187u8, 196u8,
+            ]
+            .as_ref()
         );
 
         // 4th StreamTag::Message
@@ -750,7 +756,10 @@ mod private {
         );
         assert_eq!(
             s.get_nonce(),
-            [2u8, 0u8, 0u8, 0u8, 70u8, 193u8, 51u8, 16u8, 173u8, 151u8, 68u8, 48u8,].as_ref()
+            [
+                2u8, 0u8, 0u8, 0u8, 70u8, 193u8, 51u8, 16u8, 173u8, 151u8, 68u8, 48u8,
+            ]
+            .as_ref()
         );
         assert_eq!(
             out4.as_ref(),
@@ -783,7 +792,10 @@ mod private {
         );
         assert_eq!(
             s.get_nonce(),
-            [3u8, 0u8, 0u8, 0u8, 119u8, 231u8, 54u8, 137u8, 64u8, 159u8, 87u8, 77u8,].as_ref()
+            [
+                3u8, 0u8, 0u8, 0u8, 119u8, 231u8, 54u8, 137u8, 64u8, 159u8, 87u8, 77u8,
+            ]
+            .as_ref()
         );
         assert_eq!(
             out5.as_ref(),
@@ -1029,9 +1041,10 @@ mod private {
 
         // Reset state
         let mut s = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-        assert!(s
-            .open_chunk(&cipher1, Some(&[1u8; 1]), &mut plain_out1)
-            .is_err());
+        assert!(
+            s.open_chunk(&cipher1, Some(&[1u8; 1]), &mut plain_out1)
+                .is_err()
+        );
     }
 
     #[test]
@@ -1138,7 +1151,7 @@ mod private {
         ];
 
         let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-        assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), before_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
@@ -1146,7 +1159,7 @@ mod private {
         ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Finish)
             .unwrap();
 
-        assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), after_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
         assert_eq!(actual.as_ref(), out.as_ref());
@@ -1182,7 +1195,7 @@ mod private {
         ];
 
         let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-        assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), before_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
@@ -1190,7 +1203,7 @@ mod private {
         ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Rekey)
             .unwrap();
 
-        assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), after_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
         assert_eq!(actual.as_ref(), out.as_ref());
@@ -1226,7 +1239,7 @@ mod private {
         ];
 
         let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-        assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), before_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
@@ -1236,7 +1249,7 @@ mod private {
         ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Finish)
             .unwrap();
 
-        assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), after_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
         assert_eq!(actual.as_ref(), out.as_ref());
@@ -1272,7 +1285,7 @@ mod private {
         ];
 
         let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
-        assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), before_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
@@ -1282,7 +1295,7 @@ mod private {
         ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Rekey)
             .unwrap();
 
-        assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), after_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
         assert_eq!(actual.as_ref(), out.as_ref());
@@ -1408,7 +1421,7 @@ mod private {
 
         let mut ctx = StreamXChaCha20Poly1305::new(&SecretKey::from(KEY), &Nonce::from(NONCE));
         ctx.counter = u32::MAX;
-        assert_eq!(ctx.key.unprotected_as_bytes(), before_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), before_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), before_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(before_internal_counter));
 
@@ -1416,7 +1429,7 @@ mod private {
         ctx.seal_chunk(DEFAULT_MSG.as_ref(), None, &mut actual, &StreamTag::Rekey)
             .unwrap();
 
-        assert_eq!(ctx.key.unprotected_as_bytes(), after_internal_key.as_ref());
+        assert_eq!(ctx.key.unprotected_as_ref(), after_internal_key.as_ref());
         assert_eq!(ctx.get_nonce(), after_internal_nonce.as_ref());
         assert_eq!(ctx.counter, u32::from_le_bytes(after_internal_counter));
         assert_eq!(actual.as_ref(), out.as_ref());

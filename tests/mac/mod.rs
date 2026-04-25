@@ -21,12 +21,12 @@ macro_rules! impl_hmac_test_runner (($name:ident, $hmac:ident, $hmac_tag:ident, 
             None => $sha2_outsize,
         };
 
-        let key = $hmac_sk::from_slice(secret_key).unwrap();
+        let key = $hmac_sk::try_from(secret_key).unwrap();
 
         // Only use verify() on OUTSIZE length tags since this is
         // the amount that Tag requires.
         if len == $sha2_outsize {
-            let expected_tag = $hmac_tag::from_slice(expected).unwrap();
+            let expected_tag = $hmac_tag::try_from(expected).unwrap();
             let res = $hmac::verify(&expected_tag, &key, data);
             if valid_result {
                 assert!(res.is_ok());
@@ -38,9 +38,9 @@ macro_rules! impl_hmac_test_runner (($name:ident, $hmac:ident, $hmac_tag:ident, 
             ctx.update(data).unwrap();
             let actual = ctx.finalize().unwrap();
             if valid_result {
-                assert_eq!(expected, actual.unprotected_as_bytes()[..len].as_ref());
+                assert_eq!(expected, actual.unprotected_as_ref()[..len].as_ref());
             } else {
-                assert_ne!(expected, actual.unprotected_as_bytes()[..len].as_ref());
+                assert_ne!(expected, actual.unprotected_as_ref()[..len].as_ref());
             }
         }
     }
@@ -80,7 +80,7 @@ impl_hmac_test_runner!(
 );
 
 fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) {
-    let sk = OneTimeKey::from_slice(key).unwrap();
+    let sk = OneTimeKey::try_from(key).unwrap();
 
     let mut state = poly1305::Poly1305::new(&sk);
     state.update(input).unwrap();
@@ -90,5 +90,5 @@ fn poly1305_test_runner(key: &[u8], input: &[u8], output: &[u8]) {
 
     assert_eq!(tag_stream, output);
     assert_eq!(tag_one_shot, output);
-    assert!(poly1305::Poly1305::verify(&Tag::from_slice(output).unwrap(), &sk, input).is_ok());
+    assert!(poly1305::Poly1305::verify(&Tag::try_from(output).unwrap(), &sk, input).is_ok());
 }

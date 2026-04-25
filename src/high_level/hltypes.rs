@@ -20,57 +20,92 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// These are the different types used by the high-level interface. They are not
-/// used in `hazardous`.
-use crate::errors::UnknownCryptoError;
+use crate::generics::{ByteVecData, Public, Secret, TypeSpec, sealed::Data, sealed::Sealed};
+#[cfg(feature = "safe_api")]
+use crate::{
+    errors::UnknownCryptoError,
+    generics::{GeneratePublic, GenerateSecret},
+};
 
-construct_secret_key_variable_size! {
-    /// A type to represent a secret key.
-    ///
-    /// As default it will randomly generate a `SecretKey` of 32 bytes.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is empty.
-    /// - `length` is 0.
-    /// - `length` is not less than [`isize::MAX`].
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (SecretKey, test_secret_key, 32)
+#[derive(Debug)]
+/// Marker type for Orion high-level secret key.
+pub struct KeyType {}
+impl Sealed for KeyType {}
+
+impl TypeSpec for KeyType {
+    const NAME: &'static str = stringify!(SecretKey);
+    type TypeData = ByteVecData;
 }
 
-construct_salt_variable_size! {
-    /// A type to represent the `Salt` that Argon2i uses during key derivation.
-    ///
-    /// As default it will randomly generate a `Salt` of 16 bytes.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is empty.
-    /// - `length` is 0.
-    /// - `length` is not less than [`isize::MAX`].
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (Salt, test_salt, 16)
+impl GenerateSecret for KeyType {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Secret<KeyType>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(32)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Secret::from_data(data))
+    }
 }
 
-construct_secret_key_variable_size! {
-    /// A type to represent the `Password` that Argon2i hashes and uses for key derivation.
-    ///
-    /// As default it will randomly generate a `Password` of 32 bytes.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is empty.
-    /// - `length` is 0.
-    /// - `length` is not less than [`isize::MAX`].
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (Password, test_password, 32)
+/// A type to represent a secret key.
+///
+/// [`SecretKey::generate()`] will generate a random secret key of 32 bytes.
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `slice` is empty.
+/// - `length` is 0.
+/// - `length` is not less than [`isize::MAX`].
+/// - Failure to generate random bytes securely.
+pub type SecretKey = Secret<KeyType>;
+
+#[derive(Debug, Clone, Copy)]
+/// Marker type for Orion high-level salt for KDF operations.
+pub struct SaltType {}
+impl Sealed for SaltType {}
+
+impl TypeSpec for SaltType {
+    const NAME: &'static str = stringify!(Salt);
+    type TypeData = ByteVecData;
 }
+
+impl GeneratePublic for SaltType {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Public<SaltType>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(crate::pwhash::SALT_LENGTH)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Public::from_data(data))
+    }
+}
+
+/// A type to represent the `Salt` that Argon2i uses during key derivation.
+///
+/// [`Salt::generate()`] will generate a random salt of 16 bytes.
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `slice` is empty.
+/// - `length` is 0.
+/// - `length` is not less than [`isize::MAX`].
+/// - Failure to generate random bytes securely.
+pub type Salt = Public<SaltType>;
+
+#[derive(Debug)]
+/// Marker type for Orion high-level password.
+pub struct PasswordType {}
+impl Sealed for PasswordType {}
+
+impl TypeSpec for PasswordType {
+    const NAME: &'static str = stringify!(Password);
+    type TypeData = ByteVecData;
+}
+
+/// A type to represent the `Password` that Argon2i hashes and uses for key derivation.
+///
+/// # Errors:
+/// An error will be returned if:
+/// - `slice` is empty.
+/// - `length` is 0.
+/// - `length` is not less than [`isize::MAX`].
+pub type Password = Secret<PasswordType>;

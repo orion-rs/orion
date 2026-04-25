@@ -1,9 +1,10 @@
 // ml_kem_keygen_internalProjection.json
 // taken at commit: https://github.com/usnistgov/ACVP-Server/commit/203f667c26e10a1be89dfe8da7a54498fde2d848
 
-use orion::hazardous::kem::mlkem1024;
+use orion::KP;
 use orion::hazardous::kem::mlkem512;
 use orion::hazardous::kem::mlkem768;
+use orion::hazardous::kem::mlkem1024;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
 
@@ -49,8 +50,8 @@ fn mlkem_runner(path: &str) {
             for test in test_group.tests.iter() {
                 let mut d = [0u8; 32];
                 let mut z = [0u8; 32];
-                let mut ek_expected = [0u8; mlkem512::MlKem512::EK_SIZE];
-                let mut dk_expected = [0u8; mlkem512::MlKem512::DK_SIZE];
+                let mut ek_expected = [0u8; mlkem512::EK_SIZE];
+                let mut dk_expected = [0u8; mlkem512::DK_SIZE];
                 hex::decode_to_slice(&test.z, &mut z).unwrap();
                 hex::decode_to_slice(&test.d, &mut d).unwrap();
                 hex::decode_to_slice(&test.ek, &mut ek_expected).unwrap();
@@ -59,7 +60,7 @@ fn mlkem_runner(path: &str) {
                 let mut dz = d.to_vec();
                 dz.extend(&z);
 
-                let seed = mlkem512::Seed::from_slice(&dz).unwrap();
+                let seed = mlkem512::Seed::try_from(&dz).unwrap();
                 let kp = mlkem512::KeyPair::try_from(&seed).unwrap();
 
                 assert_eq!(ek_expected, kp.public().as_ref());
@@ -72,8 +73,8 @@ fn mlkem_runner(path: &str) {
             for test in test_group.tests.iter() {
                 let mut d = [0u8; 32];
                 let mut z = [0u8; 32];
-                let mut ek_expected = [0u8; mlkem768::MlKem768::EK_SIZE];
-                let mut dk_expected = [0u8; mlkem768::MlKem768::DK_SIZE];
+                let mut ek_expected = [0u8; mlkem768::EK_SIZE];
+                let mut dk_expected = [0u8; mlkem768::DK_SIZE];
                 hex::decode_to_slice(&test.z, &mut z).unwrap();
                 hex::decode_to_slice(&test.d, &mut d).unwrap();
                 hex::decode_to_slice(&test.ek, &mut ek_expected).unwrap();
@@ -82,7 +83,7 @@ fn mlkem_runner(path: &str) {
                 let mut dz = d.to_vec();
                 dz.extend(&z);
 
-                let seed = mlkem768::Seed::from_slice(&dz).unwrap();
+                let seed = mlkem768::Seed::try_from(&dz).unwrap();
                 let kp = mlkem768::KeyPair::try_from(&seed).unwrap();
 
                 assert_eq!(ek_expected, kp.public().as_ref());
@@ -96,8 +97,8 @@ fn mlkem_runner(path: &str) {
             for test in test_group.tests.iter() {
                 let mut d = [0u8; 32];
                 let mut z = [0u8; 32];
-                let mut ek_expected = [0u8; mlkem1024::MlKem1024::EK_SIZE];
-                let mut dk_expected = [0u8; mlkem1024::MlKem1024::DK_SIZE];
+                let mut ek_expected = [0u8; mlkem1024::EK_SIZE];
+                let mut dk_expected = [0u8; mlkem1024::DK_SIZE];
                 hex::decode_to_slice(&test.z, &mut z).unwrap();
                 hex::decode_to_slice(&test.d, &mut d).unwrap();
                 hex::decode_to_slice(&test.ek, &mut ek_expected).unwrap();
@@ -106,7 +107,7 @@ fn mlkem_runner(path: &str) {
                 let mut dz = d.to_vec();
                 dz.extend(&z);
 
-                let seed = mlkem1024::Seed::from_slice(&dz).unwrap();
+                let seed = mlkem1024::Seed::try_from(&dz).unwrap();
                 let kp = mlkem1024::KeyPair::try_from(&seed).unwrap();
 
                 assert_eq!(ek_expected, kp.public().as_ref());

@@ -149,12 +149,12 @@ pub(crate) mod sha2_core {
 
     #[cfg(feature = "zeroize")]
     impl<
-            W: Word,
-            T: Variant<W, { N_CONSTS }>,
-            const BLOCKSIZE: usize,
-            const OUTSIZE: usize,
-            const N_CONSTS: usize,
-        > Drop for State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
+        W: Word,
+        T: Variant<W, { N_CONSTS }>,
+        const BLOCKSIZE: usize,
+        const OUTSIZE: usize,
+        const N_CONSTS: usize,
+    > Drop for State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
     {
         fn drop(&mut self) {
             self.working_state.iter_mut().zeroize();
@@ -166,12 +166,12 @@ pub(crate) mod sha2_core {
     }
 
     impl<
-            W: Word,
-            T: Variant<W, { N_CONSTS }>,
-            const BLOCKSIZE: usize,
-            const OUTSIZE: usize,
-            const N_CONSTS: usize,
-        > Debug for State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
+        W: Word,
+        T: Variant<W, { N_CONSTS }>,
+        const BLOCKSIZE: usize,
+        const OUTSIZE: usize,
+        const N_CONSTS: usize,
+    > Debug for State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
     {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             write!(
@@ -184,12 +184,12 @@ pub(crate) mod sha2_core {
     }
 
     impl<
-            W: Word,
-            T: Variant<W, { N_CONSTS }>,
-            const BLOCKSIZE: usize,
-            const OUTSIZE: usize,
-            const N_CONSTS: usize,
-        > State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
+        W: Word,
+        T: Variant<W, { N_CONSTS }>,
+        const BLOCKSIZE: usize,
+        const OUTSIZE: usize,
+        const N_CONSTS: usize,
+    > State<W, T, BLOCKSIZE, OUTSIZE, N_CONSTS>
     {
         /// Increment the message length during processing of data.
         pub(crate) fn increment_mlen(&mut self, length: &W) {

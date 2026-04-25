@@ -33,6 +33,7 @@ pub trait TestableKem<K: PartialEq, C: PartialEq + AsRef<[u8]>> {
     fn decap(dk: &[u8], c: &C) -> Result<K, UnknownCryptoError>;
 }
 
+#[derive(Debug)]
 pub struct KemTester<T, K, C> {
     _kem: PhantomData<T>,
     _return_type_k: PhantomData<K>,

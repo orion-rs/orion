@@ -39,11 +39,8 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - If the key exchange results in an all-zero output.
-//!
-//! # Panics:
-//! A panic will occur if:
-//! - Failure to generate random bytes securely.
+//! - The key exchange results in an all-zero output.
+//! - Failure to generate random bytes securely during key-generation.
 //!
 //! # Security:
 //! - The API is designed to be ephemeral and a [`PrivateKey`] should not be used more than once.
@@ -87,6 +84,7 @@
 pub use super::hltypes::SecretKey;
 pub use crate::hazardous::ecc::x25519::PrivateKey;
 pub use crate::hazardous::ecc::x25519::PublicKey;
+pub use crate::hazardous::ecc::x25519::SharedKey;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
@@ -103,7 +101,7 @@ pub struct EphemeralClientSession {
 impl EphemeralClientSession {
     /// Generate a new random key pair.
     pub fn new() -> Result<Self, UnknownCryptoError> {
-        let privkey = PrivateKey::generate();
+        let privkey = PrivateKey::generate()?;
         let pubkey: PublicKey = PublicKey::try_from(&privkey)?;
 
         Ok(Self {
@@ -132,8 +130,8 @@ impl EphemeralClientSession {
         let keys = establish_session_keys(&q, &self.public_key, server_public_key)?;
 
         Ok(SessionKeys {
-            rx: SecretKey::from_slice(&keys.as_ref()[..32])?,
-            tx: SecretKey::from_slice(&keys.as_ref()[32..])?,
+            rx: SecretKey::try_from(&keys.as_ref()[..32])?,
+            tx: SecretKey::try_from(&keys.as_ref()[32..])?,
         })
     }
 }
@@ -148,7 +146,7 @@ pub struct EphemeralServerSession {
 impl EphemeralServerSession {
     /// Generate a new random key pair.
     pub fn new() -> Result<Self, UnknownCryptoError> {
-        let privkey = PrivateKey::generate();
+        let privkey = PrivateKey::generate()?;
         let pubkey: PublicKey = PublicKey::try_from(&privkey)?;
 
         Ok(Self {
@@ -177,8 +175,8 @@ impl EphemeralServerSession {
         let keys = establish_session_keys(&q, client_public_key, &self.public_key)?;
 
         Ok(SessionKeys {
-            rx: SecretKey::from_slice(&keys.as_ref()[32..])?,
-            tx: SecretKey::from_slice(&keys.as_ref()[..32])?,
+            rx: SecretKey::try_from(&keys.as_ref()[32..])?,
+            tx: SecretKey::try_from(&keys.as_ref()[..32])?,
         })
     }
 }
@@ -205,14 +203,14 @@ impl SessionKeys {
 
 /// Using BLAKE2b, derive two shared secret from a scalarmult computation.
 fn establish_session_keys(
-    shared_secret: &x25519::SharedKey,
+    shared_secret: &SharedKey,
     client_pk: &PublicKey,
     server_pk: &PublicKey,
 ) -> Result<Digest, UnknownCryptoError> {
     let mut ctx = Blake2b::new(64)?;
-    ctx.update(shared_secret.unprotected_as_bytes())?;
-    ctx.update(&client_pk.to_bytes())?;
-    ctx.update(&server_pk.to_bytes())?;
+    ctx.update(shared_secret.unprotected_as_ref())?;
+    ctx.update(client_pk.as_ref())?;
+    ctx.update(server_pk.as_ref())?;
     ctx.finalize()
 }
 
@@ -253,12 +251,14 @@ mod public {
             0xc4, 0x6a, 0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd, 0x86, 0x62, 0x05, 0x16,
             0x5f, 0x49, 0xb8, 0x00,
         ];
-        let server_low_order_pk = PublicKey::from_slice(&low_order_public).unwrap();
+        let server_low_order_pk = PublicKey::try_from(&low_order_public[..]).unwrap();
 
         let session_client = EphemeralClientSession::new().unwrap();
-        assert!(session_client
-            .establish_with_server(&server_low_order_pk)
-            .is_err());
+        assert!(
+            session_client
+                .establish_with_server(&server_low_order_pk)
+                .is_err()
+        );
     }
 
     // The following are tests generated with sodiumoxide to test basic compatibility with libsodium API.
@@ -273,15 +273,15 @@ mod public {
         let server_rx = "201d1bb45d4b9164f269d59cc00ba1a49c1924c27485bb6e5cc77ea4cc38ec7e";
         let server_tx = "37830d33c5de06fbe246db5803ed70284fe9ab78bc6b896a3db3a9b8db50418b";
 
-        let client_public = PublicKey::from_slice(&hex::decode(client_pk).unwrap()).unwrap();
-        let client_secret = PrivateKey::from_slice(&hex::decode(client_sk).unwrap()).unwrap();
-        let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
-        let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
+        let client_public = PublicKey::try_from(&hex::decode(client_pk).unwrap()).unwrap();
+        let client_secret = PrivateKey::try_from(&hex::decode(client_sk).unwrap()).unwrap();
+        let server_public = PublicKey::try_from(&hex::decode(server_pk).unwrap()).unwrap();
+        let server_secret = PrivateKey::try_from(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::try_from(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::try_from(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::try_from(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::try_from(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
@@ -328,15 +328,15 @@ mod public {
         let server_rx = "f69cf60f763fb2a9c47dc1b3237983ef79cecd26205c68f9c16e91db6c8f3f18";
         let server_tx = "25789992d2eac8bc0e1c3322d9b8e26050064ea3cead77ca2cf36966dea54186";
 
-        let client_public = PublicKey::from_slice(&hex::decode(client_pk).unwrap()).unwrap();
-        let client_secret = PrivateKey::from_slice(&hex::decode(client_sk).unwrap()).unwrap();
-        let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
-        let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
+        let client_public = PublicKey::try_from(&hex::decode(client_pk).unwrap()).unwrap();
+        let client_secret = PrivateKey::try_from(&hex::decode(client_sk).unwrap()).unwrap();
+        let server_public = PublicKey::try_from(&hex::decode(server_pk).unwrap()).unwrap();
+        let server_secret = PrivateKey::try_from(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::try_from(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::try_from(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::try_from(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::try_from(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
@@ -383,15 +383,15 @@ mod public {
         let server_rx = "547c1f1be7abe8d10bf92fb19f79edd2139441b4faa54976b5db90a50b7244c4";
         let server_tx = "89f90402d56d5e184b1682c21583e695560e0ab54459d09a51a596a8d33293da";
 
-        let client_public = PublicKey::from_slice(&hex::decode(client_pk).unwrap()).unwrap();
-        let client_secret = PrivateKey::from_slice(&hex::decode(client_sk).unwrap()).unwrap();
-        let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
-        let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
+        let client_public = PublicKey::try_from(&hex::decode(client_pk).unwrap()).unwrap();
+        let client_secret = PrivateKey::try_from(&hex::decode(client_sk).unwrap()).unwrap();
+        let server_public = PublicKey::try_from(&hex::decode(server_pk).unwrap()).unwrap();
+        let server_secret = PrivateKey::try_from(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::try_from(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::try_from(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::try_from(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::try_from(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
@@ -438,15 +438,15 @@ mod public {
         let server_rx = "fd1ab19e5c6ac0c5508ba129ded170a25c04f6f1ab9ccc3e66cd73988ade8471";
         let server_tx = "738d3ff37e8b5d58daf888111359693042508617ef088c2048c0d87bc002ca38";
 
-        let client_public = PublicKey::from_slice(&hex::decode(client_pk).unwrap()).unwrap();
-        let client_secret = PrivateKey::from_slice(&hex::decode(client_sk).unwrap()).unwrap();
-        let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
-        let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
+        let client_public = PublicKey::try_from(&hex::decode(client_pk).unwrap()).unwrap();
+        let client_secret = PrivateKey::try_from(&hex::decode(client_sk).unwrap()).unwrap();
+        let server_public = PublicKey::try_from(&hex::decode(server_pk).unwrap()).unwrap();
+        let server_secret = PrivateKey::try_from(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::try_from(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::try_from(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::try_from(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::try_from(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
@@ -493,15 +493,15 @@ mod public {
         let server_rx = "a01332e4cb85b2bfac65f86936f27058b339889442c13eee06414bfb2d68c58b";
         let server_tx = "8fa8dfc483108262b058b60b11e2f9b5b47287061bde785827afafb102a09ec7";
 
-        let client_public = PublicKey::from_slice(&hex::decode(client_pk).unwrap()).unwrap();
-        let client_secret = PrivateKey::from_slice(&hex::decode(client_sk).unwrap()).unwrap();
-        let server_public = PublicKey::from_slice(&hex::decode(server_pk).unwrap()).unwrap();
-        let server_secret = PrivateKey::from_slice(&hex::decode(server_sk).unwrap()).unwrap();
+        let client_public = PublicKey::try_from(&hex::decode(client_pk).unwrap()).unwrap();
+        let client_secret = PrivateKey::try_from(&hex::decode(client_sk).unwrap()).unwrap();
+        let server_public = PublicKey::try_from(&hex::decode(server_pk).unwrap()).unwrap();
+        let server_secret = PrivateKey::try_from(&hex::decode(server_sk).unwrap()).unwrap();
 
-        let client_recv = SecretKey::from_slice(&hex::decode(client_rx).unwrap()).unwrap();
-        let client_trans = SecretKey::from_slice(&hex::decode(client_tx).unwrap()).unwrap();
-        let server_recv = SecretKey::from_slice(&hex::decode(server_rx).unwrap()).unwrap();
-        let server_trans = SecretKey::from_slice(&hex::decode(server_tx).unwrap()).unwrap();
+        let client_recv = SecretKey::try_from(&hex::decode(client_rx).unwrap()).unwrap();
+        let client_trans = SecretKey::try_from(&hex::decode(client_tx).unwrap()).unwrap();
+        let server_recv = SecretKey::try_from(&hex::decode(server_rx).unwrap()).unwrap();
+        let server_trans = SecretKey::try_from(&hex::decode(server_tx).unwrap()).unwrap();
 
         let session_client = EphemeralClientSession {
             private_key: client_secret,
