@@ -375,9 +375,9 @@ impl X25519PrivateKey {
         scalar
     }
 
-    #[cfg(debug_assertions)]
-    const fn is_clamped(scalar: &[u8; PRIVATE_KEY_SIZE]) -> bool {
-        (scalar[0] & 7) == 0 && (scalar[31] & 0xC0) == 0x40
+    fn is_clamped(scalar: &[u8; PRIVATE_KEY_SIZE]) -> bool {
+        use subtle::ConstantTimeEq;
+        ((scalar[0] & 7).ct_eq(&0) & ((scalar[31] & 0xC0).ct_eq(&0x40))).into()
     }
 }
 
