@@ -154,6 +154,15 @@ impl GenerateSecret for DhKemX25519PrivateKey {
     }
 }
 
+impl From<[u8; x25519::PRIVATE_KEY_SIZE]> for PrivateKey {
+    fn from(value: [u8; x25519::PRIVATE_KEY_SIZE]) -> Self {
+        let mut value = value;
+        x25519::X25519PrivateKey::clamp_mut(&mut value);
+
+        Self::from_data(<DhKemX25519PrivateKey as TypeSpec>::TypeData::from(value))
+    }
+}
+
 impl TryFrom<&PrivateKey> for PublicKey {
     type Error = UnknownCryptoError;
 
@@ -405,6 +414,7 @@ mod public {
     use super::*;
 
     #[test]
+    #[cfg(feature = "safe_api")]
     fn test_rfc9180_serialize_deserialize_clapming_requirement() {
         use crate::hazardous::ecc::x25519::X25519PrivateKey;
 
@@ -414,6 +424,16 @@ mod public {
         assert!(X25519PrivateKey::is_clamped(&k));
         // Test it holds internally (DeserializePrivateKey()) clamped
         assert!(X25519PrivateKey::is_clamped(&kp.0.data.bytes));
+        // Test it is applied from foreign-origin byte slice
+        let mut k = [0u8; x25519::PRIVATE_KEY_SIZE];
+        crate::util::secure_rand_bytes(&mut k).unwrap();
+        assert!(!X25519PrivateKey::is_clamped(&k));
+        assert!(X25519PrivateKey::is_clamped(
+            &PrivateKey::try_from(&k).unwrap().data.bytes
+        ));
+        assert!(X25519PrivateKey::is_clamped(
+            &PrivateKey::from(k).data.bytes
+        ));
     }
 
     #[test]
