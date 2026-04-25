@@ -96,8 +96,7 @@
 //! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::hash::blake2::blake2b::Blake2b;
-use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
+use crate::hazardous::hash::blake2::blake2b::{BLAKE2B_MAX_OUTSIZE, Blake2b};
 use crate::util;
 use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 #[cfg(feature = "zeroize")]
@@ -183,7 +182,7 @@ fn initial_hash(
     // We save additional 8 bytes in H0 for when the first two blocks are processed,
     // so that this may contain two little-endian integers.
     let mut h0 = [0u8; 72];
-    let mut hasher = Blake2b::new(BLAKE2B_OUTSIZE)?;
+    let mut hasher = Blake2b::new(BLAKE2B_MAX_OUTSIZE)?;
 
     // Collect the first part to reduce times we update the hasher state.
     h0[0..4].copy_from_slice(&LANES.to_le_bytes());
@@ -202,7 +201,7 @@ fn initial_hash(
     hasher.update(k)?;
     hasher.update(&(x.len() as u32).to_le_bytes())?;
     hasher.update(x)?;
-    h0[0..BLAKE2B_OUTSIZE].copy_from_slice(hasher.finalize()?.as_ref());
+    h0[0..BLAKE2B_MAX_OUTSIZE].copy_from_slice(hasher.finalize()?.as_ref());
 
     Ok(h0)
 }
@@ -215,30 +214,30 @@ fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError>
 
     let outlen = dst.len() as u32;
 
-    if dst.len() <= BLAKE2B_OUTSIZE {
+    if dst.len() <= BLAKE2B_MAX_OUTSIZE {
         let mut ctx = Blake2b::new(dst.len())?;
         ctx.update(&outlen.to_le_bytes())?;
         ctx.update(input)?;
         dst.copy_from_slice(ctx.finalize()?.as_ref());
     } else {
-        let mut ctx = Blake2b::new(BLAKE2B_OUTSIZE)?;
+        let mut ctx = Blake2b::new(BLAKE2B_MAX_OUTSIZE)?;
         ctx.update(&outlen.to_le_bytes())?;
         ctx.update(input)?;
 
         let mut tmp = ctx.finalize()?;
-        dst[..BLAKE2B_OUTSIZE].copy_from_slice(tmp.as_ref());
+        dst[..BLAKE2B_MAX_OUTSIZE].copy_from_slice(tmp.as_ref());
 
-        let mut pos = BLAKE2B_OUTSIZE / 2;
-        let mut toproduce = dst.len() - BLAKE2B_OUTSIZE / 2;
+        let mut pos = BLAKE2B_MAX_OUTSIZE / 2;
+        let mut toproduce = dst.len() - BLAKE2B_MAX_OUTSIZE / 2;
 
-        while toproduce > BLAKE2B_OUTSIZE {
+        while toproduce > BLAKE2B_MAX_OUTSIZE {
             ctx.reset()?;
             ctx.update(tmp.as_ref())?;
             tmp = ctx.finalize()?;
 
-            dst[pos..(pos + BLAKE2B_OUTSIZE)].copy_from_slice(tmp.as_ref());
-            pos += BLAKE2B_OUTSIZE / 2;
-            toproduce -= BLAKE2B_OUTSIZE / 2;
+            dst[pos..(pos + BLAKE2B_MAX_OUTSIZE)].copy_from_slice(tmp.as_ref());
+            pos += BLAKE2B_MAX_OUTSIZE / 2;
+            toproduce -= BLAKE2B_MAX_OUTSIZE / 2;
         }
 
         ctx = Blake2b::new(toproduce)?;
@@ -462,16 +461,18 @@ pub fn derive_key(
         x,
     )?;
     let mut tmp = [0u8; 1024];
-    debug_assert_eq!(h0.len(), ((size_of::<u32>() * 2) + BLAKE2B_OUTSIZE));
+    debug_assert_eq!(h0.len(), ((size_of::<u32>() * 2) + BLAKE2B_MAX_OUTSIZE));
     debug_assert!(
-        h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + size_of::<u32>())] == [0u8; size_of::<u32>()]
+        h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
+            == [0u8; size_of::<u32>()]
     ); // Block 0
-    debug_assert!(h0[BLAKE2B_OUTSIZE + size_of::<u32>()..] == [0u8; size_of::<u32>()]); // Lane
+    debug_assert!(h0[BLAKE2B_MAX_OUTSIZE + size_of::<u32>()..] == [0u8; size_of::<u32>()]); // Lane
 
     // H' into the first two blocks
     extended_hash(&h0, &mut tmp)?;
     load_u64_into_le(&tmp, &mut blocks[0]);
-    h0[BLAKE2B_OUTSIZE..(BLAKE2B_OUTSIZE + size_of::<u32>())].copy_from_slice(&1u32.to_le_bytes()); // Block 1
+    h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
+        .copy_from_slice(&1u32.to_le_bytes()); // Block 1
     extended_hash(&h0, &mut tmp)?;
     load_u64_into_le(&tmp, &mut blocks[1]);
 
