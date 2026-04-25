@@ -405,7 +405,7 @@ mod tests {
 
     #[test]
     #[cfg(feature = "serde")]
-    fn test_encapuslation_key_serialization() {
+    fn test_encapsulation_key_serialization() {
         use crate::test_framework::newtypes::public::PublicNewtype;
         PublicNewtype::test_serialization::<EK_SIZE, MlKem768EncapKey>();
     }

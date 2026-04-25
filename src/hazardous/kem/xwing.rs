@@ -77,7 +77,7 @@ use crate::generics::{ByteArrayData, Public, Secret, TypeSpec, sealed::Data};
 use crate::hazardous::ecc::x25519;
 use crate::hazardous::hash::sha3::sha3_256;
 use crate::hazardous::hash::sha3::shake256::Shake256;
-use crate::hazardous::kem::ml_kem::mlkem768;
+use crate::hazardous::kem::ml_kem::{self, mlkem768};
 
 /// KEM-label used by X-Wing.
 const LABEL: &[u8; 6] = b"\\.//^\\";
@@ -95,10 +95,6 @@ pub const CIPHERTEXT_SIZE: usize = 1120;
 pub const SHARED_SECRET_SIZE: usize = 32;
 
 /// X-Wing encapsulation key.
-///
-/// **SECURITY**: This type simply holds bytes and performs no checks whatsoever. If an invalid
-/// ML-KEM-768 is part of the bytes parsed from this type, the check will first surface
-/// when encapsulation is performed.
 pub type EncapsulationKey = Public<XWingEncapKey>;
 
 /// X-Wing ciphertext.
@@ -114,20 +110,23 @@ pub type SharedSecret = Secret<XWingSharedSecret>;
 /// X-Wing encapsulation key implementation. See [`EncapsulationKey`] type for convenience.
 ///
 ///
-/// **SECURITY**: This type simply holds bytes and performs no checks whatsoever. If an invalid
-/// ML-KEM-768 is part of the bytes parsed from this type, the check will first surface
-/// when encapsulation is performed.
+/// **SECURITY**: This type performs ML-KEM-768 key-checks and no checks for the X25519 part.
 pub struct XWingEncapKey {}
 impl Sealed for XWingEncapKey {}
 
 impl TypeSpec for XWingEncapKey {
     const NAME: &'static str = stringify!(EncapsulationKey);
     type TypeData = ByteArrayData<EK_SIZE>;
-}
 
-impl From<[u8; EK_SIZE]> for Public<XWingEncapKey> {
-    fn from(value: [u8; EK_SIZE]) -> Self {
-        Self::from_data(<XWingEncapKey as TypeSpec>::TypeData::from(value))
+    // Perform FIPS-203 Encapsulation Key checks, with without allocating
+    // an actual EncapKey, to save work. It will be properly expanded later anyway.
+    fn parse_bytes(bytes: &[u8]) -> Result<Self::TypeData, UnknownCryptoError> {
+        use crate::hazardous::kem::ml_kem::internal::PkeParameters;
+
+        let ek: [u8; EK_SIZE] = bytes.try_into().map_err(|_| UnknownCryptoError)?;
+        ml_kem::internal::MlKem768Internal::encapsulation_key_check(&ek[..mlkem768::EK_SIZE])?;
+
+        Ok(Self::TypeData::from(ek))
     }
 }
 
@@ -537,18 +536,34 @@ mod tests {
         )
     }
 
+    // NOTE(brycx): PublicNewtype generic tests aren't run for Encapsulation keys
+    // because their parsing logic depends on valid ML-KEM768 keys
+    // which isn't compatible with test framework.
+
     #[test]
-    fn test_encapuslation_key() {
+    #[cfg(test)]
+    fn test_encapsulation_key() {
+        use crate::hazardous::kem::mlkem768;
+
+        let seed = mlkem768::Seed::from([21u8; mlkem768::SEED_SIZE]);
+        let kp = mlkem768::KeyPair::new(seed).unwrap();
+
+        let mut xwing_public_bytes = [0u8; EK_SIZE];
+        crate::util::secure_rand_bytes(&mut xwing_public_bytes).unwrap();
+
+        // Length mismatch
+        assert!(EncapsulationKey::try_from(&xwing_public_bytes[..EK_SIZE - 1]).is_err());
+        // With invalid/random ML-KEM-768 public part, X-Wing fails.
+        assert!(EncapsulationKey::try_from(&xwing_public_bytes).is_err());
+        // With valid ML-KEM-768 and completely random X25519, which is not parsed, X-Wing succeeds.
+        xwing_public_bytes[..mlkem768::EK_SIZE].copy_from_slice(kp.public().as_ref());
+        assert!(EncapsulationKey::try_from(&xwing_public_bytes).is_ok());
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_encapsulation_key_serialization() {
         use crate::test_framework::newtypes::public::PublicNewtype;
-        PublicNewtype::test_no_generate::<EK_SIZE, EK_SIZE, XWingEncapKey>();
-
-        // Test of From<[u8; N]>
-        assert_ne!(
-            EncapsulationKey::from([0u8; EK_SIZE]),
-            EncapsulationKey::from([1u8; EK_SIZE])
-        );
-
-        #[cfg(feature = "serde")]
         PublicNewtype::test_serialization::<EK_SIZE, XWingEncapKey>();
     }
 
