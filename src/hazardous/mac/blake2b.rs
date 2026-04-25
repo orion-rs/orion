@@ -73,9 +73,15 @@ use crate::generics::GenerateSecret;
 use crate::generics::sealed::Data;
 use crate::generics::sealed::Sealed;
 use crate::generics::{ByteArrayVecData, Secret, TypeSpec};
-use crate::hazardous::hash::blake2::blake2b_core::{self, BLAKE2B_KEYSIZE, BLAKE2B_OUTSIZE};
+pub use crate::hazardous::hash::blake2::blake2b::{
+    BLAKE2B_MAX_KEYSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MIN_OUTSIZE,
+};
+use crate::hazardous::hash::blake2::blake2b_core;
 #[cfg(feature = "serde")]
 use alloc::vec::Vec;
+
+/// The size used with [`SecretKey::generate()`].
+pub const BLAKE2B_GEN_SIZE: usize = 32;
 
 #[derive(Debug)]
 /// Marker type for BLAKE2b key. See [`SecretKey`] type for convenience.
@@ -84,7 +90,7 @@ impl Sealed for Blake2bKey {}
 
 impl TypeSpec for Blake2bKey {
     const NAME: &'static str = stringify!(SecretKey);
-    type TypeData = ByteArrayVecData<1, BLAKE2B_KEYSIZE>;
+    type TypeData = ByteArrayVecData<BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE>;
 }
 
 impl GenerateSecret for Blake2bKey {
@@ -107,7 +113,7 @@ impl Sealed for Blake2bTag {}
 
 impl TypeSpec for Blake2bTag {
     const NAME: &'static str = stringify!(Tag);
-    type TypeData = ByteArrayVecData<1, BLAKE2B_OUTSIZE>;
+    type TypeData = ByteArrayVecData<BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE>;
 }
 
 /// A type to represent the MAC/Tag that BLAKE2b returns for keyed mode.
@@ -175,7 +181,7 @@ impl Blake2b {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Return a BLAKE2b tag.
     pub fn finalize(&mut self) -> Result<Tag, UnknownCryptoError> {
-        let mut tmp = zeroize_wrap!([0u8; BLAKE2B_OUTSIZE]);
+        let mut tmp = zeroize_wrap!([0u8; BLAKE2B_MAX_OUTSIZE]);
         self._state._finalize(&mut tmp)?;
 
         Tag::try_from(&tmp[..self._state.size])
@@ -207,19 +213,20 @@ mod public {
     #[test]
     fn test_blake2b_key() {
         use crate::test_framework::newtypes::secret::SecretNewtype;
-        SecretNewtype::test_with_generate::<1, BLAKE2B_KEYSIZE, 32, Blake2bKey>();
+        SecretNewtype::test_with_generate::<BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE, 32, Blake2bKey>(
+        );
     }
 
     #[test]
     fn test_blake2b_tag() {
         use crate::test_framework::newtypes::secret::SecretNewtype;
-        SecretNewtype::test_no_generate::<1, BLAKE2B_OUTSIZE, Blake2bTag>();
+        SecretNewtype::test_no_generate::<BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, Blake2bTag>();
     }
 
     #[test]
     #[cfg(feature = "serde")]
     fn test_serde_serialized_equivalence_to_bytes_fn() {
-        let bytes = [38u8; BLAKE2B_OUTSIZE];
+        let bytes = [38u8; BLAKE2B_MAX_OUTSIZE];
         let secret_type = Tag::try_from(&bytes).unwrap();
         let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
         let serialized_from_secret_type = serde_json::to_value(&secret_type).unwrap();
@@ -229,16 +236,17 @@ mod public {
     #[test]
     #[cfg(feature = "serde")]
     fn test_serde_deserialized_equivalence_to_bytes_fn() {
-        let bytes = [38u8; BLAKE2B_OUTSIZE];
+        let bytes = [38u8; BLAKE2B_MAX_OUTSIZE];
         let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
         let secret_type: Tag = serde_json::from_value(serialized_from_bytes).unwrap();
         assert_eq!(secret_type.unprotected_as_ref(), bytes.as_slice());
     }
 
     mod test_streaming_interface_no_key {
+        use super::*;
         use crate::errors::UnknownCryptoError;
         use crate::hazardous::hash::blake2::blake2b_core::{
-            BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE, compare_blake2b_states,
+            BLAKE2B_BLOCKSIZE, compare_blake2b_states,
         };
         use crate::hazardous::mac::blake2b::{Blake2b, SecretKey, Tag};
         use crate::test_framework::incremental_interface::{
@@ -263,7 +271,7 @@ mod public {
 
             fn one_shot(input: &[u8]) -> Result<Tag, UnknownCryptoError> {
                 let key = SecretKey::try_from(KEY.as_slice()).unwrap();
-                let mut ctx = Blake2b::new(&key, BLAKE2B_OUTSIZE)?;
+                let mut ctx = Blake2b::new(&key, BLAKE2B_MAX_OUTSIZE)?;
                 ctx.update(input)?;
                 ctx.finalize()
             }
@@ -286,7 +294,7 @@ mod public {
         #[test]
         fn default_consistency_tests() {
             let key = SecretKey::try_from(KEY.as_slice()).unwrap();
-            let initial_state: Blake2b = Blake2b::new(&key, BLAKE2B_OUTSIZE).unwrap();
+            let initial_state: Blake2b = Blake2b::new(&key, BLAKE2B_MAX_OUTSIZE).unwrap();
 
             let test_runner = StreamingContextConsistencyTester::<Tag, Blake2b>::new(
                 initial_state,
@@ -301,7 +309,7 @@ mod public {
         /// Test different streaming state usage patterns.
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
             let key = SecretKey::try_from(KEY.as_slice()).unwrap();
-            let initial_state: Blake2b = Blake2b::new(&key, BLAKE2B_OUTSIZE).unwrap();
+            let initial_state: Blake2b = Blake2b::new(&key, BLAKE2B_MAX_OUTSIZE).unwrap();
 
             let test_runner = StreamingContextConsistencyTester::<Tag, Blake2b>::new(
                 initial_state,
@@ -487,9 +495,9 @@ mod public {
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_same_hash_different_usage(data: Vec<u8>, size: usize) -> bool {
-            use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
+            use crate::hazardous::mac::blake2b::{BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_OUTSIZE};
 
-            if (1..=BLAKE2B_OUTSIZE).contains(&size) {
+            if (BLAKE2B_MIN_OUTSIZE..=BLAKE2B_MAX_OUTSIZE).contains(&size) {
                 // Will panic on incorrect results.
                 let sk = SecretKey::generate().unwrap();
                 produces_same_hash(&sk, size, &data[..]);
@@ -503,9 +511,9 @@ mod public {
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_same_state_different_usage(data: Vec<u8>, size: usize) -> bool {
-            use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
+            use crate::hazardous::mac::blake2b::{BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_OUTSIZE};
 
-            if (1..=BLAKE2B_OUTSIZE).contains(&size) {
+            if (BLAKE2B_MIN_OUTSIZE..=BLAKE2B_MAX_OUTSIZE).contains(&size) {
                 // Will panic on incorrect results.
                 let sk = SecretKey::generate().unwrap();
                 produces_same_state(&sk, size, &data[..]);

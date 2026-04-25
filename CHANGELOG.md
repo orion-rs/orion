@@ -22,6 +22,8 @@
 - [Breaking change] `orion::hazardous::ecc::x25519::SharedSecret` now  respects (applies masking) the u-coordinate condition for `PartialEq`.
 
 - MSRV bumped to `1.87`
+- Add constants for BLAKE2b: `BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE` making the conditions more discernable.
+
 
 ### 0.17.14
 

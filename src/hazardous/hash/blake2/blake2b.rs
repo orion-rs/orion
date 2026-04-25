@@ -65,7 +65,15 @@ use crate::errors::UnknownCryptoError;
 use crate::generics::sealed::Sealed;
 use crate::generics::{ByteArrayVecData, Public, TypeSpec};
 use crate::hazardous::hash::blake2::blake2b_core;
-use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_OUTSIZE;
+
+/// The minimum key size for the hash function BLAKE2b when used in keyed mode.
+pub const BLAKE2B_MIN_KEYSIZE: usize = 1;
+/// The minimum output size for the hash function BLAKE2b.
+pub const BLAKE2B_MIN_OUTSIZE: usize = 1;
+/// The maximum key size for the hash function BLAKE2b when used in keyed mode.
+pub const BLAKE2B_MAX_KEYSIZE: usize = 64;
+/// The maximum output size for the hash function BLAKE2b.
+pub const BLAKE2B_MAX_OUTSIZE: usize = 64;
 
 #[cfg(feature = "safe_api")]
 use std::io;
@@ -77,7 +85,7 @@ impl Sealed for Blake2bDigest {}
 
 impl TypeSpec for Blake2bDigest {
     const NAME: &'static str = stringify!(Digest);
-    type TypeData = ByteArrayVecData<1, BLAKE2B_OUTSIZE>;
+    type TypeData = ByteArrayVecData<BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE>;
 }
 /// A type to represent the [`Digest`]/hash-output that BLAKE2b returns.
 pub type Digest = Public<Blake2bDigest>;
@@ -112,7 +120,7 @@ impl Blake2b {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Return a BLAKE2b digest.
     pub fn finalize(&mut self) -> Result<Digest, UnknownCryptoError> {
-        let mut tmp = [0u8; BLAKE2B_OUTSIZE];
+        let mut tmp = [0u8; BLAKE2B_MAX_OUTSIZE];
         self._state._finalize(&mut tmp)?;
 
         Digest::try_from(&tmp[..self._state.size])
@@ -200,22 +208,23 @@ impl io::Write for Blake2b {
 
 #[cfg(test)]
 mod public {
+    use super::*;
 
     #[test]
     fn test_blake2b_digest() {
-        use super::*;
         use crate::test_framework::newtypes::public::PublicNewtype;
-        PublicNewtype::test_no_generate::<1, BLAKE2B_OUTSIZE, Blake2bDigest>();
+        PublicNewtype::test_no_generate::<1, BLAKE2B_MAX_OUTSIZE, Blake2bDigest>();
 
         #[cfg(feature = "serde")]
-        PublicNewtype::test_serialization::<BLAKE2B_OUTSIZE, Blake2bDigest>();
+        PublicNewtype::test_serialization::<BLAKE2B_MAX_OUTSIZE, Blake2bDigest>();
     }
 
     mod test_streaming_interface_no_key {
+        use super::*;
         use crate::errors::UnknownCryptoError;
         use crate::hazardous::hash::blake2::blake2b::{Blake2b, Digest};
         use crate::hazardous::hash::blake2::blake2b_core::{
-            BLAKE2B_BLOCKSIZE, BLAKE2B_OUTSIZE, compare_blake2b_states,
+            BLAKE2B_BLOCKSIZE, compare_blake2b_states,
         };
         use crate::test_framework::incremental_interface::{
             StreamingContextConsistencyTester, TestableStreamingContext,
@@ -235,7 +244,7 @@ mod public {
             }
 
             fn one_shot(input: &[u8]) -> Result<Digest, UnknownCryptoError> {
-                let mut ctx = Blake2b::new(BLAKE2B_OUTSIZE)?;
+                let mut ctx = Blake2b::new(BLAKE2B_MAX_OUTSIZE)?;
                 ctx.update(input)?;
                 ctx.finalize()
             }
@@ -257,7 +266,7 @@ mod public {
 
         #[test]
         fn default_consistency_tests() {
-            let initial_state: Blake2b = Blake2b::new(BLAKE2B_OUTSIZE).unwrap();
+            let initial_state: Blake2b = Blake2b::new(BLAKE2B_MAX_OUTSIZE).unwrap();
 
             let test_runner = StreamingContextConsistencyTester::<Digest, Blake2b>::new(
                 initial_state,
@@ -271,7 +280,7 @@ mod public {
         /// Related bug: https://github.com/orion-rs/orion/issues/46
         /// Test different streaming state usage patterns.
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-            let initial_state: Blake2b = Blake2b::new(BLAKE2B_OUTSIZE).unwrap();
+            let initial_state: Blake2b = Blake2b::new(BLAKE2B_MAX_OUTSIZE).unwrap();
 
             let test_runner = StreamingContextConsistencyTester::<Digest, Blake2b>::new(
                 initial_state,

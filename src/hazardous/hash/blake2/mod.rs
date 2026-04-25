@@ -24,13 +24,12 @@
 pub mod blake2b;
 
 pub(crate) mod blake2b_core {
+    use super::blake2b::{
+        BLAKE2B_MAX_KEYSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MIN_OUTSIZE,
+    };
 
     /// The blocksize for the hash function BLAKE2b.
     pub(crate) const BLAKE2B_BLOCKSIZE: usize = 128;
-    /// The maximum key size for the hash function BLAKE2b when used in keyed mode.
-    pub(crate) const BLAKE2B_KEYSIZE: usize = 64;
-    /// The maximum output size for the hash function BLAKE2b.
-    pub(crate) const BLAKE2B_OUTSIZE: usize = 64;
 
     use crate::errors::UnknownCryptoError;
     use crate::util::endianness::load_u64_into_le;
@@ -203,12 +202,12 @@ pub(crate) mod blake2b_core {
         /// Initialize a `State` struct with a given size a key and optional key.
         /// An empty `secret_key` equals non-MAC mode.
         pub(crate) fn _new(sk: &[u8], size: usize) -> Result<Self, UnknownCryptoError> {
-            if !(1..=BLAKE2B_OUTSIZE).contains(&size) {
+            if !(BLAKE2B_MIN_OUTSIZE..=BLAKE2B_MAX_OUTSIZE).contains(&size) {
                 return Err(UnknownCryptoError);
             }
             let is_keyed = match sk.len() {
                 0 => false,
-                1..=BLAKE2B_KEYSIZE => true,
+                BLAKE2B_MIN_KEYSIZE..=BLAKE2B_MAX_KEYSIZE => true,
                 _ => return Err(UnknownCryptoError),
             };
 
@@ -250,8 +249,10 @@ pub(crate) mod blake2b_core {
                 (0, true) => return Err(UnknownCryptoError),
                 (0, false) => (),
                 // reset with key, new with none
-                (1..=BLAKE2B_KEYSIZE, false) => return Err(UnknownCryptoError),
-                (1..=BLAKE2B_KEYSIZE, true) => (),
+                (BLAKE2B_MIN_KEYSIZE..=BLAKE2B_MAX_KEYSIZE, false) => {
+                    return Err(UnknownCryptoError);
+                }
+                (BLAKE2B_MIN_KEYSIZE..=BLAKE2B_MAX_KEYSIZE, true) => (),
                 (_, _) => return Err(UnknownCryptoError),
             }
 
@@ -323,9 +324,9 @@ pub(crate) mod blake2b_core {
         /// to `self.size` later.
         pub(crate) fn _finalize(
             &mut self,
-            dest: &mut [u8; BLAKE2B_OUTSIZE],
+            dest: &mut [u8; BLAKE2B_MAX_OUTSIZE],
         ) -> Result<(), UnknownCryptoError> {
-            debug_assert!(self.size <= BLAKE2B_OUTSIZE);
+            debug_assert!(self.size >= BLAKE2B_MIN_OUTSIZE && self.size <= BLAKE2B_MAX_OUTSIZE);
             if self.is_finalized {
                 return Err(UnknownCryptoError);
             }
@@ -365,8 +366,7 @@ pub(crate) mod blake2b_core {
 
 #[cfg(test)]
 mod private {
-    use crate::hazardous::hash::blake2::blake2b_core::BLAKE2B_KEYSIZE;
-
+    use super::blake2b::{BLAKE2B_MAX_KEYSIZE, BLAKE2B_MIN_KEYSIZE};
     use super::blake2b_core::State;
 
     #[test]
@@ -381,13 +381,13 @@ mod private {
     #[test]
     fn test_sk_len() {
         assert!(State::_new(&[0u8; 0], 64).is_ok());
-        assert!(State::_new(&[0u8; 1], 64).is_ok());
-        assert!(State::_new(&[0u8; BLAKE2B_KEYSIZE], 64).is_ok());
-        assert!(State::_new(&[0u8; BLAKE2B_KEYSIZE + 1], 64).is_err());
+        assert!(State::_new(&[0u8; BLAKE2B_MIN_KEYSIZE], 64).is_ok());
+        assert!(State::_new(&[0u8; BLAKE2B_MAX_KEYSIZE], 64).is_ok());
+        assert!(State::_new(&[0u8; BLAKE2B_MAX_KEYSIZE + 1], 64).is_err());
 
         let mut ctx = State::_new(&[], 64).unwrap();
         assert!(ctx._reset(&[]).is_ok());
-        assert!(ctx._reset(&[0u8; BLAKE2B_KEYSIZE + 1]).is_err());
+        assert!(ctx._reset(&[0u8; BLAKE2B_MAX_KEYSIZE + 1]).is_err());
     }
 
     #[test]
