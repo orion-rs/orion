@@ -1,9 +1,10 @@
 ### 0.17.14
 
-**Date:** TBD.
+**Date:** April 25, 2026.
 
 **Changelog:**
 - Add `TryFrom<&[u8]>` for `mlkem512::EncapsulationKey`, `mlkem768::EncapsulationKey` and `mlkem1024::EncapsulationKey`.
+- Fix compiling with the following feature-set: `--no-default-features, --features alloc,zeroize` by conditionally enabling `alloc` for `zeroize`, on `alloc`-only configurations.
 
 ### 0.17.13
 

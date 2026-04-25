@@ -1485,15 +1485,13 @@ mod private {
                 259, 49, 1009, 1012, 828, 416, 1015, 878, 802, 213, 230, 567, 392,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -1575,15 +1573,13 @@ mod private {
                 1719, 1171, 1881, 2031,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -1668,15 +1664,13 @@ mod private {
                 3021, 1483, 2941, 2676, 422, 1775,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -1761,15 +1755,13 @@ mod private {
                 1163, 1752, 3677, 1553, 2352, 3650, 1758, 1756, 3893, 3566,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -1851,15 +1843,13 @@ mod private {
                 4079, 1009, 184, 91, 3936, 1790, 3997, 719, 1012, 3540, 3910, 848, 980, 726,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -1943,15 +1933,13 @@ mod private {
                 2035, 2712, 3411, 1658,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -2036,15 +2024,13 @@ mod private {
                 2313, 430, 3057, 2824, 2721, 1792, 1944, 3026, 3907, 2236, 978, 2126,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -2129,15 +2115,13 @@ mod private {
                 4010, 2728, 1454, 2225, 3648, 3476, 3811, 3592, 3339, 3548, 3973, 3979, 4061,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -2220,15 +2204,13 @@ mod private {
                 402,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -2312,15 +2294,13 @@ mod private {
                 1543, 2967,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -2405,15 +2385,13 @@ mod private {
                 3171, 349, 1296, 1876, 2988, 1789, 3580, 1396,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
 
             let offset = 0;
@@ -2498,15 +2476,13 @@ mod private {
                 688, 1143, 599, 3050, 3856, 3094, 2281, 356, 3916, 3918, 3209, 349, 1317,
             ];
 
-            let mut idx = offset;
-            for expected in expected_ref_idx.iter() {
+            for (idx, expected) in (offset..).zip(expected_ref_idx.iter()) {
                 // Mimic offset..segment_length runs with idx
                 assert_eq!(
                     *expected,
                     gidx.get_next(idx, &mut tmp_block),
                     "Invalid at {idx}",
                 );
-                idx += 1;
             }
         }
     }

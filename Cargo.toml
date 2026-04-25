@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.17.13"
+version = "0.17.14"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Usable, easy and safe pure-Rust crypto"
 keywords = ["cryptography", "crypto", "aead", "pqc", "kem"]
@@ -30,7 +30,7 @@ features = ["alloc"]
 default = ["safe_api", "zeroize"]
 zeroize = ["dep:zeroize"]
 safe_api = ["getrandom", "ct-codecs", "zeroize?/alloc"]
-alloc = []
+alloc = ["zeroize?/alloc"]
 serde = ["dep:serde", "alloc"]
 experimental = []
 
