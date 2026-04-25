@@ -57,18 +57,20 @@ fn wycheproof_runner(path: &str) {
                 _ => panic!("Unexpected test outcome for Wycheproof test"),
             };
 
-            assert!(super::wycheproof_test_runner(
-                &decode(&test.key).unwrap(),
-                &decode(&test.iv).unwrap(),
-                &decode(&test.aad).unwrap(),
-                &decode(&test.tag).unwrap(),
-                &decode(&test.msg).unwrap(),
-                &decode(&test.ct).unwrap(),
-                should_test_pass,
-                test.tcId,
-                is_ietf,
-            )
-            .is_ok());
+            assert!(
+                super::wycheproof_test_runner(
+                    &decode(&test.key).unwrap(),
+                    &decode(&test.iv).unwrap(),
+                    &decode(&test.aad).unwrap(),
+                    &decode(&test.tag).unwrap(),
+                    &decode(&test.msg).unwrap(),
+                    &decode(&test.ct).unwrap(),
+                    should_test_pass,
+                    test.tcId,
+                    is_ietf,
+                )
+                .is_ok()
+            );
 
             tests_run += 1;
         }

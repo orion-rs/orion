@@ -72,7 +72,7 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::stream::chacha20;
 //!
-//! let secret_key = chacha20::SecretKey::generate();
+//! let secret_key = chacha20::SecretKey::generate()?;
 //!
 //! // WARNING: This nonce is only meant for demonstration and should not
 //! // be repeated. Please read the security section.
@@ -95,7 +95,12 @@
 //! [`SecretKey::generate()`]: chacha20::SecretKey::generate()
 //! [`XChaCha20Poly1305`]: super::aead::xchacha20poly1305
 //! [RFC]: https://tools.ietf.org/html/rfc8439
+use crate::GenerateSecret;
 use crate::errors::UnknownCryptoError;
+#[cfg(feature = "safe_api")]
+use crate::generics::sealed::Data;
+use crate::generics::sealed::Sealed;
+use crate::generics::{ByteArrayData, Public, Secret, TypeSpec};
 use crate::util::endianness::load_u32_le;
 use crate::util::u32x4::U32x4;
 #[cfg(feature = "zeroize")]
@@ -112,32 +117,54 @@ const HCHACHA_OUTSIZE: usize = 32;
 /// The nonce size for HChaCha20.
 pub(crate) const HCHACHA_NONCESIZE: usize = 16;
 
-construct_secret_key! {
-    /// A type to represent the `SecretKey` that Chacha20, XChaCha20, ChaCha20-Poly1305 and
-    /// XChaCha20-Poly1305 use.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    ///
-    /// # Panics:
-    /// A panic will occur if:
-    /// - Failure to generate random bytes securely.
-    (SecretKey, test_secret_key, CHACHA_KEYSIZE, CHACHA_KEYSIZE, CHACHA_KEYSIZE)
+#[derive(Debug)]
+/// Marker type for ChaCha20 key. See [`SecretKey`] type for convenience.
+pub struct ChaCha20Key {}
+impl Sealed for ChaCha20Key {}
+
+impl TypeSpec for ChaCha20Key {
+    const NAME: &'static str = stringify!(SecretKey);
+    type TypeData = ByteArrayData<CHACHA_KEYSIZE>;
 }
 
-impl_from_trait!(SecretKey, CHACHA_KEYSIZE);
-
-construct_public! {
-    /// A type that represents a `Nonce` that ChaCha20 and ChaCha20-Poly1305 use.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 12 bytes.
-    (Nonce, test_nonce, IETF_CHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE)
+impl From<[u8; CHACHA_KEYSIZE]> for Secret<ChaCha20Key> {
+    fn from(value: [u8; CHACHA_KEYSIZE]) -> Self {
+        Self::from_data(<ChaCha20Key as TypeSpec>::TypeData::from(value))
+    }
 }
 
-impl_from_trait!(Nonce, IETF_CHACHA_NONCESIZE);
+impl GenerateSecret for ChaCha20Key {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Secret<ChaCha20Key>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(CHACHA_KEYSIZE)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Secret::from_data(data))
+    }
+}
+
+/// A type to represent the `SecretKey` that Chacha20, XChaCha20, ChaCha20-Poly1305 and
+/// XChaCha20-Poly1305 use.
+pub type SecretKey = Secret<ChaCha20Key>;
+
+#[derive(Debug, Clone, Copy)]
+/// Marker type for ChaCha20 nonce. See [`Nonce`] type for convenience.
+pub struct ChaCha20Nonce {}
+impl Sealed for ChaCha20Nonce {}
+
+impl TypeSpec for ChaCha20Nonce {
+    const NAME: &'static str = stringify!(Nonce);
+    type TypeData = ByteArrayData<IETF_CHACHA_NONCESIZE>;
+}
+
+impl From<[u8; IETF_CHACHA_NONCESIZE]> for Public<ChaCha20Nonce> {
+    fn from(value: [u8; IETF_CHACHA_NONCESIZE]) -> Self {
+        Self::from_data(<ChaCha20Nonce as TypeSpec>::TypeData::from(value))
+    }
+}
+
+/// A type that represents a `Nonce` that ChaCha20 and ChaCha20-Poly1305 use.
+pub type Nonce = Public<ChaCha20Nonce>;
 
 macro_rules! ROUND {
     ($r0:expr, $r1:expr, $r2:expr, $r3:expr) => {
@@ -339,7 +366,7 @@ pub(crate) fn encrypt_in_place(
         return Err(UnknownCryptoError);
     }
 
-    let mut ctx = ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true)?;
+    let mut ctx = ChaCha20::new(secret_key.unprotected_as_ref(), nonce.as_ref(), true)?;
     let mut keystream_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
     xor_keystream(&mut ctx, initial_counter, keystream_block.as_mut(), bytes)
 }
@@ -360,7 +387,7 @@ pub fn encrypt(
         return Err(UnknownCryptoError);
     }
 
-    let mut ctx = ChaCha20::new(secret_key.unprotected_as_bytes(), nonce.as_ref(), true)?;
+    let mut ctx = ChaCha20::new(secret_key.unprotected_as_ref(), nonce.as_ref(), true)?;
     let mut keystream_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
 
     for (ctr, (p_block, c_block)) in plaintext
@@ -402,7 +429,7 @@ pub(super) fn hchacha20(
     secret_key: &SecretKey,
     nonce: &[u8],
 ) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
-    let mut chacha_state = ChaCha20::new(secret_key.unprotected_as_bytes(), nonce, false)?;
+    let mut chacha_state = ChaCha20::new(secret_key.unprotected_as_ref(), nonce, false)?;
     let mut keystream_block = [0u8; HCHACHA_OUTSIZE];
     chacha_state.keystream_block(0, &mut keystream_block);
 
@@ -414,12 +441,38 @@ pub(super) fn hchacha20(
 mod public {
     use super::*;
 
+    #[test]
+    fn test_chacha20_key() {
+        use super::*;
+        use crate::test_framework::newtypes::secret::SecretNewtype;
+        SecretNewtype::test_with_generate::<
+            CHACHA_KEYSIZE,
+            CHACHA_KEYSIZE,
+            CHACHA_KEYSIZE,
+            ChaCha20Key,
+        >();
+    }
+
+    #[test]
+    fn test_chacha20_nonce() {
+        use super::*;
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_no_generate::<
+            IETF_CHACHA_NONCESIZE,
+            IETF_CHACHA_NONCESIZE,
+            ChaCha20Nonce,
+        >();
+
+        #[cfg(feature = "serde")]
+        PublicNewtype::test_serialization::<IETF_CHACHA_NONCESIZE, ChaCha20Nonce>();
+    }
+
     #[cfg(feature = "safe_api")]
     #[test]
     // See https://github.com/orion-rs/orion/issues/308
     fn test_plaintext_left_in_dst_out() {
-        let k = SecretKey::generate();
-        let n = Nonce::from_slice(&[0u8; 12]).unwrap();
+        let k = SecretKey::generate().unwrap();
+        let n = Nonce::try_from(&[0u8; 12]).unwrap();
         let ic: u32 = u32::MAX - 1;
 
         let text = [b'x'; 128 + 4];
@@ -432,10 +485,10 @@ mod public {
 
     #[test]
     fn test_xor_keystream_err_initial_ctr_overflow() {
-        let sk = SecretKey::from_slice(&[0u8; 32]).unwrap();
-        let nonce = Nonce::from_slice(&[0u8; 12]).unwrap();
+        let sk = SecretKey::try_from(&[0u8; 32]).unwrap();
+        let nonce = Nonce::try_from(&[0u8; 12]).unwrap();
         let mut chacha_state =
-            ChaCha20::new(sk.unprotected_as_bytes(), nonce.as_ref(), true).unwrap();
+            ChaCha20::new(sk.unprotected_as_ref(), nonce.as_ref(), true).unwrap();
 
         let mut tmp_block = [0u8; CHACHA_BLOCKSIZE];
         let mut bytes = [12u8; CHACHA_BLOCKSIZE * 2];
@@ -449,23 +502,23 @@ mod public {
         use crate::test_framework::streamcipher_interface::*;
 
         impl TestingRandom for SecretKey {
-            fn gen() -> Self {
-                Self::generate()
+            fn gen_new() -> Self {
+                Self::generate().unwrap()
             }
         }
 
         impl TestingRandom for Nonce {
-            fn gen() -> Self {
+            fn gen_new() -> Self {
                 let mut n = [0u8; IETF_CHACHA_NONCESIZE];
                 crate::util::secure_rand_bytes(&mut n).unwrap();
-                Self::from_slice(&n).unwrap()
+                Self::try_from(&n).unwrap()
             }
         }
 
         #[quickcheck]
         fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
-            let secret_key = SecretKey::generate();
-            let nonce = Nonce::from_slice(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
+            let secret_key = SecretKey::generate().unwrap();
+            let nonce = Nonce::try_from(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
             StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
             test_diff_params_diff_output(&encrypt, &decrypt);
 
@@ -473,6 +526,7 @@ mod public {
         }
     }
 
+    #[cfg(any(feature = "safe_api", feature = "alloc"))]
     // hex crate uses Vec<u8>, so we need std.
     mod test_hchacha20 {
         use super::*;
@@ -481,19 +535,19 @@ mod public {
 
         #[test]
         fn test_nonce_length() {
-            assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16],).is_ok());
-            assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 17],).is_err());
-            assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 15],).is_err());
-            assert!(hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 0],).is_err());
+            assert!(hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 16],).is_ok());
+            assert!(hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 17],).is_err());
+            assert!(hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 15],).is_err());
+            assert!(hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 0],).is_err());
         }
 
         #[test]
         fn test_diff_keys_diff_output() {
             let keystream1 =
-                hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
+                hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
 
             let keystream2 =
-                hchacha20(&SecretKey::from_slice(&[1u8; 32]).unwrap(), &[0u8; 16]).unwrap();
+                hchacha20(&SecretKey::try_from(&[1u8; 32]).unwrap(), &[0u8; 16]).unwrap();
 
             assert_ne!(keystream1, keystream2);
         }
@@ -501,17 +555,17 @@ mod public {
         #[test]
         fn test_diff_nonce_diff_output() {
             let keystream1 =
-                hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
+                hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
 
             let keystream2 =
-                hchacha20(&SecretKey::from_slice(&[0u8; 32]).unwrap(), &[1u8; 16]).unwrap();
+                hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[1u8; 16]).unwrap();
 
             assert_ne!(keystream1, keystream2);
         }
 
         pub fn hchacha_test_runner(key: &str, nonce: &str, output_expected: &str) {
             let actual: [u8; 32] = hchacha20(
-                &SecretKey::from_slice(&decode(key).unwrap()).unwrap(),
+                &SecretKey::try_from(&decode(key).unwrap()).unwrap(),
                 &decode(nonce).unwrap(),
             )
             .unwrap();

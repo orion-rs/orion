@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use super::fe::{barrett_reduce, FieldElement};
+use super::fe::{FieldElement, barrett_reduce};
 
 #[cfg(test)]
 /// FIPS-203, Algorithm 3.

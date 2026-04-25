@@ -57,6 +57,7 @@
 #![cfg_attr(not(feature = "safe_api"), no_std)]
 #![forbid(unsafe_code)]
 #![deny(clippy::mem_forget)]
+#![deny(missing_debug_implementations)]
 #![warn(
     missing_docs,
     rust_2018_idioms,
@@ -77,8 +78,10 @@ extern crate alloc;
 extern crate std as alloc;
 
 #[macro_use]
-mod typedefs;
-pub(crate) use typedefs::ZeroizeWrap;
+/// Generic types used throughout the library.
+pub mod generics;
+pub use crate::generics::{GeneratePublic, GenerateSecret, KP, Public, Secret};
+pub(crate) use generics::ZeroizeWrap;
 
 #[macro_use]
 /// Utilities such as constant-time comparison.

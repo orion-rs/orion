@@ -59,21 +59,13 @@
 //! [`finalize()`]: sha384::Sha384::finalize
 //! [BLAKE2b]: super::blake2::blake2b
 
-use crate::errors::UnknownCryptoError;
+use crate::{
+    errors::UnknownCryptoError,
+    generics::{ByteArrayData, Public, TypeSpec, sealed::Sealed},
+};
 
 #[cfg(feature = "safe_api")]
 use std::io;
-
-construct_public! {
-    /// A type to represent the `Digest` that SHA384 returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 48 bytes.
-    (Digest, test_digest, SHA384_OUTSIZE, SHA384_OUTSIZE)
-}
-
-impl_from_trait!(Digest, SHA384_OUTSIZE);
 
 use super::sha2_core::{State, Variant};
 use super::w64::WordU64;
@@ -84,6 +76,25 @@ pub const SHA384_BLOCKSIZE: usize = 128;
 pub const SHA384_OUTSIZE: usize = 48;
 /// The number of constants for the hash function SHA384.
 const N_CONSTS: usize = 80;
+
+#[derive(Debug, Clone, Copy)]
+/// Marker type for SHA384 digest. See [`Digest`] type for convenience.
+pub struct Sha384Digest {}
+impl Sealed for Sha384Digest {}
+
+impl TypeSpec for Sha384Digest {
+    const NAME: &'static str = stringify!(Digest);
+    type TypeData = ByteArrayData<SHA384_OUTSIZE>;
+}
+
+impl From<[u8; SHA384_OUTSIZE]> for Public<Sha384Digest> {
+    fn from(value: [u8; SHA384_OUTSIZE]) -> Self {
+        Self::from_data(<Sha384Digest as TypeSpec>::TypeData::from(value))
+    }
+}
+
+/// A type to represent the [`Digest`]/hash-output that SHA384 returns.
+pub type Digest = Public<Sha384Digest>;
 
 #[derive(Clone)]
 pub(crate) struct V384;
@@ -255,6 +266,16 @@ impl io::Write for Sha384 {
 #[cfg(test)]
 mod public {
     use super::*;
+
+    #[test]
+    fn test_sha384_digest() {
+        use super::*;
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_no_generate::<SHA384_OUTSIZE, SHA384_OUTSIZE, Sha384Digest>();
+
+        #[cfg(feature = "serde")]
+        PublicNewtype::test_serialization::<SHA384_OUTSIZE, Sha384Digest>();
+    }
 
     #[test]
     fn test_default_equals_new() {

@@ -49,8 +49,8 @@ mod sodiumoxide_xchacha20_poly1305 {
         let mut dst_out_pt = vec![0u8; plaintext.len()];
 
         aead::xchacha20poly1305::seal(
-            &aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
-            &aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            &aead::xchacha20poly1305::SecretKey::try_from(&key).unwrap(),
+            &aead::xchacha20poly1305::Nonce::try_from(&nonce).unwrap(),
             &plaintext,
             Some(&aad),
             &mut dst_out_ct,
@@ -68,8 +68,8 @@ mod sodiumoxide_xchacha20_poly1305 {
         );
 
         aead::xchacha20poly1305::open(
-            &aead::xchacha20poly1305::SecretKey::from_slice(&key).unwrap(),
-            &aead::xchacha20poly1305::Nonce::from_slice(&nonce).unwrap(),
+            &aead::xchacha20poly1305::SecretKey::try_from(&key).unwrap(),
+            &aead::xchacha20poly1305::Nonce::try_from(&nonce).unwrap(),
             &dst_out_ct,
             Some(&aad),
             &mut dst_out_pt,
@@ -96,8 +96,8 @@ mod wireguard_xchacha20_poly1305 {
 
         // These test vectors use empty ad parameter, see source.
         aead::xchacha20poly1305::seal(
-            &aead::xchacha20poly1305::SecretKey::from_slice(key).unwrap(),
-            &aead::xchacha20poly1305::Nonce::from_slice(nonce).unwrap(),
+            &aead::xchacha20poly1305::SecretKey::try_from(key).unwrap(),
+            &aead::xchacha20poly1305::Nonce::try_from(nonce).unwrap(),
             plaintext,
             None,
             &mut dst_out_ct,
@@ -115,8 +115,8 @@ mod wireguard_xchacha20_poly1305 {
         );
 
         aead::xchacha20poly1305::open(
-            &aead::xchacha20poly1305::SecretKey::from_slice(key).unwrap(),
-            &aead::xchacha20poly1305::Nonce::from_slice(nonce).unwrap(),
+            &aead::xchacha20poly1305::SecretKey::try_from(key).unwrap(),
+            &aead::xchacha20poly1305::Nonce::try_from(nonce).unwrap(),
             &dst_out_ct,
             None,
             &mut dst_out_pt,

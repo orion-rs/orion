@@ -60,9 +60,14 @@
 //! [BLAKE2b]: super::blake2::blake2b
 
 use crate::errors::UnknownCryptoError;
+use crate::generics::sealed::Sealed;
+use crate::generics::{ByteArrayData, Public, TypeSpec};
 
 #[cfg(feature = "safe_api")]
 use std::io;
+
+use super::sha2_core::{State, Variant, Word};
+use super::w32::WordU32;
 
 /// The blocksize for the hash function SHA256.
 pub const SHA256_BLOCKSIZE: usize = 64;
@@ -71,19 +76,24 @@ pub const SHA256_OUTSIZE: usize = 32;
 /// The number of constants for the hash function SHA256.
 const N_CONSTS: usize = 64;
 
-construct_public! {
-    /// A type to represent the `Digest` that SHA256 returns.
-    ///
-    /// # Errors:
-    /// An error will be returned if:
-    /// - `slice` is not 32 bytes.
-    (Digest, test_digest, SHA256_OUTSIZE, SHA256_OUTSIZE)
+#[derive(Debug, Clone, Copy)]
+/// Marker type for SHA256 digest. See [`Digest`] type for convenience.
+pub struct Sha256Digest {}
+impl Sealed for Sha256Digest {}
+
+impl TypeSpec for Sha256Digest {
+    const NAME: &'static str = stringify!(Digest);
+    type TypeData = ByteArrayData<SHA256_OUTSIZE>;
 }
 
-impl_from_trait!(Digest, SHA256_OUTSIZE);
+impl From<[u8; SHA256_OUTSIZE]> for Public<Sha256Digest> {
+    fn from(value: [u8; SHA256_OUTSIZE]) -> Self {
+        Self::from_data(<Sha256Digest as TypeSpec>::TypeData::from(value))
+    }
+}
 
-use super::sha2_core::{State, Variant, Word};
-use super::w32::WordU32;
+/// A type to represent the [`Digest`]/hash-output that SHA256 returns.
+pub type Digest = Public<Sha256Digest>;
 
 #[derive(Clone)]
 /// SHA256 streaming state.
@@ -275,6 +285,16 @@ impl io::Write for Sha256 {
 #[cfg(test)]
 mod public {
     use super::*;
+
+    #[test]
+    fn test_sha256_digest() {
+        use super::*;
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_no_generate::<SHA256_OUTSIZE, SHA256_OUTSIZE, Sha256Digest>();
+
+        #[cfg(feature = "serde")]
+        PublicNewtype::test_serialization::<SHA256_OUTSIZE, Sha256Digest>();
+    }
 
     #[test]
     fn test_default_equals_new() {

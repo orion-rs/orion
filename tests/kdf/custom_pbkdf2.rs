@@ -10,9 +10,9 @@ mod custom_test_vectors {
 
     #[test]
     fn test_case_1() {
-        let password_256 = sha256::Password::from_slice("password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::from_slice("password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::from_slice("password".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("password".as_bytes()).unwrap();
+        let password_384 = sha384::Password::try_from("password".as_bytes()).unwrap();
+        let password_512 = sha512::Password::try_from("password".as_bytes()).unwrap();
         let salt = "salt".as_bytes();
         let iter = 1;
         let mut dk_out = [0u8; 20];
@@ -29,9 +29,9 @@ mod custom_test_vectors {
 
     #[test]
     fn test_case_2() {
-        let password_256 = sha256::Password::from_slice("password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::from_slice("password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::from_slice("password".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("password".as_bytes()).unwrap();
+        let password_384 = sha384::Password::try_from("password".as_bytes()).unwrap();
+        let password_512 = sha512::Password::try_from("password".as_bytes()).unwrap();
         let salt = "salt".as_bytes();
         let iter = 2;
         let mut dk_out = [0u8; 20];
@@ -48,9 +48,9 @@ mod custom_test_vectors {
 
     #[test]
     fn test_case_3() {
-        let password_256 = sha256::Password::from_slice("password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::from_slice("password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::from_slice("password".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("password".as_bytes()).unwrap();
+        let password_384 = sha384::Password::try_from("password".as_bytes()).unwrap();
+        let password_512 = sha512::Password::try_from("password".as_bytes()).unwrap();
         let salt = "salt".as_bytes();
         let iter = 4096;
         let mut dk_out = [0u8; 20];
@@ -68,9 +68,9 @@ mod custom_test_vectors {
     /* This takes too long for normal tests
     #[test]
     fn test_case_4() {
-        let password_256 = sha256::Password::from_slice("password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::from_slice("password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::from_slice("password".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("password".as_bytes()).unwrap();
+        let password_384 = sha384::Password::try_from("password".as_bytes()).unwrap();
+        let password_512 = sha512::Password::try_from("password".as_bytes()).unwrap();
         let salt = "salt".as_bytes();
         let iter = 16777216;
         let mut dk_out = [0u8; 20];
@@ -89,11 +89,11 @@ mod custom_test_vectors {
     #[test]
     fn test_case_5() {
         let password_256 =
-            sha256::Password::from_slice("passwordPASSWORDpassword".as_bytes()).unwrap();
+            sha256::Password::try_from("passwordPASSWORDpassword".as_bytes()).unwrap();
         let password_384 =
-            sha384::Password::from_slice("passwordPASSWORDpassword".as_bytes()).unwrap();
+            sha384::Password::try_from("passwordPASSWORDpassword".as_bytes()).unwrap();
         let password_512 =
-            sha512::Password::from_slice("passwordPASSWORDpassword".as_bytes()).unwrap();
+            sha512::Password::try_from("passwordPASSWORDpassword".as_bytes()).unwrap();
         let salt = "saltSALTsaltSALTsaltSALTsaltSALTsalt".as_bytes();
         let iter = 4096;
         let mut dk_out = [0u8; 25];
@@ -110,9 +110,9 @@ mod custom_test_vectors {
 
     #[test]
     fn test_case_6() {
-        let password_256 = sha256::Password::from_slice("pass\0word".as_bytes()).unwrap();
-        let password_384 = sha384::Password::from_slice("pass\0word".as_bytes()).unwrap();
-        let password_512 = sha512::Password::from_slice("pass\0word".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("pass\0word".as_bytes()).unwrap();
+        let password_384 = sha384::Password::try_from("pass\0word".as_bytes()).unwrap();
+        let password_512 = sha512::Password::try_from("pass\0word".as_bytes()).unwrap();
         let salt = "sa\0lt".as_bytes();
         let iter = 4096;
         let mut dk_out = [0u8; 16];
@@ -129,9 +129,9 @@ mod custom_test_vectors {
 
     #[test]
     fn test_case_7() {
-        let password_256 = sha256::Password::from_slice("passwd".as_bytes()).unwrap();
-        let password_384 = sha384::Password::from_slice("passwd".as_bytes()).unwrap();
-        let password_512 = sha512::Password::from_slice("passwd".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("passwd".as_bytes()).unwrap();
+        let password_384 = sha384::Password::try_from("passwd".as_bytes()).unwrap();
+        let password_512 = sha512::Password::try_from("passwd".as_bytes()).unwrap();
         let salt = "salt".as_bytes();
         let iter = 1;
         let mut dk_out = [0u8; 128];
@@ -148,9 +148,9 @@ mod custom_test_vectors {
 
     #[test]
     fn test_case_8() {
-        let password_256 = sha256::Password::from_slice("Password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::from_slice("Password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::from_slice("Password".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("Password".as_bytes()).unwrap();
+        let password_384 = sha384::Password::try_from("Password".as_bytes()).unwrap();
+        let password_512 = sha512::Password::try_from("Password".as_bytes()).unwrap();
         let salt = "NaCl".as_bytes();
         let iter = 80000;
         let mut dk_out = [0u8; 128];
@@ -167,9 +167,9 @@ mod custom_test_vectors {
 
     #[test]
     fn test_case_9() {
-        let password_256 = sha256::Password::from_slice("Password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::from_slice("Password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::from_slice("Password".as_bytes()).unwrap();
+        let password_256 = sha256::Password::try_from("Password".as_bytes()).unwrap();
+        let password_384 = sha384::Password::try_from("Password".as_bytes()).unwrap();
+        let password_512 = sha512::Password::try_from("Password".as_bytes()).unwrap();
         let salt = "sa\0lt".as_bytes();
         let iter = 4096;
         let mut dk_out = [0u8; 256];

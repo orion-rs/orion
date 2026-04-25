@@ -1,5 +1,5 @@
 use hex::decode;
-use orion::hazardous::kem::{mlkem1024, mlkem512, mlkem768};
+use orion::hazardous::kem::{mlkem512, mlkem768, mlkem1024};
 use std::{
     fs::File,
     io::{BufRead, BufReader},
@@ -20,7 +20,7 @@ fn c2spcctv_mlkem_bad_encapsulation_keys_1024() {
 
     for line in lines.map_while(Result::ok) {
         let raw_ek_bytes = decode(line).unwrap();
-        assert!(mlkem1024::EncapsulationKey::from_slice(&raw_ek_bytes).is_err());
+        assert!(mlkem1024::EncapsulationKey::try_from(&raw_ek_bytes).is_err());
     }
 }
 
@@ -35,7 +35,7 @@ fn c2spcctv_mlkem_bad_encapsulation_keys_768() {
 
     for line in lines.map_while(Result::ok) {
         let raw_ek_bytes = decode(line).unwrap();
-        assert!(mlkem768::EncapsulationKey::from_slice(&raw_ek_bytes).is_err());
+        assert!(mlkem768::EncapsulationKey::try_from(&raw_ek_bytes).is_err());
     }
 }
 
@@ -50,6 +50,6 @@ fn c2spcctv_mlkem_bad_encapsulation_keys_512() {
 
     for line in lines.map_while(Result::ok) {
         let raw_ek_bytes = decode(line).unwrap();
-        assert!(mlkem512::EncapsulationKey::from_slice(&raw_ek_bytes).is_err());
+        assert!(mlkem512::EncapsulationKey::try_from(&raw_ek_bytes).is_err());
     }
 }

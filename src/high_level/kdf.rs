@@ -53,7 +53,7 @@
 //! # Security:
 //! - Choosing the correct cost parameters is important for security. Please refer to
 //!   [libsodium's docs] for a description of how to do this.
-//! - The salt should always be generated using a CSPRNG. [`Salt::default()`]
+//! - The salt should always be generated using a CSPRNG. [`Salt::generate()`]
 //!   can be used for this, it will generate a [`Salt`] of 16 bytes.
 //! - The recommended minimum size for a salt is 16 bytes.
 //! - The recommended minimum size for a derived key is 16 bytes.
@@ -64,8 +64,8 @@
 //! ```rust
 //! use orion::kdf;
 //!
-//! let user_password = kdf::Password::from_slice(b"User password")?;
-//! let salt = kdf::Salt::default();
+//! let user_password = kdf::Password::try_from(b"User password")?;
+//! let salt = kdf::Salt::generate()?;
 //!
 //! let derived_key = kdf::derive_key(&user_password, &salt, 3, 1<<16, 32)?;
 //!
@@ -92,16 +92,16 @@ pub fn derive_key(
         return Err(UnknownCryptoError);
     }
 
-    let mut dk = SecretKey::from_slice(&vec![0u8; length as usize])?;
+    let mut dk = SecretKey::try_from(&vec![0u8; length as usize])?;
 
     argon2i::derive_key(
-        password.unprotected_as_bytes(),
+        password.unprotected_as_ref(),
         salt.as_ref(),
         iterations,
         memory,
         None,
         None,
-        &mut dk.value,
+        dk.data.as_mut(),
     )?;
 
     Ok(dk)
@@ -117,8 +117,8 @@ mod public {
 
         #[test]
         fn test_derive_key() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 16]).unwrap();
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let salt = Salt::try_from([0u8; 16].as_slice()).unwrap();
             let dk_first = derive_key(&password, &salt, 3, 1024, 32).unwrap();
             let dk_second = derive_key(&password, &salt, 3, 1024, 32).unwrap();
 
@@ -127,8 +127,8 @@ mod public {
 
         #[test]
         fn test_derive_key_err_diff_iter() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
             let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
             let dk_diff_iter = derive_key(&password, &salt, 4, 1024, 32).unwrap();
 
@@ -137,8 +137,8 @@ mod public {
 
         #[test]
         fn test_derive_key_err_diff_mem() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
             let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
             let dk_diff_mem = derive_key(&password, &salt, 3, 512, 32).unwrap();
 
@@ -147,12 +147,12 @@ mod public {
 
         #[test]
         fn test_derive_key_err_diff_salt() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
             let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
             let dk_diff_salt = derive_key(
                 &password,
-                &Salt::from_slice(&[1u8; 64]).unwrap(),
+                &Salt::try_from([1u8; 64].as_slice()).unwrap(),
                 3,
                 1024,
                 32,
@@ -164,8 +164,8 @@ mod public {
 
         #[test]
         fn test_derive_key_err_diff_len() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
             let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
             let dk_diff_len = derive_key(&password, &salt, 3, 1024, 64).unwrap();
 
@@ -174,11 +174,11 @@ mod public {
 
         #[test]
         fn test_derive_key_err_diff_pass() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
             let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
             let dk_diff_pass = derive_key(
-                &Password::from_slice(&[1u8; 64]).unwrap(),
+                &Password::try_from([1u8; 64].as_slice()).unwrap(),
                 &salt,
                 3,
                 1024,
@@ -191,8 +191,8 @@ mod public {
 
         #[test]
         fn test_derive_key_bad_length() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 64]).unwrap();
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
 
             assert!(derive_key(&password, &salt, 3, 1024, 3).is_err());
             assert!(derive_key(&password, &salt, 3, 1024, 4).is_ok());
@@ -201,8 +201,8 @@ mod public {
 
         #[test]
         fn test_derive_key_bad_iter() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 16]).unwrap();
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let salt = Salt::try_from([0u8; 16].as_slice()).unwrap();
 
             assert!(derive_key(&password, &salt, 2, 1024, 32).is_err());
             assert!(derive_key(&password, &salt, 3, 1024, 32).is_ok());
@@ -211,8 +211,8 @@ mod public {
 
         #[test]
         fn test_derive_key_bad_mem() {
-            let password = Password::from_slice(&[0u8; 64]).unwrap();
-            let salt = Salt::from_slice(&[0u8; 16]).unwrap();
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let salt = Salt::try_from([0u8; 16].as_slice()).unwrap();
 
             assert!(derive_key(&password, &salt, 3, 7, 32).is_err());
             assert!(derive_key(&password, &salt, 3, 8, 32).is_ok());

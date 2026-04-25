@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2023-2026 The orion Developers
+// Copyright (c) 2026 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#![cfg_attr(docsrs, doc(cfg(feature = "experimental")))]
-
-/// Fully-committing ChaCha20-Poly1305 with BLAKE2b based on the [CTX] construction by John Chan & Phillip Rogaway.
-///
-/// [CTX]: <https://eprint.iacr.org/2022/1260>
-pub mod chacha20poly1305blake2b;
-
-/// Fully-committing XChaCha20-Poly1305 with BLAKE2b based on the [CTX] construction by John Chan & Phillip Rogaway.
-///
-/// [CTX]: <https://eprint.iacr.org/2022/1260>
-pub mod xchacha20poly1305blake2b;
+pub mod public;
+pub mod secret;

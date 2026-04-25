@@ -309,7 +309,7 @@ mod public {
     #[cfg(feature = "safe_api")]
     /// Load and store should not change the result.
     fn prop_load_store_u32_le(src: Vec<u8>) -> bool {
-        if !src.is_empty() && src.len() % 4 == 0 {
+        if !src.is_empty() && src.len().is_multiple_of(4) {
             let mut dst_load = vec![0u32; src.len() / 4];
             load_u32_into_le(&src[..], &mut dst_load);
             // Test that loading a single also is working correctly
@@ -328,7 +328,7 @@ mod public {
     #[cfg(feature = "safe_api")]
     /// Load and store should not change the result.
     fn prop_load_store_u64_le(src: Vec<u8>) -> bool {
-        if !src.is_empty() && src.len() % 8 == 0 {
+        if !src.is_empty() && src.len().is_multiple_of(8) {
             let mut dst_load = vec![0u64; src.len() / 8];
             load_u64_into_le(&src[..], &mut dst_load);
             let mut dst_store = src.clone();
