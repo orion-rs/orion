@@ -19,8 +19,10 @@
 - [Breaking change] Types that previously implemented `Copy` do not anymore. `Copy` in all cases requires copying a lot of bytes and could hide a performance penalty, so now only `Clone` is available for `Public<T>`. 
 - [Breaking change] `orion::hazardous::ecc::x25519::PublicKey` no longer stores the u-coordinate in masked form, but original byte slice. The `PartialEq` still respects (applies masking) the u-coordinate condition. Masking is applied before Montgomery ladder.
 - [Breaking change] `orion::hazardous::ecc::x25519::SecretKey` no longer stores the clamped scalar, but the original byte slice. This changes the inherited `PartialEq`, which now operates on the original bytes, not the clamped. Clamping is applied before Montgomery ladder.
-- [Breaking change] `orion::hazardous::ecc::x25519::SharedSecret` now  respects (applies masking) the u-coordinate condition for `PartialEq`.
+- [Breaking change] `orion::hazardous::ecc::x25519::SharedSecret` now respects (applies masking) the u-coordinate condition for `PartialEq`.
 - [Breaking change] `orion::hazardous::kem::xwing::EncapsulationKey` now fails on `TryFrom<&[u8]>` if the ML-KEM-768 public-part does not pass the FIPS-203 keys checks.
+- [Breaking change] `orion::hazardous::kem::x25519_hkdf_sha256` uses as separate `PrivateKey` type to ensure RFC9180 `SerializePrivateKey()` and `DeserializePrivateKey()` clamping requirements are uphled.
+	- This was previously a part of `orion::hazardous::ecc::x25519::SecretKey` but has been moved to HPKE, since it is a HPKE-specific requirement.
 
 - MSRV bumped to `1.87`
 - Add constants for BLAKE2b: `BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE` making the conditions more discernable.

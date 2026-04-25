@@ -65,6 +65,7 @@
 //! [`derive_keypair()`]: x25519_hkdf_sha256::DhKem::derive_keypair
 //! [`generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
 
+use crate::GenerateSecret;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
 use crate::hazardous::kdf::hkdf;
@@ -73,14 +74,19 @@ use crate::generics::ByteArrayData;
 use crate::generics::Secret;
 use crate::generics::TypeSpec;
 use crate::generics::sealed::Sealed;
-pub use crate::hazardous::ecc::x25519::PrivateKey;
 pub use crate::hazardous::ecc::x25519::PublicKey;
+
+#[cfg(feature = "safe_api")]
+use crate::generics::sealed::Data;
 
 /// Size of private [`SharedSecret`].
 pub const SHARED_SECRET_SIZE: usize = 32;
 
 /// DH-KEM(X25519, HKDF-SHA256) shared secret.
 pub type SharedSecret = Secret<DhKemSharedSecret>;
+
+/// DH-KEM(X25519, HKDF-SHA256) private key.
+pub type PrivateKey = Secret<DhKemX25519PrivateKey>;
 
 #[derive(Debug)]
 /// DH-KEM(X25519, HKDF-SHA256) shared secret implementation. See [`SharedSecret`] type for convenience.
@@ -98,6 +104,73 @@ impl TypeSpec for DhKemSharedSecret {
 impl From<[u8; SHARED_SECRET_SIZE]> for SharedSecret {
     fn from(value: [u8; SHARED_SECRET_SIZE]) -> Self {
         Self::from_data(<DhKemSharedSecret as TypeSpec>::TypeData::from(value))
+    }
+}
+
+#[derive(Debug)]
+/// DH-KEM(X25519, HKDF-SHA256) private key implementation. See [`PrivateKey`] type for convenience.
+pub struct DhKemX25519PrivateKey {}
+impl Sealed for DhKemX25519PrivateKey {}
+
+impl TypeSpec for DhKemX25519PrivateKey {
+    const NAME: &'static str = stringify!(PrivateKey);
+
+    type TypeData = ByteArrayData<{ x25519::PRIVATE_KEY_SIZE }>;
+
+    /// # Note about serialized private keys for this suite
+    /// RFC 9180 defines the format of X25519 serialized private keys as the clamped version. According to the standard,
+    /// (de)serializing from/to a private key requires clamping input/output. This implementation adheres to this requirement,
+    /// and as such, calling [`unprotected_as_ref()`] on the private key used with this suite will return its clamped version.
+    ///
+    /// The original RFC 9180 test vectors for this suite do on the contrary not include this clamping, so if someone were to compare
+    /// or otherwise use the output of [`unprotected_as_ref()`], and expect it to be equal that of other implementations, it might not be.
+    /// This does not affect interoperability in any other way, meaning HPKE data encrypted with Orion will still decrypt successfully with different
+    /// HPKE implementations.
+    ///
+    /// The test-vector issues have been reported: <https://www.rfc-editor.org/errata/eid7121>, <https://github.com/cfrg/draft-irtf-cfrg-hpke/issues/255>
+    ///
+    /// In versions of Orion priot to `0.18.0` this was handeled directly in `hazardous::ecc::x25519`, but moved
+    /// to separate types to isolate this weirdly specific requirement.
+    fn parse_bytes(bytes: &[u8]) -> Result<Self::TypeData, UnknownCryptoError> {
+        use crate::hazardous::ecc::x25519::X25519PrivateKey;
+
+        let mut secret: [u8; x25519::PRIVATE_KEY_SIZE] =
+            bytes.try_into().map_err(|_| UnknownCryptoError)?;
+        X25519PrivateKey::clamp_mut(&mut secret);
+
+        Ok(Self::TypeData::from(secret))
+    }
+}
+
+impl GenerateSecret for DhKemX25519PrivateKey {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Secret<DhKemX25519PrivateKey>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(x25519::PRIVATE_KEY_SIZE)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        x25519::X25519PrivateKey::clamp_mut(&mut data.bytes);
+
+        Ok(Secret::<DhKemX25519PrivateKey>::from_data(data))
+    }
+}
+
+impl TryFrom<&PrivateKey> for PublicKey {
+    type Error = UnknownCryptoError;
+
+    /// Identical to X25519 except using the internally pre-clamped private key.
+    fn try_from(value: &PrivateKey) -> Result<Self, Self::Error> {
+        Ok(Self::from(
+            x25519::mont_ladder(&value.data.bytes, x25519::BASEPOINT).as_bytes(),
+        ))
+    }
+}
+
+impl From<&PrivateKey> for x25519::PrivateKey {
+    /// Identical to X25519 except using the internally pre-clamped private key.
+    fn from(value: &PrivateKey) -> Self {
+        debug_assert!(x25519::X25519PrivateKey::is_clamped(&value.data.bytes));
+
+        x25519::PrivateKey::from(value.data.bytes)
     }
 }
 
@@ -212,7 +285,10 @@ impl DhKem {
     ) -> Result<(SharedSecret, PublicKey), UnknownCryptoError> {
         let public_ephemeral = PublicKey::try_from(&secret_ephemeral)?;
 
-        let dh = x25519::key_agreement(&secret_ephemeral, public_recipient)?;
+        let dh = x25519::key_agreement(
+            &x25519::PrivateKey::from(&secret_ephemeral),
+            public_recipient,
+        )?;
         let mut kem_context = [0u8; 32 + 32];
         kem_context[..32].copy_from_slice(public_ephemeral.as_ref());
         kem_context[32..64].copy_from_slice(public_recipient.as_ref());
@@ -233,7 +309,10 @@ impl DhKem {
         public_ephemeral: &PublicKey,
         secret_recipient: &PrivateKey,
     ) -> Result<SharedSecret, UnknownCryptoError> {
-        let dh = x25519::key_agreement(secret_recipient, public_ephemeral)?;
+        let dh = x25519::key_agreement(
+            &x25519::PrivateKey::from(secret_recipient),
+            public_ephemeral,
+        )?;
 
         let mut kem_context = [0u8; 32 + 32];
         kem_context[..32].copy_from_slice(public_ephemeral.as_ref());
@@ -271,10 +350,15 @@ impl DhKem {
 
         let mut dh = zeroize_wrap!([0u8; 64]);
         dh[..32].copy_from_slice(
-            x25519::key_agreement(&secret_ephemeral, public_recipient)?.unprotected_as_ref(),
+            x25519::key_agreement(
+                &x25519::PrivateKey::from(&secret_ephemeral),
+                public_recipient,
+            )?
+            .unprotected_as_ref(),
         );
         dh[32..64].copy_from_slice(
-            x25519::key_agreement(secret_sender, public_recipient)?.unprotected_as_ref(),
+            x25519::key_agreement(&x25519::PrivateKey::from(secret_sender), public_recipient)?
+                .unprotected_as_ref(),
         );
 
         let mut kem_context = [0u8; 32 * 3];
@@ -295,12 +379,13 @@ impl DhKem {
         secret_recipient: &PrivateKey,
         public_sender: &PublicKey,
     ) -> Result<SharedSecret, UnknownCryptoError> {
+        let secret_recipient_x25519 = x25519::PrivateKey::from(secret_recipient);
         let mut dh = zeroize_wrap!([0u8; 64]);
         dh[..32].copy_from_slice(
-            x25519::key_agreement(secret_recipient, public_ephemeral)?.unprotected_as_ref(),
+            x25519::key_agreement(&secret_recipient_x25519, public_ephemeral)?.unprotected_as_ref(),
         );
         dh[32..64].copy_from_slice(
-            x25519::key_agreement(secret_recipient, public_sender)?.unprotected_as_ref(),
+            x25519::key_agreement(&secret_recipient_x25519, public_sender)?.unprotected_as_ref(),
         );
 
         let mut kem_context = [0u8; 32 * 3];
@@ -317,9 +402,19 @@ impl DhKem {
 
 #[cfg(test)]
 mod public {
-    #[cfg(feature = "safe_api")]
-    use crate::hazardous::ecc::x25519::{PrivateKey, PublicKey};
-    use crate::hazardous::kem::x25519_hkdf_sha256::*;
+    use super::*;
+
+    #[test]
+    fn test_rfc9180_serialize_deserialize_clapming_requirement() {
+        use crate::hazardous::ecc::x25519::X25519PrivateKey;
+
+        let kp = DhKem::derive_keypair(&[42u8; 32]).unwrap();
+        // Test it returns (SerializePrivateKey()) clamped
+        let k: [u8; x25519::PRIVATE_KEY_SIZE] = kp.0.unprotected_as_ref().try_into().unwrap();
+        assert!(X25519PrivateKey::is_clamped(&k));
+        // Test it holds internally (DeserializePrivateKey()) clamped
+        assert!(X25519PrivateKey::is_clamped(&kp.0.data.bytes));
+    }
 
     #[test]
     fn test_shared_secret() {
