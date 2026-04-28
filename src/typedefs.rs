@@ -129,7 +129,7 @@ macro_rules! impl_drop_trait (($name:ident) => (
             #[cfg(feature = "zeroize")]
             {
               use zeroize::Zeroize;
-              self.value.iter_mut().zeroize();
+              self.value.zeroize();
             }
         }
     }
