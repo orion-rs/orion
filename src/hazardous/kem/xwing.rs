@@ -542,6 +542,7 @@ mod tests {
 
     #[test]
     #[cfg(test)]
+    #[cfg(feature = "safe_api")]
     fn test_encapsulation_key() {
         use crate::hazardous::kem::mlkem768;
 
