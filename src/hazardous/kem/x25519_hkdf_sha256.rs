@@ -427,6 +427,11 @@ mod public {
         // Test it is applied from foreign-origin byte slice
         let mut k = [0u8; x25519::PRIVATE_KEY_SIZE];
         crate::util::secure_rand_bytes(&mut k).unwrap();
+
+        while X25519PrivateKey::is_clamped(&k) {
+            crate::util::secure_rand_bytes(&mut k).unwrap();
+        }
+
         assert!(!X25519PrivateKey::is_clamped(&k));
         assert!(X25519PrivateKey::is_clamped(
             &PrivateKey::try_from(&k).unwrap().data.bytes

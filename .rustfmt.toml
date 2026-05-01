@@ -2,4 +2,5 @@ max_width = 100
 newline_style = "Unix"
 tab_spaces = 4
 use_try_shorthand = true
-edition = "2018"
+edition = "2024"
+style_edition = "2024"
