@@ -574,7 +574,8 @@ impl<Aead: TestableAead, const KS: usize, const NS: usize, const TS: usize>
         let diff_sk = Secret::<Aead::Key>::try_from(&skbytes).unwrap();
         let diff_tag = Aead::_seal_inplace(&diff_sk, &n, Some(&ad), &mut input).unwrap();
         assert_ne!(diff_tag, ref_tag);
-        if input.len() >= 4 { // avoid hitting equal for low input sizes randomly
+        if input.len() >= 4 {
+            // avoid hitting equal for low input sizes randomly
             assert_ne!(input, ref_ct);
         }
 
@@ -583,7 +584,8 @@ impl<Aead: TestableAead, const KS: usize, const NS: usize, const TS: usize>
         let diff_n = Public::<Aead::Nonce>::try_from(&nbytes).unwrap();
         let diff_tag = Aead::_seal_inplace(&sk, &diff_n, Some(&ad), &mut input).unwrap();
         assert_ne!(diff_tag, ref_tag);
-        if input.len() >= 4 { // avoid hitting equal for low input sizes randomly
+        if input.len() >= 4 {
+            // avoid hitting equal for low input sizes randomly
             assert_ne!(input, ref_ct);
         }
 
