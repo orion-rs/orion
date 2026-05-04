@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::errors::UnknownCryptoError;
+use crate::{errors::UnknownCryptoError, hazardous::stream::chacha20::CHACHA_BLOCKSIZE};
 use core::marker::PhantomData;
 
 #[cfg(all(feature = "alloc", not(feature = "safe_api")))]
@@ -67,7 +67,7 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
 
         let ctx = SC::_new(sk, n);
 
-        Self::next_producable_err_max::<MAX_POSITION>(&mut ctx.clone());
+        Self::next_producable_ok_max::<MAX_POSITION>(&mut ctx.clone());
         Self::xor_keystream_empty_ok(&mut ctx.clone());
         Self::last_keystream_block_exhausts::<BS, MAX_POSITION>(&mut ctx.clone());
 
@@ -119,12 +119,17 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         assert!(ctx._xor_keystream_into(&mut [0u8; 0]).is_ok());
     }
 
-    fn next_producable_err_max<const MAX: u32>(ctx: &mut SC) {
+    fn next_producable_ok_max<const MAX: u32>(ctx: &mut SC) {
         ctx._set_position(MAX - 2);
         assert!(ctx._next_producible().is_ok());
         ctx._set_position(MAX - 1);
         assert!(ctx._next_producible().is_ok());
         ctx._set_position(MAX);
+        assert!(ctx._next_producible().is_ok());
+        // only after keystream_block() has generated the last
+        // block is the state exhausted and cannot produce any more.
+        let mut block = [0u8; CHACHA_BLOCKSIZE];
+        ctx._xor_keystream_into(&mut block).unwrap();
         assert!(ctx._next_producible().is_err());
     }
 
