@@ -20,294 +20,257 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#![allow(non_snake_case)]
-
-#[cfg(feature = "safe_api")]
 use crate::errors::UnknownCryptoError;
+use core::marker::PhantomData;
 
-#[cfg(test)]
-#[cfg(feature = "safe_api")]
-pub trait TestingRandom {
-    /// Randomly generate self.
-    fn gen_new() -> Self;
+#[cfg(all(feature = "alloc", not(feature = "safe_api")))]
+use alloc::vec;
+
+pub trait TestableStreamCipher: Sized + Clone {
+    fn _new(sk: &[u8], n: &[u8]) -> Self;
+
+    #[cfg(test)]
+    #[cfg(feature = "safe_api")]
+    fn _random() -> Self;
+
+    fn _next_producible(&self) -> Result<(), UnknownCryptoError>;
+
+    fn _keystream_remaining(&self) -> u64;
+
+    fn _is_exhausted(&self) -> bool;
+
+    fn _set_position(&mut self, blockctr: u32);
+
+    fn _position(&self) -> u32;
+
+    fn _xor_keystream_into(&mut self, bytes: &mut [u8]) -> Result<(), UnknownCryptoError>;
 }
 
-#[cfg(feature = "safe_api")]
-/// Test runner for stream ciphers.
-pub fn StreamCipherTestRunner<Encryptor, Decryptor, Key, Nonce>(
-    encryptor: Encryptor,
-    decryptor: Decryptor,
-    key: Key,
-    nonce: Nonce,
-    counter: u32,
-    input: &[u8],
-    expected_ct: Option<&[u8]>,
-) where
-    Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-    Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-    if !input.is_empty() {
-        encrypt_decrypt_out_length(&encryptor, &decryptor, &key, &nonce, input);
-        encrypt_decrypt_equals_expected(
-            &encryptor,
-            &decryptor,
-            &key,
-            &nonce,
-            counter,
-            input,
-            expected_ct,
+#[derive(Debug)]
+pub struct StreamcipherTester<SC: TestableStreamCipher> {
+    ctx: PhantomData<SC>,
+}
+
+impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
+    pub fn run_tests<const BS: usize, const MAX_POSITION: u32>(
+        sk: &[u8],
+        n: &[u8],
+        plaintext: Option<&[u8]>,
+        expected_ct: Option<&[u8]>,
+    ) {
+        if expected_ct.is_some() {
+            assert!(
+                plaintext.is_some(),
+                "cannot have expected ciphertext without plaintext"
+            );
+        }
+
+        let ctx = SC::_new(sk, n);
+
+        Self::next_producable_err_max::<MAX_POSITION>(&mut ctx.clone());
+        Self::xor_keystream_empty_ok(&mut ctx.clone());
+        Self::last_keystream_block_exhausts::<BS, MAX_POSITION>(&mut ctx.clone());
+
+        #[cfg(any(feature = "alloc", feature = "safe_api"))]
+        {
+            Self::return_err_if_next_overflows::<BS, MAX_POSITION>(&mut ctx.clone());
+            Self::xor_keystream_seek_ahead::<BS>(&mut ctx.clone());
+
+            if let Some(pt) = plaintext {
+                Self::xor_keystream_roundtrip(&mut ctx.clone(), pt);
+            }
+
+            if let (Some(pt), Some(expected)) = (plaintext, expected_ct) {
+                Self::xor_keystream_produces_expected(&mut ctx.clone(), pt, expected);
+            }
+        }
+
+        #[cfg(all(feature = "safe_api", test))]
+        Self::test_diff_params_diff_output();
+    }
+
+    /// Given an input length `a` find out how many times
+    /// the initial counter on encrypt()/decrypt() would
+    /// increase.
+    fn counter_increase_times(a: f32) -> u32 {
+        // Otherwise a overflowing subtraction would happen
+        if a <= 64f32 {
+            return 0;
+        }
+
+        let check_with_floor = (a / 64f32).floor();
+        let actual = a / 64f32;
+
+        assert!(actual >= check_with_floor);
+        // Subtract one because the first 64 in length
+        // the counter does not increase
+        if actual > check_with_floor {
+            (actual.ceil() as u32) - 1
+        } else {
+            (actual as u32) - 1
+        }
+    }
+
+    fn xor_keystream_empty_ok(ctx: &mut SC) {
+        assert!(ctx._xor_keystream_into(&mut [0u8; 0]).is_ok());
+    }
+
+    fn next_producable_err_max<const MAX: u32>(ctx: &mut SC) {
+        ctx._set_position(MAX - 2);
+        assert!(ctx._next_producible().is_ok());
+        ctx._set_position(MAX - 1);
+        assert!(ctx._next_producible().is_ok());
+        ctx._set_position(MAX);
+        assert!(ctx._next_producible().is_err());
+    }
+
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    fn xor_keystream_roundtrip(ctx: &mut SC, input: &[u8]) {
+        assert_eq!(ctx._position(), 0);
+        let mut inputdst = input.to_vec();
+        ctx._xor_keystream_into(&mut inputdst).unwrap();
+
+        if !input.is_empty() {
+            assert_ne!(&inputdst, &input);
+        }
+
+        ctx._set_position(0);
+        ctx._xor_keystream_into(&mut inputdst).unwrap();
+        assert_eq!(&inputdst, &input);
+    }
+
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    fn xor_keystream_produces_expected(ctx: &mut SC, pt: &[u8], expected: &[u8]) {
+        let mut ct_actual = pt.to_vec();
+        let mut pt_actual = expected.to_vec();
+        assert_eq!(ct_actual.len(), pt_actual.len());
+
+        let mut enc_ctx = ctx.clone();
+        let mut dec_ctx = ctx.clone();
+        assert_eq!(enc_ctx._position(), 0);
+        assert_eq!(dec_ctx._position(), 0);
+
+        enc_ctx._xor_keystream_into(&mut ct_actual).unwrap();
+        dec_ctx._xor_keystream_into(&mut pt_actual).unwrap();
+
+        assert_eq!(ct_actual, expected);
+        assert_eq!(pt_actual, pt);
+
+        assert_eq!(
+            Self::counter_increase_times(ct_actual.len() as f32),
+            enc_ctx._position()
+        );
+        assert_eq!(
+            Self::counter_increase_times(pt_actual.len() as f32),
+            dec_ctx._position()
         );
     }
 
-    encrypt_decrypt_input_empty(&encryptor, &decryptor, &key, &nonce);
-    initial_counter_overflow_err(&encryptor, &decryptor, &key, &nonce);
-    initial_counter_max_ok(&encryptor, &decryptor, &key, &nonce);
-}
+    fn last_keystream_block_exhausts<const BS: usize, const MAX: u32>(ctx: &mut SC) {
+        ctx._set_position(MAX);
+        assert!(!ctx._is_exhausted());
 
-#[cfg(feature = "safe_api")]
-/// Given an input length `a` find out how many times
-/// the initial counter on encrypt()/decrypt() would
-/// increase.
-fn counter_increase_times(a: f32) -> u32 {
-    // Otherwise a overflowing subtraction would happen
-    if a <= 64f32 {
-        return 0;
+        let mut block = [123u8; BS];
+
+        // OK: Generate the very last keystream block.
+        let prepos = ctx._position();
+        assert!(ctx._xor_keystream_into(&mut block).is_ok());
+        // (internally the streampos hasn't moved because it would wrap-around)
+        assert_eq!(prepos, ctx._position());
+        assert!(ctx._is_exhausted());
+        assert!(ctx._next_producible().is_err());
+        assert_eq!(ctx._keystream_remaining(), 0);
+
+        // ERR: Generate the last block again, even with BS size dst.
+        assert!(ctx._xor_keystream_into(&mut block).is_err());
+        assert_eq!(prepos, ctx._position());
+        assert!(ctx._is_exhausted());
+        assert!(ctx._next_producible().is_err());
+        assert_eq!(ctx._keystream_remaining(), 0);
+
+        // Should not be recoverable from exhausted state even with position.
+        ctx._set_position(0);
+        assert!(ctx._xor_keystream_into(&mut block).is_err());
+        assert!(ctx._is_exhausted());
+        assert!(ctx._next_producible().is_err()); // should also check self.exhausted
+        assert_eq!(ctx._keystream_remaining(), 0);
     }
 
-    let check_with_floor = (a / 64f32).floor();
-    let actual = a / 64f32;
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    fn return_err_if_next_overflows<const BS: usize, const MAX: u32>(ctx: &mut SC) {
+        ctx._set_position(MAX);
+        assert!(!ctx._is_exhausted());
 
-    assert!(actual >= check_with_floor);
-    // Subtract one because the first 64 in length
-    // the counter does not increase
-    if actual > check_with_floor {
-        (actual.ceil() as u32) - 1
-    } else {
-        (actual as u32) - 1
-    }
-}
+        let mut block = vec![123u8; BS + 8];
+        assert!(ctx._xor_keystream_into(&mut block).is_err());
+        // Generating the last block exhausted
+        assert!(ctx._is_exhausted());
 
-#[cfg(feature = "safe_api")]
-fn return_if_counter_will_overflow<Encryptor, Decryptor, Key, Nonce>(
-    encryptor: &Encryptor,
-    decryptor: &Decryptor,
-    key: &Key,
-    nonce: &Nonce,
-    counter: u32,
-    input: &[u8],
-) -> bool
-where
-    Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-    Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-    assert!(!input.is_empty());
-    let mut dst_out = vec![0u8; input.len()];
-
-    // Overflow will occur and the operation should fail
-    let enc_res = encryptor(key, nonce, counter, &[0u8; 0], &mut dst_out).is_err();
-    let dec_res = decryptor(key, nonce, counter, &[0u8; 0], &mut dst_out).is_err();
-
-    enc_res && dec_res
-}
-
-#[cfg(feature = "safe_api")]
-fn encrypt_decrypt_input_empty<Encryptor, Decryptor, Key, Nonce>(
-    encryptor: &Encryptor,
-    decryptor: &Decryptor,
-    key: &Key,
-    nonce: &Nonce,
-) where
-    Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-    Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-    let mut dst_out = [0u8; 64];
-    assert!(encryptor(key, nonce, 0, &[0u8; 0], &mut dst_out).is_err());
-    assert!(decryptor(key, nonce, 0, &[0u8; 0], &mut dst_out).is_err());
-}
-
-#[cfg(feature = "safe_api")]
-fn encrypt_decrypt_out_length<Encryptor, Decryptor, Key, Nonce>(
-    encryptor: &Encryptor,
-    decryptor: &Decryptor,
-    key: &Key,
-    nonce: &Nonce,
-    input: &[u8],
-) where
-    Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-    Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-    assert!(!input.is_empty());
-
-    let mut dst_out_empty = vec![0u8; 0];
-    assert!(encryptor(key, nonce, 0, input, &mut dst_out_empty).is_err());
-    assert!(decryptor(key, nonce, 0, input, &mut dst_out_empty).is_err());
-
-    let mut dst_out_less = vec![0u8; input.len() - 1];
-    assert!(encryptor(key, nonce, 0, input, &mut dst_out_less).is_err());
-    assert!(decryptor(key, nonce, 0, input, &mut dst_out_less).is_err());
-
-    let mut dst_out_exact = vec![0u8; input.len()];
-    assert!(encryptor(key, nonce, 0, input, &mut dst_out_exact).is_ok());
-    assert!(decryptor(key, nonce, 0, input, &mut dst_out_exact).is_ok());
-
-    let mut dst_out_greater = vec![0u8; input.len() + 1];
-    assert!(encryptor(key, nonce, 0, input, &mut dst_out_greater).is_ok());
-    assert!(decryptor(key, nonce, 0, input, &mut dst_out_greater).is_ok());
-}
-
-#[cfg(feature = "safe_api")]
-/// Test that encrypting and decrypting produces expected plaintext/ciphertext.
-fn encrypt_decrypt_equals_expected<Encryptor, Decryptor, Key, Nonce>(
-    encryptor: &Encryptor,
-    decryptor: &Decryptor,
-    key: &Key,
-    nonce: &Nonce,
-    counter: u32,
-    input: &[u8],
-    expected_ct: Option<&[u8]>,
-) where
-    Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-    Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-    assert!(!input.is_empty());
-
-    // Check if the counter would overflow. If yes, ensure that both encryptor and
-    // decryptor returned errors.
-    if counter_increase_times(input.len() as f32)
-        .checked_add(counter)
-        .is_none()
-    {
-        assert!(return_if_counter_will_overflow(
-            encryptor, decryptor, key, nonce, counter, input
-        ));
-
-        return;
+        // the last possible block is produced and acutally written to output
+        assert_ne!(&block[..BS], &[123u8; BS]);
+        // the last bytes are left untouched
+        assert_eq!(&block[BS..], &[123u8; 8]);
     }
 
-    let mut dst_out_ct = vec![0u8; input.len()];
-    encryptor(key, nonce, counter, input, &mut dst_out_ct).unwrap();
-    if let Some(expected_result) = expected_ct {
-        assert_eq!(expected_result, &dst_out_ct[..]);
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    fn xor_keystream_seek_ahead<const BS: usize>(ctx: &mut SC) {
+        let mut blocks = vec![0u8; BS * 10];
+
+        ctx._set_position(0);
+        ctx._xor_keystream_into(&mut blocks).unwrap();
+        assert_eq!(ctx._position(), 10);
+
+        ctx._set_position(0);
+        let mut block = [0u8; BS];
+        ctx._xor_keystream_into(&mut block).unwrap();
+        assert_eq!(&block, &blocks[..BS]);
+        assert_eq!(ctx._position(), 1);
+
+        ctx._set_position(1);
+        let mut block = [0u8; BS];
+        ctx._xor_keystream_into(&mut block).unwrap();
+        assert_eq!(&block, &blocks[BS..BS * 2]);
+        assert_eq!(ctx._position(), 2);
+
+        ctx._set_position(2);
+        let mut block = [0u8; BS];
+        ctx._xor_keystream_into(&mut block).unwrap();
+        assert_eq!(&block, &blocks[BS * 2..BS * 3]);
+        assert_eq!(ctx._position(), 3);
+
+        ctx._set_position(9);
+        let mut block = [0u8; BS];
+        ctx._xor_keystream_into(&mut block).unwrap();
+        assert_eq!(&block, &blocks[blocks.len() - BS..]);
+        assert_eq!(ctx._position(), 10);
     }
 
-    let mut dst_out_pt = vec![0u8; input.len()];
-    decryptor(key, nonce, counter, &dst_out_ct, &mut dst_out_pt).unwrap();
-    assert_eq!(input, &dst_out_pt[..]);
-    if let Some(expected_result) = expected_ct {
-        decryptor(key, nonce, counter, expected_result, &mut dst_out_pt).unwrap();
-        assert_eq!(input, &dst_out_pt[..]);
+    #[cfg(test)]
+    #[cfg(feature = "safe_api")]
+    /// Test that encrypting using different secret-key/nonce/initial-counter combinations yields different
+    /// ciphertexts.
+    fn test_diff_params_diff_output() {
+        let input = &[0u8; 16];
+
+        let mut ctx1 = SC::_random();
+        let mut ctx2 = SC::_random();
+
+        let mut dst1 = vec![0u8; input.len()];
+        let mut dst2 = vec![0u8; input.len()];
+
+        ctx1._xor_keystream_into(&mut dst1).unwrap();
+        ctx2._xor_keystream_into(&mut dst2).unwrap();
+        assert_ne!(&dst1, &input);
+        assert_ne!(&dst2, &input);
+        assert_ne!(&dst1, &dst2);
+
+        ctx1._set_position(0);
+        ctx2._set_position(0);
+
+        ctx1._xor_keystream_into(&mut dst1).unwrap();
+        ctx2._xor_keystream_into(&mut dst2).unwrap();
+        assert_eq!(&dst1, &input);
+        assert_eq!(&dst2, &input);
+        assert_eq!(&dst1, &dst2);
     }
-}
-
-#[cfg(feature = "safe_api")]
-/// Test that an initial counter will not overflow the internal.
-fn initial_counter_overflow_err<Encryptor, Decryptor, Key, Nonce>(
-    encryptor: &Encryptor,
-    decryptor: &Decryptor,
-    key: &Key,
-    nonce: &Nonce,
-) where
-    Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-    Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-    let mut dst_out = [0u8; 128];
-    assert!(
-        encryptor(
-            key,
-            nonce,
-            u32::MAX,
-            &[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
-            &mut dst_out
-        )
-        .is_err()
-    );
-    assert!(
-        decryptor(
-            key,
-            nonce,
-            u32::MAX,
-            &[0u8; 65], //  CHACHA_BLOCKSIZE + 1 one to trigger internal block counter addition.
-            &mut dst_out
-        )
-        .is_err()
-    );
-}
-
-#[cfg(feature = "safe_api")]
-/// Test that processing one block does not fail on the largest possible initial block counter.
-fn initial_counter_max_ok<Encryptor, Decryptor, Key, Nonce>(
-    encryptor: &Encryptor,
-    decryptor: &Decryptor,
-    key: &Key,
-    nonce: &Nonce,
-) where
-    Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-    Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-    let mut dst_out = [0u8; 64];
-    assert!(
-        encryptor(
-            key,
-            nonce,
-            u32::MAX,
-            &[0u8; 64], // Only needs to process one keystream
-            &mut dst_out
-        )
-        .is_ok()
-    );
-    assert!(
-        decryptor(
-            key,
-            nonce,
-            u32::MAX,
-            &[0u8; 64], // Only needs to process one keystream
-            &mut dst_out
-        )
-        .is_ok()
-    );
-}
-
-#[cfg(test)]
-#[cfg(feature = "safe_api")]
-/// Test that encrypting using different secret-key/nonce/initial-counter combinations yields different
-/// ciphertexts.
-pub fn test_diff_params_diff_output<Encryptor, Decryptor, Key, Nonce>(
-    encryptor: &Encryptor,
-    decryptor: &Decryptor,
-) where
-    Key: TestingRandom + PartialEq<Key>,
-    Nonce: TestingRandom + PartialEq<Nonce>,
-    Encryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-    Decryptor: Fn(&Key, &Nonce, u32, &[u8], &mut [u8]) -> Result<(), UnknownCryptoError>,
-{
-    let input = &[0u8; 16];
-
-    let sk1 = Key::gen_new();
-    let sk2 = Key::gen_new();
-    assert!(sk1 != sk2);
-
-    let n1 = Nonce::gen_new();
-    let n2 = Nonce::gen_new();
-    assert!(n1 != n2);
-
-    let c1 = 0u32;
-    let c2 = 1u32;
-
-    let mut dst_out_ct = vec![0u8; input.len()];
-    let mut dst_out_pt = vec![0u8; input.len()];
-
-    // Different secret key
-    encryptor(&sk1, &n1, c1, input, &mut dst_out_ct).unwrap();
-    decryptor(&sk2, &n1, c1, &dst_out_ct, &mut dst_out_pt).unwrap();
-    assert_ne!(&dst_out_pt[..], input);
-
-    // Different nonce
-    encryptor(&sk1, &n1, c1, input, &mut dst_out_ct).unwrap();
-    decryptor(&sk1, &n2, c1, &dst_out_ct, &mut dst_out_pt).unwrap();
-    assert_ne!(&dst_out_pt[..], input);
-
-    // Different initial counter
-    encryptor(&sk1, &n1, c1, input, &mut dst_out_ct).unwrap();
-    decryptor(&sk1, &n1, c2, &dst_out_ct, &mut dst_out_pt).unwrap();
-    assert_ne!(&dst_out_pt[..], input);
 }

@@ -21,13 +21,10 @@
 // SOFTWARE.
 
 //! # Parameters:
-//! - `secret_key`: The secret key.
-//! - `nonce`: The nonce value.
-//! - `initial_counter`: The initial counter value. In most cases, this is `0`.
-//! - `ciphertext`: The encrypted data.
-//! - `plaintext`: The data to be encrypted.
-//! - `dst_out`: Destination array that will hold the ciphertext/plaintext after
-//!   encryption/decryption.
+//! - `sk`: The secret key.
+//! - `n`: The nonce value.
+//! - `blockctr`: The position within the keystream.
+//! - `bytes`: Bytes to apply the keystream to.
 //!
 //! `nonce`: "Counters and LFSRs are both acceptable ways of generating unique
 //! nonces, as is encrypting a counter using a block cipher with a 64-bit block
@@ -36,23 +33,14 @@
 //! because such a truncation may repeat after a short time." See [RFC]
 //! for more information.
 //!
-//! `dst_out`: The output buffer may have a capacity greater than the input. If this is the case,
-//! only the first input length amount of bytes in `dst_out` are modified, while the rest remain untouched.
-//!
 //! # Errors:
 //! An error will be returned if:
-//! - The length of `dst_out` is less than `plaintext` or `ciphertext`.
-//! - `plaintext` or `ciphertext` is empty.
-//! - The `initial_counter` is high enough to cause a potential overflow.
-//!
-//! Even though `dst_out` is allowed to be of greater length than `plaintext`,
-//! the `ciphertext` produced by `chacha20`/`xchacha20` will always be of the
-//! same length as the `plaintext`.
-//!
-//! # Panics:
-//! A panic will occur if:
-//! - More than `2^32-1` keystream blocks are processed or more than `2^32-1 * 64`
-//!   bytes of data are processed.
+//! - The [`ChaCha20::next_producible()`] returns err.
+//! - If a keystream block (64 bytes) has been generated with [`ChaCha20::position()`] [`u32::MAX`],
+//!   and [`ChaCha20::xor_keystream_into()`] is called subsequently. Generating the last keystream block
+//!   moves [`ChaCha20`] into an exhausted state, which is non-resettable. In this case, the key/nonce pair
+//!   has generated all possible keystream bytes and is thus not safe to use further.
+//!   This can be checked with [`ChaCha20::is_exhausted()`].
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -70,30 +58,40 @@
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
-//! use orion::hazardous::stream::chacha20;
+//! use orion::hazardous::stream::chacha20::{SecretKey, Nonce, ChaCha20};
 //!
-//! let secret_key = chacha20::SecretKey::generate()?;
-//!
+//! let sk = SecretKey::generate()?;
 //! // WARNING: This nonce is only meant for demonstration and should not
 //! // be repeated. Please read the security section.
-//! let nonce = chacha20::Nonce::from([0u8; 12]);
-//! let message = "Data to protect".as_bytes();
+//! let n = Nonce::from([0u8; 12]);
+//! let mut ctx = ChaCha20::new(&sk, &n);
 //!
-//! // The length of this message is 15.
 //!
-//! let mut dst_out_pt = [0u8; 15];
-//! let mut dst_out_ct = [0u8; 15];
+//! // Encrypting a message:
+//! let mut message: [u8; 15] = *b"Data to protect";
+//! ctx.xor_keystream_into(&mut message)?;
+//! // Decrypt (re-apply keystream):
+//! ctx.set_position(0); // reset to beginning
+//! ctx.xor_keystream_into(&mut message)?;
 //!
-//! chacha20::encrypt(&secret_key, &nonce, 0, message, &mut dst_out_ct)?;
+//! assert_eq!("Data to protect".as_bytes(), message);
 //!
-//! chacha20::decrypt(&secret_key, &nonce, 0, &dst_out_ct, &mut dst_out_pt)?;
+//! // Seeking ahead in keystream. This example generates the 256th keystream block (64 bytes):
+//! ctx.set_position(256);
+//! let mut keystream_block = [0u8; 64];
+//! ctx.xor_keystream_into(&mut keystream_block)?;
 //!
-//! assert_eq!(dst_out_pt, message);
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`SecretKey::generate()`]: chacha20::SecretKey::generate()
 //! [`XChaCha20Poly1305`]: super::aead::xchacha20poly1305
+//! [`ChaCha20`]: chacha20::ChaCha20
+//! [`ChaCha20::xor_keystream_into()`]: chacha20::ChaCha20::xor_keystream_into()
+//! [`ChaCha20::position()`]: chacha20::ChaCha20::position()
+//! [`ChaCha20::is_exhausted()`]: chacha20::ChaCha20::is_exhausted()
+//! [`ChaCha20::next_producible()`]: chacha20::ChaCha20::next_producible()
+
 //! [RFC]: https://tools.ietf.org/html/rfc8439
 use crate::GenerateSecret;
 use crate::errors::UnknownCryptoError;
@@ -103,6 +101,8 @@ use crate::generics::sealed::Sealed;
 use crate::generics::{ByteArrayData, Public, Secret, TypeSpec};
 use crate::util::endianness::load_u32_le;
 use crate::util::u32x4::U32x4;
+use crate::util::xor_slices;
+use core::fmt::Debug;
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
@@ -111,7 +111,7 @@ pub const CHACHA_KEYSIZE: usize = 32;
 /// The nonce size for IETF ChaCha20.
 pub const IETF_CHACHA_NONCESIZE: usize = 12;
 /// The blocksize which ChaCha20 operates on.
-pub(crate) const CHACHA_BLOCKSIZE: usize = 64;
+pub const CHACHA_BLOCKSIZE: usize = 64;
 /// The size of the subkey that HChaCha20 returns.
 const HCHACHA_OUTSIZE: usize = 32;
 /// The nonce size for HChaCha20.
@@ -199,102 +199,105 @@ macro_rules! DOUBLE_ROUND {
         $r3 = $r3.shl_1();
     };
 }
-pub(crate) struct ChaCha20 {
+
+#[derive(Clone)]
+/// IETF ChaCha20 as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
+pub struct ChaCha20 {
     state: [U32x4; 4],
-    internal_counter: u32,
-    is_ietf: bool,
+    pub(crate) keystreamblock: [u8; CHACHA_BLOCKSIZE],
+    streampos: u32,
+    /// Flag to track if the final block counter has been used.
+    /// If we didn't track, we could end up writing the same keystream
+    /// block to CHACHA_BLOCKSIZE-sized output chunks over multiple
+    /// xor_keystream_into() calls. As the next_produceable() can
+    /// only be called if more bytes that the last block is requested.
+    ///
+    /// This is meant to be un-resettable, because using a key/nonce pair
+    /// for an exhausted stream re-generates previous keystream bytes.
+    exhausted: bool,
+}
+
+impl Debug for ChaCha20 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "{} state: {{***OMITTED***}}, keystreamblock: {{***OMITTED***}}, streampos: {:?}, exhausted: {:?}",
+            stringify!(ChaCha20),
+            self.streampos,
+            self.exhausted,
+        )
+    }
 }
 
 #[cfg(feature = "zeroize")]
+impl Zeroize for ChaCha20 {
+    fn zeroize(&mut self) {
+        self.state.iter_mut().zeroize();
+        self.keystreamblock.iter_mut().zeroize();
+    }
+}
+
 impl Drop for ChaCha20 {
     fn drop(&mut self) {
-        self.state.iter_mut().zeroize();
+        #[cfg(feature = "zeroize")]
+        self.zeroize();
     }
 }
 
 impl ChaCha20 {
-    #[allow(clippy::unreadable_literal)]
-    /// Initialize either a ChaCha or HChaCha state with a `secret_key` and
-    /// `nonce`.
-    pub(crate) fn new(sk: &[u8], n: &[u8], is_ietf: bool) -> Result<Self, UnknownCryptoError> {
-        debug_assert_eq!(sk.len(), CHACHA_KEYSIZE);
-        if (n.len() != IETF_CHACHA_NONCESIZE) && is_ietf {
-            return Err(UnknownCryptoError);
-        }
-        if (n.len() != HCHACHA_NONCESIZE) && !is_ietf {
-            return Err(UnknownCryptoError);
-        }
-
+    /// Create a new [`ChaCha20`] instance.
+    pub fn new(sk: &SecretKey, n: &Nonce) -> Self {
         // Row 0 with constants.
         let r0 = U32x4(0x61707865, 0x3320646e, 0x79622d32, 0x6b206574);
 
         // Row 1 and 2 with secret key.
         let r1 = U32x4(
-            load_u32_le(&sk[0..4]),
-            load_u32_le(&sk[4..8]),
-            load_u32_le(&sk[8..12]),
-            load_u32_le(&sk[12..16]),
+            load_u32_le(&sk.data.bytes[0..4]),
+            load_u32_le(&sk.data.bytes[4..8]),
+            load_u32_le(&sk.data.bytes[8..12]),
+            load_u32_le(&sk.data.bytes[12..16]),
         );
 
         let r2 = U32x4(
-            load_u32_le(&sk[16..20]),
-            load_u32_le(&sk[20..24]),
-            load_u32_le(&sk[24..28]),
-            load_u32_le(&sk[28..32]),
+            load_u32_le(&sk.data.bytes[16..20]),
+            load_u32_le(&sk.data.bytes[20..24]),
+            load_u32_le(&sk.data.bytes[24..28]),
+            load_u32_le(&sk.data.bytes[28..32]),
         );
 
-        // Row 3 with counter and nonce if IETF,
-        // but only nonce if HChaCha20.
-        let r3 = if is_ietf {
-            U32x4(
-                0, // Default counter
-                load_u32_le(&n[0..4]),
-                load_u32_le(&n[4..8]),
-                load_u32_le(&n[8..12]),
-            )
-        } else {
-            U32x4(
-                load_u32_le(&n[0..4]),
-                load_u32_le(&n[4..8]),
-                load_u32_le(&n[8..12]),
-                load_u32_le(&n[12..16]),
-            )
-        };
+        let r3 = U32x4(
+            0, // Default counter
+            load_u32_le(&n.data.bytes[0..4]),
+            load_u32_le(&n.data.bytes[4..8]),
+            load_u32_le(&n.data.bytes[8..12]),
+        );
 
-        Ok(Self {
+        Self {
             state: [r0, r1, r2, r3],
-            internal_counter: 0,
-            is_ietf,
-        })
+            keystreamblock: [0u8; CHACHA_BLOCKSIZE],
+            streampos: 0,
+            exhausted: false,
+        }
+    }
+
+    /// Return `true` if the last keystream block has been generated.
+    pub fn is_exhausted(&self) -> bool {
+        self.exhausted
     }
 
     /// Check that we can produce one more keystream block, given the current state.
     ///
-    /// If the internal counter would overflow, we return an error.
-    pub(crate) fn next_produceable(&self) -> Result<(), UnknownCryptoError> {
-        if self.internal_counter.checked_add(1).is_none() {
+    /// Return error if advancing the internal state position by one would overflow [`u32::MAX`],
+    /// or the keystream has been exhausted (see [`Self::is_exhausted`]).
+    pub fn next_producible(&self) -> Result<(), UnknownCryptoError> {
+        if self.streampos.checked_add(1).is_none() || self.exhausted {
             Err(UnknownCryptoError)
         } else {
             Ok(())
         }
     }
 
-    /// Process the next keystream and copy into destination array.
-    pub(crate) fn keystream_block(&mut self, block_counter: u32, inplace: &mut [u8]) {
-        debug_assert!(if self.is_ietf {
-            inplace.len() == CHACHA_BLOCKSIZE
-        } else {
-            inplace.len() == HCHACHA_OUTSIZE
-        });
-
-        if self.is_ietf {
-            self.state[3].0 = block_counter;
-        }
-
-        // If this panics, max amount of keystream blocks
-        // have been retrieved.
-        self.internal_counter = self.internal_counter.checked_add(1).unwrap();
-
+    fn apply_rounds(&self) -> [U32x4; 4] {
         let mut wr0 = self.state[0];
         let mut wr1 = self.state[1];
         let mut wr2 = self.state[2];
@@ -311,135 +314,198 @@ impl ChaCha20 {
         DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
         DOUBLE_ROUND!(wr0, wr1, wr2, wr3);
 
-        let mut iter = inplace.chunks_exact_mut(16);
+        [wr0, wr1, wr2, wr3]
+    }
 
-        if self.is_ietf {
-            wr0 = wr0.wrapping_add(self.state[0]);
-            wr1 = wr1.wrapping_add(self.state[1]);
-            wr2 = wr2.wrapping_add(self.state[2]);
-            wr3 = wr3.wrapping_add(self.state[3]);
+    /// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
+    pub(crate) fn hchacha(sk: &SecretKey, n: &[u8; HCHACHA_NONCESIZE]) -> [u8; HCHACHA_OUTSIZE] {
+        let mut ctx = ChaCha20::new(sk, &Nonce::from([0u8; IETF_CHACHA_NONCESIZE]));
+        ctx.state[3] = U32x4(
+            load_u32_le(&n[0..4]),
+            load_u32_le(&n[4..8]),
+            load_u32_le(&n[8..12]),
+            load_u32_le(&n[12..16]),
+        );
 
-            wr0.store_into_le(iter.next().unwrap());
-            wr1.store_into_le(iter.next().unwrap());
-            wr2.store_into_le(iter.next().unwrap());
-            wr3.store_into_le(iter.next().unwrap());
+        #[cfg(feature = "zeroize")]
+        let mut wstate = ctx.apply_rounds();
+        #[cfg(not(feature = "zeroize"))]
+        let wstate = ctx.apply_rounds();
+
+        let mut out = [0u8; HCHACHA_OUTSIZE];
+        wstate[0].store_into_le(&mut out[..16]);
+        wstate[3].store_into_le(&mut out[16..]);
+
+        #[cfg(feature = "zeroize")]
+        wstate.iter_mut().zeroize();
+
+        out
+    }
+
+    /// Process the next keystream and advance `self.streampos`.
+    pub(crate) fn keystream_block(&mut self) {
+        debug_assert!(
+            !self.exhausted,
+            "internally called keystream_block on an exhausted state!"
+        );
+
+        self.exhausted = self.streampos == u32::MAX;
+        self.state[3].0 = self.streampos;
+
+        let mut wstate = self.apply_rounds();
+
+        wstate[0] = wstate[0].wrapping_add(self.state[0]);
+        wstate[1] = wstate[1].wrapping_add(self.state[1]);
+        wstate[2] = wstate[2].wrapping_add(self.state[2]);
+        wstate[3] = wstate[3].wrapping_add(self.state[3]);
+
+        wstate[0].store_into_le(&mut self.keystreamblock[0..16]);
+        wstate[1].store_into_le(&mut self.keystreamblock[16..32]);
+        wstate[2].store_into_le(&mut self.keystreamblock[32..48]);
+        wstate[3].store_into_le(&mut self.keystreamblock[48..64]);
+
+        #[cfg(feature = "zeroize")]
+        wstate.iter_mut().zeroize();
+
+        if let Some(nextpos) = self.streampos.checked_add(1) {
+            self.streampos = nextpos;
         } else {
-            wr0.store_into_le(iter.next().unwrap());
-            wr3.store_into_le(iter.next().unwrap());
+            assert!(self.exhausted);
+            assert_eq!(self.streampos, u32::MAX);
         }
     }
-}
 
-/// XOR keystream into destination array using a temporary buffer for each keystream block.
-pub(crate) fn xor_keystream(
-    ctx: &mut ChaCha20,
-    initial_counter: u32,
-    tmp_block: &mut [u8],
-    bytes: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    debug_assert_eq!(tmp_block.len(), CHACHA_BLOCKSIZE);
-    if bytes.is_empty() {
-        return Err(UnknownCryptoError);
+    /// Given the current [`Self::position`], determine how many keystream
+    /// bytes can be generated from here on out. If [`Self::is_exhausted()`], then
+    /// this gives `0`.
+    pub fn keystream_remaining(&self) -> u64 {
+        debug_assert!((u32::MAX as u64 + 1) * (CHACHA_BLOCKSIZE as u64) < u64::MAX);
+        if self.is_exhausted() {
+            return 0;
+        }
+
+        let max: u64 = (u32::MAX as u64) + 1; // (0..=u32::MAX)
+        (max - (self.streampos as u64)) * CHACHA_BLOCKSIZE as u64
     }
 
-    for (ctr, out_block) in bytes.chunks_mut(CHACHA_BLOCKSIZE).enumerate() {
-        match initial_counter.checked_add(ctr as u32) {
-            Some(counter) => {
-                ctx.keystream_block(counter, tmp_block);
-                xor_slices!(tmp_block, out_block);
+    /// Set the position/counter of the [`ChaCha20`] state.
+    /// This is equivalent to seeking ahead in the keystream output generated,
+    /// for a given pair of [`SecretKey`] and [`Nonce`].
+    pub fn set_position(&mut self, blockctr: u32) {
+        self.streampos = blockctr;
+        self.state[3].0 = self.streampos;
+    }
+
+    /// Return the current position within the keystream.
+    /// This is what will be used when generating the next keystream block.
+    pub fn position(&self) -> u32 {
+        self.streampos
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Produce keystream blocks, based on the [`ChaCha20::position()`], and XOR into `bytes`.
+    ///
+    /// # NOTE:
+    /// When explicitly generating keystream blocks, e.g. with a combination of [`ChaCha20::set_position()`],
+    /// and this one, no leftover handling is performed. If `bytes` is less than [`CHACHA_BLOCKSIZE`] or not
+    /// a multiple thereof, the leftover bytes are not saved. This function will always generate a keystream block
+    /// based on the current position and if `bytes` cannot hold all [`CHACHA_BLOCKSIZE`] bytes, then they are "forgotten".
+    ///
+    ///
+    /// # SECURITY:
+    /// If this returns [`UnknownCryptoError`], then not all `bytes` have been processed.
+    /// Take care to zero out the bytes if this contains sensitive information.
+    pub fn xor_keystream_into(&mut self, bytes: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        if bytes.is_empty() {
+            return Ok(());
+        }
+        if self.exhausted {
+            return Err(UnknownCryptoError);
+        }
+
+        // https://github.com/orion-rs/orion/issues/308 fix was to not copy
+        // plaintext into out-buffer. This new API means there's only one.
+        // Here `bytes` contain plaintext, so now it is user-respnsibility
+        // to ensure to zero out plaintext bytes if the function fails.
+
+        let mut parts = bytes.chunks_mut(CHACHA_BLOCKSIZE).peekable();
+        while let Some(block) = parts.next() {
+            self.keystream_block();
+            xor_slices(&self.keystreamblock, block);
+
+            // The only time we don't want to error on this check
+            // is when we have self.streampos == u32::MAX and there's
+            // at most CHACHA_BLOCKSIZE amount of bytes to process.
+            // self.exhausted will prevent this from happening more than once.
+            if parts.peek().is_some() {
+                self.next_producible()?;
             }
-            None => return Err(UnknownCryptoError),
         }
+
+        Ok(())
     }
-
-    Ok(())
-}
-
-/// In-place IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub(crate) fn encrypt_in_place(
-    secret_key: &SecretKey,
-    nonce: &Nonce,
-    initial_counter: u32,
-    bytes: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    if bytes.is_empty() {
-        return Err(UnknownCryptoError);
-    }
-
-    let mut ctx = ChaCha20::new(secret_key.unprotected_as_ref(), nonce.as_ref(), true)?;
-    let mut keystream_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
-    xor_keystream(&mut ctx, initial_counter, keystream_block.as_mut(), bytes)
-}
-
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// IETF ChaCha20 encryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn encrypt(
-    secret_key: &SecretKey,
-    nonce: &Nonce,
-    initial_counter: u32,
-    plaintext: &[u8],
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    if dst_out.len() < plaintext.len() {
-        return Err(UnknownCryptoError);
-    }
-    if plaintext.is_empty() {
-        return Err(UnknownCryptoError);
-    }
-
-    let mut ctx = ChaCha20::new(secret_key.unprotected_as_ref(), nonce.as_ref(), true)?;
-    let mut keystream_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
-
-    for (ctr, (p_block, c_block)) in plaintext
-        .chunks(CHACHA_BLOCKSIZE)
-        .zip(dst_out.chunks_mut(CHACHA_BLOCKSIZE))
-        .enumerate()
-    {
-        match initial_counter.checked_add(ctr as u32) {
-            Some(counter) => {
-                // See https://github.com/orion-rs/orion/issues/308
-                ctx.next_produceable()?;
-
-                ctx.keystream_block(counter, keystream_block.as_mut());
-                xor_slices!(p_block, keystream_block.as_mut());
-                c_block[..p_block.len()]
-                    .copy_from_slice(&keystream_block.as_ref()[..p_block.len()]);
-            }
-            None => return Err(UnknownCryptoError),
-        }
-    }
-
-    Ok(())
-}
-
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// IETF ChaCha20 decryption as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
-pub fn decrypt(
-    secret_key: &SecretKey,
-    nonce: &Nonce,
-    initial_counter: u32,
-    ciphertext: &[u8],
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    encrypt(secret_key, nonce, initial_counter, ciphertext, dst_out)
-}
-
-/// HChaCha20 as specified in the [draft-RFC](https://github.com/bikeshedders/xchacha-rfc/blob/master).
-pub(super) fn hchacha20(
-    secret_key: &SecretKey,
-    nonce: &[u8],
-) -> Result<[u8; HCHACHA_OUTSIZE], UnknownCryptoError> {
-    let mut chacha_state = ChaCha20::new(secret_key.unprotected_as_ref(), nonce, false)?;
-    let mut keystream_block = [0u8; HCHACHA_OUTSIZE];
-    chacha_state.keystream_block(0, &mut keystream_block);
-
-    Ok(keystream_block)
 }
 
 // Testing public functions in the module.
 #[cfg(test)]
 mod public {
     use super::*;
+    use crate::test_framework::streamcipher_interface::*;
+
+    const ZERO_KEY: [u8; CHACHA_KEYSIZE] = [0u8; CHACHA_KEYSIZE];
+    const ZERO_IETF_NONCE: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_omitted_debug() {
+        let sk = SecretKey::generate().unwrap();
+        let n = Nonce::from(ZERO_IETF_NONCE);
+        let ctx = ChaCha20::new(&sk, &n);
+
+        let secret_key = format!("{:?}", &ctx.state);
+        let secret_export = format!("{:?}", &ctx.keystreamblock);
+
+        let test_debug_contents = format!("{:?}", &ctx);
+        assert!(!test_debug_contents.contains(&secret_key));
+        assert!(!test_debug_contents.contains(&secret_export));
+    }
+
+    #[test]
+    fn test_keystream_remaining() {
+        let sk = SecretKey::from(ZERO_KEY);
+        let nonce = Nonce::from(ZERO_IETF_NONCE);
+        let mut ctx = ChaCha20::new(&sk, &nonce);
+
+        ctx.set_position(0);
+        assert_eq!(ctx.position(), 0);
+        assert_eq!(
+            ctx.keystream_remaining(),
+            (CHACHA_BLOCKSIZE as u64) * 2u64.pow(32)
+        );
+
+        ctx.set_position(1);
+        assert_eq!(ctx.position(), 1);
+        assert_eq!(
+            ctx.keystream_remaining(),
+            crate::hazardous::aead::chacha20poly1305::P_MAX
+        );
+
+        ctx.set_position(u32::MAX);
+        assert_eq!(ctx.position(), u32::MAX);
+        assert_eq!(ctx.keystream_remaining(), 64);
+
+        // If we encrypt 1.5 block, we "forget" the rest. So this will return
+        // the amount as if we encrypted two full blocks.
+        let mut onehalf = [0u8; CHACHA_BLOCKSIZE + CHACHA_BLOCKSIZE / 2];
+        ctx.set_position(1);
+        ctx.xor_keystream_into(&mut onehalf).unwrap();
+        assert_eq!(ctx.position(), 3);
+        assert_eq!(
+            ctx.keystream_remaining(),
+            crate::hazardous::aead::chacha20poly1305::P_MAX - (CHACHA_BLOCKSIZE as u64 * 2)
+        );
+    }
 
     #[test]
     fn test_chacha20_key() {
@@ -467,110 +533,112 @@ mod public {
         PublicNewtype::test_serialization::<IETF_CHACHA_NONCESIZE, ChaCha20Nonce>();
     }
 
-    #[cfg(feature = "safe_api")]
-    #[test]
-    // See https://github.com/orion-rs/orion/issues/308
-    fn test_plaintext_left_in_dst_out() {
-        let k = SecretKey::generate().unwrap();
-        let n = Nonce::try_from(&[0u8; 12]).unwrap();
-        let ic: u32 = u32::MAX - 1;
+    impl TestableStreamCipher for ChaCha20 {
+        fn _new(sk: &[u8], n: &[u8]) -> Self {
+            Self::new(
+                &SecretKey::try_from(sk).unwrap(),
+                &Nonce::try_from(n).unwrap(),
+            )
+        }
 
-        let text = [b'x'; 128 + 4];
-        let mut dst_out = [0u8; 128 + 4];
+        #[cfg(test)]
+        #[cfg(feature = "safe_api")]
+        fn _random() -> Self {
+            use rand::RngExt;
+            let mut rng = rand::rng();
+            let rand_sk: bool = rng.random();
 
-        let _err = encrypt(&k, &n, ic, &text, &mut dst_out).unwrap_err();
+            let (sk, n) = if rand_sk {
+                (SecretKey::generate().unwrap(), Nonce::from(ZERO_IETF_NONCE))
+            } else {
+                // only implemented for testing purposes.
+                let mut arr = ZERO_IETF_NONCE;
+                rng.fill(&mut arr);
+                (SecretKey::from(ZERO_KEY), Nonce::from(arr))
+            };
 
-        assert_ne!(&[b'x'; 4], &dst_out[dst_out.len() - 4..]);
+            Self::_new(sk.unprotected_as_ref(), n.as_ref())
+        }
+
+        fn _next_producible(&self) -> Result<(), UnknownCryptoError> {
+            self.next_producible()
+        }
+
+        fn _keystream_remaining(&self) -> u64 {
+            self.keystream_remaining()
+        }
+
+        fn _set_position(&mut self, blockctr: u32) {
+            self.set_position(blockctr);
+        }
+
+        fn _is_exhausted(&self) -> bool {
+            self.is_exhausted()
+        }
+
+        fn _position(&self) -> u32 {
+            self.position()
+        }
+
+        fn _xor_keystream_into(&mut self, bytes: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self.xor_keystream_into(bytes)
+        }
     }
 
     #[test]
-    fn test_xor_keystream_err_initial_ctr_overflow() {
-        let sk = SecretKey::try_from(&[0u8; 32]).unwrap();
-        let nonce = Nonce::try_from(&[0u8; 12]).unwrap();
-        let mut chacha_state =
-            ChaCha20::new(sk.unprotected_as_ref(), nonce.as_ref(), true).unwrap();
-
-        let mut tmp_block = [0u8; CHACHA_BLOCKSIZE];
-        let mut bytes = [12u8; CHACHA_BLOCKSIZE * 2];
-        // Should return error on processing of second block.
-        assert!(xor_keystream(&mut chacha_state, u32::MAX, &mut tmp_block, &mut bytes).is_err());
+    fn test_streamcipher() {
+        StreamcipherTester::<ChaCha20>::run_tests::<CHACHA_BLOCKSIZE, { u32::MAX }>(
+            &ZERO_KEY,
+            &ZERO_IETF_NONCE,
+            None,
+            None,
+        );
     }
 
+    #[quickcheck]
     #[cfg(feature = "safe_api")]
-    mod test_encrypt_decrypt {
-        use super::*;
-        use crate::test_framework::streamcipher_interface::*;
+    fn prop_streamcipher_interface(input: Vec<u8>) -> bool {
+        let sk = SecretKey::generate().unwrap();
+        let n = Nonce::from(ZERO_IETF_NONCE);
+        StreamcipherTester::<ChaCha20>::run_tests::<CHACHA_BLOCKSIZE, { u32::MAX }>(
+            sk.unprotected_as_ref(),
+            n.as_ref(),
+            Some(&input),
+            None,
+        );
 
-        impl TestingRandom for SecretKey {
-            fn gen_new() -> Self {
-                Self::generate().unwrap()
-            }
-        }
-
-        impl TestingRandom for Nonce {
-            fn gen_new() -> Self {
-                let mut n = [0u8; IETF_CHACHA_NONCESIZE];
-                crate::util::secure_rand_bytes(&mut n).unwrap();
-                Self::try_from(&n).unwrap()
-            }
-        }
-
-        #[quickcheck]
-        fn prop_streamcipher_interface(input: Vec<u8>, counter: u32) -> bool {
-            let secret_key = SecretKey::generate().unwrap();
-            let nonce = Nonce::try_from(&[0u8; IETF_CHACHA_NONCESIZE]).unwrap();
-            StreamCipherTestRunner(encrypt, decrypt, secret_key, nonce, counter, &input, None);
-            test_diff_params_diff_output(&encrypt, &decrypt);
-
-            true
-        }
+        true
     }
 
     #[cfg(any(feature = "safe_api", feature = "alloc"))]
-    // hex crate uses Vec<u8>, so we need std.
     mod test_hchacha20 {
         use super::*;
 
-        use hex::decode;
-
-        #[test]
-        fn test_nonce_length() {
-            assert!(hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 16],).is_ok());
-            assert!(hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 17],).is_err());
-            assert!(hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 15],).is_err());
-            assert!(hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 0],).is_err());
-        }
-
         #[test]
         fn test_diff_keys_diff_output() {
-            let keystream1 =
-                hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
-
-            let keystream2 =
-                hchacha20(&SecretKey::try_from(&[1u8; 32]).unwrap(), &[0u8; 16]).unwrap();
+            let keystream1 = ChaCha20::hchacha(&SecretKey::from(ZERO_KEY), &[0u8; 16]);
+            let keystream2 = ChaCha20::hchacha(&SecretKey::from([1u8; CHACHA_KEYSIZE]), &[0u8; 16]);
 
             assert_ne!(keystream1, keystream2);
         }
 
         #[test]
         fn test_diff_nonce_diff_output() {
-            let keystream1 =
-                hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[0u8; 16]).unwrap();
-
-            let keystream2 =
-                hchacha20(&SecretKey::try_from(&[0u8; 32]).unwrap(), &[1u8; 16]).unwrap();
+            let sk = SecretKey::from(ZERO_KEY);
+            let keystream1 = ChaCha20::hchacha(&sk, &[0u8; 16]);
+            let keystream2 = ChaCha20::hchacha(&sk, &[1u8; 16]);
 
             assert_ne!(keystream1, keystream2);
         }
 
         pub fn hchacha_test_runner(key: &str, nonce: &str, output_expected: &str) {
-            let actual: [u8; 32] = hchacha20(
-                &SecretKey::try_from(&decode(key).unwrap()).unwrap(),
-                &decode(nonce).unwrap(),
-            )
-            .unwrap();
+            let expected: [u8; HCHACHA_OUTSIZE] =
+                hex::decode(output_expected).unwrap().try_into().unwrap();
+            let sk = SecretKey::try_from(&hex::decode(key).unwrap()).unwrap();
+            let n: [u8; HCHACHA_NONCESIZE] = hex::decode(nonce).unwrap().try_into().unwrap();
 
-            assert_eq!(&actual, &decode(output_expected).unwrap()[..]);
+            let actual: [u8; HCHACHA_OUTSIZE] = ChaCha20::hchacha(&sk, &n);
+            assert_eq!(actual, expected);
         }
 
         // Testing against Monocypher-generated test vectors
@@ -985,76 +1053,17 @@ mod public {
 mod private {
     use super::*;
 
-    mod test_init_state {
+    const ZERO_KEY: [u8; CHACHA_KEYSIZE] = [0u8; CHACHA_KEYSIZE];
+    const ZERO_IETF_NONCE: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
+
+    mod test_xor_keystream_into {
         use super::*;
 
         #[test]
-        fn test_nonce_length() {
-            assert!(ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 15], true).is_err());
-            assert!(ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 10], true).is_err());
-            assert!(
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true).is_ok()
-            );
-
-            assert!(ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 15], false).is_err());
-            assert!(ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; 17], false).is_err());
-            assert!(
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false).is_ok()
-            );
-        }
-
-        #[quickcheck]
-        #[cfg(feature = "safe_api")]
-        fn prop_test_nonce_length_ietf(nonce: Vec<u8>) -> bool {
-            if nonce.len() == IETF_CHACHA_NONCESIZE {
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_ok()
-            } else {
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce[..], true).is_err()
-            }
-        }
-
-        #[quickcheck]
-        #[cfg(feature = "safe_api")]
-        // Always fail to initialize state while the nonce is not
-        // the correct length. If it is correct length, never panic.
-        fn prop_test_nonce_length_hchacha(nonce: Vec<u8>) -> bool {
-            if nonce.len() == HCHACHA_NONCESIZE {
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_ok()
-            } else {
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &nonce, false).is_err()
-            }
-        }
-    }
-
-    mod test_encrypt_in_place {
-        use super::*;
-
-        #[test]
-        #[should_panic]
-        #[cfg(debug_assertions)]
-        fn test_xor_keystream_err_bad_tmp() {
-            let mut ctx =
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true).unwrap();
-            let mut tmp = [0u8; CHACHA_BLOCKSIZE - 1];
-            let mut out = [0u8; CHACHA_BLOCKSIZE];
-            xor_keystream(&mut ctx, 0, &mut tmp, &mut out).unwrap();
-        }
-
-        #[test]
-        fn test_xor_keystream_err_empty_input() {
-            let mut ctx =
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true).unwrap();
-            let mut tmp = [0u8; CHACHA_BLOCKSIZE];
+        fn test_xor_keystream_ok_empty_input() {
+            let mut ctx = ChaCha20::new(&SecretKey::from(ZERO_KEY), &Nonce::from(ZERO_IETF_NONCE));
             let mut out = [0u8; 0];
-            assert!(xor_keystream(&mut ctx, 0, &mut tmp, &mut out).is_err());
-        }
-
-        #[test]
-        fn test_enc_in_place_err_empty_input() {
-            let n = Nonce::from([0u8; IETF_CHACHA_NONCESIZE]);
-            let sk = SecretKey::from([0u8; CHACHA_KEYSIZE]);
-            let mut out = [0u8; 0];
-            assert!(encrypt_in_place(&sk, &n, 0, &mut out).is_err());
+            assert!(ctx.xor_keystream_into(&mut out).is_ok());
         }
     }
 
@@ -1062,50 +1071,7 @@ mod private {
         use super::*;
 
         #[test]
-        fn test_xor_keystream_block_ignore_counter_when_hchacha() {
-            let mut chacha_state_hchacha =
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false).unwrap();
-
-            let mut hchacha_keystream_block_zero = [0u8; HCHACHA_OUTSIZE];
-            let mut hchacha_keystream_block_max = [0u8; HCHACHA_OUTSIZE];
-
-            chacha_state_hchacha.keystream_block(0, &mut hchacha_keystream_block_zero);
-            chacha_state_hchacha.keystream_block(u32::MAX, &mut hchacha_keystream_block_max);
-
-            assert_eq!(hchacha_keystream_block_zero, hchacha_keystream_block_max);
-        }
-
-        #[cfg(debug_assertions)]
-        #[test]
-        #[should_panic]
-        fn test_xor_keystream_block_invalid_blocksize_ietf() {
-            let mut chacha_state_ietf =
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; IETF_CHACHA_NONCESIZE], true).unwrap();
-
-            let mut ietf_keystream_block = [0u8; CHACHA_BLOCKSIZE];
-            let mut hchacha_keystream_block = [0u8; HCHACHA_OUTSIZE];
-
-            chacha_state_ietf.keystream_block(0, &mut ietf_keystream_block);
-            chacha_state_ietf.keystream_block(0, &mut hchacha_keystream_block);
-        }
-
-        #[cfg(debug_assertions)]
-        #[test]
-        #[should_panic]
-        fn test_xor_keystream_block_invalid_blocksize_hchacha() {
-            let mut chacha_state_hchacha =
-                ChaCha20::new(&[0u8; CHACHA_KEYSIZE], &[0u8; HCHACHA_NONCESIZE], false).unwrap();
-
-            let mut ietf_keystream_block = [0u8; CHACHA_BLOCKSIZE];
-            let mut hchacha_keystream_block = [0u8; HCHACHA_OUTSIZE];
-
-            chacha_state_hchacha.keystream_block(0, &mut hchacha_keystream_block);
-            chacha_state_hchacha.keystream_block(0, &mut ietf_keystream_block);
-        }
-
-        #[test]
-        #[should_panic]
-        fn test_xor_keystream_panic_on_too_much_keystream_data_ietf() {
+        fn test_xor_keystream_err_on_too_much_keystream_data_ietf() {
             let mut chacha_state_ietf = ChaCha20 {
                 state: [
                     U32x4(0, 0, 0, 0),
@@ -1113,40 +1079,38 @@ mod private {
                     U32x4(0, 0, 0, 0),
                     U32x4(0, 0, 0, 0),
                 ],
-                internal_counter: (u32::MAX - 128),
-                is_ietf: true,
+                keystreamblock: [0u8; CHACHA_BLOCKSIZE],
+                streampos: (u32::MAX - 128),
+                exhausted: false,
             };
 
-            let mut keystream_block = [0u8; CHACHA_BLOCKSIZE];
+            // xor_keystream_into() logic is tested with: StreamcipherTester::last_keystream_block_exhausts().
 
-            for amount in 0..(128 + 1) {
-                chacha_state_ietf.keystream_block(amount, &mut keystream_block);
+            assert_eq!(chacha_state_ietf.position(), u32::MAX - 128);
+            assert_eq!(
+                chacha_state_ietf.keystream_remaining(),
+                (u32::MAX - chacha_state_ietf.position() + 1) as u64 * CHACHA_BLOCKSIZE as u64
+            );
+
+            for block_n in 0..=128 {
+                if block_n == 128 {
+                    assert!(!chacha_state_ietf.is_exhausted());
+                    assert_eq!(chacha_state_ietf.position(), u32::MAX);
+
+                    chacha_state_ietf.keystream_block();
+
+                    assert!(chacha_state_ietf.is_exhausted());
+                    assert_eq!(chacha_state_ietf.position(), u32::MAX);
+                } else {
+                    chacha_state_ietf.keystream_block();
+                }
             }
         }
 
         #[test]
+        #[cfg(debug_assertions)]
         #[should_panic]
-        fn test_xor_keystream_panic_on_too_much_keystream_data_hchacha() {
-            let mut chacha_state_ietf = ChaCha20 {
-                state: [
-                    U32x4(0, 0, 0, 0),
-                    U32x4(0, 0, 0, 0),
-                    U32x4(0, 0, 0, 0),
-                    U32x4(0, 0, 0, 0),
-                ],
-                internal_counter: (u32::MAX - 128),
-                is_ietf: false,
-            };
-
-            let mut keystream_block = [0u8; HCHACHA_OUTSIZE];
-
-            for _ in 0..(128 + 1) {
-                chacha_state_ietf.keystream_block(0, &mut keystream_block);
-            }
-        }
-
-        #[test]
-        fn test_error_if_internal_counter_would_overflow() {
+        fn test_panic_debug_calling_keystream_block_on_exhausted() {
             let mut chacha_state = ChaCha20 {
                 state: [
                     U32x4(0, 0, 0, 0),
@@ -1154,15 +1118,17 @@ mod private {
                     U32x4(0, 0, 0, 0),
                     U32x4(0, 0, 0, 0),
                 ],
-                internal_counter: (u32::MAX - 2),
-                is_ietf: false,
+                keystreamblock: [0u8; CHACHA_BLOCKSIZE],
+                streampos: (u32::MAX - 2),
+                exhausted: false,
             };
 
-            assert!(chacha_state.next_produceable().is_ok());
-            chacha_state.internal_counter += 1;
-            assert!(chacha_state.next_produceable().is_ok());
-            chacha_state.internal_counter += 1;
-            assert!(chacha_state.next_produceable().is_err());
+            chacha_state.keystream_block();
+            chacha_state.keystream_block();
+            chacha_state.keystream_block();
+
+            // debug_assert! fails:
+            chacha_state.keystream_block();
         }
     }
 }
@@ -1180,10 +1146,6 @@ mod test_vectors {
         }
     }
 
-    // Convenience function for testing.
-    fn init(key: &[u8], nonce: &[u8]) -> Result<ChaCha20, UnknownCryptoError> {
-        ChaCha20::new(key, nonce, true)
-    }
     #[test]
     fn rfc8439_chacha20_block_results() {
         let key = [
@@ -1209,15 +1171,12 @@ mod test_vectors {
             U32x4(0x00000001, 0x09000000, 0x4a000000, 0x00000000),
         ];
         // Test initial key-setup
-        let mut state = init(&key, &nonce).unwrap();
-        // Set block counter
-        state.state[3].0 = 1;
-        assert!(state.state[..] == expected_init[..]);
+        let mut state = ChaCha20::new(&SecretKey::from(key), &Nonce::from(nonce));
+        state.set_position(1);
+        assert_eq!(state.state, expected_init);
 
-        let mut kb = [0u8; 64];
-        state.keystream_block(1, &mut kb);
-
-        assert_eq!(kb[..], expected[..]);
+        state.keystream_block();
+        assert_eq!(state.keystreamblock, expected);
     }
 
     #[test]
@@ -1238,11 +1197,10 @@ mod test_vectors {
             0xc3, 0x87, 0xb6, 0x69, 0xb2, 0xee, 0x65, 0x86,
         ];
 
-        let mut state = init(&key, &nonce).unwrap();
-        let mut kb = [0u8; 64];
-        state.keystream_block(0, &mut kb);
-
-        assert_eq!(kb[..], expected[..]);
+        let mut state = ChaCha20::new(&SecretKey::from(key), &Nonce::from(nonce));
+        state.set_position(0);
+        state.keystream_block();
+        assert_eq!(state.keystreamblock, expected);
     }
 
     #[test]
@@ -1263,11 +1221,10 @@ mod test_vectors {
             0xac, 0xe1, 0x0a, 0x1f, 0x4b, 0x79, 0x4d, 0x6f,
         ];
 
-        let mut state = init(&key, &nonce).unwrap();
-        let mut kb = [0u8; 64];
-        state.keystream_block(1, &mut kb);
-
-        assert_eq!(kb[..], expected[..]);
+        let mut state = ChaCha20::new(&SecretKey::from(key), &Nonce::from(nonce));
+        state.set_position(1);
+        state.keystream_block();
+        assert_eq!(state.keystreamblock, expected);
     }
 
     #[test]
@@ -1288,11 +1245,10 @@ mod test_vectors {
             0xa6, 0x4a, 0xdd, 0xeb, 0x00, 0x6c, 0x13, 0xa0,
         ];
 
-        let mut state = init(&key, &nonce).unwrap();
-        let mut kb = [0u8; 64];
-        state.keystream_block(1, &mut kb);
-
-        assert_eq!(kb[..], expected[..]);
+        let mut state = ChaCha20::new(&SecretKey::from(key), &Nonce::from(nonce));
+        state.set_position(1);
+        state.keystream_block();
+        assert_eq!(state.keystreamblock, expected);
     }
 
     #[test]
@@ -1313,11 +1269,10 @@ mod test_vectors {
             0x73, 0x74, 0xf4, 0x87, 0x2e, 0x99, 0xf0, 0x96,
         ];
 
-        let mut state = init(&key, &nonce).unwrap();
-        let mut kb = [0u8; 64];
-        state.keystream_block(2, &mut kb);
-
-        assert_eq!(kb[..], expected[..]);
+        let mut state = ChaCha20::new(&SecretKey::from(key), &Nonce::from(nonce));
+        state.set_position(2);
+        state.keystream_block();
+        assert_eq!(state.keystreamblock, expected);
     }
 
     #[test]
@@ -1338,11 +1293,10 @@ mod test_vectors {
             0xfa, 0x19, 0x8a, 0x39, 0x53, 0x1b, 0xed, 0x6d,
         ];
 
-        let mut state = init(&key, &nonce).unwrap();
-        let mut kb = [0u8; 64];
-        state.keystream_block(0, &mut kb);
-
-        assert_eq!(kb[..], expected[..]);
+        let mut state = ChaCha20::new(&SecretKey::from(key), &Nonce::from(nonce));
+        state.set_position(0);
+        state.keystream_block();
+        assert_eq!(state.keystreamblock, expected);
     }
 
     #[test]
@@ -1383,13 +1337,19 @@ mod test_vectors {
             0xf3, 0x63,
         ];
 
-        let mut state = init(&key, &nonce).unwrap();
+        let mut state = ChaCha20::new(&SecretKey::from(key), &Nonce::from(nonce));
         let mut actual_keystream = [0u8; 128];
 
-        state.keystream_block(1, &mut actual_keystream[..64]);
+        state.set_position(1);
+        state
+            .xor_keystream_into(&mut actual_keystream[..64])
+            .unwrap();
         assert!(first_state == state.state);
 
-        state.keystream_block(2, &mut actual_keystream[64..]);
+        state.set_position(2);
+        state
+            .xor_keystream_into(&mut actual_keystream[64..])
+            .unwrap();
         assert!(second_state == state.state);
 
         assert_eq!(
