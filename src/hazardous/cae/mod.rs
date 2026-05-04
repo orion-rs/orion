@@ -20,6 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// TODO: This is not used anywhere AFAICT. Should we perhaps drop these and wait for RFC?
+// None of the schemes outside Lightweight AEAD scheme competition seem to focus on this.
+
 #![cfg_attr(docsrs, doc(cfg(feature = "experimental")))]
 
 /// Fully-committing ChaCha20-Poly1305 with BLAKE2b based on the [CTX] construction by John Chan & Phillip Rogaway.

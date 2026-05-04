@@ -119,12 +119,10 @@
 //! [partitioning oracle attack]: https://www.usenix.org/conference/usenixsecurity21/presentation/len
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::aead;
-use crate::hazardous::aead::chacha20poly1305::{ENC_CTR, poly1305_key_gen, process_authentication};
+use crate::hazardous::aead::chacha20poly1305::{ChaCha20Poly1305, ENC_CTR};
 use crate::hazardous::hash::blake2::blake2b::Blake2b;
 use crate::hazardous::mac::poly1305::POLY1305_OUTSIZE;
-use crate::hazardous::mac::poly1305::Poly1305;
-use crate::hazardous::stream::chacha20::{self, CHACHA_BLOCKSIZE, ChaCha20};
+use crate::hazardous::stream::chacha20::ChaCha20;
 use crate::util;
 
 pub use crate::hazardous::aead::chacha20poly1305::A_MAX;
@@ -165,7 +163,7 @@ pub fn seal(
         None => return Err(UnknownCryptoError),
     };
 
-    aead::chacha20poly1305::seal(
+    ChaCha20Poly1305::seal(
         secret_key,
         nonce,
         plaintext,
@@ -214,12 +212,15 @@ pub fn open(
     blake2b.update(nonce.as_ref())?;
     blake2b.update(ad)?;
 
-    let mut dec_ctx = ChaCha20::new(secret_key.unprotected_as_ref(), nonce.as_ref(), true)?;
-    let mut tmp = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
-    let mut auth_ctx = Poly1305::new(&poly1305_key_gen(&mut dec_ctx, &mut tmp)?);
+    let mut dec_ctx = ChaCha20::new(secret_key, nonce);
+    let mut auth_ctx = ChaCha20Poly1305::poly1305_init(&mut dec_ctx);
 
     let ciphertext_len = ciphertext_with_tag.len() - TAG_SIZE;
-    process_authentication(&mut auth_ctx, ad, &ciphertext_with_tag[..ciphertext_len])?;
+    ChaCha20Poly1305::process_authentication(
+        &mut auth_ctx,
+        ad,
+        &ciphertext_with_tag[..ciphertext_len],
+    )?;
 
     blake2b.update(auth_ctx.finalize()?.unprotected_as_ref())?;
 
@@ -228,14 +229,10 @@ pub fn open(
         &ciphertext_with_tag[ciphertext_len..],
     )?;
 
+    debug_assert_eq!(dec_ctx.position(), ENC_CTR);
     if ciphertext_len != 0 {
         dst_out[..ciphertext_len].copy_from_slice(&ciphertext_with_tag[..ciphertext_len]);
-        chacha20::xor_keystream(
-            &mut dec_ctx,
-            ENC_CTR,
-            tmp.as_mut(),
-            &mut dst_out[..ciphertext_len],
-        )?;
+        dec_ctx.xor_keystream_into(&mut dst_out[..ciphertext_len])?;
     }
 
     Ok(())
@@ -246,15 +243,16 @@ pub fn open(
 #[cfg(feature = "safe_api")]
 mod public {
     use super::*;
-    use crate::test_framework::aead_interface::{AeadTestRunner, test_diff_params_err};
+    use crate::hazardous::stream::chacha20;
+    use crate::test_framework::aead_interface::BufferedOnlyAeadTestRunner;
 
     #[quickcheck]
     #[cfg(feature = "safe_api")]
     fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
+        // TODO(brycx): These are older tests (see mod-level todo about whether to remove these).
         let secret_key = SecretKey::generate().unwrap();
         let nonce = Nonce::try_from(&[0u8; chacha20::IETF_CHACHA_NONCESIZE]).unwrap();
-        AeadTestRunner(seal, open, secret_key, nonce, &input, None, TAG_SIZE, &ad);
-        test_diff_params_err(&seal, &open, &input, TAG_SIZE);
+        BufferedOnlyAeadTestRunner(seal, open, secret_key, nonce, &input, None, TAG_SIZE, &ad);
         true
     }
 }

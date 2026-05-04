@@ -89,7 +89,7 @@ use fiat_crypto::poly1305_32::{
 use crate::generics::sealed::Data;
 
 /// The blocksize which Poly1305 operates on.
-const POLY1305_BLOCKSIZE: usize = 16;
+pub(crate) const POLY1305_BLOCKSIZE: usize = 16;
 /// The output size for Poly1305.
 pub const POLY1305_OUTSIZE: usize = 16;
 /// The key size for Poly1305.
@@ -154,7 +154,7 @@ impl serde::Serialize for Tag {
     where
         S: serde::ser::Serializer,
     {
-        let bytes: &[u8] = &self.data.as_ref();
+        let bytes: &[u8] = self.data.as_ref();
         bytes.serialize(serializer)
     }
 }
@@ -314,12 +314,14 @@ impl Poly1305 {
         state
     }
 
-    /// Update state with a `data` and pad it to blocksize with 0, if not
+    /// Update state with a `data` and pad it to blocksize with 0's, if not
     /// evenly divisible by blocksize.
     pub(crate) fn process_pad_to_blocksize(
         &mut self,
         data: &[u8],
     ) -> Result<(), UnknownCryptoError> {
+        debug_assert_eq!(self.leftover, 0);
+
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
@@ -338,6 +340,8 @@ impl Poly1305 {
             pad[..remaining.len()].copy_from_slice(remaining);
             self.process_block(&pad).unwrap();
         }
+
+        debug_assert_eq!(self.leftover, 0);
 
         Ok(())
     }

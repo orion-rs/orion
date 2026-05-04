@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::aead::chacha20poly1305;
+use crate::hazardous::aead::chacha20poly1305::{self, ChaCha20Poly1305};
 use crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE;
 use crate::hazardous::hpke::mode::private::*;
 use crate::hazardous::hpke::suite::private::*;
@@ -502,7 +502,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
         let key = chacha20poly1305::SecretKey::from(self.key);
         let nonce = self.compute_nonce();
-        chacha20poly1305::seal(&key, &nonce, plaintext, Some(aad), out)?;
+        ChaCha20Poly1305::seal(&key, &nonce, plaintext, Some(aad), out)?;
 
         self.increment_seq()
     }
@@ -520,7 +520,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
 
         let key = chacha20poly1305::SecretKey::from(self.key);
         let nonce = self.compute_nonce();
-        chacha20poly1305::open(&key, &nonce, ciphertext, Some(aad), out)?;
+        ChaCha20Poly1305::open(&key, &nonce, ciphertext, Some(aad), out)?;
 
         self.increment_seq()
     }

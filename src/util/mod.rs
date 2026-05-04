@@ -34,6 +34,16 @@ macro_rules! xor_slices {
     };
 }
 
+#[inline(always)]
+/// xor_slices(src, destination): XOR src into destination slice.
+/// Uses iter() and .zip(), so it short-circuits on the slice that has
+/// the smallest length.
+pub(crate) fn xor_slices(src: &[u8], dst: &mut [u8]) {
+    for (inplace, selem) in dst.iter_mut().zip(src.iter()) {
+        *inplace ^= selem;
+    }
+}
+
 pub(crate) mod endianness;
 pub(crate) mod u32x4;
 pub(crate) mod u64x4;
