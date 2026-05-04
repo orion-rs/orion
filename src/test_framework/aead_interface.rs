@@ -22,11 +22,12 @@
 
 #![allow(non_snake_case)]
 
+use crate::errors::UnknownCryptoError;
+use crate::{Public, Secret, generics::TypeSpec};
 use core::marker::PhantomData;
 
-#[cfg(feature = "safe_api")]
-use crate::errors::UnknownCryptoError;
-use crate::{Public, Secret, generics::TypeSpec, hazardous::stream::chacha20::CHACHA_BLOCKSIZE};
+#[cfg(any(feature = "safe_api", feature = "alloc"))]
+use crate::hazardous::stream::chacha20::CHACHA_BLOCKSIZE;
 use core::fmt::Debug;
 
 #[cfg(all(feature = "alloc", not(feature = "safe_api")))]
@@ -118,6 +119,7 @@ impl<Aead: TestableAead, const KS: usize, const NS: usize, const TS: usize>
         Ok(())
     }
 
+    #[allow(unused_variables)] // input is not used on pure --no-default-features.
     pub fn run_all_tests(input: &[u8]) {
         Self::test_seal_zero_length_input_is_ok();
 

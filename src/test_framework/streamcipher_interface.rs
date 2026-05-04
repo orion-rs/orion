@@ -89,6 +89,7 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         Self::test_diff_params_diff_output();
     }
 
+    #[cfg(feature = "safe_api")]
     /// Given an input length `a` find out how many times
     /// the initial counter on encrypt()/decrypt() would
     /// increase.
@@ -139,7 +140,7 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         assert_eq!(&inputdst, &input);
     }
 
-    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    #[cfg(feature = "safe_api")]
     fn xor_keystream_produces_expected(ctx: &mut SC, pt: &[u8], expected: &[u8]) {
         let mut ct_actual = pt.to_vec();
         let mut pt_actual = expected.to_vec();

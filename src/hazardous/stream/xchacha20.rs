@@ -97,6 +97,7 @@ use crate::{
     generics::GeneratePublic,
     hazardous::stream::chacha20::{ChaCha20, HCHACHA_NONCESIZE},
 };
+#[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
 /// The nonce size for XChaCha20.
