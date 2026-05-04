@@ -79,7 +79,10 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
             if let Some(pt) = plaintext {
                 Self::xor_keystream_roundtrip(&mut ctx.clone(), pt);
             }
+        }
 
+        #[cfg(feature = "safe_api")]
+        {
             if let (Some(pt), Some(expected)) = (plaintext, expected_ct) {
                 Self::xor_keystream_produces_expected(&mut ctx.clone(), pt, expected);
             }
