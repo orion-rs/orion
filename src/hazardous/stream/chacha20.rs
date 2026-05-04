@@ -287,10 +287,9 @@ impl ChaCha20 {
 
     /// Check that we can produce one more keystream block, given the current state.
     ///
-    /// Return error if advancing the internal state position by one would overflow [`u32::MAX`],
-    /// or the keystream has been exhausted (see [`Self::is_exhausted`]).
+    /// Return error if [`Self::is_exhausted()`].
     pub fn next_producible(&self) -> Result<(), UnknownCryptoError> {
-        if self.streampos.checked_add(1).is_none() || self.exhausted {
+        if self.exhausted {
             Err(UnknownCryptoError)
         } else {
             Ok(())
@@ -469,6 +468,40 @@ mod public {
         let test_debug_contents = format!("{:?}", &ctx);
         assert!(!test_debug_contents.contains(&secret_key));
         assert!(!test_debug_contents.contains(&secret_export));
+    }
+
+    #[test]
+    fn test_xor_keystream_last_two_full_blocks() {
+        let sk = SecretKey::from(ZERO_KEY);
+        let nonce = Nonce::from(ZERO_IETF_NONCE);
+
+        // Use u32::MAX to fill the last half block
+        let mut ctx = ChaCha20::new(&sk, &nonce);
+        ctx.set_position(u32::MAX - 1);
+        let mut twoblocks_min = [0u8; CHACHA_BLOCKSIZE + (CHACHA_BLOCKSIZE / 2)];
+        assert!(ctx.xor_keystream_into(&mut twoblocks_min).is_ok());
+        assert!(ctx.is_exhausted());
+        assert_eq!(ctx.keystream_remaining(), 0);
+
+        // Use u32::MAX to fill the full last blocks
+        let mut ctx = ChaCha20::new(&sk, &nonce);
+        ctx.set_position(u32::MAX - 1);
+        let mut twoblocks_mid = [0u8; CHACHA_BLOCKSIZE * 2];
+        assert!(ctx.xor_keystream_into(&mut twoblocks_mid).is_ok());
+        assert!(ctx.is_exhausted());
+        assert_eq!(ctx.keystream_remaining(), 0);
+
+        // ERR: Do not move past two full blocks
+        let mut ctx = ChaCha20::new(&sk, &nonce);
+        ctx.set_position(u32::MAX - 1);
+        let mut twoblocks_max = [0u8; (CHACHA_BLOCKSIZE * 2) + 1];
+        assert!(ctx.xor_keystream_into(&mut twoblocks_max).is_err());
+        assert!(ctx.is_exhausted());
+        assert_eq!(ctx.keystream_remaining(), 0);
+
+        assert_eq!(&twoblocks_min, &twoblocks_mid[..twoblocks_min.len()]);
+        assert_eq!(&twoblocks_mid, &twoblocks_max[..twoblocks_mid.len()]);
+        assert_eq!(twoblocks_max[twoblocks_max.len() - 1], 0);
     }
 
     #[test]
