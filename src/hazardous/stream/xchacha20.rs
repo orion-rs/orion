@@ -193,9 +193,20 @@ impl XChaCha20 {
         self.chacha20.set_position(blockctr);
     }
 
-    /// Return the current position within the keystream.
+    /// Set the byte position within the [`XChaCha20`] state. This will set the correct
+    /// state block counter internally and any offset if needed.
+    pub fn set_byte_position(&mut self, pos: u64) -> Result<(), UnknownCryptoError> {
+        self.chacha20.set_byte_position(pos)
+    }
+
+    /// Get the current position/counter of the [`ChaCha20`] state, as a block.
     pub fn position(&self) -> u32 {
         self.chacha20.position()
+    }
+
+    /// Get the current position/counter of the [`ChaCha20`] state, as a byte-index.
+    pub fn byte_position(&mut self) -> u64 {
+        self.chacha20.byte_position()
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -221,7 +232,7 @@ impl XChaCha20 {
 #[cfg(feature = "safe_api")]
 mod public {
     use crate::{
-        hazardous::stream::chacha20::{CHACHA_BLOCKSIZE, CHACHA_KEYSIZE},
+        hazardous::stream::chacha20::{CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, MAX_KEYSTREAM_BYTES},
         test_framework::streamcipher_interface::{StreamcipherTester, TestableStreamCipher},
     };
 
@@ -317,16 +328,25 @@ mod public {
         fn _is_exhausted(&self) -> bool {
             self.is_exhausted()
         }
+
+        fn _set_byte_position(&mut self, pos: u64) -> Result<(), UnknownCryptoError> {
+            self.set_byte_position(pos)
+        }
+
+        fn _byte_position(&mut self) -> u64 {
+            self.byte_position()
+        }
+
+        const MAX_KEYSTREAM_BYTES: u64 = MAX_KEYSTREAM_BYTES;
     }
 
     #[test]
     fn test_streamcipher() {
-        StreamcipherTester::<XChaCha20>::run_tests::<CHACHA_BLOCKSIZE, { u32::MAX }>(
-            &ZERO_KEY,
-            &ZERO_XNONCE,
-            None,
-            None,
-        );
+        StreamcipherTester::<XChaCha20>::run_tests::<
+            CHACHA_BLOCKSIZE,
+            { u32::MAX },
+            MAX_KEYSTREAM_BYTES,
+        >(&ZERO_KEY, &ZERO_XNONCE, None, None);
     }
 
     #[quickcheck]
@@ -334,12 +354,11 @@ mod public {
     fn prop_streamcipher_interface(input: Vec<u8>) -> bool {
         let sk = SecretKey::generate().unwrap();
         let n = Nonce::from(ZERO_XNONCE);
-        StreamcipherTester::<XChaCha20>::run_tests::<CHACHA_BLOCKSIZE, { u32::MAX }>(
-            sk.unprotected_as_ref(),
-            n.as_ref(),
-            Some(&input),
-            None,
-        );
+        StreamcipherTester::<XChaCha20>::run_tests::<
+            CHACHA_BLOCKSIZE,
+            { u32::MAX },
+            MAX_KEYSTREAM_BYTES,
+        >(sk.unprotected_as_ref(), n.as_ref(), Some(&input), None);
 
         true
     }

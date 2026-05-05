@@ -27,6 +27,8 @@ use core::marker::PhantomData;
 use alloc::vec;
 
 pub trait TestableStreamCipher: Sized + Clone {
+    const MAX_KEYSTREAM_BYTES: u64;
+
     fn _new(sk: &[u8], n: &[u8]) -> Self;
 
     #[cfg(test)]
@@ -41,7 +43,11 @@ pub trait TestableStreamCipher: Sized + Clone {
 
     fn _set_position(&mut self, blockctr: u32);
 
+    fn _set_byte_position(&mut self, pos: u64) -> Result<(), UnknownCryptoError>;
+
     fn _position(&self) -> u32;
+
+    fn _byte_position(&mut self) -> u64;
 
     fn _xor_keystream_into(&mut self, bytes: &mut [u8]) -> Result<(), UnknownCryptoError>;
 }
@@ -52,7 +58,7 @@ pub struct StreamcipherTester<SC: TestableStreamCipher> {
 }
 
 impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
-    pub fn run_tests<const BS: usize, const MAX_POSITION: u32>(
+    pub fn run_tests<const BS: usize, const MAX_POSITION: u32, const MAX_BYTES: u64>(
         sk: &[u8],
         n: &[u8],
         plaintext: Option<&[u8]>,
@@ -70,6 +76,8 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         Self::next_producable_ok_max::<MAX_POSITION>(&mut ctx.clone());
         Self::xor_keystream_empty_ok(&mut ctx.clone());
         Self::last_keystream_block_exhausts::<BS, MAX_POSITION>(&mut ctx.clone());
+        Self::bytes_pos_keystream_rem::<MAX_BYTES>(&mut ctx.clone());
+        Self::set_bytes_pos_err_past_max::<MAX_BYTES>(&mut ctx.clone());
 
         #[cfg(any(feature = "alloc", feature = "safe_api"))]
         {
@@ -121,6 +129,14 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         assert!(ctx._xor_keystream_into(&mut [0u8; 0]).is_ok());
     }
 
+    fn bytes_pos_keystream_rem<const MAX_BYTES: u64>(ctx: &mut SC) {
+        assert_eq!(ctx._keystream_remaining() + ctx._byte_position(), MAX_BYTES);
+    }
+
+    fn set_bytes_pos_err_past_max<const MAX_BYTES: u64>(ctx: &mut SC) {
+        assert!(ctx._set_byte_position(MAX_BYTES + 1).is_err());
+    }
+
     fn next_producable_ok_max<const MAX: u32>(ctx: &mut SC) {
         ctx._set_position(MAX - 2);
         assert!(ctx._next_producible().is_ok());
@@ -148,6 +164,7 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         ctx._set_position(0);
         ctx._xor_keystream_into(&mut inputdst).unwrap();
         assert_eq!(&inputdst, &input);
+        assert_eq!(ctx._byte_position() as usize, input.len() - 1);
     }
 
     #[cfg(feature = "safe_api")]
@@ -291,28 +308,28 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         assert!(!ctx._is_exhausted());
 
         // Use u32::MAX to fill the last half block
-        let mut ctx = ctx.clone();
-        ctx._set_position(MAX - 1);
-        let mut twoblocks_min = vec![0u8; (MAX + (MAX / 2)) as usize];
-        assert!(ctx._xor_keystream_into(&mut twoblocks_min).is_ok());
-        assert!(ctx._is_exhausted());
-        assert_eq!(ctx._keystream_remaining(), 0);
+        let mut wctx = ctx.clone();
+        wctx._set_position(MAX - 1);
+        let mut twoblocks_min = vec![0u8; BS + (BS / 2)];
+        assert!(wctx._xor_keystream_into(&mut twoblocks_min).is_ok());
+        assert!(wctx._is_exhausted());
+        assert_eq!(wctx._keystream_remaining(), 0);
 
         // Use u32::MAX to fill the full last blocks
-        let mut ctx = ctx.clone();
-        ctx._set_position(MAX - 1);
-        let mut twoblocks_mid = vec![0u8; (MAX * 2) as usize];
-        assert!(ctx._xor_keystream_into(&mut twoblocks_mid).is_ok());
-        assert!(ctx._is_exhausted());
-        assert_eq!(ctx._keystream_remaining(), 0);
+        let mut wctx = ctx.clone();
+        wctx._set_position(MAX - 1);
+        let mut twoblocks_mid = vec![0u8; BS * 2];
+        assert!(wctx._xor_keystream_into(&mut twoblocks_mid).is_ok());
+        assert!(wctx._is_exhausted());
+        assert_eq!(wctx._keystream_remaining(), 0);
 
         // ERR: Do not move past two full blocks
-        let mut ctx = ctx.clone();
-        ctx._set_position(u32::MAX - 1);
-        let mut twoblocks_max = vec![0u8; ((MAX * 2) + 1) as usize];
-        assert!(ctx._xor_keystream_into(&mut twoblocks_max).is_err());
-        assert!(ctx._is_exhausted());
-        assert_eq!(ctx._keystream_remaining(), 0);
+        let mut wctx = ctx.clone();
+        wctx._set_position(u32::MAX - 1);
+        let mut twoblocks_max = vec![0u8; (BS * 2) + 1];
+        assert!(wctx._xor_keystream_into(&mut twoblocks_max).is_err());
+        assert!(wctx._is_exhausted());
+        assert_eq!(wctx._keystream_remaining(), 0);
 
         assert_eq!(&twoblocks_min, &twoblocks_mid[..twoblocks_min.len()]);
         assert_eq!(&twoblocks_mid, &twoblocks_max[..twoblocks_mid.len()]);
@@ -356,13 +373,28 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
             one_shot._xor_keystream_into(&mut other_data).unwrap();
 
             assert_eq!(data, other_data);
-            assert_eq!(one_shot._is_exhausted(), one_shot._is_exhausted());
-            assert_eq!(one_shot._position(), one_shot._position());
+            assert_eq!(state._is_exhausted(), one_shot._is_exhausted());
+            assert_eq!(state._position(), one_shot._position());
             assert_eq!(
-                one_shot._keystream_remaining(),
+                state._keystream_remaining(),
                 one_shot._keystream_remaining()
             );
-            assert_eq!(one_shot._is_exhausted(), one_shot._is_exhausted());
+            assert_eq!(
+                state._keystream_remaining(),
+                SC::MAX_KEYSTREAM_BYTES - data.len() as u64,
+            );
+            assert_eq!(
+                one_shot._keystream_remaining(),
+                SC::MAX_KEYSTREAM_BYTES - other_data.len() as u64,
+            );
+
+            if !data.is_empty() {
+                assert_eq!(state._byte_position() as usize, data.len() - 1);
+                assert_eq!(one_shot._byte_position() as usize, other_data.len() - 1);
+            } else {
+                assert_eq!(state._byte_position() as usize, 0);
+                assert_eq!(one_shot._byte_position() as usize, 0);
+            }
         }
     }
 }

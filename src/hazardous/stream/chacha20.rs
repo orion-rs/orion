@@ -116,6 +116,8 @@ pub const CHACHA_BLOCKSIZE: usize = 64;
 const HCHACHA_OUTSIZE: usize = 32;
 /// The nonce size for HChaCha20.
 pub(crate) const HCHACHA_NONCESIZE: usize = 16;
+/// Maximum amount of keystream bytes that can be generated for a single key/nonce pair.
+pub const MAX_KEYSTREAM_BYTES: u64 = (u32::MAX as u64 + 1) * CHACHA_BLOCKSIZE as u64;
 
 #[derive(Debug)]
 /// Marker type for ChaCha20 key. See [`SecretKey`] type for convenience.
@@ -205,6 +207,7 @@ macro_rules! DOUBLE_ROUND {
 pub struct ChaCha20 {
     state: [U32x4; 4],
     pub(crate) keystreamblock: [u8; CHACHA_BLOCKSIZE],
+    blockoffset: u8,
     streampos: u32,
     /// Flag to track if the final block counter has been used.
     /// If we didn't track, we could end up writing the same keystream
@@ -221,8 +224,9 @@ impl Debug for ChaCha20 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "{} state: {{***OMITTED***}}, keystreamblock: {{***OMITTED***}}, streampos: {:?}, exhausted: {:?}",
+            "{} state: {{***OMITTED***}}, keystreamblock: {{***OMITTED***}}, blockoffset: {:?}, streampos: {:?}, exhausted: {:?}",
             stringify!(ChaCha20),
+            self.blockoffset,
             self.streampos,
             self.exhausted,
         )
@@ -275,6 +279,7 @@ impl ChaCha20 {
         Self {
             state: [r0, r1, r2, r3],
             keystreamblock: [0u8; CHACHA_BLOCKSIZE],
+            blockoffset: 0,
             streampos: 0,
             exhausted: false,
         }
@@ -374,42 +379,93 @@ impl ChaCha20 {
         }
     }
 
-    /// Given the current [`Self::position`], determine how many keystream
+    /// Given the current [`Self::byte_position`], determine how many keystream
     /// bytes can be generated from here on out. If [`Self::is_exhausted()`], then
-    /// this gives `0`.
+    /// this gives `0` if no leftover.
     pub fn keystream_remaining(&self) -> u64 {
         debug_assert!((u32::MAX as u64 + 1) * (CHACHA_BLOCKSIZE as u64) < u64::MAX);
+        let leftover: u64 = if self.blockoffset == 0 {
+            0
+        } else {
+            (CHACHA_BLOCKSIZE - self.blockoffset as usize) as u64
+        };
+
+        // If the keystream is exhausted, the only possible keystream
+        // left is `leftover`.
         if self.is_exhausted() {
-            return 0;
+            return leftover;
         }
 
+        // In case there is any leftover, then we have generated
+        // keystream block exactly at streampos, which has then
+        // subsequently been bumped in keystream_block(), so
+        // leftover is the bytes from streampos-1.
         let max: u64 = (u32::MAX as u64) + 1; // (0..=u32::MAX)
-        (max - (self.streampos as u64)) * CHACHA_BLOCKSIZE as u64
+        let remblocks: u64 = max - (self.streampos as u64);
+        let rembytes: u64 = remblocks * CHACHA_BLOCKSIZE as u64;
+
+        rembytes + leftover
     }
 
-    /// Set the position/counter of the [`ChaCha20`] state.
+    /// Set the position/counter of the [`ChaCha20`] state, to a specific block.
+    ///
+    /// # NOTE:
+    /// This resets the internal offset tracker, which keeps track of unused
+    /// but already generated keystream bytes, for the [`Self::position()`]
+    /// prior to calling this function. To set position in terms of specific
+    /// bytes across the entire keystream, use
+    ///
     /// This is equivalent to seeking ahead in the keystream output generated,
-    /// for a given pair of [`SecretKey`] and [`Nonce`].
+    /// on a per-block ([`CHACHA_BLOCKSIZE`]) basis.
     pub fn set_position(&mut self, blockctr: u32) {
         self.streampos = blockctr;
+        self.blockoffset = 0;
         self.state[3].0 = self.streampos;
     }
 
-    /// Return the current position within the keystream.
-    /// This is what will be used when generating the next keystream block.
+    /// Set the byte position within the [`ChaCha20`] state. This will set the correct
+    /// state block counter internally and any offset if needed.
+    pub fn set_byte_position(&mut self, pos: u64) -> Result<(), UnknownCryptoError> {
+        if pos >= MAX_KEYSTREAM_BYTES {
+            return Err(UnknownCryptoError);
+        }
+
+        let block = pos / CHACHA_BLOCKSIZE as u64;
+        debug_assert!((0..=u32::MAX).contains(&(block as u32)));
+        let offset = pos % CHACHA_BLOCKSIZE as u64;
+        debug_assert!((0..=CHACHA_BLOCKSIZE).contains(&(offset as usize)));
+        self.set_position(block as u32);
+
+        if offset > 0 {
+            self.next_producible()?;
+
+            self.keystream_block();
+            self.blockoffset = offset as u8;
+        }
+
+        Ok(())
+    }
+
+    /// Get the current position/counter of the [`ChaCha20`] state, as a block.
     pub fn position(&self) -> u32 {
         self.streampos
     }
 
+    /// Get the current position/counter of the [`ChaCha20`] state, as a byte-index.
+    pub fn byte_position(&mut self) -> u64 {
+        if self.blockoffset == 0 {
+            return self.streampos as u64 * CHACHA_BLOCKSIZE as u64;
+        }
+
+        if self.exhausted {
+            return self.streampos as u64 * CHACHA_BLOCKSIZE as u64 + self.blockoffset as u64;
+        }
+
+        (self.streampos - 1) as u64 * CHACHA_BLOCKSIZE as u64 + self.blockoffset as u64
+    }
+
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Produce keystream blocks, based on the [`ChaCha20::position()`], and XOR into `bytes`.
-    ///
-    /// # NOTE:
-    /// When explicitly generating keystream blocks, e.g. with a combination of [`ChaCha20::set_position()`],
-    /// and this one, no leftover handling is performed. If `bytes` is less than [`CHACHA_BLOCKSIZE`] or not
-    /// a multiple thereof, the leftover bytes are not saved. This function will always generate a keystream block
-    /// based on the current position and if `bytes` cannot hold all [`CHACHA_BLOCKSIZE`] bytes, then they are "forgotten".
-    ///
+    /// Produce keystream blocks, based on the [`ChaCha20::byte_position()`], and XOR into `bytes`.
     ///
     /// # SECURITY:
     /// If this returns [`UnknownCryptoError`], then not all `bytes` have been processed.
@@ -418,27 +474,50 @@ impl ChaCha20 {
         if bytes.is_empty() {
             return Ok(());
         }
-        if self.exhausted {
-            return Err(UnknownCryptoError);
-        }
 
         // https://github.com/orion-rs/orion/issues/308 fix was to not copy
-        // plaintext into out-buffer. This new API means there's only one.
+        // plaintext into out-buffer. This new API means there's only one buffer.
         // Here `bytes` contain plaintext, so now it is user-respnsibility
         // to ensure to zero out plaintext bytes if the function fails.
 
-        let mut parts = bytes.chunks_mut(CHACHA_BLOCKSIZE).peekable();
-        while let Some(block) = parts.next() {
-            self.keystream_block();
-            xor_slices(&self.keystreamblock, block);
+        let mut bytes = bytes;
+        // blockoffset should never reach CHACHA_BLOCKSIZE exactly, as this indicates
+        // the entire keystream has been consumed, a new one is generated and blockoffset
+        // it reset to 0.
+        debug_assert!((0..CHACHA_BLOCKSIZE).contains(&(self.blockoffset as usize)));
 
-            // The only time we don't want to error on this check
-            // is when we have self.streampos == u32::MAX and there's
-            // at most CHACHA_BLOCKSIZE amount of bytes to process.
-            // self.exhausted will prevent this from happening more than once.
-            if parts.peek().is_some() {
-                self.next_producible()?;
-            }
+        if self.blockoffset > 0 {
+            // SECURITY: This is the only time we don't check for self.exhausted/self.next_producible().
+            // If the keystream is exhausted, but we etner this branch, it means we have unused keystream
+            // leftover. This unused rem is safe to use. This function should only ever execute once after
+            // self.exhausted == true.
+            let offset = self.blockoffset as usize;
+            let want = core::cmp::min(CHACHA_BLOCKSIZE - offset, bytes.len());
+            xor_slices(
+                &self.keystreamblock[offset..offset + want],
+                &mut bytes[..want],
+            );
+
+            bytes = &mut bytes[want..];
+            self.blockoffset = ((offset + want) & (CHACHA_BLOCKSIZE - 1)) as u8;
+        }
+
+        while bytes.len() >= CHACHA_BLOCKSIZE {
+            self.next_producible()?;
+
+            self.keystream_block();
+            xor_slices(&self.keystreamblock, bytes);
+            bytes = &mut bytes[CHACHA_BLOCKSIZE..];
+        }
+
+        if !bytes.is_empty() {
+            debug_assert!(bytes.len() < CHACHA_BLOCKSIZE);
+            self.next_producible()?;
+
+            self.keystream_block();
+            let offset = bytes.len();
+            xor_slices(&self.keystreamblock[..offset], bytes);
+            self.blockoffset = offset as u8;
         }
 
         Ok(())
@@ -502,7 +581,7 @@ mod public {
         assert_eq!(ctx.position(), 3);
         assert_eq!(
             ctx.keystream_remaining(),
-            crate::hazardous::aead::chacha20poly1305::P_MAX - (CHACHA_BLOCKSIZE as u64 * 2)
+            MAX_KEYSTREAM_BYTES - (CHACHA_BLOCKSIZE * 2 + CHACHA_BLOCKSIZE / 2) as u64
         );
     }
 
@@ -582,16 +661,25 @@ mod public {
         fn _xor_keystream_into(&mut self, bytes: &mut [u8]) -> Result<(), UnknownCryptoError> {
             self.xor_keystream_into(bytes)
         }
+
+        fn _set_byte_position(&mut self, pos: u64) -> Result<(), UnknownCryptoError> {
+            self.set_byte_position(pos)
+        }
+
+        fn _byte_position(&mut self) -> u64 {
+            self.byte_position()
+        }
+
+        const MAX_KEYSTREAM_BYTES: u64 = MAX_KEYSTREAM_BYTES;
     }
 
     #[test]
     fn test_streamcipher() {
-        StreamcipherTester::<ChaCha20>::run_tests::<CHACHA_BLOCKSIZE, { u32::MAX }>(
-            &ZERO_KEY,
-            &ZERO_IETF_NONCE,
-            None,
-            None,
-        );
+        StreamcipherTester::<ChaCha20>::run_tests::<
+            CHACHA_BLOCKSIZE,
+            { u32::MAX },
+            MAX_KEYSTREAM_BYTES,
+        >(&ZERO_KEY, &ZERO_IETF_NONCE, None, None);
     }
 
     #[quickcheck]
@@ -599,12 +687,11 @@ mod public {
     fn prop_streamcipher_interface(input: Vec<u8>) -> bool {
         let sk = SecretKey::generate().unwrap();
         let n = Nonce::from(ZERO_IETF_NONCE);
-        StreamcipherTester::<ChaCha20>::run_tests::<CHACHA_BLOCKSIZE, { u32::MAX }>(
-            sk.unprotected_as_ref(),
-            n.as_ref(),
-            Some(&input),
-            None,
-        );
+        StreamcipherTester::<ChaCha20>::run_tests::<
+            CHACHA_BLOCKSIZE,
+            { u32::MAX },
+            MAX_KEYSTREAM_BYTES,
+        >(sk.unprotected_as_ref(), n.as_ref(), Some(&input), None);
 
         true
     }
@@ -1079,6 +1166,7 @@ mod private {
                     U32x4(0, 0, 0, 0),
                 ],
                 keystreamblock: [0u8; CHACHA_BLOCKSIZE],
+                blockoffset: 0u8,
                 streampos: (u32::MAX - 128),
                 exhausted: false,
             };
@@ -1118,6 +1206,7 @@ mod private {
                     U32x4(0, 0, 0, 0),
                 ],
                 keystreamblock: [0u8; CHACHA_BLOCKSIZE],
+                blockoffset: 0u8,
                 streampos: (u32::MAX - 2),
                 exhausted: false,
             };
