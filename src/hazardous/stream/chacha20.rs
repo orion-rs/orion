@@ -41,6 +41,7 @@
 //!   moves [`ChaCha20`] into an exhausted state, which is non-resettable. In this case, the key/nonce pair
 //!   has generated all possible keystream bytes and is thus not safe to use further.
 //!   This can be checked with [`ChaCha20::is_exhausted()`].
+//! - If [`ChaCha20::set_byte_position()`] is called with a `pos` that is equal to or greater than [`MAX_KEYSTREAM_BYTES`].
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -91,6 +92,7 @@
 //! [`ChaCha20::position()`]: chacha20::ChaCha20::position()
 //! [`ChaCha20::is_exhausted()`]: chacha20::ChaCha20::is_exhausted()
 //! [`ChaCha20::next_producible()`]: chacha20::ChaCha20::next_producible()
+//! [`ChaCha20::set_byte_position()`]: chacha20::ChaCha20::set_byte_position()
 
 //! [RFC]: https://tools.ietf.org/html/rfc8439
 use crate::GenerateSecret;
@@ -374,8 +376,8 @@ impl ChaCha20 {
         if let Some(nextpos) = self.streampos.checked_add(1) {
             self.streampos = nextpos;
         } else {
-            assert!(self.exhausted);
-            assert_eq!(self.streampos, u32::MAX);
+            debug_assert!(self.exhausted);
+            debug_assert_eq!(self.streampos, u32::MAX);
         }
     }
 
@@ -453,6 +455,10 @@ impl ChaCha20 {
 
     /// Get the current position/counter of the [`ChaCha20`] state, as a byte-index.
     pub fn byte_position(&mut self) -> u64 {
+        if self.exhausted && self.blockoffset == 0 {
+            return MAX_KEYSTREAM_BYTES;
+        }
+
         if self.blockoffset == 0 {
             return self.streampos as u64 * CHACHA_BLOCKSIZE as u64;
         }

@@ -87,6 +87,7 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
             Self::xor_keystream_seek_ahead::<BS>(&mut ctx.clone());
             Self::test_xor_keystream_non_blocksize_aligned::<BS>(&mut ctx.clone());
             Self::test_xor_keystream_last_two_full_blocks::<BS, MAX_POSITION>(&mut ctx.clone());
+            Self::test_byte_position_at_exhaust::<BS, MAX_POSITION>(&mut ctx.clone());
 
             if let Some(pt) = plaintext {
                 Self::xor_keystream_roundtrip(&mut ctx.clone(), pt);
@@ -161,7 +162,8 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         let mut inputdst = input.to_vec();
         ctx._xor_keystream_into(&mut inputdst).unwrap();
 
-        if !input.is_empty() {
+        if !input.is_empty() && input.len() > 4 {
+            // no random collisions on low-length things
             assert_ne!(&inputdst, &input);
         }
 
@@ -408,5 +410,63 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
                 assert_eq!(one_shot._byte_position() as usize, 0);
             }
         }
+    }
+
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    fn test_byte_position_at_exhaust<const BS: usize, const MAX: u32>(ctx: &mut SC) {
+        let mut wctx = ctx.clone();
+        wctx._set_position(MAX);
+        let mut block = [0u8; BS];
+        wctx._xor_keystream_into(&mut block).unwrap();
+
+        assert!(wctx._is_exhausted());
+        assert_eq!(wctx._keystream_remaining(), 0);
+        assert_eq!(wctx._byte_position(), SC::MAX_KEYSTREAM_BYTES);
+        assert_eq!(
+            wctx._byte_position() + wctx._keystream_remaining(),
+            SC::MAX_KEYSTREAM_BYTES
+        );
+
+        let mut wctx = ctx.clone();
+        wctx._set_position(MAX);
+        assert_eq!(
+            wctx._byte_position(),
+            SC::MAX_KEYSTREAM_BYTES - CHACHA_BLOCKSIZE as u64
+        );
+        let mut block = [0u8; 41];
+        wctx._xor_keystream_into(&mut block).unwrap();
+        assert!(wctx._is_exhausted());
+        assert_eq!(wctx._keystream_remaining(), CHACHA_BLOCKSIZE as u64 - 41);
+        assert_eq!(wctx._byte_position(), SC::MAX_KEYSTREAM_BYTES - 23);
+
+        let mut blockrem = [0u8; 23];
+        wctx._xor_keystream_into(&mut blockrem).unwrap();
+        assert!(wctx._is_exhausted());
+        assert_eq!(wctx._keystream_remaining(), 0);
+        assert_eq!(wctx._byte_position(), SC::MAX_KEYSTREAM_BYTES);
+
+        let mut wctx = ctx.clone();
+        wctx._set_byte_position(SC::MAX_KEYSTREAM_BYTES - 1)
+            .unwrap();
+        let mut byte = [0u8; 1];
+        wctx._xor_keystream_into(&mut byte).unwrap();
+        assert!(wctx._is_exhausted());
+        assert_eq!(wctx._keystream_remaining(), 0);
+        assert_eq!(wctx._byte_position(), SC::MAX_KEYSTREAM_BYTES);
+
+        let mut wctx = ctx.clone();
+        wctx._set_position(MAX - 1);
+        let mut blocks = vec![0u8; BS + BS / 2];
+        wctx._xor_keystream_into(&mut blocks).unwrap();
+        assert!(wctx._is_exhausted());
+        assert_eq!(wctx._keystream_remaining(), (BS / 2) as u64);
+        assert_eq!(
+            wctx._byte_position(),
+            SC::MAX_KEYSTREAM_BYTES - (BS / 2) as u64
+        );
+        assert_eq!(
+            wctx._byte_position() + wctx._keystream_remaining(),
+            SC::MAX_KEYSTREAM_BYTES
+        );
     }
 }

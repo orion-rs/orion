@@ -34,6 +34,7 @@
 //!   moves [`XChaCha20`] into an exhausted state, which is non-resettable. In this case, the key/nonce pair
 //!   has generated all possible keystream bytes and is thus not safe to use further.
 //!   This can be checked with [`XChaCha20::is_exhausted()`].
+//! - If [`XChaCha20::set_byte_position()`] is called with a `pos` that is equal to or greater than [`MAX_KEYSTREAM_BYTES`].
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -83,10 +84,12 @@
 //! [`XChaCha20::position()`]: xchacha20::XChaCha20::position()
 //! [`XChaCha20::is_exhausted()`]: xchacha20::XChaCha20::is_exhausted()
 //! [`XChaCha20::next_producible()`]: xchacha20::XChaCha20::next_producible()
+//! [`XChaCha20::set_byte_position()`]: xchacha20::XChaCha20::set_byte_position()
 
 #[cfg(feature = "safe_api")]
 use crate::generics::sealed::Data;
 pub use crate::hazardous::stream::chacha20::CHACHA_BLOCKSIZE;
+pub use crate::hazardous::stream::chacha20::MAX_KEYSTREAM_BYTES;
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::{
     errors::UnknownCryptoError,
@@ -174,8 +177,7 @@ impl XChaCha20 {
 
     /// Check that we can produce one more keystream block, given the current state.
     ///
-    /// Return error if advancing the internal state position by one would overflow [`u32::MAX`],
-    /// or the keystream has been exhausted (see [`Self::is_exhausted`]).
+    /// Return error if [`Self::is_exhausted()`].
     pub fn next_producible(&self) -> Result<(), UnknownCryptoError> {
         self.chacha20.next_producible()
     }
