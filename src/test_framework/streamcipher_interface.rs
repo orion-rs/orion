@@ -75,6 +75,8 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         {
             Self::return_err_if_next_overflows::<BS, MAX_POSITION>(&mut ctx.clone());
             Self::xor_keystream_seek_ahead::<BS>(&mut ctx.clone());
+            Self::test_xor_keystream_non_blocksize_aligned::<BS>(&mut ctx.clone());
+            Self::test_xor_keystream_last_two_full_blocks::<BS, MAX_POSITION>(&mut ctx.clone());
 
             if let Some(pt) = plaintext {
                 Self::xor_keystream_roundtrip(&mut ctx.clone(), pt);
@@ -281,5 +283,86 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         assert_eq!(&dst1, &input);
         assert_eq!(&dst2, &input);
         assert_eq!(&dst1, &dst2);
+    }
+
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    fn test_xor_keystream_last_two_full_blocks<const BS: usize, const MAX: u32>(ctx: &mut SC) {
+        assert_eq!(ctx._position(), 0);
+        assert!(!ctx._is_exhausted());
+
+        // Use u32::MAX to fill the last half block
+        let mut ctx = ctx.clone();
+        ctx._set_position(MAX - 1);
+        let mut twoblocks_min = vec![0u8; (MAX + (MAX / 2)) as usize];
+        assert!(ctx._xor_keystream_into(&mut twoblocks_min).is_ok());
+        assert!(ctx._is_exhausted());
+        assert_eq!(ctx._keystream_remaining(), 0);
+
+        // Use u32::MAX to fill the full last blocks
+        let mut ctx = ctx.clone();
+        ctx._set_position(MAX - 1);
+        let mut twoblocks_mid = vec![0u8; (MAX * 2) as usize];
+        assert!(ctx._xor_keystream_into(&mut twoblocks_mid).is_ok());
+        assert!(ctx._is_exhausted());
+        assert_eq!(ctx._keystream_remaining(), 0);
+
+        // ERR: Do not move past two full blocks
+        let mut ctx = ctx.clone();
+        ctx._set_position(u32::MAX - 1);
+        let mut twoblocks_max = vec![0u8; ((MAX * 2) + 1) as usize];
+        assert!(ctx._xor_keystream_into(&mut twoblocks_max).is_err());
+        assert!(ctx._is_exhausted());
+        assert_eq!(ctx._keystream_remaining(), 0);
+
+        assert_eq!(&twoblocks_min, &twoblocks_mid[..twoblocks_min.len()]);
+        assert_eq!(&twoblocks_mid, &twoblocks_max[..twoblocks_mid.len()]);
+        assert_eq!(twoblocks_max[twoblocks_max.len() - 1], 0);
+    }
+
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    /// This test should be identical in intention to the
+    /// `StreamingContextConsistencyTester::incremental_processing_with_leftover()`
+    fn test_xor_keystream_non_blocksize_aligned<const BS: usize>(ctx: &mut SC) {
+        assert_eq!(ctx._position(), 0);
+
+        for len in 0..BS * 4 {
+            let mut data = vec![0u8; len];
+            let mut state = ctx.clone();
+            let mut other_data: Vec<u8> = Vec::new();
+
+            other_data.extend_from_slice(&data);
+            state._xor_keystream_into(&mut data).unwrap();
+
+            if data.len() > BS {
+                let data_prelen = data.len();
+                data.extend_from_slice(b"");
+                state._xor_keystream_into(&mut data[data_prelen..]).unwrap();
+                other_data.extend_from_slice(b"");
+            }
+            if data.len() > BS * 2 {
+                let data_prelen = data.len();
+                data.extend_from_slice(b"Extra");
+                state._xor_keystream_into(&mut data[data_prelen..]).unwrap();
+                other_data.extend_from_slice(b"Extra");
+            }
+            if data.len() > BS * 3 {
+                let data_prelen = data.len();
+                data.extend_from_slice(&[0u8; 256]);
+                state._xor_keystream_into(&mut data[data_prelen..]).unwrap();
+                other_data.extend_from_slice(&[0u8; 256]);
+            }
+
+            let mut one_shot = ctx.clone();
+            one_shot._xor_keystream_into(&mut other_data).unwrap();
+
+            assert_eq!(data, other_data);
+            assert_eq!(one_shot._is_exhausted(), one_shot._is_exhausted());
+            assert_eq!(one_shot._position(), one_shot._position());
+            assert_eq!(
+                one_shot._keystream_remaining(),
+                one_shot._keystream_remaining()
+            );
+            assert_eq!(one_shot._is_exhausted(), one_shot._is_exhausted());
+        }
     }
 }
