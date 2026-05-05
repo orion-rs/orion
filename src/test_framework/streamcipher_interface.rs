@@ -25,6 +25,8 @@ use core::marker::PhantomData;
 
 #[cfg(all(feature = "alloc", not(feature = "safe_api")))]
 use alloc::vec;
+#[cfg(all(feature = "alloc", not(feature = "safe_api")))]
+use alloc::vec::Vec;
 
 pub trait TestableStreamCipher: Sized + Clone {
     const MAX_KEYSTREAM_BYTES: u64;
