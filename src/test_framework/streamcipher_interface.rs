@@ -135,6 +135,8 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
 
     fn set_bytes_pos_err_past_max<const MAX_BYTES: u64>(ctx: &mut SC) {
         assert!(ctx._set_byte_position(MAX_BYTES + 1).is_err());
+        assert!(ctx._set_byte_position(MAX_BYTES).is_err()); // 0-indexed
+        assert!(ctx._set_byte_position(MAX_BYTES - 1).is_ok());
     }
 
     fn next_producable_ok_max<const MAX: u32>(ctx: &mut SC) {
@@ -315,6 +317,13 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         assert!(wctx._is_exhausted());
         // Still has 32 bytes leftover from the last block.
         assert_eq!(wctx._keystream_remaining(), (BS / 2) as u64);
+        let mut consume_leftover = vec![0u8; BS / 2];
+        assert!(wctx._xor_keystream_into(&mut consume_leftover).is_ok());
+        assert!(wctx._is_exhausted());
+        // Consume the leftover keystream of the last block.
+        assert_eq!(wctx._keystream_remaining(), 0);
+        let mut err = [0u8; 1];
+        assert!(wctx._xor_keystream_into(&mut err).is_err());
 
         // Use u32::MAX to fill the full last blocks
         let mut wctx = ctx.clone();

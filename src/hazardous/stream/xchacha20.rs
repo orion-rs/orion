@@ -186,9 +186,16 @@ impl XChaCha20 {
         self.chacha20.keystream_remaining()
     }
 
-    /// Set the position/counter of the [`XChaCha20`] state.
+    /// Set the position/counter of the [`XChaCha20`] state, to a specific block.
+    ///
+    /// # NOTE:
+    /// This resets the internal offset tracker, which keeps track of unused
+    /// but already generated keystream bytes, for the [`Self::position()`]
+    /// prior to calling this function. To set position in terms of specific
+    /// bytes across the entire keystream, use
+    ///
     /// This is equivalent to seeking ahead in the keystream output generated,
-    /// for a given pair of [`SecretKey`] and [`Nonce`].
+    /// on a per-block ([`CHACHA_BLOCKSIZE`]) basis.
     pub fn set_position(&mut self, blockctr: u32) {
         self.chacha20.set_position(blockctr);
     }
@@ -199,25 +206,18 @@ impl XChaCha20 {
         self.chacha20.set_byte_position(pos)
     }
 
-    /// Get the current position/counter of the [`ChaCha20`] state, as a block.
+    /// Get the current position/counter of the [`XChaCha20`] state, as a block.
     pub fn position(&self) -> u32 {
         self.chacha20.position()
     }
 
-    /// Get the current position/counter of the [`ChaCha20`] state, as a byte-index.
+    /// Get the current position/counter of the [`XChaCha20`] state, as a byte-index.
     pub fn byte_position(&mut self) -> u64 {
         self.chacha20.byte_position()
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Produce keystream blocks, based on the [`XChaCha20::position()`], and XOR into `bytes`.
-    ///
-    /// # NOTE:
-    /// When explicitly generating keystream blocks, e.g. with a combination of [`XChaCha20::set_position()`],
-    /// and this one, no leftover handling is performed. If `bytes` is less than [`CHACHA_BLOCKSIZE`] or not
-    /// a multiple thereof, the leftover bytes are not saved. This function will always generate a keystream block
-    /// based on the current position and if `bytes` cannot hold all [`CHACHA_BLOCKSIZE`] bytes, then they are "forgotten".
-    ///
+    /// Produce keystream blocks, based on the [`XChaCha20::byte_position()`], and XOR into `bytes`.
     ///
     /// # SECURITY:
     /// If this returns [`UnknownCryptoError`], then not all `bytes` have been processed.
