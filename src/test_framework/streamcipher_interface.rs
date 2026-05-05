@@ -164,7 +164,7 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         ctx._set_position(0);
         ctx._xor_keystream_into(&mut inputdst).unwrap();
         assert_eq!(&inputdst, &input);
-        assert_eq!(ctx._byte_position() as usize, input.len() - 1);
+        assert_eq!(ctx._byte_position() as usize, input.len());
     }
 
     #[cfg(feature = "safe_api")]
@@ -313,7 +313,8 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
         let mut twoblocks_min = vec![0u8; BS + (BS / 2)];
         assert!(wctx._xor_keystream_into(&mut twoblocks_min).is_ok());
         assert!(wctx._is_exhausted());
-        assert_eq!(wctx._keystream_remaining(), 0);
+        // Still has 32 bytes leftover from the last block.
+        assert_eq!(wctx._keystream_remaining(), (BS / 2) as u64);
 
         // Use u32::MAX to fill the full last blocks
         let mut wctx = ctx.clone();
@@ -389,8 +390,8 @@ impl<SC: TestableStreamCipher> StreamcipherTester<SC> {
             );
 
             if !data.is_empty() {
-                assert_eq!(state._byte_position() as usize, data.len() - 1);
-                assert_eq!(one_shot._byte_position() as usize, other_data.len() - 1);
+                assert_eq!(state._byte_position() as usize, data.len());
+                assert_eq!(one_shot._byte_position() as usize, other_data.len());
             } else {
                 assert_eq!(state._byte_position() as usize, 0);
                 assert_eq!(one_shot._byte_position() as usize, 0);
