@@ -130,7 +130,7 @@ impl serde::Serialize for Tag {
     where
         S: serde::ser::Serializer,
     {
-        let bytes: &[u8] = &self.data.as_ref();
+        let bytes: &[u8] = self.data.as_ref();
         bytes.serialize(serializer)
     }
 }

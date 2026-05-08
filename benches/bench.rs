@@ -116,20 +116,17 @@ mod aead {
         let nonce = chacha20poly1305::Nonce::try_from(&[0u8; 12]).unwrap();
 
         for size in INPUT_SIZES.iter() {
-            let input = vec![0u8; *size];
-            let mut out = vec![0u8; input.len() + 16];
+            let mut bytes = vec![0u8; *size];
 
             group.throughput(Throughput::Bytes(*size as u64));
-            group.bench_with_input(
-                BenchmarkId::new("encrypt", *size),
-                &input,
-                |b, input_message| {
-                    b.iter(|| {
-                        chacha20poly1305::seal(&key, &nonce, &input_message, None, &mut out)
-                            .unwrap()
-                    })
-                },
-            );
+            group.bench_function(BenchmarkId::new("encrypt", *size), |b| {
+                b.iter(|| {
+                    let _tag = chacha20poly1305::ChaCha20Poly1305::seal_inplace(
+                        &key, &nonce, None, &mut bytes,
+                    )
+                    .unwrap();
+                })
+            });
         }
     }
 
@@ -139,20 +136,17 @@ mod aead {
         let nonce = xchacha20poly1305::Nonce::generate().unwrap();
 
         for size in INPUT_SIZES.iter() {
-            let input = vec![0u8; *size];
-            let mut out = vec![0u8; input.len() + 16];
+            let mut bytes = vec![0u8; *size];
 
             group.throughput(Throughput::Bytes(*size as u64));
-            group.bench_with_input(
-                BenchmarkId::new("encrypt", *size),
-                &input,
-                |b, input_message| {
-                    b.iter(|| {
-                        xchacha20poly1305::seal(&key, &nonce, &input_message, None, &mut out)
-                            .unwrap()
-                    })
-                },
-            );
+            group.bench_function(BenchmarkId::new("encrypt", *size), |b| {
+                b.iter(|| {
+                    let _tag = xchacha20poly1305::XChaCha20Poly1305::seal_inplace(
+                        &key, &nonce, None, &mut bytes,
+                    )
+                    .unwrap();
+                })
+            });
         }
     }
 
@@ -246,24 +240,24 @@ mod hash {
 }
 
 mod stream {
+    use orion::hazardous::stream::{chacha20::ChaCha20, xchacha20::XChaCha20};
+
     use super::*;
 
     pub fn bench_chacha20(c: &mut Criterion) {
         let mut group = c.benchmark_group("ChaCha20");
-        let key = chacha20poly1305::SecretKey::generate().unwrap();
-        let nonce = chacha20poly1305::Nonce::from([0u8; 12]);
+        let key = chacha20::SecretKey::generate().unwrap();
+        let nonce = chacha20::Nonce::from([0u8; 12]);
+        let ctx = ChaCha20::new(&key, &nonce);
 
         for size in INPUT_SIZES.iter() {
-            let input = vec![0u8; *size];
-            let mut out = vec![0u8; input.len()];
+            let mut out = vec![0u8; *size];
+            let mut wctx = ctx.clone();
 
             group.throughput(Throughput::Bytes(*size as u64));
-            group.bench_with_input(
+            group.bench_function(
                 BenchmarkId::new("xor-stream", *size),
-                &input,
-                |b, input_message| {
-                    b.iter(|| chacha20::encrypt(&key, &nonce, 0, &input_message, &mut out).unwrap())
-                },
+                |b: &mut Bencher<'_>| b.iter(|| wctx.xor_keystream_into(&mut out).unwrap()),
             );
         }
     }
@@ -272,20 +266,16 @@ mod stream {
         let mut group = c.benchmark_group("XChaCha20");
         let key = xchacha20::SecretKey::generate().unwrap();
         let nonce = xchacha20::Nonce::generate().unwrap();
+        let ctx = XChaCha20::new(&key, &nonce);
 
         for size in INPUT_SIZES.iter() {
-            let input = vec![0u8; *size];
-            let mut out = vec![0u8; input.len()];
+            let mut out = vec![0u8; *size];
+            let mut wctx = ctx.clone();
 
             group.throughput(Throughput::Bytes(*size as u64));
-            group.bench_with_input(
+            group.bench_function(
                 BenchmarkId::new("xor-stream", *size),
-                &input,
-                |b, input_message| {
-                    b.iter(|| {
-                        xchacha20::encrypt(&key, &nonce, 0, &input_message, &mut out).unwrap()
-                    })
-                },
+                |b: &mut Bencher<'_>| b.iter(|| wctx.xor_keystream_into(&mut out).unwrap()),
             );
         }
     }

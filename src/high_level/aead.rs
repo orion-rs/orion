@@ -53,9 +53,6 @@
 //! - The received tag does not match the calculated tag when calling [`open`].
 //! - `plaintext.len()` + [`XCHACHA_NONCESIZE`] + [`POLY1305_OUTSIZE`] overflows when calling [`seal`].
 //! - Failure to generate random bytes securely.
-//!
-//! # Panics:
-//! A panic will occur if:
 //! - More than 2^32-1 * 64 bytes of data are processed.
 //!
 //! # Security:
@@ -108,7 +105,7 @@ pub fn seal(secret_key: &SecretKey, plaintext: &[u8]) -> Result<Vec<u8>, Unknown
     let nonce = Nonce::generate()?;
     dst_out[..XCHACHA_NONCESIZE].copy_from_slice(nonce.as_ref());
 
-    aead::xchacha20poly1305::seal(
+    aead::xchacha20poly1305::XChaCha20Poly1305::seal(
         &XChaCha20Key::try_from(secret_key.unprotected_as_ref())?,
         &nonce,
         plaintext,
@@ -133,7 +130,7 @@ pub fn open(
     let mut dst_out =
         vec![0u8; ciphertext_with_tag_and_nonce.len() - (XCHACHA_NONCESIZE + POLY1305_OUTSIZE)];
 
-    aead::xchacha20poly1305::open(
+    aead::xchacha20poly1305::XChaCha20Poly1305::open(
         &XChaCha20Key::try_from(secret_key.unprotected_as_ref())?,
         &Nonce::try_from(&ciphertext_with_tag_and_nonce[..XCHACHA_NONCESIZE])?,
         &ciphertext_with_tag_and_nonce[XCHACHA_NONCESIZE..],
