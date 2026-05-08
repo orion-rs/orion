@@ -103,15 +103,15 @@
 //! ["secretstream" API]: https://download.libsodium.org/doc/secret-key_cryptography/secretstream
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::aead::chacha20poly1305::poly1305_key_gen;
-use crate::hazardous::mac::poly1305::{POLY1305_OUTSIZE, Poly1305, Tag as Poly1305Tag};
+use crate::hazardous::aead::chacha20poly1305::ChaCha20Poly1305;
+use crate::hazardous::mac::poly1305::{POLY1305_OUTSIZE, Tag as Poly1305Tag};
 pub use crate::hazardous::stream::chacha20::SecretKey;
 use crate::hazardous::stream::chacha20::{
     CHACHA_BLOCKSIZE, CHACHA_KEYSIZE, ChaCha20, HCHACHA_NONCESIZE, IETF_CHACHA_NONCESIZE,
-    Nonce as IETFNonce, encrypt as chacha20_enc, encrypt_in_place as chacha20_xor_stream,
+    Nonce as IETFNonce,
 };
 pub use crate::hazardous::stream::xchacha20::Nonce;
-use crate::hazardous::stream::xchacha20::subkey_and_nonce;
+use crate::hazardous::stream::xchacha20::XChaCha20;
 use core::convert::TryFrom;
 use subtle::ConstantTimeEq;
 
@@ -222,15 +222,10 @@ impl StreamXChaCha20Poly1305 {
     ) -> Result<Poly1305Tag, UnknownCryptoError> {
         debug_assert!(text.len() >= textpos + msglen);
 
-        let mut chacha20_ctx = ChaCha20::new(
-            self.key.unprotected_as_ref(),
-            self.get_nonce().as_ref(),
-            true,
-        )?;
-        let mut tmp_block = zeroize_wrap!([0u8; CHACHA_BLOCKSIZE]);
+        let mut chacha20_ctx = ChaCha20::new(&self.key, &self.get_nonce());
+        let mut poly = ChaCha20Poly1305::poly1305_init(&mut chacha20_ctx);
 
         let mut pad = [0u8; 16];
-        let mut poly = Poly1305::new(&poly1305_key_gen(&mut chacha20_ctx, &mut tmp_block)?);
 
         poly.process_pad_to_blocksize(ad)?;
         poly.update(block)?;
@@ -272,7 +267,7 @@ impl StreamXChaCha20Poly1305 {
         inonce.copy_from_slice(&nonce.as_ref()[HCHACHA_NONCESIZE..]);
 
         Self {
-            key: subkey_and_nonce(secret_key, nonce).0,
+            key: XChaCha20::subkey_and_ietf_nonce(secret_key, nonce).0,
             counter: 1,
             inonce,
         }
@@ -285,7 +280,9 @@ impl StreamXChaCha20Poly1305 {
         new_key_and_inonce[..CHACHA_KEYSIZE].copy_from_slice(self.key.unprotected_as_ref());
         new_key_and_inonce[CHACHA_KEYSIZE..].copy_from_slice(&self.inonce);
 
-        chacha20_xor_stream(&self.key, &self.get_nonce(), 0, &mut new_key_and_inonce)?;
+        let mut ctx = ChaCha20::new(&self.key, &self.get_nonce());
+        debug_assert_eq!(ctx.position(), 0);
+        ctx.xor_keystream_into(&mut new_key_and_inonce)?;
 
         self.key = SecretKey::try_from(&new_key_and_inonce[..CHACHA_KEYSIZE])?;
         self.inonce
@@ -322,11 +319,15 @@ impl StreamXChaCha20Poly1305 {
         let nonce = self.get_nonce();
 
         block[0] = tag.as_byte();
-        chacha20_xor_stream(&self.key, &nonce, 1, &mut block)?;
+        let mut ctx = ChaCha20::new(&self.key, &nonce);
+        ctx.set_position(1);
+        ctx.xor_keystream_into(&mut block)?;
         dst_out[0] = block[0];
 
         if msglen != 0 {
-            chacha20_enc(&self.key, &nonce, 2, plaintext, &mut dst_out[TAG_SIZE..])?;
+            debug_assert_eq!(ctx.position(), 2);
+            dst_out[TAG_SIZE..macpos].copy_from_slice(plaintext);
+            ctx.xor_keystream_into(&mut dst_out[TAG_SIZE..macpos])?;
         }
 
         let mac = self.generate_auth_tag(dst_out, ad, msglen, &block, TAG_SIZE)?;
@@ -360,22 +361,23 @@ impl StreamXChaCha20Poly1305 {
         let nonce = self.get_nonce();
 
         block[0] = ciphertext[0];
-        chacha20_xor_stream(&self.key, &nonce, 1, &mut block)?;
+        let mut ctx = ChaCha20::new(&self.key, &nonce);
+        ctx.set_position(1);
+        ctx.xor_keystream_into(&mut block)?;
         let tag = StreamTag::try_from(block[0])?;
+
         block[0] = ciphertext[0];
         let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, TAG_SIZE)?;
         if !(mac == ciphertext[macpos..macpos + mac.len()]) {
             return Err(UnknownCryptoError);
         }
+
         if msglen != 0 {
-            chacha20_enc(
-                &self.key,
-                &nonce,
-                2,
-                &ciphertext[TAG_SIZE..(TAG_SIZE + msglen)],
-                dst_out,
-            )?;
+            debug_assert_eq!(ctx.position(), 2);
+            dst_out[..msglen].copy_from_slice(&ciphertext[TAG_SIZE..(TAG_SIZE + msglen)]);
+            ctx.xor_keystream_into(&mut dst_out[..msglen])?;
         }
+
         self.advance_state(&mac, &tag)?;
 
         Ok(tag)
@@ -432,9 +434,11 @@ mod public {
 
         #[quickcheck]
         fn prop_aead_interface(input: Vec<u8>, ad: Vec<u8>) -> bool {
+            // TODO(brycx): Save the old AeadTestRunner for use with this and CAE? This one doesn't seem worth migrating):
+            // Potentially, we could also drop support for this if no users.
             let secret_key = SecretKey::generate().unwrap();
             let nonce = Nonce::generate().unwrap();
-            AeadTestRunner(seal, open, secret_key, nonce, &input, None, ABYTES, &ad);
+            BufferedOnlyAeadTestRunner(seal, open, secret_key, nonce, &input, None, ABYTES, &ad);
 
             true
         }

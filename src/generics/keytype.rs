@@ -286,7 +286,7 @@ impl<T: TypeSpec> serde::Serialize for Public<T> {
     where
         S: serde::ser::Serializer,
     {
-        let bytes: &[u8] = &self.data.as_ref();
+        let bytes: &[u8] = self.data.as_ref();
         bytes.serialize(serializer)
     }
 }
