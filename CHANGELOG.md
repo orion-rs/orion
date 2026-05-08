@@ -23,7 +23,13 @@
 - [Breaking change] `orion::hazardous::kem::xwing::EncapsulationKey` now fails on `TryFrom<&[u8]>` if the ML-KEM-768 public-part does not pass the FIPS-203 keys checks.
 - [Breaking change] `orion::hazardous::kem::x25519_hkdf_sha256` uses as separate `PrivateKey` type to ensure RFC9180 `SerializePrivateKey()` and `DeserializePrivateKey()` clamping requirements are uphled.
 	- This was previously a part of `orion::hazardous::ecc::x25519::SecretKey` but has been moved to HPKE, since it is a HPKE-specific requirement.
-
+- [Breaking change] `orion::hazardous::stream`:
+	- [Breaking change]: Remove `chacha20::encrypt()`, `chacha20::decrypt()`, `xchacha20::encrypt()` and `xchacha20::decrypt()`.
+	- Add structs `ChaCha20` and `XChaCha20` that can be used for encryption/decryption and with a more stream-oriented API (including seeking ahead).
+- [Breaking change] `orion::hazardous::aead`:
+	- [Breaking change]: Remove `chacha20poly1305::seal()`, `chacha20poly1305::open()`, `xchacha20poly1305::seal()` `xchacha20poly1305::open()`.
+	- Add structs `ChaCha20Poly1305` and `XChaCha20Poly1305` that offer equivalent `open()` and `seal()` functions from versions prior to `0.18.0`.
+	- Add support for `seal_inplace()` and `open_inplace()` for `ChaCha20Poly1305` and `XChaCha20Poly1305`. These overwrite data directly instead of copying and allow handling the authentication tag separately.
 - MSRV bumped to `1.87`
 - Add constants for BLAKE2b: `BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE` making the conditions more discernable.
 
