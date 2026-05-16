@@ -302,7 +302,9 @@ pub fn derive_key(
 ) -> Result<(), UnknownCryptoError> {
     if n <= 1
         || n & (n - 1) != 0
-        || ((r as u64) * (p as u64)) >= RP_MAX
+		|| r == 0
+        || p == 0
+		|| ((r as u64) * (p as u64)) >= RP_MAX
         || r > RP_BLK_MAX / p
         || r > R_BLK_MAX
         || n > N_MAX / r
@@ -541,6 +543,9 @@ mod tests {
             assert!(derive_key(password, salt, valid_n, invalid_r, invalid_p, &mut dk).is_err());
             assert!(derive_key(password, salt, valid_n, valid_r, invalid_p, &mut dk).is_err());
             assert!(derive_key(password, salt, valid_n, invalid_r, valid_p, &mut dk).is_err());
+			// r=0 and p=0 must return Err, not panic via division by zero
+            assert!(derive_key(password, salt, valid_n, 0, valid_p, &mut dk).is_err());
+            assert!(derive_key(password, salt, valid_n, valid_r, 0, &mut dk).is_err());
         }
     }
 }
