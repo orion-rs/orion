@@ -1,3 +1,10 @@
+### 0.17.15
+
+**Date:** June 1, 2026.
+
+**Changelog:**
+- Fix panic on zero `r` or `p` in `scrypt::derive_key` ([#622](https://github.com/orion-rs/orion/pull/622), credits: [@sashaphmn](https://github.com/sashaphmn)).
+
 ### 0.17.14
 
 **Date:** April 25, 2026.

@@ -48,6 +48,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - `n` is not larger than `1` or a power of `2`.
+//! - `r` or `p` is 0.
 //! - `r * p >=` [RP_MAX].
 //! - `r * 128 * p >=` [RP_BLK_MAX].
 //! - `r * 256 >=` [R_BLK_MAX].
