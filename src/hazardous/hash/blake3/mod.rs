@@ -25,6 +25,7 @@ mod cvstack;
 
 pub(crate) mod blake3_core {
     use core::cmp::min;
+    use core::ops::{Index, IndexMut};
 
     const OUT_LEN: usize = 32;
     const KEY_LEN: usize = 32;
@@ -107,9 +108,79 @@ pub(crate) mod blake3_core {
     }
 
     // Internal compression function state
-    pub(crate) type CFState = [u32; 16];
+    pub(crate) struct CFState {
+        input_chaining_values: ChainingValue,
+        iv: [u32; 4],
+        counter: [u32; 2],
+        block_amount: u32,
+        flags: u32,
+    }
 
-    pub(crate) fn truncate(state: CFState) -> ChainingValue {}
+    impl CFState {
+        fn new(cv: ChainingValue, counter: [u32; 2], block_amount: u32, flags: u32) -> Self {
+            Self {
+                input_chaining_values: cv,
+                iv: [IV[0], IV[1], IV[2], IV[3]],
+                counter,
+                block_amount,
+                flags,
+            }
+        }
+
+        fn truncate(self) -> ChainingValue {
+            self.input_chaining_values
+        }
+    }
+
+    impl Index<usize> for CFState {
+        type Output = u32;
+
+        fn index(&self, index: usize) -> &Self::Output {
+            match index {
+                0..=7 => &self.input_chaining_values[index],
+                8..=11 => &self.iv[index - 8],
+                12..=13 => &self.counter[index - 12],
+                14 => &self.block_amount,
+                15 => &self.flags,
+                _ => panic!("accessing by invalid index"),
+            }
+        }
+    }
+
+    impl IndexMut<usize> for CFState {
+        fn index_mut(&mut self, index: usize) -> &mut u32 {
+            match index {
+                0..=7 => &mut self.input_chaining_values[index],
+                8..=11 => &mut self.iv[index - 8],
+                12..=13 => &mut self.counter[index - 12],
+                14 => &mut self.block_amount,
+                15 => &mut self.flags,
+                _ => panic!("accessing by invalid index"),
+            }
+        }
+    }
+
+    pub(crate) fn parent_cv(
+        left: ChainingValue,
+        right: ChainingValue,
+        key_words: [u32; 8],
+        flags: u32,
+        compress: CompressionFn,
+    ) -> ChainingValue {
+        let msg = merge_msgs(left, right);
+        let merge_state = CFState::new(key_words, [0, 0], BLOCK_LEN as u32, flags | PARENT);
+        let compressed_state = compress(merge_state, &msg);
+
+        compressed_state.truncate()
+    }
+
+    fn merge_msgs(first: ChainingValue, second: ChainingValue) -> [u32; 16] {
+        let mut msgs = [0u32; 16];
+        msgs[..8].copy_from_slice(&first);
+        msgs[8..].copy_from_slice(&second);
+
+        msgs
+    }
 
     pub(crate) type CompressionFn = fn(CFState, &[u32; 16]) -> CFState;
 
@@ -155,7 +226,7 @@ pub(crate) mod blake3_core {
     }
 
     pub(crate) fn compress(mut init_state: CFState, msgs: &[u32; 16]) -> CFState {
-        for _ in 0..ROUND_ITERS + 1 {
+        for _ in 0..ROUND_ITERS {
             round(&mut init_state, msgs);
         }
         init_state
