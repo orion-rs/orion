@@ -1,0 +1,163 @@
+// MIT License
+
+// Copyright (c) 2018-2026 The orion Developers
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+pub mod blake3;
+mod cvstack;
+
+pub(crate) mod blake3_core {
+    use core::cmp::min;
+
+    const OUT_LEN: usize = 32;
+    const KEY_LEN: usize = 32;
+    const BLOCK_LEN: usize = 64;
+    const CHUNK_LEN: usize = 1024;
+    const ROUND_ITERS: usize = 7;
+
+    // Flags for the compression function
+    // See Table 3 in section 2.2 Compression Function
+    const CHUNK_START: u32 = 1 << 0;
+    const CHUNK_END: u32 = 1 << 1;
+    const PARENT: u32 = 1 << 2;
+    const ROOT: u32 = 1 << 3;
+    const KEYED_HASH: u32 = 1 << 4;
+    const DERIVE_KEY_CONTEXT: u32 = 1 << 5;
+    const DERIVE_KEY_MATERIAL: u32 = 1 << 6;
+
+    // Initial state inside the compression function
+    pub(crate) const IV: [u32; 8] = [
+        0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB,
+        0x5BE0CD19,
+    ];
+
+    // Permutation done after each round (except for the last one)
+    const MSG_PERMUTATION: [usize; 16] = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8];
+
+    // 32B intermediate hash output (a.k.a. chaining value)
+    pub(crate) type ChainingValue = [u32; 8];
+
+    pub(crate) struct Output {
+        chaining_value: [u32; 8],
+        block_words: [u32; 16],
+        counter: u64,
+        block_len: u32,
+        flags: u32,
+    }
+
+    impl Output {}
+
+    pub(crate) struct ChunkState {
+        cv: ChainingValue,
+        chunk_counter: u64,
+        block: [u8; BLOCK_LEN],
+        block_len: u8,
+        blocks_compressed: u8,
+        flags: u32,
+    }
+
+    impl ChunkState {
+        pub(crate) fn new(key_words: [u32; 8], chunk_counter: u64, flags: u32) -> Self {
+            Self {
+                cv: key_words,
+                block: [0; BLOCK_LEN],
+                block_len: 0,
+                chunk_counter,
+                blocks_compressed: 0,
+                flags,
+            }
+        }
+
+        pub(crate) fn update(&mut self, input: &[u8]) {
+            let filled: bool = self.append_to_block(input);
+            if filled {
+                self.compress_block();
+            }
+        }
+
+        fn append_to_block(&mut self, input: &[u8]) -> bool {
+            let want = BLOCK_LEN - self.block_len as usize;
+            let take = min(input.len(), want);
+            self.block[self.block_len as usize..][take..].clone_from_slice(&input[..take]);
+            self.block_len += take as u8;
+
+            self.block_len == BLOCK_LEN as u8
+        }
+
+        // No checks done whether the block is filled properly. Make sure
+        // self.block_len == BLOCK_LEN
+        fn compress_block(&mut self) {}
+    }
+
+    // Internal compression function state
+    pub(crate) type CFState = [u32; 16];
+
+    pub(crate) fn truncate(state: CFState) -> ChainingValue {}
+
+    pub(crate) type CompressionFn = fn(CFState, &[u32; 16]) -> CFState;
+
+    // Quater round, also called 'G', representing the round function similarly
+    // to BLAKE2 or ChaCha
+    fn quater_round(
+        state: &mut CFState,
+        a: usize,
+        b: usize,
+        c: usize,
+        d: usize,
+        msg1: u32,
+        msg2: u32,
+    ) {
+        state[a] = state[a].wrapping_add(state[b]).wrapping_add(msg1);
+        state[d] = (state[d] ^ state[a]).rotate_right(16);
+        state[c] = state[c].wrapping_add(state[d]);
+        state[b] = (state[b] ^ state[c]).rotate_right(12);
+
+        state[a] = state[a].wrapping_add(state[b]).wrapping_add(msg2);
+        state[d] = (state[d] ^ state[a]).rotate_right(8);
+        state[c] = state[c].wrapping_add(state[d]);
+        state[b] = (state[b] ^ state[c]).rotate_right(7);
+    }
+
+    fn mix_columns(state: &mut CFState, msgs: &[u32; 16]) {
+        quater_round(state, 0, 4, 8, 12, msgs[0], msgs[1]);
+        quater_round(state, 1, 5, 9, 13, msgs[2], msgs[3]);
+        quater_round(state, 2, 6, 10, 14, msgs[4], msgs[5]);
+        quater_round(state, 3, 7, 11, 15, msgs[6], msgs[7]);
+    }
+
+    fn mix_diagonals(state: &mut CFState, msgs: &[u32; 16]) {
+        quater_round(state, 0, 5, 10, 15, msgs[0], msgs[1]);
+        quater_round(state, 1, 6, 11, 12, msgs[2], msgs[3]);
+        quater_round(state, 2, 7, 8, 13, msgs[4], msgs[5]);
+        quater_round(state, 3, 4, 9, 14, msgs[6], msgs[7]);
+    }
+
+    fn round(state: &mut CFState, msgs: &[u32; 16]) {
+        mix_columns(state, msgs);
+        mix_diagonals(state, msgs);
+    }
+
+    pub(crate) fn compress(mut init_state: CFState, msgs: &[u32; 16]) -> CFState {
+        for _ in 0..ROUND_ITERS + 1 {
+            round(&mut init_state, msgs);
+        }
+        init_state
+    }
+}
