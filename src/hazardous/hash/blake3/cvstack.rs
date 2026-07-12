@@ -1,6 +1,4 @@
-use crate::hazardous::hash::blake3::blake3_core::{
-    cfstate_new, compress, CFState, ChainingValue, CompressionFn,
-};
+use crate::hazardous::hash::blake3::blake3_core::{parent_cv, ChainingValue, CompressionFn};
 
 // The maximum possible height of a BLAKE3 tree: the input is capped at 2^64B
 // with 2^10B nodes => 2^54B nodes
@@ -24,26 +22,23 @@ impl TreeStack {
     //
     // Note: Call only after the at least 1 byte of the following chunk has
     // been supplied.
-    pub fn push(&mut self, mut next_cv: ChainingValue, mut total_chunks: u64) {
-        while total_chunks & 1 == 0 {
-            let sibling = self.pop();
-            next_cv = self.merge(&mut next_cv, sibling);
-            total_chunks = total_chunks >> 1;
+    pub fn push(&mut self, mut config: PushCommand) {
+        while config.total_chunks & 1 == 0 {
+            config.next_cv = parent_cv(
+                self.pop(),
+                config.next_cv,
+                config.key_words,
+                config.flags,
+                config.compress,
+            );
+            config.total_chunks = config.total_chunks >> 1;
         }
-        self.push_merged(next_cv);
+        self.push_merged(config.next_cv);
     }
 
     fn push_merged(&mut self, cv: ChainingValue) {
         self.stack[self.stack_len as usize] = cv;
         self.stack_len += 1;
-    }
-
-    fn merge(&mut self, left: &mut ChainingValue, right: ChainingValue) -> ChainingValue {
-        let msgs = [left, right].as_flattened();
-        let merge_state: CFState;
-        let compressed_state = compress(merge_state, msgs);
-
-        compressed_state.truncate();
     }
 
     // Pops the top of the stack
@@ -57,5 +52,33 @@ impl TreeStack {
     // Produces the final output of the hash function
     //
     // Merges the current chaining value with every CV in the stack
-    pub fn finalize(mut self, compress: CompressionFn) -> ChainingValue {}
+    pub fn finalize(self, mut config: FinalizeCommand) -> ChainingValue {
+        for i in (0..self.stack_len as usize).rev() {
+            let sibling = self.stack[i];
+            config.current_cv = parent_cv(
+                sibling,
+                config.current_cv,
+                config.key_words,
+                config.flags,
+                config.compress,
+            )
+        }
+
+        config.current_cv
+    }
+}
+
+pub(crate) struct PushCommand {
+    next_cv: ChainingValue,
+    total_chunks: u64,
+    key_words: [u32; 8],
+    flags: u32,
+    compress: CompressionFn,
+}
+
+pub(crate) struct FinalizeCommand {
+    current_cv: ChainingValue,
+    key_words: [u32; 8],
+    flags: u32,
+    compress: CompressionFn,
 }
