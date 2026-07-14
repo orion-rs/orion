@@ -1,4 +1,6 @@
-use crate::hazardous::hash::blake3::blake3_core::{parent_cv, ChainingValue, CompressionFn};
+use crate::hazardous::hash::blake3::blake3_core::{
+    CFState, ChainingValue, CompressionFn, BLOCK_LEN, PARENT,
+};
 
 // The maximum possible height of a BLAKE3 tree: the input is capped at 2^64B
 // with 2^10B nodes => 2^54B nodes
@@ -6,13 +8,15 @@ const MAX_TREE_DEPTH: usize = 54;
 
 pub(crate) struct TreeStack {
     stack: [ChainingValue; MAX_TREE_DEPTH],
+    compress: CompressionFn,
     stack_len: u8,
 }
 
 impl TreeStack {
-    pub const fn new() -> Self {
+    pub const fn new(compress: CompressionFn) -> Self {
         Self {
             stack: [[0; 8]; MAX_TREE_DEPTH],
+            compress,
             stack_len: 0,
         }
     }
@@ -24,14 +28,10 @@ impl TreeStack {
     // been supplied.
     pub fn push(&mut self, mut config: PushCommand) {
         while config.total_chunks & 1 == 0 {
-            config.next_cv = parent_cv(
-                self.pop(),
-                config.next_cv,
-                config.key_words,
-                config.flags,
-                config.compress,
-            );
-            config.total_chunks = config.total_chunks >> 1;
+            let sibling = self.pop();
+            config.next_cv =
+                self.parent_cv(sibling, config.next_cv, config.key_words, config.flags);
+            config.total_chunks >>= 1;
         }
         self.push_merged(config.next_cv);
     }
@@ -55,30 +55,45 @@ impl TreeStack {
     pub fn finalize(self, mut config: FinalizeCommand) -> ChainingValue {
         for i in (0..self.stack_len as usize).rev() {
             let sibling = self.stack[i];
-            config.current_cv = parent_cv(
-                sibling,
-                config.current_cv,
-                config.key_words,
-                config.flags,
-                config.compress,
-            )
+            config.current_cv =
+                self.parent_cv(sibling, config.current_cv, config.key_words, config.flags)
         }
 
         config.current_cv
     }
+
+    fn parent_cv(
+        &self,
+        left: ChainingValue,
+        right: ChainingValue,
+        key_words: [u32; 8],
+        flags: u32,
+    ) -> ChainingValue {
+        let msg = merge_msgs(left, right);
+        let merge_state = CFState::new(key_words, 0, BLOCK_LEN as u32, flags | PARENT);
+        let compressed_state = (self.compress)(merge_state, &msg);
+
+        compressed_state.truncate()
+    }
+}
+
+fn merge_msgs(first: ChainingValue, second: ChainingValue) -> [u32; 16] {
+    let mut msgs = [0u32; 16];
+    msgs[..8].copy_from_slice(&first);
+    msgs[8..].copy_from_slice(&second);
+
+    msgs
 }
 
 pub(crate) struct PushCommand {
-    next_cv: ChainingValue,
-    total_chunks: u64,
-    key_words: [u32; 8],
-    flags: u32,
-    compress: CompressionFn,
+    pub next_cv: ChainingValue,
+    pub total_chunks: u64,
+    pub key_words: [u32; 8],
+    pub flags: u32,
 }
 
 pub(crate) struct FinalizeCommand {
-    current_cv: ChainingValue,
-    key_words: [u32; 8],
-    flags: u32,
-    compress: CompressionFn,
+    pub current_cv: ChainingValue,
+    pub key_words: [u32; 8],
+    pub flags: u32,
 }
