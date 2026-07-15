@@ -13,7 +13,7 @@ const ROUND_ITERS: usize = 7;
 pub(crate) const CHUNK_START: u32 = 1 << 0;
 const CHUNK_END: u32 = 1 << 1;
 pub(crate) const PARENT: u32 = 1 << 2;
-const ROOT: u32 = 1 << 3;
+pub(crate) const ROOT: u32 = 1 << 3;
 const KEYED_HASH: u32 = 1 << 4;
 const DERIVE_KEY_CONTEXT: u32 = 1 << 5;
 const DERIVE_KEY_MATERIAL: u32 = 1 << 6;
@@ -168,7 +168,8 @@ impl CFState {
     }
 
     pub fn truncate(self) -> ChainingValue {
-        self.input_chaining_values
+        array::from_fn(|i| self[i] ^ self[i + 8])
+        // self.input_chaining_values
     }
 
     fn to_le_array(counter: u64) -> [u32; 2] {
@@ -228,10 +229,10 @@ fn mix_columns(state: &mut CFState, msgs: &[u32; 16]) {
 }
 
 fn mix_diagonals(state: &mut CFState, msgs: &[u32; 16]) {
-    quater_round(state, 0, 5, 10, 15, msgs[0], msgs[1]);
-    quater_round(state, 1, 6, 11, 12, msgs[2], msgs[3]);
-    quater_round(state, 2, 7, 8, 13, msgs[4], msgs[5]);
-    quater_round(state, 3, 4, 9, 14, msgs[6], msgs[7]);
+    quater_round(state, 0, 5, 10, 15, msgs[8], msgs[9]);
+    quater_round(state, 1, 6, 11, 12, msgs[10], msgs[11]);
+    quater_round(state, 2, 7, 8, 13, msgs[12], msgs[13]);
+    quater_round(state, 3, 4, 9, 14, msgs[14], msgs[15]);
 }
 
 fn round(state: &mut CFState, msgs: &[u32; 16]) {
@@ -327,6 +328,86 @@ mod tests {
         assert_eq!(
             final_state_1.input_chaining_values, final_state_2.input_chaining_values,
             "Repeated compression of the same state yielded different results"
+        );
+    }
+
+    #[test]
+    fn test_ietf_execution_trace() {
+        // Arrange
+        // The message to hash is "IETF" padded with zeros
+        let msgs: [u32; 16] = [0x46544549, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let initial_flags = CHUNK_START | CHUNK_END | ROOT;
+        let mut state = CFState::new(IV, 0, 4, initial_flags);
+
+        // The expected 16-word state after each of the 7 rounds
+        let expected_rounds: [[u32; 16]; 7] = [
+            [
+                // after round 0
+                0xd7737c52, 0xa0d29b6a, 0xd3b4f608, 0xe20caed2, 0x49091c17, 0xb1abb189, 0x961f03ba,
+                0xc3474f4e, 0xa7590324, 0x9c110e95, 0xf77c59cc, 0xb47c3370, 0x9c1aed89, 0xb7c28f82,
+                0xbab6db43, 0xe634ca3e,
+            ],
+            [
+                // after round 1
+                0x4cce55f2, 0x9cdfa58b, 0x297f68b4, 0x887fd036, 0x4e620c26, 0x321af343, 0xb8e634b0,
+                0x72737ae9, 0x6f6ecf4a, 0x628788fb, 0xdf9428c1, 0xa2c42d78, 0xa51ddf7b, 0x6cf97481,
+                0x72dccb9c, 0x1878acb8,
+            ],
+            [
+                // after round 2
+                0x8e99a713, 0xbd202a18, 0xd70c8d18, 0x603ba3ad, 0xf411ae76, 0x88ff9580, 0x03db2909,
+                0xa12e939f, 0x19b81233, 0x69787f12, 0xd2b0c5b7, 0x52034613, 0x21baaea8, 0x84e5fe6d,
+                0xc8c96ae8, 0x422a96d8,
+            ],
+            [
+                // after round 3
+                0xeeb6ec2a, 0x22f4289a, 0x64900193, 0xd9f751b3, 0x216a610d, 0xf5aadf41, 0xddf5584d,
+                0xae312167, 0xc8f40fb3, 0x97f06701, 0x6eee4503, 0x4827825d, 0x3c59d243, 0x473585da,
+                0x90d24798, 0xc5957f9d,
+            ],
+            [
+                // after round 4
+                0x11876617, 0x4a71dc87, 0x23a5b774, 0x185e51fa, 0xa1ed35c0, 0x729a3348, 0x6da19311,
+                0x9716237c, 0xf66bbb71, 0xf303cf35, 0x585dd137, 0xe5c9c363, 0x8b2b32ed, 0x6add0d37,
+                0x12b87a10, 0xf96fde3e,
+            ],
+            [
+                // after round 5
+                0x02b010fc, 0x345f4920, 0xce96e963, 0x018a8afd, 0xc0e0faca, 0x651d2baf, 0x0b24a23d,
+                0xd1ffa8fc, 0xaa7de2ee, 0xd80796c0, 0xff96b6bd, 0x7cfbf53a, 0x292b8630, 0x8d8e1a78,
+                0x31c6cb9d, 0xb471de23,
+            ],
+            [
+                // after round 6
+                0xa4839e1a, 0x064b478f, 0xbb47c942, 0x3f4a0350, 0xefd0bb79, 0x61167ed0, 0x356b01f5,
+                0xb40f5364, 0xba5d3c99, 0xadadb369, 0x9fcea12a, 0xf08a4ddf, 0x7ba07e35, 0x9e94d896,
+                0xe3dfca24, 0x568e0272,
+            ],
+        ];
+
+        let mut current_msgs = msgs;
+        for i in 0..7 {
+            round(&mut state, &current_msgs);
+            current_msgs = permute_msgs(current_msgs);
+
+            for j in 0..16 {
+                assert_eq!(
+                    state[j], expected_rounds[i][j],
+                    "State mismatch at round {} word {:02}",
+                    i, j
+                );
+            }
+        }
+
+        // Verify the 8-word compression function output
+        let compress_output = state.truncate();
+        let expected_compress_output = [
+            0x1edea283, 0xabe6f4e6, 0x24896868, 0xcfc04e8f, 0x9470c54c, 0xff82a646, 0xd6b4cbd1,
+            0xe2815116,
+        ];
+        assert_eq!(
+            compress_output, expected_compress_output,
+            "Compression output mismatch"
         );
     }
 }
