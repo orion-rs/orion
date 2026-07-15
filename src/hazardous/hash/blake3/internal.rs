@@ -151,7 +151,7 @@ impl CFState {
         Self {
             input_chaining_values: cv,
             iv: [IV[0], IV[1], IV[2], IV[3]],
-            counter: [(counter & 0xffffffff) as u32, (counter >> 32) as u32],
+            counter: Self::to_le_array(counter),
             block_amount,
             flags,
         }
@@ -172,6 +172,10 @@ impl CFState {
 
     pub fn truncate(self) -> ChainingValue {
         self.input_chaining_values
+    }
+
+    fn to_le_array(counter: u64) -> [u32; 2] {
+        [counter as u32, (counter >> 32) as u32]
     }
 }
 
@@ -249,4 +253,56 @@ pub(crate) fn compress(mut init_state: CFState, msgs: &[u32; 16]) -> CFState {
         msgs_copy = permute_msgs(msgs_copy);
     }
     init_state
+}
+
+// -- TEST -- //
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cfstate_counter_endianness() {
+        // Arrange
+        // Use a counter that spans both halves of a 64-bit integer
+        let chunk_counter: u64 = 0x00000001_FFFFFFFF;
+        let key_words = [0; 8];
+        let chunk = ChunkState::new(key_words, chunk_counter, 0);
+
+        // Act
+        let state = CFState::from(&chunk);
+
+        // Assert
+        // BLAKE3 spec requires the low 32-bits first, then high 32-bits
+        assert_eq!(
+            state.counter[0], 0xFFFFFFFF,
+            "Low 32-bits mapped incorrectly"
+        );
+        assert_eq!(
+            state.counter[1], 0x00000001,
+            "High 32-bits mapped incorrectly"
+        );
+    }
+
+    #[test]
+    fn test_chunk_state_block_boundaries() {
+        // Arrange
+        let mut chunk = ChunkState::new(IV, 0, 0);
+        // 65 bytes is exactly one block (64) plus 1 byte overlapping into the next
+        let data = [0x42; 65];
+
+        // Act
+        chunk.update(&data);
+
+        // Assert
+        assert_eq!(
+            chunk.blocks_compressed, 1,
+            "Should have compressed exactly 1 full block"
+        );
+        assert_eq!(
+            chunk.block_len, 1,
+            "Should have 1 byte lingering in the next block buffer"
+        );
+        assert_eq!(chunk.block[0], 0x42, "Lingering byte should match input");
+    }
 }

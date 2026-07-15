@@ -1,4 +1,4 @@
-use crate::hazardous::hash::blake3::blake3_core::{
+use crate::hazardous::hash::blake3::internal::{
     CFState, ChainingValue, CompressionFn, BLOCK_LEN, PARENT,
 };
 
@@ -96,4 +96,52 @@ pub(crate) struct FinalizeCommand {
     pub current_cv: ChainingValue,
     pub key_words: [u32; 8],
     pub flags: u32,
+}
+
+// -- TEST -- //
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const MOCK_IV: [u32; 8] = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+    // Mock compression function that just returns a fixed value so we can trace it
+    fn mock_compress(_state: CFState, _msgs: &[u32; 16]) -> CFState {
+        CFState::new([99; 8], 0, 0, 0)
+    }
+
+    #[test]
+    fn test_tree_stack_push_merge_logic() {
+        // Arrange
+        let mut tree = TreeStack::new(mock_compress);
+        let dummy_cv_1 = [1; 8];
+        let dummy_cv_2 = [2; 8];
+
+        // Act
+        // Push first chunk (total_chunks = 1 -> odd, shouldn't merge)
+        tree.push(PushCommand {
+            next_cv: dummy_cv_1,
+            total_chunks: 1,
+            key_words: MOCK_IV,
+            flags: 0,
+        });
+
+        // Push second chunk (total_chunks = 2 -> even, MUST merge with chunk 1)
+        tree.push(PushCommand {
+            next_cv: dummy_cv_2,
+            total_chunks: 2,
+            key_words: MOCK_IV,
+            flags: 0,
+        });
+
+        // Assert
+        assert_eq!(
+            tree.stack_len, 1,
+            "Stack should merge down to a single parent node"
+        );
+        assert_eq!(
+            tree.stack[0], [99; 8],
+            "Parent CV should be the output of mock_compress"
+        );
+    }
 }
