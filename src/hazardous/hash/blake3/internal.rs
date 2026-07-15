@@ -161,10 +161,7 @@ impl CFState {
         CFState {
             input_chaining_values: chunk.cv,
             iv: [IV[0], IV[1], IV[2], IV[3]],
-            counter: [
-                (chunk.chunk_counter >> 32) as u32,
-                (chunk.chunk_counter & 0xffffffff) as u32,
-            ],
+            counter: Self::to_le_array(chunk.chunk_counter),
             block_amount: chunk.blocks_compressed as u32,
             flags: chunk.flags,
         }
