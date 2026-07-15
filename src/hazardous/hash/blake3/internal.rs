@@ -246,7 +246,7 @@ fn permute_msgs(msgs: [u32; 16]) -> [u32; 16] {
 pub(crate) fn compress(mut init_state: CFState, msgs: &[u32; 16]) -> CFState {
     let mut msgs_copy = *msgs;
     for _ in 0..ROUND_ITERS {
-        round(&mut init_state, msgs);
+        round(&mut init_state, &msgs_copy);
         msgs_copy = permute_msgs(msgs_copy);
     }
     init_state
@@ -301,5 +301,32 @@ mod tests {
             "Should have 1 byte lingering in the next block buffer"
         );
         assert_eq!(chunk.block[0], 0x42, "Lingering byte should match input");
+    }
+
+    #[test]
+    fn test_compress_mutates_state_deterministically() {
+        // Arrange
+        let cv = [0x11223344; 8];
+        let init_state = CFState::new(cv, 1, 64, CHUNK_START);
+        let msgs = [0x55667788; 16];
+
+        // Act
+        let final_state_1 = compress(init_state, &msgs);
+
+        // Re-create the identical initial state to test determinism
+        let init_state_again = CFState::new(cv, 1, 64, CHUNK_START);
+        let final_state_2 = compress(init_state_again, &msgs);
+
+        // Assert
+        // The state must have changed from the initial CV
+        assert_ne!(
+            final_state_1.input_chaining_values, cv,
+            "Compression failed to mutate the state"
+        );
+        // The compression must be purely deterministic
+        assert_eq!(
+            final_state_1.input_chaining_values, final_state_2.input_chaining_values,
+            "Repeated compression of the same state yielded different results"
+        );
     }
 }
