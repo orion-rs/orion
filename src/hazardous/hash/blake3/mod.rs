@@ -111,7 +111,7 @@ impl Blake3 {
         self.state = ChunkState::new(key_words, self.total_chunks, CHUNK_START);
     }
 
-    /// Return a BLAKE2b digest in the `out_slice` parameter.
+    /// Return a BLAKE3 digest in the `out_slice` parameter.
     pub fn finalize(mut self, out_slice: &mut [u8]) {
         let key_words = self.mode.key_words();
         let is_root = self.total_chunks == 0;
