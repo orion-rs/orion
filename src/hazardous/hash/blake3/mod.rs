@@ -29,7 +29,8 @@ use crate::hazardous::hash::blake3::internal::{
 };
 use core::cmp::min;
 
-/// Blake3 can run in different modes based on usage
+/// Blake3 can run in different modes based on usage.
+/// Currently, only Hash and KeyedHash is supported.
 pub enum Mode {
     /// Regular hashing
     Hash,
@@ -41,7 +42,9 @@ pub enum Mode {
 }
 
 enum FlagContext {
+    // Indicates START_FLAG plus other flags based on mode
     Initial,
+    // Indicates PARENT plus other flags based on mode
     Parent,
 }
 
