@@ -2,8 +2,6 @@ use core::array;
 use core::cmp::min;
 use core::ops::{Index, IndexMut};
 
-const OUT_LEN: usize = 32;
-const KEY_LEN: usize = 32;
 pub(crate) const BLOCK_LEN: usize = 64;
 pub(crate) const CHUNK_LEN: usize = 1024;
 const ROUND_ITERS: usize = 7;
@@ -15,8 +13,8 @@ pub(crate) const CHUNK_END: u32 = 1 << 1;
 pub(crate) const PARENT: u32 = 1 << 2;
 pub(crate) const ROOT: u32 = 1 << 3;
 pub(crate) const KEYED_HASH: u32 = 1 << 4;
-const DERIVE_KEY_CONTEXT: u32 = 1 << 5;
-const DERIVE_KEY_MATERIAL: u32 = 1 << 6;
+// const DERIVE_KEY_CONTEXT: u32 = 1 << 5;
+// const DERIVE_KEY_MATERIAL: u32 = 1 << 6;
 
 fn chunk_end_flags(is_root: bool) -> u32 {
     if is_root {
