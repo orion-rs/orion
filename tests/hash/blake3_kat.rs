@@ -27,7 +27,6 @@ fn test_blake3_kat() {
     if let Some(cases) = root.get("cases").unwrap().as_array() {
         for test_case in cases {
             let input_len = test_case.get("input_len").unwrap().as_u64().unwrap() as usize;
-            println!("Input len (= iteration) = {}\n", input_len);
 
             // Extract the expected hex strings
             let hash_hex = test_case.get("hash").unwrap().as_str().unwrap();
