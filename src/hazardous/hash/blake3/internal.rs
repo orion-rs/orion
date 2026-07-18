@@ -11,10 +11,10 @@ const ROUND_ITERS: usize = 7;
 // Flags for the compression function
 // See Table 3 in section 2.2 Compression Function
 pub(crate) const CHUNK_START: u32 = 1 << 0;
-const CHUNK_END: u32 = 1 << 1;
+pub(crate) const CHUNK_END: u32 = 1 << 1;
 pub(crate) const PARENT: u32 = 1 << 2;
 pub(crate) const ROOT: u32 = 1 << 3;
-const KEYED_HASH: u32 = 1 << 4;
+pub(crate) const KEYED_HASH: u32 = 1 << 4;
 const DERIVE_KEY_CONTEXT: u32 = 1 << 5;
 const DERIVE_KEY_MATERIAL: u32 = 1 << 6;
 
@@ -80,23 +80,30 @@ impl ChunkState {
             return;
         }
 
-        let taken: usize = self.append_to_block(input);
-        self.block_len += taken as u8;
         if self.block_len == BLOCK_LEN as u8 {
             self.compress_block();
         }
 
+        let taken: usize = self.append_to_block(input);
+        self.block_len += taken as u8;
+
         self.update(&input[taken..])
     }
 
-    pub(crate) fn finalize_chunk(&mut self, is_root: bool) -> ChainingValue {
+    pub(crate) fn root_output(&mut self, is_root: bool) -> OutputReader {
         self.flags |= chunk_end_flags(is_root);
         let state = CFState::from(self);
-
         let msgs = self.accumulate_blocks();
-        let compressed_state = compress(state, &msgs);
 
-        compressed_state.truncate()
+        OutputReader::new(state, msgs)
+    }
+
+    pub(crate) fn finalize_chunk(&mut self, is_root: bool) -> CFState {
+        self.flags |= chunk_end_flags(is_root);
+        let state = CFState::from(self);
+        let msgs = self.accumulate_blocks();
+
+        compress(state, &msgs)
     }
 
     fn append_to_block(&mut self, input: &[u8]) -> usize {
@@ -134,10 +141,56 @@ impl ChunkState {
         self.blocks_compressed += 1;
         self.block_len = 0;
         self.block = [0; BLOCK_LEN];
+        self.flags &= !CHUNK_START;
+    }
+}
+
+pub(crate) struct OutputReader {
+    base_state: CFState,
+    msgs: [u32; 16],
+}
+
+impl OutputReader {
+    pub(crate) fn new(base_state: CFState, msgs: [u32; 16]) -> Self {
+        Self { base_state, msgs }
+    }
+
+    pub(crate) fn fill(self, out_slice: &mut [u8]) {
+        for (out_block_counter, out_chunk) in out_slice.chunks_mut(64).enumerate() {
+            let state = CFState {
+                counter: CFState::to_le_array(out_block_counter as u64),
+                ..self.base_state
+            };
+
+            let compressed = compress(state.clone(), &self.msgs);
+            let block_output = Self::block_output(&compressed, &state);
+
+            // Write directly into the final output slice
+            for (word, chunk_bytes) in block_output.iter().zip(out_chunk.chunks_mut(4)) {
+                let bytes = word.to_le_bytes();
+                // chunk_bytes is exactly 4 bytes long, EXCEPT potentially the very last one.
+                // Slicing `bytes` to match `chunk_bytes.len()` guarantees no panics.
+                chunk_bytes.copy_from_slice(&bytes[..chunk_bytes.len()]);
+            }
+        }
+    }
+
+    // Constructs the output as defined in the standard: 32B words
+    fn block_output(compressed: &CFState, init_state: &CFState) -> [u32; 16] {
+        let block_words: [u32; 16] = array::from_fn(|i| {
+            if i < 8 {
+                compressed[i] ^ compressed[i + 8]
+            } else {
+                compressed[i] ^ init_state[i - 8]
+            }
+        });
+
+        block_words
     }
 }
 
 // Internal compression function state
+#[derive(Clone)]
 pub(crate) struct CFState {
     input_chaining_values: ChainingValue,
     iv: [u32; 4],
@@ -162,14 +215,13 @@ impl CFState {
             input_chaining_values: chunk.cv,
             iv: [IV[0], IV[1], IV[2], IV[3]],
             counter: Self::to_le_array(chunk.chunk_counter),
-            block_amount: chunk.blocks_compressed as u32,
+            block_amount: chunk.block_len as u32,
             flags: chunk.flags,
         }
     }
 
     pub fn truncate(self) -> ChainingValue {
         array::from_fn(|i| self[i] ^ self[i + 8])
-        // self.input_chaining_values
     }
 
     fn to_le_array(counter: u64) -> [u32; 2] {

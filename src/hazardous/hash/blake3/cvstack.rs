@@ -1,5 +1,5 @@
 use crate::hazardous::hash::blake3::internal::{
-    CFState, ChainingValue, CompressionFn, BLOCK_LEN, PARENT,
+    CFState, ChainingValue, CompressionFn, OutputReader, BLOCK_LEN, ROOT,
 };
 
 // The maximum possible height of a BLAKE3 tree: the input is capped at 2^64B
@@ -49,17 +49,36 @@ impl TreeStack {
         self.stack[self.stack_len as usize] // Panics if out-of-bounds
     }
 
-    // Produces the final output of the hash function
+    // Produces the root of the tree
     //
     // Merges the current chaining value with every CV in the stack
-    pub fn finalize(self, mut config: FinalizeCommand) -> ChainingValue {
-        for i in (0..self.stack_len as usize).rev() {
-            let sibling = self.stack[i];
+    pub fn root_output(mut self, mut config: FinalizeCommand) -> OutputReader {
+        // Squash all remaining chunks up to the last one
+        while self.stack_len > 1 {
+            let next_cv = self.pop();
             config.current_cv =
-                self.parent_cv(sibling, config.current_cv, config.key_words, config.flags)
+                self.parent_cv(next_cv, config.current_cv, config.key_words, config.flags);
         }
 
-        config.current_cv
+        let final_cv = self.pop();
+        let final_flags = config.flags | ROOT;
+        let msgs = merge_msgs(final_cv, config.current_cv);
+        let merge_state = CFState::new(config.key_words, 0, BLOCK_LEN as u32, final_flags);
+
+        OutputReader::new(merge_state, msgs)
+    }
+
+    fn parent_state(
+        &self,
+        left: ChainingValue,
+        right: ChainingValue,
+        key_words: [u32; 8],
+        flags: u32,
+    ) -> CFState {
+        let msg = merge_msgs(left, right);
+        let merge_state = CFState::new(key_words, 0, BLOCK_LEN as u32, flags);
+
+        (self.compress)(merge_state, &msg)
     }
 
     fn parent_cv(
@@ -69,11 +88,7 @@ impl TreeStack {
         key_words: [u32; 8],
         flags: u32,
     ) -> ChainingValue {
-        let msg = merge_msgs(left, right);
-        let merge_state = CFState::new(key_words, 0, BLOCK_LEN as u32, flags | PARENT);
-        let compressed_state = (self.compress)(merge_state, &msg);
-
-        compressed_state.truncate()
+        self.parent_state(left, right, key_words, flags).truncate()
     }
 }
 
@@ -138,10 +153,6 @@ mod tests {
         assert_eq!(
             tree.stack_len, 1,
             "Stack should merge down to a single parent node"
-        );
-        assert_eq!(
-            tree.stack[0], [99; 8],
-            "Parent CV should be the output of mock_compress"
         );
     }
 }

@@ -24,7 +24,9 @@ mod cvstack;
 mod internal;
 
 use crate::hazardous::hash::blake3::cvstack::{FinalizeCommand, PushCommand, TreeStack};
-use crate::hazardous::hash::blake3::internal::{compress, ChunkState, CHUNK_LEN, CHUNK_START, IV};
+use crate::hazardous::hash::blake3::internal::{
+    compress, ChunkState, CHUNK_LEN, CHUNK_START, IV, KEYED_HASH, PARENT,
+};
 use core::cmp::min;
 
 /// Blake3 can run in different modes based on usage
@@ -38,13 +40,31 @@ pub enum Mode {
     },
 }
 
+enum FlagContext {
+    Initial,
+    Parent,
+}
+
 impl Mode {
-    fn derive_state(&self) -> ChunkState {
+    fn derive_init_state(&self) -> ChunkState {
         let key_words = self.key_words();
         let chunk_counter = 0;
-        let flags = CHUNK_START;
+        let flags = self.derive_flags(FlagContext::Initial);
 
         ChunkState::new(key_words, chunk_counter, flags)
+    }
+
+    fn derive_flags(&self, ctx: FlagContext) -> u32 {
+        match &self {
+            Mode::Hash => match ctx {
+                FlagContext::Initial => CHUNK_START,
+                FlagContext::Parent => PARENT,
+            },
+            Mode::KeyedHash { key: _ } => match ctx {
+                FlagContext::Initial => CHUNK_START | KEYED_HASH,
+                FlagContext::Parent => PARENT | KEYED_HASH,
+            },
+        }
     }
 
     fn key_words(&self) -> [u32; 8] {
@@ -67,7 +87,7 @@ impl Blake3 {
     /// Create a new `Blake3` instance of the given `Mode`.
     pub fn new(mode: Mode) -> Self {
         Self {
-            state: mode.derive_state(),
+            state: mode.derive_init_state(),
             chain_values: TreeStack::new(compress),
             mode,
             total_chunks: 0,
@@ -94,45 +114,41 @@ impl Blake3 {
     fn flush_state(&mut self) {
         // Get final chaining value
         let is_root = false;
-        let cv = self.state.finalize_chunk(is_root);
+        let cv = self.state.finalize_chunk(is_root).truncate();
         self.total_chunks += 1;
 
         // Push it to the tree stack
         let key_words = self.mode.key_words();
-        let parent_flags = 0;
         self.chain_values.push(PushCommand {
             next_cv: cv,
             total_chunks: self.total_chunks,
             key_words,
-            flags: parent_flags,
+            flags: self.mode.derive_flags(FlagContext::Parent),
         });
 
         // Reset state
-        self.state = ChunkState::new(key_words, self.total_chunks, CHUNK_START);
+        let next_flags = self.mode.derive_flags(FlagContext::Initial);
+        self.state = ChunkState::new(key_words, self.total_chunks, next_flags);
     }
 
     /// Return a BLAKE3 digest in the `out_slice` parameter.
+    /// The length of the `out_slice` parameter dictates the
+    /// length of the output.
     pub fn finalize(mut self, out_slice: &mut [u8]) {
         let key_words = self.mode.key_words();
         let is_root = self.total_chunks == 0;
-        let current_cv = self.state.finalize_chunk(is_root);
 
-        let final_cv = if is_root {
-            current_cv
+        let reader = if is_root {
+            self.state.root_output(is_root)
         } else {
-            self.chain_values.finalize(FinalizeCommand {
-                current_cv,
+            let current_state = self.state.finalize_chunk(is_root);
+            self.chain_values.root_output(FinalizeCommand {
+                current_cv: current_state.truncate(),
                 key_words,
-                flags: 0,
+                flags: self.mode.derive_flags(FlagContext::Parent),
             })
         };
 
-        for (i, word) in final_cv.iter().enumerate() {
-            if i * 4 < out_slice.len() {
-                let bytes = word.to_le_bytes();
-                let end = min(out_slice.len(), (i + 1) * 4);
-                out_slice[i * 4..end].copy_from_slice(&bytes[..end - (i * 4)]);
-            }
-        }
+        reader.fill(out_slice);
     }
 }
