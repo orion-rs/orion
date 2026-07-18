@@ -77,7 +77,7 @@ impl Mode {
 
 /// Blake3 configuration
 pub struct Blake3 {
-    state: ChunkState,
+    chunk: ChunkState,
     chain_values: TreeStack,
     mode: Mode,
     total_chunks: u64,
@@ -87,7 +87,7 @@ impl Blake3 {
     /// Create a new `Blake3` instance of the given `Mode`.
     pub fn new(mode: Mode) -> Self {
         Self {
-            state: mode.derive_init_state(),
+            chunk: mode.derive_init_state(),
             chain_values: TreeStack::new(compress),
             mode,
             total_chunks: 0,
@@ -100,13 +100,13 @@ impl Blake3 {
             return;
         }
 
-        if self.state.len() == CHUNK_LEN {
+        if self.chunk.len() == CHUNK_LEN {
             self.flush_state();
         }
 
-        let want = CHUNK_LEN - self.state.len();
+        let want = CHUNK_LEN - self.chunk.len();
         let take = min(want, data.len());
-        self.state.update(&data[..take]);
+        self.chunk.update(&data[..take]);
 
         self.update(&data[take..])
     }
@@ -114,7 +114,7 @@ impl Blake3 {
     fn flush_state(&mut self) {
         // Get final chaining value
         let is_root = false;
-        let cv = self.state.finalize_chunk(is_root).truncate();
+        let cv = self.chunk.finalize_chunk(is_root).truncate();
         self.total_chunks += 1;
 
         // Push it to the tree stack
@@ -128,7 +128,7 @@ impl Blake3 {
 
         // Reset state
         let next_flags = self.mode.derive_flags(FlagContext::Initial);
-        self.state = ChunkState::new(key_words, self.total_chunks, next_flags);
+        self.chunk = ChunkState::new(key_words, self.total_chunks, next_flags);
     }
 
     /// Return a BLAKE3 digest in the `out_slice` parameter.
@@ -139,9 +139,9 @@ impl Blake3 {
         let is_root = self.total_chunks == 0;
 
         let reader = if is_root {
-            self.state.root_output(is_root)
+            self.chunk.root_output(is_root)
         } else {
-            let current_state = self.state.finalize_chunk(is_root);
+            let current_state = self.chunk.finalize_chunk(is_root);
             self.chain_values.root_output(FinalizeCommand {
                 current_cv: current_state.truncate(),
                 key_words,
