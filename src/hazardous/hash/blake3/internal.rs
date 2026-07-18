@@ -436,7 +436,7 @@ mod tests {
         ];
 
         let mut current_msgs = msgs;
-        for i in 0..7 {
+        (0..7).for_each(|i| {
             round(&mut state, &current_msgs);
             current_msgs = permute_msgs(current_msgs);
 
@@ -447,7 +447,7 @@ mod tests {
                     i, j
                 );
             }
-        }
+        });
 
         // Verify the 8-word compression function output
         let compress_output = state.truncate();
