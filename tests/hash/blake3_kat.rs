@@ -1,3 +1,6 @@
+// Tests were taking from the official Blake3 Github repository
+// https://github.com/BLAKE3-team/BLAKE3/commit/ae3e8e6b3a5ae3190ca5d62820789b17886a0038
+
 use hex::decode;
 use serde_json::Value;
 use std::{fs::File, io::BufReader};
@@ -29,6 +32,8 @@ fn test_blake3_kat() {
             let input_len = test_case.get("input_len").unwrap().as_u64().unwrap() as usize;
 
             // Extract the expected hex strings
+            // Orion does not implement the 'derive key' mode yet, although the test
+            // vectors do include them.
             let hash_hex = test_case.get("hash").unwrap().as_str().unwrap();
             let keyed_hash_hex = test_case.get("keyed_hash").unwrap().as_str().unwrap();
 
