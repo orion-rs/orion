@@ -15,6 +15,7 @@
 	- [Breaking change] ML-KEM `DecapsulatoinKeys` no longer themself perform key-caching. This has been moved to `KeyPair`. `KeyPair` therefor offers important performance benefits when decapsulating with the same secret more than once.
 	- [Breaking change] Constants previously associated with the zero-sized structs are now in `mlkem*::` modules.
 	- [Breaking change] `ML-KEM` `DecapuslationKey`s can now return the raw, encoded bytes.
+	- [Breaking change] `X-Wing` now has separate type for explicit randomness `Eseed` used during encapsulation operations.
 - [Breaking change] `orion::kdf::Password` and `orion::pwhash::Password`  no longer has `generate()` since it is meant to represent a user-supplied password (one of the many drawbacks of the older macro-based approach).
 - [Breaking change] Types that previously implemented `Copy` do not anymore. `Copy` in all cases requires copying a lot of bytes and could hide a performance penalty, so now only `Clone` is available for `Public<T>`. 
 - [Breaking change] `orion::hazardous::ecc::x25519::PublicKey` no longer stores the u-coordinate in masked form, but original byte slice. The `PartialEq` still respects (applies masking) the u-coordinate condition. Masking is applied before Montgomery ladder.

@@ -207,7 +207,7 @@ fn test_normal_debug<const MIN: usize, const MAX: usize, S: TypeSpec>() {
     let public = format!("{:?}", [u8::MAX; MAX].as_ref());
     let test_debug_contents = format!(
         "{:?}",
-        &Public::<S>::try_from([u8::MAX; MAX].as_slice()).unwrap()
+        Public::<S>::try_from([u8::MAX; MAX].as_slice()).unwrap()
     );
     assert!(test_debug_contents.contains(&public));
     assert!(test_debug_contents.starts_with(S::NAME));

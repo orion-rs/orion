@@ -547,10 +547,10 @@ mod public {
         let n = Nonce::from(ZERO_IETF_NONCE);
         let ctx = ChaCha20::new(&sk, &n);
 
-        let secret_key = format!("{:?}", &ctx.state);
-        let secret_export = format!("{:?}", &ctx.keystreamblock);
+        let secret_key = format!("{:?}", ctx.state);
+        let secret_export = format!("{:?}", ctx.keystreamblock);
 
-        let test_debug_contents = format!("{:?}", &ctx);
+        let test_debug_contents = format!("{:?}", ctx);
         assert!(!test_debug_contents.contains(&secret_key));
         assert!(!test_debug_contents.contains(&secret_export));
     }

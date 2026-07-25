@@ -72,7 +72,7 @@ impl core::fmt::Debug for DHKEM_X25519_SHA256_CHACHA20 {
             f,
             "{} key: {{***OMITTED***}}, base_nonce: {:?}, ctr: {:?}, exporter_secret: {{***OMITTED***}}",
             stringify!(DHKEM_X25519_SHA256_CHACHA20),
-            &self.base_nonce,
+            self.base_nonce,
             self.ctr
         )
     }
@@ -552,10 +552,10 @@ mod test {
         let (_sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
         let (ctx, _enc) = DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
 
-        let secret_key = format!("{:?}", &ctx.key);
-        let secret_export = format!("{:?}", &ctx.exporter_secret);
+        let secret_key = format!("{:?}", ctx.key);
+        let secret_export = format!("{:?}", ctx.exporter_secret);
 
-        let test_debug_contents = format!("{:?}", &ctx);
+        let test_debug_contents = format!("{:?}", ctx);
         assert!(!test_debug_contents.contains(&secret_key));
         assert!(!test_debug_contents.contains(&secret_export));
     }
