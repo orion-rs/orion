@@ -35,6 +35,7 @@ const MSG_PERMUTATION: [usize; 16] = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9,
 // 32B intermediate hash output (a.k.a. chaining value)
 pub(crate) type ChainingValue = [u32; 8];
 
+#[derive(PartialEq, Debug, Clone)]
 pub(crate) struct ChunkState {
     /// The resulting chaining value of the last compressed block.
     cv: ChainingValue,

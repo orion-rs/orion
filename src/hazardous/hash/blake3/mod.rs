@@ -31,6 +31,7 @@ use core::cmp::min;
 
 /// Blake3 can run in different modes based on usage.
 /// Currently, only Hash and KeyedHash is supported.
+#[derive(PartialEq, Debug, Clone)]
 pub enum Mode {
     /// Regular hashing
     Hash,
@@ -79,6 +80,7 @@ impl Mode {
 }
 
 /// Blake3 configuration
+#[derive(PartialEq, Debug, Clone)]
 pub struct Blake3 {
     chunk: ChunkState,
     chain_values: TreeStack,

@@ -6,6 +6,7 @@ use crate::hazardous::hash::blake3::internal::{
 // with 2^10B nodes => 2^54B nodes
 const MAX_TREE_DEPTH: usize = 54;
 
+#[derive(PartialEq, Debug, Clone)]
 pub(crate) struct TreeStack {
     stack: [ChainingValue; MAX_TREE_DEPTH],
     compress: CompressionFn,
