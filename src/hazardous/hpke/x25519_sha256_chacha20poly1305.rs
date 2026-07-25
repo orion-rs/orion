@@ -179,6 +179,7 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
     type PrivateKey = x25519_hkdf_sha256::PrivateKey;
     type PublicKey = x25519_hkdf_sha256::PublicKey;
     type EncapsulatedKey = x25519_hkdf_sha256::PublicKey;
+    type EphemeralSecret = x25519_hkdf_sha256::PrivateKey;
 
     fn labeled_extract(
         salt: &[u8],
@@ -374,6 +375,53 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
         Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_ref(), info, psk, psk_id)
     }
 
+    fn seal(
+        &mut self,
+        plaintext: &[u8],
+        aad: &[u8],
+        out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        // Ensure we don't write anything to `out` if `increment_seq()` would fail.
+        if self.would_overflow() {
+            return Err(UnknownCryptoError);
+        }
+
+        let key = chacha20poly1305::SecretKey::from(self.key);
+        let nonce = self.compute_nonce();
+        ChaCha20Poly1305::seal(&key, &nonce, plaintext, Some(aad), out)?;
+
+        self.increment_seq()
+    }
+
+    fn open(
+        &mut self,
+        ciphertext: &[u8],
+        aad: &[u8],
+        out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        // Ensure we don't write anything to `out` if `increment_seq()` would fail.
+        if self.would_overflow() {
+            return Err(UnknownCryptoError);
+        }
+
+        let key = chacha20poly1305::SecretKey::from(self.key);
+        let nonce = self.compute_nonce();
+        ChaCha20Poly1305::open(&key, &nonce, ciphertext, Some(aad), out)?;
+
+        self.increment_seq()
+    }
+
+    fn export(&self, exporter_context: &[u8], out: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        if out.len() > Self::EXPORT_SECRET_MAXLEN {
+            return Err(UnknownCryptoError);
+        }
+
+        Self::check_input_max_lengths(exporter_context)?;
+        Self::labeled_expand(&self.exporter_secret, b"sec", exporter_context, out)
+    }
+}
+
+impl AuthSuite for DHKEM_X25519_SHA256_CHACHA20 {
     #[cfg(feature = "safe_api")]
     fn setup_auth_sender(
         pubkey_r: &Self::PublicKey,
@@ -487,51 +535,6 @@ impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
             psk,
             psk_id,
         )
-    }
-
-    fn seal(
-        &mut self,
-        plaintext: &[u8],
-        aad: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        // Ensure we don't write anything to `out` if `increment_seq()` would fail.
-        if self.would_overflow() {
-            return Err(UnknownCryptoError);
-        }
-
-        let key = chacha20poly1305::SecretKey::from(self.key);
-        let nonce = self.compute_nonce();
-        ChaCha20Poly1305::seal(&key, &nonce, plaintext, Some(aad), out)?;
-
-        self.increment_seq()
-    }
-
-    fn open(
-        &mut self,
-        ciphertext: &[u8],
-        aad: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        // Ensure we don't write anything to `out` if `increment_seq()` would fail.
-        if self.would_overflow() {
-            return Err(UnknownCryptoError);
-        }
-
-        let key = chacha20poly1305::SecretKey::from(self.key);
-        let nonce = self.compute_nonce();
-        ChaCha20Poly1305::open(&key, &nonce, ciphertext, Some(aad), out)?;
-
-        self.increment_seq()
-    }
-
-    fn export(&self, exporter_context: &[u8], out: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if out.len() > Self::EXPORT_SECRET_MAXLEN {
-            return Err(UnknownCryptoError);
-        }
-
-        Self::check_input_max_lengths(exporter_context)?;
-        Self::labeled_expand(&self.exporter_secret, b"sec", exporter_context, out)
     }
 }
 

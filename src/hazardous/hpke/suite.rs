@@ -25,7 +25,7 @@ pub(crate) mod private {
     use crate::hazardous::hpke::mode::private::HpkeMode;
     use crate::hazardous::hpke::private::{HpkeEncapKey, HpkePrivateKey, HpkePublicKey};
 
-    /// Common trait for HPKE suite.
+    /// Common trait for HPKE suite, implying modes `Base` + `PSK`.
     pub trait Suite {
         /// The private key used for this suite.
         type PrivateKey: HpkePrivateKey;
@@ -121,6 +121,30 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2>
+        fn seal(
+            &mut self,
+            plaintext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError>;
+
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2>
+        fn open(
+            &mut self,
+            ciphertext: &[u8],
+            aad: &[u8],
+            out: &mut [u8],
+        ) -> Result<(), UnknownCryptoError>;
+
+        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export>
+        fn export(&self, exporter_context: &[u8], out: &mut [u8])
+        -> Result<(), UnknownCryptoError>;
+    }
+
+    /// HPKE suite, implying a KEM additionally provides `Auth` mode, on top of `Base` + `PSK`.
+    /// Not all suites include KEM which supports `Auth`, such as X-Wing.
+    pub trait AuthSuite: Suite {
         #[cfg(feature = "safe_api")]
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy>
         fn setup_auth_sender(
@@ -184,25 +208,5 @@ pub(crate) mod private {
         ) -> Result<Self, UnknownCryptoError>
         where
             Self: Sized;
-
-        /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2>
-        fn seal(
-            &mut self,
-            plaintext: &[u8],
-            aad: &[u8],
-            out: &mut [u8],
-        ) -> Result<(), UnknownCryptoError>;
-
-        /// <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2>
-        fn open(
-            &mut self,
-            ciphertext: &[u8],
-            aad: &[u8],
-            out: &mut [u8],
-        ) -> Result<(), UnknownCryptoError>;
-
-        /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export>
-        fn export(&self, exporter_context: &[u8], out: &mut [u8])
-        -> Result<(), UnknownCryptoError>;
     }
 }

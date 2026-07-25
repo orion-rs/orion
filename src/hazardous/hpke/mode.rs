@@ -194,7 +194,7 @@ impl<S: Suite + Base> ModeBase<S> {
     pub fn new_sender_deterministic(
         pubkey_r: &S::PublicKey,
         info: &[u8],
-        secret_ephemeral: S::PrivateKey,
+        secret_ephemeral: S::EphemeralSecret,
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_base_sender_deterministic(pubkey_r, info, secret_ephemeral)?;
 
@@ -400,7 +400,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secret_ephemeral: S::PrivateKey,
+        secret_ephemeral: S::EphemeralSecret,
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) =
             S::setup_psk_sender_deterministic(pubkey_r, info, psk, psk_id, secret_ephemeral)?;
@@ -582,7 +582,7 @@ impl<S> ModeAuth<S> {
     pub const MODE_ID: u8 = 0x02u8;
 }
 
-impl<S: Suite + Auth> ModeAuth<S> {
+impl<S: AuthSuite + Auth> ModeAuth<S> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// HPKE Auth mode sender.
@@ -607,7 +607,7 @@ impl<S: Suite + Auth> ModeAuth<S> {
         pubkey_r: &S::PublicKey,
         info: &[u8],
         secret_key_s: &S::PrivateKey,
-        secret_ephemeral: S::PrivateKey,
+        secret_ephemeral: S::EphemeralSecret,
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) =
             S::setup_auth_sender_deterministic(pubkey_r, info, secret_key_s, secret_ephemeral)?;
@@ -792,7 +792,7 @@ impl<S> ModeAuthPsk<S> {
     pub const MODE_ID: u8 = 0x03u8;
 }
 
-impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
+impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// HPKE AuthPsk mode sender.
@@ -821,7 +821,7 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         psk: &[u8],
         psk_id: &[u8],
         secret_key_s: &S::PrivateKey,
-        secret_ephemeral: S::PrivateKey,
+        secret_ephemeral: S::EphemeralSecret,
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_authpsk_sender_deterministic(
             pubkey_r,
