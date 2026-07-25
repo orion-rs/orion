@@ -109,7 +109,7 @@ pub type DecapsulationKey = Secret<XWingDecapKey>;
 /// X-Wing shared secret.
 pub type SharedSecret = Secret<XWingSharedSecret>;
 
-/// TODO: Do we also want this for ML-KEM `m`? This is to make it compatible with future
+/// TODO(brycx): Do we also want this for ML-KEM `m`? This is to make it compatible with future
 /// HPKE impl upcoming, but this is also relevant for ML-KEM, so my take is yes.
 /// X-Wing encapsulation explicit randomness.
 pub type Eseed = Secret<XWingEseed>;

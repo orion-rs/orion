@@ -24,10 +24,12 @@ use private::HpkeEncapKey;
 use private::HpkePrivateKey;
 use private::HpkePublicKey;
 
+mod mlkem768x25519_sha256_chacha20poly1305;
 mod mode;
 mod suite;
 mod x25519_sha256_chacha20poly1305;
 
+pub use mlkem768x25519_sha256_chacha20poly1305::MLKEM768_X25519_SHA256_CHACHA20;
 pub use mode::ModeAuth;
 pub use mode::ModeAuthPsk;
 pub use mode::ModeBase;
@@ -49,6 +51,11 @@ pub(crate) mod private {
 impl HpkePrivateKey for crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey {}
 impl HpkePublicKey for crate::hazardous::kem::x25519_hkdf_sha256::PublicKey {}
 impl HpkeEncapKey for crate::hazardous::kem::x25519_hkdf_sha256::PublicKey {}
+
+impl HpkePrivateKey for crate::hazardous::kem::xwing::DecapsulationKey {}
+impl HpkePrivateKey for crate::hazardous::kem::xwing::Eseed {}
+impl HpkePublicKey for crate::hazardous::kem::xwing::EncapsulationKey {}
+impl HpkeEncapKey for crate::hazardous::kem::xwing::Ciphertext {}
 
 #[derive(Clone, Debug, PartialEq)]
 /// The role for an instance of HPKE mode.

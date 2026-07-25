@@ -125,6 +125,22 @@ impl DHKEM_X25519_SHA256_CHACHA20 {
     /// Output size for this suite's KDF (<https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2>).
     pub const NH: usize = 32;
 
+    /// Deterministically derive this suite's KEM keypair from input keying material.
+    ///
+    /// # Errors:
+    /// An error will be returned if `ikm` is less than 32 bytes.
+    pub fn derive_keypair(
+        ikm: &[u8],
+    ) -> Result<
+        (
+            x25519_hkdf_sha256::PrivateKey,
+            x25519_hkdf_sha256::PublicKey,
+        ),
+        UnknownCryptoError,
+    > {
+        x25519_hkdf_sha256::DhKem::derive_keypair(ikm)
+    }
+
     fn compute_nonce(&self) -> chacha20poly1305::Nonce {
         // "Implementations MAY use a sequence number that is shorter than the nonce length (padding on the left with zero),
         // but MUST raise an error if the sequence number overflows." https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2
@@ -547,6 +563,26 @@ mod test {
         hazardous::hpke::*,
         test_framework::hpke_interface::{HpkeTester, TestableHpke},
     };
+
+    #[test]
+    fn test_derive_keypair() {
+        let (sk, pk) = DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32]).unwrap();
+        let (sk_kem, pk_kem) = DhKem::derive_keypair(&[0u8; 32]).unwrap();
+        assert_eq!(sk, sk_kem);
+        assert_eq!(pk, pk_kem);
+
+        assert!(DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 31]).is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32]).is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 63]).is_ok());
+        assert_ne!(
+            DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32])
+                .unwrap()
+                .1,
+            DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[1u8; 32])
+                .unwrap()
+                .1
+        );
+    }
 
     #[test]
     #[cfg(feature = "safe_api")]
