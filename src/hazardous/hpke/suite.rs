@@ -33,6 +33,8 @@ pub(crate) mod private {
         type PublicKey: HpkePublicKey;
         /// The KEM ciphertext, i.e. the "encapsulated" key (in HPKE-terms) used for this suite.
         type EncapsulatedKey: HpkeEncapKey;
+        /// The secret ephemeral randomness used during deterministic operations.
+        type EphemeralSecret: HpkePrivateKey;
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con>
         fn key_schedule(
@@ -73,7 +75,7 @@ pub(crate) mod private {
         fn setup_base_sender_deterministic(
             pubkey_r: &Self::PublicKey,
             info: &[u8],
-            secret_ephemeral: Self::PrivateKey,
+            secret_ephemeral: Self::EphemeralSecret,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
@@ -103,7 +105,7 @@ pub(crate) mod private {
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
-            secret_ephemeral: Self::PrivateKey,
+            secret_ephemeral: Self::EphemeralSecret,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
@@ -133,7 +135,7 @@ pub(crate) mod private {
             pubkey_r: &Self::PublicKey,
             info: &[u8],
             secrety_key_s: &Self::PrivateKey,
-            secret_ephemeral: Self::PrivateKey,
+            secret_ephemeral: Self::EphemeralSecret,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
@@ -166,7 +168,7 @@ pub(crate) mod private {
             psk: &[u8],
             psk_id: &[u8],
             secrety_key_s: &Self::PrivateKey,
-            secret_ephemeral: Self::PrivateKey,
+            secret_ephemeral: Self::EphemeralSecret,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
