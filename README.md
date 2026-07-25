@@ -13,7 +13,8 @@ Currently supports:
 * **MAC**: HMAC, Poly1305.
 * **Stream ciphers**: (X)ChaCha20.
 * **KEM**: X-Wing, ML-KEM, DHKEM(X25519, HKDF-SHA256).
-* **HPKE**: 
+* **HPKE**:
+    - X-Wing/(ML-KEM768, X25519), HKDF-SHA256, ChaCha20Poly1305
     - DHKEM(X25519, HKDF-SHA256), HKDF-SHA256, ChaCha20Poly1305
 
 Experimental support (with `experimental` feature enabled):
