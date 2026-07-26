@@ -24,10 +24,17 @@ use private::HpkeEncapKey;
 use private::HpkePrivateKey;
 use private::HpkePublicKey;
 
+mod base;
 mod mlkem768x25519_sha256_chacha20poly1305;
 mod mode;
 mod suite;
 mod x25519_sha256_chacha20poly1305;
+
+mod aead;
+mod kdf;
+mod kem;
+
+pub(crate) use kem::{VERSION_ID, length_prefix};
 
 pub use mlkem768x25519_sha256_chacha20poly1305::MLKEM768_X25519_SHA256_CHACHA20;
 pub use mode::ModeAuth;
