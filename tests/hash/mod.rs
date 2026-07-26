@@ -34,7 +34,7 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 }
 
 fn blake3_test_runner(input: &[u8], key: &[u8], expected_hash: &[u8], expected_keyed_hash: &[u8]) {
-    let mut hasher = blake3::Blake3::new(blake3::Mode::Hash);
+    let mut hasher = blake3::Blake3::default();
     hasher.update(input);
     let mut digest = vec![0u8; expected_hash.len()];
     hasher.finalize(&mut digest);
@@ -42,16 +42,8 @@ fn blake3_test_runner(input: &[u8], key: &[u8], expected_hash: &[u8], expected_k
 
     // Keyed Hash
     if !key.is_empty() {
-        // Copy key to slice
-        let mut key_words = [0u32; 8];
-        (0..8).for_each(|i| {
-            let start = i * 4;
-            let mut bytes = [0u8; 4];
-            bytes.copy_from_slice(&key[start..start + 4]);
-            key_words[i] = u32::from_le_bytes(bytes);
-        });
-
-        let mut keyed_hasher = blake3::Blake3::new(blake3::Mode::KeyedHash { key: key_words });
+        let secret_key = blake3::SecretKey::from_slice(key).unwrap();
+        let mut keyed_hasher = blake3::Blake3::new_keyed(&secret_key);
         keyed_hasher.update(input);
         let mut keyed_digest = vec![0u8; expected_keyed_hash.len()];
         keyed_hasher.finalize(&mut keyed_digest);
