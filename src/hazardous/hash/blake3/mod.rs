@@ -162,19 +162,18 @@ impl Blake3 {
 
     /// Update state with `data`. This can be called multiple times.
     pub fn update(&mut self, data: &[u8]) {
-        if data.is_empty() {
-            return;
+        let mut data_view = data;
+        while !data_view.is_empty() {
+            if self.chunk.len() == CHUNK_LEN {
+                self.flush_state();
+            }
+
+            let want = CHUNK_LEN - self.chunk.len();
+            let take = min(want, data_view.len());
+            self.chunk.update(&data_view[..take]);
+
+            data_view = &data_view[take..]
         }
-
-        if self.chunk.len() == CHUNK_LEN {
-            self.flush_state();
-        }
-
-        let want = CHUNK_LEN - self.chunk.len();
-        let take = min(want, data.len());
-        self.chunk.update(&data[..take]);
-
-        self.update(&data[take..])
     }
 
     fn flush_state(&mut self) {

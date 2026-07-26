@@ -87,19 +87,18 @@ impl ChunkState {
     /// greater than CHUNK_LEN - len().
     pub(crate) fn update(&mut self, input: &[u8]) {
         assert!(input.len() <= CHUNK_LEN - self.len());
+        let mut input_view = input;
 
-        if input.is_empty() {
-            return;
+        while !input_view.is_empty() {
+            if self.block_len == BLOCK_LEN as u8 {
+                self.compress_block();
+            }
+
+            let taken: usize = self.append_to_block(input_view);
+            self.block_len += taken as u8;
+
+            input_view = &input_view[taken..]
         }
-
-        if self.block_len == BLOCK_LEN as u8 {
-            self.compress_block();
-        }
-
-        let taken: usize = self.append_to_block(input);
-        self.block_len += taken as u8;
-
-        self.update(&input[taken..])
     }
 
     pub(crate) fn root_output(&mut self, is_root: bool) -> OutputReader {
