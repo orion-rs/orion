@@ -21,12 +21,12 @@
 // SOFTWARE.
 
 use crate::hazardous::aead::chacha20poly1305::ChaCha20Poly1305;
+use crate::hazardous::hash::sha3::shake256::Shake256;
 use crate::hazardous::hpke::base::HpkeSuite;
 use crate::hazardous::hpke::kem::MlKem768X25519;
-use crate::hazardous::kdf::hkdf::sha256::HkdfSha256;
 
 #[allow(non_camel_case_types)]
-/// HPKE suite: X-Wing/MLKEM768-X25519, HKDF-SHA-256 and ChaCha20Poly1305.
+/// HPKE suite: X-Wing/MLKEM768-X25519, SHAKE256 and ChaCha20Poly1305.
 ///
 /// This suite is defined in:
 /// - KEM suite: [draft-irtf-cfrg-concrete-hybrid-kems-04](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-concrete-hybrid-kems-04)
@@ -52,7 +52,9 @@ use crate::hazardous::kdf::hkdf::sha256::HkdfSha256;
 /// [`xwing`]: crate::hazardous::kem::xwing
 /// [`xwing::DecapsulationKey`]: crate::hazardous::kem::xwing::DecapsulationKey
 /// [`xwing::KeyPair`]: crate::hazardous::kem::xwing::KeyPair
-pub type MLKEM768_X25519_SHA256_CHACHA20 = HpkeSuite<MlKem768X25519, HkdfSha256, ChaCha20Poly1305>;
+pub type MLKEM768_X25519_SHAKE256_CHACHA20 = HpkeSuite<MlKem768X25519, Shake256, ChaCha20Poly1305>;
+
+// TODO(brycx): Test vectors: https://datatracker.ietf.org/doc/html/draft-ietf-hpke-pq-05#name-mlkem768-x25519-shake256-ch
 
 #[cfg(feature = "safe_api")]
 #[cfg(test)]
@@ -71,10 +73,10 @@ mod test {
     #[cfg(feature = "safe_api")]
     // format! is only available with std
     fn test_omitted_debug() {
-        let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
+        let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
         let ek = kp.public();
         let (ctx, _enc) =
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).unwrap();
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).unwrap();
 
         let secret_key = format!("{:?}", ctx.key);
         let secret_export = format!("{:?}", ctx.exporter_secret);
@@ -100,7 +102,7 @@ mod test {
         )
         .unwrap();
 
-        let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&ikm).unwrap();
+        let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&ikm).unwrap();
         assert_eq!(kp.private().unprotected_as_ref(), &expected_dk);
         // The derived keypair must match the one the seed alone expands into.
         assert_eq!(
@@ -113,15 +115,15 @@ mod test {
 
     #[test]
     fn test_derive_keypair_ikm_lengths() {
-        assert!(MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 31]).is_err());
-        assert!(MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32]).is_ok());
-        assert!(MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 64]).is_ok());
+        assert!(MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; 31]).is_err());
+        assert!(MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; 32]).is_ok());
+        assert!(MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; 64]).is_ok());
         // Distinct IKM must give distinct keypairs.
         assert_ne!(
-            MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32])
+            MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; 32])
                 .unwrap()
                 .public(),
-            MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[1u8; 32])
+            MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[1u8; 32])
                 .unwrap()
                 .public()
         );
@@ -129,40 +131,40 @@ mod test {
 
     #[test]
     fn test_partialeq_impl() {
-        let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
+        let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
         let (dk, ek) = (kp.private(), kp.public());
         let (ctx_s, enc) =
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).unwrap();
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).unwrap();
         let ctx_r =
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, dk, &[0u8; 64]).unwrap();
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_recipient(&enc, dk, &[0u8; 64]).unwrap();
         assert_eq!(ctx_s, ctx_r);
 
-        let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[1u8; DK_SIZE]).unwrap();
+        let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[1u8; DK_SIZE]).unwrap();
         let ek = kp.public();
         let (ctx_s, _enc) =
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).unwrap();
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).unwrap();
         assert_ne!(ctx_s, ctx_r);
     }
 
     #[test]
     fn test_error_on_lengths_base() {
-        let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
+        let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
         let (dk, ek) = (kp.private(), kp.public());
         let (ctx, enc) =
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).unwrap();
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).unwrap();
         // Info
-        assert!(MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).is_ok());
-        assert!(MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; 65]).is_err());
+        assert!(MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).is_ok());
+        assert!(MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_sender(ek, &[0u8; 65]).is_err());
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, dk, &[0u8; 64]).is_ok()
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_recipient(&enc, dk, &[0u8; 64]).is_ok()
         );
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, dk, &[0u8; 65]).is_err()
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_recipient(&enc, dk, &[0u8; 65]).is_err()
         );
 
         // Export
         let mut out = [0u8; 64];
-        let mut out_max = [0u8; (255 * MLKEM768_X25519_SHA256_CHACHA20::NH) + 1];
+        let mut out_max = [0u8; (255 * MLKEM768_X25519_SHAKE256_CHACHA20::NH) + 1];
         assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
         assert!(ctx.export(&[0u8; 65], &mut out).is_err());
         assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
@@ -170,17 +172,17 @@ mod test {
 
     #[test]
     fn test_error_on_lengths_psk() {
-        let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
+        let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
         let (dk, ek) = (kp.private(), kp.public());
         // Info
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_sender(
                 ek, &[0u8; 65], &[0u8; 64], b"psk_id"
             )
             .is_err()
         );
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_sender(
                 ek, &[0u8; 64], &[0u8; 64], b"psk_id"
             )
             .is_ok()
@@ -188,53 +190,53 @@ mod test {
 
         // PSK
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_sender(
                 ek, &[0u8; 64], &[0u8; 65], b"psk_id"
             )
             .is_err()
         );
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_sender(
                 ek, &[0u8; 64], &[0u8; 31], b"psk_id"
             )
             .is_err()
         );
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_sender(
                 ek, &[0u8; 64], &[0u8; 32], b"psk_id"
             )
             .is_ok()
         );
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_sender(
                 ek, &[0u8; 64], &[0u8; 64], b"psk_id"
             )
             .is_ok()
         );
-        let (ctx, enc) = MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
+        let (ctx, enc) = MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_sender(
             ek, &[0u8; 64], &[0u8; 64], b"psk_id",
         )
         .unwrap();
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_recipient(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_recipient(
                 &enc, dk, &[0u8; 64], &[0u8; 31], b"psk_id"
             )
             .is_err()
         );
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_recipient(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_recipient(
                 &enc, dk, &[0u8; 64], &[0u8; 65], b"psk_id"
             )
             .is_err()
         );
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_recipient(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_recipient(
                 &enc, dk, &[0u8; 64], &[0u8; 32], b"psk_id"
             )
             .is_ok()
         );
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_psk_recipient(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_psk_recipient(
                 &enc, dk, &[0u8; 64], &[0u8; 64], b"psk_id"
             )
             .is_ok()
@@ -242,7 +244,7 @@ mod test {
 
         // Export
         let mut out = [0u8; 64];
-        let mut out_max = [0u8; (255 * MLKEM768_X25519_SHA256_CHACHA20::NH) + 1];
+        let mut out_max = [0u8; (255 * MLKEM768_X25519_SHAKE256_CHACHA20::NH) + 1];
         assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
         assert!(ctx.export(&[0u8; 65], &mut out).is_err());
         assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
@@ -251,9 +253,10 @@ mod test {
     #[test]
     fn test_error_if_internal_counter_overflows() {
         let info = b"info param";
-        let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
+        let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
         let (dk, ek) = (kp.private(), kp.public());
-        let (mut ctx, enc) = MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, info).unwrap();
+        let (mut ctx, enc) =
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_sender(ek, info).unwrap();
 
         ctx.ctr = u64::MAX - 1;
 
@@ -265,7 +268,7 @@ mod test {
         assert!(ctx.seal(plaintext, b"", &mut dst_out).is_err());
 
         let mut ctx =
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, dk, info).unwrap();
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_recipient(&enc, dk, info).unwrap();
         ctx.ctr = u64::MAX - 1;
 
         let ciphertext = dst_out;
@@ -281,22 +284,23 @@ mod test {
     #[test]
     fn test_deterministic_and_fresh_sender_equivalent() {
         let eseed = Eseed::from([37u8; ESEED_SIZE]);
-        let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
+        let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(&[0u8; DK_SIZE]).unwrap();
         let (dk, ek) = (kp.private(), kp.public());
 
-        let (ctx_s, enc) = MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender_deterministic(
+        let (ctx_s, enc) = MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_sender_deterministic(
             ek,
             b"info param",
             eseed,
         )
         .unwrap();
         let ctx_r =
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, dk, b"info param").unwrap();
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_recipient(&enc, dk, b"info param")
+                .unwrap();
         assert_eq!(ctx_s, ctx_r);
 
         let eseed = Eseed::from([37u8; ESEED_SIZE]);
         let (ctx_s_again, enc_again) =
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender_deterministic(
+            MLKEM768_X25519_SHAKE256_CHACHA20::setup_base_sender_deterministic(
                 ek,
                 b"info param",
                 eseed,
@@ -306,15 +310,15 @@ mod test {
         assert_eq!(enc_again, enc);
     }
 
-    impl TestableHpke for ModeBase<MLKEM768_X25519_SHA256_CHACHA20> {
-        const HPKE_MODE: u8 = ModeBase::<MLKEM768_X25519_SHA256_CHACHA20>::MODE_ID;
+    impl TestableHpke for ModeBase<MLKEM768_X25519_SHAKE256_CHACHA20> {
+        const HPKE_MODE: u8 = ModeBase::<MLKEM768_X25519_SHAKE256_CHACHA20>::MODE_ID;
 
         fn kem_ct_size() -> usize {
-            MLKEM768_X25519_SHA256_CHACHA20::KEM_CT_SIZE
+            MLKEM768_X25519_SHAKE256_CHACHA20::KEM_CT_SIZE
         }
 
         fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
-            let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(seed)?;
+            let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(seed)?;
             let (dk, ek) = (kp.private(), kp.public());
             Ok((dk.unprotected_as_ref().to_vec(), ek.as_ref().to_vec()))
         }
@@ -332,7 +336,7 @@ mod test {
         {
             let pubkey_r = EncapsulationKey::try_from(pubkey_r)?;
             let (ctx, enc) =
-                ModeBase::<MLKEM768_X25519_SHA256_CHACHA20>::new_sender(&pubkey_r, info)?;
+                ModeBase::<MLKEM768_X25519_SHAKE256_CHACHA20>::new_sender(&pubkey_r, info)?;
             public_ct_out.copy_from_slice(enc.as_ref());
 
             Ok(ctx)
@@ -351,7 +355,7 @@ mod test {
         {
             let enc = Ciphertext::try_from(enc)?;
             let secret_key_r = DecapsulationKey::try_from(secret_key_r)?;
-            ModeBase::<MLKEM768_X25519_SHA256_CHACHA20>::new_recipient(&enc, &secret_key_r, info)
+            ModeBase::<MLKEM768_X25519_SHAKE256_CHACHA20>::new_recipient(&enc, &secret_key_r, info)
         }
 
         fn seal(
@@ -386,9 +390,9 @@ mod test {
             aad: &[u8],
         ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
             let pubkey_r = EncapsulationKey::try_from(pubkey_r)?;
-            let mut dst_kem_out = vec![0u8; MLKEM768_X25519_SHA256_CHACHA20::KEM_CT_SIZE];
+            let mut dst_kem_out = vec![0u8; MLKEM768_X25519_SHAKE256_CHACHA20::KEM_CT_SIZE];
             let mut dst_out = vec![0u8; plaintext.len() + 16];
-            let enc = ModeBase::<MLKEM768_X25519_SHA256_CHACHA20>::base_seal(
+            let enc = ModeBase::<MLKEM768_X25519_SHAKE256_CHACHA20>::base_seal(
                 &pubkey_r,
                 info,
                 plaintext,
@@ -413,7 +417,7 @@ mod test {
             let enc = Ciphertext::try_from(enc)?;
             let secret_key_r = DecapsulationKey::try_from(secret_key_r)?;
             let mut dst_out = vec![0u8; ciphertext.len() - 16];
-            ModeBase::<MLKEM768_X25519_SHA256_CHACHA20>::base_open(
+            ModeBase::<MLKEM768_X25519_SHAKE256_CHACHA20>::base_open(
                 &enc,
                 &secret_key_r,
                 info,
@@ -426,15 +430,15 @@ mod test {
         }
     }
 
-    impl TestableHpke for ModePsk<MLKEM768_X25519_SHA256_CHACHA20> {
-        const HPKE_MODE: u8 = ModePsk::<MLKEM768_X25519_SHA256_CHACHA20>::MODE_ID;
+    impl TestableHpke for ModePsk<MLKEM768_X25519_SHAKE256_CHACHA20> {
+        const HPKE_MODE: u8 = ModePsk::<MLKEM768_X25519_SHAKE256_CHACHA20>::MODE_ID;
 
         fn kem_ct_size() -> usize {
-            MLKEM768_X25519_SHA256_CHACHA20::KEM_CT_SIZE
+            MLKEM768_X25519_SHAKE256_CHACHA20::KEM_CT_SIZE
         }
 
         fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
-            let kp = MLKEM768_X25519_SHA256_CHACHA20::derive_keypair(seed)?;
+            let kp = MLKEM768_X25519_SHAKE256_CHACHA20::derive_keypair(seed)?;
             let (dk, ek) = (kp.private(), kp.public());
             Ok((dk.unprotected_as_ref().to_vec(), ek.as_ref().to_vec()))
         }
@@ -451,7 +455,7 @@ mod test {
             Self: Sized,
         {
             let pubkey_r = EncapsulationKey::try_from(pubkey_r)?;
-            let (ctx, enc) = ModePsk::<MLKEM768_X25519_SHA256_CHACHA20>::new_sender(
+            let (ctx, enc) = ModePsk::<MLKEM768_X25519_SHAKE256_CHACHA20>::new_sender(
                 &pubkey_r, info, psk, psk_id,
             )?;
             public_ct_out.copy_from_slice(enc.as_ref());
@@ -472,7 +476,7 @@ mod test {
         {
             let enc = Ciphertext::try_from(enc)?;
             let secret_key_r = DecapsulationKey::try_from(secret_key_r)?;
-            ModePsk::<MLKEM768_X25519_SHA256_CHACHA20>::new_recipient(
+            ModePsk::<MLKEM768_X25519_SHAKE256_CHACHA20>::new_recipient(
                 &enc,
                 &secret_key_r,
                 info,
@@ -513,9 +517,9 @@ mod test {
             aad: &[u8],
         ) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
             let pubkey_r = EncapsulationKey::try_from(pubkey_r)?;
-            let mut dst_kem_out = vec![0u8; MLKEM768_X25519_SHA256_CHACHA20::KEM_CT_SIZE];
+            let mut dst_kem_out = vec![0u8; MLKEM768_X25519_SHAKE256_CHACHA20::KEM_CT_SIZE];
             let mut dst_out = vec![0u8; plaintext.len() + 16];
-            let enc = ModePsk::<MLKEM768_X25519_SHA256_CHACHA20>::psk_seal(
+            let enc = ModePsk::<MLKEM768_X25519_SHAKE256_CHACHA20>::psk_seal(
                 &pubkey_r,
                 info,
                 psk,
@@ -542,7 +546,7 @@ mod test {
             let enc = Ciphertext::try_from(enc)?;
             let secret_key_r = DecapsulationKey::try_from(secret_key_r)?;
             let mut dst_out = vec![0u8; ciphertext.len() - 16];
-            ModePsk::<MLKEM768_X25519_SHA256_CHACHA20>::psk_open(
+            ModePsk::<MLKEM768_X25519_SHAKE256_CHACHA20>::psk_open(
                 &enc,
                 &secret_key_r,
                 info,
@@ -560,14 +564,14 @@ mod test {
     #[test]
     fn default_consistency_tests_mode_base() {
         let seed = 123456u64.to_le_bytes();
-        let mut tester_ctx = HpkeTester::<ModeBase<MLKEM768_X25519_SHA256_CHACHA20>>::new(&seed);
+        let mut tester_ctx = HpkeTester::<ModeBase<MLKEM768_X25519_SHAKE256_CHACHA20>>::new(&seed);
         tester_ctx.run_all_tests();
     }
 
     #[test]
     fn default_consistency_tests_mode_psk() {
         let seed = 123456u64.to_le_bytes();
-        let mut tester_ctx = HpkeTester::<ModePsk<MLKEM768_X25519_SHA256_CHACHA20>>::new(&seed);
+        let mut tester_ctx = HpkeTester::<ModePsk<MLKEM768_X25519_SHAKE256_CHACHA20>>::new(&seed);
         tester_ctx.run_all_tests();
     }
 }

@@ -272,99 +272,13 @@ pub mod sha256 {
         _derive_key::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(salt, ikm, info, dst_out)
     }
 
-    /// HPKE: <https://www.rfc-editor.org/rfc/rfc9180.html#name-cryptographic-dependencies>
-    pub(crate) fn labeled_extract(
-        version_id: &[u8; 7],
-        suite_id: &[u8; 10],
-        salt: &[u8],
-        label: &[u8],
-        ikm: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        debug_assert_eq!(out.len(), SHA256_OUTSIZE);
-
-        let prk = extract_with_parts(salt, &[version_id, suite_id, label, ikm])?;
-        out[..SHA256_OUTSIZE].copy_from_slice(prk.unprotected_as_ref());
-
-        Ok(())
-    }
-
-    /// HPKE: <https://www.rfc-editor.org/rfc/rfc9180.html#name-cryptographic-dependencies>
-    pub(crate) fn labeled_expand(
-        version_id: &[u8; 7],
-        suite_id: &[u8; 10],
-        prk: &[u8],
-        label: &[u8],
-        info: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        let l: u16 = out.len().try_into().map_err(|_| UnknownCryptoError)?;
-
-        expand_with_parts(
-            prk,
-            Some(&[&l.to_be_bytes(), version_id, suite_id, label, info]),
-            out,
-        )
-    }
-
     // TODO(brycx): we need HKDF to be used w. structs so that it is best used with HPKE as well.
     // Change this to be struct-based like we did with the streaming ciphers.
     #[derive(Debug, Clone, Copy)]
+    /// HKDF-SHA256.
     pub struct HkdfSha256 {}
 
     impl HkdfSha256 {
-        #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// The HKDF extract step.
-        pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<Tag, UnknownCryptoError> {
-            Ok(Tag::from(_extract::<
-                hmac::sha256::HmacSha256,
-                { SHA256_OUTSIZE },
-            >(salt, ikm)?))
-        }
-
-        pub(crate) fn extract_with_parts(
-            salt: &[u8],
-            ikm: &[&[u8]],
-        ) -> Result<Tag, UnknownCryptoError> {
-            Ok(Tag::from(_extract_with_parts::<
-                hmac::sha256::HmacSha256,
-                { SHA256_OUTSIZE },
-            >(salt, ikm)?))
-        }
-
-        #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// The HKDF expand step.
-        pub fn expand(
-            prk: &Tag,
-            info: Option<&[u8]>,
-            dst_out: &mut [u8],
-        ) -> Result<(), UnknownCryptoError> {
-            _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
-                prk.unprotected_as_ref(),
-                info,
-                dst_out,
-            )
-        }
-
-        pub(crate) fn expand_with_parts(
-            prk: &[u8],
-            info: Option<&[&[u8]]>,
-            dst_out: &mut [u8],
-        ) -> Result<(), UnknownCryptoError> {
-            _expand_with_parts::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(prk, info, dst_out)
-        }
-
-        #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-        /// Combine `extract` and `expand` to return a derived key.
-        pub fn derive_key(
-            salt: &[u8],
-            ikm: &[u8],
-            info: Option<&[u8]>,
-            dst_out: &mut [u8],
-        ) -> Result<(), UnknownCryptoError> {
-            _derive_key::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(salt, ikm, info, dst_out)
-        }
-
         /// HPKE: <https://www.rfc-editor.org/rfc/rfc9180.html#name-cryptographic-dependencies>
         pub(crate) fn hpke_labeled_extract(
             version_id: &[u8; 7],

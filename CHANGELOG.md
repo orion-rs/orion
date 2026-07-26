@@ -10,6 +10,7 @@
 - [Breaking change] `T::unprotected_as_bytes()` -> `T::unprotected_as_ref()`. 
 - [Breaking change] High-level types used in non-`hazardous` API no longer implement `Default` with a panicking CSPRNG call. Instead `generate() -> Result<Self, UnknownCryptoError>` is provided exclusively.
 - [Breaking change] High-level types used in non-`hazardous` API no longer implement `T::generate(length: usize)`.
+- [Breaking change] HPKE implementation has been redesigned for modularity and easier maintainability.
 - [Breaking change] ML-KEM and X-Wing API have undergone large re-design:
 	- [Breaking change] `mlkem*:MlKem*` struct no longer exists, and all functionality has been moved to the respective `KeyPair`, `EncapsulationKey` and `DecapsulationKey` types.
 	- [Breaking change] ML-KEM `DecapsulatoinKeys` no longer themself perform key-caching. This has been moved to `KeyPair`. `KeyPair` therefor offers important performance benefits when decapsulating with the same secret more than once.
@@ -33,7 +34,9 @@
 	- Add support for `seal_inplace()` and `open_inplace()` for `ChaCha20Poly1305` and `XChaCha20Poly1305`. These overwrite data directly instead of copying and allow handling the authentication tag separately.
 - MSRV bumped to `1.87`
 - Add constants for BLAKE2b: `BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE` making the conditions more discernable.
-
+- Add support for the following PQ/T HPKE suites:
+	- `MLKEM768_X25519_SHA256_CHACHA20`
+	- `MLKEM768_X25519_SHAKE256_CHACHA20`
 
 ### 0.17.14
 

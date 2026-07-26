@@ -26,6 +26,7 @@ use private::HpkePublicKey;
 
 mod base;
 mod mlkem768x25519_sha256_chacha20poly1305;
+mod mlkem768x25519_shake256_chacha20poly1305;
 mod mode;
 mod suite;
 mod x25519_sha256_chacha20poly1305;
@@ -37,6 +38,7 @@ mod kem;
 pub(crate) use kem::{VERSION_ID, length_prefix};
 
 pub use mlkem768x25519_sha256_chacha20poly1305::MLKEM768_X25519_SHA256_CHACHA20;
+pub use mlkem768x25519_shake256_chacha20poly1305::MLKEM768_X25519_SHAKE256_CHACHA20;
 pub use mode::ModeAuth;
 pub use mode::ModeAuthPsk;
 pub use mode::ModeBase;
