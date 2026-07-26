@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2018-2026 The orion Developers
+// Copyright (c) 2026 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,27 @@
 mod cvstack;
 mod internal;
 
+use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake3::cvstack::{FinalizeCommand, PushCommand, TreeStack};
 use crate::hazardous::hash::blake3::internal::{
-    compress, ChunkState, CHUNK_LEN, CHUNK_START, IV, KEYED_HASH, PARENT,
+    compress, ChunkState, CHUNK_LEN, CHUNK_START, IV, KEYED_HASH, KEY_SIZE, PARENT,
 };
 use core::cmp::min;
+
+construct_secret_key! {
+    /// A type to represent the secret key that Blake3 uses for keyed mode.
+    ///
+    /// # Errors:
+    /// An error will be returned if:
+    /// - `slice` is empty
+    /// - `slice` is greater than 256b (32B)
+    ///
+    /// # Panics:
+    /// A panic will occur during:
+    /// - failure to generate random bytes securely
+    ///
+    (SecretKey, test_secret_key, KEY_SIZE, KEY_SIZE, KEY_SIZE)
+}
 
 /// Blake3 can run in different modes based on usage.
 /// Currently, only Hash and KeyedHash is supported.
@@ -88,9 +104,54 @@ pub struct Blake3 {
     total_chunks: u64,
 }
 
+/// Represents the standard `hash` mode for `Blake3` for producing
+/// hashes without a secret key.
+impl Default for Blake3 {
+    /// Create a new `Blake3` instance for standard hashing (`hash` mode).
+    fn default() -> Self {
+        let mode = Mode::Hash;
+        Self {
+            chunk: mode.derive_init_state(),
+            chain_values: TreeStack::new(compress),
+            mode,
+            total_chunks: 0,
+        }
+    }
+}
+
+impl Drop for Blake3 {
+    fn drop(&mut self) {
+        #[cfg(feature = "zeroize")]
+        {
+            use zeroize::Zeroize;
+
+            if let Mode::KeyedHash { key } = &mut self.mode {
+                key.iter_mut().zeroize();
+            };
+        }
+    }
+}
+
 impl Blake3 {
-    /// Create a new `Blake3` instance of the given `Mode`.
-    pub fn new(mode: Mode) -> Self {
+    /// Create a new `Blake3` instance for standard hashing (`hash` mode).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Create a new `Blake3` instance for keyed hashing (`keyed hash` mode).
+    pub fn new_keyed(secret_key: &SecretKey) -> Self {
+        let bytes = secret_key.unprotected_as_bytes();
+        let key_words = core::array::from_fn(|i| {
+            let start = i * 4;
+            u32::from_le_bytes([
+                bytes[start],
+                bytes[start + 1],
+                bytes[start + 2],
+                bytes[start + 3],
+            ])
+        });
+        let mode = Mode::KeyedHash { key: key_words };
+
         Self {
             chunk: mode.derive_init_state(),
             chain_values: TreeStack::new(compress),

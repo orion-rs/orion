@@ -6,11 +6,37 @@ use crate::hazardous::hash::blake3::internal::{
 // with 2^10B nodes => 2^54B nodes
 const MAX_TREE_DEPTH: usize = 54;
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct TreeStack {
     stack: [ChainingValue; MAX_TREE_DEPTH],
     compress: CompressionFn,
     stack_len: u8,
+}
+
+/// Implemented manually to avoid the undefined comparison
+/// of function pointers (which is useless in our case)
+impl PartialEq for TreeStack {
+    fn eq(&self, other: &Self) -> bool {
+        if self.stack_len != other.stack_len {
+            return false;
+        }
+
+        let len = self.stack_len as usize;
+        self.stack[..len] == other.stack[..len]
+    }
+}
+
+impl Drop for TreeStack {
+    fn drop(&mut self) {
+        #[cfg(feature = "zeroize")]
+        {
+            use zeroize::Zeroize;
+
+            for cv in self.stack.iter_mut() {
+                cv.zeroize();
+            }
+        }
+    }
 }
 
 impl TreeStack {
@@ -47,13 +73,13 @@ impl TreeStack {
     // The popped value is not manually deleted, only the counter is decreased.
     fn pop(&mut self) -> ChainingValue {
         self.stack_len -= 1;
-        self.stack[self.stack_len as usize] // Panics if out-of-bounds
+        self.stack[self.stack_len as usize]
     }
 
     // Produces the root of the tree
     //
     // Merges the current chaining value with every CV in the stack
-    pub fn root_output(mut self, mut config: FinalizeCommand) -> OutputReader {
+    pub fn root_output(&mut self, mut config: FinalizeCommand) -> OutputReader {
         // Squash all remaining chunks up to the last one
         while self.stack_len > 1 {
             let next_cv = self.pop();

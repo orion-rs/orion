@@ -4,6 +4,7 @@ use core::ops::{Index, IndexMut};
 
 pub(crate) const BLOCK_LEN: usize = 64;
 pub(crate) const CHUNK_LEN: usize = 1024;
+pub(crate) const KEY_SIZE: usize = 32;
 const ROUND_ITERS: usize = 7;
 
 // Flags for the compression function
@@ -50,6 +51,18 @@ pub(crate) struct ChunkState {
     /// CHUNK_LEN / BLOCK_LEN.
     blocks_compressed: u8,
     flags: u32,
+}
+
+impl Drop for ChunkState {
+    fn drop(&mut self) {
+        #[cfg(feature = "zeroize")]
+        {
+            use zeroize::Zeroize;
+
+            self.cv.iter_mut().zeroize();
+            self.block.iter_mut().zeroize();
+        }
+    }
 }
 
 impl ChunkState {
