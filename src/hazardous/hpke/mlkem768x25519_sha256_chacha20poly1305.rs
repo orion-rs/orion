@@ -23,7 +23,7 @@
 use crate::hazardous::aead::chacha20poly1305::ChaCha20Poly1305;
 use crate::hazardous::hpke::base::HpkeSuite;
 use crate::hazardous::hpke::kem::MlKem768X25519;
-use crate::hazardous::kdf::hkdf::sha256::HkdfSha256;
+use crate::hazardous::kdf::hkdf::HkdfSha256;
 
 #[allow(non_camel_case_types)]
 /// HPKE suite: X-Wing/MLKEM768-X25519, HKDF-SHA-256 and ChaCha20Poly1305.

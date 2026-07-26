@@ -11,6 +11,7 @@
 - [Breaking change] High-level types used in non-`hazardous` API no longer implement `Default` with a panicking CSPRNG call. Instead `generate() -> Result<Self, UnknownCryptoError>` is provided exclusively.
 - [Breaking change] High-level types used in non-`hazardous` API no longer implement `T::generate(length: usize)`.
 - [Breaking change] HPKE implementation has been redesigned for modularity and easier maintainability.
+- [Breaking change] HKDF functions have been moved to specific structs (for example `::hkdf::sha256` is now `::hkdf::HkdfSha256`).
 - [Breaking change] ML-KEM and X-Wing API have undergone large re-design:
 	- [Breaking change] `mlkem*:MlKem*` struct no longer exists, and all functionality has been moved to the respective `KeyPair`, `EncapsulationKey` and `DecapsulationKey` types.
 	- [Breaking change] ML-KEM `DecapsulatoinKeys` no longer themself perform key-caching. This has been moved to `KeyPair`. `KeyPair` therefor offers important performance benefits when decapsulating with the same secret more than once.

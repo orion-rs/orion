@@ -26,7 +26,7 @@ use crate::hazardous::hash::sha3::shake256::Shake256;
 use crate::hazardous::hpke::kem::{VERSION_ID, length_prefix};
 use crate::hazardous::hpke::mode::private::HpkeMode;
 use crate::hazardous::hpke::suite::private::HpkeKdf;
-use crate::hazardous::kdf::hkdf::sha256::HkdfSha256;
+use crate::hazardous::kdf::hkdf::HkdfSha256;
 
 impl HpkeKdf for HkdfSha256 {
     const KDF_ID: [u8; 2] = 0x0001u16.to_be_bytes();
