@@ -160,6 +160,15 @@ impl Blake3 {
         }
     }
 
+    /// Reset to `new()` state.
+    pub fn reset(&mut self) {
+        // Old values are zeroized as `drop()` is guaranteed
+        // to be called.
+        self.chunk = self.mode.derive_init_state();
+        self.chain_values = TreeStack::new(compress);
+        self.total_chunks = 0;
+    }
+
     /// Update state with `data`. This can be called multiple times.
     pub fn update(&mut self, data: &[u8]) {
         let mut data_view = data;
@@ -180,7 +189,7 @@ impl Blake3 {
         // Get final chaining value
         let is_root = false;
         let cv = self.chunk.finalize_chunk(is_root).truncate();
-        self.total_chunks += 1;
+        self.total_chunks = self.total_chunks.checked_add(1).unwrap();
 
         // Push it to the tree stack
         let key_words = self.mode.key_words();
