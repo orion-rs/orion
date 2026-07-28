@@ -21,11 +21,12 @@
 // SOFTWARE.
 
 use crate::{
+    Public, Secret,
     errors::UnknownCryptoError,
     hazardous::{
-        aead::chacha20poly1305::{self, ChaCha20Poly1305},
+        aead::chacha20poly1305::ChaCha20Poly1305,
         hpke::suite::private::HpkeAead,
-        stream::chacha20,
+        stream::chacha20::{self, ChaCha20Key, ChaCha20Nonce},
     },
 };
 
@@ -34,35 +35,29 @@ impl HpkeAead for ChaCha20Poly1305 {
     const NK: usize = chacha20::CHACHA_KEYSIZE;
     const NN: usize = chacha20::IETF_CHACHA_NONCESIZE;
 
-    type Key = [u8; chacha20::CHACHA_KEYSIZE];
-    type Nonce = [u8; chacha20::IETF_CHACHA_NONCESIZE];
+    type Key = ChaCha20Key;
+    type Nonce = ChaCha20Nonce;
 
-    const KEY_INIT: Self::Key = [0u8; chacha20::CHACHA_KEYSIZE];
-    const NONCE_INIT: Self::Nonce = [0u8; chacha20::IETF_CHACHA_NONCESIZE];
+    const KEY_INIT: Secret<Self::Key> = Self::Key::zero();
+    const NONCE_INIT: Public<Self::Nonce> = Self::Nonce::zero();
 
     fn seal(
-        key: &Self::Key,
-        nonce: &Self::Nonce,
+        key: &Secret<Self::Key>,
+        nonce: &Public<Self::Nonce>,
         plaintext: &[u8],
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        let key = chacha20poly1305::SecretKey::from(*key);
-        let nonce = chacha20poly1305::Nonce::from(*nonce);
-
         ChaCha20Poly1305::seal(&key, &nonce, plaintext, Some(aad), out)
     }
 
     fn open(
-        key: &Self::Key,
-        nonce: &Self::Nonce,
+        key: &Secret<Self::Key>,
+        nonce: &Public<Self::Nonce>,
         ciphertext: &[u8],
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        let key = chacha20poly1305::SecretKey::from(*key);
-        let nonce = chacha20poly1305::Nonce::from(*nonce);
-
         ChaCha20Poly1305::open(&key, &nonce, ciphertext, Some(aad), out)
     }
 }

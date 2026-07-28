@@ -105,6 +105,7 @@ use crate::util::endianness::load_u32_le;
 use crate::util::u32x4::U32x4;
 use crate::util::xor_slices;
 use core::fmt::Debug;
+use core::marker::PhantomData;
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
@@ -125,6 +126,16 @@ pub const MAX_KEYSTREAM_BYTES: u64 = (u32::MAX as u64 + 1) * CHACHA_BLOCKSIZE as
 /// Marker type for ChaCha20 key. See [`SecretKey`] type for convenience.
 pub struct ChaCha20Key {}
 impl Sealed for ChaCha20Key {}
+
+impl ChaCha20Key {
+    /// Used in HPKE generics to avoid relyign on nightly const generics.
+    pub(crate) const fn zero() -> Secret<Self> {
+        Secret {
+            data: ByteArrayData::<CHACHA_KEYSIZE> { bytes: [0u8; _] },
+            _spec: PhantomData,
+        }
+    }
+}
 
 impl TypeSpec for ChaCha20Key {
     const NAME: &'static str = stringify!(SecretKey);
@@ -155,6 +166,16 @@ pub type SecretKey = Secret<ChaCha20Key>;
 /// Marker type for ChaCha20 nonce. See [`Nonce`] type for convenience.
 pub struct ChaCha20Nonce {}
 impl Sealed for ChaCha20Nonce {}
+
+impl ChaCha20Nonce {
+    /// Used in HPKE generics to avoid relyign on nightly const generics.
+    pub(crate) const fn zero() -> Public<Self> {
+        Public {
+            data: ByteArrayData::<IETF_CHACHA_NONCESIZE> { bytes: [0u8; _] },
+            _spec: PhantomData,
+        }
+    }
+}
 
 impl TypeSpec for ChaCha20Nonce {
     const NAME: &'static str = stringify!(Nonce);
@@ -538,6 +559,12 @@ mod public {
 
     const ZERO_KEY: [u8; CHACHA_KEYSIZE] = [0u8; CHACHA_KEYSIZE];
     const ZERO_IETF_NONCE: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
+
+    #[test]
+    fn test_zerokey() {
+        assert_eq!(ChaCha20Key::zero(), &ZERO_KEY);
+        assert_eq!(ChaCha20Nonce::zero(), &ZERO_IETF_NONCE);
+    }
 
     #[test]
     #[cfg(feature = "safe_api")]

@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 pub(crate) mod private {
+    use crate::Public;
     use crate::errors::UnknownCryptoError;
     use crate::generics::{Secret, TypeSpec};
     use crate::hazardous::hpke::mode::private::HpkeMode;
@@ -117,7 +118,7 @@ pub(crate) mod private {
         const NH: usize;
 
         /// The exporter secret this KDF produces, which is `Nh` bytes.
-        type ExporterSecret: AsRef<[u8]> + AsMut<[u8]> + Clone;
+        type ExporterSecret: TypeSpec;
 
         /// An all-zero [`Self::ExporterSecret`], to be filled by [`Self::combine_secrets()`].
         const EXPORTER_SECRET_INIT: Self::ExporterSecret;
@@ -159,21 +160,21 @@ pub(crate) mod private {
         const NN: usize;
 
         /// The key of this AEAD, which is `Nk` bytes.
-        type Key: AsRef<[u8]> + AsMut<[u8]> + Clone;
+        type Key: TypeSpec;
 
         /// The nonce of this AEAD, which is `Nn` bytes.
-        type Nonce: AsRef<[u8]> + AsMut<[u8]> + Clone;
+        type Nonce: TypeSpec;
 
         /// An all-zero [`Self::Key`], buffer used by [`HpkeKdf::combine_secrets()`].
-        const KEY_INIT: Self::Key;
+        const KEY_INIT: Secret<Self::Key>;
 
         /// An all-zero [`Self::Nonce`], buffer used by [`HpkeKdf::combine_secrets()`].
-        const NONCE_INIT: Self::Nonce;
+        const NONCE_INIT: Public<Self::Nonce>;
 
         /// AEAD `Seal()`.
         fn seal(
-            key: &Self::Key,
-            nonce: &Self::Nonce,
+            key: &Secret<Self::Key>,
+            nonce: &Public<Self::Nonce>,
             plaintext: &[u8],
             aad: &[u8],
             out: &mut [u8],
@@ -181,8 +182,8 @@ pub(crate) mod private {
 
         /// AEAD `Open()`.
         fn open(
-            key: &Self::Key,
-            nonce: &Self::Nonce,
+            key: &Secret<Self::Key>,
+            nonce: &Public<Self::Nonce>,
             ciphertext: &[u8],
             aad: &[u8],
             out: &mut [u8],
