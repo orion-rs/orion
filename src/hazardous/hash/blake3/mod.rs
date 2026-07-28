@@ -244,7 +244,7 @@ mod test_streaming_interface {
         is_finalized: bool,
     }
 
-    impl TestableStreamingContext<Vec<u8>> for Blake3Tester {
+    impl TestableStreamingContext<[u8; 32]> for Blake3Tester {
         fn reset(&mut self) -> Result<(), UnknownCryptoError> {
             self.inner.reset();
             self.is_finalized = false;
@@ -259,28 +259,28 @@ mod test_streaming_interface {
             Ok(())
         }
 
-        fn finalize(&mut self) -> Result<Vec<u8>, UnknownCryptoError> {
+        fn finalize(&mut self) -> Result<[u8; 32], UnknownCryptoError> {
             if self.is_finalized {
                 return Err(UnknownCryptoError);
             }
 
             self.is_finalized = true;
-            let mut out = vec![0u8; 32];
+            let mut out = [0u8; 32];
             // `finalize()` consumes `self`, cloning solely for testing purposes
             self.inner.clone().finalize(&mut out);
             Ok(out)
         }
 
-        fn one_shot(input: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+        fn one_shot(input: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
             let mut hasher = Blake3::new();
             hasher.update(input);
 
-            let mut out = vec![0u8; 32];
+            let mut out = [0u8; 32];
             hasher.finalize(&mut out);
             Ok(out)
         }
 
-        fn verify_result(expected: &Vec<u8>, input: &[u8]) -> Result<(), UnknownCryptoError> {
+        fn verify_result(expected: &[u8; 32], input: &[u8]) -> Result<(), UnknownCryptoError> {
             let actual = Self::one_shot(input)?;
             if &actual == expected {
                 Ok(())
@@ -301,7 +301,7 @@ mod test_streaming_interface {
             is_finalized: false,
         };
         let test_runner =
-            StreamingContextConsistencyTester::<Vec<u8>, Blake3Tester>::new(init_state, BLOCK_LEN);
+            StreamingContextConsistencyTester::<[u8; 32], Blake3Tester>::new(init_state, BLOCK_LEN);
         test_runner.run_all_tests();
     }
 
@@ -313,7 +313,7 @@ mod test_streaming_interface {
             is_finalized: false,
         };
         let test_runner =
-            StreamingContextConsistencyTester::<Vec<u8>, Blake3Tester>::new(init_state, BLOCK_LEN);
+            StreamingContextConsistencyTester::<[u8; 32], Blake3Tester>::new(init_state, BLOCK_LEN);
         test_runner.run_all_tests_property(&data);
         true
     }
