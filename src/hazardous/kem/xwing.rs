@@ -30,13 +30,12 @@
 //! - `ek`: The public encapsulation key, for which a shared secret and ciphertext is generated.
 //! - `dk`: The secret decapsulation key, for which a ciphertext is used to derive a shared secret.
 //! - `c`: The public ciphertext, sent to the decapsulating party.
-//! - `eseed`: Explicit randomness used for encapsulation.
+//! - `eseed`: Explicit randomness used for encapsulation [`Eseed`].
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `eseed` is not 64 bytes.
 //! - [`getrandom::fill()`] fails during [`EncapsulationKey::encap()`].
-//! - [`getrandom::fill()`] fails during [`DecapsulationKey::generate()`]/[`KeyPair::generate()`].
+//! - [`getrandom::fill()`] fails during [`DecapsulationKey::generate()`]/[`KeyPair::generate()`]/[`Eseed::generate()`].
 //!
 //! # Security:
 //! - It is critical that both the seed and explicit randomness `eseed`, used for key generation and encapsulation
@@ -63,11 +62,13 @@
 //! [`getrandom::fill()`]: getrandom::fill
 //! [`DecapsulationKey::generate()`]: xwing::DecapsulationKey::generate
 //! [`KeyPair::generate()`]: xwing::KeyPair::generate
+//! [`Eseed::generate()`]: xwing::Eseed::generate
 //! [`EncapsulationKey::encap()`]: xwing::EncapsulationKey::encap
 //! [`EncapsulationKey::encap_deterministic()`]: xwing::EncapsulationKey::encap_deterministic
 //! [`KeyPair`]: xwing::KeyPair
 //! [`DecapsulationKey`]: xwing::DecapsulationKey
 //! [`EncapsulationKey`]: xwing::EncapsulationKey
+//! [`Eseed`]: xwing::Eseed
 
 use crate::KP;
 use crate::errors::UnknownCryptoError;
@@ -77,7 +78,7 @@ use crate::generics::{ByteArrayData, Public, Secret, TypeSpec, sealed::Data};
 use crate::hazardous::ecc::x25519;
 use crate::hazardous::hash::sha3::sha3_256;
 use crate::hazardous::hash::sha3::shake256::Shake256;
-use crate::hazardous::kem::ml_kem::{self, mlkem768};
+use crate::hazardous::kem::ml_kem::{self, ExplicitRandom, mlkem768};
 
 /// KEM-label used by X-Wing.
 const LABEL: &[u8; 6] = b"\\.//^\\";
@@ -94,6 +95,9 @@ pub const CIPHERTEXT_SIZE: usize = 1120;
 /// Size of private [`SharedSecret`].
 pub const SHARED_SECRET_SIZE: usize = 32;
 
+/// Size of private [`Eseed`].
+pub const ESEED_SIZE: usize = 64;
+
 /// X-Wing encapsulation key.
 pub type EncapsulationKey = Public<XWingEncapKey>;
 
@@ -105,6 +109,9 @@ pub type DecapsulationKey = Secret<XWingDecapKey>;
 
 /// X-Wing shared secret.
 pub type SharedSecret = Secret<XWingSharedSecret>;
+
+/// X-Wing encapsulation explicit randomness.
+pub type Eseed = Secret<XWingEseed>;
 
 #[derive(Debug, Clone, Copy)]
 /// X-Wing encapsulation key implementation. See [`EncapsulationKey`] type for convenience.
@@ -151,6 +158,32 @@ impl GenerateSecret for XWingDecapKey {
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     fn generate() -> Result<Secret<XWingDecapKey>, UnknownCryptoError> {
         let mut data = Self::TypeData::new(DK_SIZE)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Secret::from_data(data))
+    }
+}
+
+#[derive(Debug)]
+/// X-Wing encapsulation explicit randomness implementation. See [`Eseed`] type for convenience.
+pub struct XWingEseed {}
+impl Sealed for XWingEseed {}
+
+impl TypeSpec for XWingEseed {
+    const NAME: &'static str = stringify!(Eseed);
+    type TypeData = ByteArrayData<ESEED_SIZE>;
+}
+
+impl From<[u8; ESEED_SIZE]> for Secret<XWingEseed> {
+    fn from(value: [u8; ESEED_SIZE]) -> Self {
+        Self::from_data(<XWingEseed as TypeSpec>::TypeData::from(value))
+    }
+}
+
+impl GenerateSecret for XWingEseed {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Secret<XWingEseed>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(ESEED_SIZE)?;
         crate::util::secure_rand_bytes(&mut data.bytes)?;
         Ok(Secret::from_data(data))
     }
@@ -226,28 +259,24 @@ impl EncapsulationKey {
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Given the [`EncapsulationKey`], generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap(&self) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
-        let mut m = zeroize_wrap!([0u8; 64]);
-        getrandom::fill(m.as_mut())?;
-
-        self.encap_deterministic(m.as_ref())
+        let eseed = Eseed::generate()?;
+        self.encap_deterministic(&eseed)
     }
 
-    /// Given the [`EncapsulationKey`] and securely generated randomness `eseed`, generate a [`SharedSecret`] and associated [`Ciphertext`].
+    /// Given the [`EncapsulationKey`] and securely generated randomness [`Eseed`], generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap_deterministic(
         &self,
-        eseed: &[u8],
+        eseed: &Eseed,
     ) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
-        if eseed.len() != 64 {
-            return Err(UnknownCryptoError);
-        }
-
         let pk_m = &self.data.bytes[..mlkem768::EK_SIZE];
         let pk_x = &self.data.bytes[mlkem768::EK_SIZE..];
-        let ek_x = x25519::PrivateKey::try_from(&eseed[32..64])?;
+        let ek_x = x25519::PrivateKey::try_from(&eseed.unprotected_as_ref()[32..64])?;
         let ct_x = x25519::PublicKey::try_from(&ek_x)?;
         let ss_x = x25519::key_agreement(&ek_x, &x25519::PublicKey::try_from(pk_x)?)?;
         let mlkem768_encapkey = mlkem768::EncapsulationKey::try_from(pk_m)?;
-        let (ss_m, ct_m) = mlkem768_encapkey.encap_deterministic(&eseed[..32])?;
+
+        let mlkem_m = ExplicitRandom::try_from(&eseed.unprotected_as_ref()[..32])?;
+        let (ss_m, ct_m) = mlkem768_encapkey.encap_deterministic(&mlkem_m)?;
         let ss = combiner(
             ss_m.unprotected_as_ref(),
             ss_x.unprotected_as_ref(),
@@ -384,13 +413,13 @@ mod tests {
     // of X25519 part differ!
     // The spec mentions nothing about canocnicality.
     fn test_highbit_not_ignored_in_x25519_parts_pk() {
-        let eseed = &[111u8; 64];
+        let eseed = Eseed::from([111u8; 64]);
         let dk = DecapsulationKey::try_from(&[127u8; DK_SIZE]).unwrap();
         let ek = EncapsulationKey::try_from(&dk).unwrap();
         let kp = KeyPair::try_from(&dk).unwrap();
         assert_eq!(&ek, kp.public());
 
-        let (ss, _) = ek.encap_deterministic(eseed).unwrap();
+        let (ss, _) = ek.encap_deterministic(&eseed).unwrap();
 
         // Modify hibit in X25519-part of X-Wing key
         let mut ek_hibit_zero = ek.clone();
@@ -398,8 +427,8 @@ mod tests {
         let mut ek_hibit_one = ek.clone();
         ek_hibit_one.data.bytes[EK_SIZE - 1] |= 0x80;
 
-        let (ss_zero, _) = ek_hibit_zero.encap_deterministic(eseed).unwrap();
-        let (ss_one, _) = ek_hibit_one.encap_deterministic(eseed).unwrap();
+        let (ss_zero, _) = ek_hibit_zero.encap_deterministic(&eseed).unwrap();
+        let (ss_one, _) = ek_hibit_one.encap_deterministic(&eseed).unwrap();
 
         assert_ne!(&ss_zero, &ss_one);
         // Our generated one is always masked
@@ -414,11 +443,11 @@ mod tests {
     // different shared secrets from two ciphertexts where only hibit
     // of X25519 part differ!
     fn test_highbit_not_ignored_in_x25519_parts_ct() {
-        let eseed = &[111u8; 64];
+        let eseed = Eseed::from([111u8; 64]);
         let dk = DecapsulationKey::try_from(&[127u8; DK_SIZE]).unwrap();
         let kp = KeyPair::try_from(&dk).unwrap();
         assert_eq!(&dk, kp.private());
-        let (ss, ct) = kp.public().encap_deterministic(eseed).unwrap();
+        let (ss, ct) = kp.public().encap_deterministic(&eseed).unwrap();
 
         // Modify hibit in X25519-part of X-Wing ciphertext
         let mut ct_hibit_zero = ct.clone();
@@ -492,8 +521,8 @@ mod tests {
         let ek1 = EncapsulationKey::try_from(&ek1).unwrap();
         assert_ne!(kp.public(), &ek1);
 
-        let (ss0, _ct0_rt) = ek0.encap_deterministic(&eseed).unwrap();
-        let (ss1, _ct1_rt) = ek1.encap_deterministic(&eseed).unwrap();
+        let (ss0, _ct0_rt) = ek0.encap_deterministic(&Eseed::from(eseed)).unwrap();
+        let (ss1, _ct1_rt) = ek1.encap_deterministic(&Eseed::from(eseed)).unwrap();
         assert_eq!(ss0.unprotected_as_ref(), &ss_ek0);
         assert_eq!(ss1.unprotected_as_ref(), &ss_ek1);
 
@@ -630,7 +659,10 @@ mod tests {
         let dk = DecapsulationKey::try_from(&[127u8; DK_SIZE]).unwrap();
         let kp = KeyPair::try_from(&dk).unwrap();
 
-        let (k, c) = kp.public().encap_deterministic(&[255u8; 64]).unwrap();
+        let (k, c) = kp
+            .public()
+            .encap_deterministic(&Eseed::from([255u8; 64]))
+            .unwrap();
         let k_prime = kp.private().decap(&c).unwrap();
 
         assert_eq!(k, k_prime);
@@ -642,15 +674,5 @@ mod tests {
         let kp = KeyPair::try_from(&seed).unwrap();
 
         assert_eq!(seed.unprotected_as_ref(), kp.private().unprotected_as_ref());
-    }
-
-    #[test]
-    fn bad_eseed_lens() {
-        let seed = DecapsulationKey::try_from(&[127u8; DK_SIZE]).unwrap();
-        let kp = KeyPair::try_from(&seed).unwrap();
-
-        assert!(kp.public().encap_deterministic(&[255u8; 64]).is_ok());
-        assert!(kp.public().encap_deterministic(&[255u8; 63]).is_err());
-        assert!(kp.public().encap_deterministic(&[255u8; 65]).is_err());
     }
 }

@@ -49,7 +49,7 @@
 //! [`squeeze()`]: shake256::Shake256::squeeze
 
 use super::Shake;
-use crate::errors::UnknownCryptoError;
+use crate::{errors::UnknownCryptoError, hazardous::hpke::length_prefix};
 #[cfg(feature = "safe_api")]
 use std::io;
 
@@ -133,6 +133,35 @@ impl Shake256 {
     /// Squeeze output of the XOF into `dest`. This can be called multiple times.
     pub fn squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
         self._state._squeeze(dest)
+    }
+
+    /// HPKE:
+    /// <https://datatracker.ietf.org/doc/html/draft-ietf-hpke-pq-05#name-hybrid-kems-with-ecdh-and-m>
+    /// <https://datatracker.ietf.org/doc/html/draft-ietf-hpke-hpke-04#section-4.4>
+    pub(crate) fn hpke_labeled_derive(
+        version_id: &[u8; 7],
+        suite_id: &[u8; 10],
+        ikm_parts: &[&[u8]],
+        label: &[u8],
+        context_parts: &[&[u8]],
+        out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        let l: u16 = out.len().try_into().map_err(|_| UnknownCryptoError)?;
+
+        let mut shake = Shake256::new();
+        for part in ikm_parts {
+            shake.absorb(part)?;
+        }
+        shake.absorb(version_id)?;
+        shake.absorb(suite_id)?;
+        shake.absorb(&length_prefix(label)?)?;
+        shake.absorb(label)?;
+        shake.absorb(&l.to_be_bytes())?;
+        for part in context_parts {
+            shake.absorb(part)?;
+        }
+
+        shake.squeeze(out)
     }
 }
 

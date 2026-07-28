@@ -10,11 +10,14 @@
 - [Breaking change] `T::unprotected_as_bytes()` -> `T::unprotected_as_ref()`. 
 - [Breaking change] High-level types used in non-`hazardous` API no longer implement `Default` with a panicking CSPRNG call. Instead `generate() -> Result<Self, UnknownCryptoError>` is provided exclusively.
 - [Breaking change] High-level types used in non-`hazardous` API no longer implement `T::generate(length: usize)`.
+- [Breaking change] HPKE implementation has been redesigned for modularity and easier maintainability.
+- [Breaking change] HKDF functions have been moved to specific structs (for example `::hkdf::sha256` is now `::hkdf::HkdfSha256`).
 - [Breaking change] ML-KEM and X-Wing API have undergone large re-design:
 	- [Breaking change] `mlkem*:MlKem*` struct no longer exists, and all functionality has been moved to the respective `KeyPair`, `EncapsulationKey` and `DecapsulationKey` types.
 	- [Breaking change] ML-KEM `DecapsulatoinKeys` no longer themself perform key-caching. This has been moved to `KeyPair`. `KeyPair` therefor offers important performance benefits when decapsulating with the same secret more than once.
 	- [Breaking change] Constants previously associated with the zero-sized structs are now in `mlkem*::` modules.
 	- [Breaking change] `ML-KEM` `DecapuslationKey`s can now return the raw, encoded bytes.
+	- [Breaking change] `X-Wing` now has separate type for explicit randomness `Eseed` used during encapsulation operations.
 - [Breaking change] `orion::kdf::Password` and `orion::pwhash::Password`  no longer has `generate()` since it is meant to represent a user-supplied password (one of the many drawbacks of the older macro-based approach).
 - [Breaking change] Types that previously implemented `Copy` do not anymore. `Copy` in all cases requires copying a lot of bytes and could hide a performance penalty, so now only `Clone` is available for `Public<T>`. 
 - [Breaking change] `orion::hazardous::ecc::x25519::PublicKey` no longer stores the u-coordinate in masked form, but original byte slice. The `PartialEq` still respects (applies masking) the u-coordinate condition. Masking is applied before Montgomery ladder.
@@ -32,7 +35,9 @@
 	- Add support for `seal_inplace()` and `open_inplace()` for `ChaCha20Poly1305` and `XChaCha20Poly1305`. These overwrite data directly instead of copying and allow handling the authentication tag separately.
 - MSRV bumped to `1.87`
 - Add constants for BLAKE2b: `BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE` making the conditions more discernable.
-
+- Add support for the following PQ/T HPKE suites:
+	- `MLKEM768_X25519_SHA256_CHACHA20`
+	- `MLKEM768_X25519_SHAKE256_CHACHA20`
 
 ### 0.17.14
 

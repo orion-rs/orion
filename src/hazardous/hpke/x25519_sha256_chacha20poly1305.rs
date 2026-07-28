@@ -20,16 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::errors::UnknownCryptoError;
-use crate::hazardous::aead::chacha20poly1305::{self, ChaCha20Poly1305};
-use crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE;
-use crate::hazardous::hpke::mode::private::*;
-use crate::hazardous::hpke::suite::private::*;
-use crate::hazardous::kdf::hkdf;
-use crate::hazardous::kem::x25519_hkdf_sha256;
+use crate::hazardous::aead::chacha20poly1305::ChaCha20Poly1305;
+use crate::hazardous::hpke::base::HpkeSuite;
+use crate::hazardous::hpke::kem::DhKemX25519HkdfSha256;
+use crate::hazardous::kdf::hkdf::HkdfSha256;
 
 #[allow(non_camel_case_types)]
-#[cfg_attr(test, derive(Clone))]
 /// HPKE suite: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256 and ChaCha20Poly1305.
 ///
 /// # Note about serialized private keys for this suite
@@ -45,505 +41,40 @@ use crate::hazardous::kem::x25519_hkdf_sha256;
 /// The test-vector issues have been reported: <https://www.rfc-editor.org/errata/eid7121>, <https://github.com/cfrg/draft-irtf-cfrg-hpke/issues/255>
 ///
 /// [`unprotected_as_ref()`]: crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey::unprotected_as_ref
-pub struct DHKEM_X25519_SHA256_CHACHA20 {
-    key: [u8; 32],
-    base_nonce: [u8; 12],
-    ctr: u64, // "sequence number"
-    exporter_secret: [u8; 32],
-}
-
-impl PartialEq<DHKEM_X25519_SHA256_CHACHA20> for DHKEM_X25519_SHA256_CHACHA20 {
-    fn eq(&self, other: &DHKEM_X25519_SHA256_CHACHA20) -> bool {
-        use subtle::ConstantTimeEq;
-
-        (self.key.ct_eq(&other.key)
-            & self.base_nonce.ct_eq(&other.base_nonce)
-            & self.ctr.ct_eq(&other.ctr)
-            & self.exporter_secret.ct_eq(&other.exporter_secret))
-        .into()
-    }
-}
-
-impl Eq for DHKEM_X25519_SHA256_CHACHA20 {}
-
-impl core::fmt::Debug for DHKEM_X25519_SHA256_CHACHA20 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "{} key: {{***OMITTED***}}, base_nonce: {:?}, ctr: {:?}, exporter_secret: {{***OMITTED***}}",
-            stringify!(DHKEM_X25519_SHA256_CHACHA20),
-            &self.base_nonce,
-            self.ctr
-        )
-    }
-}
-
-impl Drop for DHKEM_X25519_SHA256_CHACHA20 {
-    fn drop(&mut self) {
-        #[cfg(feature = "zeroize")]
-        {
-            use zeroize::Zeroize;
-            self.key.iter_mut().zeroize();
-            self.exporter_secret.iter_mut().zeroize();
-        }
-    }
-}
-
-impl Base for DHKEM_X25519_SHA256_CHACHA20 {}
-impl Psk for DHKEM_X25519_SHA256_CHACHA20 {}
-impl Auth for DHKEM_X25519_SHA256_CHACHA20 {}
-impl AuthPsk for DHKEM_X25519_SHA256_CHACHA20 {}
-
-impl DHKEM_X25519_SHA256_CHACHA20 {
-    /// Size of the HPKE suite KEM ciphertext/encapsulated key.
-    pub const KEM_CT_SIZE: usize = 32; // Equivalent to X25519 public key.
-
-    /// Size of the HPKE suite KEM shared secret.
-    pub const KEM_SS_SIZE: usize = 32; // Equivalent to X25519 public key.
-
-    /// Version identifier for this HPKE scheme.
-    pub const VERSION_ID: &[u8; 7] = b"HPKE-v1";
-
-    /// HPKE ID for this HPKE scheme.
-    pub const HPKE_ID: &[u8; 4] = b"HPKE";
-
-    /// KEM ID for this HPKE scheme's KEM (in LE bytes).
-    pub const KEM_ID: [u8; 2] = 0x0020u16.to_be_bytes();
-
-    /// KDF ID for this HPKE scheme's KDF (in LE bytes).
-    pub const KDF_ID: [u8; 2] = 0x0001u16.to_be_bytes();
-
-    /// AEAD ID for this HPKE scheme's AEAD (in LE bytes).
-    pub const AEAD_ID: [u8; 2] = 0x0003u16.to_be_bytes();
-
-    /// The maximum length of `export` secret that may be requested.
-    pub const EXPORT_SECRET_MAXLEN: usize = (255 * Self::NH);
-
-    /// Nonce size for this suite's AEAD (<https://www.rfc-editor.org/rfc/rfc9180.html#section-7.3>).
-    pub const NN: usize = 12;
-
-    /// Output size for this suite's KDF (<https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2>).
-    pub const NH: usize = 32;
-
-    fn compute_nonce(&self) -> chacha20poly1305::Nonce {
-        // "Implementations MAY use a sequence number that is shorter than the nonce length (padding on the left with zero),
-        // but MUST raise an error if the sequence number overflows." https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2
-
-        let mut n = [0u8; crate::hazardous::stream::chacha20::IETF_CHACHA_NONCESIZE];
-        n[4..12].copy_from_slice(&self.ctr.to_be_bytes());
-        xor_slices!(self.base_nonce, n);
-
-        chacha20poly1305::Nonce::from(n)
-    }
-
-    fn would_overflow(&self) -> bool {
-        self.ctr.checked_add(1).is_none()
-    }
-
-    fn increment_seq(&mut self) -> Result<(), UnknownCryptoError> {
-        if let Some(next_seq) = self.ctr.checked_add(1) {
-            self.ctr = next_seq;
-        } else {
-            return Err(UnknownCryptoError);
-        }
-
-        if self.ctr as u128 >= ((1u128 << (8u128 * Self::NN as u128)) - 1) {
-            // unreachable: Internal u64 counter should have overflowed before this counter has!
-            return Err(UnknownCryptoError);
-        }
-
-        Ok(())
-    }
-
-    /// Minimum length: <https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4>
-    /// Maximum length: <https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2.1>
-    fn check_psk_length(psk: &[u8], psk_id: &[u8]) -> Result<(), UnknownCryptoError> {
-        if psk.len() < 32 {
-            return Err(UnknownCryptoError);
-        }
-        Self::check_input_max_lengths(psk)?;
-        Self::check_input_max_lengths(psk_id)
-    }
-
-    /// Maximum length: <https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2.1>
-    fn check_input_max_lengths(input: &[u8]) -> Result<(), UnknownCryptoError> {
-        if input.len() > 64 {
-            return Err(UnknownCryptoError);
-        }
-
-        Ok(())
-    }
-}
-
-impl Suite for DHKEM_X25519_SHA256_CHACHA20 {
-    type PrivateKey = x25519_hkdf_sha256::PrivateKey;
-    type PublicKey = x25519_hkdf_sha256::PublicKey;
-    type EncapsulatedKey = x25519_hkdf_sha256::PublicKey;
-
-    fn labeled_extract(
-        salt: &[u8],
-        label: &[u8],
-        ikm: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        debug_assert_eq!(out.len(), SHA256_OUTSIZE);
-
-        // The `suite_id` is [b"HPKE" || KEM_ID || KDF_ID || AEAD_ID].
-        let prk = hkdf::sha256::extract_with_parts(
-            salt,
-            &[
-                Self::VERSION_ID,
-                b"HPKE",
-                &Self::KEM_ID,
-                &Self::KDF_ID,
-                &Self::AEAD_ID,
-                label,
-                ikm,
-            ],
-        )?;
-
-        out[..SHA256_OUTSIZE].copy_from_slice(prk.unprotected_as_ref());
-
-        Ok(())
-    }
-
-    fn labeled_expand(
-        prk: &[u8],
-        label: &[u8],
-        info: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        let l: u16 = out.len().try_into().map_err(|_| UnknownCryptoError)?;
-
-        // The `suite_id` is [b"HPKE" || KEM_ID || KDF_ID || AEAD_ID].
-        hkdf::sha256::expand_with_parts(
-            prk,
-            Some(&[
-                &l.to_be_bytes(),
-                Self::VERSION_ID,
-                b"HPKE",
-                &Self::KEM_ID,
-                &Self::KDF_ID,
-                &Self::AEAD_ID,
-                label,
-                info,
-            ]),
-            out,
-        )?;
-
-        Ok(())
-    }
-
-    fn key_schedule(
-        mode: &HpkeMode,
-        shared_secret: &[u8],
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-    ) -> Result<Self, UnknownCryptoError> {
-        mode.verify_psk_inputs(psk, psk_id)?;
-
-        // NOTE: We hardcode NK here, is this an approach we want to keep?
-        // key_schedule_context: [ mode || psk_id_hash || info_hash ]
-        let mut key_schedule_context = zeroize_wrap!([0u8; { (32 * 2) + 1 }]);
-        key_schedule_context[0] = mode.mode_id();
-        Self::labeled_extract(
-            b"",
-            b"psk_id_hash",
-            psk_id,
-            &mut key_schedule_context[1..33],
-        )?;
-        Self::labeled_extract(b"", b"info_hash", info, &mut key_schedule_context[33..65])?;
-
-        let mut secret = zeroize_wrap!([0u8; 32]);
-        Self::labeled_extract(shared_secret, b"secret", psk, secret.as_mut())?;
-
-        let mut key = zeroize_wrap!([0u8; 32]);
-
-        Self::labeled_expand(
-            secret.as_ref(),
-            b"key",
-            key_schedule_context.as_ref(),
-            key.as_mut(),
-        )?;
-
-        let mut base_nonce = [0u8; 12];
-        Self::labeled_expand(
-            secret.as_ref(),
-            b"base_nonce",
-            key_schedule_context.as_ref(),
-            &mut base_nonce,
-        )?;
-
-        let mut exporter_secret = zeroize_wrap!([0u8; 32]);
-        Self::labeled_expand(
-            secret.as_ref(),
-            b"exp",
-            key_schedule_context.as_ref(),
-            exporter_secret.as_mut_slice(),
-        )?;
-
-        Ok(Self {
-            key: key.as_ref().try_into().expect("unreachable"),
-            base_nonce,
-            ctr: 0,
-            exporter_secret: exporter_secret.as_ref().try_into().expect("unreachable"),
-        })
-    }
-
-    #[cfg(feature = "safe_api")]
-    fn setup_base_sender(
-        pubkey_r: &Self::PublicKey,
-        info: &[u8],
-    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        Self::check_input_max_lengths(info)?;
-
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(pubkey_r)?;
-        let ctx = Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_ref(), info, &[], &[])?;
-
-        Ok((ctx, enc))
-    }
-
-    fn setup_base_sender_deterministic(
-        pubkey_r: &Self::PublicKey,
-        info: &[u8],
-        secret_ephemeral: Self::PrivateKey,
-    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        Self::check_input_max_lengths(info)?;
-
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap_deterministic(pubkey_r, secret_ephemeral)?;
-        let ctx = Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_ref(), info, &[], &[])?;
-
-        Ok((ctx, enc))
-    }
-
-    fn setup_base_recipient(
-        enc: &Self::EncapsulatedKey,
-        secret_key_r: &Self::PrivateKey,
-        info: &[u8],
-    ) -> Result<Self, UnknownCryptoError> {
-        Self::check_input_max_lengths(info)?;
-
-        let ss = x25519_hkdf_sha256::DhKem::decap(enc, secret_key_r)?;
-        Self::key_schedule(&HpkeMode::Base, ss.unprotected_as_ref(), info, &[], &[])
-    }
-
-    #[cfg(feature = "safe_api")]
-    fn setup_psk_sender(
-        pubkey_r: &Self::PublicKey,
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        Self::check_psk_length(psk, psk_id)?;
-        Self::check_input_max_lengths(info)?;
-
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap(pubkey_r)?;
-        let ctx = Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_ref(), info, psk, psk_id)?;
-
-        Ok((ctx, enc))
-    }
-
-    fn setup_psk_sender_deterministic(
-        pubkey_r: &Self::PublicKey,
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-        secret_ephemeral: Self::PrivateKey,
-    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        Self::check_psk_length(psk, psk_id)?;
-        Self::check_input_max_lengths(info)?;
-
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::encap_deterministic(pubkey_r, secret_ephemeral)?;
-        let ctx = Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_ref(), info, psk, psk_id)?;
-
-        Ok((ctx, enc))
-    }
-
-    fn setup_psk_recipient(
-        enc: &Self::EncapsulatedKey,
-        secret_key_r: &Self::PrivateKey,
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-    ) -> Result<Self, UnknownCryptoError> {
-        Self::check_psk_length(psk, psk_id)?;
-        Self::check_input_max_lengths(info)?;
-
-        let ss = x25519_hkdf_sha256::DhKem::decap(enc, secret_key_r)?;
-        Self::key_schedule(&HpkeMode::Psk, ss.unprotected_as_ref(), info, psk, psk_id)
-    }
-
-    #[cfg(feature = "safe_api")]
-    fn setup_auth_sender(
-        pubkey_r: &Self::PublicKey,
-        info: &[u8],
-        secrety_key_s: &Self::PrivateKey,
-    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        Self::check_input_max_lengths(info)?;
-
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(pubkey_r, secrety_key_s)?;
-        let ctx = Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_ref(), info, &[], &[])?;
-
-        Ok((ctx, enc))
-    }
-
-    fn setup_auth_sender_deterministic(
-        pubkey_r: &Self::PublicKey,
-        info: &[u8],
-        secrety_key_s: &Self::PrivateKey,
-        secret_ephemeral: Self::PrivateKey,
-    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        Self::check_input_max_lengths(info)?;
-
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap_deterministic(
-            pubkey_r,
-            secrety_key_s,
-            secret_ephemeral,
-        )?;
-        let ctx = Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_ref(), info, &[], &[])?;
-
-        Ok((ctx, enc))
-    }
-
-    fn setup_auth_recipient(
-        enc: &Self::EncapsulatedKey,
-        secret_key_r: &Self::PrivateKey,
-        info: &[u8],
-        pubkey_s: &Self::PublicKey,
-    ) -> Result<Self, UnknownCryptoError> {
-        Self::check_input_max_lengths(info)?;
-
-        let ss = x25519_hkdf_sha256::DhKem::auth_decap(enc, secret_key_r, pubkey_s)?;
-        Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_ref(), info, &[], &[])
-    }
-
-    #[cfg(feature = "safe_api")]
-    fn setup_authpsk_sender(
-        pubkey_r: &Self::PublicKey,
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-        secrety_key_s: &Self::PrivateKey,
-    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        Self::check_psk_length(psk, psk_id)?;
-        Self::check_input_max_lengths(info)?;
-
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap(pubkey_r, secrety_key_s)?;
-        let ctx = Self::key_schedule(
-            &HpkeMode::AuthPsk,
-            ss.unprotected_as_ref(),
-            info,
-            psk,
-            psk_id,
-        )?;
-
-        Ok((ctx, enc))
-    }
-
-    fn setup_authpsk_sender_deterministic(
-        pubkey_r: &Self::PublicKey,
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-        secrety_key_s: &Self::PrivateKey,
-        secret_ephemeral: Self::PrivateKey,
-    ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
-        Self::check_psk_length(psk, psk_id)?;
-        Self::check_input_max_lengths(info)?;
-
-        let (ss, enc) = x25519_hkdf_sha256::DhKem::auth_encap_deterministic(
-            pubkey_r,
-            secrety_key_s,
-            secret_ephemeral,
-        )?;
-        let ctx = Self::key_schedule(
-            &HpkeMode::AuthPsk,
-            ss.unprotected_as_ref(),
-            info,
-            psk,
-            psk_id,
-        )?;
-
-        Ok((ctx, enc))
-    }
-
-    fn setup_authpsk_recipient(
-        enc: &Self::EncapsulatedKey,
-        secret_key_r: &Self::PrivateKey,
-        info: &[u8],
-        psk: &[u8],
-        psk_id: &[u8],
-        pubkey_s: &Self::PublicKey,
-    ) -> Result<Self, UnknownCryptoError> {
-        Self::check_psk_length(psk, psk_id)?;
-        Self::check_input_max_lengths(info)?;
-
-        let ss = x25519_hkdf_sha256::DhKem::auth_decap(enc, secret_key_r, pubkey_s)?;
-        Self::key_schedule(
-            &HpkeMode::AuthPsk,
-            ss.unprotected_as_ref(),
-            info,
-            psk,
-            psk_id,
-        )
-    }
-
-    fn seal(
-        &mut self,
-        plaintext: &[u8],
-        aad: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        // Ensure we don't write anything to `out` if `increment_seq()` would fail.
-        if self.would_overflow() {
-            return Err(UnknownCryptoError);
-        }
-
-        let key = chacha20poly1305::SecretKey::from(self.key);
-        let nonce = self.compute_nonce();
-        ChaCha20Poly1305::seal(&key, &nonce, plaintext, Some(aad), out)?;
-
-        self.increment_seq()
-    }
-
-    fn open(
-        &mut self,
-        ciphertext: &[u8],
-        aad: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        // Ensure we don't write anything to `out` if `increment_seq()` would fail.
-        if self.would_overflow() {
-            return Err(UnknownCryptoError);
-        }
-
-        let key = chacha20poly1305::SecretKey::from(self.key);
-        let nonce = self.compute_nonce();
-        ChaCha20Poly1305::open(&key, &nonce, ciphertext, Some(aad), out)?;
-
-        self.increment_seq()
-    }
-
-    fn export(&self, exporter_context: &[u8], out: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        if out.len() > Self::EXPORT_SECRET_MAXLEN {
-            return Err(UnknownCryptoError);
-        }
-
-        Self::check_input_max_lengths(exporter_context)?;
-        Self::labeled_expand(&self.exporter_secret, b"sec", exporter_context, out)
-    }
-}
+pub type DHKEM_X25519_SHA256_CHACHA20 =
+    HpkeSuite<DhKemX25519HkdfSha256, HkdfSha256, ChaCha20Poly1305>;
 
 #[cfg(feature = "safe_api")]
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::errors::UnknownCryptoError;
+    use crate::hazardous::hpke::suite::private::{AuthSuite, Suite};
     use crate::hazardous::kem::x25519_hkdf_sha256::*;
     use crate::{
         hazardous::hpke::*,
         test_framework::hpke_interface::{HpkeTester, TestableHpke},
     };
+
+    #[test]
+    fn test_derive_keypair() {
+        let (sk, pk) = DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32]).unwrap();
+        let (sk_kem, pk_kem) = DhKem::derive_keypair(&[0u8; 32]).unwrap();
+        assert_eq!(sk, sk_kem);
+        assert_eq!(pk, pk_kem);
+
+        assert!(DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 31]).is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32]).is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 63]).is_ok());
+        assert_ne!(
+            DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32])
+                .unwrap()
+                .1,
+            DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[1u8; 32])
+                .unwrap()
+                .1
+        );
+    }
 
     #[test]
     #[cfg(feature = "safe_api")]
@@ -552,10 +83,10 @@ mod test {
         let (_sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
         let (ctx, _enc) = DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
 
-        let secret_key = format!("{:?}", &ctx.key);
-        let secret_export = format!("{:?}", &ctx.exporter_secret);
+        let secret_key = format!("{:?}", ctx.key);
+        let secret_export = format!("{:?}", ctx.exporter_secret);
 
-        let test_debug_contents = format!("{:?}", &ctx);
+        let test_debug_contents = format!("{:?}", ctx);
         assert!(!test_debug_contents.contains(&secret_key));
         assert!(!test_debug_contents.contains(&secret_export));
     }

@@ -1056,7 +1056,7 @@ mod tests {
         .unwrap();
 
         let ser = format!("{:?}", dk.bytes.as_ref());
-        let test_debug_contents = format!("{:?}", &dk);
+        let test_debug_contents = format!("{:?}", dk);
         assert!(!test_debug_contents.contains(&ser));
         assert!(test_debug_contents.contains(&"{***OMITTED***}".to_string()));
     }

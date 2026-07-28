@@ -145,6 +145,7 @@ pub const C_MAX: u64 = P_MAX + (POLY1305_OUTSIZE as u64);
 pub const A_MAX: u64 = u64::MAX;
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(Clone))] // NOTE: required by HPKE test-suite.
 /// ChaCha20Poly1305 encryption and authentication as specified in the [RFC 8439](https://tools.ietf.org/html/rfc8439).
 pub struct ChaCha20Poly1305 {}
 

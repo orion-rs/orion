@@ -149,7 +149,7 @@ pub trait KP<PrivT: TypeSpec, PubT: TypeSpec>: Debug {
 /// - Provides non-omitted implementation of [`Debug`].
 pub struct Public<T: TypeSpec> {
     pub(crate) data: T::TypeData,
-    _spec: PhantomData<T>,
+    pub(crate) _spec: PhantomData<T>,
 }
 
 #[derive(Clone)] // SECURITY: Requires T: Clone which should only be enabled selectively.
@@ -161,7 +161,7 @@ pub struct Public<T: TypeSpec> {
 /// - Provides a zeroizing [`Drop`] implementation if `"zeroize"` feature is enabled.
 pub struct Secret<T: TypeSpec> {
     pub(crate) data: T::TypeData,
-    _spec: PhantomData<T>,
+    pub(crate) _spec: PhantomData<T>,
 }
 
 impl<T: TypeSpec> Public<T> {
