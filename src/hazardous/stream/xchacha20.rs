@@ -85,6 +85,7 @@
 //! [`XChaCha20::is_exhausted()`]: xchacha20::XChaCha20::is_exhausted()
 //! [`XChaCha20::next_producible()`]: xchacha20::XChaCha20::next_producible()
 //! [`XChaCha20::set_byte_position()`]: xchacha20::XChaCha20::set_byte_position()
+//! [`MAX_KEYSTREAM_BYTES`]: chacha20::MAX_KEYSTREAM_BYTES
 
 #[cfg(feature = "safe_api")]
 use crate::generics::sealed::Data;

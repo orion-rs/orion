@@ -68,6 +68,7 @@
 //! [`KeyPair`]: xwing::KeyPair
 //! [`DecapsulationKey`]: xwing::DecapsulationKey
 //! [`EncapsulationKey`]: xwing::EncapsulationKey
+//! [`Eseed`]: xwing::Eseed
 
 use crate::KP;
 use crate::errors::UnknownCryptoError;

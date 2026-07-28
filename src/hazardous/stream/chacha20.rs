@@ -93,6 +93,7 @@
 //! [`ChaCha20::is_exhausted()`]: chacha20::ChaCha20::is_exhausted()
 //! [`ChaCha20::next_producible()`]: chacha20::ChaCha20::next_producible()
 //! [`ChaCha20::set_byte_position()`]: chacha20::ChaCha20::set_byte_position()
+//! [`MAX_KEYSTREAM_BYTES`]: chacha20::MAX_KEYSTREAM_BYTES
 
 //! [RFC]: https://tools.ietf.org/html/rfc8439
 use crate::GenerateSecret;
