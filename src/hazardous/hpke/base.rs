@@ -29,11 +29,8 @@ use crate::hazardous::hpke::mode::private::*;
 use crate::hazardous::hpke::suite::private::*;
 use crate::{Public, Secret};
 
-/// Largest `Nk + Nn + Nh` of any suite, which is the scratch needed by the key schedule.
-///
-/// This exists because `[u8; Nk + Nn + Nh]` would require the unstable `generic_const_exprs`.
-/// Currently the largest is 32 + 12 + 64 = 108, for the XOF-based KDFs with `Nh = 64`.
-/// [`HpkeSuite::key_schedule()`] errors if a suite ever exceeds it.
+/// Largest `Nk + Nn + Nh` of any suite, at time of writing. This serves as a max-value 
+/// buffer. Avoid unstable const generics.
 const KEY_SCHEDULE_MAX: usize = 128;
 
 /// An HPKE suite, composed of a KEM, a KDF and an AEAD.
