@@ -123,6 +123,7 @@ pub(crate) const HCHACHA_NONCESIZE: usize = 16;
 pub const MAX_KEYSTREAM_BYTES: u64 = (u32::MAX as u64 + 1) * CHACHA_BLOCKSIZE as u64;
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(Clone))] // NOTE: Needed for HPKE testsuites.
 /// Marker type for ChaCha20 key. See [`SecretKey`] type for convenience.
 pub struct ChaCha20Key {}
 impl Sealed for ChaCha20Key {}
