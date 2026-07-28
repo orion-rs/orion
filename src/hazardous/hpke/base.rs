@@ -29,7 +29,7 @@ use crate::hazardous::hpke::mode::private::*;
 use crate::hazardous::hpke::suite::private::*;
 use crate::{Public, Secret};
 
-/// Largest `Nk + Nn + Nh` of any suite, at time of writing. This serves as a max-value 
+/// Largest `Nk + Nn + Nh` of any suite, at time of writing. This serves as a max-value
 /// buffer. Avoid unstable const generics.
 const KEY_SCHEDULE_MAX: usize = 128;
 
