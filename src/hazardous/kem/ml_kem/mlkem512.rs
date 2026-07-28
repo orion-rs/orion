@@ -43,7 +43,6 @@
 //! An error will be returned if:
 //! - [`getrandom::fill()`] fails during encapsulation.
 //! - [`getrandom::fill()`] fails during [`KeyPair::generate()`].
-//! - `m` is not 32 bytes.
 //!
 //! # Security:
 //! - It is critical that both the seed and explicit randomness `m`, used for key generation and encapsulation
@@ -83,7 +82,10 @@ use crate::generics::sealed::{Sealed, TryFromBytes};
 use crate::generics::{ByteArrayData, Public, Secret, TypeSpec};
 use crate::hazardous::kem::ml_kem::internal::*;
 
+pub use crate::hazardous::kem::ml_kem::ExplicitRandom;
+pub use crate::hazardous::kem::ml_kem::MlKemExplicitRandom;
 pub use crate::hazardous::kem::ml_kem::MlKemSeed;
+pub use crate::hazardous::kem::ml_kem::RAND_SIZE;
 pub use crate::hazardous::kem::ml_kem::SEED_SIZE;
 pub use crate::hazardous::kem::ml_kem::Seed;
 
@@ -197,31 +199,25 @@ impl EncapsulationKey {
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Given the [`EncapsulationKey`], generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap(&self) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
-        let mut m = zeroize_wrap!([0u8; 32]);
-        getrandom::fill(m.as_mut())?;
-
-        self.encap_deterministic(m.as_ref())
+        let m = ExplicitRandom::generate()?;
+        self.encap_deterministic(&m)
     }
 
     /// Given the [`EncapsulationKey`] and randomness `m`, generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap_deterministic(
         &self,
-        m: &[u8],
+        m: &ExplicitRandom,
     ) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
-        if m.len() != 32 {
-            return Err(UnknownCryptoError);
-        }
-
         let mut c = Ciphertext::try_from(&[0u8; MlKem512Internal::CIPHERTEXT_SIZE])?;
 
         #[cfg(feature = "zeroize")]
         let mut k_internal = self
             .data
-            .mlkem_encap_internal(m.as_ref(), c.data.as_mut())?;
+            .mlkem_encap_internal(m.unprotected_as_ref(), c.data.as_mut())?;
         #[cfg(not(feature = "zeroize"))]
         let k_internal = self
             .data
-            .mlkem_encap_internal(m.as_ref(), c.data.as_mut())?;
+            .mlkem_encap_internal(m.unprotected_as_ref(), c.data.as_mut())?;
 
         let k = SharedSecret::try_from(k_internal.as_slice())?;
         zeroize_call!(k_internal);
@@ -469,8 +465,9 @@ mod tests {
     #[cfg(feature = "safe_api")]
     fn test_dk_cached_ek() {
         let seed = Seed::try_from(&[128u8; 64]).unwrap();
+        let m = ExplicitRandom::try_from(&[125u8; 32]).unwrap();
         let kp = KeyPair::try_from(&seed).unwrap();
-        let (ss_pubapi, ct_pubapi) = kp.public().encap_deterministic(&[125u8; 32]).unwrap();
+        let (ss_pubapi, ct_pubapi) = kp.public().encap_deterministic(&m).unwrap();
         let mut c_prime = [0u8; MlKem512Internal::CIPHERTEXT_SIZE];
         // This call re-computes encap key internally from the bytes a decapkey would store.
         let ss_privapi = kp
@@ -494,10 +491,9 @@ mod tests {
 
     #[cfg(feature = "safe_api")]
     #[test]
-    fn test_bad_m_length() {
+    fn test_m_can_determinism() {
         let kp = KeyPair::generate().unwrap();
-        let mut m = [0u8; 32];
-        getrandom::fill(m.as_mut()).unwrap();
+        let m = ExplicitRandom::generate().unwrap();
 
         // Using the same deterministic seed is in fact deterministic,
         // also using correct length.
@@ -505,8 +501,6 @@ mod tests {
             kp.public().encap_deterministic(&m).unwrap(),
             kp.public().encap_deterministic(&m).unwrap()
         );
-        assert!(kp.public().encap_deterministic(&[0u8; 31]).is_err());
-        assert!(kp.public().encap_deterministic(&[0u8; 33]).is_err());
     }
 
     #[cfg(feature = "safe_api")]
@@ -559,9 +553,10 @@ mod tests {
     /// Basic no_std-compatible test.
     fn basic_roundtrip() {
         let seed = Seed::try_from(&[127u8; 64]).unwrap();
+        let m = ExplicitRandom::try_from(&[125u8; 32]).unwrap();
         let kp = KeyPair::try_from(&seed).unwrap();
 
-        let (k, c) = kp.public().encap_deterministic(&[255u8; 32]).unwrap();
+        let (k, c) = kp.public().encap_deterministic(&m).unwrap();
         let k_prime = kp.private().decap(&c).unwrap();
 
         assert_eq!(k, k_prime);

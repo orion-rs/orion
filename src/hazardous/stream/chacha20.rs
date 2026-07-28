@@ -93,6 +93,7 @@
 //! [`ChaCha20::is_exhausted()`]: chacha20::ChaCha20::is_exhausted()
 //! [`ChaCha20::next_producible()`]: chacha20::ChaCha20::next_producible()
 //! [`ChaCha20::set_byte_position()`]: chacha20::ChaCha20::set_byte_position()
+//! [`MAX_KEYSTREAM_BYTES`]: chacha20::MAX_KEYSTREAM_BYTES
 
 //! [RFC]: https://tools.ietf.org/html/rfc8439
 use crate::GenerateSecret;
@@ -105,6 +106,7 @@ use crate::util::endianness::load_u32_le;
 use crate::util::u32x4::U32x4;
 use crate::util::xor_slices;
 use core::fmt::Debug;
+use core::marker::PhantomData;
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
@@ -122,9 +124,20 @@ pub(crate) const HCHACHA_NONCESIZE: usize = 16;
 pub const MAX_KEYSTREAM_BYTES: u64 = (u32::MAX as u64 + 1) * CHACHA_BLOCKSIZE as u64;
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(Clone))] // NOTE: Needed for HPKE testsuites.
 /// Marker type for ChaCha20 key. See [`SecretKey`] type for convenience.
 pub struct ChaCha20Key {}
 impl Sealed for ChaCha20Key {}
+
+impl ChaCha20Key {
+    /// Used in HPKE generics to avoid relyign on nightly const generics.
+    pub(crate) const fn zero() -> Secret<Self> {
+        Secret {
+            data: ByteArrayData::<CHACHA_KEYSIZE> { bytes: [0u8; _] },
+            _spec: PhantomData,
+        }
+    }
+}
 
 impl TypeSpec for ChaCha20Key {
     const NAME: &'static str = stringify!(SecretKey);
@@ -155,6 +168,16 @@ pub type SecretKey = Secret<ChaCha20Key>;
 /// Marker type for ChaCha20 nonce. See [`Nonce`] type for convenience.
 pub struct ChaCha20Nonce {}
 impl Sealed for ChaCha20Nonce {}
+
+impl ChaCha20Nonce {
+    /// Used in HPKE generics to avoid relyign on nightly const generics.
+    pub(crate) const fn zero() -> Public<Self> {
+        Public {
+            data: ByteArrayData::<IETF_CHACHA_NONCESIZE> { bytes: [0u8; _] },
+            _spec: PhantomData,
+        }
+    }
+}
 
 impl TypeSpec for ChaCha20Nonce {
     const NAME: &'static str = stringify!(Nonce);
@@ -540,6 +563,12 @@ mod public {
     const ZERO_IETF_NONCE: [u8; IETF_CHACHA_NONCESIZE] = [0u8; IETF_CHACHA_NONCESIZE];
 
     #[test]
+    fn test_zerokey() {
+        assert_eq!(ChaCha20Key::zero(), &ZERO_KEY);
+        assert_eq!(ChaCha20Nonce::zero(), &ZERO_IETF_NONCE);
+    }
+
+    #[test]
     #[cfg(feature = "safe_api")]
     // format! is only available with std
     fn test_omitted_debug() {
@@ -547,10 +576,10 @@ mod public {
         let n = Nonce::from(ZERO_IETF_NONCE);
         let ctx = ChaCha20::new(&sk, &n);
 
-        let secret_key = format!("{:?}", &ctx.state);
-        let secret_export = format!("{:?}", &ctx.keystreamblock);
+        let secret_key = format!("{:?}", ctx.state);
+        let secret_export = format!("{:?}", ctx.keystreamblock);
 
-        let test_debug_contents = format!("{:?}", &ctx);
+        let test_debug_contents = format!("{:?}", ctx);
         assert!(!test_debug_contents.contains(&secret_key));
         assert!(!test_debug_contents.contains(&secret_export));
     }

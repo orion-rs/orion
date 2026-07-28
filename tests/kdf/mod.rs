@@ -12,11 +12,14 @@ pub mod wycheproof_hkdf;
 pub mod wycheproof_pbkdf2;
 
 use orion::hazardous::{
-    kdf::{hkdf, pbkdf2},
+    kdf::{
+        hkdf::{HkdfSha256, HkdfSha384, HkdfSha512},
+        pbkdf2,
+    },
     mac::hmac,
 };
 
-macro_rules! impl_hkdf_test_runner (($name:ident, $extract:ident, $derive_key:ident, $hmac_tag:ident) => (
+macro_rules! impl_hkdf_test_runner (($name:ident, $hkdf:ident, $hmac_tag:ident) => (
     fn $name(
         expected_prk: Option<&[u8]>,
         expected_okm: &[u8],
@@ -27,38 +30,31 @@ macro_rules! impl_hkdf_test_runner (($name:ident, $extract:ident, $derive_key:id
         valid_result: bool,
     ) {
         if expected_prk.is_some() {
-            let actual_prk = $extract(salt, &ikm).unwrap();
+            let actual_prk = $hkdf::extract(salt, &ikm).unwrap();
             assert_eq!(actual_prk, $hmac_tag::try_from(expected_prk.unwrap()).unwrap());
         }
 
         let mut okm_out = vec![0u8; okm_len];
 
         if valid_result {
-            assert!($derive_key(salt, ikm, Some(&info), &mut okm_out).is_ok());
+            assert!($hkdf::derive_key(salt, ikm, Some(&info), &mut okm_out).is_ok());
             assert_eq!(okm_out, expected_okm);
         } else {
             // If derivation call is OK, actual MUST NOT = expected
-            if $derive_key(salt, ikm, Some(&info), &mut okm_out).is_ok() {
+            if $hkdf::derive_key(salt, ikm, Some(&info), &mut okm_out).is_ok() {
                 assert_ne!(okm_out, expected_okm);
             }
         }
     }
 ));
 
-use hkdf::sha256::{derive_key as hkdf_derive_key256, extract as extract256};
 use hmac::sha256::Tag as Tag256;
-
-impl_hkdf_test_runner!(hkdf256_test_runner, extract256, hkdf_derive_key256, Tag256);
-
-use hkdf::sha384::{derive_key as hkdf_derive_key384, extract as extract384};
 use hmac::sha384::Tag as Tag384;
-
-impl_hkdf_test_runner!(hkdf384_test_runner, extract384, hkdf_derive_key384, Tag384);
-
-use hkdf::sha512::{derive_key as hkdf_derive_key512, extract as extract512};
 use hmac::sha512::Tag as Tag512;
 
-impl_hkdf_test_runner!(hkdf512_test_runner, extract512, hkdf_derive_key512, Tag512);
+impl_hkdf_test_runner!(hkdf256_test_runner, HkdfSha256, Tag256);
+impl_hkdf_test_runner!(hkdf384_test_runner, HkdfSha384, Tag384);
+impl_hkdf_test_runner!(hkdf512_test_runner, HkdfSha512, Tag512);
 
 macro_rules! impl_pbkdf2_test_runner (($name:ident, $password:ident, $derive_key:ident) => (
     fn $name(

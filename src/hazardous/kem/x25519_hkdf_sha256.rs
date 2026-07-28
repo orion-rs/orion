@@ -78,6 +78,7 @@ pub use crate::hazardous::ecc::x25519::PublicKey;
 
 #[cfg(feature = "safe_api")]
 use crate::generics::sealed::Data;
+use crate::hazardous::mac::hmac;
 
 /// Size of private [`SharedSecret`].
 pub const SHARED_SECRET_SIZE: usize = 32;
@@ -201,8 +202,8 @@ impl DhKem {
         salt: &[u8],
         label: &[u8; 7],
         ikm: &[u8],
-    ) -> Result<hkdf::sha256::Tag, UnknownCryptoError> {
-        hkdf::sha256::extract_with_parts(
+    ) -> Result<hmac::sha256::Tag, UnknownCryptoError> {
+        hkdf::HkdfSha256::extract_with_parts(
             salt,
             &[
                 Self::HPKE_VERSION_ID.as_bytes(),
@@ -215,13 +216,13 @@ impl DhKem {
     }
 
     fn labeled_expand(
-        prk: &hkdf::sha256::Tag,
+        prk: &hmac::sha256::Tag,
         label: &[u8],
         info: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         let l: u16 = out.len().try_into().map_err(|_| UnknownCryptoError)?;
-        hkdf::sha256::expand_with_parts(
+        hkdf::HkdfSha256::expand_with_parts(
             prk.unprotected_as_ref(),
             Some(&[
                 &l.to_be_bytes(),

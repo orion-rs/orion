@@ -1,7 +1,11 @@
 use hex::decode;
+use orion::KP;
 use orion::hazardous::hpke::DHKEM_X25519_SHA256_CHACHA20;
+use orion::hazardous::hpke::MLKEM768_X25519_SHA256_CHACHA20;
+use orion::hazardous::hpke::MLKEM768_X25519_SHAKE256_CHACHA20;
 use orion::hazardous::hpke::{ModeAuth, ModeAuthPsk, ModeBase, ModePsk};
 use orion::hazardous::kem::x25519_hkdf_sha256::*;
+use orion::hazardous::kem::xwing::{Ciphertext, DecapsulationKey, EncapsulationKey, Eseed};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
 
@@ -410,4 +414,174 @@ fn hpke_runner(path: &str) {
 #[test]
 fn test_hpke_kats() {
     hpke_runner("./tests/test_data/third_party/rfc9180/test-vectors.json");
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize, Debug)]
+/// Test vectors of <https://datatracker.ietf.org/doc/html/draft-ietf-hpke-pq-05#appendix-A>.
+/// JSON format: https://github.com/hpkewg/hpke-pq/commit/11b5b9541e9976fc9ce25902011d20dacc089066
+///
+/// NOTE: These do not currently have any PSK modes. Opened pull request for this here: https://github.com/hpkewg/hpke-pq/pull/63
+///
+/// These differ from the RFC 9180 ones ([`HpkeTest`]), in that the KEMs they cover are not DH-KEMs:
+/// so there's no ephemeral keypair only the encapsulation randomness `ikmE`.
+///
+/// TODO(brycx): This could probably be merged with above struct, making the `ikmE` an `Option` field, but
+/// this is the result of a quick copy-paste for now.
+pub(crate) struct HpkePqTest {
+    pub(crate) mode: u64,
+    pub(crate) kem_id: u64,
+    pub(crate) kdf_id: u64,
+    pub(crate) aead_id: u64,
+    pub(crate) info: String,
+    pub(crate) ikmE: String,
+    pub(crate) ikmR: String,
+    pub(crate) pkRm: String,
+    pub(crate) skRm: String,
+    pub(crate) enc: String,
+    pub(crate) shared_secret: String,
+    pub(crate) key: String,
+    pub(crate) base_nonce: String,
+    pub(crate) exporter_secret: String,
+    pub(crate) encryptions: Vec<EncryptionTest>,
+    pub(crate) exports: Vec<ExportTest>,
+}
+
+macro_rules! impl_hkpke_pq_test_runner_mode_base (($test:ident, $suite:ident, $seckey:ident, $pubkey:ident, $ct:ident, $eph:ident) => (
+        let secret_recip = $seckey::try_from(&decode(&$test.skRm).unwrap()).unwrap();
+        let public_recip = $pubkey::try_from(&decode(&$test.pkRm).unwrap()).unwrap();
+        let derived_kp_recip = $suite::derive_keypair(&decode(&$test.ikmR).unwrap()).unwrap();
+        assert_eq!(derived_kp_recip.private(), &secret_recip);
+        assert_eq!(derived_kp_recip.public(), &public_recip);
+        assert_eq!(
+            $pubkey::try_from(&secret_recip).unwrap(),
+            public_recip
+        );
+
+        let info = decode(&$test.info).unwrap();
+        let shared_secret = decode(&$test.shared_secret).unwrap();
+
+        // These two ignored value are implicit to the HPKE ctx and are tested
+        // implicitly through the encryption and export tests.
+        let _base_nonce = decode(&$test.base_nonce).unwrap();
+        let _exporter_secret = decode(&$test.exporter_secret).unwrap();
+        let enc = $ct::try_from(&decode(&$test.enc).unwrap()).unwrap();
+        let secret_eph = $eph::try_from(&decode(&$test.ikmE).unwrap()).unwrap();
+
+        let (ss, actual_kem_enc) = public_recip.encap_deterministic(&secret_eph).unwrap();
+        assert_eq!(ss.unprotected_as_ref(), &shared_secret);
+        assert_eq!(actual_kem_enc, enc);
+
+        let (mut hpke_ctx_s, actual_enc) =
+        ModeBase::<$suite>::new_sender_deterministic(
+            &public_recip,
+            &info,
+            secret_eph,
+            )
+        .unwrap();
+        assert_eq!(actual_enc, enc);
+
+        let mut hpke_ctx_r = ModeBase::<$suite>::new_recipient(
+            &enc,
+            &secret_recip,
+            &info,
+        )
+        .unwrap();
+
+        for encryption in $test.encryptions.iter() {
+            let aad = decode(&encryption.aad).unwrap();
+            let ct = decode(&encryption.ct).unwrap();
+            // Nonce is kept internal to the HPKE ctx.
+            let _nonce = decode(&encryption.nonce).unwrap();
+            let pt = decode(&encryption.pt).unwrap();
+            let mut out = vec![0u8; ct.len() - 16];
+            let mut out_ct = vec![0u8; ct.len()];
+
+            hpke_ctx_s
+                .seal(&pt, &aad, &mut out_ct)
+                .expect("Failed encryption");
+            assert_eq!(&out_ct, &ct);
+
+            hpke_ctx_r
+                .open(&ct, &aad, &mut out)
+                .expect("Failed decryption");
+                assert_eq!(&pt, &out);
+        }
+
+        for export in $test.exports.iter() {
+            let expected_export = decode(&export.exported_value).unwrap();
+            let exporter_context = decode(&export.exporter_context).unwrap();
+            let mut export_out_from_s = vec![0u8; export.L];
+            let mut export_out_from_r = vec![0u8; export.L];
+
+            hpke_ctx_s
+                .export_secret(&exporter_context, &mut export_out_from_s)
+                    .unwrap();
+            hpke_ctx_r
+                .export_secret(&exporter_context, &mut export_out_from_r)
+                .unwrap();
+            assert_eq!(export_out_from_s, export_out_from_r);
+            assert_eq!(export_out_from_s, expected_export);
+        }
+));
+
+fn hpke_pq_runner(path: &str) {
+    let file = File::open(path).unwrap();
+    let reader = BufReader::new(file);
+    let tests: Vec<HpkePqTest> = serde_json::from_reader(reader).unwrap();
+
+    let mut test_counter = 0;
+    for test in tests {
+        match test.mode as u8 {
+            0u8 => {
+                match (
+                    (test.kem_id as u16).to_be_bytes(),
+                    (test.kdf_id as u16).to_be_bytes(),
+                    (test.aead_id as u16).to_be_bytes(),
+                ) {
+                    (
+                        MLKEM768_X25519_SHA256_CHACHA20::KEM_ID,
+                        MLKEM768_X25519_SHA256_CHACHA20::KDF_ID,
+                        MLKEM768_X25519_SHA256_CHACHA20::AEAD_ID,
+                    ) => {
+                        impl_hkpke_pq_test_runner_mode_base!(
+                            test,
+                            MLKEM768_X25519_SHA256_CHACHA20,
+                            DecapsulationKey,
+                            EncapsulationKey,
+                            Ciphertext,
+                            Eseed
+                        );
+                        test_counter += 1;
+                    }
+                    (
+                        MLKEM768_X25519_SHAKE256_CHACHA20::KEM_ID,
+                        MLKEM768_X25519_SHAKE256_CHACHA20::KDF_ID,
+                        MLKEM768_X25519_SHAKE256_CHACHA20::AEAD_ID,
+                    ) => {
+                        impl_hkpke_pq_test_runner_mode_base!(
+                            test,
+                            MLKEM768_X25519_SHAKE256_CHACHA20,
+                            DecapsulationKey,
+                            EncapsulationKey,
+                            Ciphertext,
+                            Eseed
+                        );
+                        test_counter += 1;
+                    }
+                    _ => continue, //unsupported varitant
+                };
+            }
+            // The KEM of this suite provides no `AuthEncap()`/`AuthDecap()`, and the draft
+            // only defines Base mode vectors for it.
+            _ => panic!("invalid test.mode part of KATs"),
+        }
+    }
+
+    assert_eq!(test_counter, 2);
+}
+
+#[test]
+fn test_hpke_pq_kats() {
+    hpke_pq_runner("./tests/test_data/third_party/hpke_wg/hpke_pq_05_test_vectors.json");
 }

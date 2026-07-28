@@ -23,7 +23,10 @@ pub fn draft_06_testvector_1() {
     let kp = KeyPair::try_from(&dk).unwrap();
     assert_eq!(&pk, kp.public().as_ref());
 
-    let (ss_actual, ct_actual) = kp.public().encap_deterministic(&eseed).unwrap();
+    let (ss_actual, ct_actual) = kp
+        .public()
+        .encap_deterministic(&Eseed::try_from(&eseed).unwrap())
+        .unwrap();
     assert_eq!(&ss, ss_actual.unprotected_as_ref());
     assert_eq!(&ct, ct_actual.as_ref());
 
@@ -59,7 +62,10 @@ pub fn draft_06_testvector_2() {
     let kp = KeyPair::try_from(&dk).unwrap();
     assert_eq!(&pk, kp.public().as_ref());
 
-    let (ss_actual, ct_actual) = kp.public().encap_deterministic(&eseed).unwrap();
+    let (ss_actual, ct_actual) = kp
+        .public()
+        .encap_deterministic(&Eseed::try_from(&eseed).unwrap())
+        .unwrap();
     assert_eq!(&ss, ss_actual.unprotected_as_ref());
     assert_eq!(&ct, ct_actual.as_ref());
 
@@ -96,7 +102,10 @@ pub fn draft_06_testvector_3() {
     let kp = KeyPair::try_from(&dk).unwrap();
     assert_eq!(&pk, kp.public().as_ref());
 
-    let (ss_actual, ct_actual) = kp.public().encap_deterministic(&eseed).unwrap();
+    let (ss_actual, ct_actual) = kp
+        .public()
+        .encap_deterministic(&Eseed::try_from(&eseed).unwrap())
+        .unwrap();
     assert_eq!(&ss, ss_actual.unprotected_as_ref());
     assert_eq!(&ct, ct_actual.as_ref());
 

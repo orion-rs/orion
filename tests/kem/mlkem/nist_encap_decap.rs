@@ -3,6 +3,7 @@
 
 use orion::hazardous::kem::mlkem512;
 use orion::hazardous::kem::mlkem768;
+use orion::hazardous::kem::mlkem768::ExplicitRandom;
 use orion::hazardous::kem::mlkem1024;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
@@ -71,7 +72,9 @@ fn mlkem_runner(path: &str) {
                     hex::decode_to_slice(&test.c, &mut ct_expected).unwrap();
 
                     let ek = mlkem512::EncapsulationKey::try_from(&ek_expected).unwrap();
-                    let (k_actual, ct_actual) = ek.encap_deterministic(&m).unwrap();
+                    let (k_actual, ct_actual) = ek
+                        .encap_deterministic(&ExplicitRandom::try_from(&m).unwrap())
+                        .unwrap();
                     assert_eq!(k, k_actual.unprotected_as_ref());
                     assert_eq!(ct_expected, ct_actual.as_ref());
 
@@ -128,7 +131,9 @@ fn mlkem_runner(path: &str) {
                     hex::decode_to_slice(&test.c, &mut ct_expected).unwrap();
 
                     let ek = mlkem768::EncapsulationKey::try_from(&ek_expected).unwrap();
-                    let (k_actual, ct_actual) = ek.encap_deterministic(&m).unwrap();
+                    let (k_actual, ct_actual) = ek
+                        .encap_deterministic(&ExplicitRandom::try_from(&m).unwrap())
+                        .unwrap();
                     assert_eq!(k, k_actual.unprotected_as_ref());
                     assert_eq!(ct_expected, ct_actual.as_ref());
 
@@ -186,7 +191,9 @@ fn mlkem_runner(path: &str) {
                     hex::decode_to_slice(&test.c, &mut ct_expected).unwrap();
 
                     let ek = mlkem1024::EncapsulationKey::try_from(&ek_expected).unwrap();
-                    let (k_actual, ct_actual) = ek.encap_deterministic(&m).unwrap();
+                    let (k_actual, ct_actual) = ek
+                        .encap_deterministic(&ExplicitRandom::try_from(&m).unwrap())
+                        .unwrap();
                     assert_eq!(k, k_actual.unprotected_as_ref());
                     assert_eq!(ct_expected, ct_actual.as_ref());
 

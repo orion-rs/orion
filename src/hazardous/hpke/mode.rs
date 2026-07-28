@@ -117,18 +117,19 @@ pub(crate) mod private {
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
-///   as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+///   as the security level that is desired. For [`MLKEM768_X25519_SHAKE256_CHACHA20`] this means 256 bits.
 /// - The `ikm` used as input for `derive_keypair()` must never be reused.
 /// - The `secret_ephemeral` must never be reused.
 ///
 /// # Example:
 /// ```rust
 /// # #[cfg(feature = "safe_api")] {
-/// use orion::hazardous::hpke::{ModeBase, DHKEM_X25519_SHA256_CHACHA20};
-/// use orion::hazardous::kem::x25519_hkdf_sha256::DhKem;
+/// use orion::hazardous::hpke::{ModeBase, MLKEM768_X25519_SHAKE256_CHACHA20};
+/// use orion::hazardous::kem::xwing::KeyPair;
+/// use orion::KP;
 ///
-/// let (sender_secret, sender_public) = DhKem::generate_keypair()?;
-/// let (recipient_secret, recipient_public) = DhKem::generate_keypair()?;
+/// let sender_kp = KeyPair::generate()?;
+/// let recipient_kp = KeyPair::generate()?;
 ///
 ///
 /// // Streaming-based API
@@ -136,12 +137,12 @@ pub(crate) mod private {
 /// let mut aead_ct_out1 = [0u8; 32];
 /// let mut aead_ct_out2 = [0u8; 32];
 ///
-/// let (mut hpke_sender, enc) = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&recipient_public, b"info parameter")?;
+/// let (mut hpke_sender, enc) = ModeBase::<MLKEM768_X25519_SHAKE256_CHACHA20>::new_sender(recipient_kp.public(), b"info parameter")?;
 /// hpke_sender.seal(&[0u8; 16], b"aad parameter 0", &mut aead_ct_out0)?;
 /// hpke_sender.seal(&[1u8; 16], b"aad parameter 1", &mut aead_ct_out1)?;
 /// hpke_sender.seal(&[2u8; 16], b"aad parameter 2", &mut aead_ct_out2)?;
 ///
-/// let mut hpke_recipient = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, &recipient_secret, b"info parameter")?;
+/// let mut hpke_recipient = ModeBase::<MLKEM768_X25519_SHAKE256_CHACHA20>::new_recipient(&enc, recipient_kp.private(), b"info parameter")?;
 /// let mut aead_pt_out0 = [0u8; 16];
 /// let mut aead_pt_out1 = [0u8; 16];
 /// let mut aead_pt_out2 = [0u8; 16];
@@ -154,13 +155,13 @@ pub(crate) mod private {
 /// assert_eq!(&aead_pt_out2, &[2u8; 16]);
 ///
 /// // One-shot API
-/// let enc = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::base_seal(&recipient_public, b"info parameter", &[3u8; 16], b"aad", &mut aead_ct_out0)?;
-/// ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::base_open(&enc, &recipient_secret, b"info parameter", &aead_ct_out0, b"aad", &mut aead_pt_out0)?;
+/// let enc = ModeBase::<MLKEM768_X25519_SHAKE256_CHACHA20>::base_seal(recipient_kp.public(), b"info parameter", &[3u8; 16], b"aad", &mut aead_ct_out0)?;
+/// ModeBase::<MLKEM768_X25519_SHAKE256_CHACHA20>::base_open(&enc, recipient_kp.private(), b"info parameter", &aead_ct_out0, b"aad", &mut aead_pt_out0)?;
 /// assert_eq!(&aead_pt_out0, &[3u8; 16]);
 /// # }
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
-/// [`DHKEM_X25519_SHA256_CHACHA20`]: crate::hazardous::hpke::x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20
+/// [`MLKEM768_X25519_SHAKE256_CHACHA20`]: crate::hazardous::hpke::MLKEM768_X25519_SHAKE256_CHACHA20
 pub struct ModeBase<S> {
     suite: S,
     role: Role,
@@ -194,7 +195,7 @@ impl<S: Suite + Base> ModeBase<S> {
     pub fn new_sender_deterministic(
         pubkey_r: &S::PublicKey,
         info: &[u8],
-        secret_ephemeral: S::PrivateKey,
+        secret_ephemeral: S::EphemeralSecret,
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_base_sender_deterministic(pubkey_r, info, secret_ephemeral)?;
 
@@ -318,18 +319,19 @@ impl<S: Suite + Base> ModeBase<S> {
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
-///   as the security level that is desired. For [`DHKEM_X25519_SHA256_CHACHA20`] this means 256 bits.
+///   as the security level that is desired. For [`MLKEM768_X25519_SHAKE256_CHACHA20`] this means 256 bits.
 /// - The `ikm` used as input for `derive_keypair()` must never be reused.
 /// - The `secret_ephemeral` must never be reused.
 ///
 /// # Example:
 /// ```rust
 /// # #[cfg(feature = "safe_api")] {
-/// use orion::hazardous::hpke::{ModePsk, DHKEM_X25519_SHA256_CHACHA20};
-/// use orion::hazardous::kem::x25519_hkdf_sha256::DhKem;
+/// use orion::hazardous::hpke::{ModePsk, MLKEM768_X25519_SHAKE256_CHACHA20};
+/// use orion::hazardous::kem::xwing::KeyPair;
+/// use orion::KP;
 ///
-/// let (sender_secret, sender_public) = DhKem::generate_keypair()?;
-/// let (recipient_secret, recipient_public) = DhKem::generate_keypair()?;
+/// let sender_kp = KeyPair::generate()?;
+/// let recipient_kp = KeyPair::generate()?;
 /// let psk = b"any preshared secret key that is 32 bytes minimum";
 /// let psk_id = b"identifier for psk";
 ///
@@ -338,12 +340,12 @@ impl<S: Suite + Base> ModeBase<S> {
 /// let mut aead_ct_out1 = [0u8; 32];
 /// let mut aead_ct_out2 = [0u8; 32];
 ///
-/// let (mut hpke_sender, enc) = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&recipient_public, b"info parameter", psk, psk_id)?;
+/// let (mut hpke_sender, enc) = ModePsk::<MLKEM768_X25519_SHAKE256_CHACHA20>::new_sender(recipient_kp.public(), b"info parameter", psk, psk_id)?;
 /// hpke_sender.seal(&[0u8; 16], b"aad parameter 0", &mut aead_ct_out0)?;
 /// hpke_sender.seal(&[1u8; 16], b"aad parameter 1", &mut aead_ct_out1)?;
 /// hpke_sender.seal(&[2u8; 16], b"aad parameter 2", &mut aead_ct_out2)?;
 ///
-/// let mut hpke_recipient = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, &recipient_secret, b"info parameter", psk, psk_id)?;
+/// let mut hpke_recipient = ModePsk::<MLKEM768_X25519_SHAKE256_CHACHA20>::new_recipient(&enc, recipient_kp.private(), b"info parameter", psk, psk_id)?;
 /// let mut aead_pt_out0 = [0u8; 16];
 /// let mut aead_pt_out1 = [0u8; 16];
 /// let mut aead_pt_out2 = [0u8; 16];
@@ -356,13 +358,13 @@ impl<S: Suite + Base> ModeBase<S> {
 /// assert_eq!(&aead_pt_out2, &[2u8; 16]);
 ///
 /// // One-shot API
-/// let enc = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::psk_seal(&recipient_public, b"info parameter", psk, psk_id, &[3u8; 16], b"aad", &mut aead_ct_out0)?;
-/// ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::psk_open(&enc, &recipient_secret, b"info parameter", psk, psk_id, &aead_ct_out0, b"aad", &mut aead_pt_out0)?;
+/// let enc = ModePsk::<MLKEM768_X25519_SHAKE256_CHACHA20>::psk_seal(recipient_kp.public(), b"info parameter", psk, psk_id, &[3u8; 16], b"aad", &mut aead_ct_out0)?;
+/// ModePsk::<MLKEM768_X25519_SHAKE256_CHACHA20>::psk_open(&enc, recipient_kp.private(), b"info parameter", psk, psk_id, &aead_ct_out0, b"aad", &mut aead_pt_out0)?;
 /// assert_eq!(&aead_pt_out0, &[3u8; 16]);
 /// # }
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
-/// [`DHKEM_X25519_SHA256_CHACHA20`]: crate::hazardous::hpke::x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20
+/// [`MLKEM768_X25519_SHAKE256_CHACHA20`]: crate::hazardous::hpke::MLKEM768_X25519_SHAKE256_CHACHA20
 pub struct ModePsk<S> {
     suite: S,
     role: Role,
@@ -400,7 +402,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secret_ephemeral: S::PrivateKey,
+        secret_ephemeral: S::EphemeralSecret,
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) =
             S::setup_psk_sender_deterministic(pubkey_r, info, psk, psk_id, secret_ephemeral)?;
@@ -582,7 +584,7 @@ impl<S> ModeAuth<S> {
     pub const MODE_ID: u8 = 0x02u8;
 }
 
-impl<S: Suite + Auth> ModeAuth<S> {
+impl<S: AuthSuite + Auth> ModeAuth<S> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// HPKE Auth mode sender.
@@ -607,7 +609,7 @@ impl<S: Suite + Auth> ModeAuth<S> {
         pubkey_r: &S::PublicKey,
         info: &[u8],
         secret_key_s: &S::PrivateKey,
-        secret_ephemeral: S::PrivateKey,
+        secret_ephemeral: S::EphemeralSecret,
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) =
             S::setup_auth_sender_deterministic(pubkey_r, info, secret_key_s, secret_ephemeral)?;
@@ -792,7 +794,7 @@ impl<S> ModeAuthPsk<S> {
     pub const MODE_ID: u8 = 0x03u8;
 }
 
-impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
+impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// HPKE AuthPsk mode sender.
@@ -821,7 +823,7 @@ impl<S: Suite + AuthPsk> ModeAuthPsk<S> {
         psk: &[u8],
         psk_id: &[u8],
         secret_key_s: &S::PrivateKey,
-        secret_ephemeral: S::PrivateKey,
+        secret_ephemeral: S::EphemeralSecret,
     ) -> Result<(Self, S::EncapsulatedKey), UnknownCryptoError> {
         let (suite, ek) = S::setup_authpsk_sender_deterministic(
             pubkey_r,
