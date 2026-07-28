@@ -54,8 +54,6 @@ use crate::hazardous::hpke::kem::MlKem768X25519;
 /// [`xwing::KeyPair`]: crate::hazardous::kem::xwing::KeyPair
 pub type MLKEM768_X25519_SHAKE256_CHACHA20 = HpkeSuite<MlKem768X25519, Shake256, ChaCha20Poly1305>;
 
-// TODO(brycx): Test vectors: https://datatracker.ietf.org/doc/html/draft-ietf-hpke-pq-05#name-mlkem768-x25519-shake256-ch
-
 #[cfg(feature = "safe_api")]
 #[cfg(test)]
 mod test {
