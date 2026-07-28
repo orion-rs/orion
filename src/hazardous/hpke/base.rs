@@ -27,6 +27,7 @@ use crate::errors::UnknownCryptoError;
 use crate::hazardous::hpke::VERSION_ID;
 use crate::hazardous::hpke::mode::private::*;
 use crate::hazardous::hpke::suite::private::*;
+use crate::{Public, Secret};
 
 /// Largest `Nk + Nn + Nh` of any suite, which is the scratch needed by the key schedule.
 ///
@@ -35,7 +36,6 @@ use crate::hazardous::hpke::suite::private::*;
 /// [`HpkeSuite::key_schedule()`] errors if a suite ever exceeds it.
 const KEY_SCHEDULE_MAX: usize = 128;
 
-#[cfg_attr(test, derive(Clone))]
 /// An HPKE suite, composed of a KEM, a KDF and an AEAD.
 ///
 /// This is not used directly. Each supported combination of primitives is exposed as its own type,
@@ -46,11 +46,25 @@ where
     Kdf: HpkeKdf,
     Aead: HpkeAead,
 {
-    pub(crate) key: Aead::Key,
-    pub(crate) base_nonce: Aead::Nonce,
+    pub(crate) key: Secret<Aead::Key>,
+    pub(crate) base_nonce: Public<Aead::Nonce>,
     pub(crate) ctr: u64, // "sequence number"
     pub(crate) exporter_secret: Kdf::ExporterSecret,
     pub(crate) _phantom: PhantomData<(Kem, Kdf, Aead)>,
+}
+
+#[cfg(test)]
+impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> Clone for HpkeSuite<Kem, Kdf, Aead> {
+    fn clone(&self) -> Self {
+        Self {
+            // SAFETY: This is a test-only unwrap()s.
+            key: Secret::<Aead::Key>::try_from(self.key.unprotected_as_ref()).unwrap(),
+            base_nonce: Public::<Aead::Nonce>::try_from(self.base_nonce.as_ref()).unwrap(),
+            ctr: self.ctr,
+            exporter_secret: self.exporter_secret.clone(),
+            _phantom: self._phantom,
+        }
+    }
 }
 
 impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> PartialEq<HpkeSuite<Kem, Kdf, Aead>>
@@ -59,7 +73,10 @@ impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> PartialEq<HpkeSuite<Kem, Kdf, A
     fn eq(&self, other: &HpkeSuite<Kem, Kdf, Aead>) -> bool {
         use subtle::ConstantTimeEq;
 
-        (self.key.as_ref().ct_eq(other.key.as_ref())
+        (self
+            .key
+            .unprotected_as_ref()
+            .ct_eq(other.key.unprotected_as_ref())
             & self.base_nonce.as_ref().ct_eq(other.base_nonce.as_ref())
             & self.ctr.ct_eq(&other.ctr)
             & self
@@ -90,8 +107,10 @@ impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> Drop for HpkeSuite<Kem, Kdf, Ae
     fn drop(&mut self) {
         #[cfg(feature = "zeroize")]
         {
+            use crate::generics::sealed::Data;
             use zeroize::Zeroize;
-            self.key.as_mut().iter_mut().zeroize();
+
+            self.key.data.memzero();
             self.exporter_secret.as_mut().iter_mut().zeroize();
         }
     }
@@ -165,14 +184,14 @@ impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> HpkeSuite<Kem, Kdf, Aead> {
         suite_id
     }
 
-    fn compute_nonce(&self) -> Aead::Nonce {
+    fn compute_nonce(&self) -> Public<Aead::Nonce> {
         // "Implementations MAY use a sequence number that is shorter than the nonce length (padding on the left with zero),
         // but MUST raise an error if the sequence number overflows." https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2
         debug_assert!(Aead::NN >= size_of::<u64>());
 
         let mut n = Aead::NONCE_INIT;
-        n.as_mut()[Aead::NN - size_of::<u64>()..].copy_from_slice(&self.ctr.to_be_bytes());
-        xor_slices!(self.base_nonce.as_ref(), n.as_mut());
+        n.data.as_mut()[Aead::NN - size_of::<u64>()..].copy_from_slice(&self.ctr.to_be_bytes());
+        xor_slices!(self.base_nonce.as_ref(), n.data.as_mut());
 
         n
     }
@@ -254,8 +273,9 @@ impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> Suite for HpkeSuite<Kem, Kdf, A
         let mut key = Aead::KEY_INIT;
         let mut base_nonce = Aead::NONCE_INIT;
         let mut exporter_secret = Kdf::EXPORTER_SECRET_INIT;
-        key.as_mut().copy_from_slice(&combined[..Aead::NK]);
+        key.data.as_mut().copy_from_slice(&combined[..Aead::NK]);
         base_nonce
+            .data
             .as_mut()
             .copy_from_slice(&combined[Aead::NK..Aead::NK + Aead::NN]);
         exporter_secret

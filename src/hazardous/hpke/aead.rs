@@ -48,7 +48,7 @@ impl HpkeAead for ChaCha20Poly1305 {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        ChaCha20Poly1305::seal(&key, &nonce, plaintext, Some(aad), out)
+        ChaCha20Poly1305::seal(key, nonce, plaintext, Some(aad), out)
     }
 
     fn open(
@@ -58,6 +58,6 @@ impl HpkeAead for ChaCha20Poly1305 {
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        ChaCha20Poly1305::open(&key, &nonce, ciphertext, Some(aad), out)
+        ChaCha20Poly1305::open(key, nonce, ciphertext, Some(aad), out)
     }
 }

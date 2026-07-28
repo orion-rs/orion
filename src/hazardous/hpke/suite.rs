@@ -117,8 +117,13 @@ pub(crate) mod private {
         /// RFC9180 "`Nh`": The output size of this KDF's extract function, in bytes.
         const NH: usize;
 
+        #[cfg(test)]
         /// The exporter secret this KDF produces, which is `Nh` bytes.
-        type ExporterSecret: TypeSpec;
+        type ExporterSecret: AsRef<[u8]> + AsMut<[u8]> + Clone;
+
+        #[cfg(not(test))]
+        /// The exporter secret this KDF produces, which is `Nh` bytes.
+        type ExporterSecret: AsRef<[u8]> + AsMut<[u8]>;
 
         /// An all-zero [`Self::ExporterSecret`], to be filled by [`Self::combine_secrets()`].
         const EXPORTER_SECRET_INIT: Self::ExporterSecret;
@@ -159,9 +164,19 @@ pub(crate) mod private {
         /// RFC9180 "`Nn`": The length of a nonce for this AEAD, in bytes.
         const NN: usize;
 
+        #[cfg(test)]
+        /// The key of this AEAD, which is `Nk` bytes.
+        type Key: TypeSpec + Clone;
+
+        #[cfg(not(test))]
         /// The key of this AEAD, which is `Nk` bytes.
         type Key: TypeSpec;
 
+        #[cfg(test)]
+        /// The nonce of this AEAD, which is `Nn` bytes.
+        type Nonce: TypeSpec + Clone;
+
+        #[cfg(not(test))]
         /// The nonce of this AEAD, which is `Nn` bytes.
         type Nonce: TypeSpec;
 
