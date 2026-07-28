@@ -3,6 +3,7 @@
 use orion::KP;
 use orion::hazardous::kem::mlkem512;
 use orion::hazardous::kem::mlkem768;
+use orion::hazardous::kem::mlkem768::ExplicitRandom;
 use orion::hazardous::kem::mlkem1024;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
@@ -196,7 +197,9 @@ fn mlkem_runner(path: &str) {
 
                     let ek = mlkem512::EncapsulationKey::try_from(&ek_expected).unwrap();
                     let ciphertext = mlkem512::Ciphertext::try_from(&ct_expected).unwrap();
-                    let (k_actual, c_acutal) = ek.encap_deterministic(&m).unwrap();
+                    let (k_actual, c_acutal) = ek
+                        .encap_deterministic(&ExplicitRandom::try_from(&m).unwrap())
+                        .unwrap();
 
                     assert_eq!(ciphertext, c_acutal);
                     assert_eq!(&shared_expected, k_actual.unprotected_as_ref());
@@ -217,7 +220,9 @@ fn mlkem_runner(path: &str) {
 
                     let ek = mlkem768::EncapsulationKey::try_from(&ek_expected).unwrap();
                     let ciphertext = mlkem768::Ciphertext::try_from(&ct_expected).unwrap();
-                    let (k_actual, c_acutal) = ek.encap_deterministic(&m).unwrap();
+                    let (k_actual, c_acutal) = ek
+                        .encap_deterministic(&ExplicitRandom::try_from(&m).unwrap())
+                        .unwrap();
 
                     assert_eq!(ciphertext, c_acutal);
                     assert_eq!(&shared_expected, k_actual.unprotected_as_ref());
@@ -238,7 +243,9 @@ fn mlkem_runner(path: &str) {
 
                     let ek = mlkem1024::EncapsulationKey::try_from(&ek_expected).unwrap();
                     let ciphertext = mlkem1024::Ciphertext::try_from(&ct_expected).unwrap();
-                    let (k_actual, c_acutal) = ek.encap_deterministic(&m).unwrap();
+                    let (k_actual, c_acutal) = ek
+                        .encap_deterministic(&ExplicitRandom::try_from(&m).unwrap())
+                        .unwrap();
 
                     assert_eq!(ciphertext, c_acutal);
                     assert_eq!(&shared_expected, k_actual.unprotected_as_ref());
