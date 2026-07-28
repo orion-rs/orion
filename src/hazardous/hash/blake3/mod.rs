@@ -226,3 +226,95 @@ impl Blake3 {
         reader.fill(out_slice);
     }
 }
+
+#[cfg(test)]
+mod test_streaming_interface {
+    use super::*;
+    use crate::hazardous::hash::blake3::internal::BLOCK_LEN;
+    use crate::test_framework::incremental_interface::{
+        StreamingContextConsistencyTester, TestableStreamingContext,
+    };
+
+    // A wrapper exclusively for testing. The expected API for `.finalize()` is
+    // that it accepts `mut& self`, requiring a manual check for double use.
+    // Our solution consumes itself, solving the problem, but panicking in the tests.
+    #[derive(PartialEq, Debug, Clone)]
+    struct Blake3Tester {
+        inner: Blake3,
+        is_finalized: bool,
+    }
+
+    impl TestableStreamingContext<Vec<u8>> for Blake3Tester {
+        fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+            self.inner.reset();
+            self.is_finalized = false;
+            Ok(())
+        }
+
+        fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+            if self.is_finalized {
+                return Err(UnknownCryptoError);
+            }
+            self.inner.update(input);
+            Ok(())
+        }
+
+        fn finalize(&mut self) -> Result<Vec<u8>, UnknownCryptoError> {
+            if self.is_finalized {
+                return Err(UnknownCryptoError);
+            }
+
+            self.is_finalized = true;
+            let mut out = vec![0u8; 32];
+            // `finalize()` consumes `self`, cloning solely for testing purposes
+            self.inner.clone().finalize(&mut out);
+            Ok(out)
+        }
+
+        fn one_shot(input: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+            let mut hasher = Blake3::new();
+            hasher.update(input);
+
+            let mut out = vec![0u8; 32];
+            hasher.finalize(&mut out);
+            Ok(out)
+        }
+
+        fn verify_result(expected: &Vec<u8>, input: &[u8]) -> Result<(), UnknownCryptoError> {
+            let actual = Self::one_shot(input)?;
+            if &actual == expected {
+                Ok(())
+            } else {
+                Err(UnknownCryptoError)
+            }
+        }
+
+        fn compare_states(state_1: &Self, state_2: &Self) {
+            assert_eq!(state_1, state_2)
+        }
+    }
+
+    #[test]
+    fn default_consistency_states() {
+        let init_state = Blake3Tester {
+            inner: Blake3::new(),
+            is_finalized: false,
+        };
+        let test_runner =
+            StreamingContextConsistencyTester::<Vec<u8>, Blake3Tester>::new(init_state, BLOCK_LEN);
+        test_runner.run_all_tests();
+    }
+
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+        let init_state = Blake3Tester {
+            inner: Blake3::new(),
+            is_finalized: false,
+        };
+        let test_runner =
+            StreamingContextConsistencyTester::<Vec<u8>, Blake3Tester>::new(init_state, BLOCK_LEN);
+        test_runner.run_all_tests_property(&data);
+        true
+    }
+}
