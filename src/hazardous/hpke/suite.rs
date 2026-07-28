@@ -230,6 +230,7 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        /// Deterministic setup of base-mode sender.
         fn setup_base_sender_deterministic(
             pubkey_r: &Self::PublicKey,
             info: &[u8],
@@ -258,6 +259,7 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        /// Deterministic setup of psk-mode sender.
         fn setup_psk_sender_deterministic(
             pubkey_r: &Self::PublicKey,
             info: &[u8],
@@ -312,6 +314,7 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        /// Deterministic setup of auth-mode sender.
         fn setup_auth_sender_deterministic(
             pubkey_r: &Self::PublicKey,
             info: &[u8],
@@ -343,6 +346,7 @@ pub(crate) mod private {
         where
             Self: Sized;
 
+        /// Deterministic setup of authpsk-mode sender.
         fn setup_authpsk_sender_deterministic(
             pubkey_r: &Self::PublicKey,
             info: &[u8],

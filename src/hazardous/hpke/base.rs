@@ -120,13 +120,13 @@ impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> HpkeSuite<Kem, Kdf, Aead> {
     /// HPKE ID.
     pub const HPKE_ID: &[u8; 4] = b"HPKE";
 
-    /// KEM ID (in LE bytes).
+    /// KEM ID (in BE bytes).
     pub const KEM_ID: [u8; 2] = Kem::KEM_ID;
 
-    /// KDF ID (in LE bytes).
+    /// KDF ID (in BE bytes).
     pub const KDF_ID: [u8; 2] = Kdf::KDF_ID;
 
-    /// AEAD ID (in LE bytes).
+    /// AEAD ID (in BE bytes).
     pub const AEAD_ID: [u8; 2] = Aead::AEAD_ID;
 
     /// The maximum length of `export` secret that may be requested.
