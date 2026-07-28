@@ -78,7 +78,7 @@ use crate::generics::{ByteArrayData, Public, Secret, TypeSpec, sealed::Data};
 use crate::hazardous::ecc::x25519;
 use crate::hazardous::hash::sha3::sha3_256;
 use crate::hazardous::hash::sha3::shake256::Shake256;
-use crate::hazardous::kem::ml_kem::{self, mlkem768};
+use crate::hazardous::kem::ml_kem::{self, ExplicitRandom, mlkem768};
 
 /// KEM-label used by X-Wing.
 const LABEL: &[u8; 6] = b"\\.//^\\";
@@ -110,8 +110,6 @@ pub type DecapsulationKey = Secret<XWingDecapKey>;
 /// X-Wing shared secret.
 pub type SharedSecret = Secret<XWingSharedSecret>;
 
-/// TODO(brycx): Do we also want this for ML-KEM `m`? This is to make it compatible with future
-/// HPKE impl upcoming, but this is also relevant for ML-KEM, so my take is yes.
 /// X-Wing encapsulation explicit randomness.
 pub type Eseed = Secret<XWingEseed>;
 
@@ -276,8 +274,9 @@ impl EncapsulationKey {
         let ct_x = x25519::PublicKey::try_from(&ek_x)?;
         let ss_x = x25519::key_agreement(&ek_x, &x25519::PublicKey::try_from(pk_x)?)?;
         let mlkem768_encapkey = mlkem768::EncapsulationKey::try_from(pk_m)?;
-        let (ss_m, ct_m) =
-            mlkem768_encapkey.encap_deterministic(&eseed.unprotected_as_ref()[..32])?;
+
+        let mlkem_m = ExplicitRandom::try_from(&eseed.unprotected_as_ref()[..32])?;
+        let (ss_m, ct_m) = mlkem768_encapkey.encap_deterministic(&mlkem_m)?;
         let ss = combiner(
             ss_m.unprotected_as_ref(),
             ss_x.unprotected_as_ref(),
