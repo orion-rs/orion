@@ -1,0 +1,102 @@
+// MIT License
+
+// Copyright (c) 2026 The orion Developers
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+use crate::errors::UnknownCryptoError;
+use crate::hazardous::dsa::ml_dsa::internal::fe::{DILITHIUM_Q, FieldElement, RingElementNTT};
+use crate::hazardous::hash::sha3::shake128::Shake128;
+use subtle::ConstantTimeLess;
+
+/// FIPS-204, Algorithm 14.
+pub(crate) fn coeff_from_three_bytes(b0: u8, b1: u8, b2: u8) -> Option<FieldElement> {
+    // Combine clearing of bits and masking
+    let z: u32 = ((b0 as u32) | ((b1 as u32) << 8) | ((b2 as u32) << 16)) & 0x7F_FFFF;
+
+    if z.ct_lt(&DILITHIUM_Q).into() {
+        Some(FieldElement(z))
+    } else {
+        None
+    }
+}
+
+/// FIPS-204, Algorithm 30.
+pub(crate) fn rj_ntt_poly(seed: &[u8; 34]) -> Result<RingElementNTT, UnknownCryptoError> {
+    debug_assert_eq!(seed.len(), 32);
+
+    let mut a_hat = RingElementNTT::zero();
+    let mut ctx = Shake128::new();
+    ctx.absorb(seed)?;
+
+    let mut j = 0;
+    let mut buf = [0u8; 3];
+    while j < 256 {
+        ctx.squeeze(&mut buf)?;
+        if let Some(coeff) = coeff_from_three_bytes(buf[0], buf[1], buf[2]) {
+            a_hat[j] = coeff;
+            j += 1;
+        }
+    }
+
+    Ok(a_hat)
+}
+
+
+
+
+
+#[cfg(test)]
+mod test {
+    use crate::hazardous::dsa::ml_dsa::internal::{
+        fe::DILITHIUM_Q, sampling::coeff_from_three_bytes,
+    };
+
+    #[test]
+    fn test_coeff_from_three_bytes() {        
+        fn spec(b0: u8, b1: u8, b2: u8) -> Option<u32> {
+            let mut b2 = b2;
+            if b2 > 127 {
+                b2 -= 128;
+            }
+            let z = 65536 * b2 as u32 + 256 * b1 as u32 + b0 as u32;
+            if z < DILITHIUM_Q { Some(z) } else { None }
+        }
+
+        // full space for the three bytes is 2.pow(24)
+        let mut non_rejected: u64 = 0;
+        let mut accepted_z = 0u64;
+        for n in 0..(1u32 << 24) {
+            let (b0, b1, b2) = (n as u8, (n >> 8) as u8, (n >> 16) as u8);
+            if let Some(fe) = coeff_from_three_bytes(b0, b1, b2) {
+                assert_eq!(spec(b0, b1, b2).expect("failed"), fe.0);
+                non_rejected += 1;
+                if b2 < 128 { // b2 bit 7 clearated out
+                    accepted_z += 1;
+                }
+            } else {
+                assert!(spec(b0, b1, b2).is_none());
+            }
+        }
+
+        // if z < DILITHIUM_Q and two byte combinations will hit every z, b2 last bit is cleared.
+        assert_eq!(non_rejected, 2 * DILITHIUM_Q as u64);
+        assert_eq!(accepted_z, DILITHIUM_Q as u64);
+    }
+}
