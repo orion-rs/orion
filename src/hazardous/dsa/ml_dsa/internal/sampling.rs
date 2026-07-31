@@ -21,8 +21,13 @@
 // SOFTWARE.
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::dsa::ml_dsa::internal::fe::{DILITHIUM_Q, FieldElement, RingElementNTT};
+use crate::hazardous::dsa::ml_dsa::internal::MlDsaParameters;
+use crate::hazardous::dsa::ml_dsa::internal::fe::{
+    DILITHIUM_Q, FieldElement, RingElement, RingElementNTT,
+};
 use crate::hazardous::hash::sha3::shake128::Shake128;
+use crate::hazardous::hash::sha3::shake256::Shake256;
+use crate::hazardous::kem::ml_kem::internal::serialization::bytes_to_bits;
 use subtle::ConstantTimeLess;
 
 /// FIPS-204, Algorithm 14.
@@ -58,18 +63,46 @@ pub(crate) fn rj_ntt_poly(seed: &[u8; 34]) -> Result<RingElementNTT, UnknownCryp
     Ok(a_hat)
 }
 
+/// FIPS-204, Algorithm 29.
+pub(crate) fn sample_in_ball<P: MlDsaParameters>(
+    seed: &[u8],
+) -> Result<RingElement, UnknownCryptoError> {
+    // TODO: len check seed
 
+    let mut c = RingElement::zero();
+    let mut ctx = Shake256::new();
+    ctx.absorb(seed)?;
+    let mut s = [0u8; 8];
+    ctx.squeeze(&mut s)?;
+    let signs = u64::from_le_bytes(s);
 
+    let mut h = [0u8; 64];
+    bytes_to_bits(&s, &mut h);
 
+    for i in (256 - P::TAU)..256 {
+        // reuse s allocation for one-byte squeezes, s[0] = j
+        ctx.squeeze(&mut s[..1])?;
+        while s[0] > i as u8 {
+            ctx.squeeze(&mut s[..1])?;
+        }
+        let j = s[0] as usize;
+        c[i] = c[j];
+        c[j] = FieldElement::new(1) - FieldElement::new(2 * (signs & 1) as u32);
+    }
+
+    Ok(c)
+}
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::hazardous::dsa::ml_dsa::internal::{
-        fe::DILITHIUM_Q, sampling::coeff_from_three_bytes,
+        MlDsa44, MlDsa65, MlDsa87, MlDsaParameters, fe::DILITHIUM_Q,
+        sampling::coeff_from_three_bytes,
     };
 
     #[test]
-    fn test_coeff_from_three_bytes() {        
+    fn test_coeff_from_three_bytes() {
         fn spec(b0: u8, b1: u8, b2: u8) -> Option<u32> {
             let mut b2 = b2;
             if b2 > 127 {
@@ -87,7 +120,8 @@ mod test {
             if let Some(fe) = coeff_from_three_bytes(b0, b1, b2) {
                 assert_eq!(spec(b0, b1, b2).expect("failed"), fe.0);
                 non_rejected += 1;
-                if b2 < 128 { // b2 bit 7 clearated out
+                if b2 < 128 {
+                    // b2 bit 7 clearated out
                     accepted_z += 1;
                 }
             } else {
@@ -98,5 +132,41 @@ mod test {
         // if z < DILITHIUM_Q and two byte combinations will hit every z, b2 last bit is cleared.
         assert_eq!(non_rejected, 2 * DILITHIUM_Q as u64);
         assert_eq!(accepted_z, DILITHIUM_Q as u64);
+    }
+
+    #[test]
+    fn sample_in_ball_has_tau_hammingdistance() {
+        let c = sample_in_ball::<MlDsa44>(&[9u8; 64]).unwrap();
+        let nonzero = c.coefficients.iter().filter(|&&x| x.0 != 0).count();
+        let ones = c
+            .coefficients
+            .iter()
+            .filter(|&&x| x.0 == 1 || x.0 == DILITHIUM_Q - 1)
+            .count();
+
+        assert_eq!(nonzero, MlDsa44::TAU);
+        assert_eq!(ones, MlDsa44::TAU);
+
+        let c = sample_in_ball::<MlDsa65>(&[9u8; 64]).unwrap();
+        let nonzero = c.coefficients.iter().filter(|&&x| x.0 != 0).count();
+        let ones = c
+            .coefficients
+            .iter()
+            .filter(|&&x| x.0 == 1 || x.0 == DILITHIUM_Q - 1)
+            .count();
+
+        assert_eq!(nonzero, MlDsa65::TAU);
+        assert_eq!(ones, MlDsa65::TAU);
+
+        let c = sample_in_ball::<MlDsa87>(&[9u8; 64]).unwrap();
+        let nonzero = c.coefficients.iter().filter(|&&x| x.0 != 0).count();
+        let ones = c
+            .coefficients
+            .iter()
+            .filter(|&&x| x.0 == 1 || x.0 == DILITHIUM_Q - 1)
+            .count();
+
+        assert_eq!(nonzero, MlDsa87::TAU);
+        assert_eq!(ones, MlDsa87::TAU);
     }
 }
