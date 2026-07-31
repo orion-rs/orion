@@ -23,7 +23,7 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::dsa::ml_dsa::internal::MlDsaParameters;
 use crate::hazardous::dsa::ml_dsa::internal::fe::{
-    DILITHIUM_Q, FieldElement, RingElement, RingElementNTT,
+    DILITHIUM_Q, FieldElement, RingElement, RingElementNTT, conditional_sub_u32,
 };
 use crate::hazardous::hash::sha3::shake128::Shake128;
 use crate::hazardous::hash::sha3::shake256::Shake256;
@@ -35,16 +35,34 @@ pub(crate) fn coeff_from_three_bytes(b0: u8, b1: u8, b2: u8) -> Option<FieldElem
     // Combine clearing of bits and masking
     let z: u32 = ((b0 as u32) | ((b1 as u32) << 8) | ((b2 as u32) << 16)) & 0x7F_FFFF;
 
-    if z.ct_lt(&DILITHIUM_Q).into() {
-        Some(FieldElement(z))
+    if z < DILITHIUM_Q {
+        Some(FieldElement::new(z))
     } else {
         None
     }
 }
 
+/// FIPS-204, Algorithm 15.
+pub(crate) fn coeff_from_half_byte<P: MlDsaParameters>(b: u32) -> Option<FieldElement> {
+    // TODO: b range (0..15) len debug_assert
+
+    match P::ETA {
+        2 => {
+            // (205 * b) >> 10 => floor(b/5)
+            // b - 5 * floor(b/5) => b mod 5
+            let b_mod_5 = b - 5 * ((205 * b) >> 10);
+            (b < 15).then_some(FieldElement::new(conditional_sub_u32(
+                2 + DILITHIUM_Q - b_mod_5,
+            )))
+        }
+        4 => (b < 9).then_some(FieldElement::new(conditional_sub_u32(4 + DILITHIUM_Q - b))),
+        _ => unreachable!("incorrectly defined ML-DSA MlDsaParameters"),
+    }
+}
+
 /// FIPS-204, Algorithm 30.
-pub(crate) fn rj_ntt_poly(seed: &[u8; 34]) -> Result<RingElementNTT, UnknownCryptoError> {
-    debug_assert_eq!(seed.len(), 32);
+pub(crate) fn rj_ntt_poly(seed: &[u8]) -> Result<RingElementNTT, UnknownCryptoError> {
+    // TODO: seed len debug_assert
 
     let mut a_hat = RingElementNTT::zero();
     let mut ctx = Shake128::new();
@@ -63,11 +81,42 @@ pub(crate) fn rj_ntt_poly(seed: &[u8; 34]) -> Result<RingElementNTT, UnknownCryp
     Ok(a_hat)
 }
 
+/// FIPS-204, Algorithm 31.
+pub(crate) fn rej_bounded_poly<P: MlDsaParameters>(
+    seed: &[u8],
+) -> Result<RingElement, UnknownCryptoError> {
+    // TODO: len check seed debug_assert
+
+    let mut j = 0;
+
+    let mut a = RingElement::zero();
+    let mut ctx = Shake256::new();
+    ctx.absorb(seed)?;
+
+    let mut z = [0u8; 1];
+    while j < 256 {
+        ctx.squeeze(&mut z)?;
+        if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) ^ 0x0F) {
+            a[j] = z0;
+            j += 1;
+        }
+
+        if j < 256
+            && let Some(z1) = coeff_from_half_byte::<P>((z[0] as u32) >> 4)
+        {
+            a[j] = z1;
+            j += 1;
+        }
+    }
+
+    Ok(a)
+}
+
 /// FIPS-204, Algorithm 29.
 pub(crate) fn sample_in_ball<P: MlDsaParameters>(
     seed: &[u8],
 ) -> Result<RingElement, UnknownCryptoError> {
-    // TODO: len check seed
+    // TODO: len check seed debug_assert
 
     let mut c = RingElement::zero();
     let mut ctx = Shake256::new();
@@ -91,6 +140,57 @@ pub(crate) fn sample_in_ball<P: MlDsaParameters>(
     }
 
     Ok(c)
+}
+
+pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
+    mat: [[RingElementNTT; L]; K],
+}
+
+impl<const K: usize, const L: usize> MatrixNTT<K, L> {
+    /// FIPS-204, Algorithm 32 and Algorithm 31.
+    /// Merged to avoid useless re-instantiations of SHAKE128.
+    pub(crate) fn expand_a<P: MlDsaParameters>(seed: &[u8]) -> Result<Self, UnknownCryptoError> {
+        debug_assert_eq!(seed.len(), 32);
+
+        let mut mat_hat = [[RingElementNTT::zero(); L]; K];
+        let mut ctx = Shake128::new();
+        ctx.absorb(seed)?;
+
+        for r in 0..P::DIM.0 {
+            for s in 0..P::DIM.1 {
+                // FIPS-204, Algorithm 31:
+
+                // rho remains fixed for each of these invocations
+                let mut g = ctx.clone();
+                g.absorb(&[s as u8, r as u8])?; // rho prime
+
+                let mut a_hat = RingElementNTT::zero();
+                let mut j = 0;
+                let mut buf = [0u8; 3];
+                while j < 256 {
+                    ctx.squeeze(&mut buf)?;
+                    if let Some(coeff) = coeff_from_three_bytes(buf[0], buf[1], buf[2]) {
+                        a_hat[j] = coeff;
+                        j += 1;
+                    }
+                }
+
+                mat_hat[r][s] = a_hat;
+            }
+        }
+
+        Ok(Self { mat: mat_hat })
+    }
+}
+
+/// FIPS-204, Algorithm 33.
+pub(crate) fn expand_s<P: MlDsaParameters>() {
+    unimplemented!()
+}
+
+/// FIPS-204, Algorithm 34.
+pub(crate) fn expand_mask<P: MlDsaParameters>() {
+    unimplemented!()
 }
 
 #[cfg(test)]

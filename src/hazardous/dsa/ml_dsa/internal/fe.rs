@@ -37,7 +37,7 @@ pub(crate) const QNEGINV: u32 = 4236238847;
 pub(crate) const R2MODQ: u32 = 2365951;
 
 // Constant-time conditional subtraction
-const fn conditional_sub_u32(a: u32) -> u32 {
+pub(crate) const fn conditional_sub_u32(a: u32) -> u32 {
     // Calculate a - mod
     let t: u32 = a.overflowing_sub(DILITHIUM_Q).0;
 
