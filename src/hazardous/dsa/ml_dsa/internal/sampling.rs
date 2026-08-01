@@ -21,10 +21,10 @@
 // SOFTWARE.
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::dsa::ml_dsa::internal::MlDsaParameters;
 use crate::hazardous::dsa::ml_dsa::internal::fe::{
     DILITHIUM_Q, FieldElement, RingElement, RingElementNTT, conditional_sub_u32,
 };
+use crate::hazardous::dsa::ml_dsa::internal::{MlDsaParameters, bitlen};
 use crate::hazardous::hash::sha3::shake128::Shake128;
 use crate::hazardous::hash::sha3::shake256::Shake256;
 use crate::hazardous::kem::ml_kem::internal::serialization::bytes_to_bits;
@@ -251,8 +251,8 @@ pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
 /// `CLEN`: 32 * c, where c = 1 + bitlen (γ1 − 1)
 ///
 /// - MlDsa44::GAMMA_1_BITLEN = 17 => 576
-/// - MlDsa65::GAMMA_1_BITLEN = 19 => 608
-/// - MlDsa87::GAMMA_1_BITLEN = 19 => 608
+/// - MlDsa65::GAMMA_1_BITLEN = 19 => 640
+/// - MlDsa87::GAMMA_1_BITLEN = 19 => 640
 pub(crate) fn expand_mask<const CLEN: usize, const K: usize, const L: usize, P: MlDsaParameters>(
     seed: &[u8],
     mu: u32,
@@ -273,7 +273,7 @@ pub(crate) fn expand_mask<const CLEN: usize, const K: usize, const L: usize, P: 
         let mut h = ctx.clone();
         h.absorb(&(mu as u16 + r).to_le_bytes())?;
         h.squeeze(&mut v)?;
-        // MISSING BITUNPACK
+        P::bitunpack_ring_element_gamma(&v, &mut y[r as usize]);
     }
 
     Ok(y)

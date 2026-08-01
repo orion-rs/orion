@@ -22,10 +22,12 @@
 
 use core::fmt::Debug;
 
+use crate::hazardous::dsa::ml_dsa::internal::fe::{FieldElement, RingElement, conditional_sub_u32};
+
 mod fe;
 mod sampling;
 
-const fn bitlen(a: u32) -> u32 {
+pub(crate) const fn bitlen(a: u32) -> u32 {
     u32::BITS - a.leading_zeros()
 }
 
@@ -62,6 +64,9 @@ pub trait MlDsaParameters: Debug {
     const PRIVATE_KEY_SIZE: usize;
     const PUBLIC_KEY_SIZE: usize;
     const SIGNATURE_SIZE: usize;
+
+    /// FIPS-204, Algorithm 19.
+    fn bitunpack_ring_element_gamma(v: &[u8], w: &mut RingElement);
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -80,6 +85,24 @@ impl MlDsaParameters for MlDsa44 {
     const PRIVATE_KEY_SIZE: usize = 2560;
     const PUBLIC_KEY_SIZE: usize = 1312;
     const SIGNATURE_SIZE: usize = 2420;
+
+    fn bitunpack_ring_element_gamma(v: &[u8], w: &mut RingElement) {
+        debug_assert_eq!(v.len(), 576);
+        let fe_gamma1: FieldElement = FieldElement::new(Self::GAMMA_1);
+
+        for (a, blk) in w.coefficients.chunks_exact_mut(4).zip(v.chunks_exact(9)) {
+            let b = |k: usize| blk[k] as u32;
+            let t = [
+                b(0) | (b(1) << 8) | (b(2) << 16),
+                (b(2) >> 2) | (b(3) << 6) | (b(4) << 14),
+                (b(4) >> 4) | (b(5) << 4) | (b(6) << 12),
+                (b(6) >> 6) | (b(7) << 2) | (b(8) << 10),
+            ];
+            for (dst, &tj) in a.iter_mut().zip(t.iter()) {
+                *dst = fe_gamma1 - FieldElement::new(tj & 0x3FFFF);
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -98,6 +121,19 @@ impl MlDsaParameters for MlDsa65 {
     const PRIVATE_KEY_SIZE: usize = 4032;
     const PUBLIC_KEY_SIZE: usize = 1952;
     const SIGNATURE_SIZE: usize = 3309;
+
+    fn bitunpack_ring_element_gamma(v: &[u8], w: &mut RingElement) {
+        debug_assert_eq!(v.len(), 640);
+        let fe_gamma1: FieldElement = FieldElement::new(Self::GAMMA_1);
+
+        for (a, blk) in w.coefficients.chunks_exact_mut(2).zip(v.chunks_exact(5)) {
+            let b = |k: usize| blk[k] as u32;
+            let t0 = b(0) | (b(1) << 8) | (b(2) << 16);
+            let t1 = (b(2) >> 4) | (b(3) << 4) | (b(4) << 12);
+            a[0] = fe_gamma1 - FieldElement::new(t0 & 0xFFFFF);
+            a[1] = fe_gamma1 - FieldElement::new(t1 & 0xFFFFF);
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -116,4 +152,8 @@ impl MlDsaParameters for MlDsa87 {
     const PRIVATE_KEY_SIZE: usize = 4896;
     const PUBLIC_KEY_SIZE: usize = 2592;
     const SIGNATURE_SIZE: usize = 4627;
+
+    fn bitunpack_ring_element_gamma(v: &[u8], w: &mut RingElement) {
+        MlDsa65::bitunpack_ring_element_gamma(v, w);
+    }
 }
