@@ -43,7 +43,7 @@ fn blake3_test_runner(input: &[u8], key: &[u8], expected_hash: &[u8], expected_k
     // Keyed Hash
     if !key.is_empty() {
         let secret_key = blake3::SecretKey::from_slice(key).unwrap();
-        let mut keyed_hasher = blake3::Blake3::new_keyed(&secret_key);
+        let mut keyed_hasher = blake3::Blake3Keyed::new(&secret_key);
         keyed_hasher.update(input);
         let mut keyed_digest = vec![0u8; expected_keyed_hash.len()];
         keyed_hasher.finalize(&mut keyed_digest);
