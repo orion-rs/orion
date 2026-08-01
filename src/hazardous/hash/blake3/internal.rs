@@ -82,7 +82,6 @@ impl Drop for ChunkState {
             use zeroize::Zeroize;
 
             self.cv.iter_mut().zeroize();
-            self.block.iter_mut().zeroize();
         }
     }
 }
