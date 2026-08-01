@@ -6,7 +6,7 @@ use crate::hazardous::hash::blake3::internal::{
 // with 2^10B nodes => 2^54B nodes
 const MAX_TREE_DEPTH: usize = 54;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct TreeStack {
     stack: [ChainingValue; MAX_TREE_DEPTH],
     compress: CompressionFn,
@@ -36,6 +36,12 @@ impl Drop for TreeStack {
                 cv.zeroize();
             }
         }
+    }
+}
+
+impl core::fmt::Debug for TreeStack {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "TreeStack {{ ***OMITTED*** }}")
     }
 }
 

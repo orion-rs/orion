@@ -58,7 +58,7 @@ const MSG_PERMUTATION: [usize; 16] = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9,
 // 32B intermediate hash output (a.k.a. chaining value)
 pub(crate) type ChainingValue = [u32; 8];
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Clone)]
 pub(crate) struct ChunkState {
     /// The resulting chaining value of the last compressed block.
     cv: ChainingValue,
@@ -84,6 +84,20 @@ impl Drop for ChunkState {
             self.cv.iter_mut().zeroize();
             self.block.iter_mut().zeroize();
         }
+    }
+}
+
+impl core::fmt::Debug for ChunkState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // The *cv* contains the key before the first iteration in
+        // *keyed hash* mode. It is omitted.
+        f.debug_struct("ChunkState")
+            .field("chunk_counter", &self.chunk_counter)
+            .field("block", &self.block)
+            .field("block_len", &self.block_len)
+            .field("blocks_compressed", &self.blocks_compressed)
+            .field("flags", &self.flags)
+            .finish()
     }
 }
 
