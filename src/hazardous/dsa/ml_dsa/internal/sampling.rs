@@ -150,14 +150,16 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
     /// FIPS-204, Algorithm 32 and Algorithm 31.
     /// Merged to avoid useless re-instantiations of SHAKE128.
     pub(crate) fn expand_a<P: MlDsaParameters>(seed: &[u8]) -> Result<Self, UnknownCryptoError> {
+        debug_assert_eq!(K, P::DIM_K);
+        debug_assert_eq!(L, P::DIM_L);
         debug_assert_eq!(seed.len(), 32);
 
         let mut mat_hat = [[RingElementNTT::zero(); L]; K];
         let mut ctx = Shake128::new();
         ctx.absorb(seed)?;
 
-        for r in 0..P::DIM.0 {
-            for s in 0..P::DIM.1 {
+        for r in 0..P::DIM_K {
+            for s in 0..P::DIM_L {
                 // FIPS-204, Algorithm 31:
 
                 // rho remains fixed for each of these invocations
@@ -183,14 +185,98 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
     }
 }
 
-/// FIPS-204, Algorithm 33.
-pub(crate) fn expand_s<P: MlDsaParameters>() {
-    unimplemented!()
+/// FIPS-204, Algorithm 33 and Algorithm 31.
+/// Merged to avoid useless re-instantiations of SHAKE256.
+pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
+    seed: &[u8],
+) -> Result<([RingElement; L], [RingElement; K]), UnknownCryptoError> {
+    debug_assert_eq!(K, P::DIM_K);
+    debug_assert_eq!(L, P::DIM_L);
+    debug_assert_eq!(seed.len(), 64);
+
+    let mut s1 = [RingElement::zero(); L];
+    let mut s2 = [RingElement::zero(); K];
+
+    let mut ctx = Shake256::new();
+    ctx.absorb(seed)?;
+
+    let mut z = [0u8; 1];
+    for r in 0..L as u16 {
+        let mut h = ctx.clone();
+        h.absorb(&r.to_le_bytes())?;
+
+        let mut j = 0;
+        while j < 256 {
+            h.squeeze(&mut z)?;
+            if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) ^ 0x0F) {
+                s1[r as usize][j] = z0;
+                j += 1;
+            }
+
+            if j < 256
+                && let Some(z1) = coeff_from_half_byte::<P>((z[0] as u32) >> 4)
+            {
+                s1[r as usize][j] = z1;
+                j += 1;
+            }
+        }
+    }
+
+    for r in 0..K as u16 {
+        let mut h = ctx.clone();
+        h.absorb(&(r + L as u16).to_le_bytes())?;
+
+        let mut j = 0;
+        while j < 256 {
+            h.squeeze(&mut z)?;
+            if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) ^ 0x0F) {
+                s2[r as usize][j] = z0;
+                j += 1;
+            }
+
+            if j < 256
+                && let Some(z1) = coeff_from_half_byte::<P>((z[0] as u32) >> 4)
+            {
+                s2[r as usize][j] = z1;
+                j += 1;
+            }
+        }
+    }
+
+    Ok((s1, s2))
 }
 
 /// FIPS-204, Algorithm 34.
-pub(crate) fn expand_mask<P: MlDsaParameters>() {
-    unimplemented!()
+///
+/// `CLEN`: 32 * c, where c = 1 + bitlen (γ1 − 1)
+///
+/// - MlDsa44::GAMMA_1_BITLEN = 17 => 576
+/// - MlDsa65::GAMMA_1_BITLEN = 19 => 608
+/// - MlDsa87::GAMMA_1_BITLEN = 19 => 608
+pub(crate) fn expand_mask<const CLEN: usize, const K: usize, const L: usize, P: MlDsaParameters>(
+    seed: &[u8],
+    mu: u32,
+) -> Result<[RingElement; L], UnknownCryptoError> {
+    // TODO: Is there a range of valid numbers for mu? or does it need checked arithmetic?
+
+    debug_assert_eq!(K, P::DIM_K);
+    debug_assert_eq!(L, P::DIM_L);
+    debug_assert_eq!(seed.len(), 64);
+
+    let mut y = [RingElement::zero(); L];
+    let mut v = [0u8; CLEN];
+
+    let mut ctx = Shake256::new();
+    ctx.absorb(seed)?;
+
+    for r in 0..L as u16 {
+        let mut h = ctx.clone();
+        h.absorb(&(mu as u16 + r).to_le_bytes())?;
+        h.squeeze(&mut v)?;
+        // MISSING BITUNPACK
+    }
+
+    Ok(y)
 }
 
 #[cfg(test)]
