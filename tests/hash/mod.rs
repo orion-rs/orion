@@ -35,18 +35,26 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 
 fn blake3_test_runner(input: &[u8], key: &[u8], expected_hash: &[u8], expected_keyed_hash: &[u8]) {
     let mut hasher = blake3::Blake3::default();
-    hasher.update(input);
+    hasher
+        .update(input)
+        .expect("unexpected error on first update");
     let mut digest = vec![0u8; expected_hash.len()];
-    hasher.finalize(&mut digest);
+    hasher
+        .finalize(&mut digest)
+        .expect("unexpected error on finalization");
     assert_eq!(digest.as_slice(), expected_hash);
 
     // Keyed Hash
     if !key.is_empty() {
         let secret_key = blake3::SecretKey::from_slice(key).unwrap();
         let mut keyed_hasher = blake3::Blake3Keyed::new(&secret_key);
-        keyed_hasher.update(input);
+        keyed_hasher
+            .update(input)
+            .expect("unexpected error on first update");
         let mut keyed_digest = vec![0u8; expected_keyed_hash.len()];
-        keyed_hasher.finalize(&mut keyed_digest);
+        keyed_hasher
+            .finalize(&mut keyed_digest)
+            .expect("unexpected error on finalization");
         assert_eq!(keyed_digest.as_slice(), expected_keyed_hash);
     }
 }

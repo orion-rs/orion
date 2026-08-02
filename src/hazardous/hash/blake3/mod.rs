@@ -74,15 +74,15 @@ impl Blake3 {
     }
 
     /// Update state with `data`. This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) {
-        self.internal.update(data, IV, 0);
+    pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.internal.update(data, IV, 0)
     }
 
     /// Return a BLAKE3 digest in the `out_slice` parameter.
     /// The length of the `out_slice` parameter dictates the
     /// length of the output.
-    pub fn finalize(self, out_slice: &mut [u8]) {
-        self.internal.finalize(out_slice, IV, 0);
+    pub fn finalize(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        self.internal.finalize(out_slice, IV, 0)
     }
 }
 
@@ -122,17 +122,17 @@ impl<'key> Blake3Keyed<'key> {
     }
 
     /// Update state with `data`. This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) {
+    pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         self.internal
-            .update(data, Self::parse_key(self.key), KEYED_HASH);
+            .update(data, Self::parse_key(self.key), KEYED_HASH)
     }
 
     /// Return a BLAKE3 digest in the `out_slice` parameter.
     /// The length of the `out_slice` parameter dictates the
     /// length of the output.
-    pub fn finalize(self, out_slice: &mut [u8]) {
+    pub fn finalize(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
         self.internal
-            .finalize(out_slice, Self::parse_key(self.key), KEYED_HASH);
+            .finalize(out_slice, Self::parse_key(self.key), KEYED_HASH)
     }
 }
 
@@ -145,48 +145,28 @@ mod test_streaming_interface {
             StreamingContextConsistencyTester, TestableStreamingContext,
         };
 
-        // A wrapper exclusively for testing. The expected API for `.finalize()` is
-        // that it accepts `mut& self`, requiring a manual check for double use.
-        // Our solution consumes itself, solving the problem, but panicking in the tests.
-        #[derive(PartialEq, Debug, Clone)]
-        struct Blake3Tester {
-            inner: Blake3,
-            is_finalized: bool,
-        }
-
-        impl TestableStreamingContext<[u8; 32]> for Blake3Tester {
+        impl TestableStreamingContext<[u8; 32]> for Blake3 {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                self.inner.reset();
-                self.is_finalized = false;
+                self.reset();
                 Ok(())
             }
 
             fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
-                if self.is_finalized {
-                    return Err(UnknownCryptoError);
-                }
-                self.inner.update(input);
-                Ok(())
+                self.update(input)
             }
 
             fn finalize(&mut self) -> Result<[u8; 32], UnknownCryptoError> {
-                if self.is_finalized {
-                    return Err(UnknownCryptoError);
-                }
-
-                self.is_finalized = true;
                 let mut out = [0u8; 32];
-                // `finalize()` consumes `self`, cloning solely for testing purposes
-                self.inner.clone().finalize(&mut out);
+                self.finalize(&mut out)?;
                 Ok(out)
             }
 
             fn one_shot(input: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
                 let mut hasher = Blake3::new();
-                hasher.update(input);
+                hasher.update(input)?;
 
                 let mut out = [0u8; 32];
-                hasher.finalize(&mut out);
+                hasher.finalize(&mut out)?;
                 Ok(out)
             }
 
@@ -206,12 +186,9 @@ mod test_streaming_interface {
 
         #[test]
         fn default_consistency_states() {
-            let init_state = Blake3Tester {
-                inner: Blake3::new(),
-                is_finalized: false,
-            };
-            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3Tester>::new(
-                init_state, BLOCK_LEN,
+            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3>::new(
+                Blake3::new(),
+                BLOCK_LEN,
             );
             test_runner.run_all_tests();
         }
@@ -219,12 +196,9 @@ mod test_streaming_interface {
         #[quickcheck]
         #[cfg(feature = "safe_api")]
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-            let init_state = Blake3Tester {
-                inner: Blake3::new(),
-                is_finalized: false,
-            };
-            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3Tester>::new(
-                init_state, BLOCK_LEN,
+            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3>::new(
+                Blake3::new(),
+                BLOCK_LEN,
             );
             test_runner.run_all_tests_property(&data);
             true
@@ -238,49 +212,29 @@ mod test_streaming_interface {
             StreamingContextConsistencyTester, TestableStreamingContext,
         };
 
-        // A wrapper exclusively for testing. The expected API for `.finalize()` is
-        // that it accepts `mut& self`, requiring a manual check for double use.
-        // Our solution consumes itself, solving the problem, but panicking in the tests.
-        #[derive(PartialEq, Debug, Clone)]
-        struct Blake3KeyedTester<'key> {
-            inner: Blake3Keyed<'key>,
-            is_finalized: bool,
-        }
-
-        impl<'key> TestableStreamingContext<[u8; 32]> for Blake3KeyedTester<'key> {
+        impl<'key> TestableStreamingContext<[u8; 32]> for Blake3Keyed<'key> {
             fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                self.inner.reset();
-                self.is_finalized = false;
+                self.reset();
                 Ok(())
             }
 
             fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
-                if self.is_finalized {
-                    return Err(UnknownCryptoError);
-                }
-                self.inner.update(input);
-                Ok(())
+                self.update(input)
             }
 
             fn finalize(&mut self) -> Result<[u8; 32], UnknownCryptoError> {
-                if self.is_finalized {
-                    return Err(UnknownCryptoError);
-                }
-
-                self.is_finalized = true;
                 let mut out = [0u8; 32];
-                // `finalize()` consumes `self`, cloning solely for testing purposes
-                self.inner.clone().finalize(&mut out);
+                self.finalize(&mut out)?;
                 Ok(out)
             }
 
             fn one_shot(input: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
                 let secret_key = get_secret_key();
                 let mut hasher = Blake3Keyed::new(&secret_key);
-                hasher.update(input);
+                hasher.update(input)?;
 
                 let mut out = [0u8; 32];
-                hasher.finalize(&mut out);
+                hasher.finalize(&mut out)?;
                 Ok(out)
             }
 
@@ -301,14 +255,10 @@ mod test_streaming_interface {
         #[test]
         fn keyed_consistency_states() {
             let secret_key = get_secret_key();
-            let init_state = Blake3KeyedTester {
-                inner: Blake3Keyed::new(&secret_key),
-                is_finalized: false,
-            };
-            let test_runner =
-                StreamingContextConsistencyTester::<[u8; 32], Blake3KeyedTester<'_>>::new(
-                    init_state, BLOCK_LEN,
-                );
+            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3Keyed<'_>>::new(
+                Blake3Keyed::new(&secret_key),
+                BLOCK_LEN,
+            );
             test_runner.run_all_tests();
         }
 
@@ -316,14 +266,10 @@ mod test_streaming_interface {
         #[cfg(feature = "safe_api")]
         fn prop_input_to_consistency(data: Vec<u8>) -> bool {
             let secret_key = get_secret_key();
-            let init_state = Blake3KeyedTester {
-                inner: Blake3Keyed::new(&secret_key),
-                is_finalized: false,
-            };
-            let test_runner =
-                StreamingContextConsistencyTester::<[u8; 32], Blake3KeyedTester<'_>>::new(
-                    init_state, BLOCK_LEN,
-                );
+            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3Keyed<'_>>::new(
+                Blake3Keyed::new(&secret_key),
+                BLOCK_LEN,
+            );
             test_runner.run_all_tests_property(&data);
             true
         }

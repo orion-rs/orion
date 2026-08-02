@@ -20,9 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::hazardous::hash::blake3::{
-    cvstack::{FinalizeCommand, PushCommand, TreeStack},
-    internal::{compress, ChunkState, CHUNK_LEN, CHUNK_START, PARENT},
+use crate::{
+    errors::UnknownCryptoError,
+    hazardous::hash::blake3::{
+        cvstack::{FinalizeCommand, PushCommand, TreeStack},
+        internal::{compress, ChunkState, CHUNK_LEN, CHUNK_START, PARENT},
+    },
 };
 use core::cmp::min;
 
@@ -32,6 +35,7 @@ pub struct Blake3State {
     chunk: ChunkState,
     chain_values: TreeStack,
     total_chunks: u64,
+    is_finalized: bool,
 }
 
 impl Blake3State {
@@ -40,11 +44,21 @@ impl Blake3State {
             chunk: ChunkState::new(key_words, 0, CHUNK_START | flags),
             chain_values: TreeStack::new(compress),
             total_chunks: 0,
+            is_finalized: false,
         }
     }
 
     /// Update state with `data`. This can be called multiple times.
-    pub(crate) fn update(&mut self, data: &[u8], key_words: [u32; 8], flags: u32) {
+    pub(crate) fn update(
+        &mut self,
+        data: &[u8],
+        key_words: [u32; 8],
+        flags: u32,
+    ) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+
         let mut data_view = data;
         while !data_view.is_empty() {
             if self.chunk.len() == CHUNK_LEN {
@@ -57,6 +71,8 @@ impl Blake3State {
 
             data_view = &data_view[take..]
         }
+
+        Ok(())
     }
 
     fn flush_state(&mut self, key_words: [u32; 8], flags: u32) {
@@ -80,7 +96,16 @@ impl Blake3State {
     /// Return a BLAKE3 digest in the `out_slice` parameter.
     /// The length of the `out_slice` parameter dictates the
     /// length of the output.
-    pub fn finalize(mut self, out_slice: &mut [u8], key_words: [u32; 8], flags: u32) {
+    pub fn finalize(
+        &mut self,
+        out_slice: &mut [u8],
+        key_words: [u32; 8],
+        flags: u32,
+    ) -> Result<(), UnknownCryptoError> {
+        if self.is_finalized {
+            return Err(UnknownCryptoError);
+        }
+        self.is_finalized = true;
         let is_root = self.total_chunks == 0;
 
         let reader = if is_root {
@@ -95,5 +120,6 @@ impl Blake3State {
         };
 
         reader.fill(out_slice);
+        Ok(())
     }
 }
