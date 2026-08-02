@@ -22,7 +22,7 @@
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::dsa::ml_dsa::internal::fe::{
-    DILITHIUM_Q, FieldElement, RingElement, RingElementNTT, conditional_sub_u32,
+    DILITHIUM_Q, FieldElement, RingElement, RingElementNTT, Vector, VectorNTT, conditional_sub_u32,
 };
 use crate::hazardous::dsa::ml_dsa::internal::{MlDsaParameters, bitlen};
 use crate::hazardous::hash::sha3::shake128::Shake128;
@@ -144,14 +144,14 @@ pub(crate) fn sample_in_ball<P: MlDsaParameters>(
 }
 
 pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
-    mat: [[RingElementNTT; L]; K],
+    mat: [VectorNTT<L>; K],
 }
 
-impl<const K: usize, const L: usize> Mul<[RingElementNTT; L]> for MatrixNTT<K, L> {
-    type Output = [RingElementNTT; K];
+impl<const K: usize, const L: usize> Mul<VectorNTT<L>> for MatrixNTT<K, L> {
+    type Output = VectorNTT<K>;
 
-    fn mul(self, rhs: [RingElementNTT; L]) -> Self::Output {
-        let mut w_hat = [RingElementNTT::zero(); K];
+    fn mul(self, rhs: VectorNTT<L>) -> Self::Output {
+        let mut w_hat = VectorNTT::<K>::zero();
         for i in 0..K {
             for j in 0..L {
                 let mul_ntt = self.mat[i][j] * rhs[j];
@@ -171,7 +171,7 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
         debug_assert_eq!(L, P::DIM_L);
         debug_assert_eq!(seed.len(), 32);
 
-        let mut mat_hat = [[RingElementNTT::zero(); L]; K];
+        let mut mat_hat = [VectorNTT::<L>::zero(); K];
         let mut ctx = Shake128::new();
         ctx.absorb(seed)?;
 
@@ -206,13 +206,13 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
 /// Merged to avoid useless re-instantiations of SHAKE256.
 pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
     seed: &[u8],
-) -> Result<([RingElement; L], [RingElement; K]), UnknownCryptoError> {
+) -> Result<(Vector<L>, Vector<K>), UnknownCryptoError> {
     debug_assert_eq!(K, P::DIM_K);
     debug_assert_eq!(L, P::DIM_L);
     debug_assert_eq!(seed.len(), 64);
 
-    let mut s1 = [RingElement::zero(); L];
-    let mut s2 = [RingElement::zero(); K];
+    let mut s1 = Vector::<L>::zero();
+    let mut s2 = Vector::<K>::zero();
 
     let mut ctx = Shake256::new();
     ctx.absorb(seed)?;

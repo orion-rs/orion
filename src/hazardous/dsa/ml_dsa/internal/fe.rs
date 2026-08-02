@@ -173,6 +173,19 @@ pub struct RingElement {
     pub coefficients: [FieldElement; 256],
 }
 
+impl Add for RingElement {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut ret = RingElement::zero();
+        for idx in 0..256 {
+            ret.coefficients[idx] = self.coefficients[idx] + rhs.coefficients[idx];
+        }
+
+        ret
+    }
+}
+
 impl RingElement {
     pub fn zero() -> Self {
         Self {
@@ -238,6 +251,114 @@ impl FieldElement {
 
     pub fn zero() -> Self {
         Self(0)
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+/// Vector of ring elements/polynomials in T_q.
+pub struct Vector<const N: usize> {
+    pub elems: [RingElement; N],
+}
+
+impl<const N: usize> Vector<N> {
+    pub fn zero() -> Self {
+        Self {
+            elems: [RingElement::zero(); N],
+        }
+    }
+
+    pub fn ntt(&self) -> VectorNTT<N> {
+        let mut ntt = VectorNTT::<N>::zero();
+        for (ringelem, ntt) in self.elems.iter().zip(ntt.elems.iter_mut()) {
+            *ntt = to_ntt(&*ringelem);
+        }
+
+        ntt
+    }
+}
+
+impl<const N: usize> Add for Vector<N> {
+    type Output = Self;
+
+    /// FIPS-204, Algorithm 46.
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut ret = Vector::<N>::zero();
+        for idx in 0..N {
+            ret.elems[idx] = self.elems[idx] + rhs.elems[idx];
+        }
+
+        ret
+    }
+}
+
+impl<const N: usize> Index<usize> for Vector<N> {
+    type Output = RingElement;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        debug_assert!(index <= N);
+
+        &self.elems[index]
+    }
+}
+
+impl<const N: usize> IndexMut<usize> for Vector<N> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        debug_assert!(index <= N);
+        &mut self.elems[index]
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+/// Vector of ring elements/polynomials in T_q, in NTT domain.
+pub struct VectorNTT<const N: usize> {
+    pub elems: [RingElementNTT; N],
+}
+
+impl<const N: usize> Index<usize> for VectorNTT<N> {
+    type Output = RingElementNTT;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        debug_assert!(index <= N);
+
+        &self.elems[index]
+    }
+}
+
+impl<const N: usize> IndexMut<usize> for VectorNTT<N> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        debug_assert!(index <= N);
+        &mut self.elems[index]
+    }
+}
+
+impl<const N: usize> VectorNTT<N> {
+    pub fn zero() -> Self {
+        Self {
+            elems: [RingElementNTT::zero(); N],
+        }
+    }
+
+    pub fn inverse_ntt(&self) -> Vector<N> {
+        let mut ntt_inv = Vector::<N>::zero();
+        for (ntt, inv_ntt) in self.elems.iter().zip(ntt_inv.elems.iter_mut()) {
+            *inv_ntt = inverse_ntt(&ntt);
+        }
+
+        ntt_inv
+    }
+}
+
+impl<const N: usize> Add for VectorNTT<N> {
+    type Output = Self;
+
+    /// FIPS-204, Algorithm 46.
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut ret = VectorNTT::<N>::zero();
+        for idx in 0..N {
+            ret.elems[idx] = self.elems[idx] + rhs.elems[idx];
+        }
+
+        ret
     }
 }
 

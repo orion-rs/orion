@@ -28,8 +28,10 @@ use crate::{
     errors::UnknownCryptoError,
     hazardous::{
         dsa::ml_dsa::internal::{
-            fe::{FieldElement, RingElement, conditional_sub_u32},
-            sampling::MatrixNTT,
+            fe::{
+                FieldElement, RingElement, RingElementNTT, conditional_sub_u32, inverse_ntt, to_ntt,
+            },
+            sampling::{MatrixNTT, expand_s},
         },
         hash::sha3::shake256::Shake256,
     },
@@ -466,7 +468,11 @@ impl<const K: usize, const L: usize, P: MlDsaParameters> KeyPair<K, L, P> {
         let mut expanded_seed = zeroize_wrap!([0u8; 128]);
         h.squeeze(expanded_seed.as_mut())?;
 
-        let mat = MatrixNTT::<K, L>::expand_a::<P>(&expanded_seed[..32])?;
+        let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&expanded_seed[..32])?;
+        let (s1, s2) = expand_s::<K, L, P>(&expanded_seed[32..32 + 64])?;
+
+        let t = (mat_a_hat * s1.ntt()).inverse_ntt() + s2;
+        // Missing component-wise Power2Round
 
         Ok(Self {
             _phantom: PhantomData,
