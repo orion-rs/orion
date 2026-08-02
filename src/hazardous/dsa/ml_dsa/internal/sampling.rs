@@ -28,6 +28,7 @@ use crate::hazardous::dsa::ml_dsa::internal::{MlDsaParameters, bitlen};
 use crate::hazardous::hash::sha3::shake128::Shake128;
 use crate::hazardous::hash::sha3::shake256::Shake256;
 use crate::hazardous::kem::ml_kem::internal::serialization::bytes_to_bits;
+use core::ops::Mul;
 use subtle::ConstantTimeLess;
 
 /// FIPS-204, Algorithm 14.
@@ -144,6 +145,22 @@ pub(crate) fn sample_in_ball<P: MlDsaParameters>(
 
 pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
     mat: [[RingElementNTT; L]; K],
+}
+
+impl<const K: usize, const L: usize> Mul<[RingElementNTT; L]> for MatrixNTT<K, L> {
+    type Output = [RingElementNTT; K];
+
+    fn mul(self, rhs: [RingElementNTT; L]) -> Self::Output {
+        let mut w_hat = [RingElementNTT::zero(); K];
+        for i in 0..K {
+            for j in 0..L {
+                let mul_ntt = self.mat[i][j] * rhs[j];
+                w_hat[i] = w_hat[i] + mul_ntt;
+            }
+        }
+
+        w_hat
+    }
 }
 
 impl<const K: usize, const L: usize> MatrixNTT<K, L> {

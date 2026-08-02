@@ -23,9 +23,12 @@
 use core::ops::{Add, AddAssign, Mul, Sub};
 use core::ops::{Index, IndexMut};
 
+use subtle::{Choice, ConstantTimeEq, ConstantTimeLess};
+
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
+use crate::errors::UnknownCryptoError;
 use crate::hazardous::dsa::ml_dsa::internal::MlDsaParameters;
 
 pub(crate) const DILITHIUM_Q: u32 = 8380417;
@@ -109,6 +112,21 @@ impl FieldElement {
 
         (r1, conditional_sub_u32(r0))
     }
+
+    pub(crate) fn is_outside_bound(&self, bound: u32) -> Choice {
+        debug_assert!(self.0 < DILITHIUM_Q);
+        debug_assert!(bound < u32::MAX / 2); // required for panic-free 2*bound-1 range window.
+
+        // SECURITY: `bound` is public, so we do vartime branch here.
+        if (bound == 0) | (bound > (DILITHIUM_Q - 1) / 8) {
+            return Choice::from(1u8);
+        }
+
+        // "For an element w ∈ Z ±  q,‖w‖ = ∣w mod q∣"
+        // FIPS-204, p. 6.
+        let range = 2 * bound - 1;
+        conditional_sub_u32(self.0 + bound - 1).ct_lt(&range)
+    }
 }
 
 impl Add for FieldElement {
@@ -167,6 +185,15 @@ impl RingElement {
         Self {
             coefficients: ntt.coefficients,
         }
+    }
+
+    pub(crate) fn is_outside_bound(&self, bound: u32) -> Choice {
+        let mut ret = Choice::from(0u8);
+        for coeff in self.coefficients {
+            ret |= coeff.is_outside_bound(bound);
+        }
+
+        ret.ct_ne(&Choice::from(0u8))
     }
 
     #[cfg(all(test, feature = "safe_api"))]
