@@ -60,6 +60,8 @@ pub trait MlDsaParameters: Debug {
     const GAMMA_2: u32;
     /// `bitlen (γ1 − 1)`
     const GAMMA_1_BITLEN: u32 = bitlen(Self::GAMMA_1 - 1);
+    /// "# of dropped bits from t"
+    const D: u32 = 13;
 
     const PRIVATE_KEY_SIZE: usize;
     const PUBLIC_KEY_SIZE: usize;
@@ -67,6 +69,84 @@ pub trait MlDsaParameters: Debug {
 
     /// FIPS-204, Algorithm 19.
     fn bitunpack_ring_element_gamma(v: &[u8], w: &mut RingElement);
+
+    /// FIPS-204, Algorithm 22.
+    fn pk_encode<const PK_ENCODED_SIZE: usize>(
+        rho: &[u8],
+        t1: &[RingElement],
+    ) -> [u8; PK_ENCODED_SIZE] {
+        debug_assert_eq!(rho.len(), 32);
+        debug_assert_eq!(PK_ENCODED_SIZE, Self::PUBLIC_KEY_SIZE);
+
+        let mut pk = [0u8; PK_ENCODED_SIZE];
+        pk[..32].copy_from_slice(rho);
+
+        for (idx, encpoly) in (0..Self::DIM_K).zip(pk[32..].chunks_exact_mut(320)) {
+            for i in 0..256 / 4 {
+                let c = |k: usize| t1[idx].coefficients[4 * i + k].0;
+                encpoly[5 * i] = c(0) as u8;
+                encpoly[5 * i + 1] = ((c(0) >> 8) | (c(1) << 2)) as u8;
+                encpoly[5 * i + 2] = ((c(1) >> 6) | (c(2) << 4)) as u8;
+                encpoly[5 * i + 3] = ((c(2) >> 4) | (c(3) << 6)) as u8;
+                encpoly[5 * i + 4] = (c(3) >> 2) as u8;
+            }
+        }
+
+        pk
+    }
+
+    /// FIPS-204, Algorithm 23.
+    fn pk_decode<const K: usize>(pk: &[u8]) -> ([u8; 32], [RingElement; K]) {
+        debug_assert_eq!(pk.len(), Self::PUBLIC_KEY_SIZE);
+
+        let mut rho = [0u8; 32];
+        rho.copy_from_slice(&pk[..32]);
+
+        let mut t1 = [RingElement::zero(); K];
+
+        for (idx, encpoly) in (0..Self::DIM_K).zip(pk[32..].chunks_exact(320)) {
+            for (fe, blk) in t1[idx]
+                .coefficients
+                .chunks_exact_mut(4)
+                .zip(encpoly.chunks_exact(5))
+            {
+                let c = |k: usize| blk[k] as u32;
+                fe[0].0 = (c(0) | (c(1) << 8)) & 0x3FF;
+                fe[1].0 = ((c(1) >> 2) | (c(2) << 6)) & 0x3FF;
+                fe[2].0 = ((c(2) >> 4) | (c(3) << 4)) & 0x3FF;
+                fe[3].0 = ((c(3) >> 6) | (c(4) << 2)) & 0x3FF;
+            }
+        }
+
+        (rho, t1)
+    }
+
+    /// FIPS-204, Algorithm 24.
+    fn sk_encode<const SK_ENCODED_SIZE: usize, const K: usize, const L: usize>(
+        rho: &[u8],
+        k: &[u8],
+        tr: &[u8],
+        s1: &[RingElement],
+        s2: &[RingElement],
+        t0: &[RingElement],
+    ) -> [u8; SK_ENCODED_SIZE] {
+        debug_assert_eq!(rho.len(), 32);
+        debug_assert_eq!(k.len(), 32);
+        debug_assert_eq!(tr.len(), 64);
+        debug_assert_eq!(s1.len(), Self::DIM_L);
+        debug_assert_eq!(s2.len(), Self::DIM_K);
+        debug_assert_eq!(t0.len(), Self::DIM_K);
+        debug_assert_eq!(SK_ENCODED_SIZE, Self::PRIVATE_KEY_SIZE);
+
+        let mut sk = [0u8; SK_ENCODED_SIZE];
+
+        sk
+    }
+
+    /// FIPS-204, Algorithm 25.
+    fn sk_decode<const K: usize>(pk: &[u8]) -> ([u8; 32], [RingElement; K]) {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

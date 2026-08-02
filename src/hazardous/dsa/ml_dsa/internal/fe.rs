@@ -26,6 +26,8 @@ use core::ops::{Index, IndexMut};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
+use crate::hazardous::dsa::ml_dsa::internal::MlDsaParameters;
+
 pub(crate) const DILITHIUM_Q: u32 = 8380417;
 
 pub(crate) const QINV: u32 = 58728449;
@@ -98,6 +100,16 @@ impl From<MontgomeryFieldElement> for FieldElement {
 /// NOTE(brycx): While for Kyber q = 3329 a field element would fit in u16, but Dilithium q = 8380417 which only fits in u32.
 /// Thus, for possible future re-usability, we use 32-bit integer here.
 pub struct FieldElement(pub(crate) u32);
+
+impl FieldElement {
+    pub(crate) const fn power2round<P: MlDsaParameters>(&self) -> (u32, u32) {
+        debug_assert!(self.0 < DILITHIUM_Q);
+        let r1 = (self.0.overflowing_add((1 << (P::D - 1)) - 1).0) >> P::D;
+        let r0 = self.0.overflowing_add(DILITHIUM_Q - (r1 << P::D)).0;
+
+        (r1, conditional_sub_u32(r0))
+    }
+}
 
 impl Add for FieldElement {
     type Output = Self;
