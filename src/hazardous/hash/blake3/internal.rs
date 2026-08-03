@@ -52,6 +52,11 @@ pub(crate) const IV: [u32; 8] = [
     0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19,
 ];
 
+pub(crate) const IV_BYTES: [u8; 32] = [
+    103, 230, 9, 106, 133, 174, 103, 187, 114, 243, 110, 60, 58, 245, 79, 165, 127, 82, 14, 81,
+    140, 104, 5, 155, 171, 217, 131, 31, 25, 205, 224, 91,
+];
+
 // Permutation done after each round (except for the last one)
 const MSG_PERMUTATION: [usize; 16] = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8];
 
@@ -80,7 +85,6 @@ impl Drop for ChunkState {
         #[cfg(feature = "zeroize")]
         {
             use zeroize::Zeroize;
-
             self.cv.iter_mut().zeroize();
         }
     }
@@ -101,9 +105,9 @@ impl core::fmt::Debug for ChunkState {
 }
 
 impl ChunkState {
-    pub(crate) fn new(key_words: [u32; 8], chunk_counter: u64, flags: u32) -> Self {
+    pub(crate) fn new(key_words: &[u32; 8], chunk_counter: u64, flags: u32) -> Self {
         Self {
-            cv: key_words,
+            cv: *key_words,
             block: [0; BLOCK_LEN],
             block_len: 0,
             chunk_counter,
@@ -363,7 +367,7 @@ mod tests {
         // Use a counter that spans both halves of a 64-bit integer
         let chunk_counter: u64 = 0x00000001_FFFFFFFF;
         let key_words = [0; 8];
-        let chunk = ChunkState::new(key_words, chunk_counter, 0);
+        let chunk = ChunkState::new(&key_words, chunk_counter, 0);
 
         // Act
         let state = CFState::from(&chunk);
@@ -383,7 +387,7 @@ mod tests {
     #[test]
     fn test_chunk_state_block_boundaries() {
         // Arrange
-        let mut chunk = ChunkState::new(IV, 0, 0);
+        let mut chunk = ChunkState::new(&IV, 0, 0);
         // 65 bytes is exactly one block (64) plus 1 byte overlapping into the next
         let data = [0x42; 65];
 

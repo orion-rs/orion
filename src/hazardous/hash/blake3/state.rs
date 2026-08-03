@@ -20,28 +20,71 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use subtle::ConstantTimeEq;
+
 use crate::{
     errors::UnknownCryptoError,
     hazardous::hash::blake3::{
         cvstack::{FinalizeCommand, PushCommand, TreeStack},
         internal::{compress, ChunkState, CHUNK_LEN, CHUNK_START, PARENT},
+        SecretKey,
     },
 };
 use core::cmp::min;
 
 /// BLAKE3 internal state.
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Clone)]
 pub struct Blake3State {
+    key: [u32; 8],
     chunk: ChunkState,
     chain_values: TreeStack,
     total_chunks: u64,
     is_finalized: bool,
 }
 
+impl PartialEq<Blake3State> for Blake3State {
+    fn eq(&self, other: &Blake3State) -> bool {
+        Into::<bool>::into(self.key.ct_eq(&other.key))
+            & (self.chunk == other.chunk)
+            & (self.chain_values == other.chain_values)
+            & (self.total_chunks == other.total_chunks)
+            & (self.is_finalized == other.is_finalized)
+    }
+}
+
+#[cfg(feature = "zeroize")]
+impl Drop for Blake3State {
+    fn drop(&mut self) {
+        use zeroize::Zeroize;
+        self.key.zeroize();
+    }
+}
+
+impl core::fmt::Debug for Blake3State {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Blake3State {{ [***OMITTED***] }}",)
+    }
+}
+
 impl Blake3State {
-    pub(crate) fn new(key_words: [u32; 8], flags: u32) -> Self {
+    fn parse_key(key: &SecretKey) -> [u32; 8] {
+        let bytes = key.unprotected_as_bytes();
+        core::array::from_fn(|i| {
+            let start = i * 4;
+            u32::from_le_bytes([
+                bytes[start],
+                bytes[start + 1],
+                bytes[start + 2],
+                bytes[start + 3],
+            ])
+        })
+    }
+
+    pub(crate) fn new(key: &SecretKey, flags: u32) -> Self {
+        let key_words = Self::parse_key(key);
         Self {
-            chunk: ChunkState::new(key_words, 0, CHUNK_START | flags),
+            key: key_words,
+            chunk: ChunkState::new(&key_words, 0, CHUNK_START | flags),
             chain_values: TreeStack::new(compress),
             total_chunks: 0,
             is_finalized: false,
@@ -49,12 +92,7 @@ impl Blake3State {
     }
 
     /// Update state with `data`. This can be called multiple times.
-    pub(crate) fn update(
-        &mut self,
-        data: &[u8],
-        key_words: [u32; 8],
-        flags: u32,
-    ) -> Result<(), UnknownCryptoError> {
+    pub(crate) fn update(&mut self, data: &[u8], flags: u32) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
@@ -62,7 +100,7 @@ impl Blake3State {
         let mut data_view = data;
         while !data_view.is_empty() {
             if self.chunk.len() == CHUNK_LEN {
-                self.flush_state(key_words, flags);
+                self.flush_state(flags);
             }
 
             let want = CHUNK_LEN - self.chunk.len();
@@ -75,7 +113,7 @@ impl Blake3State {
         Ok(())
     }
 
-    fn flush_state(&mut self, key_words: [u32; 8], flags: u32) {
+    fn flush_state(&mut self, flags: u32) {
         // Get final chaining value
         let is_root = false;
         let cv = self.chunk.finalize_chunk(is_root).truncate();
@@ -85,23 +123,18 @@ impl Blake3State {
         self.chain_values.push(PushCommand {
             next_cv: cv,
             total_chunks: self.total_chunks,
-            key_words,
+            key_words: self.key,
             flags: flags | PARENT,
         });
 
         // Reset state
-        self.chunk = ChunkState::new(key_words, self.total_chunks, flags | CHUNK_START);
+        self.chunk = ChunkState::new(&self.key, self.total_chunks, flags | CHUNK_START);
     }
 
     /// Return a BLAKE3 digest in the `out_slice` parameter.
     /// The length of the `out_slice` parameter dictates the
     /// length of the output.
-    pub fn finalize(
-        &mut self,
-        out_slice: &mut [u8],
-        key_words: [u32; 8],
-        flags: u32,
-    ) -> Result<(), UnknownCryptoError> {
+    pub fn finalize(&mut self, out_slice: &mut [u8], flags: u32) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
@@ -114,7 +147,7 @@ impl Blake3State {
             let current_state = self.chunk.finalize_chunk(is_root);
             self.chain_values.root_output(FinalizeCommand {
                 current_cv: current_state.truncate(),
-                key_words,
+                key_words: self.key,
                 flags: flags | PARENT,
             })
         };

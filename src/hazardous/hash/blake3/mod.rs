@@ -59,13 +59,15 @@
 //! [`update()`]: blake3::Blake3::update
 //! [`reset()`]: blake3::Blake3::reset
 //! [`finalize()`]: blake3::Blake3::finalize
+//! [`SecretKey::generate()`]: blake3::SecretKey::generate
+//! [`Blake3Keyed`]: blake3::Blake3Keyed
 
 mod cvstack;
 mod internal;
 mod state;
 
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::hash::blake3::internal::{IV, KEYED_HASH, KEY_SIZE};
+use crate::hazardous::hash::blake3::internal::{IV_BYTES, KEYED_HASH, KEY_SIZE};
 use crate::hazardous::hash::blake3::state::Blake3State;
 
 #[cfg(feature = "safe_api")]
@@ -85,6 +87,15 @@ construct_secret_key! {
     (SecretKey, test_secret_key, KEY_SIZE, KEY_SIZE, KEY_SIZE)
 }
 
+impl From<[u8; 32]> for SecretKey {
+    fn from(value: [u8; 32]) -> Self {
+        Self {
+            value,
+            original_length: 32,
+        }
+    }
+}
+
 /// BLAKE3 configuration for standard hashing.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Blake3 {
@@ -97,7 +108,7 @@ impl Default for Blake3 {
     /// Create a new [`Blake3`] instance for standard hashing (`hash` mode).
     fn default() -> Self {
         Self {
-            internal: Blake3State::new(IV, 0),
+            internal: Blake3State::new(&SecretKey::from(IV_BYTES), 0),
         }
     }
 }
@@ -110,19 +121,19 @@ impl Blake3 {
 
     /// Reset to [`Self::new()`] state.
     pub fn reset(&mut self) {
-        self.internal = Blake3State::new(IV, 0)
+        self.internal = Blake3State::new(&SecretKey::from(IV_BYTES), 0)
     }
 
     /// Update state with `data`. This can be called multiple times.
     pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.update(data, IV, 0)
+        self.internal.update(data, 0)
     }
 
     /// Return a BLAKE3 digest in the `out_slice` parameter.
     /// The length of the `out_slice` parameter dictates the
     /// length of the output.
     pub fn finalize(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.finalize(out_slice, IV, 0)
+        self.internal.finalize(out_slice, 0)
     }
 }
 
@@ -180,41 +191,26 @@ impl<'key> Blake3Keyed<'key> {
     /// Create a new [`Blake3Keyed`] instance for keyed hashing (`keyed hash` mode).
     pub fn new(key: &'key SecretKey) -> Self {
         Self {
-            internal: Blake3State::new(Self::parse_key(key), KEYED_HASH),
+            internal: Blake3State::new(key, KEYED_HASH),
             key,
         }
     }
 
-    fn parse_key(key: &SecretKey) -> [u32; 8] {
-        let bytes = key.unprotected_as_bytes();
-        core::array::from_fn(|i| {
-            let start = i * 4;
-            u32::from_le_bytes([
-                bytes[start],
-                bytes[start + 1],
-                bytes[start + 2],
-                bytes[start + 3],
-            ])
-        })
-    }
-
     /// Reset to [`Self::new()`] state.
     pub fn reset(&mut self) {
-        self.internal = Blake3State::new(Self::parse_key(self.key), KEYED_HASH);
+        self.internal = Blake3State::new(self.key, KEYED_HASH);
     }
 
     /// Update state with `data`. This can be called multiple times.
     pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-        self.internal
-            .update(data, Self::parse_key(self.key), KEYED_HASH)
+        self.internal.update(data, KEYED_HASH)
     }
 
     /// Return a BLAKE3 digest in the `out_slice` parameter.
     /// The length of the `out_slice` parameter dictates the
     /// length of the output.
     pub fn finalize(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        self.internal
-            .finalize(out_slice, Self::parse_key(self.key), KEYED_HASH)
+        self.internal.finalize(out_slice, KEYED_HASH)
     }
 }
 
