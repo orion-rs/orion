@@ -20,6 +20,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # Parameters:
+//! - `data`: The data to be hashed.
+//! - `out_slice`: The variable-sized output buffer.
+//!
+//! # Errors:
+//! An error will be returned if:
+//! - [`finalize()`] is called twice without a [`reset()`] in between.
+//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
+//!   between.
+//!
+//! # Panics:
+//! A panic will occur if:
+//! - More than 1024*(2^64-1) bytes of data are hashed.
+//!
+//! # Security:
+//! - The recommended minimum output size is 32. The security provided by the hash function cannot
+//! exceed 256 bits, so choosing output sizes larger than 32 bytes provides no additional security over
+//! the 32 exactly. Choosing a smaller output size however decreases the security provided.
+//!
+//! # Example:
+//! ```rust
+//! use orion::hazardous::hash::blake3::Blake3;
+//!
+//! // Using the streaming interface.
+//! let mut hash_out = [0u8; 32];
+//! let mut state = Blake3::new();
+//! state.update(b"Some data")?;
+//! state.finalize(&mut hash_out)?;
+//!
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! ```
+//! [`update()`]: blake3::Blake3::update
+//! [`reset()`]: blake3::Blake3::reset
+//! [`finalize()`]: blake3::Blake3::finalize
+
 mod cvstack;
 mod internal;
 mod state;
