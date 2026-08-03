@@ -32,7 +32,7 @@
 //!
 //! # Panics:
 //! A panic will occur if:
-//! - More than 1024*(2^64-1) bytes of data are hashed.
+//! - More than 2^64 bytes of data are hashed.
 //!
 //! # Security:
 //! - The recommended minimum output size is 32. The security provided by the hash function cannot

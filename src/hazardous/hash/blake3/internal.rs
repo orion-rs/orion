@@ -24,6 +24,8 @@ use core::array;
 use core::cmp::min;
 use core::ops::{Index, IndexMut};
 
+use subtle::ConstantTimeEq;
+
 pub(crate) const BLOCK_LEN: usize = 64;
 pub(crate) const CHUNK_LEN: usize = 1024;
 pub(crate) const KEY_SIZE: usize = 32;
@@ -63,7 +65,7 @@ const MSG_PERMUTATION: [usize; 16] = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9,
 // 32B intermediate hash output (a.k.a. chaining value)
 pub(crate) type ChainingValue = [u32; 8];
 
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub(crate) struct ChunkState {
     /// The resulting chaining value of the last compressed block.
     cv: ChainingValue,
@@ -78,6 +80,17 @@ pub(crate) struct ChunkState {
     /// CHUNK_LEN / BLOCK_LEN.
     blocks_compressed: u8,
     flags: u32,
+}
+
+impl PartialEq<ChunkState> for ChunkState {
+    fn eq(&self, other: &ChunkState) -> bool {
+        Into::<bool>::into(self.cv.ct_eq(&other.cv))
+            & (self.chunk_counter == other.chunk_counter)
+            & (self.block == other.block)
+            & (self.block_len == other.block_len)
+            & (self.blocks_compressed == other.blocks_compressed)
+            & (self.flags == other.flags)
+    }
 }
 
 impl Drop for ChunkState {
