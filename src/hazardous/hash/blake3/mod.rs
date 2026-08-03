@@ -29,30 +29,29 @@ use crate::hazardous::hash::blake3::internal::{IV, KEYED_HASH, KEY_SIZE};
 use crate::hazardous::hash::blake3::state::Blake3State;
 
 construct_secret_key! {
-    /// A type to represent the secret key that Blake3 uses for keyed mode.
+    /// A type to represent the secret key that BLAKE3 uses for keyed mode.
     ///
     /// # Errors:
     /// An error will be returned if:
-    /// - `slice` is empty
-    /// - `slice` is greater than 256b (32B)
+    /// - `slice` is not 32 bytes.
     ///
     /// # Panics:
     /// A panic will occur during:
-    /// - failure to generate random bytes securely
+    /// - Failure to generate random bytes securely.
     ///
     (SecretKey, test_secret_key, KEY_SIZE, KEY_SIZE, KEY_SIZE)
 }
 
-/// Blake3 configuration for standard hashing
+/// BLAKE3 configuration for standard hashing.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Blake3 {
     internal: Blake3State,
 }
 
-/// Represents the standard `hash` mode for `Blake3` for producing
+/// Represents the standard `hash` mode for [Blake3] for producing
 /// hashes without a secret key.
 impl Default for Blake3 {
-    /// Create a new `Blake3` instance for standard hashing (`hash` mode).
+    /// Create a new [`Blake3`] instance for standard hashing (`hash` mode).
     fn default() -> Self {
         Self {
             internal: Blake3State::new(IV, 0),
@@ -61,15 +60,13 @@ impl Default for Blake3 {
 }
 
 impl Blake3 {
-    /// Create a new `Blake3` instance for standard hashing (`hash` mode).
+    /// Create a new [`Blake3`] instance for standard hashing (`hash` mode).
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Reset to `new()` state.
+    /// Reset to [`Self::new()`] state.
     pub fn reset(&mut self) {
-        // Old values are zeroized as `drop()` is guaranteed
-        // to be called.
         self.internal = Blake3State::new(IV, 0)
     }
 
@@ -86,7 +83,7 @@ impl Blake3 {
     }
 }
 
-/// Represents the `keyed hash` mode for `Blake3` for producing
+/// Represents the "keyed hash" mode for BLAKE3 for producing
 /// hashes using a secret key.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Blake3Keyed<'key> {
@@ -95,7 +92,7 @@ pub struct Blake3Keyed<'key> {
 }
 
 impl<'key> Blake3Keyed<'key> {
-    /// Create a new `Blake3` instance for keyed hashing (`keyed hash` mode).
+    /// Create a new [`Blake3Keyed`] instance for keyed hashing (`keyed hash` mode).
     pub fn new(key: &'key SecretKey) -> Self {
         Self {
             internal: Blake3State::new(Self::parse_key(key), KEYED_HASH),
@@ -116,7 +113,7 @@ impl<'key> Blake3Keyed<'key> {
         })
     }
 
-    /// Reset to `new()` state.
+    /// Reset to [`Self::new()`] state.
     pub fn reset(&mut self) {
         self.internal = Blake3State::new(Self::parse_key(self.key), KEYED_HASH);
     }

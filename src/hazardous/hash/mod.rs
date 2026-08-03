@@ -29,5 +29,5 @@ pub mod sha3;
 /// BLAKE2 hash functions.
 pub mod blake2;
 
-/// BLAKE3 as specified in the [Blake3 paper](https://raw.githubusercontent.com/BLAKE3-team/BLAKE3-specs/master/blake3.pdf).
+/// BLAKE3 as specified in the [BLAKE3 paper](https://raw.githubusercontent.com/BLAKE3-team/BLAKE3-specs/master/blake3.pdf).
 pub mod blake3;

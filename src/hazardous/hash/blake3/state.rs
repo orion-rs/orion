@@ -29,7 +29,7 @@ use crate::{
 };
 use core::cmp::min;
 
-/// Blake3 internal state
+/// BLAKE3 internal state.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Blake3State {
     chunk: ChunkState,
