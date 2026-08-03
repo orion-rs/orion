@@ -63,6 +63,9 @@ use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake3::internal::{IV, KEYED_HASH, KEY_SIZE};
 use crate::hazardous::hash::blake3::state::Blake3State;
 
+#[cfg(feature = "safe_api")]
+use std::io;
+
 construct_secret_key! {
     /// A type to represent the secret key that BLAKE3 uses for keyed mode.
     ///
@@ -115,6 +118,48 @@ impl Blake3 {
     /// length of the output.
     pub fn finalize(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
         self.internal.finalize(out_slice, IV, 0)
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+/// Example: custom digest size.
+/// ```rust
+/// use orion::{
+///     hazardous::hash::blake3::Blake3,
+///     errors::UnknownCryptoError,
+/// };
+/// use std::io::{self, Read, Write};
+///
+/// // `reader` could also be a `File::open(...)?`.
+/// let mut reader = io::Cursor::new(b"some data");
+/// let mut hasher = Blake3::new()?;
+/// std::io::copy(&mut reader, &mut hasher)?;
+///
+/// let mut digest = [0u8; 32];
+/// hasher.finalize(&mut digest)?;
+///
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[cfg(feature = "safe_api")]
+impl io::Write for Blake3 {
+    /// Update the hasher's internal state with *all* of the bytes given.
+    /// If this function returns the `Ok` variant, it's guaranteed that it
+    /// will contain the length of the buffer passed to [`Write`](std::io::Write).
+    /// Note that this function is just a small wrapper over
+    /// [`Blake3::update`](crate::hazardous::hash::blake3::Blake3::update).
+    ///
+    /// ## Errors:
+    /// This function will only ever return the [`std::io::ErrorKind::Other`]()
+    /// variant when it returns an error. Additionally, this will always contain Orion's
+    /// [`UnknownCryptoError`] type.
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.update(bytes).map_err(io::Error::other)?;
+        Ok(bytes.len())
+    }
+
+    /// This type doesn't buffer writes, so flushing is a no-op.
+    fn flush(&mut self) -> Result<(), io::Error> {
+        Ok(())
     }
 }
 
