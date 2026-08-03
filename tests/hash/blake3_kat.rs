@@ -26,6 +26,8 @@ fn test_blake3_kat() {
     let key_str = root.get("key").unwrap().as_str().unwrap();
     let key = key_str.as_bytes().to_vec();
 
+    let mut tests_ran = 0;
+
     // Iterate over the "cases" array
     if let Some(cases) = root.get("cases").unwrap().as_array() {
         for test_case in cases {
@@ -44,6 +46,10 @@ fn test_blake3_kat() {
 
             // Run both standard and keyed checks
             super::blake3_test_runner(&input, &key, &expected_hash, &expected_keyed_hash);
+
+            tests_ran += 1;
         }
     }
+
+    assert_eq!(tests_ran, 35);
 }

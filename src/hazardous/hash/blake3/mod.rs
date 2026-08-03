@@ -132,7 +132,7 @@ impl Blake3 {
 ///
 /// // `reader` could also be a `File::open(...)?`.
 /// let mut reader = io::Cursor::new(b"some data");
-/// let mut hasher = Blake3::new()?;
+/// let mut hasher = Blake3::new();
 /// std::io::copy(&mut reader, &mut hasher)?;
 ///
 /// let mut digest = [0u8; 32];
