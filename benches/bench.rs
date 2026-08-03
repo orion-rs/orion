@@ -233,6 +233,28 @@ mod hash {
         }
     }
 
+    pub fn bench_blake3_512(c: &mut Criterion) {
+        let mut group = c.benchmark_group("BLAKE3-512");
+        let mut dest = [0u8; 64];
+
+        for size in INPUT_SIZES.iter() {
+            let input = vec![0u8; *size];
+
+            group.throughput(Throughput::Bytes(*size as u64));
+            group.bench_with_input(
+                BenchmarkId::new("compute hash", *size),
+                &input,
+                |b, input_message| {
+                    b.iter(|| {
+                        let mut ctx = blake3::Blake3::new();
+                        ctx.update(&input_message).unwrap();
+                        ctx.finalize(&mut dest).unwrap();
+                    })
+                },
+            );
+        }
+    }
+
     criterion_group! {
         name = hash_benches;
         config = Criterion::default();
@@ -241,6 +263,7 @@ mod hash {
         bench_sha384,
         bench_sha512,
         bench_blake2b_512,
+        bench_blake3_512
     }
 }
 

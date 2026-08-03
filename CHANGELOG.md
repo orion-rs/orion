@@ -1,3 +1,10 @@
+### 0.17.6
+
+**Date:** TBD.
+
+**Changelog:**
+- Add support for BLAKE3 ([#641](https://github.com/orion-rs/orion/pull/641), credits: [@jakub-mata](https://github.com/jakub-mata)).
+
 ### 0.17.15
 
 **Date:** June 1, 2026.
