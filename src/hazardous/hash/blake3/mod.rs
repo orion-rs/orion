@@ -38,6 +38,11 @@
 //! - The recommended minimum output size is 32. The security provided by the hash function cannot
 //! exceed 256 bits, so choosing output sizes larger than 32 bytes provides no additional security over
 //! the 32 exactly. Choosing a smaller output size however decreases the security provided.
+//! - The secret key should always be generated using a CSPRNG.
+//!   [`SecretKey::generate()`] can be used for this. It generates
+//!   a secret key of 32 bytes.
+//! - When using [`Blake3Keyed`] the output digest can be used as a MAC. If this is done, it is crucial
+//! to use constant-time comparisons for such digest and take care not to leak them through [`Debug`].
 //!
 //! # Example:
 //! ```rust
