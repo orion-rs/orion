@@ -21,15 +21,14 @@
 // SOFTWARE.
 
 use crate::errors::UnknownCryptoError;
+use crate::hazardous::dsa::ml_dsa::internal::MlDsaParameters;
 use crate::hazardous::dsa::ml_dsa::internal::fe::{
     DILITHIUM_Q, FieldElement, RingElement, RingElementNTT, Vector, VectorNTT, conditional_sub_u32,
 };
-use crate::hazardous::dsa::ml_dsa::internal::{MlDsaParameters, bitlen};
 use crate::hazardous::hash::sha3::shake128::Shake128;
 use crate::hazardous::hash::sha3::shake256::Shake256;
 use crate::hazardous::kem::ml_kem::internal::serialization::bytes_to_bits;
 use core::ops::Mul;
-use subtle::ConstantTimeLess;
 
 /// FIPS-204, Algorithm 14.
 pub(crate) fn coeff_from_three_bytes(b0: u8, b1: u8, b2: u8) -> Option<FieldElement> {
@@ -187,7 +186,7 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
                 let mut j = 0;
                 let mut buf = [0u8; 3];
                 while j < 256 {
-                    ctx.squeeze(&mut buf)?;
+                    g.squeeze(&mut buf)?;
                     if let Some(coeff) = coeff_from_three_bytes(buf[0], buf[1], buf[2]) {
                         a_hat[j] = coeff;
                         j += 1;
@@ -225,7 +224,7 @@ pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
         let mut j = 0;
         while j < 256 {
             h.squeeze(&mut z)?;
-            if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) ^ 0x0F) {
+            if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) & 0x0F) {
                 s1[r as usize][j] = z0;
                 j += 1;
             }
@@ -246,7 +245,7 @@ pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
         let mut j = 0;
         while j < 256 {
             h.squeeze(&mut z)?;
-            if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) ^ 0x0F) {
+            if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) & 0x0F) {
                 s2[r as usize][j] = z0;
                 j += 1;
             }

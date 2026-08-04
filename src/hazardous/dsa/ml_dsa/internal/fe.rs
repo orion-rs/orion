@@ -125,7 +125,7 @@ impl FieldElement {
         // "For an element w ∈ Z ±  q,‖w‖ = ∣w mod q∣"
         // FIPS-204, p. 6.
         let range = 2 * bound - 1;
-        conditional_sub_u32(self.0 + bound - 1).ct_lt(&range)
+        !conditional_sub_u32(self.0 + bound - 1).ct_lt(&range)
     }
 }
 
@@ -536,7 +536,9 @@ pub fn inverse_ntt(w_hat: &RingElementNTT) -> RingElement {
     );
 
     const N_INV: u32 = 8347681;
-    const N_INV_MONT: FieldElement = FieldElement(montgomery_reduce(N_INV as u64 * R2MODQ as u64));
+    // Montgomery scaling was off
+    //const N_INV_MONT: FieldElement = FieldElement(montgomery_reduce(N_INV as u64 * R2MODQ as u64));
+    const N_INV_MONT: FieldElement = FieldElement(41978);
 
     let mut w = RingElement::copy_from_ntt(w_hat);
 

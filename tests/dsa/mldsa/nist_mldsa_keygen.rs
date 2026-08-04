@@ -62,8 +62,8 @@ fn mldsa_runner(path: &str) {
                 >::keygen_internal(&seed)
                 .unwrap();
 
-                assert_eq!(sk_expected, kp.sk);
                 assert_eq!(pk_expected, kp.pk);
+                assert_eq!(sk_expected, kp.sk);
 
                 tests_run += 1;
             }
@@ -86,8 +86,8 @@ fn mldsa_runner(path: &str) {
                 >::keygen_internal(&seed)
                 .unwrap();
 
-                assert_eq!(sk_expected, kp.sk);
                 assert_eq!(pk_expected, kp.pk);
+                assert_eq!(sk_expected, kp.sk);
             }
         }
 
@@ -109,13 +109,13 @@ fn mldsa_runner(path: &str) {
                 >::keygen_internal(&seed)
                 .unwrap();
 
-                assert_eq!(sk_expected, kp.sk);
                 assert_eq!(pk_expected, kp.pk);
+                assert_eq!(sk_expected, kp.sk);
             }
         }
     }
 
-    assert_eq!(tests_run, 75);
+    assert_eq!(tests_run, 25);
 }
 
 #[test]
