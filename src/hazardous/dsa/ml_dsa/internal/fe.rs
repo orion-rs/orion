@@ -275,6 +275,23 @@ impl<const N: usize> Vector<N> {
 
         ntt
     }
+
+    /// FIPS-204, Algorithm 6.
+    /// Component-wise Power2Round returning: (t1, t0)
+    pub fn power2round<P: MlDsaParameters>(&self) -> (Vector<N>, Vector<N>) {
+        let mut t0 = Self::zero();
+        let mut t1 = Self::zero();
+
+        for ringelemidx in 0..N {
+            for feelemidx in 0..256 {
+                let (r1, r0) = self[ringelemidx][feelemidx].power2round::<P>();
+                t0[ringelemidx][feelemidx] = FieldElement::new(r0);
+                t1[ringelemidx][feelemidx] = FieldElement::new(r1);
+            }
+        }
+
+        (t1, t0)
+    }
 }
 
 impl<const N: usize> Add for Vector<N> {

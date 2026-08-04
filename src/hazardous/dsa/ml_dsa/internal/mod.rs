@@ -450,13 +450,30 @@ impl MlDsaParameters for MlDsa87 {
     }
 }
 
-pub(crate) struct KeyPair<const K: usize, const L: usize, P: MlDsaParameters> {
+#[derive(Debug)]
+/// TODO: THIS SHOULD BE INTERNAL
+pub struct KeyPair<
+    const SK_ENCODED_SIZE: usize,
+    const PK_ENCODED_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> {
+    pub sk: [u8; SK_ENCODED_SIZE],
+    pub pk: [u8; PK_ENCODED_SIZE],
     _phantom: PhantomData<P>,
 }
 
-impl<const K: usize, const L: usize, P: MlDsaParameters> KeyPair<K, L, P> {
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const PK_ENCODED_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> KeyPair<SK_ENCODED_SIZE, PK_ENCODED_SIZE, K, L, P>
+{
     /// FIPS-204, Algorithm 6.
-    pub(crate) fn keygen_internal(seed: &[u8]) -> Result<Self, UnknownCryptoError> {
+    pub fn keygen_internal(seed: &[u8]) -> Result<Self, UnknownCryptoError> {
         debug_assert_eq!(K, P::DIM_K);
         debug_assert_eq!(L, P::DIM_L);
         debug_assert_eq!(seed.len(), 32);
@@ -472,9 +489,26 @@ impl<const K: usize, const L: usize, P: MlDsaParameters> KeyPair<K, L, P> {
         let (s1, s2) = expand_s::<K, L, P>(&expanded_seed[32..32 + 64])?;
 
         let t = (mat_a_hat * s1.ntt()).inverse_ntt() + s2;
-        // Missing component-wise Power2Round
+        let (t1, t0) = t.power2round::<P>();
+        let pk = P::pk_encode::<PK_ENCODED_SIZE>(&expanded_seed[..32], &t1.elems);
+
+        let mut tr = zeroize_wrap!([0u8; 64]);
+        h.reset();
+        h.absorb(&pk)?;
+        h.squeeze(&mut tr.as_mut())?;
+
+        let sk = P::sk_encode::<SK_ENCODED_SIZE, K, L>(
+            &expanded_seed[..32],
+            &expanded_seed[32 + 64..32 + 64 + 32],
+            tr.as_slice(),
+            &s1.elems,
+            &s2.elems,
+            &t0.elems,
+        );
 
         Ok(Self {
+            sk,
+            pk,
             _phantom: PhantomData,
         })
     }
