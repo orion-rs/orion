@@ -53,8 +53,11 @@ fn test_bitlen() {
     assert_eq!(MlDsa87::GAMMA_1_BITLEN, 19);
 }
 
-pub trait MlDsaParameters: Debug {
+/// Internal parameters for the three parameter-sets that ML-DSA supports.
+pub trait MlDsaParameters: Debug + Sized {
+    /// Dilithium constant Q.
     const Q: u32 = 8380417;
+    /// Polynomial sizes in T_q/R_q.
     const N: usize = 256;
 
     /// "# of ±1’s in polynomial c"
@@ -65,8 +68,9 @@ pub trait MlDsaParameters: Debug {
     const ETA: usize;
     /// bytes used to bitpack a FieldElement for this ETA
     const ETA_BITPACK_SIZE: usize;
-    /// "dimensions of A"
+    /// "dimensions of A", K
     const DIM_K: usize;
+    /// "dimensions of A", L
     const DIM_L: usize;
     /// "coefficient range of y"
     const GAMMA_1: u32;
@@ -86,14 +90,26 @@ pub trait MlDsaParameters: Debug {
     const BETA: u32;
     /// "max # of 1’s in the hint h"
     const OMEGA: u32;
+    /// bytes used to represent the commitment hash during signing.
+    const COMMITMENT_HASH_LEN: usize = Self::LAMBDA / 4;
+    /// 32 * c, where c = 1 + bitlen (γ1 − 1)
+    const CLEN: usize;
 
-    // Barret M for decompose()
+    /// Barret M for constant-time Decompose().
     const DECOMPOSE_BARRETT_M: u32;
+    /// Barret shift for constant-time Decompose().
     const DECOMPOSE_BARRETT_SHIFT: u32 = 24; // fits all three paramsets
+    /// Constant-time Decompose().
     const DECOMPOSE_W1_MAX: u32;
 
+    /// bytes sued to encode polynomial as byte signature
+    const Z_BITPACK_SIZE: usize;
+
+    /// Size of private signing key in bytes.
     const PRIVATE_KEY_SIZE: usize;
+    /// Size of public verification key in bytes.
     const PUBLIC_KEY_SIZE: usize;
+    /// Size of public signature in bytes.
     const SIGNATURE_SIZE: usize;
 
     /// FIPS-204, Algorithm 17.
@@ -106,7 +122,10 @@ pub trait MlDsaParameters: Debug {
     fn bitunpack_ring_element_gamma(v: &[u8], w: &mut RingElement);
 
     /// FIPS-204, Algorithm 28.
-    fn bitpack_polynomial_vector_w1<const K: usize>(w1: &RingElement, out: &mut [u8]);
+    fn bitpack_polynomial_vector_w1(w1: &RingElement, out: &mut [u8]);
+
+    /// FIPS-204, Algorithm 28.
+    fn bitpack_polynomial_z(z: &RingElement, out: &mut [u8]);
 
     /// FIPS-204, Algorithm 28.
     fn w1_encode<const K: usize>(w1: &Vector<K>, out: &mut [u8]) {
@@ -118,7 +137,7 @@ pub trait MlDsaParameters: Debug {
             .iter()
             .zip(out.chunks_exact_mut(Self::W1_BITPACK_SIZE))
         {
-            Self::bitpack_polynomial_vector_w1::<K>(poly, chunk);
+            Self::bitpack_polynomial_vector_w1(poly, chunk);
         }
     }
 
@@ -287,7 +306,7 @@ pub trait MlDsaParameters: Debug {
         ),
         UnknownCryptoError,
     > {
-        if sk.len() < Self::PRIVATE_KEY_SIZE {
+        if sk.len() != Self::PRIVATE_KEY_SIZE {
             return Err(UnknownCryptoError);
         }
 
@@ -330,6 +349,70 @@ pub trait MlDsaParameters: Debug {
         Ok((rho, k, tr, s1, s2, t0))
     }
 
+    /// FIPS-204, Algorithm 26.
+    fn sig_encode<const K: usize, const L: usize, const COMMITHASH_LEN: usize>(
+        c_tilde: &[u8],
+        z: &Vector<L>,
+        h: &Hint<K>,
+        out: &mut [u8],
+    ) {
+        debug_assert_eq!(
+            Self::SIGNATURE_SIZE,
+            (Self::Z_BITPACK_SIZE * L) + COMMITHASH_LEN + Self::OMEGA as usize + K
+        );
+        debug_assert_eq!(c_tilde.len(), COMMITHASH_LEN);
+        debug_assert_eq!(
+            out.len(),
+            (Self::Z_BITPACK_SIZE * L) + COMMITHASH_LEN + Self::OMEGA as usize + K
+        );
+
+        let (cpart, rem) = out.split_at_mut(COMMITHASH_LEN);
+        cpart.copy_from_slice(c_tilde);
+        let (zpart, hpart) = rem.split_at_mut(Self::Z_BITPACK_SIZE * L);
+        for (p, c) in z
+            .elems
+            .iter()
+            .zip(zpart.chunks_exact_mut(Self::Z_BITPACK_SIZE))
+        {
+            Self::bitpack_polynomial_z(p, c);
+        }
+
+        h.hint_bitpack::<Self>(hpart);
+    }
+
+    /// FIPS-204, Algorithm 27.
+    fn sig_decode<const K: usize, const L: usize, const COMMITHASH_LEN: usize>(
+        sigma: &[u8],
+    ) -> Result<([u8; COMMITHASH_LEN], Vector<L>, Hint<K>), UnknownCryptoError> {
+        debug_assert_eq!(
+            Self::SIGNATURE_SIZE,
+            (Self::Z_BITPACK_SIZE * L) + COMMITHASH_LEN + Self::OMEGA as usize + K
+        );
+
+        if sigma.len() != Self::SIGNATURE_SIZE {
+            return Err(UnknownCryptoError);
+        }
+
+        let (c_tilde, rem) = sigma.split_at(COMMITHASH_LEN);
+        let (polyparts, hintparts) = rem.split_at(Self::Z_BITPACK_SIZE * L);
+
+        let mut z = Vector::<L>::zero();
+        for (p, c) in z
+            .elems
+            .iter_mut()
+            .zip(polyparts.chunks_exact(Self::Z_BITPACK_SIZE))
+        {
+            Self::bitunpack_ring_element_gamma(c, p);
+        }
+
+        let h = Hint::<K>::hint_bitunpack::<Self>(hintparts)?;
+
+        let mut c_out = [0u8; COMMITHASH_LEN];
+        c_out.copy_from_slice(c_tilde);
+
+        Ok((c_out, z, h))
+    }
+
     fn expand_seed<const K: usize, const L: usize>(
         rho: &[u8],
         out: &mut [u8],
@@ -360,6 +443,7 @@ impl MlDsaParameters for MlDsa44 {
     const DIM_L: usize = 4;
     const GAMMA_1: u32 = 1 << 17;
     const GAMMA_2: u32 = (Self::Q - 1) / 88;
+    const CLEN: usize = 576;
 
     const BETA: u32 = 78;
     const OMEGA: u32 = 80;
@@ -369,6 +453,8 @@ impl MlDsaParameters for MlDsa44 {
 
     const DECOMPOSE_BARRETT_M: u32 = 88;
     const DECOMPOSE_W1_MAX: u32 = 43;
+
+    const Z_BITPACK_SIZE: usize = 576;
 
     const PRIVATE_KEY_SIZE: usize = 2560;
     const PUBLIC_KEY_SIZE: usize = 1312;
@@ -421,7 +507,7 @@ impl MlDsaParameters for MlDsa44 {
         }
     }
 
-    fn bitpack_polynomial_vector_w1<const K: usize>(w1: &RingElement, out: &mut [u8]) {
+    fn bitpack_polynomial_vector_w1(w1: &RingElement, out: &mut [u8]) {
         debug_assert_eq!(out.len(), Self::W1_BITPACK_SIZE);
         debug_assert!(
             w1.coefficients
@@ -443,6 +529,28 @@ impl MlDsaParameters for MlDsa44 {
             o[2] = (c >> 4) | (d << 2);
         }
     }
+
+    fn bitpack_polynomial_z(z: &RingElement, out: &mut [u8]) {
+        debug_assert_eq!(out.len(), Self::Z_BITPACK_SIZE);
+
+        // nine bytes with 4 cofficients given 18 bits per
+        for (i, o) in out.chunks_exact_mut(9).enumerate() {
+            let a = z[4 * i].bitpack_gamma1_offset::<Self>();
+            let b = z[4 * i + 1].bitpack_gamma1_offset::<Self>();
+            let c = z[4 * i + 2].bitpack_gamma1_offset::<Self>();
+            let d = z[4 * i + 3].bitpack_gamma1_offset::<Self>();
+
+            o[0] = a as u8;
+            o[1] = (a >> 8) as u8;
+            o[2] = ((a >> 16) | (b << 2)) as u8;
+            o[3] = (b >> 6) as u8;
+            o[4] = ((b >> 14) | (c << 4)) as u8;
+            o[5] = (c >> 4) as u8;
+            o[6] = ((c >> 12) | (d << 6)) as u8;
+            o[7] = (d >> 2) as u8;
+            o[8] = (d >> 10) as u8;
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -458,6 +566,7 @@ impl MlDsaParameters for MlDsa65 {
     const DIM_L: usize = 5;
     const GAMMA_1: u32 = 1 << 19;
     const GAMMA_2: u32 = (Self::Q - 1) / 32;
+    const CLEN: usize = 640;
 
     const BETA: u32 = 196;
     const OMEGA: u32 = 55;
@@ -467,6 +576,8 @@ impl MlDsaParameters for MlDsa65 {
 
     const DECOMPOSE_BARRETT_M: u32 = 32;
     const DECOMPOSE_W1_MAX: u32 = 15;
+
+    const Z_BITPACK_SIZE: usize = 640;
 
     const PRIVATE_KEY_SIZE: usize = 4032;
     const PUBLIC_KEY_SIZE: usize = 1952;
@@ -506,7 +617,7 @@ impl MlDsaParameters for MlDsa65 {
         }
     }
 
-    fn bitpack_polynomial_vector_w1<const K: usize>(w1: &RingElement, out: &mut [u8]) {
+    fn bitpack_polynomial_vector_w1(w1: &RingElement, out: &mut [u8]) {
         debug_assert_eq!(out.len(), Self::W1_BITPACK_SIZE);
         debug_assert!(
             w1.coefficients
@@ -516,6 +627,22 @@ impl MlDsaParameters for MlDsa65 {
 
         for (i, o) in out.iter_mut().enumerate() {
             *o = w1[2 * i].0 as u8 | (w1[2 * i + 1].0 as u8) << 4;
+        }
+    }
+
+    fn bitpack_polynomial_z(z: &RingElement, out: &mut [u8]) {
+        debug_assert_eq!(out.len(), Self::Z_BITPACK_SIZE);
+
+        // 5 bytes with 2 cofficients given 20 bits per
+        for (i, o) in out.chunks_exact_mut(5).enumerate() {
+            let a = z[2 * i].bitpack_gamma1_offset::<Self>();
+            let b = z[2 * i + 1].bitpack_gamma1_offset::<Self>();
+
+            o[0] = a as u8;
+            o[1] = (a >> 8) as u8;
+            o[2] = ((a >> 16) | (b << 4)) as u8;
+            o[3] = (b >> 4) as u8;
+            o[4] = (b >> 12) as u8;
         }
     }
 }
@@ -533,6 +660,7 @@ impl MlDsaParameters for MlDsa87 {
     const DIM_L: usize = 7;
     const GAMMA_1: u32 = 1 << 19;
     const GAMMA_2: u32 = MlDsa65::GAMMA_2;
+    const CLEN: usize = MlDsa65::CLEN;
 
     const BETA: u32 = 120;
     const OMEGA: u32 = 75;
@@ -542,6 +670,8 @@ impl MlDsaParameters for MlDsa87 {
 
     const DECOMPOSE_BARRETT_M: u32 = MlDsa65::DECOMPOSE_BARRETT_M;
     const DECOMPOSE_W1_MAX: u32 = MlDsa65::DECOMPOSE_W1_MAX;
+
+    const Z_BITPACK_SIZE: usize = MlDsa65::Z_BITPACK_SIZE;
 
     const PRIVATE_KEY_SIZE: usize = 4896;
     const PUBLIC_KEY_SIZE: usize = 2592;
@@ -563,8 +693,12 @@ impl MlDsaParameters for MlDsa87 {
         MlDsa44::bitunpack_ring_element_eta(v, w);
     }
 
-    fn bitpack_polynomial_vector_w1<const K: usize>(w1: &RingElement, out: &mut [u8]) {
-        MlDsa65::bitpack_polynomial_vector_w1::<K>(w1, out);
+    fn bitpack_polynomial_vector_w1(w1: &RingElement, out: &mut [u8]) {
+        MlDsa65::bitpack_polynomial_vector_w1(w1, out);
+    }
+
+    fn bitpack_polynomial_z(w1: &RingElement, out: &mut [u8]) {
+        MlDsa65::bitpack_polynomial_z(w1, out);
     }
 }
 
@@ -785,16 +919,16 @@ impl<
     >
 {
     /// FIPS-204, Algorithm 7.
-    pub fn sign_deterministic(
+    pub fn sign_internal_deterministic(
         &self,
         mprime: &[u8],
         rnd: &[u8],
     ) -> Result<[u8; SIG_ENCODED_SIZE], UnknownCryptoError> {
-        let mut tr_bits = [0u8; 64 * u8::BITS as usize];
-        bytes_to_bits(&self.tr_hash, &mut tr_bits);
+        // let mut tr_bits = [0u8; 64 * u8::BITS as usize];
+        // bytes_to_bits(&self.tr_hash, &mut tr_bits);
 
         let mut h = Shake256::new();
-        h.absorb(&tr_bits)?;
+        h.absorb(&self.tr_hash)?;
         h.absorb(mprime)?;
         let mut mu = [0u8; 64];
         h.squeeze(&mut mu)?;
@@ -815,6 +949,8 @@ impl<
         // Commitment hash
         // TODO: does this need zeroize?
         let mut c_tilde = [0u8; COMMITHASH_LEN];
+        let mut hint = Hint::<K>::zero();
+        let mut z = Vector::<L>::zero();
 
         while !valid_sample {
             let y = expand_mask::<CLEN, K, L, P>(rhoprimeprime.as_slice(), counter)?;
@@ -832,7 +968,7 @@ impl<
             let c_hat = c.into_ntt();
             let c_mul_s1 = (&c_hat * &self.s1_hat).inverse_ntt_mont();
             let c_mul_s2 = (&c_hat * &self.s2_hat).inverse_ntt_mont();
-            let z = y + c_mul_s1;
+            z = y + c_mul_s1;
 
             let w_sub_cs2 = w - c_mul_s2;
             let r0 = w_sub_cs2.low_bits::<P>();
@@ -847,9 +983,9 @@ impl<
             }
 
             let c_mul_t0 = (&c_hat * &self.t0_hat).inverse_ntt_mont();
-            let h = Hint::<K>::make::<P>(&-c_mul_t0, &(w_sub_cs2 + c_mul_t0));
+            hint = Hint::<K>::make::<P>(&-c_mul_t0, &(w_sub_cs2 + c_mul_t0));
 
-            if bool::from(c_mul_t0.is_outside_bound(P::GAMMA_2) | h.weight().ct_gt(&P::OMEGA)) {
+            if bool::from(c_mul_t0.is_outside_bound(P::GAMMA_2) | hint.weight().ct_gt(&P::OMEGA)) {
                 // Rejected
                 counter += L as u32;
                 continue;
@@ -858,7 +994,10 @@ impl<
             valid_sample = true;
         }
 
-        Ok([0u8; SIG_ENCODED_SIZE])
+        let mut sigma = [0u8; SIG_ENCODED_SIZE];
+        P::sig_encode::<K, L, COMMITHASH_LEN>(&c_tilde, &z, &hint, &mut sigma);
+
+        Ok(sigma)
     }
 
     pub fn sign_hedged(&self) -> Result<(), UnknownCryptoError> {

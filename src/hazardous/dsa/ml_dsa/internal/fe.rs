@@ -29,6 +29,7 @@ use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
+use crate::errors::UnknownCryptoError;
 use crate::hazardous::dsa::ml_dsa::internal::MlDsaParameters;
 
 pub(crate) const DILITHIUM_Q: u32 = 8380417;
@@ -235,6 +236,14 @@ impl FieldElement<Standard> {
         let hint = 0u32.wrapping_sub(hint);
 
         (adjust & hint) | (r1 & !hint)
+    }
+
+    pub(crate) fn bitpack_gamma1_offset<P: MlDsaParameters>(&self) -> u32 {
+        debug_assert!(self.0 < DILITHIUM_Q);
+        let t = conditional_sub_u32(P::GAMMA_1 + DILITHIUM_Q - self.0);
+        debug_assert!(t < 2 * P::GAMMA_1); // ||z||infinity norm bound on gamma1
+
+        t
     }
 }
 
@@ -715,8 +724,8 @@ impl<const N: usize, D: Domain> IndexMut<usize> for VectorNTT<N, D> {
 /// TODO this type handles secret bytes.
 ///
 /// Hint used during signing/verification. Values are only ever [0, 1].
-pub(crate) struct Hint<const N: usize> {
-    pub(crate) bits: [[u8; 256]; N],
+pub(crate) struct Hint<const K: usize> {
+    pub(crate) bits: [[u8; 256]; K],
 }
 
 impl<const K: usize> Hint<K> {
@@ -749,6 +758,59 @@ impl<const K: usize> Hint<K> {
             }
         }
         n
+    }
+
+    pub(crate) fn hint_bitpack<P: MlDsaParameters>(&self, out: &mut [u8]) {
+        debug_assert_eq!(out.len(), P::OMEGA as usize + K);
+        // CORRECTNESS/SECURITY: This method is used durign signature encoding
+        // and assumes the rejection sampling has finished before this routine is run.
+        debug_assert!(self.weight() as usize <= P::OMEGA as usize);
+
+        let mut index = 0usize;
+
+        for i in 0..K {
+            for j in 0..256 {
+                if self.bits[i][j] != 0 {
+                    out[index] = j as u8;
+                    index += 1;
+                }
+            }
+
+            out[P::OMEGA as usize + 1] = index as u8;
+        }
+    }
+
+    pub(crate) fn hint_bitunpack<P: MlDsaParameters>(
+        bytes: &[u8],
+    ) -> Result<Self, UnknownCryptoError> {
+        debug_assert_eq!(bytes.len(), P::OMEGA as usize + K);
+
+        let mut hint = Self::zero();
+        let mut index = 0usize;
+
+        for i in 0..K {
+            let end = bytes[P::OMEGA as usize + i] as usize;
+
+            if end < index || end > P::OMEGA as usize {
+                return Err(UnknownCryptoError);
+            }
+
+            let first = index;
+            while index < end {
+                if index > first && bytes[index - 1] >= bytes[index] {
+                    return Err(UnknownCryptoError);
+                }
+
+                hint.bits[i][bytes[index] as usize] = 1;
+                index += 1;
+            }
+        }
+
+        if bytes[index..P::OMEGA as usize].iter().any(|x| x != &0) {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok(hint)
     }
 }
 
