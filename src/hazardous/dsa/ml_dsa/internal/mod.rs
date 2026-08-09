@@ -22,7 +22,7 @@
 
 use core::{fmt::Debug, marker::PhantomData};
 
-use subtle::{Choice, ConstantTimeGreater};
+use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater};
 
 use crate::{
     errors::UnknownCryptoError,
@@ -918,90 +918,6 @@ impl<
         P,
     >
 {
-    /// FIPS-204, Algorithm 7.
-    pub fn sign_internal_deterministic(
-        &self,
-        mprime: &[&[u8]],
-        rnd: &[u8],
-    ) -> Result<[u8; SIG_ENCODED_SIZE], UnknownCryptoError> {
-        // let mut tr_bits = [0u8; 64 * u8::BITS as usize];
-        // bytes_to_bits(&self.tr_hash, &mut tr_bits);
-
-        let mut h = Shake256::new();
-        h.absorb(&self.tr_hash)?;
-        for mpart in mprime {
-            h.absorb(mpart)?;
-        }
-        let mut mu = [0u8; 64];
-        h.squeeze(&mut mu)?;
-
-        h.reset();
-        h.absorb(&self.k)?;
-        h.absorb(rnd)?;
-        h.absorb(&mu)?;
-        let mut rhoprimeprime = zeroize_wrap!([0u8; 64]);
-        h.squeeze(rhoprimeprime.as_mut())?;
-
-        let mut counter = 0u32;
-        let mut valid_sample = false;
-
-        // TODO: does this need zeroize?
-        let mut w1_bytes = [0u8; W1_ENCODE_SIZE];
-
-        // Commitment hash
-        // TODO: does this need zeroize?
-        let mut c_tilde = [0u8; COMMITHASH_LEN];
-        let mut hint = Hint::<K>::zero();
-        let mut z = Vector::<L>::zero();
-
-        while !valid_sample {
-            let y = expand_mask::<CLEN, K, L, P>(rhoprimeprime.as_slice(), counter)?;
-            let w = (&self.mat_a_hat * &y.ntt()).inverse_ntt_mont();
-            let w1 = w.high_bits::<P>();
-            P::w1_encode(&w1, &mut w1_bytes);
-
-            // Commitment hash
-            h.reset();
-            h.absorb(&mu)?;
-            h.absorb(&w1_bytes)?;
-            h.squeeze(&mut c_tilde)?;
-
-            let c = sample_in_ball::<P>(&c_tilde)?;
-            let c_hat = c.into_ntt();
-            let c_mul_s1 = (&c_hat * &self.s1_hat).inverse_ntt_mont();
-            let c_mul_s2 = (&c_hat * &self.s2_hat).inverse_ntt_mont();
-            z = y + c_mul_s1;
-
-            let w_sub_cs2 = w - c_mul_s2;
-            let r0 = w_sub_cs2.low_bits::<P>();
-
-            if bool::from(
-                z.is_outside_bound(P::GAMMA_1 - P::BETA)
-                    | r0.is_outside_bound(P::GAMMA_2 - P::BETA),
-            ) {
-                // Rejected
-                counter += L as u32;
-                continue;
-            }
-
-            let c_mul_t0 = (&c_hat * &self.t0_hat).inverse_ntt_mont();
-            hint = Hint::<K>::make::<P>(&-c_mul_t0, &(w_sub_cs2 + c_mul_t0));
-
-            if bool::from(c_mul_t0.is_outside_bound(P::GAMMA_2) | hint.weight().ct_gt(&P::OMEGA)) {
-                // Rejected
-                counter += L as u32;
-                continue;
-            }
-
-            valid_sample = true;
-        }
-
-        let mut sigma = [0u8; SIG_ENCODED_SIZE];
-        P::sig_encode::<K, L, COMMITHASH_LEN>(&c_tilde, &z, &hint, &mut sigma);
-
-        Ok(sigma)
-    }
-
     pub fn sign_internal_with_mu(
         &self,
         mu: &[u8; 64],
@@ -1074,9 +990,7 @@ impl<
         Ok(sigma)
     }
 
-    /// FIPS-204, Algorithm 7 from the top: `μ ← H(tr ‖ M′, 64)`.
-    /// Renamed from `sign_internal_deterministic` — it takes `rnd`, so it is
-    /// only deterministic when the caller passes zeros.
+    /// FIPS-204, Algorithm 7.
     pub fn sign_internal(
         &self,
         mprime: &[&[u8]],
@@ -1103,7 +1017,6 @@ impl<
         if ctx.len() > 255 {
             return Err(UnknownCryptoError);
         }
-        // M′ ← IntegerToBytes(0,1) ‖ IntegerToBytes(|ctx|,1) ‖ ctx ‖ M
         self.sign_internal(&[&[0u8, ctx.len() as u8], ctx, m], rnd)
     }
 
@@ -1117,6 +1030,154 @@ impl<
     }
 
     pub fn sign_hedged(&self) -> Result<(), UnknownCryptoError> {
+        unimplemented!();
+    }
+}
+
+#[derive(Debug)]
+/// TODO: THIS SHOULD BE INTERNAL
+pub struct InternalVerifyingKey<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> {
+    pub pk: [u8; PK_ENCODED_SIZE],
+    pub rho: [u8; 32],
+    pub t1: Vector<K>,
+    pub mat_a_hat: MatrixNTT<K, L>,
+    _phantom: PhantomData<P>,
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> TryFrom<&[u8]>
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let (rho, t1) = P::pk_decode::<K>(value)?;
+
+        Ok(Self {
+            pk: value
+                .try_into()
+                .expect("length check is part of P::pk_decode()"),
+            rho,
+            t1,
+            mat_a_hat: MatrixNTT::<K, L>::expand_a::<P>(&rho)?,
+            _phantom: PhantomData,
+        })
+    }
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+>
+    InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    /// FIPS-204, Algorithm 8.
+    pub fn verify_internal_with_mu(
+        &self,
+        mu: &[u8; 64],
+        sigma: &[u8],
+    ) -> Result<(), UnknownCryptoError> {
+        let (c_tilde, z, hint) = P::sig_decode::<K, L, COMMITHASH_LEN>(sigma)?;
+        let c = sample_in_ball::<P>(&c_tilde)?;
+        // Az − ct1 ⋅ 2d
+        let w_approx = ((&self.mat_a_hat * &z.ntt())
+            - (&c.into_ntt() * &self.t1.shift_left_d::<P>().ntt()))
+            .inverse_ntt_mont();
+
+        let w1 = w_approx.use_hint::<P>(&hint);
+        let mut c_tilde_prime = [0u8; COMMITHASH_LEN];
+        let mut w1encoded = [0u8; W1_ENCODE_SIZE];
+        P::w1_encode(&w1, &mut w1encoded);
+
+        let mut h = Shake256::new();
+        h.absorb(mu)?;
+        h.absorb(&w1encoded)?;
+        h.squeeze(&mut c_tilde_prime)?;
+
+        // TODO: I don't think this requires constant-time?
+        // what can be learned of anything? There's no secret data
+        // dervied anywhere in this codepath...
+        if bool::from(
+            !z.is_outside_bound(P::GAMMA_1 - P::BETA) & c_tilde.as_slice().ct_eq(&c_tilde_prime),
+        ) {
+            Ok(())
+        } else {
+            Err(UnknownCryptoError)
+        }
+    }
+
+    /// FIPS-204, Algorithm 8.
+    pub fn verify_internal(
+        &self,
+        mprime: &[&[u8]],
+        sigma: &[u8],
+    ) -> Result<(), UnknownCryptoError> {
+        let mut tr = [0u8; 64];
+        let mut h = Shake256::new();
+        h.absorb(&self.pk)?;
+        h.squeeze(&mut tr)?;
+        h.reset();
+
+        let mut mu = [0u8; 64];
+        h.absorb(&tr)?;
+        for mpart in mprime {
+            h.absorb(mpart)?;
+        }
+        h.squeeze(&mut mu)?;
+
+        self.verify_internal_with_mu(&mu, sigma)
+    }
+
+    /// FIPS-204, Algorithm 3.
+    pub fn verify(&self, m: &[u8], sigma: &[u8], ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+        if ctx.len() > 255 {
+            return Err(UnknownCryptoError);
+        }
+        self.verify_internal(&[&[0u8, ctx.len() as u8], ctx, m], sigma)
+    }
+
+    pub fn verify_hedged(&self) -> Result<(), UnknownCryptoError> {
         unimplemented!();
     }
 }

@@ -602,6 +602,19 @@ impl<const N: usize> Vector<N> {
     pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> Self {
         self.decompose::<P>().1
     }
+
+    /// FIPS-204, Algorithm 8. t1 \cdot 2^{d}./
+    pub(crate) fn shift_left_d<P: MlDsaParameters>(&self) -> Self {
+        let mut ret = Self::zero();
+        for (src_re, out) in self.elems.iter().zip(ret.elems.iter_mut()) {
+            for i in 0..P::N {
+                debug_assert!(src_re[i].0 < 1 << (23 - P::D));
+                out[i] = FieldElement::new(src_re[i].0 << P::D);
+            }
+        }
+
+        ret
+    }
 }
 
 impl<const N: usize> Add for Vector<N> {

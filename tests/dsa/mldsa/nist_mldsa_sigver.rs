@@ -9,26 +9,24 @@ use std::{fs::File, io::BufReader};
 
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct MlDsaSigGen {
+pub(crate) struct MlDsaSigVer {
     vsId: u32,
     algorithm: String,
     mode: String,
     revision: String,
     isSample: bool,
-    testGroups: Vec<MlDsaSigGenTestGroup>,
+    testGroups: Vec<MlDsaSigVerTestGroup>,
 }
 
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct MlDsaSigGenTestGroup {
+pub(crate) struct MlDsaSigVerTestGroup {
     tgId: u32,
     testType: String,
     parameterSet: String,
-    deterministic: bool,
     signatureInterface: String,
     preHash: String,
     externalMu: bool,
-    cornerCase: String,
     tests: Vec<TestVector>,
 }
 
@@ -36,19 +34,20 @@ pub(crate) struct MlDsaSigGenTestGroup {
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct TestVector {
     tcId: u64,
+    testPassed: bool,
     deferred: bool,
     message: Option<String>,
     mu: Option<String>,
     pk: String,
     sk: String,
     context: Option<String>,
-    rnd: Option<String>,
     hashAlg: String,
     signature: String,
+    reason: String,
 }
 
 fn run_test<
-    const SK_SIZE: usize,
+    const PK_SIZE: usize,
     const SIG_SIZE: usize,
     const CLEN: usize,
     const COMMITHASH_LEN: usize,
@@ -57,17 +56,17 @@ fn run_test<
     const L: usize,
     P: MlDsaParameters,
 >(
-    group: &MlDsaSigGenTestGroup,
+    group: &MlDsaSigVerTestGroup,
     tests_run: &mut usize,
 ) {
     for test in group.tests.iter() {
-        let mut sk_expected = [0u8; SK_SIZE];
+        let mut pk_expected = [0u8; PK_SIZE];
         let mut sig_expected = [0u8; SIG_SIZE];
-        hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
+        hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
         hex::decode_to_slice(&test.signature, &mut sig_expected).unwrap();
 
-        let signkey = ml_dsa::internal::InternalSigningKey::<
-            SK_SIZE,
+        let verifkey = ml_dsa::internal::InternalVerifyingKey::<
+            PK_SIZE,
             SIG_SIZE,
             CLEN,
             COMMITHASH_LEN,
@@ -75,31 +74,25 @@ fn run_test<
             K,
             L,
             P,
-        >::try_from(&sk_expected[..])
+        >::try_from(&pk_expected[..])
         .unwrap();
 
-        // `rnd` is present exactly when the group is non-deterministic.
-        let rnd: [u8; 32] = match test.rnd.as_ref() {
-            Some(rnd) => hex::decode(rnd).unwrap().try_into().unwrap(),
-            None => [0u8; 32],
-        };
-
-        let signature = if group.externalMu {
+        let verified = if group.externalMu {
             let mu: [u8; 64] = hex::decode(test.mu.as_ref().unwrap())
                 .unwrap()
                 .try_into()
                 .unwrap();
-            signkey.sign_internal_with_mu(&mu, &rnd).unwrap()
+            verifkey.verify_internal_with_mu(&mu, &sig_expected)
         } else if group.signatureInterface == "internal" {
             let m = hex::decode(test.message.as_ref().unwrap()).unwrap();
-            signkey.sign_internal(&[&m], &rnd).unwrap()
+            verifkey.verify_internal(&[&m], &sig_expected)
         } else {
             let m = hex::decode(test.message.as_ref().unwrap()).unwrap();
             let ctx = hex::decode(test.context.as_ref().unwrap()).unwrap();
-            signkey.sign(&m, &ctx, &rnd).unwrap()
+            verifkey.verify(&m, &sig_expected, &ctx)
         };
 
-        assert_eq!(&sig_expected, &signature);
+        assert_eq!(test.testPassed, verified.is_ok());
         *tests_run += 1;
     }
 }
@@ -107,7 +100,7 @@ fn run_test<
 fn mldsa_runner(path: &str) {
     let file = File::open(path).unwrap();
     let reader = BufReader::new(file);
-    let tests: MlDsaSigGen = serde_json::from_reader(reader).unwrap();
+    let tests: MlDsaSigVer = serde_json::from_reader(reader).unwrap();
 
     let mut tests_run = 0;
     for test_group in tests.testGroups.iter() {
@@ -118,7 +111,7 @@ fn mldsa_runner(path: &str) {
 
         match test_group.parameterSet.as_str() {
             "ML-DSA-44" => run_test::<
-                { MlDsa44::PRIVATE_KEY_SIZE },
+                { MlDsa44::PUBLIC_KEY_SIZE },
                 { MlDsa44::SIGNATURE_SIZE },
                 { MlDsa44::CLEN },
                 { MlDsa44::COMMITMENT_HASH_LEN },
@@ -128,7 +121,7 @@ fn mldsa_runner(path: &str) {
                 MlDsa44,
             >(test_group, &mut tests_run),
             "ML-DSA-65" => run_test::<
-                { MlDsa65::PRIVATE_KEY_SIZE },
+                { MlDsa65::PUBLIC_KEY_SIZE },
                 { MlDsa65::SIGNATURE_SIZE },
                 { MlDsa65::CLEN },
                 { MlDsa65::COMMITMENT_HASH_LEN },
@@ -138,7 +131,7 @@ fn mldsa_runner(path: &str) {
                 MlDsa65,
             >(test_group, &mut tests_run),
             "ML-DSA-87" => run_test::<
-                { MlDsa87::PRIVATE_KEY_SIZE },
+                { MlDsa87::PUBLIC_KEY_SIZE },
                 { MlDsa87::SIGNATURE_SIZE },
                 { MlDsa87::CLEN },
                 { MlDsa87::COMMITMENT_HASH_LEN },
@@ -151,10 +144,10 @@ fn mldsa_runner(path: &str) {
         }
     }
 
-    assert_eq!(tests_run, 270);
+    assert_eq!(tests_run, 135);
 }
 
 #[test]
-fn test_acvp_mldsa_siggen() {
-    mldsa_runner("./tests/test_data/third_party/nist/ML-DSA/ml_dsa_siggen_internalProjection.json");
+fn test_acvp_mldsa_sigver() {
+    mldsa_runner("./tests/test_data/third_party/nist/ML-DSA/ml_dsa_sigver_internalProjection.json");
 }
