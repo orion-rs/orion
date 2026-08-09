@@ -24,7 +24,7 @@ use core::marker::PhantomData;
 use core::ops::{Add, Mul, Sub};
 use core::ops::{Index, IndexMut};
 
-use subtle::{Choice, ConstantTimeEq, ConstantTimeLess};
+use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess};
 
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
@@ -172,6 +172,41 @@ impl FieldElement<Standard> {
         let range = 2 * bound - 1;
         !conditional_sub_u32(self.0 + bound - 1).ct_lt(&range)
     }
+    
+    /// FIPS-204, Algorithm 36.
+    /// Returns (r1, r0) with r = r1*2γ2 + r0 (mod q)
+    pub(crate) fn decompose<P: MlDsaParameters>(&self) -> (u32, u32) {
+        debug_assert!(self.0 < DILITHIUM_Q);
+        // 2γ2
+        let two_gamma2= 2 * P::GAMMA_2;
+        
+        let mut r1 = (self.0 * P::DECOMPOSE_BARRETT_M) >> P::DECOMPOSE_BARRETT_SHIFT;
+        let mut rem = self.0 - r1 * two_gamma2;
+        debug_assert!((0..2*two_gamma2).contains(&rem));
+
+        let c = (rem.wrapping_sub(two_gamma2) >> 31) ^ 1;
+        r1 += c;
+        rem -= c * two_gamma2;
+        debug_assert!((0..two_gamma2).contains(&rem));
+        r1 += (rem.wrapping_sub(P::GAMMA_2 + 1) >> 31) ^ 1;
+
+        let mask = 0u32.wrapping_sub(P::DECOMPOSE_W1_MAX.wrapping_sub(r1) >> 31);
+        r1 &= !mask;
+
+        let r0 = conditional_sub_u32(self.0 + DILITHIUM_Q - r1 * two_gamma2);
+
+        (r1, r0)
+    }
+
+    /// FIPS-204, Algorithm 37.
+      pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> u32 {
+          self.decompose::<P>().0
+      }
+  
+      /// FIPS-204, Algorithm 38.
+      pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> u32 {
+          self.decompose::<P>().1
+      }
 }
 
 impl<D: Domain> FieldElement<D> {
@@ -251,6 +286,29 @@ impl RingElement {
 
         ret.ct_ne(&Choice::from(0u8))
     }
+
+    /// FIPS-204, Algorithm 36 (component-wise form sec. 7.4)
+    pub(crate) fn decompose<P: MlDsaParameters>(&self) -> (Self, Self) {
+        let mut w1 = Self::zero();
+        let mut w0 = Self::zero();
+        for idx in 0..256 {
+            let (r1, r0) = self[idx].decompose::<P>();
+            w1[idx] = FieldElement::new(r1);
+            w0[idx] = FieldElement::new(r0);
+        }
+
+        (w1, w0)
+    }
+
+    /// FIPS-204, Algorithm 37.
+      pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> Self {
+          self.decompose::<P>().0
+      }
+
+    /// FIPS-204, Algorithm 38.
+      pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> Self {
+          self.decompose::<P>().1
+      }
 
     #[cfg(all(test, feature = "safe_api"))]
     pub(crate) fn random_element() -> Self {
@@ -449,6 +507,29 @@ impl<const N: usize> Vector<N> {
 
         (t1, t0)
     }
+
+    /// FIPS-204, Algorithm 36 (component-wise form sec. 7.4)
+    pub(crate) fn decompose<P: MlDsaParameters>(&self) -> (Self, Self) {
+        let mut w1 = Self::zero();
+        let mut w0 = Self::zero();
+        for idx in 0..256 {
+            let (r1, r0) = self.elems[idx].decompose::<P>();
+            w1.elems[idx] = r1;
+            w0.elems[idx] = r0;
+        }
+
+        (w1, w0)
+    }
+
+    /// FIPS-204, Algorithm 37.
+      pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> Self {
+          self.decompose::<P>().0
+      }
+
+    /// FIPS-204, Algorithm 38.
+      pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> Self {
+          self.decompose::<P>().1
+      }
 }
 
 impl<const N: usize> Add for Vector<N> {

@@ -93,6 +93,7 @@ pub(crate) fn sample_in_ball<P: MlDsaParameters>(
     Ok(c)
 }
 
+#[derive(Debug)]
 pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
     mat: [VectorNTT<L, Standard>; K],
 }
@@ -224,14 +225,14 @@ pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
 pub(crate) fn expand_mask<const CLEN: usize, const K: usize, const L: usize, P: MlDsaParameters>(
     seed: &[u8],
     mu: u32,
-) -> Result<[RingElement; L], UnknownCryptoError> {
+) -> Result<Vector<L>, UnknownCryptoError> {
     // TODO: Is there a range of valid numbers for mu? or does it need checked arithmetic?
 
     debug_assert_eq!(K, P::DIM_K);
     debug_assert_eq!(L, P::DIM_L);
     debug_assert_eq!(seed.len(), 64);
 
-    let mut y = [RingElement::zero(); L];
+    let mut y = Vector::<L>::zero();
     let mut v = [0u8; CLEN];
 
     let mut ctx = Shake256::new();
