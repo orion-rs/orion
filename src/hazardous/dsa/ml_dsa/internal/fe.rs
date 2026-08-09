@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::ops::{Add, Mul, Neg, Sub};
 use core::ops::{Index, IndexMut};
@@ -310,6 +311,13 @@ pub struct RingElement {
     pub coefficients: [FieldElement<Standard>; 256],
 }
 
+#[cfg(feature = "zeroize")]
+impl Zeroize for RingElement {
+    fn zeroize(&mut self) {
+        self.coefficients.iter_mut().zeroize();
+    }
+}
+
 impl RingElement {
     pub fn zero() -> Self {
         Self {
@@ -419,6 +427,13 @@ impl IndexMut<usize> for RingElement {
 /// Element in T_q.
 pub struct RingElementNTT<D: Domain> {
     pub coefficients: [FieldElement<D>; 256],
+}
+
+#[cfg(feature = "zeroize")]
+impl<D: Domain> Zeroize for RingElementNTT<D> {
+    fn zeroize(&mut self) {
+        self.coefficients.iter_mut().zeroize();
+    }
 }
 
 impl<D: Domain> RingElementNTT<D> {
@@ -745,6 +760,14 @@ impl<const N: usize, D: Domain> IndexMut<usize> for VectorNTT<N, D> {
 /// Hint used during signing/verification. Values are only ever [0, 1].
 pub(crate) struct Hint<const K: usize> {
     pub(crate) bits: [[u8; 256]; K],
+}
+
+impl<const K: usize> Debug for Hint<K> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Hint")
+            .field("bits", b"{{ OMITTED }}")
+            .finish()
+    }
 }
 
 impl<const K: usize> Hint<K> {

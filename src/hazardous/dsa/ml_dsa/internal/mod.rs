@@ -26,6 +26,7 @@ use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater};
 
 use crate::{
     errors::UnknownCryptoError,
+    generics::sealed::{Data, Sealed, TryFromBytes},
     hazardous::{
         dsa::ml_dsa::internal::{
             fe::{FieldElement, Hint, RingElement, Standard, Vector, VectorNTT},
@@ -825,6 +826,7 @@ impl<
     }
 }
 
+// TODO: Make this Debug OMITTED
 #[derive(Debug)]
 /// TODO: THIS SHOULD BE INTERNAL
 pub struct InternalSigningKey<
@@ -921,8 +923,11 @@ impl<
     pub fn sign_internal_with_mu(
         &self,
         mu: &[u8; 64],
-        rnd: &[u8; 32],
-    ) -> Result<[u8; SIG_ENCODED_SIZE], UnknownCryptoError> {
+        rnd: &[u8],
+    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
+    {
+        debug_assert_eq!(rnd.len(), 32);
+
         let mut h = Shake256::new();
         h.absorb(&self.k)?;
         h.absorb(rnd)?;
@@ -987,15 +992,24 @@ impl<
         let mut sigma = [0u8; SIG_ENCODED_SIZE];
         P::sig_encode::<K, L, COMMITHASH_LEN>(&c_tilde, &z, &hint, &mut sigma);
 
-        Ok(sigma)
+        Ok(InternalSignature {
+            sig: sigma,
+            c: c_tilde,
+            z,
+            h: hint,
+            _phantom: PhantomData,
+        })
     }
 
     /// FIPS-204, Algorithm 7.
     pub fn sign_internal(
         &self,
         mprime: &[&[u8]],
-        rnd: &[u8; 32],
-    ) -> Result<[u8; SIG_ENCODED_SIZE], UnknownCryptoError> {
+        rnd: &[u8],
+    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
+    {
+        debug_assert_eq!(rnd.len(), 32);
+
         let mut h = Shake256::new();
         h.absorb(&self.tr_hash)?;
         for mpart in mprime {
@@ -1012,8 +1026,11 @@ impl<
         &self,
         m: &[u8],
         ctx: &[u8],
-        rnd: &[u8; 32],
-    ) -> Result<[u8; SIG_ENCODED_SIZE], UnknownCryptoError> {
+        rnd: &[u8],
+    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
+    {
+        debug_assert_eq!(rnd.len(), 32);
+
         if ctx.len() > 255 {
             return Err(UnknownCryptoError);
         }
@@ -1025,11 +1042,15 @@ impl<
         &self,
         m: &[u8],
         ctx: &[u8],
-    ) -> Result<[u8; SIG_ENCODED_SIZE], UnknownCryptoError> {
+    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
+    {
         self.sign(m, ctx, &[0u8; 32])
     }
 
-    pub fn sign_hedged(&self) -> Result<(), UnknownCryptoError> {
+    pub fn sign_hedged(
+        &self,
+    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
+    {
         unimplemented!();
     }
 }
@@ -1116,16 +1137,15 @@ impl<
     pub fn verify_internal_with_mu(
         &self,
         mu: &[u8; 64],
-        sigma: &[u8],
+        sigma: &InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>,
     ) -> Result<(), UnknownCryptoError> {
-        let (c_tilde, z, hint) = P::sig_decode::<K, L, COMMITHASH_LEN>(sigma)?;
-        let c = sample_in_ball::<P>(&c_tilde)?;
+        let c = sample_in_ball::<P>(&sigma.c)?;
         // Az − ct1 ⋅ 2d
-        let w_approx = ((&self.mat_a_hat * &z.ntt())
+        let w_approx = ((&self.mat_a_hat * &sigma.z.ntt())
             - (&c.into_ntt() * &self.t1.shift_left_d::<P>().ntt()))
             .inverse_ntt_mont();
 
-        let w1 = w_approx.use_hint::<P>(&hint);
+        let w1 = w_approx.use_hint::<P>(&sigma.h);
         let mut c_tilde_prime = [0u8; COMMITHASH_LEN];
         let mut w1encoded = [0u8; W1_ENCODE_SIZE];
         P::w1_encode(&w1, &mut w1encoded);
@@ -1139,7 +1159,8 @@ impl<
         // what can be learned of anything? There's no secret data
         // dervied anywhere in this codepath...
         if bool::from(
-            !z.is_outside_bound(P::GAMMA_1 - P::BETA) & c_tilde.as_slice().ct_eq(&c_tilde_prime),
+            !sigma.z.is_outside_bound(P::GAMMA_1 - P::BETA)
+                & sigma.c.as_slice().ct_eq(&c_tilde_prime),
         ) {
             Ok(())
         } else {
@@ -1151,7 +1172,7 @@ impl<
     pub fn verify_internal(
         &self,
         mprime: &[&[u8]],
-        sigma: &[u8],
+        sigma: &InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>,
     ) -> Result<(), UnknownCryptoError> {
         let mut tr = [0u8; 64];
         let mut h = Shake256::new();
@@ -1170,7 +1191,12 @@ impl<
     }
 
     /// FIPS-204, Algorithm 3.
-    pub fn verify(&self, m: &[u8], sigma: &[u8], ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+    pub fn verify(
+        &self,
+        m: &[u8],
+        sigma: &InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>,
+        ctx: &[u8],
+    ) -> Result<(), UnknownCryptoError> {
         if ctx.len() > 255 {
             return Err(UnknownCryptoError);
         }
@@ -1179,6 +1205,494 @@ impl<
 
     pub fn verify_hedged(&self) -> Result<(), UnknownCryptoError> {
         unimplemented!();
+    }
+}
+
+#[derive(Debug)]
+/// TODO: THIS SHOULD BE INTERNAL
+pub struct InternalSignature<
+    const SIGNATURE_SIZE: usize,
+    const COMMITHASH_LEN: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> {
+    pub sig: [u8; SIGNATURE_SIZE],
+    pub c: [u8; COMMITHASH_LEN],
+    pub z: Vector<L>,
+    pub h: Hint<K>,
+    _phantom: PhantomData<P>,
+}
+
+impl<
+    const SIGNATURE_SIZE: usize,
+    const COMMITHASH_LEN: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> TryFrom<&[u8]> for InternalSignature<SIGNATURE_SIZE, COMMITHASH_LEN, K, L, P>
+{
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let (c, z, h) = P::sig_decode::<K, L, COMMITHASH_LEN>(value)?;
+
+        Ok(Self {
+            sig: value.try_into().expect("sig_decode() checked"),
+            c,
+            z,
+            h,
+            _phantom: PhantomData,
+        })
+    }
+}
+
+// TODO: either have signature type here or one level up in modules
+// for each variant.
+
+// TypePrimitive + TypeData + Data impls for InternalSigningKey and InternalVerifyingKey
+
+impl<
+    const SIGNATURE_SIZE: usize,
+    const COMMITHASH_LEN: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> Sealed for InternalSignature<SIGNATURE_SIZE, COMMITHASH_LEN, K, L, P>
+{
+}
+
+impl<
+    const SIGNATURE_SIZE: usize,
+    const COMMITHASH_LEN: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> AsRef<[u8]> for InternalSignature<SIGNATURE_SIZE, COMMITHASH_LEN, K, L, P>
+{
+    fn as_ref(&self) -> &[u8] {
+        &self.sig
+    }
+}
+
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> Sealed
+    for InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+}
+
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> AsRef<[u8]>
+    for InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    // NOTE(brycx): required by `Data`, user-facing API
+    // does not expose this directly.
+    fn as_ref(&self) -> &[u8] {
+        &self.sk
+    }
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> Sealed
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> AsRef<[u8]>
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    // NOTE(brycx): required by `Data`, user-facing API
+    // does not expose this directly.
+    fn as_ref(&self) -> &[u8] {
+        &self.pk
+    }
+}
+
+// NOTE: unimplemented!() for trait-required methods that are not applicable to this
+// scenario using SigningKey<> and VerifyingKey<>.
+
+impl<
+    const SIGNATURE_SIZE: usize,
+    const COMMITHASH_LEN: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> AsMut<[u8]> for InternalSignature<SIGNATURE_SIZE, COMMITHASH_LEN, K, L, P>
+{
+    fn as_mut(&mut self) -> &mut [u8] {
+        unimplemented!("CORRECTNESS: VerifyingKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<
+    const SIGNATURE_SIZE: usize,
+    const COMMITHASH_LEN: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> AsMut<[u8; SIGNATURE_SIZE]> for InternalSignature<SIGNATURE_SIZE, COMMITHASH_LEN, K, L, P>
+{
+    fn as_mut(&mut self) -> &mut [u8; SIGNATURE_SIZE] {
+        unimplemented!("CORRECTNESS: VerifyingKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> AsMut<[u8]>
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn as_mut(&mut self) -> &mut [u8] {
+        unimplemented!("CORRECTNESS: VerifyingKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> AsMut<[u8]>
+    for InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn as_mut(&mut self) -> &mut [u8] {
+        unimplemented!("CORRECTNESS: SigningKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> AsMut<[u8; PK_ENCODED_SIZE]>
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn as_mut(&mut self) -> &mut [u8; PK_ENCODED_SIZE] {
+        unimplemented!("CORRECTNESS: VerifyingKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> AsMut<[u8; SK_ENCODED_SIZE]>
+    for InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn as_mut(&mut self) -> &mut [u8; SK_ENCODED_SIZE] {
+        unimplemented!("CORRECTNESS: SigningKey is not safe to modify only on encoded bytes.")
+    }
+}
+
+impl<
+    const SIGNATURE_SIZE: usize,
+    const COMMITHASH_LEN: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> Data for InternalSignature<SIGNATURE_SIZE, COMMITHASH_LEN, K, L, P>
+{
+    fn len(&self) -> usize {
+        debug_assert_eq!(self.sig.len(), SIGNATURE_SIZE);
+        SIGNATURE_SIZE
+    }
+
+    fn is_empty(&self) -> bool {
+        SIGNATURE_SIZE == 0
+    }
+
+    fn new(_size: usize) -> Result<Self, UnknownCryptoError> {
+        unimplemented!("CORRECTNESS: Not applicable for this type.")
+    }
+
+    #[cfg(feature = "zeroize")]
+    fn memzero(&mut self) {
+        unimplemented!(
+            "SECURITY: EncapKey<> is exposed as Public and should never need memzero as part of Drop."
+        );
+    }
+}
+
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> Data
+    for InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn len(&self) -> usize {
+        debug_assert_eq!(self.sk.len(), SK_ENCODED_SIZE);
+        SK_ENCODED_SIZE
+    }
+
+    fn is_empty(&self) -> bool {
+        SK_ENCODED_SIZE == 0
+    }
+
+    fn new(_size: usize) -> Result<Self, UnknownCryptoError> {
+        unimplemented!("CORRECTNESS: Not applicable for this type.")
+    }
+
+    #[cfg(feature = "zeroize")]
+    fn memzero(&mut self) {
+        use zeroize::Zeroize;
+        self.sk.iter_mut().zeroize();
+        self.k.iter_mut().zeroize();
+        self.s1_hat.elems.iter_mut().zeroize();
+        self.s2_hat.elems.iter_mut().zeroize();
+    }
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> Data
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn len(&self) -> usize {
+        debug_assert_eq!(self.pk.len(), PK_ENCODED_SIZE);
+        PK_ENCODED_SIZE
+    }
+
+    fn is_empty(&self) -> bool {
+        PK_ENCODED_SIZE == 0
+    }
+
+    fn new(_size: usize) -> Result<Self, UnknownCryptoError> {
+        unimplemented!("CORRECTNESS: Not applicable for this type.")
+    }
+
+    #[cfg(feature = "zeroize")]
+    fn memzero(&mut self) {
+        unimplemented!(
+            "SECURITY: EncapKey<> is exposed as Public and should never need memzero as part of Drop."
+        );
+    }
+}
+
+impl<
+    const SIGNATURE_SIZE: usize,
+    const COMMITHASH_LEN: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> TryFromBytes for InternalSignature<SIGNATURE_SIZE, COMMITHASH_LEN, K, L, P>
+{
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
+        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // the TypeData::try_from_bytes(), which we define to be custom here.
+        Self::try_from(bytes)
+    }
+}
+
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> TryFromBytes
+    for InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
+        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // the TypeData::try_from_bytes(), which we define to be custom here.
+        Self::try_from(bytes)
+    }
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> TryFromBytes
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
+        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // the TypeData::try_from_bytes(), which we define to be custom here.
+        Self::try_from(bytes)
     }
 }
 
