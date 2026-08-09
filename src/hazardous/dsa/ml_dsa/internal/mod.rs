@@ -316,7 +316,7 @@ impl MlDsaParameters for MlDsa44 {
 
     fn bitunpack_ring_element_gamma(v: &[u8], w: &mut RingElement) {
         debug_assert_eq!(v.len(), 576);
-        let fe_gamma1: FieldElement = FieldElement::new(Self::GAMMA_1);
+        let fe_gamma1 = FieldElement::new(Self::GAMMA_1);
 
         for (a, blk) in w.coefficients.chunks_exact_mut(4).zip(v.chunks_exact(9)) {
             let b = |k: usize| blk[k] as u32;
@@ -382,7 +382,7 @@ impl MlDsaParameters for MlDsa65 {
 
     fn bitunpack_ring_element_gamma(v: &[u8], w: &mut RingElement) {
         debug_assert_eq!(v.len(), 640);
-        let fe_gamma1: FieldElement = FieldElement::new(Self::GAMMA_1);
+        let fe_gamma1 = FieldElement::new(Self::GAMMA_1);
 
         for (a, blk) in w.coefficients.chunks_exact_mut(2).zip(v.chunks_exact(5)) {
             let b = |k: usize| blk[k] as u32;
@@ -488,7 +488,7 @@ impl<
         let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&expanded_seed[..32])?;
         let (s1, s2) = expand_s::<K, L, P>(&expanded_seed[32..32 + 64])?;
 
-        let t = (mat_a_hat * s1.ntt()).inverse_ntt() + s2;
+        let t = (&mat_a_hat * &s1.ntt()).inverse_ntt_mont() + s2;
         let (t1, t0) = t.power2round::<P>();
         let pk = P::pk_encode::<PK_ENCODED_SIZE>(&expanded_seed[..32], &t1.elems);
 
@@ -541,7 +541,7 @@ impl<
         let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&expanded_seed[..32])?;
         let (s1, s2) = expand_s::<K, L, P>(&expanded_seed[32..32 + 64])?;
 
-        let t = (mat_a_hat * s1.ntt()).inverse_ntt() + s2;
+        let t = (&mat_a_hat * &s1.ntt()).inverse_ntt_mont() + s2;
 
         // let a: Vec<Vec<u32>> = t.elems.iter().map(|&x| x.coefficients.iter().map(|&x| x.0).collect::<Vec<u32>>()).collect();
         // println!("t: {:?}", a);

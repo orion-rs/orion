@@ -23,7 +23,8 @@
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::dsa::ml_dsa::internal::MlDsaParameters;
 use crate::hazardous::dsa::ml_dsa::internal::fe::{
-    DILITHIUM_Q, FieldElement, RingElement, RingElementNTT, Vector, VectorNTT, conditional_sub_u32,
+    DILITHIUM_Q, FieldElement, RInv, RingElement, RingElementNTT, Standard, Vector, VectorNTT,
+    conditional_sub_u32,
 };
 use crate::hazardous::hash::sha3::shake128::Shake128;
 use crate::hazardous::hash::sha3::shake256::Shake256;
@@ -31,7 +32,7 @@ use crate::hazardous::kem::ml_kem::internal::serialization::bytes_to_bits;
 use core::ops::Mul;
 
 /// FIPS-204, Algorithm 14.
-pub(crate) fn coeff_from_three_bytes(b0: u8, b1: u8, b2: u8) -> Option<FieldElement> {
+pub(crate) fn coeff_from_three_bytes(b0: u8, b1: u8, b2: u8) -> Option<FieldElement<Standard>> {
     // Combine clearing of bits and masking
     let z: u32 = ((b0 as u32) | ((b1 as u32) << 8) | ((b2 as u32) << 16)) & 0x7F_FFFF;
 
@@ -43,7 +44,7 @@ pub(crate) fn coeff_from_three_bytes(b0: u8, b1: u8, b2: u8) -> Option<FieldElem
 }
 
 /// FIPS-204, Algorithm 15.
-pub(crate) fn coeff_from_half_byte<P: MlDsaParameters>(b: u32) -> Option<FieldElement> {
+pub(crate) fn coeff_from_half_byte<P: MlDsaParameters>(b: u32) -> Option<FieldElement<Standard>> {
     // TODO: b range (0..15) len debug_assert
 
     match P::ETA {
@@ -60,58 +61,6 @@ pub(crate) fn coeff_from_half_byte<P: MlDsaParameters>(b: u32) -> Option<FieldEl
     }
 }
 
-/// FIPS-204, Algorithm 30.
-pub(crate) fn rj_ntt_poly(seed: &[u8]) -> Result<RingElementNTT, UnknownCryptoError> {
-    // TODO: seed len debug_assert
-
-    let mut a_hat = RingElementNTT::zero();
-    let mut ctx = Shake128::new();
-    ctx.absorb(seed)?;
-
-    let mut j = 0;
-    let mut buf = [0u8; 3];
-    while j < 256 {
-        ctx.squeeze(&mut buf)?;
-        if let Some(coeff) = coeff_from_three_bytes(buf[0], buf[1], buf[2]) {
-            a_hat[j] = coeff;
-            j += 1;
-        }
-    }
-
-    Ok(a_hat)
-}
-
-/// FIPS-204, Algorithm 31.
-pub(crate) fn rej_bounded_poly<P: MlDsaParameters>(
-    seed: &[u8],
-) -> Result<RingElement, UnknownCryptoError> {
-    // TODO: len check seed debug_assert
-
-    let mut j = 0;
-
-    let mut a = RingElement::zero();
-    let mut ctx = Shake256::new();
-    ctx.absorb(seed)?;
-
-    let mut z = [0u8; 1];
-    while j < 256 {
-        ctx.squeeze(&mut z)?;
-        if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) ^ 0x0F) {
-            a[j] = z0;
-            j += 1;
-        }
-
-        if j < 256
-            && let Some(z1) = coeff_from_half_byte::<P>((z[0] as u32) >> 4)
-        {
-            a[j] = z1;
-            j += 1;
-        }
-    }
-
-    Ok(a)
-}
-
 /// FIPS-204, Algorithm 29.
 pub(crate) fn sample_in_ball<P: MlDsaParameters>(
     seed: &[u8],
@@ -123,7 +72,7 @@ pub(crate) fn sample_in_ball<P: MlDsaParameters>(
     ctx.absorb(seed)?;
     let mut s = [0u8; 8];
     ctx.squeeze(&mut s)?;
-    let signs = u64::from_le_bytes(s);
+    let mut signs = u64::from_le_bytes(s);
 
     let mut h = [0u8; 64];
     bytes_to_bits(&s, &mut h);
@@ -137,20 +86,23 @@ pub(crate) fn sample_in_ball<P: MlDsaParameters>(
         let j = s[0] as usize;
         c[i] = c[j];
         c[j] = FieldElement::new(1) - FieldElement::new(2 * (signs & 1) as u32);
+
+        signs >>= 1;
     }
 
     Ok(c)
 }
 
 pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
-    mat: [VectorNTT<L>; K],
+    mat: [VectorNTT<L, Standard>; K],
 }
 
-impl<const K: usize, const L: usize> Mul<VectorNTT<L>> for MatrixNTT<K, L> {
-    type Output = VectorNTT<K>;
+impl<const K: usize, const L: usize> Mul<&VectorNTT<L, Standard>> for &MatrixNTT<K, L> {
+    type Output = VectorNTT<K, RInv>;
 
-    fn mul(self, rhs: VectorNTT<L>) -> Self::Output {
-        let mut w_hat = VectorNTT::<K>::zero();
+    /// FIPS-204, Algorithm 45 (product operator).
+    fn mul(self, rhs: &VectorNTT<L, Standard>) -> Self::Output {
+        let mut w_hat = VectorNTT::<K, RInv>::zero();
         for i in 0..K {
             for j in 0..L {
                 let mul_ntt = self.mat[i][j] * rhs[j];
@@ -170,12 +122,12 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
         debug_assert_eq!(L, P::DIM_L);
         debug_assert_eq!(seed.len(), 32);
 
-        let mut mat_hat = [VectorNTT::<L>::zero(); K];
+        let mut mat_hat = [VectorNTT::<L, Standard>::zero(); K];
         let mut ctx = Shake128::new();
         ctx.absorb(seed)?;
 
-        for r in 0..P::DIM_K {
-            for s in 0..P::DIM_L {
+        for r in 0..K {
+            for s in 0..L {
                 // FIPS-204, Algorithm 31:
 
                 // rho remains fixed for each of these invocations
@@ -201,7 +153,7 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
     }
 }
 
-/// FIPS-204, Algorithm 33 and Algorithm 31.
+/// FIPS-204, Algorithm 33 and Algorithm 30.
 /// Merged to avoid useless re-instantiations of SHAKE256.
 pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
     seed: &[u8],

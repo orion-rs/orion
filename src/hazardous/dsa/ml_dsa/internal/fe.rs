@@ -20,7 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use core::ops::{Add, AddAssign, Mul, Sub};
+use core::marker::PhantomData;
+use core::ops::{Add, Mul, Sub};
 use core::ops::{Index, IndexMut};
 
 use subtle::{Choice, ConstantTimeEq, ConstantTimeLess};
@@ -28,18 +29,19 @@ use subtle::{Choice, ConstantTimeEq, ConstantTimeLess};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
-use crate::errors::UnknownCryptoError;
 use crate::hazardous::dsa::ml_dsa::internal::MlDsaParameters;
 
 pub(crate) const DILITHIUM_Q: u32 = 8380417;
 
-pub(crate) const QINV: u32 = 58728449;
-
 /// -q^(-1) % 2^(32)
 pub(crate) const QNEGINV: u32 = 4236238847;
 
-/// R**2 % q
-pub(crate) const R2MODQ: u32 = 2365951;
+/// `256^{1} \cdot R^{2} mod q`
+pub(crate) const INV_R2: MontSquareFactor = MontSquareFactor(41978);
+
+#[cfg(test)]
+/// `256^{1} \cdot R mod q`
+pub(crate) const INV: MontFactor = MontFactor(16382);
 
 // Constant-time conditional subtraction
 pub(crate) const fn conditional_sub_u32(a: u32) -> u32 {
@@ -65,46 +67,89 @@ const fn montgomery_reduce(value: u64) -> u32 {
     conditional_sub_u32(r)
 }
 
+mod sealed {
+    pub trait Sealed {}
+}
+
+pub trait Domain: sealed::Sealed + Copy + core::fmt::Debug + PartialEq + Eq {}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// Marker for field elements in Z_q _not_ in Montgomery form.
+pub struct Standard;
+impl sealed::Sealed for Standard {}
+impl Domain for Standard {}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// Marker for field elements procuded by scaling in Montgomery multiplication.
+pub struct RInv;
+impl sealed::Sealed for RInv {}
+impl Domain for RInv {}
+
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub struct MontgomeryFieldElement(pub(crate) u32);
+/// todo
+pub struct MontFactor(pub(crate) u32);
 
-#[cfg(feature = "zeroize")]
-impl Zeroize for MontgomeryFieldElement {
-    fn zeroize(&mut self) {
-        self.0.zeroize();
+impl MontFactor {
+    pub(crate) const fn from_spec(n: u32) -> Self {
+        debug_assert!(n < DILITHIUM_Q);
+        Self(n)
     }
 }
 
-impl Mul<MontgomeryFieldElement> for MontgomeryFieldElement {
-    type Output = Self;
+impl<D: Domain> Mul<FieldElement<D>> for MontFactor {
+    type Output = FieldElement<D>;
 
-    fn mul(self, rhs: MontgomeryFieldElement) -> Self::Output {
-        let r = (self.0 as u64).overflowing_mul(rhs.0 as u64);
-        debug_assert!(!r.1);
-        Self(montgomery_reduce(r.0))
+    fn mul(self, rhs: FieldElement<D>) -> Self::Output {
+        FieldElement::<D>(montgomery_reduce(self.0 as u64 * rhs.0 as u64), PhantomData)
     }
 }
 
-impl From<FieldElement> for MontgomeryFieldElement {
-    fn from(value: FieldElement) -> Self {
-        Self(montgomery_reduce(value.0 as u64 * R2MODQ as u64))
+#[derive(Clone, Copy, PartialEq, Debug)]
+/// todo
+pub struct MontSquareFactor(pub(crate) u32);
+
+impl MontSquareFactor {
+    pub(crate) const fn apply(self, rhs: FieldElement<RInv>) -> FieldElement<Standard> {
+        FieldElement::<Standard>::new(montgomery_reduce(self.0 as u64 * rhs.0 as u64))
     }
 }
 
-impl From<MontgomeryFieldElement> for FieldElement {
-    fn from(value: MontgomeryFieldElement) -> Self {
-        Self(montgomery_reduce(value.0 as u64))
+const fn mont_factor_tables(spec: &[u32; 256]) -> [MontFactor; 256] {
+    let mut mont_spec = [MontFactor::from_spec(0); 256];
+    let mut idx = 0;
+    while idx < 256 {
+        // NOTE(brycx): for or iter not in const
+        mont_spec[idx] = MontFactor::from_spec(spec[idx]);
+        idx += 1;
     }
+
+    mont_spec
 }
+
+pub const ZETA_ALL_MONT: [MontFactor; 256] = mont_factor_tables(&ZETA_ALL_SPEC);
+pub const NEG_ZETA_ALL_MONT: [MontFactor; 256] = mont_factor_tables(&NEG_ZETA_ALL_SPEC);
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 /// Element in the field Z_q.
 ///
 /// NOTE(brycx): While for Kyber q = 3329 a field element would fit in u16, but Dilithium q = 8380417 which only fits in u32.
 /// Thus, for possible future re-usability, we use 32-bit integer here.
-pub struct FieldElement(pub(crate) u32);
+pub struct FieldElement<D: Domain>(pub(crate) u32, PhantomData<D>);
 
-impl FieldElement {
+#[cfg(feature = "zeroize")]
+impl<D: Domain> Zeroize for FieldElement<D> {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+/// Specific routines for non-Montgomery domain field elements.
+impl FieldElement<Standard> {
+    pub(crate) const fn new(n: u32) -> Self {
+        debug_assert!(n < DILITHIUM_Q);
+        Self(n, PhantomData)
+    }
+
     pub(crate) const fn power2round<P: MlDsaParameters>(&self) -> (u32, u32) {
         debug_assert!(self.0 < DILITHIUM_Q);
         let r1 = (self.0.overflowing_add((1 << (P::D - 1)) - 1).0) >> P::D;
@@ -129,34 +174,45 @@ impl FieldElement {
     }
 }
 
-impl Add for FieldElement {
+impl<D: Domain> FieldElement<D> {
+    pub(crate) const fn zero() -> Self {
+        Self(0, PhantomData)
+    }
+
+    #[cfg(test)]
+    pub(crate) const fn from_raw_u32(n: u32) -> Self {
+        Self(n, PhantomData)
+    }
+}
+
+impl<D: Domain> Add for FieldElement<D> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
         let x: u32 = self.0 + other.0;
-        Self(conditional_sub_u32(x))
+        Self(conditional_sub_u32(x), PhantomData)
     }
 }
 
-impl Sub for FieldElement {
+impl<D: Domain> Sub for FieldElement<D> {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        let x: u32 = self
-            .0
-            .overflowing_sub(other.0)
-            .0
-            .overflowing_add(DILITHIUM_Q)
-            .0;
-        Self(conditional_sub_u32(x))
+        let x: u32 = self.0.wrapping_sub(other.0).wrapping_add(DILITHIUM_Q);
+
+        Self(conditional_sub_u32(x), PhantomData)
     }
 }
 
-impl Mul for FieldElement {
-    type Output = Self;
+// Montgomery mulitplication thus output is in `RInv`.
+impl Mul for FieldElement<Standard> {
+    type Output = FieldElement<RInv>;
 
-    fn mul(self, other: Self) -> Self {
-        Self(montgomery_reduce(self.0 as u64 * other.0 as u64))
+    fn mul(self, other: Self) -> Self::Output {
+        FieldElement::<RInv>(
+            montgomery_reduce(self.0 as u64 * other.0 as u64),
+            PhantomData,
+        )
     }
 }
 
@@ -170,20 +226,7 @@ impl Mul for FieldElement {
 /// it is however illegal to operate on two polynomials from different domains
 /// at the same time.
 pub struct RingElement {
-    pub coefficients: [FieldElement; 256],
-}
-
-impl Add for RingElement {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut ret = RingElement::zero();
-        for idx in 0..256 {
-            ret.coefficients[idx] = self.coefficients[idx] + rhs.coefficients[idx];
-        }
-
-        ret
-    }
+    pub coefficients: [FieldElement<Standard>; 256],
 }
 
 impl RingElement {
@@ -193,10 +236,10 @@ impl RingElement {
         }
     }
 
-    /// NOTE: This should not be accessible by a user.
-    pub(crate) fn copy_from_ntt(ntt: &RingElementNTT) -> Self {
-        Self {
-            coefficients: ntt.coefficients,
+    pub(crate) fn into_ntt(mut self) -> RingElementNTT<Standard> {
+        to_ntt(&mut self.coefficients);
+        RingElementNTT {
+            coefficients: self.coefficients,
         }
     }
 
@@ -225,8 +268,34 @@ impl RingElement {
     }
 }
 
+impl Add for RingElement {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut ret = RingElement::zero();
+        for idx in 0..256 {
+            ret.coefficients[idx] = self.coefficients[idx] + rhs.coefficients[idx];
+        }
+
+        ret
+    }
+}
+
+impl Sub for RingElement {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut ret = RingElement::zero();
+        for idx in 0..256 {
+            ret.coefficients[idx] = self.coefficients[idx] - rhs.coefficients[idx];
+        }
+
+        ret
+    }
+}
+
 impl Index<usize> for RingElement {
-    type Output = FieldElement;
+    type Output = FieldElement<Standard>;
 
     fn index(&self, index: usize) -> &Self::Output {
         debug_assert!(index <= 255);
@@ -242,15 +311,100 @@ impl IndexMut<usize> for RingElement {
     }
 }
 
-impl FieldElement {
-    pub fn new(value: u32) -> Self {
-        debug_assert!((0..DILITHIUM_Q).contains(&value));
+#[derive(PartialEq, Debug, Clone, Copy)]
+/// Element in T_q.
+pub struct RingElementNTT<D: Domain> {
+    pub coefficients: [FieldElement<D>; 256],
+}
 
-        Self(value)
-    }
-
+impl<D: Domain> RingElementNTT<D> {
     pub fn zero() -> Self {
-        Self(0)
+        Self {
+            coefficients: [FieldElement::zero(); 256],
+        }
+    }
+}
+
+impl RingElementNTT<RInv> {
+    pub(crate) fn inverse_ntt_mont(mut self) -> RingElement {
+        inverse_ntt(&mut self.coefficients);
+
+        RingElement {
+            coefficients: core::array::from_fn(|rinv_elem| {
+                INV_R2.apply(self.coefficients[rinv_elem])
+            }),
+        }
+    }
+}
+
+#[cfg(test)]
+impl RingElementNTT<Standard> {
+    pub(crate) fn inverse_ntt(mut self) -> RingElement {
+        inverse_ntt(&mut self.coefficients);
+        for coeff in self.coefficients.iter_mut() {
+            *coeff = INV * *coeff;
+        }
+
+        RingElement {
+            coefficients: self.coefficients,
+        }
+    }
+}
+
+// FIPS-204, Algorithm 44.
+impl<D: Domain> Add for RingElementNTT<D> {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        let mut c = Self::zero();
+        for idx in 0..256 {
+            c[idx] = self[idx] + other[idx];
+        }
+
+        c
+    }
+}
+
+impl<D: Domain> Sub for RingElementNTT<D> {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        let mut c = Self::zero();
+        for idx in 0..256 {
+            c[idx] = self[idx] - other[idx];
+        }
+
+        c
+    }
+}
+
+// FIPS-204, Algorithm 45.
+impl Mul for RingElementNTT<Standard> {
+    type Output = RingElementNTT<RInv>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let mut coefficients = RingElementNTT::<RInv>::zero();
+        for idx in 0..256 {
+            coefficients[idx] = self[idx] * rhs[idx];
+        }
+
+        coefficients
+    }
+}
+
+impl<D: Domain> Index<usize> for RingElementNTT<D> {
+    type Output = FieldElement<D>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        debug_assert!(index <= 255);
+        &self.coefficients[index]
+    }
+}
+
+impl<D: Domain> IndexMut<usize> for RingElementNTT<D> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        debug_assert!(index <= 255);
+        &mut self.coefficients[index]
     }
 }
 
@@ -267,13 +421,16 @@ impl<const N: usize> Vector<N> {
         }
     }
 
-    pub fn ntt(&self) -> VectorNTT<N> {
-        let mut ntt = VectorNTT::<N>::zero();
-        for (ringelem, ntt) in self.elems.iter().zip(ntt.elems.iter_mut()) {
-            *ntt = to_ntt(&*ringelem);
+    pub fn ntt(mut self) -> VectorNTT<N, Standard> {
+        for elem in self.elems.iter_mut() {
+            to_ntt(&mut elem.coefficients);
         }
 
-        ntt
+        VectorNTT {
+            elems: self.elems.map(|elem| RingElementNTT {
+                coefficients: elem.coefficients,
+            }),
+        }
     }
 
     /// FIPS-204, Algorithm 6.
@@ -327,50 +484,32 @@ impl<const N: usize> IndexMut<usize> for Vector<N> {
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 /// Vector of ring elements/polynomials in T_q, in NTT domain.
-pub struct VectorNTT<const N: usize> {
-    pub elems: [RingElementNTT; N],
+pub struct VectorNTT<const N: usize, D: Domain> {
+    pub elems: [RingElementNTT<D>; N],
 }
 
-impl<const N: usize> Index<usize> for VectorNTT<N> {
-    type Output = RingElementNTT;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        debug_assert!(index <= N);
-
-        &self.elems[index]
+impl<const N: usize> VectorNTT<N, RInv> {
+    pub(crate) fn inverse_ntt_mont(self) -> Vector<N> {
+        Vector {
+            elems: self.elems.map(|elem| elem.inverse_ntt_mont()),
+        }
     }
 }
 
-impl<const N: usize> IndexMut<usize> for VectorNTT<N> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        debug_assert!(index <= N);
-        &mut self.elems[index]
-    }
-}
-
-impl<const N: usize> VectorNTT<N> {
+impl<const N: usize, D: Domain> VectorNTT<N, D> {
     pub fn zero() -> Self {
         Self {
             elems: [RingElementNTT::zero(); N],
         }
     }
-
-    pub fn inverse_ntt(&self) -> Vector<N> {
-        let mut ntt_inv = Vector::<N>::zero();
-        for (ntt, inv_ntt) in self.elems.iter().zip(ntt_inv.elems.iter_mut()) {
-            *inv_ntt = inverse_ntt(&ntt);
-        }
-
-        ntt_inv
-    }
 }
 
-impl<const N: usize> Add for VectorNTT<N> {
+impl<const N: usize, D: Domain> Add for VectorNTT<N, D> {
     type Output = Self;
 
     /// FIPS-204, Algorithm 46.
     fn add(self, rhs: Self) -> Self::Output {
-        let mut ret = VectorNTT::<N>::zero();
+        let mut ret = VectorNTT::<N, D>::zero();
         for idx in 0..N {
             ret.elems[idx] = self.elems[idx] + rhs.elems[idx];
         }
@@ -379,72 +518,36 @@ impl<const N: usize> Add for VectorNTT<N> {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
-/// Element in T_q.
-pub struct RingElementNTT {
-    pub coefficients: [FieldElement; 256],
-}
-
-// FIPS-204, Algorithm 44.
-impl Add for RingElementNTT {
+impl<const N: usize, D: Domain> Sub for VectorNTT<N, D> {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
-        let mut c = Self::zero();
-        for idx in 0..256 {
-            c[idx] = self[idx] + other[idx];
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut ret = VectorNTT::<N, D>::zero();
+        for idx in 0..N {
+            ret.elems[idx] = self.elems[idx] - rhs.elems[idx];
         }
 
-        c
+        ret
     }
 }
 
-// FIPS-204, Algorithm 45.
-impl Mul for RingElementNTT {
-    type Output = Self;
-
-    fn mul(self, other: Self) -> Self {
-        let mut c = Self::zero();
-        for idx in 0..256 {
-            c[idx] = self[idx] * other[idx];
-        }
-
-        c
-    }
-}
-
-impl RingElementNTT {
-    pub fn zero() -> Self {
-        Self {
-            coefficients: [FieldElement::zero(); 256],
-        }
-    }
-
-    /// NOTE: This should not be accessible by a user.
-    pub(crate) fn copy_from_non_ntt(not_ntt: &RingElement) -> Self {
-        Self {
-            coefficients: not_ntt.coefficients,
-        }
-    }
-}
-
-impl Index<usize> for RingElementNTT {
-    type Output = FieldElement;
+impl<const N: usize, D: Domain> Index<usize> for VectorNTT<N, D> {
+    type Output = RingElementNTT<D>;
 
     fn index(&self, index: usize) -> &Self::Output {
-        debug_assert!(index <= 255);
-        &self.coefficients[index]
+        debug_assert!(index <= N);
+        &self.elems[index]
     }
 }
 
-impl IndexMut<usize> for RingElementNTT {
+impl<const N: usize, D: Domain> IndexMut<usize> for VectorNTT<N, D> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        debug_assert!(index <= 255);
-        &mut self.coefficients[index]
+        debug_assert!(index <= N);
+        &mut self.elems[index]
     }
 }
 
-pub(crate) const ZETA_ALL: [u32; 256] = [
+pub(crate) const ZETA_ALL_SPEC: [u32; 256] = [
     4193792, 25847, 5771523, 7861508, 237124, 7602457, 7504169, 466468, 1826347, 2353451, 8021166,
     6288512, 3119733, 5495562, 3111497, 2680103, 2725464, 1024112, 7300517, 3585928, 7830929,
     7260833, 2619752, 6271868, 6262231, 4520680, 6980856, 5102745, 1757237, 8360995, 4010497,
@@ -473,7 +576,7 @@ pub(crate) const ZETA_ALL: [u32; 256] = [
     1976782,
 ];
 
-pub(crate) const NEG_ZETA_ALL: [u32; 256] = [
+pub(crate) const NEG_ZETA_ALL_SPEC: [u32; 256] = [
     4186625, 8354570, 2608894, 518909, 8143293, 777960, 876248, 7913949, 6554070, 6026966, 359251,
     2091905, 5260684, 2884855, 5268920, 5700314, 5654953, 7356305, 1079900, 4794489, 549488,
     1119584, 5760665, 2108549, 2118186, 3859737, 1399561, 3277672, 6623180, 19422, 4369920,
@@ -503,70 +606,50 @@ pub(crate) const NEG_ZETA_ALL: [u32; 256] = [
 ];
 
 // FIPS-204, Algorithm 41.
-pub fn to_ntt(w: &RingElement) -> RingElementNTT {
+pub fn to_ntt(coefficients: &mut [FieldElement<Standard>; 256]) {
     let mut m = 0;
     let mut len = 128;
-    let mut w_hat = RingElementNTT::copy_from_non_ntt(w);
 
     while len >= 1 {
         let mut start = 0;
         while start < 256 {
             m += 1;
-            let z = ZETA_ALL[m] as u64;
+            let z = ZETA_ALL_MONT[m];
 
-            for j in start..(start + len) {
-                let t: FieldElement =
-                    FieldElement::new(montgomery_reduce(z * (w_hat[j + len].0 as u64)));
-                w_hat[j + len] = w_hat[j] - t;
-                w_hat[j] = w_hat[j] + t;
+            let (lo, hi) = coefficients[start..start + 2 * len].split_at_mut(len);
+            for (a, b) in lo.iter_mut().zip(hi.iter_mut()) {
+                let t = z.mul(*b);
+                *b = *a - t;
+                *a = *a + t;
             }
             start += 2 * len;
         }
         len >>= 1; // Same as division by 2
     }
-
-    w_hat
 }
 
 // FIPS-204, Algorithm 41.
-pub fn inverse_ntt(w_hat: &RingElementNTT) -> RingElement {
-    debug_assert!(
-        w_hat.coefficients.iter().all(|&c| c.0 < DILITHIUM_Q),
-        "input must be canonical"
-    );
-
-    const N_INV: u32 = 8347681;
-    // Montgomery scaling was off
-    //const N_INV_MONT: FieldElement = FieldElement(montgomery_reduce(N_INV as u64 * R2MODQ as u64));
-    const N_INV_MONT: FieldElement = FieldElement(41978);
-
-    let mut w = RingElement::copy_from_ntt(w_hat);
-
+pub fn inverse_ntt<D: Domain>(coefficients: &mut [FieldElement<D>; 256]) {
     let mut len = 1;
     let mut m = 256;
+
     while len < 256 {
         let mut start = 0;
         while start < 256 {
             m -= 1;
-            let z = NEG_ZETA_ALL[m] as u64;
+            let z = NEG_ZETA_ALL_MONT[m];
 
-            for j in start..(start + len) {
-                let t: FieldElement = w[j];
-                w[j] = t + w[j + len];
-                w[j + len] = t - (w[j + len]);
-                w[j + len] = FieldElement::new(montgomery_reduce(z * w[j + len].0 as u64));
+            let (lo, hi) = coefficients[start..start + 2 * len].split_at_mut(len);
+            for (a, b) in lo.iter_mut().zip(hi.iter_mut()) {
+                let t = *a;
+                *a = t + *b;
+                *b = z * (t - *b);
             }
 
             start += 2 * len;
         }
         len *= 2;
     }
-
-    for fe in w.coefficients.iter_mut() {
-        *fe = *fe * N_INV_MONT;
-    }
-
-    w
 }
 
 #[cfg(all(test, feature = "safe_api"))]
@@ -577,22 +660,22 @@ mod test_ntt_transform {
     fn neg_zetas_correctly_negated() {
         for i in 0..256 {
             assert_eq!(
-                (ZETA_ALL[i] as u64 + NEG_ZETA_ALL[i] as u64) % DILITHIUM_Q as u64,
+                (ZETA_ALL_SPEC[i] as u64 + NEG_ZETA_ALL_SPEC[i] as u64) % DILITHIUM_Q as u64,
                 0
             );
-            assert_eq!(NEG_ZETA_ALL[i], DILITHIUM_Q - ZETA_ALL[i]);
-            assert!(NEG_ZETA_ALL[i] > 0 && NEG_ZETA_ALL[i] < DILITHIUM_Q);
+            assert_eq!(NEG_ZETA_ALL_SPEC[i], DILITHIUM_Q - ZETA_ALL_SPEC[i]);
+            assert!(NEG_ZETA_ALL_SPEC[i] > 0 && NEG_ZETA_ALL_SPEC[i] < DILITHIUM_Q);
         }
     }
 
     #[test]
     fn test_to_from_ntt_roundtrips() {
         for _ in 0..100 {
-            let f: RingElement = RingElement::random_element();
-            let f_hat: RingElementNTT = to_ntt(&RingElement::random_element());
+            let f = RingElement::random_element();
+            assert_eq!(f, f.into_ntt().inverse_ntt());
 
-            assert_eq!(f, inverse_ntt(&to_ntt(&f)),);
-            assert_eq!(f_hat, to_ntt(&inverse_ntt(&f_hat)));
+            let f_hat = RingElement::random_element().into_ntt();
+            assert_eq!(f_hat, f_hat.inverse_ntt().into_ntt());
         }
     }
 }
@@ -600,6 +683,12 @@ mod test_ntt_transform {
 #[cfg(test)]
 mod test_arithmetic {
     use super::*;
+
+    /// R mod Q, where R is the montgomery value 2**32
+    const R: u64 = 4193792;
+
+    /// R^{-1} mod Q
+    const R_INV: u64 = 8265825;
 
     const EDGE_CASE_TRIGGERS: &[u32] = &[
         0,
@@ -627,26 +716,37 @@ mod test_arithmetic {
     }
 
     #[test]
-    fn test_mont_domain_mapping() {
-        assert_eq!(
-            MontgomeryFieldElement::from(FieldElement::new(1)).0,
-            4193792u32,
-        );
+    fn test_montgomery_reduce() {
+        // Output: n * R^{-1} mod Q
+        // Considered canonical for any n < Q * 2^{32}.
 
-        for value in 2..DILITHIUM_Q {
-            let fe = FieldElement::new(value);
-            let mont_fe: MontgomeryFieldElement = fe.into();
-            let fe_roundtrip: FieldElement = mont_fe.into();
+        let limit = (DILITHIUM_Q as u64) << 32;
+        let probes = [
+            0u64,
+            1,
+            (DILITHIUM_Q as u64) - 1,
+            (DILITHIUM_Q as u64),
+            (DILITHIUM_Q as u64) + 1,
+            (DILITHIUM_Q as u64 - 1).pow(2),
+            9 * (DILITHIUM_Q as u64) * ((DILITHIUM_Q as u64) - 1),
+            limit - 1,
+        ];
 
-            assert_eq!(fe, fe_roundtrip);
+        for v in probes {
+            let r = montgomery_reduce(v);
+            assert!(r < DILITHIUM_Q);
+            assert_eq!(
+                r as u64,
+                v % (DILITHIUM_Q as u64) * R_INV % (DILITHIUM_Q as u64)
+            );
         }
     }
 
-    #[test]
-    fn test_field_ops_add() {
+    fn field_ops_add<D: Domain>() {
         for x in EDGE_CASE_TRIGGERS {
             for y in 0..DILITHIUM_Q {
-                let fe_add_ret = FieldElement(*x) + FieldElement(y);
+                let fe_add_ret =
+                    FieldElement::<D>::from_raw_u32(*x) + FieldElement::<D>::from_raw_u32(y);
                 let num_add_ret = (x + y) % DILITHIUM_Q;
 
                 assert!(fe_add_ret.0 < DILITHIUM_Q);
@@ -655,11 +755,11 @@ mod test_arithmetic {
         }
     }
 
-    #[test]
-    fn test_field_ops_sub() {
+    fn field_ops_sub<D: Domain>() {
         for x in EDGE_CASE_TRIGGERS {
             for y in 0..DILITHIUM_Q {
-                let fe_sub_ret = FieldElement(*x) - FieldElement(y);
+                let fe_sub_ret =
+                    FieldElement::<D>::from_raw_u32(*x) - FieldElement::<D>::from_raw_u32(y);
                 let num_sub_ret = (*x as i32 - y as i32 + DILITHIUM_Q as i32) % DILITHIUM_Q as i32;
 
                 assert!(fe_sub_ret.0 < DILITHIUM_Q);
@@ -669,24 +769,67 @@ mod test_arithmetic {
     }
 
     #[test]
+    fn test_field_ops_add() {
+        field_ops_add::<Standard>();
+        field_ops_add::<RInv>();
+    }
+
+    #[test]
+    fn test_field_ops_sub() {
+        field_ops_sub::<Standard>();
+        field_ops_sub::<RInv>();
+    }
+
+    #[test]
     fn test_field_ops_mul() {
         for x in EDGE_CASE_TRIGGERS {
             let xfe = FieldElement::new(*x);
 
             for y in 0..DILITHIUM_Q {
                 let yfe = FieldElement::new(y);
-
-                let fe_mul_ret =
-                    MontgomeryFieldElement::from(xfe) * MontgomeryFieldElement::from(yfe);
-                let num_sub_ret = (*x as i64 * y as i64) % DILITHIUM_Q as i64;
+                let fe_mul_ret: FieldElement<RInv> = xfe * yfe;
+                let num_sub_ret: i64 = (*x as i64 * y as i64) % DILITHIUM_Q as i64;
 
                 assert!(fe_mul_ret.0 < DILITHIUM_Q);
                 assert_eq!(
-                    fe_mul_ret.0,
-                    MontgomeryFieldElement::from(FieldElement::new(num_sub_ret as u32)).0
+                    (fe_mul_ret.0 as u64 * R) % DILITHIUM_Q as u64,
+                    num_sub_ret as u64,
                 );
-                assert_eq!(FieldElement::from(fe_mul_ret).0, num_sub_ret as u32);
             }
         }
+    }
+
+    fn centered_abs(v: u32) -> u32 {
+        // |w mod+- q|
+        if v > DILITHIUM_Q / 2 {
+            DILITHIUM_Q - v
+        } else {
+            v
+        }
+    }
+
+    #[test]
+    fn test_field_element_is_outside_bound() {
+        for &bound in &[1u32, 2, 1023, 1 << 17, (DILITHIUM_Q - 1) / 8] {
+            for v in 0..DILITHIUM_Q {
+                let actual = bool::from(FieldElement::new(v).is_outside_bound(bound));
+                assert_eq!(actual, centered_abs(v) >= bound);
+            }
+
+            for v in [
+                bound - 1,
+                bound,
+                DILITHIUM_Q - bound,
+                (DILITHIUM_Q - bound + 1) % DILITHIUM_Q, // wraparound to 0 when bound is 1
+            ] {
+                let actual = bool::from(FieldElement::new(v).is_outside_bound(bound));
+                assert_eq!(actual, centered_abs(v) >= bound);
+            }
+        }
+
+        assert!(bool::from(FieldElement::new(0).is_outside_bound(0)));
+        assert!(bool::from(
+            FieldElement::new(0).is_outside_bound((DILITHIUM_Q - 1) / 8 + 1)
+        ));
     }
 }
