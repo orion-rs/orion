@@ -578,10 +578,16 @@ impl<const N: usize> Vector<N> {
     pub(crate) fn decompose<P: MlDsaParameters>(&self) -> (Self, Self) {
         let mut w1 = Self::zero();
         let mut w0 = Self::zero();
-        for idx in 0..256 {
-            let (r1, r0) = self.elems[idx].decompose::<P>();
-            w1.elems[idx] = r1;
-            w0.elems[idx] = r0;
+
+        for ((src, hi), lo) in self
+            .elems
+            .iter()
+            .zip(w1.elems.iter_mut())
+            .zip(w0.elems.iter_mut())
+        {
+            let (r1, r0) = src.decompose::<P>();
+            *hi = r1;
+            *lo = r0;
         }
 
         (w1, w0)
@@ -776,7 +782,7 @@ impl<const K: usize> Hint<K> {
                 }
             }
 
-            out[P::OMEGA as usize + 1] = index as u8;
+            out[P::OMEGA as usize + i] = index as u8;
         }
     }
 
