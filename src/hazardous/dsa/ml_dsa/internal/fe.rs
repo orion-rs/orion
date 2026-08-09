@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 use core::marker::PhantomData;
-use core::ops::{Add, Mul, Sub};
+use core::ops::{Add, Mul, Neg, Sub};
 use core::ops::{Index, IndexMut};
 
 use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess};
@@ -172,17 +172,17 @@ impl FieldElement<Standard> {
         let range = 2 * bound - 1;
         !conditional_sub_u32(self.0 + bound - 1).ct_lt(&range)
     }
-    
+
     /// FIPS-204, Algorithm 36.
     /// Returns (r1, r0) with r = r1*2γ2 + r0 (mod q)
     pub(crate) fn decompose<P: MlDsaParameters>(&self) -> (u32, u32) {
         debug_assert!(self.0 < DILITHIUM_Q);
         // 2γ2
-        let two_gamma2= 2 * P::GAMMA_2;
-        
+        let two_gamma2 = 2 * P::GAMMA_2;
+
         let mut r1 = (self.0 * P::DECOMPOSE_BARRETT_M) >> P::DECOMPOSE_BARRETT_SHIFT;
         let mut rem = self.0 - r1 * two_gamma2;
-        debug_assert!((0..2*two_gamma2).contains(&rem));
+        debug_assert!((0..2 * two_gamma2).contains(&rem));
 
         let c = (rem.wrapping_sub(two_gamma2) >> 31) ^ 1;
         r1 += c;
@@ -199,14 +199,43 @@ impl FieldElement<Standard> {
     }
 
     /// FIPS-204, Algorithm 37.
-      pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> u32 {
-          self.decompose::<P>().0
-      }
-  
-      /// FIPS-204, Algorithm 38.
-      pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> u32 {
-          self.decompose::<P>().1
-      }
+    pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> u32 {
+        self.decompose::<P>().0
+    }
+
+    /// FIPS-204, Algorithm 38.
+    pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> u32 {
+        self.decompose::<P>().1
+    }
+
+    /// FIPS-204, Algorithm 39.
+    pub(crate) fn make_hint<P: MlDsaParameters>(&self, z: &Self) -> Choice {
+        let hibits_clean = self.high_bits::<P>();
+        let hibits_add = (*self + *z).high_bits::<P>();
+
+        hibits_clean.ct_ne(&hibits_add)
+    }
+
+    /// FIPS-204, Algorithm 40.
+    pub(crate) fn use_hint<P: MlDsaParameters>(&self, hint: u32) -> u32 {
+        debug_assert!(hint == 0 || hint == 1); // hint is bit
+
+        let (r1, r0) = self.decompose::<P>();
+        let is_positive = r0.ct_gt(&1) & P::GAMMA_2.ct_gt(&r0);
+        // r1 + 1 mod m with m W1_MAX_VALUE + 1
+        let u = r1 + 1;
+        let u = u & !0u32.wrapping_sub(P::W1_MAX_VALUE.wrapping_sub(u) >> 31);
+        // r1 - 1 mod m
+        let d = r1.wrapping_sub(1);
+        let mask = 0u32.wrapping_sub(d >> 31);
+        let d = (d & !mask) | (P::W1_MAX_VALUE & mask);
+
+        let positive_mask = 0u32.wrapping_sub(u32::from(is_positive.unwrap_u8()));
+        let adjust = (u & positive_mask) | (d & !positive_mask);
+        let hint = 0u32.wrapping_sub(hint);
+
+        (adjust & hint) | (r1 & !hint)
+    }
 }
 
 impl<D: Domain> FieldElement<D> {
@@ -248,6 +277,14 @@ impl Mul for FieldElement<Standard> {
             montgomery_reduce(self.0 as u64 * other.0 as u64),
             PhantomData,
         )
+    }
+}
+
+impl Neg for FieldElement<Standard> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self(conditional_sub_u32(DILITHIUM_Q - self.0), PhantomData)
     }
 }
 
@@ -301,14 +338,14 @@ impl RingElement {
     }
 
     /// FIPS-204, Algorithm 37.
-      pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> Self {
-          self.decompose::<P>().0
-      }
+    pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> Self {
+        self.decompose::<P>().0
+    }
 
     /// FIPS-204, Algorithm 38.
-      pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> Self {
-          self.decompose::<P>().1
-      }
+    pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> Self {
+        self.decompose::<P>().1
+    }
 
     #[cfg(all(test, feature = "safe_api"))]
     pub(crate) fn random_element() -> Self {
@@ -450,6 +487,18 @@ impl Mul for RingElementNTT<Standard> {
     }
 }
 
+impl<const N: usize> Mul<&VectorNTT<N, Standard>> for &RingElementNTT<Standard> {
+    type Output = VectorNTT<N, RInv>;
+    /// FIPS-204, Algorithm 47.
+    fn mul(self, rhs: &VectorNTT<N, Standard>) -> Self::Output {
+        let mut out = VectorNTT::<N, RInv>::zero();
+        for i in 0..N {
+            out[i] = *self * rhs[i];
+        }
+        out
+    }
+}
+
 impl<D: Domain> Index<usize> for RingElementNTT<D> {
     type Output = FieldElement<D>;
 
@@ -508,6 +557,14 @@ impl<const N: usize> Vector<N> {
         (t1, t0)
     }
 
+    pub(crate) fn is_outside_bound(&self, bound: u32) -> Choice {
+        let mut ret = Choice::from(0u8);
+        for elem in self.elems.iter() {
+            ret |= elem.is_outside_bound(bound);
+        }
+        ret
+    }
+
     /// FIPS-204, Algorithm 36 (component-wise form sec. 7.4)
     pub(crate) fn decompose<P: MlDsaParameters>(&self) -> (Self, Self) {
         let mut w1 = Self::zero();
@@ -522,24 +579,51 @@ impl<const N: usize> Vector<N> {
     }
 
     /// FIPS-204, Algorithm 37.
-      pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> Self {
-          self.decompose::<P>().0
-      }
+    pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> Self {
+        self.decompose::<P>().0
+    }
 
     /// FIPS-204, Algorithm 38.
-      pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> Self {
-          self.decompose::<P>().1
-      }
+    pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> Self {
+        self.decompose::<P>().1
+    }
 }
 
 impl<const N: usize> Add for Vector<N> {
     type Output = Self;
 
-    /// FIPS-204, Algorithm 46.
     fn add(self, rhs: Self) -> Self::Output {
         let mut ret = Vector::<N>::zero();
         for idx in 0..N {
             ret.elems[idx] = self.elems[idx] + rhs.elems[idx];
+        }
+
+        ret
+    }
+}
+
+impl<const N: usize> Sub for Vector<N> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut ret = Vector::<N>::zero();
+        for idx in 0..N {
+            ret.elems[idx] = self.elems[idx] - rhs.elems[idx];
+        }
+
+        ret
+    }
+}
+
+impl<const N: usize> Neg for Vector<N> {
+    type Output = Vector<N>;
+
+    fn neg(self) -> Self::Output {
+        let mut ret = Vector::<N>::zero();
+        for idx in 0..N {
+            for c in 0..256 {
+                ret[idx][c] = -self[idx][c];
+            }
         }
 
         ret
@@ -625,6 +709,59 @@ impl<const N: usize, D: Domain> IndexMut<usize> for VectorNTT<N, D> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         debug_assert!(index <= N);
         &mut self.elems[index]
+    }
+}
+
+/// TODO this type handles secret bytes.
+///
+/// Hint used during signing/verification. Values are only ever [0, 1].
+pub(crate) struct Hint<const N: usize> {
+    pub(crate) bits: [[u8; 256]; N],
+}
+
+impl<const K: usize> Hint<K> {
+    pub(crate) fn zero() -> Self {
+        Self {
+            bits: [[0u8; 256]; K],
+        }
+    }
+
+    /// FIPS-204, Algorithm 39, component-wise.
+    pub(crate) fn make<P: MlDsaParameters>(z: &Vector<K>, r: &Vector<K>) -> Self {
+        let mut out = Self::zero();
+        for i in 0..K {
+            for j in 0..256 {
+                out.bits[i][j] = r[i][j].make_hint::<P>(&z[i][j]).unwrap_u8();
+                debug_assert!(out.bits[i][j] == 0 || out.bits[i][j] == 1);
+            }
+        }
+        out
+    }
+
+    /// Number of 1 bits.
+    /// NOTE(brycx): This does touch secret data but there's no abort
+    /// and loop-size is constant.
+    pub(crate) fn weight(&self) -> u32 {
+        let mut n = 0u32;
+        for poly in self.bits.iter() {
+            for &b in poly.iter() {
+                n += b as u32;
+            }
+        }
+        n
+    }
+}
+
+impl<const K: usize> Vector<K> {
+    /// FIPS-204, Algorithm 40 (component-wise).
+    pub(crate) fn use_hint<P: MlDsaParameters>(&self, hint: &Hint<K>) -> Self {
+        let mut out = Self::zero();
+        for i in 0..K {
+            for j in 0..256 {
+                out[i][j] = FieldElement::new(self[i][j].use_hint::<P>(hint.bits[i][j] as u32));
+            }
+        }
+        out
     }
 }
 

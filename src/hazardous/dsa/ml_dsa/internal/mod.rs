@@ -22,13 +22,17 @@
 
 use core::{fmt::Debug, marker::PhantomData};
 
-use subtle::Choice;
+use subtle::{Choice, ConstantTimeGreater};
 
 use crate::{
-    errors::UnknownCryptoError, hazardous::{
+    errors::UnknownCryptoError,
+    hazardous::{
         dsa::ml_dsa::internal::{
-            fe::{FieldElement, RingElement, Standard, Vector, VectorNTT}, sampling::{MatrixNTT, expand_mask, expand_s},
-        }, hash::sha3::shake256::Shake256, kem::ml_kem::internal::serialization::bytes_to_bits,
+            fe::{FieldElement, Hint, RingElement, Standard, Vector, VectorNTT},
+            sampling::{MatrixNTT, expand_mask, expand_s, sample_in_ball},
+        },
+        hash::sha3::shake256::Shake256,
+        kem::ml_kem::internal::serialization::bytes_to_bits,
     },
 };
 
@@ -74,13 +78,19 @@ pub trait MlDsaParameters: Debug {
     const D: u32 = 13;
     /// bytes used to bitpack a FieldElement for this d
     const D_BITPACK_SIZE: usize = 416;
-
+    /// byte used to bitpack w1 during signing
+    const W1_BITPACK_SIZE: usize;
+    /// maximum w1 value and thus bits needed to repr
+    const W1_MAX_VALUE: u32;
+    /// "β = τ ⋅ η"
+    const BETA: u32;
+    /// "max # of 1’s in the hint h"
+    const OMEGA: u32;
 
     // Barret M for decompose()
     const DECOMPOSE_BARRETT_M: u32;
     const DECOMPOSE_BARRETT_SHIFT: u32 = 24; // fits all three paramsets
     const DECOMPOSE_W1_MAX: u32;
-
 
     const PRIVATE_KEY_SIZE: usize;
     const PUBLIC_KEY_SIZE: usize;
@@ -94,6 +104,23 @@ pub trait MlDsaParameters: Debug {
 
     /// FIPS-204, Algorithm 19.
     fn bitunpack_ring_element_gamma(v: &[u8], w: &mut RingElement);
+
+    /// FIPS-204, Algorithm 28.
+    fn bitpack_polynomial_vector_w1<const K: usize>(w1: &RingElement, out: &mut [u8]);
+
+    /// FIPS-204, Algorithm 28.
+    fn w1_encode<const K: usize>(w1: &Vector<K>, out: &mut [u8]) {
+        debug_assert_eq!(K, Self::DIM_K);
+        debug_assert_eq!(out.len(), K * Self::W1_BITPACK_SIZE);
+
+        for (poly, chunk) in w1
+            .elems
+            .iter()
+            .zip(out.chunks_exact_mut(Self::W1_BITPACK_SIZE))
+        {
+            Self::bitpack_polynomial_vector_w1::<K>(poly, chunk);
+        }
+    }
 
     /// FIPS-204, Algorithm 17.
     fn bitpack_ring_element_d(w: &RingElement, out: &mut [u8]) {
@@ -334,6 +361,12 @@ impl MlDsaParameters for MlDsa44 {
     const GAMMA_1: u32 = 1 << 17;
     const GAMMA_2: u32 = (Self::Q - 1) / 88;
 
+    const BETA: u32 = 78;
+    const OMEGA: u32 = 80;
+
+    const W1_BITPACK_SIZE: usize = 256 * 6 / 8;
+    const W1_MAX_VALUE: u32 = 43;
+
     const DECOMPOSE_BARRETT_M: u32 = 88;
     const DECOMPOSE_W1_MAX: u32 = 43;
 
@@ -387,6 +420,29 @@ impl MlDsaParameters for MlDsa44 {
             fe[7] = fe_eta - FieldElement::new((b(2) >> 5) & 7);
         }
     }
+
+    fn bitpack_polynomial_vector_w1<const K: usize>(w1: &RingElement, out: &mut [u8]) {
+        debug_assert_eq!(out.len(), Self::W1_BITPACK_SIZE);
+        debug_assert!(
+            w1.coefficients
+                .iter()
+                .all(|coeff| coeff.0 <= Self::W1_MAX_VALUE)
+        );
+
+        // three bytes will fit 4 coefficients given 6 bits per
+        for (i, o) in out.chunks_exact_mut(3).enumerate() {
+            let (a, b, c, d) = (
+                w1[4 * i].0 as u8,
+                w1[4 * i + 1].0 as u8,
+                w1[4 * i + 2].0 as u8,
+                w1[4 * i + 3].0 as u8,
+            );
+
+            o[0] = a | (b << 6);
+            o[1] = (b >> 2) | (c << 4);
+            o[2] = (c >> 4) | (d << 2);
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -402,6 +458,12 @@ impl MlDsaParameters for MlDsa65 {
     const DIM_L: usize = 5;
     const GAMMA_1: u32 = 1 << 19;
     const GAMMA_2: u32 = (Self::Q - 1) / 32;
+
+    const BETA: u32 = 196;
+    const OMEGA: u32 = 55;
+
+    const W1_BITPACK_SIZE: usize = 256 * 4 / 8;
+    const W1_MAX_VALUE: u32 = 15;
 
     const DECOMPOSE_BARRETT_M: u32 = 32;
     const DECOMPOSE_W1_MAX: u32 = 15;
@@ -443,6 +505,19 @@ impl MlDsaParameters for MlDsa65 {
             fe[1] = fe_eta - FieldElement::new((byte >> 4) as u32);
         }
     }
+
+    fn bitpack_polynomial_vector_w1<const K: usize>(w1: &RingElement, out: &mut [u8]) {
+        debug_assert_eq!(out.len(), Self::W1_BITPACK_SIZE);
+        debug_assert!(
+            w1.coefficients
+                .iter()
+                .all(|coeff| coeff.0 <= Self::W1_MAX_VALUE)
+        );
+
+        for (i, o) in out.iter_mut().enumerate() {
+            *o = w1[2 * i].0 as u8 | (w1[2 * i + 1].0 as u8) << 4;
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -458,6 +533,12 @@ impl MlDsaParameters for MlDsa87 {
     const DIM_L: usize = 7;
     const GAMMA_1: u32 = 1 << 19;
     const GAMMA_2: u32 = MlDsa65::GAMMA_2;
+
+    const BETA: u32 = 120;
+    const OMEGA: u32 = 75;
+
+    const W1_BITPACK_SIZE: usize = MlDsa65::W1_BITPACK_SIZE;
+    const W1_MAX_VALUE: u32 = MlDsa65::W1_MAX_VALUE;
 
     const DECOMPOSE_BARRETT_M: u32 = MlDsa65::DECOMPOSE_BARRETT_M;
     const DECOMPOSE_W1_MAX: u32 = MlDsa65::DECOMPOSE_W1_MAX;
@@ -480,6 +561,10 @@ impl MlDsaParameters for MlDsa87 {
     fn bitunpack_ring_element_eta(v: &[u8], w: &mut RingElement) {
         debug_assert_eq!(Self::ETA, MlDsa44::ETA);
         MlDsa44::bitunpack_ring_element_eta(v, w);
+    }
+
+    fn bitpack_polynomial_vector_w1<const K: usize>(w1: &RingElement, out: &mut [u8]) {
+        MlDsa65::bitpack_polynomial_vector_w1::<K>(w1, out);
     }
 }
 
@@ -613,6 +698,7 @@ pub struct InternalSigningKey<
     const SIG_ENCODED_SIZE: usize,
     const CLEN: usize,
     const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
     const K: usize,
     const L: usize,
     P: MlDsaParameters,
@@ -637,10 +723,21 @@ impl<
     const SIG_ENCODED_SIZE: usize,
     const CLEN: usize,
     const COMMITHASH_LEN: usize, // λ/4
+    const W1_ENCODE_SIZE: usize,
     const K: usize,
     const L: usize,
     P: MlDsaParameters,
-> TryFrom<&[u8]> for InternalSigningKey<SK_ENCODED_SIZE, SIG_ENCODED_SIZE, CLEN, COMMITHASH_LEN, K, L, P>
+> TryFrom<&[u8]>
+    for InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
 {
     type Error = UnknownCryptoError;
 
@@ -671,10 +768,21 @@ impl<
     const SIG_ENCODED_SIZE: usize,
     const CLEN: usize,
     const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
     const K: usize,
     const L: usize,
     P: MlDsaParameters,
-> InternalSigningKey<SK_ENCODED_SIZE, SIG_ENCODED_SIZE, CLEN, COMMITHASH_LEN, K, L, P>
+>
+    InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
 {
     /// FIPS-204, Algorithm 7.
     pub fn sign_deterministic(
@@ -701,18 +809,53 @@ impl<
         let mut counter = 0u32;
         let mut valid_sample = false;
 
+        // TODO: does this need zeroize?
+        let mut w1_bytes = [0u8; W1_ENCODE_SIZE];
+
+        // Commitment hash
+        // TODO: does this need zeroize?
+        let mut c_tilde = [0u8; COMMITHASH_LEN];
+
         while !valid_sample {
             let y = expand_mask::<CLEN, K, L, P>(rhoprimeprime.as_slice(), counter)?;
             let w = (&self.mat_a_hat * &y.ntt()).inverse_ntt_mont();
             let w1 = w.high_bits::<P>();
+            P::w1_encode(&w1, &mut w1_bytes);
 
             // Commitment hash
-            let mut c_tilde = [0u8; COMMITHASH_LEN];
             h.reset();
             h.absorb(&mu)?;
-            h.abs
+            h.absorb(&w1_bytes)?;
+            h.squeeze(&mut c_tilde)?;
 
+            let c = sample_in_ball::<P>(&c_tilde)?;
+            let c_hat = c.into_ntt();
+            let c_mul_s1 = (&c_hat * &self.s1_hat).inverse_ntt_mont();
+            let c_mul_s2 = (&c_hat * &self.s2_hat).inverse_ntt_mont();
+            let z = y + c_mul_s1;
 
+            let w_sub_cs2 = w - c_mul_s2;
+            let r0 = w_sub_cs2.low_bits::<P>();
+
+            if bool::from(
+                z.is_outside_bound(P::GAMMA_1 - P::BETA)
+                    | r0.is_outside_bound(P::GAMMA_2 - P::BETA),
+            ) {
+                // Rejected
+                counter += L as u32;
+                continue;
+            }
+
+            let c_mul_t0 = (&c_hat * &self.t0_hat).inverse_ntt_mont();
+            let h = Hint::<K>::make::<P>(&-c_mul_t0, &(w_sub_cs2 + c_mul_t0));
+
+            if bool::from(c_mul_t0.is_outside_bound(P::GAMMA_2) | h.weight().ct_gt(&P::OMEGA)) {
+                // Rejected
+                counter += L as u32;
+                continue;
+            }
+
+            valid_sample = true;
         }
 
         Ok([0u8; SIG_ENCODED_SIZE])
