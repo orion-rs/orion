@@ -43,8 +43,13 @@ use crate::errors::UnknownCryptoError;
 use crate::generics::sealed::Sealed;
 use crate::generics::{Public, Secret, TypeSpec};
 use crate::hazardous::dsa::ml_dsa::internal::{
-    InternalSignature, InternalSigningKey, InternalVerifyingKey, MlDsa87, MlDsaParameters,
+    InternalSignature, InternalSigningKey, InternalVerifyingKey, KeyPairInternal, MlDsa87,
+    MlDsaParameters,
 };
+
+pub use crate::hazardous::dsa::ml_dsa::MlDsaSeed;
+pub use crate::hazardous::dsa::ml_dsa::SEED_SIZE;
+pub use crate::hazardous::dsa::ml_dsa::Seed;
 
 /// Size of private [`SigningKey`].
 pub const SIGNING_KEY_SIZE: usize = MlDsa87::PRIVATE_KEY_SIZE;
@@ -141,8 +146,6 @@ impl TypeSpec for MlDsa87Signature {
     }
 }
 
-// TODO: Missing also KeyGen!
-
 // TODO:
 // impl TryFrom<&SigningKey> for Public<MlDsa44VerifyingKey> {
 //     type Error = UnknownCryptoError;
@@ -189,5 +192,67 @@ impl VerifyingKey {
     /// Given the [`VerifyingKey`], verify a signature `sig` produced over message `m` and context.
     pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
         self.data.verify(m, &sig.data, ctx)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+/// ML-DSA-87 keypair.
+pub struct KeyPair {
+    seed: Seed,
+    signing_key: SigningKey,
+    pub(crate) verifying_key: VerifyingKey,
+}
+
+impl KP<MlDsa87SigningKey, MlDsa87VerifyingKey> for KeyPair {
+    fn private(&self) -> &SigningKey {
+        &self.signing_key
+    }
+
+    fn public(&self) -> &VerifyingKey {
+        &self.verifying_key
+    }
+}
+
+impl TryFrom<&Seed> for KeyPair {
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &Seed) -> Result<Self, Self::Error> {
+        let kp = KeyPairInternal::<
+            { MlDsa87::PRIVATE_KEY_SIZE },
+            { MlDsa87::PUBLIC_KEY_SIZE },
+            { MlDsa87::SIGNATURE_SIZE },
+            { MlDsa87::CLEN },
+            { MlDsa87::COMMITMENT_HASH_LEN },
+            { MlDsa87::W1_BITPACK_SIZE * MlDsa87::DIM_K },
+            { MlDsa87::DIM_K },
+            { MlDsa87::DIM_L },
+            MlDsa87,
+        >::keygen_internal(value.unprotected_as_ref())?;
+
+        Ok(Self {
+            seed: Seed::from_data(value.data.clone()),
+            signing_key: Secret::<MlDsa87SigningKey>::from_data(kp.sk),
+            verifying_key: Public::<MlDsa87VerifyingKey>::from_data(kp.pk),
+        })
+    }
+}
+
+impl KeyPair {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    /// Generate a fresh [`KeyPair`].
+    pub fn generate() -> Result<Self, UnknownCryptoError> {
+        let seed = Seed::generate()?;
+        Self::new(seed)
+    }
+
+    /// Reference to the private [`Seed`].
+    pub fn seed(&self) -> &Seed {
+        &self.seed
+    }
+
+    /// Create a new instance from a private [`Seed`].
+    pub fn new(seed: Seed) -> Result<Self, UnknownCryptoError> {
+        Self::try_from(&seed)
     }
 }

@@ -1,8 +1,8 @@
 // ML-DSA commit: https://github.com/usnistgov/ACVP-Server/commit/2972def23bf9f3680c2c531561ed9bdd0f1086ad
 
-use orion::hazardous::dsa::ml_dsa::{
-    self,
-    internal::{MlDsa44, MlDsa65, MlDsa87, MlDsaParameters},
+use orion::{
+    KP,
+    hazardous::dsa::ml_dsa::{self, Seed, internal::MlDsaParameters},
 };
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
@@ -53,17 +53,9 @@ fn mldsa_runner(path: &str) {
                 hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
                 hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
 
-                let kp = ml_dsa::internal::KeyPair::<
-                    { MlDsa44::PRIVATE_KEY_SIZE },
-                    { MlDsa44::PUBLIC_KEY_SIZE },
-                    { MlDsa44::DIM_K },
-                    { MlDsa44::DIM_L },
-                    MlDsa44,
-                >::keygen_internal(&seed)
-                .unwrap();
-
-                assert_eq!(pk_expected, kp.pk);
-                assert_eq!(sk_expected, kp.sk);
+                let kp = ml_dsa::mldsa44::KeyPair::new(Seed::from(seed)).unwrap();
+                assert_eq!(kp.public(), &pk_expected[..]);
+                assert_eq!(kp.private(), &sk_expected[..]);
 
                 tests_run += 1;
             }
@@ -77,17 +69,11 @@ fn mldsa_runner(path: &str) {
                 hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
                 hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
 
-                let kp = ml_dsa::internal::KeyPair::<
-                    { MlDsa65::PRIVATE_KEY_SIZE },
-                    { MlDsa65::PUBLIC_KEY_SIZE },
-                    { MlDsa65::DIM_K },
-                    { MlDsa65::DIM_L },
-                    MlDsa65,
-                >::keygen_internal(&seed)
-                .unwrap();
+                let kp = ml_dsa::mldsa65::KeyPair::new(Seed::from(seed)).unwrap();
+                assert_eq!(kp.public(), &pk_expected[..]);
+                assert_eq!(kp.private(), &sk_expected[..]);
 
-                assert_eq!(pk_expected, kp.pk);
-                assert_eq!(sk_expected, kp.sk);
+                tests_run += 1;
             }
         }
 
@@ -100,17 +86,11 @@ fn mldsa_runner(path: &str) {
                 hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
                 hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
 
-                let kp = ml_dsa::internal::KeyPair::<
-                    { MlDsa87::PRIVATE_KEY_SIZE },
-                    { MlDsa87::PUBLIC_KEY_SIZE },
-                    { MlDsa87::DIM_K },
-                    { MlDsa87::DIM_L },
-                    MlDsa87,
-                >::keygen_internal(&seed)
-                .unwrap();
+                let kp = ml_dsa::mldsa87::KeyPair::new(Seed::from(seed)).unwrap();
+                assert_eq!(kp.public(), &pk_expected[..]);
+                assert_eq!(kp.private(), &sk_expected[..]);
 
-                assert_eq!(pk_expected, kp.pk);
-                assert_eq!(sk_expected, kp.sk);
+                tests_run += 1;
             }
         }
     }

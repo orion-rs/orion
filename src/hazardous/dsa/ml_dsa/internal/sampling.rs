@@ -93,7 +93,7 @@ pub(crate) fn sample_in_ball<P: MlDsaParameters>(
     Ok(c)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
     mat: [VectorNTT<L, Standard>; K],
 }
