@@ -921,7 +921,7 @@ impl<
     /// FIPS-204, Algorithm 7.
     pub fn sign_internal_deterministic(
         &self,
-        mprime: &[u8],
+        mprime: &[&[u8]],
         rnd: &[u8],
     ) -> Result<[u8; SIG_ENCODED_SIZE], UnknownCryptoError> {
         // let mut tr_bits = [0u8; 64 * u8::BITS as usize];
@@ -929,7 +929,9 @@ impl<
 
         let mut h = Shake256::new();
         h.absorb(&self.tr_hash)?;
-        h.absorb(mprime)?;
+        for mpart in mprime {
+            h.absorb(mpart)?;
+        }
         let mut mu = [0u8; 64];
         h.squeeze(&mut mu)?;
 
@@ -998,6 +1000,21 @@ impl<
         P::sig_encode::<K, L, COMMITHASH_LEN>(&c_tilde, &z, &hint, &mut sigma);
 
         Ok(sigma)
+    }
+
+    /// FIPS-204, Algorithm 2.
+    pub fn sign_deterministic(
+        &self,
+        m: &[u8],
+        ctx: &[u8],
+    ) -> Result<[u8; SIG_ENCODED_SIZE], UnknownCryptoError> {
+        if ctx.len() > 255 {
+            return Err(UnknownCryptoError);
+        }
+        // deterministic is just 32 0-byte for rnd
+        let signature =
+            self.sign_internal_deterministic(&[&[0u8, ctx.len() as u8], ctx, m], &[0u8; 32])?;
+        Ok(signature)
     }
 
     pub fn sign_hedged(&self) -> Result<(), UnknownCryptoError> {
