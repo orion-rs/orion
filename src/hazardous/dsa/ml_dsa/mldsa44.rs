@@ -47,7 +47,10 @@ use crate::hazardous::dsa::ml_dsa::internal::{
     MlDsaParameters,
 };
 
+pub use crate::hazardous::dsa::ml_dsa::ExplicitRandom;
+pub use crate::hazardous::dsa::ml_dsa::MlDsaExplicitRandom;
 pub use crate::hazardous::dsa::ml_dsa::MlDsaSeed;
+pub use crate::hazardous::dsa::ml_dsa::RAND_SIZE;
 pub use crate::hazardous::dsa::ml_dsa::SEED_SIZE;
 pub use crate::hazardous::dsa::ml_dsa::Seed;
 
@@ -166,16 +169,9 @@ impl SigningKey {
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Given the [`SigningKey`], sign a message `m` and context.
     pub fn sign(&self, m: &[u8], ctx: &[u8]) -> Result<Signature, UnknownCryptoError> {
-        use crate::util::secure_rand_bytes;
+        let rnd = ExplicitRandom::generate()?;
 
-        let mut rnd = zeroize_wrap!([0u8; 32]);
-        secure_rand_bytes(rnd.as_mut())?;
-
-        Ok(Signature::from_data(self.data.sign(
-            m,
-            ctx,
-            rnd.as_slice(),
-        )?))
+        self.sign_with_rnd(m, ctx, &rnd)
     }
 
     /// Given the [`SigningKey`], sign a message `m` and context.
@@ -184,7 +180,21 @@ impl SigningKey {
         m: &[u8],
         ctx: &[u8],
     ) -> Result<Signature, UnknownCryptoError> {
-        Ok(Signature::from_data(self.data.sign(m, ctx, &[0u8; 32])?))
+        self.sign_with_rnd(m, ctx, &ExplicitRandom::deterministic())
+    }
+
+    /// Given the [`SigningKey`], sign a message `m` and context, given specifically supplied `rnd`.
+    pub fn sign_with_rnd(
+        &self,
+        m: &[u8],
+        ctx: &[u8],
+        rnd: &ExplicitRandom,
+    ) -> Result<Signature, UnknownCryptoError> {
+        Ok(Signature::from_data(self.data.sign(
+            m,
+            ctx,
+            rnd.unprotected_as_ref(),
+        )?))
     }
 }
 

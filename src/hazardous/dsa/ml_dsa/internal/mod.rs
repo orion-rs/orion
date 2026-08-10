@@ -803,7 +803,7 @@ impl<
             sk: InternalSigningKey {
                 sk,
                 rho,
-                k: expanded_seed[32..32 + 64]
+                k: expanded_seed[32 + 64..32 + 64 + 32]
                     .try_into()
                     .expect("const-sized on 128"),
                 tr_hash: tr,
@@ -815,7 +815,7 @@ impl<
             },
             pk: InternalVerifyingKey {
                 pk,
-                rho: expanded_seed[..32].try_into().unwrap(),
+                rho,
                 t1,
                 mat_a_hat,
                 _phantom: PhantomData,

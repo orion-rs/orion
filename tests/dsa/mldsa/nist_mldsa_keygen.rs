@@ -2,7 +2,7 @@
 
 use orion::{
     KP,
-    hazardous::dsa::ml_dsa::{self, Seed, internal::MlDsaParameters},
+    hazardous::dsa::ml_dsa::{Seed, mldsa44, mldsa65, mldsa87},
 };
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
@@ -47,13 +47,13 @@ fn mldsa_runner(path: &str) {
         if test_group.parameterSet == "ML-DSA-44" {
             for test in test_group.tests.iter() {
                 let mut seed = [0u8; 32];
-                let mut sk_expected = [0u8; ml_dsa::internal::MlDsa44::PRIVATE_KEY_SIZE];
-                let mut pk_expected = [0u8; ml_dsa::internal::MlDsa44::PUBLIC_KEY_SIZE];
+                let mut sk_expected = [0u8; mldsa44::SIGNING_KEY_SIZE];
+                let mut pk_expected = [0u8; mldsa44::VERIFYING_KEY_SIZE];
                 hex::decode_to_slice(&test.seed, &mut seed).unwrap();
                 hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
                 hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
 
-                let kp = ml_dsa::mldsa44::KeyPair::new(Seed::from(seed)).unwrap();
+                let kp = mldsa44::KeyPair::new(Seed::from(seed)).unwrap();
                 assert_eq!(kp.public(), &pk_expected[..]);
                 assert_eq!(kp.private(), &sk_expected[..]);
 
@@ -63,13 +63,13 @@ fn mldsa_runner(path: &str) {
         if test_group.parameterSet == "ML-DSA-65" {
             for test in test_group.tests.iter() {
                 let mut seed = [0u8; 32];
-                let mut sk_expected = [0u8; ml_dsa::internal::MlDsa65::PRIVATE_KEY_SIZE];
-                let mut pk_expected = [0u8; ml_dsa::internal::MlDsa65::PUBLIC_KEY_SIZE];
+                let mut sk_expected = [0u8; mldsa65::SIGNING_KEY_SIZE];
+                let mut pk_expected = [0u8; mldsa65::VERIFYING_KEY_SIZE];
                 hex::decode_to_slice(&test.seed, &mut seed).unwrap();
                 hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
                 hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
 
-                let kp = ml_dsa::mldsa65::KeyPair::new(Seed::from(seed)).unwrap();
+                let kp = mldsa65::KeyPair::new(Seed::from(seed)).unwrap();
                 assert_eq!(kp.public(), &pk_expected[..]);
                 assert_eq!(kp.private(), &sk_expected[..]);
 
@@ -80,13 +80,13 @@ fn mldsa_runner(path: &str) {
         if test_group.parameterSet == "ML-DSA-87" {
             for test in test_group.tests.iter() {
                 let mut seed = [0u8; 32];
-                let mut sk_expected = [0u8; ml_dsa::internal::MlDsa87::PRIVATE_KEY_SIZE];
-                let mut pk_expected = [0u8; ml_dsa::internal::MlDsa87::PUBLIC_KEY_SIZE];
+                let mut sk_expected = [0u8; mldsa87::SIGNING_KEY_SIZE];
+                let mut pk_expected = [0u8; mldsa87::VERIFYING_KEY_SIZE];
                 hex::decode_to_slice(&test.seed, &mut seed).unwrap();
                 hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
                 hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
 
-                let kp = ml_dsa::mldsa87::KeyPair::new(Seed::from(seed)).unwrap();
+                let kp = mldsa87::KeyPair::new(Seed::from(seed)).unwrap();
                 assert_eq!(kp.public(), &pk_expected[..]);
                 assert_eq!(kp.private(), &sk_expected[..]);
 
@@ -95,7 +95,7 @@ fn mldsa_runner(path: &str) {
         }
     }
 
-    assert_eq!(tests_run, 25);
+    assert_eq!(tests_run, 75);
 }
 
 #[test]

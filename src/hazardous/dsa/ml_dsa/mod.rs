@@ -40,6 +40,9 @@ pub mod mldsa87;
 /// Size of private [`Seed`].
 pub const SEED_SIZE: usize = 32;
 
+/// Size of explicit randomness ("`rnd`") used during signing [`ExplicitRandom`].
+pub const RAND_SIZE: usize = 32;
+
 #[derive(Debug)]
 /// ML-DSA seed implementation. See [`Seed`] type for convenience.
 pub struct MlDsaSeed {}
@@ -75,6 +78,49 @@ impl GenerateSecret for MlDsaSeed {
 /// using a CSPRNG.
 pub type Seed = Secret<MlDsaSeed>;
 
+#[derive(Debug)]
+/// ML-DSA `rnd` explicit randomness implementation. See [`ExplicitRandom`] type for convenience.
+pub struct MlDsaExplicitRandom {}
+impl Sealed for MlDsaExplicitRandom {}
+
+impl TypeSpec for MlDsaExplicitRandom {
+    const NAME: &'static str = stringify!(ExplicitRandom);
+    type TypeData = ByteArrayData<RAND_SIZE>;
+}
+
+impl From<[u8; RAND_SIZE]> for Secret<MlDsaExplicitRandom> {
+    fn from(value: [u8; RAND_SIZE]) -> Self {
+        Self::from_data(<MlDsaExplicitRandom as TypeSpec>::TypeData::from(value))
+    }
+}
+
+impl ExplicitRandom {
+    /// FIPS-204 deterministic `rnd`value, which is all 0's.
+    pub fn deterministic() -> Self {
+        Self::from([0u8; RAND_SIZE])
+    }
+}
+
+impl GenerateSecret for MlDsaExplicitRandom {
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    fn generate() -> Result<Secret<MlDsaExplicitRandom>, UnknownCryptoError> {
+        let mut data = Self::TypeData::new(RAND_SIZE)?;
+        crate::util::secure_rand_bytes(&mut data.bytes)?;
+        Ok(Secret::from_data(data))
+    }
+}
+
+/// ML-KEM explicit randomness ("`m`") used during encapsulation.
+///
+/// This type exists for the purpose of deterministic operations.
+///
+/// **SECURITY**: It it crucial for the security of ML-DSA that these be generated
+/// using a CSPRNG.
+///
+/// If deterministic operation is wanted, supply with [`ExplicitRandom::deterministic()`].
+pub type ExplicitRandom = Secret<MlDsaExplicitRandom>;
+
 #[test]
 fn test_mldsa_seed() {
     use crate::test_framework::newtypes::secret::SecretNewtype;
@@ -82,4 +128,16 @@ fn test_mldsa_seed() {
 
     // Test of From<[u8; N]>
     assert_ne!(Seed::from([0u8; SEED_SIZE]), Seed::from([1u8; SEED_SIZE]));
+}
+
+#[test]
+fn test_mldsa_explicitrandom() {
+    use crate::test_framework::newtypes::secret::SecretNewtype;
+    SecretNewtype::test_with_generate::<RAND_SIZE, RAND_SIZE, RAND_SIZE, MlDsaExplicitRandom>();
+
+    // Test of From<[u8; N]>
+    assert_ne!(
+        ExplicitRandom::from([0u8; RAND_SIZE]),
+        ExplicitRandom::from([1u8; RAND_SIZE])
+    );
 }
