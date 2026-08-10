@@ -35,22 +35,17 @@ use crate::{
             sampling::{MatrixNTT, expand_mask, expand_s, sample_in_ball},
         },
         hash::{
-            sha2::{
-                sha256::{SHA256_OUTSIZE, Sha256},
-                sha384::Sha384,
-                sha512::{SHA512_OUTSIZE, Sha512},
-            },
+            sha2::{sha256::Sha256, sha384::Sha384, sha512::Sha512},
             sha3::{
                 sha3_224::Sha3_224, sha3_256::Sha3_256, sha3_384::Sha3_384, sha3_512::Sha3_512,
                 shake128::Shake128, shake256::Shake256,
             },
         },
-        kem::ml_kem::internal::serialization::bytes_to_bits,
     },
 };
 
 mod fe;
-mod sampling;
+pub(crate) mod sampling;
 
 pub(crate) const fn bitlen(a: u32) -> u32 {
     u32::BITS - a.leading_zeros()

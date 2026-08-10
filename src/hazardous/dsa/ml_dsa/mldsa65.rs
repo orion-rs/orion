@@ -322,3 +322,68 @@ impl KeyPair {
         Self::try_from(&seed)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::hazardous::hash::sha3::shake128::Shake128;
+
+    use super::*;
+
+    // TODO: Add https://github.com/C2SP/CCTV/blob/main/ML-DSA/accumulated/README.md#field-operation-tests
+
+    #[test]
+    fn c2sp_cctv_accumulated_mldsa65() {
+        // src: https://github.com/C2SP/CCTV/commit/2ad7bcfdbf32721f43e10ccac78c3ecac1c9dfb5
+
+        let mut s = Shake128::new();
+        let mut a = Shake128::new();
+
+        let expected_100 =
+            hex::decode("8358a1843220194417cadbc2651295cd8fc65125b5a5c1a239a16dc8b57ca199")
+                .unwrap();
+        let expected_10000 =
+            hex::decode("5ff5e196f0b830c3b10a9eb5358e7c98a3a20136cb677f3ae3b90175c3ace329")
+                .unwrap();
+        let expected_60000000 =
+            hex::decode("0af0165db2b180f7a83dbecad1ccb758b9c2d834b7f801fc49dd572a9d4b1e83")
+                .unwrap();
+
+        // 60000000 takes very long..
+        // just run once before release of v0.18.0
+        let max = 10000;
+
+        let mut seed = [0u8; 32];
+        let mut result_100 = [0u8; 32];
+        let mut result_10000 = [0u8; 32];
+        let mut result_60000000 = [0u8; 32];
+
+        for n in 1..=max {
+            s.squeeze(&mut seed).unwrap();
+            let kp = KeyPair::new(Seed::from(seed)).unwrap();
+            a.absorb(kp.public().as_ref()).unwrap();
+            let sig = kp.private().sign_deterministic(b"", b"").unwrap();
+            a.absorb(sig.as_ref()).unwrap();
+            assert!(kp.public().verify(b"", b"", &sig).is_ok());
+
+            match n {
+                100 => {
+                    let mut a_ret = a.clone();
+                    a_ret.squeeze(&mut result_100).unwrap();
+                }
+                10000 => {
+                    let mut a_ret = a.clone();
+                    a_ret.squeeze(&mut result_10000).unwrap();
+                }
+                60000000 => {
+                    let mut a_ret = a.clone();
+                    a_ret.squeeze(&mut result_60000000).unwrap();
+                }
+                _ => continue,
+            }
+        }
+
+        assert_eq!(expected_100, result_100);
+        assert_eq!(expected_10000, result_10000);
+        // assert_eq!(expected_60000000, result_60000000);
+    }
+}

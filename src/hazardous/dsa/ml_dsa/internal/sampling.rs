@@ -62,9 +62,7 @@ pub(crate) fn coeff_from_half_byte<P: MlDsaParameters>(b: u32) -> Option<FieldEl
 }
 
 /// FIPS-204, Algorithm 29.
-pub(crate) fn sample_in_ball<P: MlDsaParameters>(
-    seed: &[u8],
-) -> Result<RingElement, UnknownCryptoError> {
+pub fn sample_in_ball<P: MlDsaParameters>(seed: &[u8]) -> Result<RingElement, UnknownCryptoError> {
     // TODO: len check seed debug_assert
 
     let mut c = RingElement::zero();

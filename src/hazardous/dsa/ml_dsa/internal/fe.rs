@@ -223,7 +223,7 @@ impl FieldElement<Standard> {
         debug_assert!(hint == 0 || hint == 1); // hint is bit
 
         let (r1, r0) = self.decompose::<P>();
-        let is_positive = r0.ct_gt(&1) & P::GAMMA_2.ct_gt(&r0);
+        let is_positive = !r0.ct_lt(&1) & !r0.ct_gt(&P::GAMMA_2);
         // r1 + 1 mod m with m W1_MAX_VALUE + 1
         let u = r1 + 1;
         let u = u & !0u32.wrapping_sub(P::W1_MAX_VALUE.wrapping_sub(u) >> 31);
@@ -756,9 +756,10 @@ impl<const N: usize, D: Domain> IndexMut<usize> for VectorNTT<N, D> {
 }
 
 /// TODO this type handles secret bytes.
+/// TODO: OMITTED DEBUG, PARTIALEQ, etc.
 ///
 /// Hint used during signing/verification. Values are only ever [0, 1].
-pub(crate) struct Hint<const K: usize> {
+pub struct Hint<const K: usize> {
     pub(crate) bits: [[u8; 256]; K],
 }
 
@@ -771,14 +772,14 @@ impl<const K: usize> Debug for Hint<K> {
 }
 
 impl<const K: usize> Hint<K> {
-    pub(crate) fn zero() -> Self {
+    pub fn zero() -> Self {
         Self {
             bits: [[0u8; 256]; K],
         }
     }
 
     /// FIPS-204, Algorithm 39, component-wise.
-    pub(crate) fn make<P: MlDsaParameters>(z: &Vector<K>, r: &Vector<K>) -> Self {
+    pub fn make<P: MlDsaParameters>(z: &Vector<K>, r: &Vector<K>) -> Self {
         let mut out = Self::zero();
         for i in 0..K {
             for j in 0..256 {
@@ -792,7 +793,7 @@ impl<const K: usize> Hint<K> {
     /// Number of 1 bits.
     /// NOTE(brycx): This does touch secret data but there's no abort
     /// and loop-size is constant.
-    pub(crate) fn weight(&self) -> u32 {
+    pub fn weight(&self) -> u32 {
         let mut n = 0u32;
         for poly in self.bits.iter() {
             for &b in poly.iter() {
@@ -802,7 +803,7 @@ impl<const K: usize> Hint<K> {
         n
     }
 
-    pub(crate) fn hint_bitpack<P: MlDsaParameters>(&self, out: &mut [u8]) {
+    pub fn hint_bitpack<P: MlDsaParameters>(&self, out: &mut [u8]) {
         debug_assert_eq!(out.len(), P::OMEGA as usize + K);
         // CORRECTNESS/SECURITY: This method is used durign signature encoding
         // and assumes the rejection sampling has finished before this routine is run.
@@ -822,9 +823,7 @@ impl<const K: usize> Hint<K> {
         }
     }
 
-    pub(crate) fn hint_bitunpack<P: MlDsaParameters>(
-        bytes: &[u8],
-    ) -> Result<Self, UnknownCryptoError> {
+    pub fn hint_bitunpack<P: MlDsaParameters>(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
         debug_assert_eq!(bytes.len(), P::OMEGA as usize + K);
 
         let mut hint = Self::zero();
@@ -858,7 +857,7 @@ impl<const K: usize> Hint<K> {
 
 impl<const K: usize> Vector<K> {
     /// FIPS-204, Algorithm 40 (component-wise).
-    pub(crate) fn use_hint<P: MlDsaParameters>(&self, hint: &Hint<K>) -> Self {
+    pub fn use_hint<P: MlDsaParameters>(&self, hint: &Hint<K>) -> Self {
         let mut out = Self::zero();
         for i in 0..K {
             for j in 0..256 {
