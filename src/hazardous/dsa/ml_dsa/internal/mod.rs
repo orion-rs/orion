@@ -703,6 +703,8 @@ impl MlDsaParameters for MlDsa87 {
     }
 }
 
+/// TODO: Safeguard PartialEq, Debug, Drop/Zeroize for all these structs.
+
 #[derive(Debug)]
 /// TODO: THIS SHOULD BE INTERNAL
 pub struct KeyPairInternal<
@@ -838,18 +840,14 @@ pub struct InternalSigningKey<
     const L: usize,
     P: MlDsaParameters,
 > {
-    pub sk: [u8; SK_ENCODED_SIZE],
-
-    pub rho: [u8; 32],     // public random seed,
-    pub k: [u8; 32],       // PRIVATE random seed,
-    pub tr_hash: [u8; 64], // hash of public key `tr`
-
-    pub s1_hat: VectorNTT<L, Standard>, // SECRET polyvector
-    pub s2_hat: VectorNTT<K, Standard>, // SECRET polyvector
-    pub t0_hat: VectorNTT<K, Standard>, // uncompressed public key
-
-    pub mat_a_hat: MatrixNTT<K, L>,
-
+    pub(crate) sk: [u8; SK_ENCODED_SIZE],
+    rho: [u8; 32],     // public random seed,
+    k: [u8; 32],       // PRIVATE random seed,
+    tr_hash: [u8; 64], // hash of public key `tr`
+    s1_hat: VectorNTT<L, Standard>, // SECRET polyvector
+    s2_hat: VectorNTT<K, Standard>, // SECRET polyvector
+    t0_hat: VectorNTT<K, Standard>, // uncompressed public key
+    mat_a_hat: MatrixNTT<K, L>,
     _phantom: PhantomData<P>,
 }
 
@@ -919,6 +917,7 @@ impl<
         P,
     >
 {
+    /// Signing with `mu` precomputed.
     pub fn sign_internal_with_mu(
         &self,
         mu: &[u8; 64],
@@ -1045,13 +1044,6 @@ impl<
     {
         self.sign(m, ctx, &[0u8; 32])
     }
-
-    pub fn sign_hedged(
-        &self,
-    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
-    {
-        unimplemented!();
-    }
 }
 
 #[derive(Debug)]
@@ -1066,10 +1058,10 @@ pub struct InternalVerifyingKey<
     const L: usize,
     P: MlDsaParameters,
 > {
-    pub pk: [u8; PK_ENCODED_SIZE],
-    pub rho: [u8; 32],
-    pub t1: Vector<K>,
-    pub mat_a_hat: MatrixNTT<K, L>,
+    pub(crate) pk: [u8; PK_ENCODED_SIZE],
+    rho: [u8; 32],
+    t1: Vector<K>,
+    mat_a_hat: MatrixNTT<K, L>,
     _phantom: PhantomData<P>,
 }
 
@@ -1200,10 +1192,6 @@ impl<
             return Err(UnknownCryptoError);
         }
         self.verify_internal(&[&[0u8, ctx.len() as u8], ctx, m], sigma)
-    }
-
-    pub fn verify_hedged(&self) -> Result<(), UnknownCryptoError> {
-        unimplemented!();
     }
 }
 
