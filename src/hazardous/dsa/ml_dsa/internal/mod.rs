@@ -841,9 +841,9 @@ pub struct InternalSigningKey<
     P: MlDsaParameters,
 > {
     pub(crate) sk: [u8; SK_ENCODED_SIZE],
-    rho: [u8; 32],     // public random seed,
-    k: [u8; 32],       // PRIVATE random seed,
-    tr_hash: [u8; 64], // hash of public key `tr`
+    rho: [u8; 32],                  // public random seed,
+    k: [u8; 32],                    // PRIVATE random seed,
+    tr_hash: [u8; 64],              // hash of public key `tr`
     s1_hat: VectorNTT<L, Standard>, // SECRET polyvector
     s2_hat: VectorNTT<K, Standard>, // SECRET polyvector
     t0_hat: VectorNTT<K, Standard>, // uncompressed public key

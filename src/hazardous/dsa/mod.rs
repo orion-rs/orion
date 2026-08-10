@@ -21,4 +21,8 @@
 // SOFTWARE.
 
 /// ML-DSA as specified in [FIPS-204](https://doi.org/10.6028/NIST.FIPS.204).
-pub mod ml_dsa;
+pub(crate) mod ml_dsa;
+
+pub use ml_dsa::mldsa44;
+pub use ml_dsa::mldsa65;
+pub use ml_dsa::mldsa87;

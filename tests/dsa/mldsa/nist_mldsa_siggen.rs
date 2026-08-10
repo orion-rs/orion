@@ -1,6 +1,6 @@
 // ML-DSA commit: https://github.com/usnistgov/ACVP-Server/commit/2972def23bf9f3680c2c531561ed9bdd0f1086ad
 
-use orion::hazardous::dsa::ml_dsa::{mldsa44, mldsa65, mldsa87};
+use orion::hazardous::dsa::{mldsa44, mldsa65, mldsa87};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
 

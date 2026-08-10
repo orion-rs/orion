@@ -2,7 +2,7 @@
 
 use orion::{
     KP,
-    hazardous::dsa::ml_dsa::{Seed, mldsa44, mldsa65, mldsa87},
+    hazardous::dsa::{mldsa44, mldsa65, mldsa87},
 };
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
@@ -53,7 +53,7 @@ fn mldsa_runner(path: &str) {
                 hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
                 hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
 
-                let kp = mldsa44::KeyPair::new(Seed::from(seed)).unwrap();
+                let kp = mldsa44::KeyPair::new(mldsa44::Seed::from(seed)).unwrap();
                 assert_eq!(kp.public(), &pk_expected[..]);
                 assert_eq!(kp.private(), &sk_expected[..]);
 
@@ -69,7 +69,7 @@ fn mldsa_runner(path: &str) {
                 hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
                 hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
 
-                let kp = mldsa65::KeyPair::new(Seed::from(seed)).unwrap();
+                let kp = mldsa65::KeyPair::new(mldsa65::Seed::from(seed)).unwrap();
                 assert_eq!(kp.public(), &pk_expected[..]);
                 assert_eq!(kp.private(), &sk_expected[..]);
 
@@ -86,7 +86,7 @@ fn mldsa_runner(path: &str) {
                 hex::decode_to_slice(&test.sk, &mut sk_expected).unwrap();
                 hex::decode_to_slice(&test.pk, &mut pk_expected).unwrap();
 
-                let kp = mldsa87::KeyPair::new(Seed::from(seed)).unwrap();
+                let kp = mldsa87::KeyPair::new(mldsa87::Seed::from(seed)).unwrap();
                 assert_eq!(kp.public(), &pk_expected[..]);
                 assert_eq!(kp.private(), &sk_expected[..]);
 
