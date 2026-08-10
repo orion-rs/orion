@@ -53,6 +53,7 @@ pub use crate::hazardous::dsa::ml_dsa::MlDsaSeed;
 pub use crate::hazardous::dsa::ml_dsa::RAND_SIZE;
 pub use crate::hazardous::dsa::ml_dsa::SEED_SIZE;
 pub use crate::hazardous::dsa::ml_dsa::Seed;
+pub use crate::hazardous::dsa::ml_dsa::internal::prehash::PreHash;
 
 /// Size of private [`SigningKey`].
 pub const SIGNING_KEY_SIZE: usize = MlDsa87::PRIVATE_KEY_SIZE;
@@ -196,12 +197,67 @@ impl SigningKey {
             rnd.unprotected_as_ref(),
         )?))
     }
+
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
+    pub fn sign_prehash(
+        &self,
+        m: &[u8],
+        ctx: &[u8],
+        ph: &PreHash,
+    ) -> Result<Signature, UnknownCryptoError> {
+        let rnd = ExplicitRandom::generate()?;
+
+        self.sign_prehash_with_rnd(m, ctx, ph, &rnd)
+    }
+
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
+    pub fn sign_prehash_deterministic(
+        &self,
+        m: &[u8],
+        ctx: &[u8],
+        ph: &PreHash,
+    ) -> Result<Signature, UnknownCryptoError> {
+        self.sign_prehash_with_rnd(m, ctx, ph, &ExplicitRandom::deterministic())
+    }
+
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
+    pub fn sign_prehash_with_rnd(
+        &self,
+        m: &[u8],
+        ctx: &[u8],
+        ph: &PreHash,
+        rnd: &ExplicitRandom,
+    ) -> Result<Signature, UnknownCryptoError> {
+        Ok(Signature::from_data(self.data.sign_prehash(
+            m,
+            ctx,
+            rnd.unprotected_as_ref(),
+            ph,
+        )?))
+    }
 }
 
 impl VerifyingKey {
     /// Given the [`VerifyingKey`], verify a signature `sig` produced over message `m` and context.
     pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
         self.data.verify(m, &sig.data, ctx)
+    }
+
+    /// Given the [`VerifyingKey`] and [`PreHash`], verify a signature `sig` produced over message `m` and context.
+    pub fn verify_prehash(
+        &self,
+        m: &[u8],
+        ctx: &[u8],
+        sig: &Signature,
+        ph: &PreHash,
+    ) -> Result<(), UnknownCryptoError> {
+        self.data.verify_prehash(m, &sig.data, ctx, ph)
     }
 }
 

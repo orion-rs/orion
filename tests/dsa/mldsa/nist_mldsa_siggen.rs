@@ -51,10 +51,6 @@ fn mldsa_runner(path: &str) {
 
     let mut tests_run = 0;
     for test_group in tests.testGroups.iter() {
-        if test_group.preHash == "preHash" {
-            // HashML- impl not there yet
-            continue;
-        }
         match test_group.parameterSet.as_str() {
             "ML-DSA-44" => {
                 let mut sk_expected = [0u8; mldsa44::SIGNING_KEY_SIZE];
@@ -75,11 +71,31 @@ fn mldsa_runner(path: &str) {
                         None => mldsa44::ExplicitRandom::deterministic(),
                     };
 
+                    let prehash: Option<mldsa44::PreHash> = match test.hashAlg.as_str() {
+                        "SHA2-256" => Some(mldsa44::PreHash::SHA256),
+                        "SHA2-384" => Some(mldsa44::PreHash::SHA384),
+                        "SHA2-512" => Some(mldsa44::PreHash::SHA512),
+                        "SHA3-224" => Some(mldsa44::PreHash::SHA3_224),
+                        "SHA3-256" => Some(mldsa44::PreHash::SHA3_256),
+                        "SHA3-384" => Some(mldsa44::PreHash::SHA3_384),
+                        "SHA3-512" => Some(mldsa44::PreHash::SHA3_512),
+                        "SHAKE-128" => Some(mldsa44::PreHash::SHAKE128),
+                        "SHAKE-256" => Some(mldsa44::PreHash::SHAKE256),
+                        "none" => None,
+                        _ => continue,
+                    };
+
                     if let (Some(m), Some(ctx)) = (test.message.as_ref(), test.context.as_ref()) {
                         let m = hex::decode(m).unwrap();
                         let ctx = hex::decode(ctx).unwrap();
-                        let signature = sk.sign_with_rnd(&m, &ctx, &rnd).unwrap();
-                        assert_eq!(signature, &sig_expected[..]);
+
+                        if let Some(ph) = prehash.as_ref() {
+                            let signature = sk.sign_prehash_with_rnd(&m, &ctx, ph, &rnd).unwrap();
+                            assert_eq!(signature, &sig_expected[..]);
+                        } else {
+                            let signature = sk.sign_with_rnd(&m, &ctx, &rnd).unwrap();
+                            assert_eq!(signature, &sig_expected[..]);
+                        }
 
                         tests_run += 1;
                     }
@@ -104,12 +120,31 @@ fn mldsa_runner(path: &str) {
                         None => mldsa65::ExplicitRandom::deterministic(),
                     };
 
+                    let prehash: Option<mldsa65::PreHash> = match test.hashAlg.as_str() {
+                        "SHA2-256" => Some(mldsa65::PreHash::SHA256),
+                        "SHA2-384" => Some(mldsa65::PreHash::SHA384),
+                        "SHA2-512" => Some(mldsa65::PreHash::SHA512),
+                        "SHA3-224" => Some(mldsa65::PreHash::SHA3_224),
+                        "SHA3-256" => Some(mldsa65::PreHash::SHA3_256),
+                        "SHA3-384" => Some(mldsa65::PreHash::SHA3_384),
+                        "SHA3-512" => Some(mldsa65::PreHash::SHA3_512),
+                        "SHAKE-128" => Some(mldsa65::PreHash::SHAKE128),
+                        "SHAKE-256" => Some(mldsa65::PreHash::SHAKE256),
+                        "none" => None,
+                        _ => continue,
+                    };
+
                     if let (Some(m), Some(ctx)) = (test.message.as_ref(), test.context.as_ref()) {
                         let m = hex::decode(m).unwrap();
                         let ctx = hex::decode(ctx).unwrap();
-                        let signature = sk.sign_with_rnd(&m, &ctx, &rnd).unwrap();
-                        assert_eq!(signature, &sig_expected[..]);
 
+                        if let Some(ph) = prehash.as_ref() {
+                            let signature = sk.sign_prehash_with_rnd(&m, &ctx, ph, &rnd).unwrap();
+                            assert_eq!(signature, &sig_expected[..]);
+                        } else {
+                            let signature = sk.sign_with_rnd(&m, &ctx, &rnd).unwrap();
+                            assert_eq!(signature, &sig_expected[..]);
+                        }
                         tests_run += 1;
                     }
                 }
@@ -133,11 +168,31 @@ fn mldsa_runner(path: &str) {
                         None => mldsa87::ExplicitRandom::deterministic(),
                     };
 
+                    let prehash: Option<mldsa87::PreHash> = match test.hashAlg.as_str() {
+                        "SHA2-256" => Some(mldsa87::PreHash::SHA256),
+                        "SHA2-384" => Some(mldsa87::PreHash::SHA384),
+                        "SHA2-512" => Some(mldsa87::PreHash::SHA512),
+                        "SHA3-224" => Some(mldsa87::PreHash::SHA3_224),
+                        "SHA3-256" => Some(mldsa87::PreHash::SHA3_256),
+                        "SHA3-384" => Some(mldsa87::PreHash::SHA3_384),
+                        "SHA3-512" => Some(mldsa87::PreHash::SHA3_512),
+                        "SHAKE-128" => Some(mldsa87::PreHash::SHAKE128),
+                        "SHAKE-256" => Some(mldsa87::PreHash::SHAKE256),
+                        "none" => None,
+                        _ => continue,
+                    };
+
                     if let (Some(m), Some(ctx)) = (test.message.as_ref(), test.context.as_ref()) {
                         let m = hex::decode(m).unwrap();
                         let ctx = hex::decode(ctx).unwrap();
-                        let signature = sk.sign_with_rnd(&m, &ctx, &rnd).unwrap();
-                        assert_eq!(signature, &sig_expected[..]);
+
+                        if let Some(ph) = prehash.as_ref() {
+                            let signature = sk.sign_prehash_with_rnd(&m, &ctx, ph, &rnd).unwrap();
+                            assert_eq!(signature, &sig_expected[..]);
+                        } else {
+                            let signature = sk.sign_with_rnd(&m, &ctx, &rnd).unwrap();
+                            assert_eq!(signature, &sig_expected[..]);
+                        }
 
                         tests_run += 1;
                     }
@@ -147,7 +202,7 @@ fn mldsa_runner(path: &str) {
         }
     }
 
-    assert_eq!(tests_run, 90);
+    assert_eq!(tests_run, 161);
 }
 
 #[test]

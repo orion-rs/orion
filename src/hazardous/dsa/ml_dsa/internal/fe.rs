@@ -73,7 +73,7 @@ mod sealed {
     pub trait Sealed {}
 }
 
-pub trait Domain: sealed::Sealed + Copy + core::fmt::Debug + PartialEq + Eq {}
+pub trait Domain: sealed::Sealed + Copy + Debug + PartialEq + Eq {}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 /// Marker for field elements in Z_q _not_ in Montgomery form.
