@@ -325,7 +325,7 @@ impl KeyPair {
 
 #[cfg(test)]
 mod tests {
-    use crate::hazardous::hash::sha3::{shake128::Shake128, shake256::Shake256};
+    use crate::hazardous::hash::sha3::shake128::Shake128;
 
     use super::*;
 
@@ -344,9 +344,9 @@ mod tests {
         let expected_10000 =
             hex::decode("e7fd21f6a59bcba60d65adc44404bb29a7c00e5d8d3ec06a732c00a306a7d143")
                 .unwrap();
-        let expected_60000000 =
-            hex::decode("080b48049257f5cd30dee17d6aa393d6c42fe52a29099df84a460ebaf4b02330")
-                .unwrap();
+        // let expected_60000000 =
+        //     hex::decode("080b48049257f5cd30dee17d6aa393d6c42fe52a29099df84a460ebaf4b02330")
+        //         .unwrap();
 
         // 60000000 takes very long..
         // just run once before release of v0.18.0

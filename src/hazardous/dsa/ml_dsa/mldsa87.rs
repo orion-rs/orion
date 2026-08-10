@@ -344,9 +344,9 @@ mod tests {
         let expected_10000 =
             hex::decode("80a8cf39317f7d0be0e24972c51ac152bd2a3e09bc0c32ce29dd82c4e7385e60")
                 .unwrap();
-        let expected_60000000 =
-            hex::decode("011166e9d5032c9bdc5c9bbb5dbb6c86df1c3d9bf3570b65ebae942dd9830057")
-                .unwrap();
+        // let expected_60000000 =
+        //     hex::decode("011166e9d5032c9bdc5c9bbb5dbb6c86df1c3d9bf3570b65ebae942dd9830057")
+        //         .unwrap();
 
         // 60000000 takes very long..
         // just run once before release of v0.18.0
