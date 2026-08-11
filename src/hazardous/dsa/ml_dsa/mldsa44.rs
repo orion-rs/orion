@@ -20,23 +20,65 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! ### ML-DSA key usage recommendations
+//!
+//! In general, it is highly recommended to use the [`KeyPair`] type to deal with signing operations, or private/signing keys in general.
+//!
+//! A [`KeyPair`] requires, or automatically generates, a [`Seed`]. It cannot be made solely from encoded/serialized signing key in bytes, unless a [`Seed`] is also provided.
+//! A seed is only 32 bytes, is fully FIPS compliant.
+//!
+//! A set of keys expanded from a [`Seed`] are guaranteed to be valid, part expanded (aka. serialized) keys are not.
+//!
+//! #### Serialized signing keys
+//! It is possible to instantiate a [`SigningKey`] directly, if strictly required, using [`SigningKey::try_from()`]. This use hereof is intended solely for
+//! interoperability purposes. The lack of generate function for [`SigningKey`] is intentional.
+//!
 //! # Parameters:
-//! - __**TODO**__
+//! - `m`: Message to be signed or verified a signature of.
+//! - `ctx`: Context string which must be the same on signing and verification.
+//! - `rnd`: [`ExplicitRandom`] provided during signing.
+//! - `ph`: [`PreHash`] variant used during HashML-DSA.
+//! - `mu`: ML-DSA `mu` parameter.
+//! - `sig`: Signature to be verified.
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - __**TODO**__
+//! - [`getrandom::fill()`] fails during signing.
+//! - [`getrandom::fill()`] fails during [`KeyPair::generate()`].
+//! - `mu` is not `64` bytes.
+//! - `ctx` is not `<= 255` bytes.
 //!
 //! # Security:
-//! - __**TODO**__
+//! - Using the randomized, non-deterministic signing hardens the ML-DSA signing routine against fault-injection attacks.
+//! - It is critical that both the seed and explicit randomness `rnd`, used for key generation and encapsulation
+//! are generated using a strong CSPRNG.
+//! - Users should always prefer signing without specifying explicit randomness, if possible.
+//! - While possible to use a single [`KeyPair`] for both HashML-DSA and ML-DSA, it is strongly recommended to utilize
+//! two independent keypairs for these two variants.
 //!
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
-//! __**TODO**__
+//! use orion::KP;
+//! use orion::hazardous::dsa::mldsa44::*;
+//!
+//! let kp = KeyPair::generate()?;
+//!
+//! let pk = VerifyingKey::try_from(kp.public().as_ref())?;
+//! let signature = kp.private().sign(b"Message to sign", b"additional context")?;
+//!
+//! assert!(pk.verify(b"Message to sign", b"additional context", &signature).is_ok());
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
+//! [`getrandom::fill()`]: getrandom::fill
+//! [`KeyPair::generate()`]: mldsa44::KeyPair::generate
+//! [`KeyPair`]: mldsa44::KeyPair
+//! [`SigningKey`]: mldsa44::SigningKey
+//! [`SigningKey::try_from()`]: mldsa44::SigningKey::try_from
+//! [`Seed`]: mldsa44::Seed
+//! [`ExplicitRandom`]: mldsa44::ExplicitRandom
+//! [`PreHash`]: mldsa44::PreHash
 
 use crate::KP;
 use crate::errors::UnknownCryptoError;
@@ -212,8 +254,6 @@ impl SigningKey {
         self.sign_prehash_with_rnd(m, ctx, ph, &rnd)
     }
 
-    #[cfg(feature = "safe_api")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
     pub fn sign_prehash_deterministic(
         &self,
@@ -224,8 +264,6 @@ impl SigningKey {
         self.sign_prehash_with_rnd(m, ctx, ph, &ExplicitRandom::deterministic())
     }
 
-    #[cfg(feature = "safe_api")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
     pub fn sign_prehash_with_rnd(
         &self,
@@ -240,6 +278,24 @@ impl SigningKey {
             rnd.unprotected_as_ref(),
             ph,
         )?))
+    }
+
+    /// Given the [`SigningKey`], sign `mu`.
+    ///
+    /// Where `mu`: `H(BytesToBits(tr)||M ′, 64)`, FIPS-204, Algorithm 7.
+    pub fn sign_external_mu_with_rnd(
+        &self,
+        mu: &[u8],
+        rnd: &ExplicitRandom,
+    ) -> Result<Signature, UnknownCryptoError> {
+        if mu.len() != 64 {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok(Signature::from_data(
+            self.data
+                .sign_internal_with_mu(mu, rnd.unprotected_as_ref())?,
+        ))
     }
 }
 
@@ -258,6 +314,17 @@ impl VerifyingKey {
         ph: &PreHash,
     ) -> Result<(), UnknownCryptoError> {
         self.data.verify_prehash(m, &sig.data, ctx, ph)
+    }
+
+    /// Given the [`VerifyingKey`], verify signature over `mu`.
+    ///
+    /// Where `mu`: `H(BytesToBits(tr)||M ′, 64)`, FIPS-204, Algorithm 7.
+    pub fn verify_external_mu(&self, mu: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
+        if mu.len() != 64 {
+            return Err(UnknownCryptoError);
+        }
+
+        self.data.verify_internal_with_mu(mu, &sig.data)
     }
 }
 

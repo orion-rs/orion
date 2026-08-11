@@ -811,7 +811,6 @@ impl<
         Ok(Self {
             sk: InternalSigningKey {
                 sk,
-                rho,
                 k: expanded_seed[32 + 64..32 + 64 + 32]
                     .try_into()
                     .expect("const-sized on 128"),
@@ -834,9 +833,7 @@ impl<
     }
 }
 
-// TODO: Make this Debug OMITTED
-#[derive(Debug)]
-/// TODO: THIS SHOULD BE INTERNAL
+/// Internal, generic signing key used across the three ML-DSA parametersets.
 pub struct InternalSigningKey<
     const SK_ENCODED_SIZE: usize,
     const SIG_ENCODED_SIZE: usize,
@@ -848,7 +845,6 @@ pub struct InternalSigningKey<
     P: MlDsaParameters,
 > {
     pub(crate) sk: [u8; SK_ENCODED_SIZE],
-    rho: [u8; 32],                  // public random seed,
     k: [u8; 32],                    // PRIVATE random seed,
     tr_hash: [u8; 64],              // hash of public key `tr`
     s1_hat: VectorNTT<L, Standard>, // SECRET polyvector
@@ -862,7 +858,62 @@ impl<
     const SK_ENCODED_SIZE: usize,
     const SIG_ENCODED_SIZE: usize,
     const CLEN: usize,
-    const COMMITHASH_LEN: usize, // λ/4
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> Debug
+    for InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} {{***OMITTED***}}", stringify!($name))
+    }
+}
+
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> Drop
+    for InternalSigningKey<
+        SK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn drop(&mut self) {
+        #[cfg(feature = "zeroize")]
+        {
+            self.memzero();
+        }
+    }
+}
+
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
     const W1_ENCODE_SIZE: usize,
     const K: usize,
     const L: usize,
@@ -888,7 +939,6 @@ impl<
             sk: value
                 .try_into()
                 .expect("length check is part of P::sk_decode()"),
-            rho,
             k,
             tr_hash: tr,
             // Precompute and store NTT of s1,s2,t0 and matrix A hat.
@@ -927,10 +977,11 @@ impl<
     /// Signing with `mu` precomputed.
     pub fn sign_internal_with_mu(
         &self,
-        mu: &[u8; 64],
+        mu: &[u8],
         rnd: &[u8],
     ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
     {
+        debug_assert_eq!(mu.len(), 64);
         debug_assert_eq!(rnd.len(), 32);
 
         let mut h = Shake256::new();
@@ -1132,8 +1183,8 @@ impl<
     }
 }
 
-#[derive(Debug)]
-/// TODO: THIS SHOULD BE INTERNAL
+#[derive(Debug, PartialEq, Clone)]
+/// Internal, generic verifying key used across the three ML-DSA parametersets.
 pub struct InternalVerifyingKey<
     const PK_ENCODED_SIZE: usize,
     const SIG_ENCODED_SIZE: usize,
@@ -1213,9 +1264,11 @@ impl<
     /// FIPS-204, Algorithm 8.
     pub fn verify_internal_with_mu(
         &self,
-        mu: &[u8; 64],
+        mu: &[u8],
         sigma: &InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>,
     ) -> Result<(), UnknownCryptoError> {
+        debug_assert_eq!(mu.len(), 64);
+
         let c = sample_in_ball::<P>(&sigma.c)?;
         // Az − ct1 ⋅ 2d
         let w_approx = ((&self.mat_a_hat * &sigma.z.ntt())
@@ -1368,8 +1421,8 @@ impl<
     }
 }
 
-#[derive(Debug)]
-/// TODO: THIS SHOULD BE INTERNAL
+#[derive(Debug, PartialEq, Clone)]
+/// Internal, generic signature used across the three ML-DSA parametersets.
 pub struct InternalSignature<
     const SIGNATURE_SIZE: usize,
     const COMMITHASH_LEN: usize,

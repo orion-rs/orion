@@ -755,19 +755,30 @@ impl<const N: usize, D: Domain> IndexMut<usize> for VectorNTT<N, D> {
     }
 }
 
-/// TODO this type handles secret bytes.
-/// TODO: OMITTED DEBUG, PARTIALEQ, etc.
-///
+#[derive(Clone, PartialEq)]
 /// Hint used during signing/verification. Values are only ever [0, 1].
 pub struct Hint<const K: usize> {
     pub(crate) bits: [[u8; 256]; K],
 }
 
+impl<const K: usize> Drop for Hint<K> {
+    fn drop(&mut self) {
+        #[cfg(feature = "zeroize")]
+        {
+            // SECURITY: This is sensitive value during rejection loop in signing.
+            // As soon as rejection passes, this is a public value. Never released
+            // outside during signing, so PartialEq is var-time.
+            self.bits.iter_mut().zeroize();
+        }
+    }
+}
+
 impl<const K: usize> Debug for Hint<K> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Hint")
-            .field("bits", b"{{ OMITTED }}")
-            .finish()
+        // SECURITY: This is sensitive value during rejection loop in signing.
+        // As soon as rejection passes, this is a public value. Never released
+        // outside during signing, so PartialEq is var-time.
+        write!(f, "{} {{***OMITTED***}}", stringify!($name))
     }
 }
 
@@ -791,9 +802,9 @@ impl<const K: usize> Hint<K> {
     }
 
     /// Number of 1 bits.
-    /// NOTE(brycx): This does touch secret data but there's no abort
-    /// and loop-size is constant.
     pub fn weight(&self) -> u32 {
+        // SECURITY: This does touch secret data but there's no abort
+        // and loop-size is constant.
         let mut n = 0u32;
         for poly in self.bits.iter() {
             for &b in poly.iter() {
