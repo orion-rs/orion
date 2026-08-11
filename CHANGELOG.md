@@ -38,6 +38,7 @@
 - Add support for the following PQ/T HPKE suites:
 	- `MLKEM768_X25519_SHA256_CHACHA20`
 	- `MLKEM768_X25519_SHAKE256_CHACHA20`
+- Add support for ML-DSA (FIPS-204).
 
 ### 0.17.14
 

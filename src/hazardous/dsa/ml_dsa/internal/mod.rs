@@ -21,10 +21,6 @@
 // SOFTWARE.
 
 pub mod prehash;
-use core::{fmt::Debug, marker::PhantomData};
-
-use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater};
-
 use crate::{
     errors::UnknownCryptoError,
     generics::sealed::{Data, Sealed, TryFromBytes},
@@ -43,6 +39,8 @@ use crate::{
         },
     },
 };
+use core::{fmt::Debug, marker::PhantomData};
+use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater};
 
 mod fe;
 pub(crate) mod sampling;
@@ -282,16 +280,16 @@ pub trait MlDsaParameters: Debug + Sized {
         sk[read..read + 64].copy_from_slice(tr);
         read += 64;
 
-        for i in 0..Self::DIM_L {
-            Self::bitpack_ring_element_eta(&s1[i], &mut sk[read..read + Self::ETA_BITPACK_SIZE]);
+        for w in s1.iter().take(Self::DIM_L) {
+            Self::bitpack_ring_element_eta(w, &mut sk[read..read + Self::ETA_BITPACK_SIZE]);
             read += Self::ETA_BITPACK_SIZE;
         }
-        for i in 0..Self::DIM_K {
-            Self::bitpack_ring_element_eta(&s2[i], &mut sk[read..read + Self::ETA_BITPACK_SIZE]);
+        for w in s2.iter().take(Self::DIM_K) {
+            Self::bitpack_ring_element_eta(w, &mut sk[read..read + Self::ETA_BITPACK_SIZE]);
             read += Self::ETA_BITPACK_SIZE;
         }
-        for i in 0..Self::DIM_K {
-            Self::bitpack_ring_element_d(&t0[i], &mut sk[read..read + Self::D_BITPACK_SIZE]);
+        for w in t0.iter().take(Self::DIM_K) {
+            Self::bitpack_ring_element_d(w, &mut sk[read..read + Self::D_BITPACK_SIZE]);
             read += Self::D_BITPACK_SIZE;
         }
 
@@ -300,6 +298,7 @@ pub trait MlDsaParameters: Debug + Sized {
         sk
     }
 
+    #[allow(clippy::type_complexity)]
     /// FIPS-204, Algorithm 25.
     fn sk_decode<const K: usize, const L: usize>(
         sk: &[u8],
@@ -608,10 +607,10 @@ impl MlDsaParameters for MlDsa65 {
         debug_assert_eq!(out.len(), Self::ETA_BITPACK_SIZE);
         let fe_eta = FieldElement::new(Self::ETA as u32);
 
-        for i in 0..256 / 2 {
+        for (i, outelem) in out.iter_mut().enumerate().take(256 / 2) {
             let t0 = fe_eta - w.coefficients[2 * i];
             let t1 = fe_eta - w.coefficients[2 * i + 1];
-            out[i] = (t0.0 | (t1.0 << 4)) as u8;
+            *outelem = (t0.0 | (t1.0 << 4)) as u8;
         }
     }
 
@@ -710,10 +709,7 @@ impl MlDsaParameters for MlDsa87 {
     }
 }
 
-/// TODO: Safeguard PartialEq, Debug, Drop/Zeroize for all these structs.
-
-#[derive(Debug)]
-/// TODO: THIS SHOULD BE INTERNAL
+/// Internal, generic signing key used across the three ML-DSA parametersets.
 pub struct KeyPairInternal<
     const SK_ENCODED_SIZE: usize,
     const PK_ENCODED_SIZE: usize,
@@ -797,7 +793,7 @@ impl<
         let mut tr = [0u8; 64];
         h.reset();
         h.absorb(&pk)?;
-        h.squeeze(&mut tr.as_mut())?;
+        h.squeeze(tr.as_mut())?;
 
         let sk = P::sk_encode::<SK_ENCODED_SIZE, K, L>(
             &rho,
@@ -994,11 +990,9 @@ impl<
         let mut counter = 0u32;
         let mut valid_sample = false;
 
-        // TODO: does this need zeroize?
-        let mut w1_bytes = [0u8; W1_ENCODE_SIZE];
+        let mut w1_bytes = zeroize_wrap!([0u8; W1_ENCODE_SIZE]);
 
         // Commitment hash
-        // TODO: does this need zeroize?
         let mut c_tilde = [0u8; COMMITHASH_LEN];
         let mut hint = Hint::<K>::zero();
         let mut z = Vector::<L>::zero();
@@ -1007,12 +1001,12 @@ impl<
             let y = expand_mask::<CLEN, K, L, P>(rhoprimeprime.as_slice(), counter)?;
             let w = (&self.mat_a_hat * &y.ntt()).inverse_ntt_mont();
             let w1 = w.high_bits::<P>();
-            P::w1_encode(&w1, &mut w1_bytes);
+            P::w1_encode(&w1, w1_bytes.as_mut());
 
             // Commitment hash
             h.reset();
             h.absorb(mu)?;
-            h.absorb(&w1_bytes)?;
+            h.absorb(w1_bytes.as_slice())?;
             h.squeeze(&mut c_tilde)?;
 
             let c = sample_in_ball::<P>(&c_tilde)?;
@@ -1285,9 +1279,10 @@ impl<
         h.absorb(&w1encoded)?;
         h.squeeze(&mut c_tilde_prime)?;
 
-        // TODO: I don't think this requires constant-time?
-        // what can be learned of anything? There's no secret data
-        // dervied anywhere in this codepath...
+        // SECURITY: While this is VerifyingKey and therefor should
+        // be no leak of secret data if this were vartime, we keep it
+        // becuase is_outside_bound() return Choice and it is the careful
+        // approach.
         if bool::from(
             !sigma.z.is_outside_bound(P::GAMMA_1 - P::BETA)
                 & sigma.c.as_slice().ct_eq(&c_tilde_prime),
@@ -1460,10 +1455,7 @@ impl<
     }
 }
 
-// TODO: either have signature type here or one level up in modules
-// for each variant.
-
-// TypePrimitive + TypeData + Data impls for InternalSigningKey and InternalVerifyingKey
+// TypePrimitive + TypeData + Data impls for InternalSigningKey, InternalVerifyingKey, InternalSignature
 
 impl<
     const SIGNATURE_SIZE: usize,
@@ -1747,7 +1739,7 @@ impl<
     #[cfg(feature = "zeroize")]
     fn memzero(&mut self) {
         unimplemented!(
-            "SECURITY: EncapKey<> is exposed as Public and should never need memzero as part of Drop."
+            "SECURITY: InternalSignature<> is exposed as Public and should never need memzero as part of Drop."
         );
     }
 }
@@ -1833,7 +1825,7 @@ impl<
     #[cfg(feature = "zeroize")]
     fn memzero(&mut self) {
         unimplemented!(
-            "SECURITY: EncapKey<> is exposed as Public and should never need memzero as part of Drop."
+            "SECURITY: InternalVerifyingKey<> is exposed as Public and should never need memzero as part of Drop."
         );
     }
 }
@@ -1920,7 +1912,7 @@ fn test_mldsa_sk_decode() {
         { MlDsa44::PRIVATE_KEY_SIZE },
         { MlDsa44::DIM_K },
         { MlDsa44::DIM_L },
-    >(&rho, &k, &tr.as_slice(), &s1.elems, &s2.elems, &t0.elems);
+    >(&rho, &k, tr.as_slice(), &s1.elems, &s2.elems, &t0.elems);
 
     assert_eq!(sk, sk_rt);
 }

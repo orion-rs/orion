@@ -45,7 +45,7 @@ pub(crate) fn coeff_from_three_bytes(b0: u8, b1: u8, b2: u8) -> Option<FieldElem
 
 /// FIPS-204, Algorithm 15.
 pub(crate) fn coeff_from_half_byte<P: MlDsaParameters>(b: u32) -> Option<FieldElement<Standard>> {
-    // TODO: b range (0..15) len debug_assert
+    debug_assert!((0..=15).contains(&b));
 
     match P::ETA {
         2 => {
@@ -63,8 +63,6 @@ pub(crate) fn coeff_from_half_byte<P: MlDsaParameters>(b: u32) -> Option<FieldEl
 
 /// FIPS-204, Algorithm 29.
 pub fn sample_in_ball<P: MlDsaParameters>(seed: &[u8]) -> Result<RingElement, UnknownCryptoError> {
-    // TODO: len check seed debug_assert
-
     let mut c = RingElement::zero();
     let mut ctx = Shake256::new();
     ctx.absorb(seed)?;
@@ -125,8 +123,8 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
         let mut ctx = Shake128::new();
         ctx.absorb(seed)?;
 
-        for r in 0..K {
-            for s in 0..L {
+        for (r, row) in mat_hat.iter_mut().enumerate().take(K) {
+            for (s, entry) in row.elems.iter_mut().enumerate().take(L) {
                 // FIPS-204, Algorithm 31:
 
                 // rho remains fixed for each of these invocations
@@ -144,7 +142,7 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
                     }
                 }
 
-                mat_hat[r][s] = a_hat;
+                *entry = a_hat;
             }
         }
 
@@ -224,8 +222,6 @@ pub(crate) fn expand_mask<const CLEN: usize, const K: usize, const L: usize, P: 
     seed: &[u8],
     mu: u32,
 ) -> Result<Vector<L>, UnknownCryptoError> {
-    // TODO: Is there a range of valid numbers for mu? or does it need checked arithmetic?
-
     debug_assert_eq!(K, P::DIM_K);
     debug_assert_eq!(L, P::DIM_L);
     debug_assert_eq!(seed.len(), 64);

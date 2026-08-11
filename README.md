@@ -12,6 +12,7 @@ Currently supports:
 * **ECDH**: X25519.
 * **MAC**: HMAC, Poly1305.
 * **Stream ciphers**: (X)ChaCha20.
+* **Signature schemes**: ML-DSA.
 * **KEM**: X-Wing, ML-KEM, DHKEM(X25519, HKDF-SHA256).
 * **HPKE**:
     - X-Wing/(ML-KEM768, X25519), HKDF-SHA256, ChaCha20Poly1305

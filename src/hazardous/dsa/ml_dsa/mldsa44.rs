@@ -122,8 +122,7 @@ impl Sealed for MlDsa44SigningKey {}
 
 impl TypeSpec for MlDsa44SigningKey {
     const NAME: &'static str = stringify!(SigningKey);
-    // TODO:
-    // Key-check logic in Data-impl under [`DecapKey`] (applies to `parse_bytes()`).
+    // Key-check logic in Data-impl under [`InternalSigningKey`] (applies to `parse_bytes()`).
     type TypeData = InternalSigningKey<
         { MlDsa44::PRIVATE_KEY_SIZE },
         { MlDsa44::SIGNATURE_SIZE },
@@ -142,8 +141,7 @@ pub struct MlDsa44VerifyingKey {}
 impl Sealed for MlDsa44VerifyingKey {}
 impl TypeSpec for MlDsa44VerifyingKey {
     const NAME: &'static str = stringify!(VerifyingKey);
-    // TODO:
-    // Key-check logic in Data-impl under [`DecapKey`] (applies to `parse_bytes()`).
+    // Key-check logic in Data-impl under [`InternalVerifyingKey`] (applies to `parse_bytes()`).
     type TypeData = InternalVerifyingKey<
         { MlDsa44::PUBLIC_KEY_SIZE },
         { MlDsa44::SIGNATURE_SIZE },
@@ -172,8 +170,7 @@ impl Sealed for MlDsa44Signature {}
 
 impl TypeSpec for MlDsa44Signature {
     const NAME: &'static str = stringify!(Signature);
-    // TODO:
-    // Key-check logic in Data-impl under [`DecapKey`] (applies to `parse_bytes()`).
+    // Key-check logic in Data-impl under [`InternalSignature`] (applies to `parse_bytes()`).
     type TypeData = InternalSignature<
         { MlDsa44::SIGNATURE_SIZE },
         { MlDsa44::COMMITMENT_HASH_LEN },
@@ -191,21 +188,6 @@ impl TypeSpec for MlDsa44Signature {
         lhs.sig.as_ref() == rhs
     }
 }
-
-// TODO:
-// impl TryFrom<&SigningKey> for Public<MlDsa44VerifyingKey> {
-//     type Error = UnknownCryptoError;
-
-//     fn try_from(value: &DecapsulationKey) -> Result<Self, Self::Error> {
-//         Ok(Self::from_data(EncapKey::<
-//             { MlKem512Internal::K },
-//             { MlKem512Internal::EK_SIZE },
-//             MlKem512Internal,
-//         >::from_bytes(
-//             value.data.get_encapsulation_key_bytes()
-//         )?))
-//     }
-// }
 
 impl SigningKey {
     #[cfg(feature = "safe_api")]

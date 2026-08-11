@@ -88,7 +88,7 @@ impl sealed::Sealed for RInv {}
 impl Domain for RInv {}
 
 #[derive(Clone, Copy, PartialEq, Debug)]
-/// todo
+/// Montgomery factor.
 pub struct MontFactor(pub(crate) u32);
 
 impl MontFactor {
@@ -107,7 +107,7 @@ impl<D: Domain> Mul<FieldElement<D>> for MontFactor {
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
-/// todo
+/// Montgomery square factor.
 pub struct MontSquareFactor(pub(crate) u32);
 
 impl MontSquareFactor {
@@ -133,9 +133,6 @@ pub const NEG_ZETA_ALL_MONT: [MontFactor; 256] = mont_factor_tables(&NEG_ZETA_AL
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 /// Element in the field Z_q.
-///
-/// NOTE(brycx): While for Kyber q = 3329 a field element would fit in u16, but Dilithium q = 8380417 which only fits in u32.
-/// Thus, for possible future re-usability, we use 32-bit integer here.
 pub struct FieldElement<D: Domain>(pub(crate) u32, PhantomData<D>);
 
 #[cfg(feature = "zeroize")]
@@ -203,11 +200,6 @@ impl FieldElement<Standard> {
     /// FIPS-204, Algorithm 37.
     pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> u32 {
         self.decompose::<P>().0
-    }
-
-    /// FIPS-204, Algorithm 38.
-    pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> u32 {
-        self.decompose::<P>().1
     }
 
     /// FIPS-204, Algorithm 39.
@@ -352,16 +344,6 @@ impl RingElement {
         }
 
         (w1, w0)
-    }
-
-    /// FIPS-204, Algorithm 37.
-    pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> Self {
-        self.decompose::<P>().0
-    }
-
-    /// FIPS-204, Algorithm 38.
-    pub(crate) fn low_bits<P: MlDsaParameters>(&self) -> Self {
-        self.decompose::<P>().1
     }
 
     #[cfg(all(test, feature = "safe_api"))]
