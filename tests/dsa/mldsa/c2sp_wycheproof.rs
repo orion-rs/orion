@@ -82,40 +82,101 @@ macro_rules! wycheproof_mldsa {
                 vk: &VerifyingKey,
                 tests: &[TestVector],
             ) -> (usize, usize) {
-                let (mut run, mut skipped) = (0usize, 0usize);
+                let mut run = 0usize;
 
                 for test in tests.iter() {
-                    let Some(msg) = test.msg.as_ref() else {
-                        // Skip `mu` tests where `msg` is none
-                        skipped += 1;
-                        continue;
-                    };
+                    match test.msg.as_ref() {
+                        Some(msg) => {
+                            let msg = hex::decode(msg).unwrap();
+                            let ctx = test
+                                .ctx
+                                .as_ref()
+                                .map_or(vec![], |c| hex::decode(c).unwrap());
+                            let produced = sk.sign_with_rnd(&msg, &ctx, &rnd_of(test));
 
-                    let msg = hex::decode(msg).unwrap();
-                    let ctx = test
-                        .ctx
-                        .as_ref()
-                        .map_or(vec![], |c| hex::decode(c).unwrap());
-                    let produced = sk.sign_with_rnd(&msg, &ctx, &rnd_of(test));
+                            if test.result == "valid" {
+                                let signature = produced.unwrap();
+                                let sig_expected = hex::decode(test.sig.as_ref().unwrap()).unwrap();
+                                assert_eq!(
+                                    signature.as_ref(),
+                                    &sig_expected[..],
+                                    "tcId {}",
+                                    test.tcId,
+                                );
 
-                    if test.result == "valid" {
-                        let signature = produced.unwrap();
-                        let sig_expected = hex::decode(test.sig.as_ref().unwrap()).unwrap();
-                        assert_eq!(signature.as_ref(), &sig_expected[..], "tcId {}", test.tcId,);
+                                assert!(
+                                    vk.verify(&msg, &ctx, &signature).is_ok(),
+                                    "tcId {}",
+                                    test.tcId
+                                );
 
-                        assert!(
-                            vk.verify(&msg, &ctx, &signature).is_ok(),
-                            "tcId {}",
-                            test.tcId
-                        );
-                    } else {
-                        assert!(produced.is_err(), "tcId {}", test.tcId);
+                                if let Some(mu) = test.mu.as_ref() {
+                                    let mu = hex::decode(mu).unwrap();
+                                    let signature_with_mu =
+                                        sk.sign_external_mu_with_rnd(&mu, &rnd_of(test)).unwrap();
+                                    assert_eq!(
+                                        signature_with_mu.as_ref(),
+                                        &sig_expected[..],
+                                        "tcId {}",
+                                        test.tcId,
+                                    );
+
+                                    assert!(
+                                        vk.verify_external_mu(&mu, &signature_with_mu).is_ok(),
+                                        "tcId {}",
+                                        test.tcId
+                                    );
+                                }
+                            } else {
+                                assert!(produced.is_err(), "tcId {}", test.tcId);
+                                if let Some(mu) = test.mu.as_ref() {
+                                    let mu = hex::decode(mu).unwrap();
+                                    assert!(
+                                        sk.sign_external_mu_with_rnd(&mu, &rnd_of(test)).is_err(),
+                                        "tcId {}",
+                                        test.tcId
+                                    );
+                                }
+                            }
+
+                            run += 1;
+                        }
+                        None => {
+                            if let Some(mu) = test.mu.as_ref() {
+                                let sig_expected = hex::decode(test.sig.as_ref().unwrap()).unwrap();
+                                let mu = hex::decode(mu).unwrap();
+                                let signature_with_mu =
+                                    sk.sign_external_mu_with_rnd(&mu, &rnd_of(test));
+
+                                if test.result == "valid" {
+                                    let signature_with_mu = signature_with_mu.unwrap();
+                                    assert_eq!(
+                                        signature_with_mu.as_ref(),
+                                        &sig_expected[..],
+                                        "tcId {}",
+                                        test.tcId,
+                                    );
+
+                                    assert!(
+                                        vk.verify_external_mu(&mu, &signature_with_mu).is_ok(),
+                                        "tcId {}",
+                                        test.tcId
+                                    );
+                                } else {
+                                    assert!(
+                                        sk.sign_external_mu_with_rnd(&mu, &rnd_of(test)).is_err(),
+                                        "tcId {}",
+                                        test.tcId
+                                    );
+                                }
+
+                                run += 1;
+                            }
+                        }
                     }
-
-                    run += 1;
                 }
 
-                (run, skipped)
+                (run, 0)
             }
 
             #[test]
