@@ -1769,6 +1769,7 @@ impl<
         self.k.iter_mut().zeroize();
         self.s1_hat.elems.iter_mut().zeroize();
         self.s2_hat.elems.iter_mut().zeroize();
+        self.t0_hat.elems.iter_mut().zeroize();
     }
 }
 
