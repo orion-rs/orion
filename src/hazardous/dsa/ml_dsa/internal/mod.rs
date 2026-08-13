@@ -419,22 +419,6 @@ pub trait MlDsaParameters: Debug + Sized {
 
         Ok((c_out, z, h))
     }
-
-    fn expand_seed<const K: usize, const L: usize>(
-        rho: &[u8],
-        out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        if rho.len() != 32 || out.len() != 128 {
-            return Err(UnknownCryptoError);
-        }
-
-        let mut h = Shake256::new();
-        h.absorb(rho)?;
-        h.absorb(&[K as u8, L as u8])?;
-        h.squeeze(out)?;
-
-        Ok(())
-    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
