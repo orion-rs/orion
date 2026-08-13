@@ -659,7 +659,7 @@ impl<const N: usize> Index<usize> for Vector<N> {
     type Output = RingElement;
 
     fn index(&self, index: usize) -> &Self::Output {
-        debug_assert!(index <= N);
+        debug_assert!(index < N);
 
         &self.elems[index]
     }
@@ -725,14 +725,14 @@ impl<const N: usize, D: Domain> Index<usize> for VectorNTT<N, D> {
     type Output = RingElementNTT<D>;
 
     fn index(&self, index: usize) -> &Self::Output {
-        debug_assert!(index <= N);
+        debug_assert!(index < N);
         &self.elems[index]
     }
 }
 
 impl<const N: usize, D: Domain> IndexMut<usize> for VectorNTT<N, D> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        debug_assert!(index <= N);
+        debug_assert!(index < N);
         &mut self.elems[index]
     }
 }
