@@ -982,9 +982,12 @@ impl<
         let mut z = Vector::<L>::zero();
 
         while !valid_sample {
-            let y = expand_mask::<CLEN, K, L, P>(rhoprimeprime.as_slice(), counter)?;
-            let w = (&self.mat_a_hat * &y.ntt()).inverse_ntt_mont();
-            let w1 = w.high_bits::<P>();
+            let y = zeroize_wrap!(expand_mask::<CLEN, K, L, P>(
+                rhoprimeprime.as_slice(),
+                counter
+            )?);
+            let w = zeroize_wrap!((&self.mat_a_hat * &y.ntt()).inverse_ntt_mont());
+            let w1 = zeroize_wrap!(w.high_bits::<P>());
             P::w1_encode(&w1, w1_bytes.as_mut());
 
             // Commitment hash
@@ -995,13 +998,22 @@ impl<
 
             let c = sample_in_ball::<P>(&c_tilde)?;
             let c_hat = c.into_ntt();
-            let c_mul_s1 = (&c_hat * &self.s1_hat).inverse_ntt_mont();
-            let c_mul_s2 = (&c_hat * &self.s2_hat).inverse_ntt_mont();
-            z = y + c_mul_s1;
+            let c_mul_s1 = zeroize_wrap!((&c_hat * &self.s1_hat).inverse_ntt_mont());
+            let c_mul_s2 = zeroize_wrap!((&c_hat * &self.s2_hat).inverse_ntt_mont());
 
-            let w_sub_cs2 = w - c_mul_s2;
+            let w_sub_cs2;
+            #[cfg(feature = "zeroize")]
+            {
+                z = *y + *c_mul_s1;
+                w_sub_cs2 = zeroize_wrap!(*w - *c_mul_s2);
+            }
+            #[cfg(not(feature = "zeroize"))]
+            {
+                z = y + c_mul_s1;
+                w_sub_cs2 = zeroize_wrap!(w - c_mul_s2);
+            }
+
             let r0 = w_sub_cs2.low_bits::<P>();
-
             if bool::from(
                 z.is_outside_bound(P::GAMMA_1 - P::BETA)
                     | r0.is_outside_bound(P::GAMMA_2 - P::BETA),
@@ -1012,7 +1024,14 @@ impl<
             }
 
             let c_mul_t0 = (&c_hat * &self.t0_hat).inverse_ntt_mont();
-            hint = Hint::<K>::make::<P>(&-c_mul_t0, &(w_sub_cs2 + c_mul_t0));
+            #[cfg(feature = "zeroize")]
+            {
+                hint = Hint::<K>::make::<P>(&-c_mul_t0, &(*w_sub_cs2 + c_mul_t0));
+            }
+            #[cfg(not(feature = "zeroize"))]
+            {
+                hint = Hint::<K>::make::<P>(&-c_mul_t0, &(w_sub_cs2 + c_mul_t0));
+            }
 
             if bool::from(c_mul_t0.is_outside_bound(P::GAMMA_2) | hint.weight().ct_gt(&P::OMEGA)) {
                 // Rejected
@@ -1767,9 +1786,9 @@ impl<
         use zeroize::Zeroize;
         self.sk.iter_mut().zeroize();
         self.k.iter_mut().zeroize();
-        self.s1_hat.elems.iter_mut().zeroize();
-        self.s2_hat.elems.iter_mut().zeroize();
-        self.t0_hat.elems.iter_mut().zeroize();
+        self.s1_hat.zeroize();
+        self.s2_hat.zeroize();
+        self.t0_hat.zeroize();
     }
 }
 

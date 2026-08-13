@@ -527,6 +527,13 @@ pub struct Vector<const N: usize> {
     pub elems: [RingElement; N],
 }
 
+#[cfg(feature = "zeroize")]
+impl<const N: usize> Zeroize for Vector<N> {
+    fn zeroize(&mut self) {
+        self.elems.iter_mut().zeroize();
+    }
+}
+
 impl<const N: usize> Vector<N> {
     pub fn zero() -> Self {
         Self {
@@ -676,6 +683,13 @@ impl<const N: usize> IndexMut<usize> for Vector<N> {
 /// Vector of ring elements/polynomials in T_q, in NTT domain.
 pub struct VectorNTT<const N: usize, D: Domain> {
     pub elems: [RingElementNTT<D>; N],
+}
+
+#[cfg(feature = "zeroize")]
+impl<const N: usize, D: Domain> Zeroize for VectorNTT<N, D> {
+    fn zeroize(&mut self) {
+        self.elems.iter_mut().zeroize();
+    }
 }
 
 impl<const N: usize> VectorNTT<N, RInv> {
