@@ -27,3 +27,4 @@ mod hltypes;
 pub mod kdf;
 pub mod kex;
 pub mod pwhash;
+pub mod signer;

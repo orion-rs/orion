@@ -39,6 +39,7 @@
 	- `MLKEM768_X25519_SHA256_CHACHA20`
 	- `MLKEM768_X25519_SHAKE256_CHACHA20`
 - Add support for ML-DSA (FIPS-204).
+- Add new high-level module `orion::signer` which provides post-quantum hedged ML-DSA-65 signature creation and verification.
 
 ### 0.17.14
 

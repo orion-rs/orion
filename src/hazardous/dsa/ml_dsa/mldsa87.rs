@@ -43,6 +43,7 @@
 //!
 //! # Errors:
 //! An error will be returned if:
+//! - Verification of a signature, message and context failed.
 //! - [`getrandom::fill()`] fails during signing.
 //! - [`getrandom::fill()`] fails during [`KeyPair::generate()`].
 //! - `mu` is not `64` bytes.

@@ -20,7 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::generics::{ByteVecData, Public, Secret, TypeSpec, sealed::Data, sealed::Sealed};
+use crate::generics::{
+    ByteVecData, Public, Secret, TypeSpec,
+    sealed::{Data, Sealed},
+};
 #[cfg(feature = "safe_api")]
 use crate::{
     errors::UnknownCryptoError,
