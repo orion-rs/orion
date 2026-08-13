@@ -760,7 +760,7 @@ impl<const K: usize> Debug for Hint<K> {
         // SECURITY: This is sensitive value during rejection loop in signing.
         // As soon as rejection passes, this is a public value. Never released
         // outside during signing, so PartialEq is var-time.
-        write!(f, "{} {{***OMITTED***}}", stringify!($name))
+        write!(f, "{} {{***OMITTED***}}", stringify!(Hint))
     }
 }
 
