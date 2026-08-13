@@ -216,7 +216,7 @@ pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
 /// - MlDsa87::GAMMA_1_BITLEN = 19 => 640
 pub(crate) fn expand_mask<const CLEN: usize, const K: usize, const L: usize, P: MlDsaParameters>(
     seed: &[u8],
-    mu: u32,
+    kappa: u32,
 ) -> Result<Vector<L>, UnknownCryptoError> {
     debug_assert_eq!(K, P::DIM_K);
     debug_assert_eq!(L, P::DIM_L);
@@ -230,9 +230,15 @@ pub(crate) fn expand_mask<const CLEN: usize, const K: usize, const L: usize, P: 
 
     for r in 0..L as u16 {
         let mut h = ctx.clone();
-        h.absorb(&(mu as u16 + r).to_le_bytes())?;
-        h.squeeze(&mut v)?;
-        P::bitunpack_ring_element_gamma(&v, &mut y[r as usize]);
+        // NOTE: This would require an unrealistic amount of rejections
+        // to actually overflow
+        if let Some(kappa_r) = (kappa as u16).checked_add(r) {
+            h.absorb(&kappa_r.to_le_bytes())?;
+            h.squeeze(&mut v)?;
+            P::bitunpack_ring_element_gamma(&v, &mut y[r as usize]);
+        } else {
+            return Err(UnknownCryptoError);
+        }
     }
 
     Ok(y)
@@ -245,6 +251,32 @@ mod test {
         MlDsa44, MlDsa65, MlDsa87, MlDsaParameters, fe::DILITHIUM_Q,
         sampling::coeff_from_three_bytes,
     };
+
+    #[test]
+    fn test_expand_mask_will_err_kappa_overflow() {
+        let seed = [0u8; 64];
+        assert!(
+            expand_mask::<{ MlDsa44::CLEN }, { MlDsa44::DIM_K }, { MlDsa44::DIM_L }, MlDsa44>(
+                &seed,
+                u16::MAX as u32
+            )
+            .is_err()
+        );
+        assert!(
+            expand_mask::<{ MlDsa65::CLEN }, { MlDsa65::DIM_K }, { MlDsa65::DIM_L }, MlDsa65>(
+                &seed,
+                u16::MAX as u32
+            )
+            .is_err()
+        );
+        assert!(
+            expand_mask::<{ MlDsa87::CLEN }, { MlDsa87::DIM_K }, { MlDsa87::DIM_L }, MlDsa87>(
+                &seed,
+                u16::MAX as u32
+            )
+            .is_err()
+        );
+    }
 
     #[test]
     fn test_coeff_from_three_bytes() {
