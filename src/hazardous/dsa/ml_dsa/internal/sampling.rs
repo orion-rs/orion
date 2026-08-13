@@ -28,7 +28,6 @@ use crate::hazardous::dsa::ml_dsa::internal::fe::{
 };
 use crate::hazardous::hash::sha3::shake128::Shake128;
 use crate::hazardous::hash::sha3::shake256::Shake256;
-use crate::hazardous::kem::ml_kem::internal::serialization::bytes_to_bits;
 use core::ops::Mul;
 
 /// FIPS-204, Algorithm 14.
@@ -69,9 +68,6 @@ pub fn sample_in_ball<P: MlDsaParameters>(seed: &[u8]) -> Result<RingElement, Un
     let mut s = [0u8; 8];
     ctx.squeeze(&mut s)?;
     let mut signs = u64::from_le_bytes(s);
-
-    let mut h = [0u8; 64];
-    bytes_to_bits(&s, &mut h);
 
     for i in (256 - P::TAU)..256 {
         // reuse s allocation for one-byte squeezes, s[0] = j
