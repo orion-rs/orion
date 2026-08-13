@@ -330,7 +330,7 @@ impl RingElement {
             ret |= coeff.is_outside_bound(bound);
         }
 
-        ret.ct_ne(&Choice::from(0u8))
+        ret
     }
 
     /// FIPS-204, Algorithm 36 (component-wise form sec. 7.4)
