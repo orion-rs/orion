@@ -42,6 +42,7 @@ pub(crate) const QNEGINV: u32 = 4236238847;
 pub(crate) const INV_R2: MontSquareFactor = MontSquareFactor(41978);
 
 #[cfg(test)]
+#[cfg(feature = "safe_api")] // NOTE: Used for randomized tests only.
 /// `256^{1} \cdot R mod q`
 pub(crate) const INV: MontFactor = MontFactor(16382);
 
@@ -439,6 +440,7 @@ impl RingElementNTT<RInv> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "safe_api")] // NOTE: Used for randomized tests only.
 impl RingElementNTT<Standard> {
     pub(crate) fn inverse_ntt(mut self) -> RingElement {
         inverse_ntt(&mut self.coefficients);

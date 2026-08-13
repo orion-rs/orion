@@ -43,7 +43,7 @@ pub const SEED_SIZE: usize = 32;
 /// Size of explicit randomness ("`rnd`") used during signing [`ExplicitRandom`].
 pub const RAND_SIZE: usize = 32;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// ML-DSA seed implementation. See [`Seed`] type for convenience.
 pub struct MlDsaSeed {}
 impl Sealed for MlDsaSeed {}
