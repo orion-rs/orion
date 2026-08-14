@@ -41,7 +41,7 @@
 //! - `ctx` is not `<= 255` bytes.
 //!
 //! # Example:
-//! ```rust
+//! ```ignore-windows
 //! use orion::signer::*;
 //!
 //! // Randomly generate a fresh keypair

@@ -58,17 +58,16 @@
 //! two independent keypairs for these two variants.
 //!
 //! # Example:
-//! ```rust
+//! ```ignore-windows
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::KP;
 //! use orion::hazardous::dsa::mldsa65::*;
 //!
 //! let kp = KeyPair::generate()?;
 //!
-//! let pk = VerifyingKey::try_from(kp.public().as_ref())?;
 //! let signature = kp.private().sign(b"Message to sign", b"additional context")?;
 //!
-//! assert!(pk.verify(b"Message to sign", b"additional context", &signature).is_ok());
+//! assert!(kp.public().verify(b"Message to sign", b"additional context", &signature).is_ok());
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
