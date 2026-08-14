@@ -42,7 +42,7 @@
 //!
 //! # Example:
 //! ```rust
-//! use orion::signer::SigningKeyPair;
+//! use orion::signer::*;
 //!
 //! // Randomly generate a fresh keypair
 //! let kp = SigningKeyPair::generate()?;
@@ -52,6 +52,14 @@
 //!
 //! // Verify the signature of the message and accompanying context
 //! assert!(kp.verify(b"Message to be signed", b"Context", &sig).is_ok());
+//!
+//! // Parse a signature public key and signature from bytes
+//! let verifying_key = VerifyingKey::try_from(kp.public().as_ref())?;
+//! let signature = Signature::try_from(sig.as_ref())?;
+//!
+//! // Verify the signature of the message and accompanying context
+//! assert!(verifying_key.verify(b"Message to be signed", b"Context", &sig).is_ok());
+//!
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`orion::signer`]: crate::signer
@@ -59,6 +67,9 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
+pub use crate::hazardous::dsa::mldsa65::Seed;
+pub use crate::hazardous::dsa::mldsa65::Signature;
+pub use crate::hazardous::dsa::mldsa65::VerifyingKey;
 use crate::{errors::UnknownCryptoError, hazardous::dsa::mldsa65};
 
 #[derive(Debug, PartialEq)]
@@ -68,14 +79,14 @@ pub struct SigningKeyPair {
     // `sk` should never be reachable by a user for this type. The ability
     // to uses semi-expanded keys is forced down to `hazardous`.
     sk: mldsa65::SigningKey,
-    vk: mldsa65::VerifyingKey,
-    seed: mldsa65::Seed,
+    vk: VerifyingKey,
+    seed: Seed,
 }
 
 impl SigningKeyPair {
     /// Randomly generate a fresh ML-DSA-65 keypair.
     pub fn generate() -> Result<Self, UnknownCryptoError> {
-        let seed = mldsa65::Seed::generate()?;
+        let seed = Seed::generate()?;
         let mldsakp = mldsa65::KeyPair::try_from(&seed)?;
 
         Ok(Self {
@@ -86,42 +97,37 @@ impl SigningKeyPair {
     }
 
     /// Get a reference to this [`SigningKeyPair`]'s private seed.
-    pub fn private(&self) -> &mldsa65::Seed {
+    pub fn private(&self) -> &Seed {
         &self.seed
     }
 
     /// Get a reference to this [`SigningKeyPair`]'s public verifying key.
-    pub fn public(&self) -> &mldsa65::VerifyingKey {
+    pub fn public(&self) -> &VerifyingKey {
         &self.vk
     }
 
     /// Sign a message, with optional context (can be empty), using ML-DSA-65 hedged/randomized signing.
-    pub fn sign(&self, m: &[u8], ctx: &[u8]) -> Result<mldsa65::Signature, UnknownCryptoError> {
+    pub fn sign(&self, m: &[u8], ctx: &[u8]) -> Result<Signature, UnknownCryptoError> {
         self.sk.sign(m, ctx)
     }
 
     /// Verify a signature over a message, with optional context (can be empty), using ML-DSA-65.
     /// Returns nothing on success and [`UnknownCryptoError`] if verification failed.
-    pub fn verify(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        sig: &mldsa65::Signature,
-    ) -> Result<(), UnknownCryptoError> {
+    pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
         self.vk.verify(m, ctx, sig)
     }
 }
 
-impl TryFrom<&mldsa65::Seed> for SigningKeyPair {
+impl TryFrom<&Seed> for SigningKeyPair {
     type Error = UnknownCryptoError;
 
-    fn try_from(value: &mldsa65::Seed) -> Result<Self, Self::Error> {
+    fn try_from(value: &Seed) -> Result<Self, Self::Error> {
         let mldsakp = mldsa65::KeyPair::try_from(value)?;
 
         Ok(Self {
             sk: mldsakp.signing_key,
             vk: mldsakp.verifying_key,
-            seed: mldsa65::Seed::from(value.data.bytes),
+            seed: Seed::from(value.data.bytes),
         })
     }
 }
