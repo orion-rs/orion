@@ -76,7 +76,6 @@ use crate::{errors::UnknownCryptoError, hazardous::dsa::mldsa65};
 /// ML-DSA-65 seed-based signing key pair.
 pub struct SigningKeyPair {
     kp: mldsa65::KeyPair,
-    seed: Seed,
 }
 
 impl SigningKeyPair {
@@ -86,13 +85,12 @@ impl SigningKeyPair {
 
         Ok(Self {
             kp: mldsa65::KeyPair::try_from(&seed)?,
-            seed,
         })
     }
 
     /// Get a reference to this [`SigningKeyPair`]'s private seed.
     pub fn private(&self) -> &Seed {
-        &self.seed
+        &self.kp.seed()
     }
 
     /// Get a reference to this [`SigningKeyPair`]'s public verifying key.
@@ -118,7 +116,6 @@ impl TryFrom<&Seed> for SigningKeyPair {
     fn try_from(value: &Seed) -> Result<Self, Self::Error> {
         Ok(Self {
             kp: mldsa65::KeyPair::try_from(value)?,
-            seed: Seed::from(value.data.bytes),
         })
     }
 }
