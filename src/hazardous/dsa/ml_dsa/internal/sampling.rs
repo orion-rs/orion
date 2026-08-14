@@ -26,8 +26,8 @@ use crate::hazardous::dsa::ml_dsa::internal::fe::{
     DILITHIUM_Q, FieldElement, RInv, RingElement, RingElementNTT, Standard, Vector, VectorNTT,
     conditional_sub_u32,
 };
-use crate::hazardous::hash::sha3::shake128::Shake128;
-use crate::hazardous::hash::sha3::shake256::Shake256;
+use crate::hazardous::hash::sha3::shake128::{SHAKE_128_RATE, Shake128};
+use crate::hazardous::hash::sha3::shake256::{SHAKE_256_RATE, Shake256};
 use core::ops::Mul;
 
 /// FIPS-204, Algorithm 14.
@@ -65,17 +65,31 @@ pub fn sample_in_ball<P: MlDsaParameters>(seed: &[u8]) -> Result<RingElement, Un
     let mut c = RingElement::zero();
     let mut ctx = Shake256::new();
     ctx.absorb(seed)?;
-    let mut s = [0u8; 8];
-    ctx.squeeze(&mut s)?;
-    let mut signs = u64::from_le_bytes(s);
+
+    // Squeeze entire block (also done in ref impl) to save squeezes for better performance.
+    let mut shake_block = [0u8; SHAKE_256_RATE];
+    ctx.squeeze(&mut shake_block)?;
+    // SAFETY: Const-sized above to SHAKE_256_RATE.
+    let mut signs = u64::from_le_bytes(shake_block[..size_of::<u64>()].try_into().unwrap());
+    let mut blockpos = size_of::<u64>();
 
     for i in (256 - P::TAU)..256 {
-        // reuse s allocation for one-byte squeezes, s[0] = j
-        ctx.squeeze(&mut s[..1])?;
-        while s[0] > i as u8 {
-            ctx.squeeze(&mut s[..1])?;
+        let j: usize;
+        loop {
+            if blockpos == SHAKE_256_RATE {
+                ctx.squeeze(&mut shake_block)?;
+                blockpos = 0;
+            }
+
+            if shake_block[blockpos] <= i as u8 {
+                j = shake_block[blockpos] as usize;
+                blockpos += 1;
+                break;
+            }
+
+            blockpos += 1;
         }
-        let j = s[0] as usize;
+
         c[i] = c[j];
         c[j] = FieldElement::new(1) - &FieldElement::new(2 * (signs & 1) as u32);
 
@@ -128,13 +142,33 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
 
                 let mut a_hat = RingElementNTT::zero();
                 let mut j = 0;
-                let mut buf = [0u8; 3];
+
+                // Squeeze entire block (also done in ref impl) to save squeezes for better performance.
+                // Because SHAKE_128_RATE envenly divides the per-iter 3 pair sample, we can easily do it
+                // here without buffering extra leftover.
+                let mut shake_block = [0u8; SHAKE_128_RATE];
+                debug_assert_eq!(SHAKE_128_RATE % 3, 0);
+                g.squeeze(&mut shake_block)?;
+                let mut blockpos = 0usize;
+
                 while j < 256 {
-                    g.squeeze(&mut buf)?;
-                    if let Some(coeff) = coeff_from_three_bytes(buf[0], buf[1], buf[2]) {
+                    if blockpos == SHAKE_128_RATE {
+                        g.squeeze(&mut shake_block)?;
+                        blockpos = 0;
+                    }
+
+                    // Here again, the indices are safe due to SHAKE_128_RATE % 3 = 0.
+                    debug_assert!(blockpos + 2 < SHAKE_128_RATE);
+                    if let Some(coeff) = coeff_from_three_bytes(
+                        shake_block[blockpos],
+                        shake_block[blockpos + 1],
+                        shake_block[blockpos + 2],
+                    ) {
                         a_hat[j] = coeff;
                         j += 1;
                     }
+
+                    blockpos += 3;
                 }
 
                 *entry = a_hat;
@@ -160,21 +194,33 @@ pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
     let mut ctx = Shake256::new();
     ctx.absorb(seed)?;
 
-    let mut z = [0u8; 1];
+    // Squeeze entire block (also done in ref impl) to save squeezes for better performance.
+    let mut shake_block = zeroize_wrap!([0u8; SHAKE_256_RATE]);
+    let mut blockpos: usize;
+
     for r in 0..L as u16 {
         let mut h = ctx.clone();
         h.absorb(&r.to_le_bytes())?;
 
         let mut j = 0;
+        h.squeeze(shake_block.as_mut())?;
+        blockpos = 0;
+
         while j < 256 {
-            h.squeeze(&mut z)?;
-            if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) & 0x0F) {
+            if blockpos == SHAKE_256_RATE {
+                h.squeeze(shake_block.as_mut())?;
+                blockpos = 0;
+            }
+            let z = shake_block[blockpos] as u32;
+            blockpos += 1;
+
+            if let Some(z0) = coeff_from_half_byte::<P>(z & 0x0F) {
                 s1[r as usize][j] = z0;
                 j += 1;
             }
 
             if j < 256
-                && let Some(z1) = coeff_from_half_byte::<P>((z[0] as u32) >> 4)
+                && let Some(z1) = coeff_from_half_byte::<P>(z >> 4)
             {
                 s1[r as usize][j] = z1;
                 j += 1;
@@ -187,15 +233,24 @@ pub(crate) fn expand_s<const K: usize, const L: usize, P: MlDsaParameters>(
         h.absorb(&(r + L as u16).to_le_bytes())?;
 
         let mut j = 0;
+        h.squeeze(shake_block.as_mut())?;
+        blockpos = 0;
+
         while j < 256 {
-            h.squeeze(&mut z)?;
-            if let Some(z0) = coeff_from_half_byte::<P>((z[0] as u32) & 0x0F) {
+            if blockpos == SHAKE_256_RATE {
+                h.squeeze(shake_block.as_mut())?;
+                blockpos = 0;
+            }
+            let z = shake_block[blockpos] as u32;
+            blockpos += 1;
+
+            if let Some(z0) = coeff_from_half_byte::<P>(z & 0x0F) {
                 s2[r as usize][j] = z0;
                 j += 1;
             }
 
             if j < 256
-                && let Some(z1) = coeff_from_half_byte::<P>((z[0] as u32) >> 4)
+                && let Some(z1) = coeff_from_half_byte::<P>(z >> 4)
             {
                 s2[r as usize][j] = z1;
                 j += 1;

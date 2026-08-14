@@ -752,18 +752,20 @@ impl<const RATE: usize> Shake<RATE> {
             self.state_to_buffer();
         }
 
-        for out_b in dest.iter_mut() {
+        let mut out = dest;
+        while !out.is_empty() {
             debug_assert!(self.to_squeeze <= RATE);
-
             if self.to_squeeze == RATE {
                 keccakf::<24>(&mut self.state);
                 self.state_to_buffer();
                 self.to_squeeze = 0;
             }
 
-            // We need to wrap around due to length limitation on buffer
-            *out_b = self.buffer[self.to_squeeze];
-            self.to_squeeze += 1;
+            let want = core::cmp::min(RATE - self.to_squeeze, out.len());
+            let (chunk, rem) = out.split_at_mut(want);
+            chunk.copy_from_slice(&self.buffer[self.to_squeeze..self.to_squeeze + want]);
+            self.to_squeeze += want;
+            out = rem;
         }
 
         Ok(())
