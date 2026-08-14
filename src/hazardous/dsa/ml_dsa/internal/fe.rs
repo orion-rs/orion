@@ -22,7 +22,7 @@
 
 use core::fmt::Debug;
 use core::marker::PhantomData;
-use core::ops::{Add, Mul, Neg, Sub};
+use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 use core::ops::{Index, IndexMut};
 
 use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess};
@@ -252,22 +252,35 @@ impl<D: Domain> FieldElement<D> {
     }
 }
 
-impl<D: Domain> Add for FieldElement<D> {
+impl<D: Domain> Add<&Self> for FieldElement<D> {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
-        let x: u32 = self.0 + other.0;
-        Self(conditional_sub_u32(x), PhantomData)
+    fn add(mut self, other: &Self) -> Self {
+        self += other;
+
+        self
     }
 }
 
-impl<D: Domain> Sub for FieldElement<D> {
+impl<D: Domain> AddAssign<&Self> for FieldElement<D> {
+    fn add_assign(&mut self, rhs: &Self) {
+        self.0 = conditional_sub_u32(self.0 + rhs.0)
+    }
+}
+
+impl<D: Domain> Sub<&Self> for FieldElement<D> {
     type Output = Self;
 
-    fn sub(self, other: Self) -> Self {
-        let x: u32 = self.0.wrapping_sub(other.0).wrapping_add(DILITHIUM_Q);
+    fn sub(mut self, other: &Self) -> Self {
+        self -= other;
 
-        Self(conditional_sub_u32(x), PhantomData)
+        self
+    }
+}
+
+impl<D: Domain> SubAssign<&Self> for FieldElement<D> {
+    fn sub_assign(&mut self, rhs: &Self) {
+        self.0 = conditional_sub_u32(self.0.wrapping_sub(rhs.0).wrapping_add(DILITHIUM_Q));
     }
 }
 
@@ -363,29 +376,39 @@ impl RingElement {
     }
 }
 
-impl Add for RingElement {
+impl Add<&Self> for RingElement {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut ret = RingElement::zero();
-        for idx in 0..256 {
-            ret.coefficients[idx] = self.coefficients[idx] + rhs.coefficients[idx];
-        }
+    fn add(mut self, rhs: &Self) -> Self::Output {
+        self += rhs;
 
-        ret
+        self
     }
 }
 
-impl Sub for RingElement {
+impl AddAssign<&Self> for RingElement {
+    fn add_assign(&mut self, rhs: &Self) {
+        for (coeff_ret, coeff_rhs) in self.coefficients.iter_mut().zip(rhs.coefficients.iter()) {
+            *coeff_ret += coeff_rhs;
+        }
+    }
+}
+
+impl Sub<&Self> for RingElement {
     type Output = Self;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        let mut ret = RingElement::zero();
-        for idx in 0..256 {
-            ret.coefficients[idx] = self.coefficients[idx] - rhs.coefficients[idx];
-        }
+    fn sub(mut self, rhs: &Self) -> Self::Output {
+        self -= rhs;
 
-        ret
+        self
+    }
+}
+
+impl SubAssign<&Self> for RingElement {
+    fn sub_assign(&mut self, rhs: &Self) {
+        for (coeff_ret, coeff_rhs) in self.coefficients.iter_mut().zip(rhs.coefficients.iter()) {
+            *coeff_ret -= coeff_rhs;
+        }
     }
 }
 
@@ -455,29 +478,40 @@ impl RingElementNTT<Standard> {
 }
 
 // FIPS-204, Algorithm 44.
-impl<D: Domain> Add for RingElementNTT<D> {
+impl<D: Domain> Add<&Self> for RingElementNTT<D> {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
-        let mut c = Self::zero();
-        for idx in 0..256 {
-            c[idx] = self[idx] + other[idx];
-        }
+    fn add(mut self, rhs: &Self) -> Self::Output {
+        self += rhs;
 
-        c
+        self
     }
 }
 
-impl<D: Domain> Sub for RingElementNTT<D> {
+// FIPS-204, Algorithm 44.
+impl<D: Domain> AddAssign<&Self> for RingElementNTT<D> {
+    fn add_assign(&mut self, rhs: &Self) {
+        for (coeff_ret, coeff_rhs) in self.coefficients.iter_mut().zip(rhs.coefficients.iter()) {
+            *coeff_ret += coeff_rhs;
+        }
+    }
+}
+
+impl<D: Domain> Sub<&Self> for RingElementNTT<D> {
     type Output = Self;
 
-    fn sub(self, other: Self) -> Self {
-        let mut c = Self::zero();
-        for idx in 0..256 {
-            c[idx] = self[idx] - other[idx];
-        }
+    fn sub(mut self, rhs: &Self) -> Self::Output {
+        self -= rhs;
 
-        c
+        self
+    }
+}
+
+impl<D: Domain> SubAssign<&Self> for RingElementNTT<D> {
+    fn sub_assign(&mut self, rhs: &Self) {
+        for (coeff_ret, coeff_rhs) in self.coefficients.iter_mut().zip(rhs.coefficients.iter()) {
+            *coeff_ret -= coeff_rhs;
+        }
     }
 }
 
@@ -623,29 +657,39 @@ impl<const N: usize> Vector<N> {
     }
 }
 
-impl<const N: usize> Add for Vector<N> {
+impl<const N: usize> Add<&Self> for Vector<N> {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut ret = Vector::<N>::zero();
-        for idx in 0..N {
-            ret.elems[idx] = self.elems[idx] + rhs.elems[idx];
-        }
+    fn add(mut self, rhs: &Self) -> Self::Output {
+        self += rhs;
 
-        ret
+        self
     }
 }
 
-impl<const N: usize> Sub for Vector<N> {
+impl<const N: usize> AddAssign<&Self> for Vector<N> {
+    fn add_assign(&mut self, rhs: &Self) {
+        for (elem_ret, elem_rhs) in self.elems.iter_mut().zip(rhs.elems.iter()) {
+            *elem_ret += elem_rhs;
+        }
+    }
+}
+
+impl<const N: usize> Sub<&Self> for Vector<N> {
     type Output = Self;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        let mut ret = Vector::<N>::zero();
-        for idx in 0..N {
-            ret.elems[idx] = self.elems[idx] - rhs.elems[idx];
-        }
+    fn sub(mut self, rhs: &Self) -> Self::Output {
+        self -= rhs;
 
-        ret
+        self
+    }
+}
+
+impl<const N: usize> SubAssign<&Self> for Vector<N> {
+    fn sub_assign(&mut self, rhs: &Self) {
+        for (elem_ret, elem_rhs) in self.elems.iter_mut().zip(rhs.elems.iter()) {
+            *elem_ret -= elem_rhs;
+        }
     }
 }
 
@@ -710,30 +754,39 @@ impl<const N: usize, D: Domain> VectorNTT<N, D> {
     }
 }
 
-impl<const N: usize, D: Domain> Add for VectorNTT<N, D> {
+impl<const N: usize, D: Domain> Add<&Self> for VectorNTT<N, D> {
     type Output = Self;
 
-    /// FIPS-204, Algorithm 46.
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut ret = VectorNTT::<N, D>::zero();
-        for idx in 0..N {
-            ret.elems[idx] = self.elems[idx] + rhs.elems[idx];
-        }
+    fn add(mut self, rhs: &Self) -> Self::Output {
+        self += rhs;
 
-        ret
+        self
     }
 }
 
-impl<const N: usize, D: Domain> Sub for VectorNTT<N, D> {
+impl<const N: usize, D: Domain> AddAssign<&Self> for VectorNTT<N, D> {
+    fn add_assign(&mut self, rhs: &Self) {
+        for (elem_ret, elem_rhs) in self.elems.iter_mut().zip(rhs.elems.iter()) {
+            *elem_ret += elem_rhs;
+        }
+    }
+}
+
+impl<const N: usize, D: Domain> Sub<&Self> for VectorNTT<N, D> {
     type Output = Self;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        let mut ret = VectorNTT::<N, D>::zero();
-        for idx in 0..N {
-            ret.elems[idx] = self.elems[idx] - rhs.elems[idx];
-        }
+    fn sub(mut self, rhs: &Self) -> Self::Output {
+        self -= rhs;
 
-        ret
+        self
+    }
+}
+
+impl<const N: usize, D: Domain> SubAssign<&Self> for VectorNTT<N, D> {
+    fn sub_assign(&mut self, rhs: &Self) {
+        for (elem_ret, elem_rhs) in self.elems.iter_mut().zip(rhs.elems.iter()) {
+            *elem_ret -= elem_rhs;
+        }
     }
 }
 
@@ -949,8 +1002,8 @@ pub fn to_ntt(coefficients: &mut [FieldElement<Standard>; 256]) {
             let (lo, hi) = coefficients[start..start + 2 * len].split_at_mut(len);
             for (a, b) in lo.iter_mut().zip(hi.iter_mut()) {
                 let t = z.mul(*b);
-                *b = *a - t;
-                *a = *a + t;
+                *b = *a - &t;
+                *a = *a + &t;
             }
             start += 2 * len;
         }
@@ -972,8 +1025,8 @@ pub fn inverse_ntt<D: Domain>(coefficients: &mut [FieldElement<D>; 256]) {
             let (lo, hi) = coefficients[start..start + 2 * len].split_at_mut(len);
             for (a, b) in lo.iter_mut().zip(hi.iter_mut()) {
                 let t = *a;
-                *a = t + *b;
-                *b = z * (t - *b);
+                *a = t + b;
+                *b = z * (t - b);
             }
 
             start += 2 * len;
@@ -1076,7 +1129,7 @@ mod test_arithmetic {
         for x in EDGE_CASE_TRIGGERS {
             for y in 0..DILITHIUM_Q {
                 let fe_add_ret =
-                    FieldElement::<D>::from_raw_u32(*x) + FieldElement::<D>::from_raw_u32(y);
+                    FieldElement::<D>::from_raw_u32(*x) + &FieldElement::<D>::from_raw_u32(y);
                 let num_add_ret = (x + y) % DILITHIUM_Q;
 
                 assert!(fe_add_ret.0 < DILITHIUM_Q);
@@ -1089,7 +1142,7 @@ mod test_arithmetic {
         for x in EDGE_CASE_TRIGGERS {
             for y in 0..DILITHIUM_Q {
                 let fe_sub_ret =
-                    FieldElement::<D>::from_raw_u32(*x) - FieldElement::<D>::from_raw_u32(y);
+                    FieldElement::<D>::from_raw_u32(*x) - &FieldElement::<D>::from_raw_u32(y);
                 let num_sub_ret = (*x as i32 - y as i32 + DILITHIUM_Q as i32) % DILITHIUM_Q as i32;
 
                 assert!(fe_sub_ret.0 < DILITHIUM_Q);
