@@ -206,7 +206,7 @@ impl FieldElement<Standard> {
     /// FIPS-204, Algorithm 39.
     pub(crate) fn make_hint<P: MlDsaParameters>(&self, z: &Self) -> Choice {
         let hibits_clean = self.high_bits::<P>();
-        let hibits_add = (*self + *z).high_bits::<P>();
+        let hibits_add = (*self + z).high_bits::<P>();
 
         hibits_clean.ct_ne(&hibits_add)
     }
@@ -1003,7 +1003,7 @@ pub fn to_ntt(coefficients: &mut [FieldElement<Standard>; 256]) {
             for (a, b) in lo.iter_mut().zip(hi.iter_mut()) {
                 let t = z.mul(*b);
                 *b = *a - &t;
-                *a = *a + &t;
+                *a += &t;
             }
             start += 2 * len;
         }

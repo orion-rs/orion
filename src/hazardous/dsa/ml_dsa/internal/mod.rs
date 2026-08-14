@@ -157,7 +157,7 @@ pub trait MlDsaParameters: Debug + Sized {
         for i in 0..256 / 8 {
             let mut t = [0u32; 8];
             for (j, slot) in t.iter_mut().enumerate() {
-                *slot = (fe_2power12 - w.coefficients[8 * i + j]).0;
+                *slot = (fe_2power12 - &w.coefficients[8 * i + j]).0;
             }
             out[13 * i] = t[0] as u8;
             out[13 * i + 1] = ((t[0] >> 8) | (t[1] << 5)) as u8;
@@ -195,7 +195,7 @@ pub trait MlDsaParameters: Debug + Sized {
                 (b(11) >> 3) | (b(12) << 5),
             ];
             for (dst, &tj) in fe.iter_mut().zip(t.iter()) {
-                *dst = fe_2power12 - FieldElement::new(tj & 0x1FFF);
+                *dst = fe_2power12 - &FieldElement::new(tj & 0x1FFF);
             }
         }
     }
@@ -464,7 +464,7 @@ impl MlDsaParameters for MlDsa44 {
                 (b(6) >> 6) | (b(7) << 2) | (b(8) << 10),
             ];
             for (dst, &tj) in a.iter_mut().zip(t.iter()) {
-                *dst = fe_gamma1 - FieldElement::new(tj & 0x3FFFF);
+                *dst = fe_gamma1 - &FieldElement::new(tj & 0x3FFFF);
             }
         }
     }
@@ -473,7 +473,7 @@ impl MlDsaParameters for MlDsa44 {
         debug_assert_eq!(out.len(), Self::ETA_BITPACK_SIZE);
         let fe_eta = FieldElement::new(Self::ETA as u32);
         for i in 0..256 / 8 {
-            let subat = |k: usize| fe_eta - w.coefficients[8 * i + k];
+            let subat = |k: usize| fe_eta - &w.coefficients[8 * i + k];
             out[3 * i] = (subat(0).0 | (subat(1).0 << 3) | (subat(2).0 << 6)) as u8;
             out[3 * i + 1] =
                 ((subat(2).0 >> 2) | (subat(3).0 << 1) | (subat(4).0 << 4) | (subat(5).0 << 7))
@@ -487,14 +487,14 @@ impl MlDsaParameters for MlDsa44 {
         let fe_eta = FieldElement::new(Self::ETA as u32);
         for (fe, blk) in w.coefficients.chunks_exact_mut(8).zip(v.chunks_exact(3)) {
             let b = |k: usize| blk[k] as u32;
-            fe[0] = fe_eta - FieldElement::new(b(0) & 7);
-            fe[1] = fe_eta - FieldElement::new((b(0) >> 3) & 7);
-            fe[2] = fe_eta - FieldElement::new((b(0) >> 6) | ((b(1) << 2) & 4));
-            fe[3] = fe_eta - FieldElement::new((b(1) >> 1) & 7);
-            fe[4] = fe_eta - FieldElement::new((b(1) >> 4) & 7);
-            fe[5] = fe_eta - FieldElement::new((b(1) >> 7) | ((b(2) << 1) & 6));
-            fe[6] = fe_eta - FieldElement::new((b(2) >> 2) & 7);
-            fe[7] = fe_eta - FieldElement::new((b(2) >> 5) & 7);
+            fe[0] = fe_eta - &FieldElement::new(b(0) & 7);
+            fe[1] = fe_eta - &FieldElement::new((b(0) >> 3) & 7);
+            fe[2] = fe_eta - &FieldElement::new((b(0) >> 6) | ((b(1) << 2) & 4));
+            fe[3] = fe_eta - &FieldElement::new((b(1) >> 1) & 7);
+            fe[4] = fe_eta - &FieldElement::new((b(1) >> 4) & 7);
+            fe[5] = fe_eta - &FieldElement::new((b(1) >> 7) | ((b(2) << 1) & 6));
+            fe[6] = fe_eta - &FieldElement::new((b(2) >> 2) & 7);
+            fe[7] = fe_eta - &FieldElement::new((b(2) >> 5) & 7);
         }
     }
 
@@ -582,8 +582,8 @@ impl MlDsaParameters for MlDsa65 {
             let b = |k: usize| blk[k] as u32;
             let t0 = b(0) | (b(1) << 8) | (b(2) << 16);
             let t1 = (b(2) >> 4) | (b(3) << 4) | (b(4) << 12);
-            a[0] = fe_gamma1 - FieldElement::new(t0 & 0xFFFFF);
-            a[1] = fe_gamma1 - FieldElement::new(t1 & 0xFFFFF);
+            a[0] = fe_gamma1 - &FieldElement::new(t0 & 0xFFFFF);
+            a[1] = fe_gamma1 - &FieldElement::new(t1 & 0xFFFFF);
         }
     }
 
@@ -592,8 +592,8 @@ impl MlDsaParameters for MlDsa65 {
         let fe_eta = FieldElement::new(Self::ETA as u32);
 
         for (i, outelem) in out.iter_mut().enumerate().take(256 / 2) {
-            let t0 = fe_eta - w.coefficients[2 * i];
-            let t1 = fe_eta - w.coefficients[2 * i + 1];
+            let t0 = fe_eta - &w.coefficients[2 * i];
+            let t1 = fe_eta - &w.coefficients[2 * i + 1];
             *outelem = (t0.0 | (t1.0 << 4)) as u8;
         }
     }
@@ -603,8 +603,8 @@ impl MlDsaParameters for MlDsa65 {
         let fe_eta = FieldElement::new(Self::ETA as u32);
 
         for (fe, &byte) in w.coefficients.chunks_exact_mut(2).zip(v.iter()) {
-            fe[0] = fe_eta - FieldElement::new((byte & 0x0F) as u32);
-            fe[1] = fe_eta - FieldElement::new((byte >> 4) as u32);
+            fe[0] = fe_eta - &FieldElement::new((byte & 0x0F) as u32);
+            fe[1] = fe_eta - &FieldElement::new((byte >> 4) as u32);
         }
     }
 
@@ -769,8 +769,8 @@ impl<
 
         let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&rho)?;
         let (s1, s2) = expand_s::<K, L, P>(&expanded_seed[32..32 + 64])?;
-
-        let t = (&mat_a_hat * &s1.ntt()).inverse_ntt_mont() + s2;
+        let s1_hat = s1.ntt();
+        let t = (&mat_a_hat * &s1_hat).inverse_ntt_mont() + &s2;
         let (t1, t0) = t.power2round::<P>();
         let pk = P::pk_encode::<PK_ENCODED_SIZE>(&rho, &t1.elems);
 
@@ -790,15 +790,15 @@ impl<
 
         Ok(Self {
             sk: InternalSigningKey {
+                rho,
                 sk,
                 k: expanded_seed[32 + 64..32 + 64 + 32]
                     .try_into()
                     .expect("const-sized on 128"),
                 tr_hash: tr,
-                s1_hat: s1.ntt(),
+                s1_hat,
                 s2_hat: s2.ntt(),
                 t0_hat: t0.ntt(),
-                mat_a_hat: mat_a_hat.clone(),
                 _phantom: PhantomData,
             },
             pk: InternalVerifyingKey {
@@ -824,13 +824,13 @@ pub struct InternalSigningKey<
     const L: usize,
     P: MlDsaParameters,
 > {
+    rho: [u8; 32],
     pub(crate) sk: [u8; SK_ENCODED_SIZE],
     k: [u8; 32],                    // PRIVATE random seed,
     tr_hash: [u8; 64],              // hash of public key `tr`
     s1_hat: VectorNTT<L, Standard>, // SECRET polyvector
     s2_hat: VectorNTT<K, Standard>, // SECRET polyvector
     t0_hat: VectorNTT<K, Standard>, // uncompressed public key
-    mat_a_hat: MatrixNTT<K, L>,
     _phantom: PhantomData<P>,
 }
 
@@ -916,6 +916,7 @@ impl<
         let (rho, k, tr, s1, s2, t0) = P::sk_decode(value)?;
 
         let ret = Self {
+            rho,
             sk: value
                 .try_into()
                 .expect("length check is part of P::sk_decode()"),
@@ -925,7 +926,6 @@ impl<
             s1_hat: s1.ntt(),
             s2_hat: s2.ntt(),
             t0_hat: t0.ntt(),
-            mat_a_hat: MatrixNTT::<K, L>::expand_a::<P>(&rho)?,
             _phantom: PhantomData,
         };
 
@@ -981,12 +981,14 @@ impl<
         let mut hint = Hint::<K>::zero();
         let mut z = Vector::<L>::zero();
 
+        let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&self.rho)?;
+
         while !valid_sample {
             let y = zeroize_wrap!(expand_mask::<CLEN, K, L, P>(
                 rhoprimeprime.as_slice(),
                 counter
             )?);
-            let w = zeroize_wrap!((&self.mat_a_hat * &y.ntt()).inverse_ntt_mont());
+            let w = zeroize_wrap!((&mat_a_hat * &y.ntt()).inverse_ntt_mont());
             let w1 = zeroize_wrap!(w.high_bits::<P>());
             P::w1_encode(&w1, w1_bytes.as_mut());
 
@@ -1004,13 +1006,13 @@ impl<
             let w_sub_cs2;
             #[cfg(feature = "zeroize")]
             {
-                z = *y + *c_mul_s1;
-                w_sub_cs2 = zeroize_wrap!(*w - *c_mul_s2);
+                z = *y + &*c_mul_s1;
+                w_sub_cs2 = zeroize_wrap!(*w - &*c_mul_s2);
             }
             #[cfg(not(feature = "zeroize"))]
             {
-                z = y + c_mul_s1;
-                w_sub_cs2 = zeroize_wrap!(w - c_mul_s2);
+                z = y + &c_mul_s1;
+                w_sub_cs2 = zeroize_wrap!(w - &c_mul_s2);
             }
 
             let r0 = w_sub_cs2.low_bits::<P>();
@@ -1026,11 +1028,11 @@ impl<
             let c_mul_t0 = (&c_hat * &self.t0_hat).inverse_ntt_mont();
             #[cfg(feature = "zeroize")]
             {
-                hint = Hint::<K>::make::<P>(&-c_mul_t0, &(*w_sub_cs2 + c_mul_t0));
+                hint = Hint::<K>::make::<P>(&-c_mul_t0, &(*w_sub_cs2 + &c_mul_t0));
             }
             #[cfg(not(feature = "zeroize"))]
             {
-                hint = Hint::<K>::make::<P>(&-c_mul_t0, &(w_sub_cs2 + c_mul_t0));
+                hint = Hint::<K>::make::<P>(&-c_mul_t0, &(w_sub_cs2 + &c_mul_t0));
             }
 
             if bool::from(c_mul_t0.is_outside_bound(P::GAMMA_2) | hint.weight().ct_gt(&P::OMEGA)) {
@@ -1269,7 +1271,7 @@ impl<
         let c = sample_in_ball::<P>(&sigma.c)?;
         // Az − ct1 ⋅ 2d
         let w_approx = ((&self.mat_a_hat * &sigma.z.ntt())
-            - (&c.into_ntt() * &self.t1.shift_left_d::<P>().ntt()))
+            - &(&c.into_ntt() * &self.t1.shift_left_d::<P>().ntt()))
             .inverse_ntt_mont();
 
         let w1 = w_approx.use_hint::<P>(&sigma.h);

@@ -77,7 +77,7 @@ pub fn sample_in_ball<P: MlDsaParameters>(seed: &[u8]) -> Result<RingElement, Un
         }
         let j = s[0] as usize;
         c[i] = c[j];
-        c[j] = FieldElement::new(1) - FieldElement::new(2 * (signs & 1) as u32);
+        c[j] = FieldElement::new(1) - &FieldElement::new(2 * (signs & 1) as u32);
 
         signs >>= 1;
     }
@@ -98,8 +98,7 @@ impl<const K: usize, const L: usize> Mul<&VectorNTT<L, Standard>> for &MatrixNTT
         let mut w_hat = VectorNTT::<K, RInv>::zero();
         for i in 0..K {
             for j in 0..L {
-                let mul_ntt = self.mat[i][j] * rhs[j];
-                w_hat[i] = w_hat[i] + mul_ntt;
+                w_hat[i] += &(self.mat[i][j] * rhs[j]);
             }
         }
 

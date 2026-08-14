@@ -75,11 +75,7 @@ use crate::{errors::UnknownCryptoError, hazardous::dsa::mldsa65};
 #[derive(Debug, PartialEq)]
 /// ML-DSA-65 seed-based signing key pair.
 pub struct SigningKeyPair {
-    // We hold `SigningKey` to force the use of Seed in the higher-level API.
-    // `sk` should never be reachable by a user for this type. The ability
-    // to uses semi-expanded keys is forced down to `hazardous`.
-    sk: mldsa65::SigningKey,
-    vk: VerifyingKey,
+    kp: mldsa65::KeyPair,
     seed: Seed,
 }
 
@@ -87,11 +83,9 @@ impl SigningKeyPair {
     /// Randomly generate a fresh ML-DSA-65 keypair.
     pub fn generate() -> Result<Self, UnknownCryptoError> {
         let seed = Seed::generate()?;
-        let mldsakp = mldsa65::KeyPair::try_from(&seed)?;
 
         Ok(Self {
-            sk: mldsakp.signing_key,
-            vk: mldsakp.verifying_key,
+            kp: mldsa65::KeyPair::try_from(&seed)?,
             seed,
         })
     }
@@ -103,18 +97,18 @@ impl SigningKeyPair {
 
     /// Get a reference to this [`SigningKeyPair`]'s public verifying key.
     pub fn public(&self) -> &VerifyingKey {
-        &self.vk
+        &self.kp.verifying_key
     }
 
     /// Sign a message, with optional context (can be empty), using ML-DSA-65 hedged/randomized signing.
     pub fn sign(&self, m: &[u8], ctx: &[u8]) -> Result<Signature, UnknownCryptoError> {
-        self.sk.sign(m, ctx)
+        self.kp.signing_key.sign(m, ctx)
     }
 
     /// Verify a signature over a message, with optional context (can be empty), using ML-DSA-65.
     /// Returns nothing on success and [`UnknownCryptoError`] if verification failed.
     pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
-        self.vk.verify(m, ctx, sig)
+        self.kp.verifying_key.verify(m, ctx, sig)
     }
 }
 
@@ -122,11 +116,8 @@ impl TryFrom<&Seed> for SigningKeyPair {
     type Error = UnknownCryptoError;
 
     fn try_from(value: &Seed) -> Result<Self, Self::Error> {
-        let mldsakp = mldsa65::KeyPair::try_from(value)?;
-
         Ok(Self {
-            sk: mldsakp.signing_key,
-            vk: mldsakp.verifying_key,
+            kp: mldsa65::KeyPair::try_from(value)?,
             seed: Seed::from(value.data.bytes),
         })
     }
