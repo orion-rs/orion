@@ -1017,7 +1017,7 @@ impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize,
     TryFromBytes for DecapKey<K, ENCODED_SIZE_EK, ENCODED_SIZE_DK, Pke>
 {
     fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
-        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // NOTE: Doesn't need the parse_bytes() because it already uses
         // the TypeData::try_from_bytes(), which we define to be custom here.
         Self::unchecked_from_slice(bytes)
     }
@@ -1027,7 +1027,7 @@ impl<const K: usize, const ENCODED_SIZE: usize, Pke: PkeParameters> TryFromBytes
     for EncapKey<K, ENCODED_SIZE, Pke>
 {
     fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
-        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // NOTE: Doesn't need the parse_bytes() because it already uses
         // the TypeData::try_from_bytes(), which we define to be custom here.
         Self::from_bytes(bytes)
     }

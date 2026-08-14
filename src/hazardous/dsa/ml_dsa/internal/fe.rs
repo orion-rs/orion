@@ -60,7 +60,7 @@ pub(crate) const fn conditional_sub_u32(a: u32) -> u32 {
 }
 
 const fn montgomery_reduce(value: u64) -> u32 {
-    // cast to u32 and warpping_mul to use lower 32 bits
+    // cast to u32 and wrapping_mul to use lower 32 bits
     let t: u32 = (value as u32).wrapping_mul(QNEGINV);
     let r: u32 = (value
         .overflowing_add((t as u64).overflowing_mul(DILITHIUM_Q as u64).0)
@@ -83,7 +83,7 @@ impl sealed::Sealed for Standard {}
 impl Domain for Standard {}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-/// Marker for field elements procuded by scaling in Montgomery multiplication.
+/// Marker for field elements produced by scaling in Montgomery multiplication.
 pub struct RInv;
 impl sealed::Sealed for RInv {}
 impl Domain for RInv {}
@@ -814,7 +814,7 @@ impl<const K: usize> Hint<K> {
 
     pub fn hint_bitpack<P: MlDsaParameters>(&self, out: &mut [u8]) {
         debug_assert_eq!(out.len(), P::OMEGA as usize + K);
-        // CORRECTNESS/SECURITY: This method is used durign signature encoding
+        // CORRECTNESS/SECURITY: This method is used during signature encoding
         // and assumes the rejection sampling has finished before this routine is run.
         debug_assert!(self.weight() as usize <= P::OMEGA as usize);
 

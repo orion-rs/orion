@@ -108,7 +108,7 @@ pub trait MlDsaParameters: Debug + Sized {
     /// Constant-time Decompose().
     const DECOMPOSE_W1_MAX: u32;
 
-    /// bytes sued to encode polynomial as byte signature
+    /// bytes used to encode polynomial as byte signature
     const Z_BITPACK_SIZE: usize;
 
     /// Size of private signing key in bytes.
@@ -1284,7 +1284,7 @@ impl<
 
         // SECURITY: While this is VerifyingKey and therefor should
         // be no leak of secret data if this were vartime, we keep it
-        // becuase is_outside_bound() return Choice and it is the careful
+        // because is_outside_bound() return Choice and it is the careful
         // approach.
         if bool::from(
             !sigma.z.is_outside_bound(P::GAMMA_1 - P::BETA)
@@ -1843,7 +1843,7 @@ impl<
 > TryFromBytes for InternalSignature<SIGNATURE_SIZE, COMMITHASH_LEN, K, L, P>
 {
     fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
-        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // NOTE: Doesn't need the parse_bytes() because it already uses
         // the TypeData::try_from_bytes(), which we define to be custom here.
         Self::try_from(bytes)
     }
@@ -1871,7 +1871,7 @@ impl<
     >
 {
     fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
-        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // NOTE: Doesn't need the parse_bytes() because it already uses
         // the TypeData::try_from_bytes(), which we define to be custom here.
         Self::try_from(bytes)
     }
@@ -1899,7 +1899,7 @@ impl<
     >
 {
     fn try_from_bytes(bytes: &[u8]) -> Result<Self, UnknownCryptoError> {
-        // NOTE: Doesn't need the parse_bytes() becuase it already uses
+        // NOTE: Doesn't need the parse_bytes() because it already uses
         // the TypeData::try_from_bytes(), which we define to be custom here.
         Self::try_from(bytes)
     }

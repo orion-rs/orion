@@ -53,7 +53,7 @@
 //! - Using the randomized, non-deterministic signing hardens the ML-DSA signing routine against fault-injection attacks.
 //! - It is critical that both the seed and explicit randomness `rnd`, used for key generation and encapsulation
 //! are generated using a strong CSPRNG.
-//! - Users should always prefer signing without specifying explicit randomness, if possible.
+//! - Users should always prefer the hedged/randomized if in doubt.
 //! - While possible to use a single [`KeyPair`] for both HashML-DSA and ML-DSA, it is strongly recommended to utilize
 //! two independent keypairs for these two variants.
 //!
@@ -117,7 +117,7 @@ pub type SigningKey = Secret<MlDsa65SigningKey>;
 pub type VerifyingKey = Public<MlDsa65VerifyingKey>;
 
 #[derive(Debug)]
-/// ML-DSA-65 signing key implementaion. See [`SigningKey`] type for convenience.
+/// ML-DSA-65 signing key implementation. See [`SigningKey`] type for convenience.
 pub struct MlDsa65SigningKey {}
 impl Sealed for MlDsa65SigningKey {}
 

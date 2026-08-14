@@ -130,7 +130,7 @@ pub struct ChaCha20Key {}
 impl Sealed for ChaCha20Key {}
 
 impl ChaCha20Key {
-    /// Used in HPKE generics to avoid relyign on nightly const generics.
+    /// Used in HPKE generics to avoid relying on nightly const generics.
     pub(crate) const fn zero() -> Secret<Self> {
         Secret {
             data: ByteArrayData::<CHACHA_KEYSIZE> { bytes: [0u8; _] },
@@ -237,7 +237,7 @@ pub struct ChaCha20 {
     /// Flag to track if the final block counter has been used.
     /// If we didn't track, we could end up writing the same keystream
     /// block to CHACHA_BLOCKSIZE-sized output chunks over multiple
-    /// xor_keystream_into() calls. As the next_produceable() can
+    /// xor_keystream_into() calls. As the next_producible() can
     /// only be called if more bytes that the last block is requested.
     ///
     /// This is meant to be un-resettable, because using a key/nonce pair
@@ -438,7 +438,7 @@ impl ChaCha20 {
     /// This resets the internal offset tracker, which keeps track of unused
     /// but already generated keystream bytes, for the [`Self::position()`]
     /// prior to calling this function. To set position in terms of specific
-    /// bytes across the entire keystream, use
+    /// bytes across the entire keystream, use [`Self::set_byte_position`].
     ///
     /// This is equivalent to seeking ahead in the keystream output generated,
     /// on a per-block ([`CHACHA_BLOCKSIZE`]) basis.
@@ -506,7 +506,7 @@ impl ChaCha20 {
 
         // https://github.com/orion-rs/orion/issues/308 fix was to not copy
         // plaintext into out-buffer. This new API means there's only one buffer.
-        // Here `bytes` contain plaintext, so now it is user-respnsibility
+        // Here `bytes` contain plaintext, so now it is user-responsibility
         // to ensure to zero out plaintext bytes if the function fails.
 
         let mut bytes = bytes;
@@ -517,7 +517,7 @@ impl ChaCha20 {
 
         if self.blockoffset > 0 {
             // SECURITY: This is the only time we don't check for self.exhausted/self.next_producible().
-            // If the keystream is exhausted, but we etner this branch, it means we have unused keystream
+            // If the keystream is exhausted, but we enter this branch, it means we have unused keystream
             // leftover. This unused rem is safe to use. This function should only ever execute once after
             // self.exhausted == true.
             let offset = self.blockoffset as usize;

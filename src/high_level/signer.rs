@@ -29,7 +29,7 @@
 //! - Uses ML-DSA-65 in "hedged"/randomized mode.
 //! - Keys are based exclusively on a seed. To interact with semi-expanded/serialized signing keys, users will have to reach for [`orion::hazardous::dsa`].
 //!
-//! # Parameters:s
+//! # Parameters:
 //! - `m`: Message to be signed or verified a signature of.
 //! - `ctx`: Context string which must be the same on signing and verification.
 //! - `sig`: Signature to be verified.
@@ -101,7 +101,7 @@ impl SigningKeyPair {
     }
 
     /// Verify a signature over a message, with optional context (can be empty), using ML-DSA-65.
-    /// Returns nothing on success and [`UnknownCryptoError`] of verification failed.
+    /// Returns nothing on success and [`UnknownCryptoError`] if verification failed.
     pub fn verify(
         &self,
         m: &[u8],

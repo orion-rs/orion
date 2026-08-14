@@ -74,7 +74,7 @@ impl GenerateSecret for MlDsaSeed {
 /// Represent the `ξ` seed used by ML-DSA to produce
 /// a signing and verification key.
 ///
-/// **SECURITY**: It it crucial for the security of ML-DSA that these be generated
+/// **SECURITY**: It is crucial for the security of ML-DSA that these be generated
 /// using a CSPRNG.
 pub type Seed = Secret<MlDsaSeed>;
 
@@ -111,12 +111,10 @@ impl GenerateSecret for MlDsaExplicitRandom {
     }
 }
 
-/// ML-KEM explicit randomness ("`m`") used during encapsulation.
+/// ML-DSA explicit randomness ("`rnd`") used during signing.
 ///
-/// This type exists for the purpose of deterministic operations.
-///
-/// **SECURITY**: It it crucial for the security of ML-DSA that these be generated
-/// using a CSPRNG.
+/// **SECURITY**: It is crucial for the security of ML-DSA that these be generated
+/// using a CSPRNG, if not [`ExplicitRandom::deterministic()`].
 ///
 /// If deterministic operation is wanted, supply with [`ExplicitRandom::deterministic()`].
 pub type ExplicitRandom = Secret<MlDsaExplicitRandom>;

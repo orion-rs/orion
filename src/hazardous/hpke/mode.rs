@@ -670,12 +670,12 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
     pub fn auth_seal(
         pubkey_r: &S::PublicKey,
         info: &[u8],
-        secrety_key_s: &S::PrivateKey,
+        secret_key_s: &S::PrivateKey,
         plaintext: &[u8],
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<S::EncapsulatedKey, UnknownCryptoError> {
-        let (mut ctx, ek) = Self::new_sender(pubkey_r, info, secrety_key_s)?;
+        let (mut ctx, ek) = Self::new_sender(pubkey_r, info, secret_key_s)?;
         ctx.seal(plaintext, aad, out)?;
 
         Ok(ek)
@@ -895,12 +895,12 @@ impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secrety_key_s: &S::PrivateKey,
+        secret_key_s: &S::PrivateKey,
         plaintext: &[u8],
         aad: &[u8],
         out: &mut [u8],
     ) -> Result<S::EncapsulatedKey, UnknownCryptoError> {
-        let (mut ctx, ek) = Self::new_sender(pubkey_r, info, psk, psk_id, secrety_key_s)?;
+        let (mut ctx, ek) = Self::new_sender(pubkey_r, info, psk, psk_id, secret_key_s)?;
         ctx.seal(plaintext, aad, out)?;
 
         Ok(ek)

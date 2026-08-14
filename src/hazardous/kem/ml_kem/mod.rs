@@ -74,7 +74,7 @@ impl GenerateSecret for MlKemSeed {
 /// Represent the `d||z` seed used by ML-KEM to produce
 /// a decapsulation key and its corresponding encapsulation key.
 ///
-/// **SECURITY**: It it crucial for the security of ML-KEM that these be generated
+/// **SECURITY**: It is crucial for the security of ML-KEM that these be generated
 /// using a CSPRNG.
 pub type Seed = Secret<MlKemSeed>;
 
@@ -108,7 +108,7 @@ impl GenerateSecret for MlKemExplicitRandom {
 ///
 /// This type exists for the purpose of deterministic operations.
 ///
-/// **SECURITY**: It it crucial for the security of ML-KEM that these be generated
+/// **SECURITY**: It is crucial for the security of ML-KEM that these be generated
 /// using a CSPRNG.
 pub type ExplicitRandom = Secret<MlKemExplicitRandom>;
 

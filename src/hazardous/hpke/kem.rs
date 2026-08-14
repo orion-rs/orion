@@ -123,7 +123,7 @@ impl HpkeAuthKem for DhKemX25519HkdfSha256 {
 /// `MLKEM768-X25519`, which is X-Wing
 /// (<https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-concrete-hybrid-kems-04#section-4.2>).
 ///
-/// This does not provde `Auth`.
+/// This does not provide `Auth`.
 pub struct MlKem768X25519 {}
 
 impl MlKem768X25519 {

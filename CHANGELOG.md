@@ -9,7 +9,7 @@
 - [Breaking change] `T::from_slice()` is no longer provided. Instead, all types provide: `TryFrom<&[u8]>`, `TryFrom<&Vec<u8>>` and `TryFrom<&[u8; N]>` + `From<[N]>` where applicable.
 - [Breaking change] `T::unprotected_as_bytes()` -> `T::unprotected_as_ref()`. 
 - [Breaking change] High-level types used in non-`hazardous` API no longer implement `Default` with a panicking CSPRNG call. Instead `generate() -> Result<Self, UnknownCryptoError>` is provided exclusively.
-- [Breaking change] High-level types used in non-`hazardous` API no longer implement `T::generate(length: usize)`.
+- [Breaking change] High-level types used in non-`hazardous` API no longer implement `T::generate(length: usize)`. They simply generate with bytelength `32`.
 - [Breaking change] HPKE implementation has been redesigned for modularity and easier maintainability.
 - [Breaking change] HKDF functions have been moved to specific structs (for example `::hkdf::sha256` is now `::hkdf::HkdfSha256`).
 - [Breaking change] ML-KEM and X-Wing API have undergone large re-design:
