@@ -90,7 +90,7 @@ impl SigningKeyPair {
 
     /// Get a reference to this [`SigningKeyPair`]'s private seed.
     pub fn private(&self) -> &Seed {
-        &self.kp.seed()
+        self.kp.seed()
     }
 
     /// Get a reference to this [`SigningKeyPair`]'s public verifying key.
