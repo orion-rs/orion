@@ -51,7 +51,7 @@
 //!
 //! # Security:
 //! - Using the randomized, non-deterministic signing hardens the ML-DSA signing routine against fault-injection attacks.
-//! - It is critical that both the seed and explicit randomness `rnd`, used for key generation and encapsulation
+//! - It is critical that both the seed and explicit randomness `rnd`, used for key generation and signing
 //! are generated using a strong CSPRNG.
 //! - Users should always prefer the hedged/randomized if in doubt.
 //! - While possible to use a single [`KeyPair`] for both HashML-DSA and ML-DSA, it is strongly recommended to utilize
@@ -155,9 +155,9 @@ impl TypeSpec for MlDsa87VerifyingKey {
     >;
 
     /// SECURITY: Override to vartime-[`PartialEq`] on a non-secret type, with a var-time one
-    /// to selectively only compare the encoded representation of encapsulation key.
+    /// to selectively only compare the encoded representation of public key.
     fn vartime_partial_eq(lhs: &Self::TypeData, rhs: &[u8]) -> bool {
-        // NOTE: This compares only the encoded encapsulation key, so make sure the other fields
+        // NOTE: This compares only the encoded public key, so make sure the other fields
         // aren't modifiable after instantiation, otherwise the encoded bytes might not correspond
         // to the RingElements/Polynomials.
         lhs.pk.as_ref() == rhs
@@ -181,9 +181,9 @@ impl TypeSpec for MlDsa87Signature {
     >;
 
     /// SECURITY: Override to vartime-[`PartialEq`] on a non-secret type, with a var-time one
-    /// to selectively only compare the encoded representation of encapsulation key.
+    /// to selectively only compare the encoded representation of signature.
     fn vartime_partial_eq(lhs: &Self::TypeData, rhs: &[u8]) -> bool {
-        // NOTE: This compares only the encoded encapsulation key, so make sure the other fields
+        // NOTE: This compares only the encoded signature, so make sure the other fields
         // aren't modifiable after instantiation, otherwise the encoded bytes might not correspond
         // to the RingElements/Polynomials.
         lhs.sig.as_ref() == rhs
