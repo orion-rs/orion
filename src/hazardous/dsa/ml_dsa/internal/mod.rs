@@ -1370,6 +1370,7 @@ impl<
                     sigma,
                 )
             }
+            // 2.16.840.1.101.3.4.2.7
             PreHash::SHA3_224 => {
                 let hash = Sha3_224::digest(m)?;
                 self.verify_internal(
