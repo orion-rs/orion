@@ -380,33 +380,19 @@ mod tests {
 
     // TODO: Add https://github.com/C2SP/CCTV/blob/main/ML-DSA/accumulated/README.md#field-operation-tests
 
-    #[test]
-    fn c2sp_cctv_accumulated_mldsa65() {
-        // src: https://github.com/C2SP/CCTV/commit/2ad7bcfdbf32721f43e10ccac78c3ecac1c9dfb5
-
+    // src: https://github.com/C2SP/CCTV/commit/2ad7bcfdbf32721f43e10ccac78c3ecac1c9dfb5
+    pub(crate) fn c2sp_cctv_accumulated_mldsa65_run(
+        iter_max: u32,
+    ) -> ([u8; 32], [u8; 32], [u8; 32]) {
         let mut s = Shake128::new();
         let mut a = Shake128::new();
-
-        let expected_100 =
-            hex::decode("8358a1843220194417cadbc2651295cd8fc65125b5a5c1a239a16dc8b57ca199")
-                .unwrap();
-        let expected_10000 =
-            hex::decode("5ff5e196f0b830c3b10a9eb5358e7c98a3a20136cb677f3ae3b90175c3ace329")
-                .unwrap();
-        // let expected_60000000 =
-        //     hex::decode("0af0165db2b180f7a83dbecad1ccb758b9c2d834b7f801fc49dd572a9d4b1e83")
-        //         .unwrap();
-
-        // 60000000 takes very long..
-        // just run once before release of v0.18.0
-        let max = 10000;
 
         let mut seed = [0u8; 32];
         let mut result_100 = [0u8; 32];
         let mut result_10000 = [0u8; 32];
         let mut result_60000000 = [0u8; 32];
 
-        for n in 1..=max {
+        for n in 1..=iter_max {
             s.squeeze(&mut seed).unwrap();
             let kp = KeyPair::new(Seed::from(seed)).unwrap();
             a.absorb(kp.public().as_ref()).unwrap();
@@ -431,8 +417,113 @@ mod tests {
             }
         }
 
+        (result_100, result_10000, result_60000000)
+    }
+
+    #[test]
+    #[ignore = "runs too long - only meant for local development, not CI"] // cargo test -- --ignored
+    fn c2sp_cctv_accumulated_60000000() {
+        let mut expected_60000000 = [0u8; 32];
+        hex::decode_to_slice(
+            "0af0165db2b180f7a83dbecad1ccb758b9c2d834b7f801fc49dd572a9d4b1e83",
+            &mut expected_60000000,
+        )
+        .unwrap();
+        let (_result_100, _result_10000, result_60000000) =
+            c2sp_cctv_accumulated_mldsa65_run(60000000);
+        assert_eq!(expected_60000000, result_60000000);
+    }
+
+    #[test]
+    fn c2sp_cctv_accumulated() {
+        let mut expected_100 = [0u8; 32];
+        let mut expected_10000 = [0u8; 32];
+
+        hex::decode_to_slice(
+            "8358a1843220194417cadbc2651295cd8fc65125b5a5c1a239a16dc8b57ca199",
+            &mut expected_100,
+        )
+        .unwrap();
+        hex::decode_to_slice(
+            "5ff5e196f0b830c3b10a9eb5358e7c98a3a20136cb677f3ae3b90175c3ace329",
+            &mut expected_10000,
+        )
+        .unwrap();
+
+        let (result_100, result_10000, _result_60000000) = c2sp_cctv_accumulated_mldsa65_run(10000);
         assert_eq!(expected_100, result_100);
         assert_eq!(expected_10000, result_10000);
-        // assert_eq!(expected_60000000, result_60000000);
+    }
+
+    // NOTE(brycx): SecretNewtype/PublicNewtype tests aren't run for SigninngKey/VerifyinngKey/Signature types
+    // because their underling TypeData structure is not compatible with the generic tests.
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_signature_public_serialization() {
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_serialization::<SIGNATURE_SIZE, MlDsa65Signature>();
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_verifyingkey_public_serialization() {
+        use crate::test_framework::newtypes::public::PublicNewtype;
+        PublicNewtype::test_serialization::<VERIFYING_KEY_SIZE, MlDsa65VerifyingKey>();
+    }
+
+    use crate::test_framework::mldsa_interface::{DsaTester, TestableDsa};
+
+    impl TestableDsa for KeyPair {
+        const SIGNATURE_SIZE: usize = SIGNATURE_SIZE;
+
+        fn keygen(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let seed = Seed::try_from(seed)?;
+            let kp = KeyPair::new(seed)?;
+
+            Ok((
+                kp.signing_key.unprotected_as_ref().to_vec(),
+                kp.verifying_key.as_ref().to_vec(),
+            ))
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn keygen_rng() -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
+            let seed = Seed::generate()?;
+            Self::keygen(seed.unprotected_as_ref())
+        }
+
+        fn sign_deterministic(
+            sk: &[u8],
+            m: &[u8],
+            ctx: &[u8],
+        ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let signing_key = SigningKey::try_from(sk)?;
+            let sig = signing_key.sign_deterministic(m, ctx)?;
+
+            Ok(sig.as_ref().to_vec())
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn sign_randomized(sk: &[u8], m: &[u8], ctx: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+            let signing_key = SigningKey::try_from(sk)?;
+            let sig = signing_key.sign(m, ctx)?;
+
+            Ok(sig.as_ref().to_vec())
+        }
+
+        fn verify(vk: &[u8], m: &[u8], ctx: &[u8], sig: &[u8]) -> Result<(), UnknownCryptoError> {
+            let verifying_key = VerifyingKey::try_from(vk)?;
+            let sig = Signature::try_from(sig)?;
+            verifying_key.verify(m, ctx, &sig)
+        }
+    }
+
+    #[test]
+    fn run_basic_dsa_tests() {
+        DsaTester::<KeyPair>::run_all_tests(
+            &[0u8; SEED_SIZE],
+            b"This message to sign with ML-DSA.",
+        );
     }
 }

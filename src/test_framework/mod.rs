@@ -42,3 +42,6 @@ pub mod hpke_interface;
 
 /// Tests for newtypes.
 pub mod newtypes;
+
+/// Tests for ML-DSA.
+pub mod mldsa_interface;
