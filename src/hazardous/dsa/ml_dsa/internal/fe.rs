@@ -1064,6 +1064,7 @@ pub fn inverse_ntt<D: Domain>(coefficients: &mut [FieldElement<D>; 256]) {
 }
 
 #[cfg(test)]
+#[cfg(feature = "safe_api")]
 mod test_hint {
     use super::*;
     use crate::hazardous::dsa::ml_dsa::internal::{MlDsa44, MlDsa65, MlDsa87};

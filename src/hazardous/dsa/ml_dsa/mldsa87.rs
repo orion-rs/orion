@@ -497,8 +497,13 @@ mod tests {
         PublicNewtype::test_serialization_non_arbitrary::<MlDsa87VerifyingKey>(kp.public());
     }
 
+    #[cfg(any(feature = "safe_api", feature = "alloc"))]
     use crate::test_framework::mldsa_interface::{DsaTester, TestableDsa};
 
+    #[cfg(all(feature = "alloc", not(feature = "safe_api")))]
+    use alloc::vec::*;
+
+    #[cfg(any(feature = "safe_api", feature = "alloc"))]
     impl TestableDsa for KeyPair {
         const SIGNATURE_SIZE: usize = SIGNATURE_SIZE;
 
@@ -545,6 +550,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(feature = "safe_api", feature = "alloc"))]
     fn run_basic_dsa_tests() {
         DsaTester::<KeyPair>::run_all_tests(
             &[0u8; SEED_SIZE],
