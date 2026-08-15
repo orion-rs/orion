@@ -915,6 +915,34 @@ impl<const K: usize> Hint<K> {
 
         Ok(hint)
     }
+
+    #[cfg(all(test, feature = "safe_api"))]
+    pub(crate) fn random_hint<P: MlDsaParameters>() -> Self {
+        use rand::{prelude::*, rng};
+        let mut rng = rng();
+
+        // Randomly select a valid mount of total hint weight
+        let mut hint = Hint::<K>::zero();
+        let weight = rng.random_range(0..=P::OMEGA);
+        if weight != 0 {
+            debug_assert_ne!(weight, hint.weight());
+        }
+
+        let mut set = 0;
+        while set < weight {
+            let i = rng.random_range(0..P::DIM_K);
+            let j = rng.random_range(0..256);
+
+            if hint.bits[i][j] == 0 {
+                hint.bits[i][j] = 1;
+                set += 1;
+            }
+        }
+
+        debug_assert_eq!(weight, hint.weight());
+
+        hint
+    }
 }
 
 impl<const K: usize> Vector<K> {
@@ -1032,6 +1060,36 @@ pub fn inverse_ntt<D: Domain>(coefficients: &mut [FieldElement<D>; 256]) {
             start += 2 * len;
         }
         len *= 2;
+    }
+}
+
+#[cfg(test)]
+mod test_hint {
+    use super::*;
+    use crate::hazardous::dsa::ml_dsa::internal::{MlDsa44, MlDsa65, MlDsa87};
+
+    #[test]
+    fn bitpacking_roundtrip() {
+        for _ in 0..100 {
+            let mut buf44 = vec![0u8; MlDsa44::OMEGA as usize + MlDsa44::DIM_K];
+            let mut buf65 = vec![0u8; MlDsa65::OMEGA as usize + MlDsa65::DIM_K];
+            let mut buf87 = vec![0u8; MlDsa87::OMEGA as usize + MlDsa87::DIM_K];
+
+            let random_hint = Hint::<{ MlDsa44::DIM_K }>::random_hint::<MlDsa44>();
+            random_hint.hint_bitpack::<MlDsa44>(&mut buf44);
+            let roundtrip = Hint::<{ MlDsa44::DIM_K }>::hint_bitunpack::<MlDsa44>(&buf44).unwrap();
+            assert_eq!(random_hint, roundtrip);
+
+            let random_hint = Hint::<{ MlDsa65::DIM_K }>::random_hint::<MlDsa65>();
+            random_hint.hint_bitpack::<MlDsa65>(&mut buf65);
+            let roundtrip = Hint::<{ MlDsa65::DIM_K }>::hint_bitunpack::<MlDsa65>(&buf65).unwrap();
+            assert_eq!(random_hint, roundtrip);
+
+            let random_hint = Hint::<{ MlDsa87::DIM_K }>::random_hint::<MlDsa87>();
+            random_hint.hint_bitpack::<MlDsa87>(&mut buf87);
+            let roundtrip = Hint::<{ MlDsa87::DIM_K }>::hint_bitunpack::<MlDsa87>(&buf87).unwrap();
+            assert_eq!(random_hint, roundtrip);
+        }
     }
 }
 
