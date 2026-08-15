@@ -70,9 +70,9 @@ use crate::GenerateSecret;
 #[cfg(feature = "safe_api")]
 use crate::Secret;
 use crate::errors::UnknownCryptoError;
+use crate::generics::sealed::{Data, Sealed};
 use crate::generics::{ByteArrayData, TypeSpec};
-use crate::generics::sealed::{Sealed, Data};
-use crate::hazardous::hash::blake3::internal::{IV_BYTES, KEYED_HASH, KEY_SIZE};
+use crate::hazardous::hash::blake3::internal::{IV_BYTES, KEY_SIZE, KEYED_HASH};
 use crate::hazardous::hash::blake3::state::Blake3State;
 
 #[cfg(feature = "safe_api")]
