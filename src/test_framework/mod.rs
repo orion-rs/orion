@@ -42,3 +42,7 @@ pub mod hpke_interface;
 
 /// Tests for newtypes.
 pub mod newtypes;
+
+#[cfg(any(feature = "safe_api", feature = "alloc"))]
+/// Tests for ML-DSA.
+pub mod mldsa_interface;

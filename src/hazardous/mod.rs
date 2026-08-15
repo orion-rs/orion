@@ -54,3 +54,6 @@ pub mod kem;
 
 /// Hybrid Public Key Encryption (HPKE).
 pub mod hpke;
+
+/// Digital Signature Algortihms (DSAs).
+pub mod dsa;

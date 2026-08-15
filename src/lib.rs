@@ -35,6 +35,9 @@
 //! ## Message authentication
 //! [`orion::auth`] offers message authentication and verification using BLAKE2b.
 //!
+//! ## Digital signatures
+//! [`orion::signer`] offers digital signature creation and verification using ML-DSA-65.
+//!
 //! ## Hashing
 //! [`orion::hash`] offers hashing using BLAKE2b.
 //!
@@ -52,6 +55,7 @@
 //! [`orion::auth`]: crate::auth
 //! [`orion::hash`]: crate::hash
 //! [`orion::kex`]: crate::kex
+//! [`orion::signer`]: crate::signer
 //! [wiki]: https://github.com/orion-rs/orion/wiki
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
@@ -113,6 +117,9 @@ pub use high_level::kdf;
 
 #[cfg(feature = "safe_api")]
 pub use high_level::kex;
+
+#[cfg(feature = "safe_api")]
+pub use high_level::signer;
 
 #[doc(hidden)]
 /// Testing framework.

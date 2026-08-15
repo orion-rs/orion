@@ -56,7 +56,7 @@ pub(crate) mod sealed {
         fn new(size: usize) -> Result<Self, UnknownCryptoError>;
 
         #[cfg(feature = "zeroize")]
-        /// Zero our the data stored.
+        /// Zero out the data stored.
         fn memzero(&mut self);
     }
 }
