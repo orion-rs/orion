@@ -310,6 +310,25 @@ impl VerifyingKey {
     }
 }
 
+impl TryFrom<&SigningKey> for VerifyingKey {
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &SigningKey) -> Result<Self, Self::Error> {
+        let vk = InternalVerifyingKey::<
+            { MlDsa87::PUBLIC_KEY_SIZE },
+            { MlDsa87::SIGNATURE_SIZE },
+            { MlDsa87::CLEN },
+            { MlDsa87::COMMITMENT_HASH_LEN },
+            { MlDsa87::W1_BITPACK_SIZE * MlDsa87::DIM_K },
+            { MlDsa87::DIM_K },
+            { MlDsa87::DIM_L },
+            MlDsa87,
+        >::try_from(&value.data)?;
+
+        Ok(Self::from_data(vk))
+    }
+}
+
 #[derive(Debug, PartialEq)]
 /// ML-DSA-87 keypair.
 pub struct KeyPair {
@@ -564,5 +583,13 @@ mod tests {
         assert!(kp.public().verify_external_mu(&[1u8; 63], &sig).is_err());
         assert!(kp.public().verify_external_mu(&[1u8; 65], &sig).is_err());
         assert!(kp.public().verify_external_mu(&[1u8; 64], &sig).is_ok());
+    }
+
+    #[test]
+    fn test_try_from_sk_to_vk() {
+        let seed = Seed::from([255u8; 32]);
+        let kp = KeyPair::new(seed).unwrap();
+
+        assert_eq!(&VerifyingKey::try_from(kp.private()).unwrap(), kp.public());
     }
 }

@@ -42,6 +42,9 @@ use crate::{
 use core::{fmt::Debug, marker::PhantomData};
 use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater};
 
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
+
 mod fe;
 pub(crate) mod sampling;
 
@@ -1234,6 +1237,77 @@ impl<
             rho,
             t1,
             mat_a_hat: MatrixNTT::<K, L>::expand_a::<P>(&rho)?,
+            _phantom: PhantomData,
+        })
+    }
+}
+
+impl<
+    const SK_ENCODED_SIZE: usize,
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+>
+    TryFrom<
+        &InternalSigningKey<
+            SK_ENCODED_SIZE,
+            SIG_ENCODED_SIZE,
+            CLEN,
+            COMMITHASH_LEN,
+            W1_ENCODE_SIZE,
+            K,
+            L,
+            P,
+        >,
+    >
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    type Error = UnknownCryptoError;
+
+    fn try_from(
+        value: &InternalSigningKey<
+            SK_ENCODED_SIZE,
+            SIG_ENCODED_SIZE,
+            CLEN,
+            COMMITHASH_LEN,
+            W1_ENCODE_SIZE,
+            K,
+            L,
+            P,
+        >,
+    ) -> Result<Self, Self::Error> {
+        #[cfg(feature = "zeroize")]
+        let (rho, mut k, _tr, _s1, s2, _t0) = P::sk_decode::<K, L>(&value.sk)?;
+        #[cfg(feature = "zeroize")]
+        k.zeroize();
+
+        #[cfg(not(feature = "zeroize"))]
+        let (rho, _k, _tr, _s1, s2, _t0) = P::sk_decode::<K, L>(&value.sk)?;
+
+        let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&rho)?;
+        let t = (&mat_a_hat * &value.s1_hat).inverse_ntt_mont() + &s2;
+        let (t1, _t0) = t.power2round::<P>();
+        let pk = P::pk_encode::<PK_ENCODED_SIZE>(&rho, &t1.elems);
+
+        Ok(Self {
+            pk,
+            rho,
+            t1,
+            mat_a_hat,
             _phantom: PhantomData,
         })
     }

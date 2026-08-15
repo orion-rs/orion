@@ -92,9 +92,19 @@ fn mldsa_runner(path: &str) {
                         if let Some(ph) = prehash.as_ref() {
                             let signature = sk.sign_prehash_with_rnd(&m, &ctx, ph, &rnd).unwrap();
                             assert_eq!(signature, &sig_expected[..]);
+                            let vk = mldsa44::VerifyingKey::try_from(&sk).unwrap();
+                            assert!(vk.verify_prehash(&m, &ctx, &signature, ph).is_ok());
+
+                            if rnd == mldsa44::ExplicitRandom::deterministic() {
+                                let signature =
+                                    sk.sign_prehash_deterministic(&m, &ctx, ph).unwrap();
+                                assert_eq!(signature, &sig_expected[..]);
+                            }
                         } else {
                             let signature = sk.sign_with_rnd(&m, &ctx, &rnd).unwrap();
                             assert_eq!(signature, &sig_expected[..]);
+                            let vk = mldsa44::VerifyingKey::try_from(&sk).unwrap();
+                            assert!(vk.verify(&m, &ctx, &signature).is_ok());
                         }
 
                         tests_run += 1;
@@ -141,9 +151,19 @@ fn mldsa_runner(path: &str) {
                         if let Some(ph) = prehash.as_ref() {
                             let signature = sk.sign_prehash_with_rnd(&m, &ctx, ph, &rnd).unwrap();
                             assert_eq!(signature, &sig_expected[..]);
+                            let vk = mldsa65::VerifyingKey::try_from(&sk).unwrap();
+                            assert!(vk.verify_prehash(&m, &ctx, &signature, ph).is_ok());
+
+                            if rnd == mldsa65::ExplicitRandom::deterministic() {
+                                let signature =
+                                    sk.sign_prehash_deterministic(&m, &ctx, ph).unwrap();
+                                assert_eq!(signature, &sig_expected[..]);
+                            }
                         } else {
                             let signature = sk.sign_with_rnd(&m, &ctx, &rnd).unwrap();
                             assert_eq!(signature, &sig_expected[..]);
+                            let vk = mldsa65::VerifyingKey::try_from(&sk).unwrap();
+                            assert!(vk.verify(&m, &ctx, &signature).is_ok());
                         }
                         tests_run += 1;
                     }
@@ -189,9 +209,19 @@ fn mldsa_runner(path: &str) {
                         if let Some(ph) = prehash.as_ref() {
                             let signature = sk.sign_prehash_with_rnd(&m, &ctx, ph, &rnd).unwrap();
                             assert_eq!(signature, &sig_expected[..]);
+                            let vk = mldsa87::VerifyingKey::try_from(&sk).unwrap();
+                            assert!(vk.verify_prehash(&m, &ctx, &signature, ph).is_ok());
+
+                            if rnd == mldsa87::ExplicitRandom::deterministic() {
+                                let signature =
+                                    sk.sign_prehash_deterministic(&m, &ctx, ph).unwrap();
+                                assert_eq!(signature, &sig_expected[..]);
+                            }
                         } else {
                             let signature = sk.sign_with_rnd(&m, &ctx, &rnd).unwrap();
                             assert_eq!(signature, &sig_expected[..]);
+                            let vk = mldsa87::VerifyingKey::try_from(&sk).unwrap();
+                            assert!(vk.verify(&m, &ctx, &signature).is_ok());
                         }
 
                         tests_run += 1;
