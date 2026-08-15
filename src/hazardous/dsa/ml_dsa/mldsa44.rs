@@ -462,14 +462,20 @@ mod tests {
     #[cfg(feature = "serde")]
     fn test_signature_public_serialization() {
         use crate::test_framework::newtypes::public::PublicNewtype;
-        PublicNewtype::test_serialization::<SIGNATURE_SIZE, MlDsa44Signature>();
+
+        let kp = KeyPair::new(Seed::from([0u8; 32])).unwrap();
+        let sig = kp.private().sign(b"", b"").unwrap();
+
+        PublicNewtype::test_serialization_non_arbitrary::<MlDsa44Signature>(&sig);
     }
 
     #[test]
     #[cfg(feature = "serde")]
     fn test_verifyingkey_public_serialization() {
         use crate::test_framework::newtypes::public::PublicNewtype;
-        PublicNewtype::test_serialization::<VERIFYING_KEY_SIZE, MlDsa44VerifyingKey>();
+
+        let kp = KeyPair::new(Seed::from([0u8; 32])).unwrap();
+        PublicNewtype::test_serialization_non_arbitrary::<MlDsa44VerifyingKey>(kp.public());
     }
 
     use crate::test_framework::mldsa_interface::{DsaTester, TestableDsa};

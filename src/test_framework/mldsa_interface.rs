@@ -54,13 +54,13 @@ impl<T: TestableDsa> DsaTester<T> {
         Self::sign_verify_err_bad_ctx(seed, msg);
         Self::sign_verify_err_bad_msg(seed);
         Self::verify_err_bad_sig(seed, msg);
-        Self::verify_err_different_public(seed, msg);
         Self::verify_err_trunncated_sig(seed, msg);
 
         #[cfg(feature = "safe_api")]
         {
             Self::keygen_rnd_is_different();
             Self::sign_rnd_is_different(seed, msg);
+            Self::verify_err_different_public(msg);
         }
     }
 
@@ -138,7 +138,7 @@ impl<T: TestableDsa> DsaTester<T> {
     fn sign_verify_err_bad_msg(seed: &[u8]) {
         let (sk, vk) = T::keygen(seed).unwrap();
         let sig = T::sign_deterministic(&sk, b"Message", &[]).unwrap();
-        let sig_mod = T::sign_deterministic(&sk, b"message", &[0u8; 1]).unwrap();
+        let sig_mod = T::sign_deterministic(&sk, b"message", &[]).unwrap();
 
         assert_ne!(sig, sig_mod);
         assert!(T::verify(&vk, b"Message", &[], &sig).is_ok());
@@ -161,9 +161,10 @@ impl<T: TestableDsa> DsaTester<T> {
         }
     }
 
-    fn verify_err_different_public(seed: &[u8], msg: &[u8]) {
-        let (sk, vk) = T::keygen(seed).unwrap();
-        let (_, vk_mod) = T::keygen(seed).unwrap();
+    #[cfg(feature = "safe_api")]
+    fn verify_err_different_public(msg: &[u8]) {
+        let (sk, vk) = T::keygen_rng().unwrap();
+        let (_, vk_mod) = T::keygen_rng().unwrap();
         let sig = T::sign_deterministic(&sk, msg, &[]).unwrap();
         assert!(T::verify(&vk, msg, &[], &sig).is_ok());
         assert!(T::verify(&vk_mod, msg, &[], &sig).is_err());
