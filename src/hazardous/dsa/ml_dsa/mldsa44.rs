@@ -532,4 +532,37 @@ mod tests {
             b"This message to sign with ML-DSA.",
         );
     }
+
+    #[test]
+    fn test_keypair_seed() {
+        let seed = Seed::from([255u8; 32]);
+        let kp = KeyPair::new(seed.clone()).unwrap();
+
+        assert_eq!(&seed, kp.seed());
+    }
+
+    #[test]
+    fn test_err_on_invalid_mu() {
+        let seed = Seed::from([255u8; 32]);
+        let rnd = ExplicitRandom::from([0u8; 32]);
+        let kp = KeyPair::new(seed.clone()).unwrap();
+
+        assert!(
+            kp.private()
+                .sign_external_mu_with_rnd(&[1u8; 63], &rnd)
+                .is_err()
+        );
+        assert!(
+            kp.private()
+                .sign_external_mu_with_rnd(&[1u8; 65], &rnd)
+                .is_err()
+        );
+        let sig = kp
+            .private()
+            .sign_external_mu_with_rnd(&[1u8; 64], &rnd)
+            .unwrap();
+        assert!(kp.public().verify_external_mu(&[1u8; 63], &sig).is_err());
+        assert!(kp.public().verify_external_mu(&[1u8; 65], &sig).is_err());
+        assert!(kp.public().verify_external_mu(&[1u8; 64], &sig).is_ok());
+    }
 }
