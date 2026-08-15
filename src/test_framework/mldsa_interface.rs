@@ -20,9 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use core::marker::PhantomData;
-
 use crate::errors::UnknownCryptoError;
+use alloc::vec::Vec;
+use core::marker::PhantomData;
 
 pub trait TestableDsa {
     const SIGNATURE_SIZE: usize;
