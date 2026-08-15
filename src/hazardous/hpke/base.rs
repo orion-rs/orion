@@ -425,11 +425,11 @@ impl<Kem: HpkeAuthKem, Kdf: HpkeKdf, Aead: HpkeAead> AuthSuite for HpkeSuite<Kem
     fn setup_auth_sender(
         pubkey_r: &Self::PublicKey,
         info: &[u8],
-        secrety_key_s: &Self::PrivateKey,
+        secret_key_s: &Self::PrivateKey,
     ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
         Self::check_input_max_lengths(info)?;
 
-        let (ss, enc) = Kem::auth_encap(pubkey_r, secrety_key_s)?;
+        let (ss, enc) = Kem::auth_encap(pubkey_r, secret_key_s)?;
         let ctx = Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_ref(), info, &[], &[])?;
 
         Ok((ctx, enc))
@@ -438,12 +438,12 @@ impl<Kem: HpkeAuthKem, Kdf: HpkeKdf, Aead: HpkeAead> AuthSuite for HpkeSuite<Kem
     fn setup_auth_sender_deterministic(
         pubkey_r: &Self::PublicKey,
         info: &[u8],
-        secrety_key_s: &Self::PrivateKey,
+        secret_key_s: &Self::PrivateKey,
         secret_ephemeral: Self::EphemeralSecret,
     ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
         Self::check_input_max_lengths(info)?;
 
-        let (ss, enc) = Kem::auth_encap_deterministic(pubkey_r, secrety_key_s, secret_ephemeral)?;
+        let (ss, enc) = Kem::auth_encap_deterministic(pubkey_r, secret_key_s, secret_ephemeral)?;
         let ctx = Self::key_schedule(&HpkeMode::Auth, ss.unprotected_as_ref(), info, &[], &[])?;
 
         Ok((ctx, enc))
@@ -467,12 +467,12 @@ impl<Kem: HpkeAuthKem, Kdf: HpkeKdf, Aead: HpkeAead> AuthSuite for HpkeSuite<Kem
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secrety_key_s: &Self::PrivateKey,
+        secret_key_s: &Self::PrivateKey,
     ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
         Self::check_psk_length(psk, psk_id)?;
         Self::check_input_max_lengths(info)?;
 
-        let (ss, enc) = Kem::auth_encap(pubkey_r, secrety_key_s)?;
+        let (ss, enc) = Kem::auth_encap(pubkey_r, secret_key_s)?;
         let ctx = Self::key_schedule(
             &HpkeMode::AuthPsk,
             ss.unprotected_as_ref(),
@@ -489,13 +489,13 @@ impl<Kem: HpkeAuthKem, Kdf: HpkeKdf, Aead: HpkeAead> AuthSuite for HpkeSuite<Kem
         info: &[u8],
         psk: &[u8],
         psk_id: &[u8],
-        secrety_key_s: &Self::PrivateKey,
+        secret_key_s: &Self::PrivateKey,
         secret_ephemeral: Self::EphemeralSecret,
     ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError> {
         Self::check_psk_length(psk, psk_id)?;
         Self::check_input_max_lengths(info)?;
 
-        let (ss, enc) = Kem::auth_encap_deterministic(pubkey_r, secrety_key_s, secret_ephemeral)?;
+        let (ss, enc) = Kem::auth_encap_deterministic(pubkey_r, secret_key_s, secret_ephemeral)?;
         let ctx = Self::key_schedule(
             &HpkeMode::AuthPsk,
             ss.unprotected_as_ref(),

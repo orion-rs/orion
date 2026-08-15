@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2020-2026 The orion Developers
+// Copyright (c) 2026 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-pub mod aead;
-pub mod auth;
-pub mod hash;
-mod hltypes;
-pub mod kdf;
-pub mod kex;
-pub mod pwhash;
-pub mod signer;
+/// ML-DSA as specified in [FIPS-204](https://doi.org/10.6028/NIST.FIPS.204).
+pub(crate) mod ml_dsa;
+
+pub use ml_dsa::mldsa44;
+pub use ml_dsa::mldsa65;
+pub use ml_dsa::mldsa87;

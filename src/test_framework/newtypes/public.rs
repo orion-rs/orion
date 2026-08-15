@@ -68,6 +68,18 @@ impl PublicNewtype {
             test_serde_deserialized_equivalence_to_bytes_fn::<MAX, S>();
         }
     }
+
+    // NOTE: Needs both gates because `serde-json` used for testing is dev-dependency.
+    #[cfg(all(feature = "serde", test))]
+    pub fn test_serialization_non_arbitrary<S: TypeSpec>(ctx: &Public<S>)
+    where
+        S::TypeData: AsRef<[u8]>,
+    {
+        {
+            test_serde_serialized_equivalence_to_bytes_fn_non_arbitrary::<S>(ctx);
+            test_serde_deserialized_equivalence_to_bytes_fn_non_arbitrary::<S>(ctx);
+        }
+    }
 }
 
 pub fn test_try_from<const MIN: usize, const MAX: usize, S: TypeSpec>() {
@@ -236,4 +248,29 @@ where
     let serialized_from_bytes = serde_json::to_value(bytes.as_slice()).unwrap();
     let public_type: Public<S> = serde_json::from_value(serialized_from_bytes).unwrap();
     assert_eq!(public_type.data.as_ref(), bytes.as_slice());
+}
+
+#[cfg(test)]
+#[cfg(feature = "serde")]
+fn test_serde_serialized_equivalence_to_bytes_fn_non_arbitrary<S: TypeSpec>(ctx: &Public<S>)
+where
+    S::TypeData: AsRef<[u8]>,
+{
+    let public_type = Public::<S>::try_from(ctx.as_ref()).unwrap();
+    let serialized_from_bytes = serde_json::to_value(ctx.as_ref()).unwrap();
+    let serialized_from_public_type = serde_json::to_value(&public_type).unwrap();
+    assert_eq!(serialized_from_bytes, serialized_from_public_type);
+    assert_eq!(&public_type, ctx);
+}
+
+#[cfg(test)]
+#[cfg(feature = "serde")]
+fn test_serde_deserialized_equivalence_to_bytes_fn_non_arbitrary<S: TypeSpec>(ctx: &Public<S>)
+where
+    S::TypeData: AsRef<[u8]>,
+{
+    let serialized_from_bytes = serde_json::to_value(ctx.as_ref()).unwrap();
+    let public_type: Public<S> = serde_json::from_value(serialized_from_bytes).unwrap();
+    assert_eq!(public_type.data.as_ref(), ctx.as_ref());
+    assert_eq!(&public_type, ctx);
 }

@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2025-2026 The orion Developers
+// Copyright (c) 2026 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,106 +25,113 @@ use crate::generics::{ByteArrayData, Secret, TypeSpec, sealed::Sealed};
 #[cfg(feature = "safe_api")]
 use crate::{errors::UnknownCryptoError, generics::sealed::Data};
 
-/// Internal implementation logic for ML-KEM.
+/// Internal implementation logic for ML-DSA.
 pub mod internal;
 
-/// ML-KEM-512 as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
-pub mod mlkem512;
+/// ML-DSA-44 as specified in [FIPS-204](https://doi.org/10.6028/NIST.FIPS.204).
+pub mod mldsa44;
 
-/// ML-KEM-768 as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
-pub mod mlkem768;
+/// ML-DSA-65 as specified in [FIPS-204](https://doi.org/10.6028/NIST.FIPS.204).
+pub mod mldsa65;
 
-/// ML-KEM-1024 as specified in [FIPS-203](https://doi.org/10.6028/NIST.FIPS.203).
-pub mod mlkem1024;
+/// ML-DSA-87 as specified in [FIPS-204](https://doi.org/10.6028/NIST.FIPS.204).
+pub mod mldsa87;
 
 /// Size of private [`Seed`].
-pub const SEED_SIZE: usize = 64;
+pub const SEED_SIZE: usize = 32;
 
-/// Size of explicit randomness ("`m`") used during encapsulation [`ExplicitRandom`].
+/// Size of explicit randomness ("`rnd`") used during signing [`ExplicitRandom`].
 pub const RAND_SIZE: usize = 32;
 
-#[derive(Debug)]
-/// ML-KEM seed implementation. See [`Seed`] type for convenience.
-pub struct MlKemSeed {}
-impl Sealed for MlKemSeed {}
+#[derive(Debug, Clone)]
+/// ML-DSA seed implementation. See [`Seed`] type for convenience.
+pub struct MlDsaSeed {}
+impl Sealed for MlDsaSeed {}
 
-impl TypeSpec for MlKemSeed {
+impl TypeSpec for MlDsaSeed {
     const NAME: &'static str = stringify!(Seed);
     type TypeData = ByteArrayData<SEED_SIZE>;
 }
 
-impl From<[u8; SEED_SIZE]> for Secret<MlKemSeed> {
+impl From<[u8; SEED_SIZE]> for Secret<MlDsaSeed> {
     fn from(value: [u8; SEED_SIZE]) -> Self {
-        Self::from_data(<MlKemSeed as TypeSpec>::TypeData::from(value))
+        Self::from_data(<MlDsaSeed as TypeSpec>::TypeData::from(value))
     }
 }
 
-impl GenerateSecret for MlKemSeed {
+impl GenerateSecret for MlDsaSeed {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    fn generate() -> Result<Secret<MlKemSeed>, UnknownCryptoError> {
+    fn generate() -> Result<Secret<MlDsaSeed>, UnknownCryptoError> {
         let mut data = Self::TypeData::new(SEED_SIZE)?;
         crate::util::secure_rand_bytes(&mut data.bytes)?;
         Ok(Secret::from_data(data))
     }
 }
 
-/// ML-KEM seed.
+/// ML-DSA seed.
 ///
-/// Represent the `d||z` seed used by ML-KEM to produce
-/// a decapsulation key and its corresponding encapsulation key.
+/// Represent the `ξ` seed used by ML-DSA to produce
+/// a signing and verification key.
 ///
-/// **SECURITY**: It is crucial for the security of ML-KEM that these be generated
+/// **SECURITY**: It is crucial for the security of ML-DSA that these be generated
 /// using a CSPRNG.
-pub type Seed = Secret<MlKemSeed>;
+pub type Seed = Secret<MlDsaSeed>;
 
 #[derive(Debug)]
-/// ML-KEM `m` explicit randomness implementation. See [`ExplicitRandom`] type for convenience.
-pub struct MlKemExplicitRandom {}
-impl Sealed for MlKemExplicitRandom {}
+/// ML-DSA `rnd` explicit randomness implementation. See [`ExplicitRandom`] type for convenience.
+pub struct MlDsaExplicitRandom {}
+impl Sealed for MlDsaExplicitRandom {}
 
-impl TypeSpec for MlKemExplicitRandom {
+impl TypeSpec for MlDsaExplicitRandom {
     const NAME: &'static str = stringify!(ExplicitRandom);
     type TypeData = ByteArrayData<RAND_SIZE>;
 }
 
-impl From<[u8; RAND_SIZE]> for Secret<MlKemExplicitRandom> {
+impl From<[u8; RAND_SIZE]> for Secret<MlDsaExplicitRandom> {
     fn from(value: [u8; RAND_SIZE]) -> Self {
-        Self::from_data(<MlKemExplicitRandom as TypeSpec>::TypeData::from(value))
+        Self::from_data(<MlDsaExplicitRandom as TypeSpec>::TypeData::from(value))
     }
 }
 
-impl GenerateSecret for MlKemExplicitRandom {
+impl ExplicitRandom {
+    /// FIPS-204 deterministic `rnd`value, which is all 0's.
+    pub fn deterministic() -> Self {
+        Self::from([0u8; RAND_SIZE])
+    }
+}
+
+impl GenerateSecret for MlDsaExplicitRandom {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    fn generate() -> Result<Secret<MlKemExplicitRandom>, UnknownCryptoError> {
+    fn generate() -> Result<Secret<MlDsaExplicitRandom>, UnknownCryptoError> {
         let mut data = Self::TypeData::new(RAND_SIZE)?;
         crate::util::secure_rand_bytes(&mut data.bytes)?;
         Ok(Secret::from_data(data))
     }
 }
 
-/// ML-KEM explicit randomness ("`m`") used during encapsulation.
+/// ML-DSA explicit randomness ("`rnd`") used during signing.
 ///
-/// This type exists for the purpose of deterministic operations.
+/// **SECURITY**: It is crucial for the security of ML-DSA that these be generated
+/// using a CSPRNG, if not [`ExplicitRandom::deterministic()`].
 ///
-/// **SECURITY**: It is crucial for the security of ML-KEM that these be generated
-/// using a CSPRNG.
-pub type ExplicitRandom = Secret<MlKemExplicitRandom>;
+/// If deterministic operation is wanted, supply with [`ExplicitRandom::deterministic()`].
+pub type ExplicitRandom = Secret<MlDsaExplicitRandom>;
 
 #[test]
-fn test_mlkem_seed() {
+fn test_mldsa_seed() {
     use crate::test_framework::newtypes::secret::SecretNewtype;
-    SecretNewtype::test_with_generate::<SEED_SIZE, SEED_SIZE, SEED_SIZE, MlKemSeed>();
+    SecretNewtype::test_with_generate::<SEED_SIZE, SEED_SIZE, SEED_SIZE, MlDsaSeed>();
 
     // Test of From<[u8; N]>
     assert_ne!(Seed::from([0u8; SEED_SIZE]), Seed::from([1u8; SEED_SIZE]));
 }
 
 #[test]
-fn test_mlkem_explicitrandom() {
+fn test_mldsa_explicitrandom() {
     use crate::test_framework::newtypes::secret::SecretNewtype;
-    SecretNewtype::test_with_generate::<RAND_SIZE, RAND_SIZE, RAND_SIZE, MlKemExplicitRandom>();
+    SecretNewtype::test_with_generate::<RAND_SIZE, RAND_SIZE, RAND_SIZE, MlDsaExplicitRandom>();
 
     // Test of From<[u8; N]>
     assert_ne!(

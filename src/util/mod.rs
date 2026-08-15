@@ -68,11 +68,9 @@ pub(crate) mod u64x4;
 /// # Errors:
 /// An error will be returned if:
 /// - `dst` is empty.
-///
-/// # Panics:
-/// A panic will occur if:
 /// - Failure to generate random bytes securely.
 /// - The platform is not supported by [`getrandom`].
+///
 ///
 /// # Example:
 /// ```rust
@@ -88,7 +86,7 @@ pub fn secure_rand_bytes(dst: &mut [u8]) -> Result<(), errors::UnknownCryptoErro
         return Err(errors::UnknownCryptoError);
     }
 
-    getrandom::fill(dst).unwrap();
+    getrandom::fill(dst)?;
 
     Ok(())
 }

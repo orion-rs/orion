@@ -2,6 +2,8 @@
 #[cfg(test)]
 pub mod aead;
 #[cfg(test)]
+pub mod dsa;
+#[cfg(test)]
 pub mod ecc;
 #[cfg(feature = "safe_api")]
 #[cfg(test)]

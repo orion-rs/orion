@@ -222,9 +222,9 @@ pub(crate) mod private {
 
         /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con>
         ///
-        /// This is what creates the key schedule for HPKE context. Previosuly we only had
-        /// two-stage HKDF based routines, buth with newer PQ/T construct and upcoming updates
-        /// to obsoleting draft-RFC, we can have one-stage KDF (XOFs) so we genralize this one
+        /// This is what creates the key schedule for HPKE context. Previously we only had
+        /// two-stage HKDF based routines, both with newer PQ/T construct and upcoming updates
+        /// to obsoleting draft-RFC, we can have one-stage KDF (XOFs) so we generalize this one
         /// as well.
         /// <https://datatracker.ietf.org/doc/html/draft-ietf-hpke-hpke-04#section-5.1>
         fn key_schedule(
@@ -325,7 +325,7 @@ pub(crate) mod private {
         fn setup_auth_sender(
             pubkey_r: &Self::PublicKey,
             info: &[u8],
-            secrety_key_s: &Self::PrivateKey,
+            secret_key_s: &Self::PrivateKey,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
@@ -334,7 +334,7 @@ pub(crate) mod private {
         fn setup_auth_sender_deterministic(
             pubkey_r: &Self::PublicKey,
             info: &[u8],
-            secrety_key_s: &Self::PrivateKey,
+            secret_key_s: &Self::PrivateKey,
             secret_ephemeral: Self::EphemeralSecret,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
@@ -357,7 +357,7 @@ pub(crate) mod private {
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
-            secrety_key_s: &Self::PrivateKey,
+            secret_key_s: &Self::PrivateKey,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
             Self: Sized;
@@ -368,7 +368,7 @@ pub(crate) mod private {
             info: &[u8],
             psk: &[u8],
             psk_id: &[u8],
-            secrety_key_s: &Self::PrivateKey,
+            secret_key_s: &Self::PrivateKey,
             secret_ephemeral: Self::EphemeralSecret,
         ) -> Result<(Self, Self::EncapsulatedKey), UnknownCryptoError>
         where
