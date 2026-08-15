@@ -478,7 +478,7 @@ mod tests {
     // because their underling TypeData structure is not compatible with the generic tests.
 
     #[test]
-    #[cfg(feature = "serde")]
+    #[cfg(all(feature = "serde", feature = "safe_api"))]
     fn test_signature_public_serialization() {
         use crate::test_framework::newtypes::public::PublicNewtype;
 
