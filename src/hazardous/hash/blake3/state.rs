@@ -25,9 +25,9 @@ use subtle::ConstantTimeEq;
 use crate::{
     errors::UnknownCryptoError,
     hazardous::hash::blake3::{
-        cvstack::{FinalizeCommand, PushCommand, TreeStack},
-        internal::{compress, ChunkState, CHUNK_LEN, CHUNK_START, PARENT},
         SecretKey,
+        cvstack::{FinalizeCommand, PushCommand, TreeStack},
+        internal::{CHUNK_LEN, CHUNK_START, ChunkState, PARENT, compress},
     },
 };
 use core::cmp::min;

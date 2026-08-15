@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 use crate::hazardous::hash::blake3::internal::{
-    CFState, ChainingValue, CompressionFn, OutputReader, BLOCK_LEN, ROOT,
+    BLOCK_LEN, CFState, ChainingValue, CompressionFn, OutputReader, ROOT,
 };
 
 // The maximum possible height of a BLAKE3 tree: the input is capped at 2^64B

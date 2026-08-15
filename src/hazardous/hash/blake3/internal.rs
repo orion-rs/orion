@@ -42,11 +42,7 @@ pub(crate) const KEYED_HASH: u32 = 1 << 4;
 // const DERIVE_KEY_MATERIAL: u32 = 1 << 6;
 
 fn chunk_end_flags(is_root: bool) -> u32 {
-    if is_root {
-        ROOT | CHUNK_END
-    } else {
-        CHUNK_END
-    }
+    if is_root { ROOT | CHUNK_END } else { CHUNK_END }
 }
 
 // Initial state inside the compression function
