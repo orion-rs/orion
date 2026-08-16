@@ -22,7 +22,6 @@
 
 use crate::errors::UnknownCryptoError;
 use alloc::vec::Vec;
-use core::marker::PhantomData;
 
 pub trait TestableDsa {
     const SIGNATURE_SIZE: usize;
@@ -33,6 +32,14 @@ pub trait TestableDsa {
     fn keygen_rng() -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError>;
 
     fn sign_deterministic(sk: &[u8], m: &[u8], ctx: &[u8]) -> Result<Vec<u8>, UnknownCryptoError>;
+
+    #[cfg(feature = "safe_api")]
+    fn sign_with_rnd(
+        sk: &[u8],
+        m: &[u8],
+        ctx: &[u8],
+        rnd: &[u8],
+    ) -> Result<Vec<u8>, UnknownCryptoError>;
 
     #[cfg(feature = "safe_api")]
     fn sign_randomized(sk: &[u8], m: &[u8], ctx: &[u8]) -> Result<Vec<u8>, UnknownCryptoError>;
@@ -60,11 +67,17 @@ pub trait TestableDsa {
 
 #[derive(Debug)]
 pub struct DsaTester<T> {
-    _dsa: PhantomData<T>,
+    _initial_context: T,
 }
 
-impl<T: TestableDsa> DsaTester<T> {
-    pub fn run_all_tests(seed: &[u8], msg: &[u8]) {
+impl<T: TestableDsa + Clone> DsaTester<T> {
+    pub fn new(streaming_context: T) -> Self {
+        Self {
+            _initial_context: streaming_context,
+        }
+    }
+
+    pub fn run_all_tests(&self, seed: &[u8], msg: &[u8]) {
         Self::keygen_is_deterministic(seed);
         Self::keygen_is_diff_modified_seed(seed);
         Self::sign_verify_roundtrip(seed, msg);
@@ -79,7 +92,30 @@ impl<T: TestableDsa> DsaTester<T> {
             Self::keygen_rnd_is_different();
             Self::sign_rnd_is_different(seed, msg);
             Self::verify_err_different_public(msg);
+
+            #[cfg(all(test, feature = "safe_api"))]
+            {
+                let (rnd, ctx) = Self::test_values_rnd_and_ctx();
+                self.consistency_sign(msg, &ctx, &rnd);
+                self.consistency_verify(seed, msg, &ctx, &rnd);
+            }
         }
+    }
+
+    // rand is dev-dep only
+    #[cfg(all(test, feature = "safe_api"))]
+    fn test_values_rnd_and_ctx() -> (Vec<u8>, Vec<u8>) {
+        use rand::{prelude::*, rng};
+        let mut rng = rng();
+
+        let ctxsize = rng.random_range(0..=255usize);
+        let mut ctx = vec![0u8; ctxsize];
+        rng.fill_bytes(&mut ctx);
+
+        let mut rnd = vec![0u8; 32];
+        rng.fill_bytes(&mut rnd);
+
+        (rnd, ctx)
     }
 
     fn keygen_is_deterministic(seed: &[u8]) {
@@ -194,5 +230,147 @@ impl<T: TestableDsa> DsaTester<T> {
         let sig = T::sign_deterministic(&sk, msg, &[]).unwrap();
         assert!(T::verify(&vk, msg, &[], &sig).is_ok());
         assert!(T::verify(&vk_mod, msg, &[], &sig[..sig.len() - 1]).is_err());
+    }
+
+    #[cfg(all(test, feature = "safe_api"))]
+    /// Related bug: https://github.com/orion-rs/orion/issues/46
+    /// Testing different usage combinations of new(), update(),
+    /// finalize() and reset() produce the same output.
+    ///
+    /// It is important to ensure this is also called with empty
+    /// `data`.
+    ///
+    /// NOTE(brycx): This is copied from incremental_interface.rs
+    /// wehre in this case: init() == reset().
+    fn consistency_sign(&self, data: &[u8], ctx: &[u8], rnd: &[u8]) {
+        // new(), update(), finalize()
+        let mut state_1 = self._initial_context.clone();
+        state_1.init_sign(ctx).unwrap();
+        state_1.update_sign(data).unwrap();
+        let res_1 = state_1.finalize_sign(rnd).unwrap();
+
+        // new(), reset(), update(), finalize()
+        let mut state_2 = self._initial_context.clone();
+        state_2.init_sign(ctx).unwrap();
+        state_2.init_sign(ctx).unwrap();
+        state_2.update_sign(data).unwrap();
+        let res_2 = state_2.finalize_sign(rnd).unwrap();
+
+        // new(), update(), reset(), update(), finalize()
+        let mut state_3 = self._initial_context.clone();
+        state_3.init_sign(ctx).unwrap();
+        state_3.update_sign(data).unwrap();
+        state_3.init_sign(ctx).unwrap();
+        state_3.update_sign(data).unwrap();
+        let res_3 = state_3.finalize_sign(rnd).unwrap();
+
+        // new(), update(), finalize(), reset(), update(), finalize()
+        let mut state_4 = self._initial_context.clone();
+        state_4.init_sign(ctx).unwrap();
+        state_4.update_sign(data).unwrap();
+        let _ = state_4.finalize_sign(rnd).unwrap();
+        state_4.init_sign(ctx).unwrap();
+        state_4.update_sign(data).unwrap();
+        let res_4 = state_4.finalize_sign(rnd).unwrap();
+
+        assert_eq!(res_1, res_2);
+        assert_eq!(res_2, res_3);
+        assert_eq!(res_3, res_4);
+
+        // Tests for the assumption that returning Ok() on empty update() calls
+        // with streaming APIs, gives the correct result. This is done by testing
+        // the reasoning that if update() is empty, returns Ok(), it is the same as
+        // calling new() -> finalize(). i.e not calling update() at all.
+        if data.is_empty() {
+            // new(), finalize()
+            let mut state_5 = self._initial_context.clone();
+            state_5.init_sign(ctx).unwrap();
+            let res_5 = state_5.finalize_sign(rnd).unwrap();
+
+            // new(), reset(), finalize()
+            let mut state_6 = self._initial_context.clone();
+            state_6.init_sign(ctx).unwrap();
+            state_6.init_sign(ctx).unwrap();
+            let res_6 = state_6.finalize_sign(rnd).unwrap();
+
+            // new(), update(), reset(), finalize()
+            let mut state_7 = self._initial_context.clone();
+            state_7.init_sign(ctx).unwrap();
+            state_7.update_sign(b"WRONG DATA").unwrap();
+            state_7.init_sign(ctx).unwrap();
+            let res_7 = state_7.finalize_sign(rnd).unwrap();
+
+            assert_eq!(res_4, res_5);
+            assert_eq!(res_5, res_6);
+            assert_eq!(res_6, res_7);
+        }
+    }
+
+    #[cfg(all(test, feature = "safe_api"))]
+    fn consistency_verify(&self, seed: &[u8], data: &[u8], ctx: &[u8], rnd: &[u8]) {
+        let (sk, _) = T::keygen(seed).unwrap();
+        let sigma = T::sign_with_rnd(&sk, data, ctx, rnd).unwrap();
+
+        // new(), update(), finalize()
+        let mut state_1 = self._initial_context.clone();
+        state_1.init_verify(ctx).unwrap();
+        state_1.update_verify(data).unwrap();
+        let res_1 = state_1.finalize_verify(&sigma).is_ok();
+
+        // new(), reset(), update(), finalize()
+        let mut state_2 = self._initial_context.clone();
+        state_2.init_verify(ctx).unwrap();
+        state_2.init_verify(ctx).unwrap();
+        state_2.update_verify(data).unwrap();
+        let res_2 = state_2.finalize_verify(&sigma).is_ok();
+
+        // new(), update(), reset(), update(), finalize()
+        let mut state_3 = self._initial_context.clone();
+        state_3.init_verify(ctx).unwrap();
+        state_3.update_verify(data).unwrap();
+        state_3.init_verify(ctx).unwrap();
+        state_3.update_verify(data).unwrap();
+        let res_3 = state_3.finalize_verify(&sigma).is_ok();
+
+        // new(), update(), finalize(), reset(), update(), finalize()
+        let mut state_4 = self._initial_context.clone();
+        state_4.init_verify(ctx).unwrap();
+        state_4.update_verify(data).unwrap();
+        let _ = state_4.finalize_verify(&sigma).is_ok();
+        state_4.init_verify(ctx).unwrap();
+        state_4.update_verify(data).unwrap();
+        let res_4 = state_4.finalize_verify(&sigma).is_ok();
+
+        assert_eq!(res_1, res_2);
+        assert_eq!(res_2, res_3);
+        assert_eq!(res_3, res_4);
+
+        // Tests for the assumption that returning Ok() on empty update() calls
+        // with streaming APIs, gives the correct result. This is done by testing
+        // the reasoning that if update() is empty, returns Ok(), it is the same as
+        // calling new() -> finalize(). i.e not calling update() at all.
+        if data.is_empty() {
+            // new(), finalize()
+            let mut state_5 = self._initial_context.clone();
+            state_5.init_verify(ctx).unwrap();
+            let res_5 = state_5.finalize_verify(&sigma).is_ok();
+
+            // new(), reset(), finalize()
+            let mut state_6 = self._initial_context.clone();
+            state_6.init_verify(ctx).unwrap();
+            state_6.init_verify(ctx).unwrap();
+            let res_6 = state_6.finalize_verify(&sigma).is_ok();
+
+            // new(), update(), reset(), finalize()
+            let mut state_7 = self._initial_context.clone();
+            state_7.init_verify(ctx).unwrap();
+            state_7.update_verify(b"WRONG DATA").unwrap();
+            state_7.init_verify(ctx).unwrap();
+            let res_7 = state_7.finalize_verify(&sigma).is_ok();
+
+            assert_eq!(res_4, res_5);
+            assert_eq!(res_5, res_6);
+            assert_eq!(res_6, res_7);
+        }
     }
 }

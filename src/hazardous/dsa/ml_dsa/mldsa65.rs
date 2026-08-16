@@ -121,6 +121,7 @@ pub type SigningKey = Secret<MlDsa65SigningKey>;
 pub type VerifyingKey = Public<MlDsa65VerifyingKey>;
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(Clone))]
 /// ML-DSA-65 signing key implementation. See [`SigningKey`] type for convenience.
 pub struct MlDsa65SigningKey {}
 impl Sealed for MlDsa65SigningKey {}
@@ -140,7 +141,7 @@ impl TypeSpec for MlDsa65SigningKey {
     >;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 /// ML-DSA-65 verifying key implementation. See [`VerifyingKey`] type for convenience.
 pub struct MlDsa65VerifyingKey {}
 impl Sealed for MlDsa65VerifyingKey {}
@@ -331,6 +332,7 @@ impl TryFrom<&SigningKey> for VerifyingKey {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(test, derive(Clone))]
 /// ML-DSA-65 keypair.
 pub struct KeyPair {
     seed: Seed,
@@ -582,13 +584,33 @@ mod tests {
         fn finalize_verify(&mut self, sig: &[u8]) -> Result<(), UnknownCryptoError> {
             self.verifying_key.finalize(&Signature::try_from(sig)?)
         }
+
+        #[cfg(feature = "safe_api")]
+        fn sign_with_rnd(
+            sk: &[u8],
+            m: &[u8],
+            ctx: &[u8],
+            rnd: &[u8],
+        ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let signing_key = SigningKey::try_from(sk)?;
+            let sig = signing_key.sign_with_rnd(m, ctx, &ExplicitRandom::try_from(rnd)?)?;
+
+            Ok(sig.as_ref().to_vec())
+        }
     }
 
     #[test]
     #[cfg(any(feature = "safe_api", feature = "alloc"))]
     fn run_basic_dsa_tests() {
+        #[cfg(feature = "safe_api")]
+        let seed = Seed::generate().unwrap();
+        #[cfg(not(feature = "safe_api"))]
+        let seed = Seed::from([123u8; 32]);
+
+        let streaming_tester = DsaTester::<KeyPair>::new(KeyPair::new(seed.clone()).unwrap());
         DsaTester::<KeyPair>::run_all_tests(
-            &[0u8; SEED_SIZE],
+            &streaming_tester,
+            seed.unprotected_as_ref(),
             b"This message to sign with ML-DSA.",
         );
     }

@@ -811,6 +811,7 @@ impl<
     }
 }
 
+#[cfg_attr(test, derive(Clone))]
 /// Internal, generic signing key used across the three ML-DSA parametersets.
 pub struct InternalSigningKey<
     const SK_ENCODED_SIZE: usize,
