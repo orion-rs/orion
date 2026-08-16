@@ -134,7 +134,7 @@ pub const NEG_ZETA_ALL_MONT: [MontFactor; 256] = mont_factor_tables(&NEG_ZETA_AL
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 /// Element in the field Z_q.
-pub struct FieldElement<D: Domain>(pub(crate) u32, PhantomData<D>);
+pub struct FieldElement<D: Domain>(pub u32, PhantomData<D>);
 
 #[cfg(feature = "zeroize")]
 impl<D: Domain> Zeroize for FieldElement<D> {
@@ -145,12 +145,12 @@ impl<D: Domain> Zeroize for FieldElement<D> {
 
 /// Specific routines for non-Montgomery domain field elements.
 impl FieldElement<Standard> {
-    pub(crate) const fn new(n: u32) -> Self {
+    pub const fn new(n: u32) -> Self {
         debug_assert!(n < DILITHIUM_Q);
         Self(n, PhantomData)
     }
 
-    pub(crate) const fn power2round<P: MlDsaParameters>(&self) -> (u32, u32) {
+    pub const fn power2round<P: MlDsaParameters>(&self) -> (u32, u32) {
         debug_assert!(self.0 < DILITHIUM_Q);
         let r1 = (self.0.overflowing_add((1 << (P::D - 1)) - 1).0) >> P::D;
         let r0 = self.0.overflowing_add(DILITHIUM_Q - (r1 << P::D)).0;
@@ -158,7 +158,7 @@ impl FieldElement<Standard> {
         (r1, conditional_sub_u32(r0))
     }
 
-    pub(crate) fn is_outside_bound(&self, bound: u32) -> Choice {
+    pub fn is_outside_bound(&self, bound: u32) -> Choice {
         debug_assert!(self.0 < DILITHIUM_Q);
         debug_assert!(bound < u32::MAX / 2); // required for panic-free 2*bound-1 range window.
 
@@ -175,7 +175,7 @@ impl FieldElement<Standard> {
 
     /// FIPS-204, Algorithm 36.
     /// Returns (r1, r0) with r = r1*2γ2 + r0 (mod q)
-    pub(crate) fn decompose<P: MlDsaParameters>(&self) -> (u32, u32) {
+    pub fn decompose<P: MlDsaParameters>(&self) -> (u32, u32) {
         debug_assert!(self.0 < DILITHIUM_Q);
         // 2γ2
         let two_gamma2 = 2 * P::GAMMA_2;
@@ -199,12 +199,12 @@ impl FieldElement<Standard> {
     }
 
     /// FIPS-204, Algorithm 37.
-    pub(crate) fn high_bits<P: MlDsaParameters>(&self) -> u32 {
+    pub fn high_bits<P: MlDsaParameters>(&self) -> u32 {
         self.decompose::<P>().0
     }
 
     /// FIPS-204, Algorithm 39.
-    pub(crate) fn make_hint<P: MlDsaParameters>(&self, z: &Self) -> Choice {
+    pub fn make_hint<P: MlDsaParameters>(&self, z: &Self) -> Choice {
         let hibits_clean = self.high_bits::<P>();
         let hibits_add = (*self + z).high_bits::<P>();
 
@@ -212,7 +212,7 @@ impl FieldElement<Standard> {
     }
 
     /// FIPS-204, Algorithm 40.
-    pub(crate) fn use_hint<P: MlDsaParameters>(&self, hint: u32) -> u32 {
+    pub fn use_hint<P: MlDsaParameters>(&self, hint: u32) -> u32 {
         debug_assert!(hint == 0 || hint == 1); // hint is bit
 
         let (r1, r0) = self.decompose::<P>();
@@ -232,7 +232,7 @@ impl FieldElement<Standard> {
         (adjust & hint) | (r1 & !hint)
     }
 
-    pub(crate) fn bitpack_gamma1_offset<P: MlDsaParameters>(&self) -> u32 {
+    pub fn bitpack_gamma1_offset<P: MlDsaParameters>(&self) -> u32 {
         debug_assert!(self.0 < DILITHIUM_Q);
         let t = conditional_sub_u32(P::GAMMA_1 + DILITHIUM_Q - self.0);
         debug_assert!(t < 2 * P::GAMMA_1); // ||z||infinity norm bound on gamma1
@@ -242,7 +242,7 @@ impl FieldElement<Standard> {
 }
 
 impl<D: Domain> FieldElement<D> {
-    pub(crate) const fn zero() -> Self {
+    pub const fn zero() -> Self {
         Self(0, PhantomData)
     }
 

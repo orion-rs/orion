@@ -26,3 +26,6 @@ pub(crate) mod ml_dsa;
 pub use ml_dsa::mldsa44;
 pub use ml_dsa::mldsa65;
 pub use ml_dsa::mldsa87;
+
+#[cfg(feature = "ct-test")]
+pub use ml_dsa::internal::fe::{Domain, FieldElement, montgomery_reduce};
