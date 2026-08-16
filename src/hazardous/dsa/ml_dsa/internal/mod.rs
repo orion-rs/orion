@@ -1142,7 +1142,7 @@ impl<
 
         let mut mu = [0u8; 64];
         self.shake256.squeeze(&mut mu)?;
-
+        self.is_initialized = false; // shake256 state must not be used again
         self.sign_internal_with_mu(&mu, rnd)
     }
 }
@@ -1449,6 +1449,7 @@ impl<
 
         let mut mu = [0u8; 64];
         self.shake256.squeeze(&mut mu)?;
+        self.is_initialized = false; // shake256 state must not be used again
         self.verify_internal_with_mu(&mu, sigma)
     }
 }

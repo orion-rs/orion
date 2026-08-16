@@ -413,5 +413,18 @@ impl<T: TestableDsa + Clone> DsaTester<T> {
         let mut stream_ctx = self._initial_context.clone();
         stream_ctx.init_verify(ctx).unwrap();
         assert!(stream_ctx.finalize_verify(&sigma).is_ok());
+
+        // init() -> update() -> finalize() -> finalize(): ERR
+        let mut stream_ctx = self._initial_context.clone();
+        stream_ctx.init_sign(ctx).unwrap();
+        stream_ctx.update_sign(data).unwrap();
+        stream_ctx.finalize_sign(rnd).unwrap();
+        assert!(stream_ctx.finalize_sign(rnd).is_err());
+
+        let mut stream_ctx = self._initial_context.clone();
+        stream_ctx.init_verify(ctx).unwrap();
+        stream_ctx.update_verify(&[]).unwrap(); // must match sigma
+        stream_ctx.finalize_verify(&sigma).unwrap();
+        assert!(stream_ctx.finalize_verify(&sigma).is_err());
     }
 }
