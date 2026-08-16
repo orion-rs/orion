@@ -27,5 +27,6 @@ pub use ml_dsa::mldsa44;
 pub use ml_dsa::mldsa65;
 pub use ml_dsa::mldsa87;
 
+#[doc(hidden)]
 #[cfg(feature = "ct-test")]
-pub use ml_dsa::internal::fe::{Domain, FieldElement, montgomery_reduce};
+pub use ml_dsa::internal::{MlDsaParameters, MlDsa44, MlDsa65, MlDsa87, fe::{Domain, FieldElement, montgomery_reduce}};
