@@ -29,6 +29,9 @@
 //!
 //! A set of keys expanded from a [`Seed`] are guaranteed to be valid, part expanded (aka. serialized) keys are not.
 //!
+//! [`KeyPair`] does not expose the streaming-based API, so in this case a [`SigningKey`] should preferrably be constructed
+//! from a [`Seed`].
+//!
 //! #### Serialized signing keys
 //! It is possible to instantiate a [`SigningKey`] directly, if strictly required, using [`SigningKey::try_from()`]. This use hereof is intended solely for
 //! interoperability purposes. The lack of generate function for [`SigningKey`] is intentional.
@@ -37,7 +40,6 @@
 //! - `m`: Message to be signed or verified a signature of.
 //! - `ctx`: Context string which must be the same on signing and verification.
 //! - `rnd`: [`ExplicitRandom`] provided during signing.
-//! - `ph`: [`PreHash`] variant used during HashML-DSA.
 //! - `mu`: ML-DSA `mu` parameter.
 //! - `sig`: Signature to be verified.
 //!
@@ -48,14 +50,16 @@
 //! - [`getrandom::fill()`] fails during [`KeyPair::generate()`].
 //! - `mu` is not `64` bytes.
 //! - `ctx` is not `<= 255` bytes.
+//! - If [`SigningKey::update()`] or [`VerifyingKey::update()`] is called without having initialized with [`SigningKey::init()`]/[`VerifyingKey::init()`] first.
+//! - If [`SigningKey::finalize()`] or [`VerifyingKey::finalize()`] is called without having initialized with [`SigningKey::init()`]/[`VerifyingKey::init()`] first.
+//! - If [`SigningKey::update()`], [`VerifyingKey::update()`], [`SigningKey::finalize()`] or [`VerifyingKey::finalize()`], is called after [`SigningKey::finalize()`] or [`VerifyingKey::finalize()`]
+//!   without re-initialization beforehand.
 //!
 //! # Security:
 //! - Using the randomized, non-deterministic signing hardens the ML-DSA signing routine against fault-injection attacks.
 //! - It is critical that both the seed and explicit randomness `rnd`, used for key generation and signing
 //! are generated using a strong CSPRNG.
 //! - Users should always prefer the hedged/randomized if in doubt.
-//! - While possible to use a single [`KeyPair`] for both HashML-DSA and ML-DSA, it is strongly recommended to utilize
-//! two independent keypairs for these two variants.
 //!
 //! # Example:
 //! ```ignore-windows
@@ -68,6 +72,23 @@
 //! let signature = kp.private().sign(b"Message to sign", b"additional context")?;
 //!
 //! assert!(kp.public().verify(b"Message to sign", b"additional context", &signature).is_ok());
+//!
+//! // Streaming-based signing
+//! let seed = Seed::generate()?;
+//! let mut sk = SigningKey::try_from(&seed)?;
+//!
+//! sk.init(b"additional context")?;
+//! sk.update(b"Message to ")?;
+//! sk.update(b"sign")?;
+//! let signature = sk.finalize()?;
+//!
+//! let mut vk = VerifyingKey::try_from(&sk)?;
+//! vk.init(b"additional context")?;
+//! vk.update(b"Message")?;
+//! vk.update(b" to ")?;
+//! vk.update(b"sign")?;
+//! assert!(vk.finalize(&signature).is_ok());
+//!
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
@@ -78,7 +99,12 @@
 //! [`SigningKey::try_from()`]: mldsa87::SigningKey::try_from
 //! [`Seed`]: mldsa87::Seed
 //! [`ExplicitRandom`]: mldsa87::ExplicitRandom
-//! [`PreHash`]: mldsa87::PreHash
+//! [`SigningKey::update()`]: mldsa87::SigningKey::update
+//! [`SigningKey::finalize()`]: mldsa87::SigningKey::finalize
+//! [`SigningKey::init()`]: mldsa87::SigningKey::init
+//! [`VerifyingKey::update()`]: mldsa87::VerifyingKey::update
+//! [`VerifyingKey::finalize()`]: mldsa87::VerifyingKey::finalize
+//! [`VerifyingKey::init()`]: mldsa87::VerifyingKey::init
 
 use crate::KP;
 use crate::errors::UnknownCryptoError;
@@ -95,7 +121,6 @@ pub use crate::hazardous::dsa::ml_dsa::MlDsaSeed;
 pub use crate::hazardous::dsa::ml_dsa::RAND_SIZE;
 pub use crate::hazardous::dsa::ml_dsa::SEED_SIZE;
 pub use crate::hazardous::dsa::ml_dsa::Seed;
-pub use crate::hazardous::dsa::ml_dsa::internal::prehash::PreHash;
 
 /// Size of private [`SigningKey`].
 pub const SIGNING_KEY_SIZE: usize = MlDsa87::PRIVATE_KEY_SIZE;
@@ -116,6 +141,7 @@ pub type SigningKey = Secret<MlDsa87SigningKey>;
 pub type VerifyingKey = Public<MlDsa87VerifyingKey>;
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(Clone))]
 /// ML-DSA-87 signing key implementation. See [`SigningKey`] type for convenience.
 pub struct MlDsa87SigningKey {}
 impl Sealed for MlDsa87SigningKey {}
@@ -135,7 +161,7 @@ impl TypeSpec for MlDsa87SigningKey {
     >;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 /// ML-DSA-87 verifying key implementation. See [`VerifyingKey`] type for convenience.
 pub struct MlDsa87VerifyingKey {}
 impl Sealed for MlDsa87VerifyingKey {}
@@ -189,6 +215,26 @@ impl TypeSpec for MlDsa87Signature {
     }
 }
 
+impl TryFrom<&Seed> for SigningKey {
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &Seed) -> Result<Self, Self::Error> {
+        let kp = KeyPairInternal::<
+            { MlDsa87::PRIVATE_KEY_SIZE },
+            { MlDsa87::PUBLIC_KEY_SIZE },
+            { MlDsa87::SIGNATURE_SIZE },
+            { MlDsa87::CLEN },
+            { MlDsa87::COMMITMENT_HASH_LEN },
+            { MlDsa87::W1_BITPACK_SIZE * MlDsa87::DIM_K },
+            { MlDsa87::DIM_K },
+            { MlDsa87::DIM_L },
+            MlDsa87,
+        >::keygen_internal(value.unprotected_as_ref())?;
+
+        Ok(Self::from_data(kp.sk))
+    }
+}
+
 impl SigningKey {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
@@ -222,46 +268,6 @@ impl SigningKey {
         )?))
     }
 
-    #[cfg(feature = "safe_api")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
-    pub fn sign_prehash(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        ph: &PreHash,
-    ) -> Result<Signature, UnknownCryptoError> {
-        let rnd = ExplicitRandom::generate()?;
-
-        self.sign_prehash_with_rnd(m, ctx, ph, &rnd)
-    }
-
-    /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
-    pub fn sign_prehash_deterministic(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        ph: &PreHash,
-    ) -> Result<Signature, UnknownCryptoError> {
-        self.sign_prehash_with_rnd(m, ctx, ph, &ExplicitRandom::deterministic())
-    }
-
-    /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
-    pub fn sign_prehash_with_rnd(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        ph: &PreHash,
-        rnd: &ExplicitRandom,
-    ) -> Result<Signature, UnknownCryptoError> {
-        Ok(Signature::from_data(self.data.sign_prehash(
-            m,
-            ctx,
-            rnd.unprotected_as_ref(),
-            ph,
-        )?))
-    }
-
     /// Given the [`SigningKey`], sign `mu`.
     ///
     /// Where `mu`: `H(BytesToBits(tr)||M ′, 64)`, FIPS-204, Algorithm 7.
@@ -279,23 +285,41 @@ impl SigningKey {
                 .sign_internal_with_mu(mu, rnd.unprotected_as_ref())?,
         ))
     }
+
+    /// Given the [`SigningKey`] and `ctx`, initialize internal state
+    /// for streaming processing of message digest to be signed.
+    pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.data.init(ctx)
+    }
+
+    /// Update internal message digest state with message bytes.
+    pub fn update(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.data.update(m)
+    }
+
+    /// Finalize and compute the signature given [`ExplicitRandom`].
+    pub fn finalize_with_rnd(
+        &mut self,
+        rnd: &ExplicitRandom,
+    ) -> Result<Signature, UnknownCryptoError> {
+        Ok(Signature::from_data(
+            self.data.finalize(rnd.unprotected_as_ref())?,
+        ))
+    }
+
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    /// Finalize and compute the signature.
+    pub fn finalize(&mut self) -> Result<Signature, UnknownCryptoError> {
+        let rnd = ExplicitRandom::generate()?;
+        self.finalize_with_rnd(&rnd)
+    }
 }
 
 impl VerifyingKey {
     /// Given the [`VerifyingKey`], verify a signature `sig` produced over message `m` and context.
     pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
         self.data.verify(m, &sig.data, ctx)
-    }
-
-    /// Given the [`VerifyingKey`] and [`PreHash`], verify a signature `sig` produced over message `m` and context.
-    pub fn verify_prehash(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        sig: &Signature,
-        ph: &PreHash,
-    ) -> Result<(), UnknownCryptoError> {
-        self.data.verify_prehash(m, &sig.data, ctx, ph)
     }
 
     /// Given the [`VerifyingKey`], verify signature over `mu`.
@@ -307,6 +331,22 @@ impl VerifyingKey {
         }
 
         self.data.verify_internal_with_mu(mu, &sig.data)
+    }
+
+    /// Given the [`VerifyingKey`] and `ctx`, initialize internal state
+    /// for streaming processing of message digest to be verified.
+    pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.data.init(ctx)
+    }
+
+    /// Update internal message digest state with message bytes.
+    pub fn update(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.data.update(m)
+    }
+
+    /// Finalize and verify the signature.
+    pub fn finalize(&mut self, sig: &Signature) -> Result<(), UnknownCryptoError> {
+        self.data.finalize(&sig.data)
     }
 }
 
@@ -330,6 +370,7 @@ impl TryFrom<&SigningKey> for VerifyingKey {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(test, derive(Clone))]
 /// ML-DSA-87 keypair.
 pub struct KeyPair {
     seed: Seed,
@@ -547,13 +588,67 @@ mod tests {
             let sig = Signature::try_from(sig)?;
             verifying_key.verify(m, ctx, &sig)
         }
+
+        #[cfg(feature = "safe_api")]
+        fn init_sign(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.signing_key.init(ctx)
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn init_verify(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.verifying_key.init(ctx)
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn update_sign(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.signing_key.update(m)
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn update_verify(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.verifying_key.update(m)
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn finalize_sign(&mut self, rnd: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+            Ok(self
+                .signing_key
+                .finalize_with_rnd(&ExplicitRandom::try_from(rnd)?)?
+                .as_ref()
+                .to_vec())
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn finalize_verify(&mut self, sig: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.verifying_key.finalize(&Signature::try_from(sig)?)
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn sign_with_rnd(
+            sk: &[u8],
+            m: &[u8],
+            ctx: &[u8],
+            rnd: &[u8],
+        ) -> Result<Vec<u8>, UnknownCryptoError> {
+            let signing_key = SigningKey::try_from(sk)?;
+            let sig = signing_key.sign_with_rnd(m, ctx, &ExplicitRandom::try_from(rnd)?)?;
+
+            Ok(sig.as_ref().to_vec())
+        }
     }
 
     #[test]
     #[cfg(any(feature = "safe_api", feature = "alloc"))]
     fn run_basic_dsa_tests() {
+        #[cfg(feature = "safe_api")]
+        let seed = Seed::generate().unwrap();
+        #[cfg(not(feature = "safe_api"))]
+        let seed = Seed::from([123u8; 32]);
+
+        let streaming_tester = DsaTester::<KeyPair>::new(KeyPair::new(seed.clone()).unwrap());
         DsaTester::<KeyPair>::run_all_tests(
-            &[0u8; SEED_SIZE],
+            &streaming_tester,
+            seed.unprotected_as_ref(),
             b"This message to sign with ML-DSA.",
         );
     }
@@ -597,5 +692,37 @@ mod tests {
         let kp = KeyPair::new(seed).unwrap();
 
         assert_eq!(&VerifyingKey::try_from(kp.private()).unwrap(), kp.public());
+    }
+
+    #[test]
+    fn test_one_shot_eq_streaming() {
+        let seed = Seed::from([255u8; 32]);
+        let kp = KeyPair::new(seed.clone()).unwrap();
+        let oneshot = kp
+            .private()
+            .sign_deterministic(b"Message to sign", b"Context")
+            .unwrap();
+
+        let mut sk = SigningKey::try_from(&seed).unwrap();
+        assert_eq!(kp.seed, seed);
+        assert_eq!(kp.private(), &sk);
+
+        sk.init(b"Context").unwrap();
+        sk.update(b"Message to ").unwrap();
+        sk.update(b"sign").unwrap();
+        let multi = sk
+            .finalize_with_rnd(&ExplicitRandom::deterministic())
+            .unwrap();
+        assert_eq!(oneshot, multi);
+
+        let mut vk = VerifyingKey::try_from(&sk).unwrap();
+        assert_eq!(kp.public(), &vk);
+        vk.init(b"Context").unwrap();
+        vk.update(b"Message").unwrap();
+        vk.update(b" to ").unwrap();
+        vk.update(b"sign").unwrap();
+
+        assert!(vk.clone().finalize(&oneshot).is_ok());
+        assert!(vk.clone().finalize(&multi).is_ok());
     }
 }

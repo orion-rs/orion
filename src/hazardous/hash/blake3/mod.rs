@@ -67,10 +67,11 @@ mod internal;
 mod state;
 
 use crate::GenerateSecret;
-#[cfg(feature = "safe_api")]
 use crate::Secret;
 use crate::errors::UnknownCryptoError;
-use crate::generics::sealed::{Data, Sealed};
+#[cfg(feature = "safe_api")]
+use crate::generics::sealed::Data;
+use crate::generics::sealed::Sealed;
 use crate::generics::{ByteArrayData, TypeSpec};
 use crate::hazardous::hash::blake3::internal::{IV_BYTES, KEY_SIZE, KEYED_HASH};
 use crate::hazardous::hash::blake3::state::Blake3State;

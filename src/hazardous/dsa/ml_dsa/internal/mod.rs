@@ -20,23 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-pub mod prehash;
 use crate::{
     errors::UnknownCryptoError,
     generics::sealed::{Data, Sealed, TryFromBytes},
     hazardous::{
         dsa::ml_dsa::internal::{
             fe::{FieldElement, Hint, RingElement, Standard, Vector, VectorNTT},
-            prehash::PreHash,
             sampling::{MatrixNTT, expand_mask, expand_s, sample_in_ball},
         },
-        hash::{
-            sha2::{sha256::Sha256, sha384::Sha384, sha512::Sha512},
-            sha3::{
-                sha3_224::Sha3_224, sha3_256::Sha3_256, sha3_384::Sha3_384, sha3_512::Sha3_512,
-                shake128::Shake128, shake256::Shake256,
-            },
-        },
+        hash::sha3::shake256::Shake256,
     },
 };
 use core::{fmt::Debug, marker::PhantomData};
@@ -802,13 +794,16 @@ impl<
                 s1_hat,
                 s2_hat: s2.ntt(),
                 t0_hat: t0.ntt(),
+                shake256: Shake256::new(),
+                is_initialized: false,
                 _phantom: PhantomData,
             },
             pk: InternalVerifyingKey {
                 pk,
-                rho,
                 t1,
                 mat_a_hat,
+                shake256: Shake256::new(),
+                is_initialized: false,
                 _phantom: PhantomData,
             },
             _phantom: PhantomData,
@@ -816,6 +811,7 @@ impl<
     }
 }
 
+#[cfg_attr(test, derive(Clone))]
 /// Internal, generic signing key used across the three ML-DSA parametersets.
 pub struct InternalSigningKey<
     const SK_ENCODED_SIZE: usize,
@@ -834,6 +830,8 @@ pub struct InternalSigningKey<
     s1_hat: VectorNTT<L, Standard>, // SECRET polyvector
     s2_hat: VectorNTT<K, Standard>, // SECRET polyvector
     t0_hat: VectorNTT<K, Standard>, // uncompressed public key
+    shake256: Shake256,             // SHAK256 instance for streaming signing
+    is_initialized: bool,
     _phantom: PhantomData<P>,
 }
 
@@ -929,6 +927,8 @@ impl<
             s1_hat: s1.ntt(),
             s2_hat: s2.ntt(),
             t0_hat: t0.ntt(),
+            shake256: Shake256::new(),
+            is_initialized: false,
             _phantom: PhantomData,
         };
 
@@ -1095,97 +1095,59 @@ impl<
         self.sign_internal(&[&[0u8, ctx.len() as u8], ctx, m], rnd)
     }
 
-    /// FIPS-204, HashML-DSA.
-    pub fn sign_prehash(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        rnd: &[u8],
-        ph: &PreHash,
-    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
-    {
-        debug_assert_eq!(rnd.len(), 32);
+    /// Initilize this signing keys internal H, to the state up to where an arbitrarly long
+    /// message is hashed before signing.
+    pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
         if ctx.len() > 255 {
             return Err(UnknownCryptoError);
         }
 
-        match ph {
-            // 2.16.840.1.101.3.4.2.1
-            PreHash::SHA256 => {
-                let hash = Sha256::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.2
-            PreHash::SHA384 => {
-                let hash = Sha384::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.3
-            PreHash::SHA512 => {
-                let hash = Sha512::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            PreHash::SHA3_224 => {
-                let hash = Sha3_224::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.8
-            PreHash::SHA3_256 => {
-                let hash = Sha3_256::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.9
-            PreHash::SHA3_384 => {
-                let hash = Sha3_384::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.10
-            PreHash::SHA3_512 => {
-                let hash = Sha3_512::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.11
-            PreHash::SHAKE128 => {
-                let mut ph_m = [0u8; 256 / 8];
-                let mut shake128 = Shake128::new();
-                shake128.absorb(m)?;
-                shake128.squeeze(&mut ph_m)?;
-                self.sign_internal(&[&[1u8, ctx.len() as u8], ctx, ph.oid(), &ph_m], rnd)
-            }
-            // 2.16.840.1.101.3.4.2.12
-            PreHash::SHAKE256 => {
-                let mut ph_m = [0u8; 512 / 8];
-                let mut shake256 = Shake256::new();
-                shake256.absorb(m)?;
-                shake256.squeeze(&mut ph_m)?;
-                self.sign_internal(&[&[1u8, ctx.len() as u8], ctx, ph.oid(), &ph_m], rnd)
-            }
+        // The usual streaming is_finalized logic is simply delegated
+        // to Shake256. Streaming signing here is basically just a wrapper
+        // around this instance. We reset() here everytime beucase init()
+        // is the same as new() and a user shouldn't have to call reset()
+        // before an init(). reset() direclty isn't provided, as the `ctx`
+        // argument is required in terms of mu-input hashing order. So,
+        // init() essentially serves as a reset() here as well.
+
+        self.shake256.reset();
+        self.shake256.absorb(&self.tr_hash)?;
+        self.shake256.absorb(&[0u8, ctx.len() as u8])?;
+        self.shake256.absorb(ctx)?;
+        self.is_initialized = true;
+
+        Ok(())
+    }
+
+    /// Essentially a wrapper over the internal H that hashes a message before signing.
+    pub fn update(&mut self, msg: &[u8]) -> Result<(), UnknownCryptoError> {
+        if !self.is_initialized {
+            return Err(UnknownCryptoError);
         }
+
+        self.shake256.absorb(msg)
+    }
+
+    /// Finalize by finishing computation of `mu`.
+    pub fn finalize(
+        &mut self,
+        rnd: &[u8],
+    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
+    {
+        if !self.is_initialized {
+            return Err(UnknownCryptoError);
+        }
+
+        debug_assert_eq!(rnd.len(), 32);
+
+        let mut mu = [0u8; 64];
+        self.shake256.squeeze(&mut mu)?;
+        self.is_initialized = false; // shake256 state must not be used again
+        self.sign_internal_with_mu(&mu, rnd)
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 /// Internal, generic verifying key used across the three ML-DSA parametersets.
 pub struct InternalVerifyingKey<
     const PK_ENCODED_SIZE: usize,
@@ -1198,10 +1160,39 @@ pub struct InternalVerifyingKey<
     P: MlDsaParameters,
 > {
     pub(crate) pk: [u8; PK_ENCODED_SIZE],
-    rho: [u8; 32],
     t1: Vector<K>,
     mat_a_hat: MatrixNTT<K, L>,
+    shake256: Shake256,
+    is_initialized: bool,
     _phantom: PhantomData<P>,
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> PartialEq
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn eq(&self, other: &Self) -> bool {
+        // NOTE: Only compare the encoded key type.
+        // This is in line with how mldsa44/65/87 Public<VerifyingKey> is built.
+        self.pk == other.pk
+    }
 }
 
 impl<
@@ -1234,9 +1225,10 @@ impl<
             pk: value
                 .try_into()
                 .expect("length check is part of P::pk_decode()"),
-            rho,
             t1,
             mat_a_hat: MatrixNTT::<K, L>::expand_a::<P>(&rho)?,
+            shake256: Shake256::new(),
+            is_initialized: false,
             _phantom: PhantomData,
         })
     }
@@ -1305,9 +1297,10 @@ impl<
 
         Ok(Self {
             pk,
-            rho,
             t1,
             mat_a_hat,
+            shake256: Shake256::new(),
+            is_initialized: false,
             _phantom: PhantomData,
         })
     }
@@ -1407,92 +1400,57 @@ impl<
         self.verify_internal(&[&[0u8, ctx.len() as u8], ctx, m], sigma)
     }
 
-    /// FIPS-204, HashML-DSA.
-    pub fn verify_prehash(
-        &self,
-        m: &[u8],
-        sigma: &InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>,
-        ctx: &[u8],
-        ph: &PreHash,
-    ) -> Result<(), UnknownCryptoError> {
+    /// Initilize this signing keys internal H, to the state up to where an arbitrarly long
+    /// message is hashed before signing.
+    pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
         if ctx.len() > 255 {
             return Err(UnknownCryptoError);
         }
 
-        match ph {
-            // 2.16.840.1.101.3.4.2.1
-            PreHash::SHA256 => {
-                let hash = Sha256::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.2
-            PreHash::SHA384 => {
-                let hash = Sha384::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.3
-            PreHash::SHA512 => {
-                let hash = Sha512::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.7
-            PreHash::SHA3_224 => {
-                let hash = Sha3_224::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.8
-            PreHash::SHA3_256 => {
-                let hash = Sha3_256::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.9
-            PreHash::SHA3_384 => {
-                let hash = Sha3_384::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.10
-            PreHash::SHA3_512 => {
-                let hash = Sha3_512::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.11
-            PreHash::SHAKE128 => {
-                let mut ph_m = [0u8; 256 / 8];
-                let mut shake128 = Shake128::new();
-                shake128.absorb(m)?;
-                shake128.squeeze(&mut ph_m)?;
-                self.verify_internal(&[&[1u8, ctx.len() as u8], ctx, ph.oid(), &ph_m], sigma)
-            }
-            // 2.16.840.1.101.3.4.2.12
-            PreHash::SHAKE256 => {
-                let mut ph_m = [0u8; 512 / 8];
-                let mut shake256 = Shake256::new();
-                shake256.absorb(m)?;
-                shake256.squeeze(&mut ph_m)?;
-                self.verify_internal(&[&[1u8, ctx.len() as u8], ctx, ph.oid(), &ph_m], sigma)
-            }
+        // The usual streaming is_finalized logic is simply delegated
+        // to Shake256. Streaming signing here is basically just a wrapper
+        // around this instance. We reset() here everytime beucase init()
+        // is the same as new() and a user shouldn't have to call reset()
+        // before an init(). reset() direclty isn't provided, as the `ctx`
+        // argument is required in terms of mu-input hashing order. So,
+        // init() essentially serves as a reset() here as well.
+
+        self.shake256.reset();
+        let mut tr = [0u8; 64];
+        self.shake256.absorb(&self.pk)?;
+        self.shake256.squeeze(&mut tr)?;
+
+        self.shake256.reset();
+        self.shake256.absorb(&tr)?;
+        self.shake256.absorb(&[0u8, ctx.len() as u8])?;
+        self.shake256.absorb(ctx)?;
+        self.is_initialized = true;
+
+        Ok(())
+    }
+
+    /// Essentially a wrapper over the internal H that hashes a message before signing.
+    pub fn update(&mut self, msg: &[u8]) -> Result<(), UnknownCryptoError> {
+        if !self.is_initialized {
+            return Err(UnknownCryptoError);
         }
+
+        self.shake256.absorb(msg)
+    }
+
+    /// Finalize by finishing computation of `mu`.
+    pub fn finalize(
+        &mut self,
+        sigma: &InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>,
+    ) -> Result<(), UnknownCryptoError> {
+        if !self.is_initialized {
+            return Err(UnknownCryptoError);
+        }
+
+        let mut mu = [0u8; 64];
+        self.shake256.squeeze(&mut mu)?;
+        self.is_initialized = false; // shake256 state must not be used again
+        self.verify_internal_with_mu(&mu, sigma)
     }
 }
 
