@@ -33,6 +33,7 @@ safe_api = ["getrandom", "ct-codecs", "zeroize?/alloc"]
 alloc = ["zeroize?/alloc"]
 serde = ["dep:serde", "alloc"]
 experimental = []
+ct-test = []
 
 [dev-dependencies]
 hex = "0.4.0"

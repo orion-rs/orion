@@ -50,8 +50,8 @@ pub fn barrett_reduce(value: u32) -> u32 {
     ret
 }
 
-// Constant-time conditional subtraction
-fn conditional_sub_u32(a: u32) -> u32 {
+/// Constant-time conditional subtraction
+pub fn conditional_sub_u32(a: u32) -> u32 {
     // Calculate a - mod
     let t: u32 = a.overflowing_sub(KYBER_Q).0;
 
@@ -75,12 +75,14 @@ impl Zeroize for FieldElement {
 }
 
 impl FieldElement {
+    /// Create new field element.
     pub fn new(value: u32) -> Self {
         debug_assert!((0..KYBER_Q).contains(&value));
 
         Self(value)
     }
 
+    /// New zero field element.
     pub fn zero() -> Self {
         Self(0)
     }
@@ -126,6 +128,7 @@ impl FieldElement {
     }
 
     #[cfg(all(test, feature = "safe_api"))]
+    #[allow(missing_docs)]
     pub fn random() -> Self {
         use rand::prelude::*;
         Self(rand::rng().random_range(0..KYBER_Q))
