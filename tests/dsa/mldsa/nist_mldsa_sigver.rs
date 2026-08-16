@@ -61,17 +61,10 @@ fn mldsa_runner(path: &str) {
 
                     let vk = mldsa44::VerifyingKey::try_from(&pk_expected).unwrap();
 
-                    let prehash: Option<mldsa44::PreHash> = match test.hashAlg.as_str() {
-                        "SHA2-256" => Some(mldsa44::PreHash::SHA256),
-                        "SHA2-384" => Some(mldsa44::PreHash::SHA384),
-                        "SHA2-512" => Some(mldsa44::PreHash::SHA512),
-                        "SHA3-224" => Some(mldsa44::PreHash::SHA3_224),
-                        "SHA3-256" => Some(mldsa44::PreHash::SHA3_256),
-                        "SHA3-384" => Some(mldsa44::PreHash::SHA3_384),
-                        "SHA3-512" => Some(mldsa44::PreHash::SHA3_512),
-                        "SHAKE-128" => Some(mldsa44::PreHash::SHAKE128),
-                        "SHAKE-256" => Some(mldsa44::PreHash::SHAKE256),
-                        "none" => None,
+                    match test.hashAlg.as_str() {
+                        "pure" => (),
+                        "none" => (),
+                        // No support for HashML-DSA.
                         _ => continue,
                     };
 
@@ -84,14 +77,8 @@ fn mldsa_runner(path: &str) {
                             let m = hex::decode(m).unwrap();
                             let ctx = hex::decode(ctx).unwrap();
                             let signature = mldsa44::Signature::try_from(&sig_expected).unwrap();
-
-                            if let Some(ph) = prehash.as_ref() {
-                                let verified = vk.verify_prehash(&m, &ctx, &signature, ph);
-                                assert_eq!(test.testPassed, verified.is_ok());
-                            } else {
-                                let verified = vk.verify(&m, &ctx, &signature);
-                                assert_eq!(test.testPassed, verified.is_ok());
-                            }
+                            let verified = vk.verify(&m, &ctx, &signature);
+                            assert_eq!(test.testPassed, verified.is_ok());
 
                             tests_run += 1;
                         }
@@ -108,17 +95,10 @@ fn mldsa_runner(path: &str) {
 
                     let vk = mldsa65::VerifyingKey::try_from(&pk_expected).unwrap();
 
-                    let prehash: Option<mldsa65::PreHash> = match test.hashAlg.as_str() {
-                        "SHA2-256" => Some(mldsa65::PreHash::SHA256),
-                        "SHA2-384" => Some(mldsa65::PreHash::SHA384),
-                        "SHA2-512" => Some(mldsa65::PreHash::SHA512),
-                        "SHA3-224" => Some(mldsa65::PreHash::SHA3_224),
-                        "SHA3-256" => Some(mldsa65::PreHash::SHA3_256),
-                        "SHA3-384" => Some(mldsa65::PreHash::SHA3_384),
-                        "SHA3-512" => Some(mldsa65::PreHash::SHA3_512),
-                        "SHAKE-128" => Some(mldsa65::PreHash::SHAKE128),
-                        "SHAKE-256" => Some(mldsa65::PreHash::SHAKE256),
-                        "none" => None,
+                    match test.hashAlg.as_str() {
+                        "pure" => (),
+                        "none" => (),
+                        // No support for HashML-DSA.
                         _ => continue,
                     };
 
@@ -131,13 +111,8 @@ fn mldsa_runner(path: &str) {
                             let m = hex::decode(m).unwrap();
                             let ctx = hex::decode(ctx).unwrap();
                             let signature = mldsa65::Signature::try_from(&sig_expected).unwrap();
-                            if let Some(ph) = prehash.as_ref() {
-                                let verified = vk.verify_prehash(&m, &ctx, &signature, ph);
-                                assert_eq!(test.testPassed, verified.is_ok());
-                            } else {
-                                let verified = vk.verify(&m, &ctx, &signature);
-                                assert_eq!(test.testPassed, verified.is_ok());
-                            }
+                            let verified = vk.verify(&m, &ctx, &signature);
+                            assert_eq!(test.testPassed, verified.is_ok());
                             tests_run += 1;
                         }
                     }
@@ -153,17 +128,10 @@ fn mldsa_runner(path: &str) {
 
                     let vk = mldsa87::VerifyingKey::try_from(&pk_expected).unwrap();
 
-                    let prehash: Option<mldsa87::PreHash> = match test.hashAlg.as_str() {
-                        "SHA2-256" => Some(mldsa87::PreHash::SHA256),
-                        "SHA2-384" => Some(mldsa87::PreHash::SHA384),
-                        "SHA2-512" => Some(mldsa87::PreHash::SHA512),
-                        "SHA3-224" => Some(mldsa87::PreHash::SHA3_224),
-                        "SHA3-256" => Some(mldsa87::PreHash::SHA3_256),
-                        "SHA3-384" => Some(mldsa87::PreHash::SHA3_384),
-                        "SHA3-512" => Some(mldsa87::PreHash::SHA3_512),
-                        "SHAKE-128" => Some(mldsa87::PreHash::SHAKE128),
-                        "SHAKE-256" => Some(mldsa87::PreHash::SHAKE256),
-                        "none" => None,
+                    match test.hashAlg.as_str() {
+                        "pure" => (),
+                        "none" => (),
+                        // No support for HashML-DSA.
                         _ => continue,
                     };
 
@@ -176,13 +144,8 @@ fn mldsa_runner(path: &str) {
                             let m = hex::decode(m).unwrap();
                             let ctx = hex::decode(ctx).unwrap();
                             let signature = mldsa87::Signature::try_from(&sig_expected).unwrap();
-                            if let Some(ph) = prehash.as_ref() {
-                                let verified = vk.verify_prehash(&m, &ctx, &signature, ph);
-                                assert_eq!(test.testPassed, verified.is_ok());
-                            } else {
-                                let verified = vk.verify(&m, &ctx, &signature);
-                                assert_eq!(test.testPassed, verified.is_ok());
-                            }
+                            let verified = vk.verify(&m, &ctx, &signature);
+                            assert_eq!(test.testPassed, verified.is_ok());
 
                             tests_run += 1;
                         }
@@ -193,7 +156,7 @@ fn mldsa_runner(path: &str) {
         }
     }
 
-    assert_eq!(tests_run, 100);
+    assert_eq!(tests_run, 66);
 }
 
 #[test]
