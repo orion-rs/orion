@@ -41,6 +41,7 @@
 - Add support for ML-DSA (FIPS-204).
 - Add new high-level module `orion::signer` which provides post-quantum hedged ML-DSA-65 signature creation and verification.
 - `orion::utils::secure_rand_bytes()` no longer panics and propagates all errors.
+- Introduce a new feature `ct-test` which only is for testing internal constant-time logic.
 
 ### 0.17.6
 

@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 /// Field elements in Z_m where m = q.
-pub(crate) mod fe;
+pub mod fe;
 
 /// Ring elements in R_q and T_q (NTT representative).
 pub(crate) mod re;
