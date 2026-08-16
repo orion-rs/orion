@@ -59,7 +59,7 @@ pub(crate) const fn conditional_sub_u32(a: u32) -> u32 {
     (t & !mask) | (a & mask)
 }
 
-const fn montgomery_reduce(value: u64) -> u32 {
+pub const fn montgomery_reduce(value: u64) -> u32 {
     // cast to u32 and wrapping_mul to use lower 32 bits
     let t: u32 = (value as u32).wrapping_mul(QNEGINV);
     let r: u32 = (value
