@@ -47,6 +47,10 @@
 //! - [`getrandom::fill()`] fails during [`KeyPair::generate()`].
 //! - `mu` is not `64` bytes.
 //! - `ctx` is not `<= 255` bytes.
+//! - If [`SigningKey::update()`] or [`VerifyingKey::update()`] is called without having initialized with [`SigningKey::init()`]/[`VerifyingKey::init()`] first.
+//! - If [`SigningKey::finalize()`] or [`VerifyingKey::finalize()`] is called without having initialized with [`SigningKey::init()`]/[`VerifyingKey::init()`] first.
+//! - If [`SigningKey::update()`], [`VerifyingKey::update()`], [`SigningKey::finalize()`] or [`VerifyingKey::finalize()`], is called after [`SigningKey::finalize()`] or [`VerifyingKey::finalize()`]
+//!   without re-initialization beforehand.
 //!
 //! # Security:
 //! - Using the randomized, non-deterministic signing hardens the ML-DSA signing routine against fault-injection attacks.
@@ -75,6 +79,12 @@
 //! [`SigningKey::try_from()`]: mldsa65::SigningKey::try_from
 //! [`Seed`]: mldsa65::Seed
 //! [`ExplicitRandom`]: mldsa65::ExplicitRandom
+//! [`SigningKey::update()`]: mldsa65::SigningKey::update
+//! [`SigningKey::finalize()`]: mldsa65::SigningKey::finalize
+//! [`SigningKey::init()`]: mldsa65::SigningKey::init
+//! [`VerifyingKey::update()`]: mldsa65::VerifyingKey::update
+//! [`VerifyingKey::finalize()`]: mldsa65::VerifyingKey::finalize
+//! [`VerifyingKey::init()`]: mldsa65::VerifyingKey::init
 
 use crate::KP;
 use crate::errors::UnknownCryptoError;
@@ -234,6 +244,37 @@ impl SigningKey {
                 .sign_internal_with_mu(mu, rnd.unprotected_as_ref())?,
         ))
     }
+
+    /// Given the [`SigningKey`] and `ctx`, initialize internal state
+    /// for streaming processing of message digest to be signed.
+    pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.data.init(ctx)
+    }
+
+    /// Update internal message digest state with message bytes.
+    pub fn update(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.data.update(m)
+    }
+
+    /// Finalize and compute the signature given [`ExplicitRandom`].
+    pub fn finalize_with_rnd(
+        &mut self,
+        rnd: &ExplicitRandom,
+    ) -> Result<Signature, UnknownCryptoError> {
+        Ok(Signature::from_data(
+            self.data.finalize(rnd.unprotected_as_ref())?,
+        ))
+    }
+
+    #[cfg(feature = "safe_api")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    /// Finalize and compute the signature.
+    pub fn finalize(&mut self) -> Result<Signature, UnknownCryptoError> {
+        let rnd = ExplicitRandom::generate()?;
+        Ok(Signature::from_data(
+            self.data.finalize(rnd.unprotected_as_ref())?,
+        ))
+    }
 }
 
 impl VerifyingKey {
@@ -251,6 +292,22 @@ impl VerifyingKey {
         }
 
         self.data.verify_internal_with_mu(mu, &sig.data)
+    }
+
+    /// Given the [`VerifyingKey`] and `ctx`, initialize internal state
+    /// for streaming processing of message digest to be verified.
+    pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.data.init(ctx)
+    }
+
+    /// Update internal message digest state with message bytes.
+    pub fn update(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.data.update(m)
+    }
+
+    /// Finalize and verify the signature.
+    pub fn finalize(&mut self, sig: &Signature) -> Result<(), UnknownCryptoError> {
+        self.data.finalize(&sig.data)
     }
 }
 

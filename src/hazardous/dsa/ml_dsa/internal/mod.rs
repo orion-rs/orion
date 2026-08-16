@@ -795,14 +795,15 @@ impl<
                 s2_hat: s2.ntt(),
                 t0_hat: t0.ntt(),
                 shake256: Shake256::new(),
+                is_initialized: false,
                 _phantom: PhantomData,
             },
             pk: InternalVerifyingKey {
                 pk,
-                rho,
                 t1,
                 mat_a_hat,
                 shake256: Shake256::new(),
+                is_initialized: false,
                 _phantom: PhantomData,
             },
             _phantom: PhantomData,
@@ -829,6 +830,7 @@ pub struct InternalSigningKey<
     s2_hat: VectorNTT<K, Standard>, // SECRET polyvector
     t0_hat: VectorNTT<K, Standard>, // uncompressed public key
     shake256: Shake256,             // SHAK256 instance for streaming signing
+    is_initialized: bool,
     _phantom: PhantomData<P>,
 }
 
@@ -925,6 +927,7 @@ impl<
             s2_hat: s2.ntt(),
             t0_hat: t0.ntt(),
             shake256: Shake256::new(),
+            is_initialized: false,
             _phantom: PhantomData,
         };
 
@@ -1110,12 +1113,17 @@ impl<
         self.shake256.absorb(&self.tr_hash)?;
         self.shake256.absorb(&[0u8, ctx.len() as u8])?;
         self.shake256.absorb(ctx)?;
+        self.is_initialized = true;
 
         Ok(())
     }
 
     /// Essentially a wrapper over the internal H that hashes a message before signing.
     pub fn update(&mut self, msg: &[u8]) -> Result<(), UnknownCryptoError> {
+        if !self.is_initialized {
+            return Err(UnknownCryptoError);
+        }
+
         self.shake256.absorb(msg)
     }
 
@@ -1125,6 +1133,10 @@ impl<
         rnd: &[u8],
     ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
     {
+        if !self.is_initialized {
+            return Err(UnknownCryptoError);
+        }
+
         debug_assert_eq!(rnd.len(), 32);
 
         self.shake256.absorb(rnd)?;
@@ -1148,10 +1160,10 @@ pub struct InternalVerifyingKey<
     P: MlDsaParameters,
 > {
     pub(crate) pk: [u8; PK_ENCODED_SIZE],
-    rho: [u8; 32],
     t1: Vector<K>,
     mat_a_hat: MatrixNTT<K, L>,
     shake256: Shake256,
+    is_initialized: bool,
     _phantom: PhantomData<P>,
 }
 
@@ -1213,10 +1225,10 @@ impl<
             pk: value
                 .try_into()
                 .expect("length check is part of P::pk_decode()"),
-            rho,
             t1,
             mat_a_hat: MatrixNTT::<K, L>::expand_a::<P>(&rho)?,
             shake256: Shake256::new(),
+            is_initialized: false,
             _phantom: PhantomData,
         })
     }
@@ -1285,10 +1297,10 @@ impl<
 
         Ok(Self {
             pk,
-            rho,
             t1,
             mat_a_hat,
             shake256: Shake256::new(),
+            is_initialized: false,
             _phantom: PhantomData,
         })
     }
@@ -1412,12 +1424,17 @@ impl<
         self.shake256.absorb(&tr)?;
         self.shake256.absorb(&[0u8, ctx.len() as u8])?;
         self.shake256.absorb(ctx)?;
+        self.is_initialized = true;
 
         Ok(())
     }
 
     /// Essentially a wrapper over the internal H that hashes a message before signing.
     pub fn update(&mut self, msg: &[u8]) -> Result<(), UnknownCryptoError> {
+        if !self.is_initialized {
+            return Err(UnknownCryptoError);
+        }
+
         self.shake256.absorb(msg)
     }
 
@@ -1426,6 +1443,10 @@ impl<
         &mut self,
         sigma: &InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>,
     ) -> Result<(), UnknownCryptoError> {
+        if !self.is_initialized {
+            return Err(UnknownCryptoError);
+        }
+
         let mut mu = [0u8; 64];
         self.shake256.squeeze(&mut mu)?;
         self.verify_internal_with_mu(&mu, sigma)
