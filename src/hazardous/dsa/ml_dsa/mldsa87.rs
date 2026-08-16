@@ -548,6 +548,40 @@ mod tests {
             let sig = Signature::try_from(sig)?;
             verifying_key.verify(m, ctx, &sig)
         }
+
+        #[cfg(feature = "safe_api")]
+        fn init_sign(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.signing_key.init(ctx)
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn init_verify(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.verifying_key.init(ctx)
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn update_sign(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.signing_key.update(m)
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn update_verify(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.verifying_key.update(m)
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn finalize_sign(&mut self, rnd: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
+            Ok(self
+                .signing_key
+                .finalize_with_rnd(&ExplicitRandom::try_from(rnd)?)?
+                .as_ref()
+                .to_vec())
+        }
+
+        #[cfg(feature = "safe_api")]
+        fn finalize_verify(&mut self, sig: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.verifying_key.finalize(&Signature::try_from(sig)?)
+        }
     }
 
     #[test]

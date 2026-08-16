@@ -38,6 +38,24 @@ pub trait TestableDsa {
     fn sign_randomized(sk: &[u8], m: &[u8], ctx: &[u8]) -> Result<Vec<u8>, UnknownCryptoError>;
 
     fn verify(vk: &[u8], m: &[u8], ctx: &[u8], sig: &[u8]) -> Result<(), UnknownCryptoError>;
+
+    #[cfg(feature = "safe_api")]
+    fn init_sign(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError>;
+
+    #[cfg(feature = "safe_api")]
+    fn init_verify(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError>;
+
+    #[cfg(feature = "safe_api")]
+    fn update_sign(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError>;
+
+    #[cfg(feature = "safe_api")]
+    fn update_verify(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError>;
+
+    #[cfg(feature = "safe_api")]
+    fn finalize_sign(&mut self, rnd: &[u8]) -> Result<Vec<u8>, UnknownCryptoError>;
+
+    #[cfg(feature = "safe_api")]
+    fn finalize_verify(&mut self, sig: &[u8]) -> Result<(), UnknownCryptoError>;
 }
 
 #[derive(Debug)]
