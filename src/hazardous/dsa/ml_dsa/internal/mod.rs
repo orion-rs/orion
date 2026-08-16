@@ -794,6 +794,7 @@ impl<
                 s1_hat,
                 s2_hat: s2.ntt(),
                 t0_hat: t0.ntt(),
+                shake256: Shake256::new(),
                 _phantom: PhantomData,
             },
             pk: InternalVerifyingKey {
@@ -801,6 +802,7 @@ impl<
                 rho,
                 t1,
                 mat_a_hat,
+                shake256: Shake256::new(),
                 _phantom: PhantomData,
             },
             _phantom: PhantomData,
@@ -826,6 +828,7 @@ pub struct InternalSigningKey<
     s1_hat: VectorNTT<L, Standard>, // SECRET polyvector
     s2_hat: VectorNTT<K, Standard>, // SECRET polyvector
     t0_hat: VectorNTT<K, Standard>, // uncompressed public key
+    shake256: Shake256,             // SHAK256 instance for streaming signing
     _phantom: PhantomData<P>,
 }
 
@@ -921,6 +924,7 @@ impl<
             s1_hat: s1.ntt(),
             s2_hat: s2.ntt(),
             t0_hat: t0.ntt(),
+            shake256: Shake256::new(),
             _phantom: PhantomData,
         };
 
@@ -1086,9 +1090,52 @@ impl<
 
         self.sign_internal(&[&[0u8, ctx.len() as u8], ctx, m], rnd)
     }
+
+    /// Initilize this signing keys internal H, to the state up to where an arbitrarly long
+    /// message is hashed before signing.
+    pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+        if ctx.len() > 255 {
+            return Err(UnknownCryptoError);
+        }
+
+        // The usual streaming is_finalized logic is simply delegated
+        // to Shake256. Streaming signing here is basically just a wrapper
+        // around this instance. We reset() here everytime beucase init()
+        // is the same as new() and a user shouldn't have to call reset()
+        // before an init(). reset() direclty isn't provided, as the `ctx`
+        // argument is required in terms of mu-input hashing order. So,
+        // init() essentially serves as a reset() here as well.
+
+        self.shake256.reset();
+        self.shake256.absorb(&self.tr_hash)?;
+        self.shake256.absorb(&[0u8, ctx.len() as u8])?;
+        self.shake256.absorb(ctx)?;
+
+        Ok(())
+    }
+
+    /// Essentially a wrapper over the internal H that hashes a message before signing.
+    pub fn update(&mut self, msg: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.shake256.absorb(msg)
+    }
+
+    /// Finalize by finishing computation of `mu`.
+    pub fn finalize(
+        &mut self,
+        rnd: &[u8],
+    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
+    {
+        debug_assert_eq!(rnd.len(), 32);
+
+        self.shake256.absorb(rnd)?;
+        let mut mu = [0u8; 64];
+        self.shake256.squeeze(&mut mu)?;
+
+        self.sign_internal_with_mu(&mu, rnd)
+    }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 /// Internal, generic verifying key used across the three ML-DSA parametersets.
 pub struct InternalVerifyingKey<
     const PK_ENCODED_SIZE: usize,
@@ -1104,7 +1151,36 @@ pub struct InternalVerifyingKey<
     rho: [u8; 32],
     t1: Vector<K>,
     mat_a_hat: MatrixNTT<K, L>,
+    shake256: Shake256,
     _phantom: PhantomData<P>,
+}
+
+impl<
+    const PK_ENCODED_SIZE: usize,
+    const SIG_ENCODED_SIZE: usize,
+    const CLEN: usize,
+    const COMMITHASH_LEN: usize,
+    const W1_ENCODE_SIZE: usize,
+    const K: usize,
+    const L: usize,
+    P: MlDsaParameters,
+> PartialEq
+    for InternalVerifyingKey<
+        PK_ENCODED_SIZE,
+        SIG_ENCODED_SIZE,
+        CLEN,
+        COMMITHASH_LEN,
+        W1_ENCODE_SIZE,
+        K,
+        L,
+        P,
+    >
+{
+    fn eq(&self, other: &Self) -> bool {
+        // NOTE: Only compare the encoded key type.
+        // This is in line with how mldsa44/65/87 Public<VerifyingKey> is built.
+        self.pk == other.pk
+    }
 }
 
 impl<
@@ -1140,6 +1216,7 @@ impl<
             rho,
             t1,
             mat_a_hat: MatrixNTT::<K, L>::expand_a::<P>(&rho)?,
+            shake256: Shake256::new(),
             _phantom: PhantomData,
         })
     }
@@ -1211,6 +1288,7 @@ impl<
             rho,
             t1,
             mat_a_hat,
+            shake256: Shake256::new(),
             _phantom: PhantomData,
         })
     }
@@ -1308,6 +1386,49 @@ impl<
             return Err(UnknownCryptoError);
         }
         self.verify_internal(&[&[0u8, ctx.len() as u8], ctx, m], sigma)
+    }
+
+    /// Initilize this signing keys internal H, to the state up to where an arbitrarly long
+    /// message is hashed before signing.
+    pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
+        if ctx.len() > 255 {
+            return Err(UnknownCryptoError);
+        }
+
+        // The usual streaming is_finalized logic is simply delegated
+        // to Shake256. Streaming signing here is basically just a wrapper
+        // around this instance. We reset() here everytime beucase init()
+        // is the same as new() and a user shouldn't have to call reset()
+        // before an init(). reset() direclty isn't provided, as the `ctx`
+        // argument is required in terms of mu-input hashing order. So,
+        // init() essentially serves as a reset() here as well.
+
+        self.shake256.reset();
+        let mut tr = [0u8; 64];
+        self.shake256.absorb(&self.pk)?;
+        self.shake256.squeeze(&mut tr)?;
+
+        self.shake256.reset();
+        self.shake256.absorb(&tr)?;
+        self.shake256.absorb(&[0u8, ctx.len() as u8])?;
+        self.shake256.absorb(ctx)?;
+
+        Ok(())
+    }
+
+    /// Essentially a wrapper over the internal H that hashes a message before signing.
+    pub fn update(&mut self, msg: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.shake256.absorb(msg)
+    }
+
+    /// Finalize by finishing computation of `mu`.
+    pub fn finalize(
+        &mut self,
+        sigma: &InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>,
+    ) -> Result<(), UnknownCryptoError> {
+        let mut mu = [0u8; 64];
+        self.shake256.squeeze(&mut mu)?;
+        self.verify_internal_with_mu(&mu, sigma)
     }
 }
 
