@@ -29,6 +29,9 @@
 //!
 //! A set of keys expanded from a [`Seed`] are guaranteed to be valid, part expanded (aka. serialized) keys are not.
 //!
+//! [`KeyPair`] does not expose the streaming-based API, so in this case a [`SigningKey`] should preferrably be constructed
+//! from a [`Seed`].
+//!
 //! #### Serialized signing keys
 //! It is possible to instantiate a [`SigningKey`] directly, if strictly required, using [`SigningKey::try_from()`]. This use hereof is intended solely for
 //! interoperability purposes. The lack of generate function for [`SigningKey`] is intentional.
@@ -69,6 +72,23 @@
 //! let signature = kp.private().sign(b"Message to sign", b"additional context")?;
 //!
 //! assert!(kp.public().verify(b"Message to sign", b"additional context", &signature).is_ok());
+//!
+//! // Streaming-based signing
+//! let seed = Seed::generate()?;
+//! let mut sk = SigningKey::try_from(&seed)?;
+//!
+//! sk.init(b"additional context")?;
+//! sk.update(b"Message to ")?;
+//! sk.update(b"sign")?;
+//! let signature = sk.finalize()?;
+//!
+//! let mut vk = VerifyingKey::try_from(&sk)?;
+//! vk.init(b"additional context")?;
+//! vk.update(b"Message")?;
+//! vk.update(b" to ")?;
+//! vk.update(b"sign")?;
+//! assert!(vk.finalize(&signature).is_ok());
+//!
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
@@ -195,6 +215,26 @@ impl TypeSpec for MlDsa65Signature {
     }
 }
 
+impl TryFrom<&Seed> for SigningKey {
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &Seed) -> Result<Self, Self::Error> {
+        let kp = KeyPairInternal::<
+            { MlDsa65::PRIVATE_KEY_SIZE },
+            { MlDsa65::PUBLIC_KEY_SIZE },
+            { MlDsa65::SIGNATURE_SIZE },
+            { MlDsa65::CLEN },
+            { MlDsa65::COMMITMENT_HASH_LEN },
+            { MlDsa65::W1_BITPACK_SIZE * MlDsa65::DIM_K },
+            { MlDsa65::DIM_K },
+            { MlDsa65::DIM_L },
+            MlDsa65,
+        >::keygen_internal(value.unprotected_as_ref())?;
+
+        Ok(Self::from_data(kp.sk))
+    }
+}
+
 impl SigningKey {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
@@ -272,9 +312,7 @@ impl SigningKey {
     /// Finalize and compute the signature.
     pub fn finalize(&mut self) -> Result<Signature, UnknownCryptoError> {
         let rnd = ExplicitRandom::generate()?;
-        Ok(Signature::from_data(
-            self.data.finalize(rnd.unprotected_as_ref())?,
-        ))
+        self.finalize_with_rnd(&rnd)
     }
 }
 
@@ -654,5 +692,37 @@ mod tests {
         let kp = KeyPair::new(seed).unwrap();
 
         assert_eq!(&VerifyingKey::try_from(kp.private()).unwrap(), kp.public());
+    }
+
+    #[test]
+    fn test_one_shot_eq_streaming() {
+        let seed = Seed::from([255u8; 32]);
+        let kp = KeyPair::new(seed.clone()).unwrap();
+        let oneshot = kp
+            .private()
+            .sign_deterministic(b"Message to sign", b"Context")
+            .unwrap();
+
+        let mut sk = SigningKey::try_from(&seed).unwrap();
+        assert_eq!(kp.seed, seed);
+        assert_eq!(kp.private(), &sk);
+
+        sk.init(b"Context").unwrap();
+        sk.update(b"Message to ").unwrap();
+        sk.update(b"sign").unwrap();
+        let multi = sk
+            .finalize_with_rnd(&ExplicitRandom::deterministic())
+            .unwrap();
+        assert_eq!(oneshot, multi);
+
+        let mut vk = VerifyingKey::try_from(&sk).unwrap();
+        assert_eq!(kp.public(), &vk);
+        vk.init(b"Context").unwrap();
+        vk.update(b"Message").unwrap();
+        vk.update(b" to ").unwrap();
+        vk.update(b"sign").unwrap();
+
+        assert!(vk.clone().finalize(&oneshot).is_ok());
+        assert!(vk.clone().finalize(&multi).is_ok());
     }
 }

@@ -1140,7 +1140,6 @@ impl<
 
         debug_assert_eq!(rnd.len(), 32);
 
-        self.shake256.absorb(rnd)?;
         let mut mu = [0u8; 64];
         self.shake256.squeeze(&mut mu)?;
 

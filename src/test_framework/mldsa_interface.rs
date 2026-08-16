@@ -98,6 +98,7 @@ impl<T: TestableDsa + Clone> DsaTester<T> {
                 let (rnd, ctx) = Self::test_values_rnd_and_ctx();
                 self.consistency_sign(msg, &ctx, &rnd);
                 self.consistency_verify(seed, msg, &ctx, &rnd);
+                self.test_iuf_combinations(seed, msg, &ctx, &rnd);
             }
         }
     }
@@ -372,5 +373,45 @@ impl<T: TestableDsa + Clone> DsaTester<T> {
             assert_eq!(res_5, res_6);
             assert_eq!(res_6, res_7);
         }
+    }
+
+    #[cfg(all(test, feature = "safe_api"))]
+    fn test_iuf_combinations(&self, seed: &[u8], data: &[u8], ctx: &[u8], rnd: &[u8]) {
+        let (sk, _) = T::keygen(seed).unwrap();
+        let sigma = T::sign_with_rnd(&sk, &[], ctx, rnd).unwrap();
+
+        // no init() -> update(): ERR
+        assert!(self._initial_context.clone().update_sign(data).is_err());
+        assert!(self._initial_context.clone().update_verify(data).is_err());
+
+        // no init() -> finalize(): ERR
+        assert!(self._initial_context.clone().finalize_sign(rnd).is_err());
+        assert!(
+            self._initial_context
+                .clone()
+                .finalize_verify(&sigma)
+                .is_err()
+        );
+
+        // finalize() -> update(): ERR
+        let mut stream_ctx = self._initial_context.clone();
+        stream_ctx.init_sign(ctx).unwrap();
+        stream_ctx.finalize_sign(rnd).unwrap();
+        assert!(stream_ctx.update_sign(data).is_err());
+
+        let mut stream_ctx = self._initial_context.clone();
+        stream_ctx.init_verify(ctx).unwrap();
+        stream_ctx.update_verify(&[]).unwrap(); // must match sigma
+        stream_ctx.finalize_verify(&sigma).unwrap();
+        assert!(stream_ctx.update_verify(&[]).is_err());
+
+        // init() -> finalize(): OK
+        let mut stream_ctx = self._initial_context.clone();
+        stream_ctx.init_sign(ctx).unwrap();
+        assert!(stream_ctx.finalize_sign(rnd).is_ok());
+
+        let mut stream_ctx = self._initial_context.clone();
+        stream_ctx.init_verify(ctx).unwrap();
+        assert!(stream_ctx.finalize_verify(&sigma).is_ok());
     }
 }
