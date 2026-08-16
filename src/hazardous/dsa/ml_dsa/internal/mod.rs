@@ -37,7 +37,7 @@ use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
-mod fe;
+pub mod fe;
 pub(crate) mod sampling;
 
 pub(crate) const fn bitlen(a: u32) -> u32 {
