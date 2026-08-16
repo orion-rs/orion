@@ -4,7 +4,16 @@
 ### About
 Orion is a cryptography library written in pure Rust. It aims to provide easy and usable crypto while trying to minimize the use of unsafe code. You can read more about Orion in the [wiki](https://github.com/orion-rs/orion/wiki).
 
-Currently supports:
+### Supported algorithms
+
+#### PQ + PQ/T
+* **Signature schemes**: ML-DSA.
+* **KEM**: X-Wing, ML-KEM.
+* **HPKE**:
+    - X-Wing/(ML-KEM768, X25519), HKDF-SHA256, ChaCha20Poly1305
+    - X-Wing/(ML-KEM768, X25519), SHAKE256, ChaCha20Poly1305
+
+#### Other
 * **AEAD**: (X)ChaCha20-Poly1305.
 * **Hashing**: BLAKE3, BLAKE2b, SHA2, SHA3.
 * **XOF**: SHAKE128, SHAKE256.
@@ -12,12 +21,9 @@ Currently supports:
 * **ECDH**: X25519.
 * **MAC**: HMAC, Poly1305.
 * **Stream ciphers**: (X)ChaCha20.
-* **Signature schemes**: ML-DSA.
-* **KEM**: X-Wing, ML-KEM, DHKEM(X25519, HKDF-SHA256).
 * **HPKE**:
-    - X-Wing/(ML-KEM768, X25519), HKDF-SHA256, ChaCha20Poly1305
-    - X-Wing/(ML-KEM768, X25519), SHAKE256, ChaCha20Poly1305
     - DHKEM(X25519, HKDF-SHA256), HKDF-SHA256, ChaCha20Poly1305
+* **KEM**: DHKEM(X25519, HKDF-SHA256).
 
 Experimental support (with `experimental` feature enabled):
 * **Committing AEAD**: (X)ChaCha20-Poly1305-BLAKE2b.
@@ -42,6 +48,7 @@ MSRV may be changed at any point and will not be considered a SemVer breaking ch
 - `no_std`: Implicit feature that represents no heap allocations. Enabled by disabling default features and not selecting any additional features.
 - `zeroize`: Toggles whether sensitive key material is zeroized internally. Enabled by default.
 - `experimental`: These APIs may contain breaking changes in any non SemVer-breaking crate releases.
+- `ct-test`: Exposes some internal functionality that is only relevant for test (used in `orion-dudect`).
 
 More detailed explanation of the features in the [wiki](https://github.com/orion-rs/orion/wiki/Crate-features).
 
