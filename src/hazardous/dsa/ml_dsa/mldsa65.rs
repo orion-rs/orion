@@ -37,7 +37,6 @@
 //! - `m`: Message to be signed or verified a signature of.
 //! - `ctx`: Context string which must be the same on signing and verification.
 //! - `rnd`: [`ExplicitRandom`] provided during signing.
-//! - `ph`: [`PreHash`] variant used during HashML-DSA.
 //! - `mu`: ML-DSA `mu` parameter.
 //! - `sig`: Signature to be verified.
 //!
@@ -54,8 +53,6 @@
 //! - It is critical that both the seed and explicit randomness `rnd`, used for key generation and signing
 //! are generated using a strong CSPRNG.
 //! - Users should always prefer the hedged/randomized if in doubt.
-//! - While possible to use a single [`KeyPair`] for both HashML-DSA and ML-DSA, it is strongly recommended to utilize
-//! two independent keypairs for these two variants.
 //!
 //! # Example:
 //! ```ignore-windows
@@ -78,7 +75,6 @@
 //! [`SigningKey::try_from()`]: mldsa65::SigningKey::try_from
 //! [`Seed`]: mldsa65::Seed
 //! [`ExplicitRandom`]: mldsa65::ExplicitRandom
-//! [`PreHash`]: mldsa65::PreHash
 
 use crate::KP;
 use crate::errors::UnknownCryptoError;
@@ -95,7 +91,6 @@ pub use crate::hazardous::dsa::ml_dsa::MlDsaSeed;
 pub use crate::hazardous::dsa::ml_dsa::RAND_SIZE;
 pub use crate::hazardous::dsa::ml_dsa::SEED_SIZE;
 pub use crate::hazardous::dsa::ml_dsa::Seed;
-pub use crate::hazardous::dsa::ml_dsa::internal::prehash::PreHash;
 
 /// Size of private [`SigningKey`].
 pub const SIGNING_KEY_SIZE: usize = MlDsa65::PRIVATE_KEY_SIZE;
@@ -222,46 +217,6 @@ impl SigningKey {
         )?))
     }
 
-    #[cfg(feature = "safe_api")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
-    pub fn sign_prehash(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        ph: &PreHash,
-    ) -> Result<Signature, UnknownCryptoError> {
-        let rnd = ExplicitRandom::generate()?;
-
-        self.sign_prehash_with_rnd(m, ctx, ph, &rnd)
-    }
-
-    /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
-    pub fn sign_prehash_deterministic(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        ph: &PreHash,
-    ) -> Result<Signature, UnknownCryptoError> {
-        self.sign_prehash_with_rnd(m, ctx, ph, &ExplicitRandom::deterministic())
-    }
-
-    /// Given the [`SigningKey`] and [`PreHash`], sign a message `m` and context.
-    pub fn sign_prehash_with_rnd(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        ph: &PreHash,
-        rnd: &ExplicitRandom,
-    ) -> Result<Signature, UnknownCryptoError> {
-        Ok(Signature::from_data(self.data.sign_prehash(
-            m,
-            ctx,
-            rnd.unprotected_as_ref(),
-            ph,
-        )?))
-    }
-
     /// Given the [`SigningKey`], sign `mu`.
     ///
     /// Where `mu`: `H(BytesToBits(tr)||M ′, 64)`, FIPS-204, Algorithm 7.
@@ -285,17 +240,6 @@ impl VerifyingKey {
     /// Given the [`VerifyingKey`], verify a signature `sig` produced over message `m` and context.
     pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
         self.data.verify(m, &sig.data, ctx)
-    }
-
-    /// Given the [`VerifyingKey`] and [`PreHash`], verify a signature `sig` produced over message `m` and context.
-    pub fn verify_prehash(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        sig: &Signature,
-        ph: &PreHash,
-    ) -> Result<(), UnknownCryptoError> {
-        self.data.verify_prehash(m, &sig.data, ctx, ph)
     }
 
     /// Given the [`VerifyingKey`], verify signature over `mu`.

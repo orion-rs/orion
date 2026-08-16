@@ -20,23 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-pub mod prehash;
 use crate::{
     errors::UnknownCryptoError,
     generics::sealed::{Data, Sealed, TryFromBytes},
     hazardous::{
         dsa::ml_dsa::internal::{
             fe::{FieldElement, Hint, RingElement, Standard, Vector, VectorNTT},
-            prehash::PreHash,
             sampling::{MatrixNTT, expand_mask, expand_s, sample_in_ball},
         },
-        hash::{
-            sha2::{sha256::Sha256, sha384::Sha384, sha512::Sha512},
-            sha3::{
-                sha3_224::Sha3_224, sha3_256::Sha3_256, sha3_384::Sha3_384, sha3_512::Sha3_512,
-                shake128::Shake128, shake256::Shake256,
-            },
-        },
+        hash::sha3::shake256::Shake256,
     },
 };
 use core::{fmt::Debug, marker::PhantomData};
@@ -1094,95 +1086,6 @@ impl<
 
         self.sign_internal(&[&[0u8, ctx.len() as u8], ctx, m], rnd)
     }
-
-    /// FIPS-204, HashML-DSA.
-    pub fn sign_prehash(
-        &self,
-        m: &[u8],
-        ctx: &[u8],
-        rnd: &[u8],
-        ph: &PreHash,
-    ) -> Result<InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>, UnknownCryptoError>
-    {
-        debug_assert_eq!(rnd.len(), 32);
-        if ctx.len() > 255 {
-            return Err(UnknownCryptoError);
-        }
-
-        match ph {
-            // 2.16.840.1.101.3.4.2.1
-            PreHash::SHA256 => {
-                let hash = Sha256::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.2
-            PreHash::SHA384 => {
-                let hash = Sha384::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.3
-            PreHash::SHA512 => {
-                let hash = Sha512::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            PreHash::SHA3_224 => {
-                let hash = Sha3_224::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.8
-            PreHash::SHA3_256 => {
-                let hash = Sha3_256::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.9
-            PreHash::SHA3_384 => {
-                let hash = Sha3_384::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.10
-            PreHash::SHA3_512 => {
-                let hash = Sha3_512::digest(m)?;
-                self.sign_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    rnd,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.11
-            PreHash::SHAKE128 => {
-                let mut ph_m = [0u8; 256 / 8];
-                let mut shake128 = Shake128::new();
-                shake128.absorb(m)?;
-                shake128.squeeze(&mut ph_m)?;
-                self.sign_internal(&[&[1u8, ctx.len() as u8], ctx, ph.oid(), &ph_m], rnd)
-            }
-            // 2.16.840.1.101.3.4.2.12
-            PreHash::SHAKE256 => {
-                let mut ph_m = [0u8; 512 / 8];
-                let mut shake256 = Shake256::new();
-                shake256.absorb(m)?;
-                shake256.squeeze(&mut ph_m)?;
-                self.sign_internal(&[&[1u8, ctx.len() as u8], ctx, ph.oid(), &ph_m], rnd)
-            }
-        }
-    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -1405,94 +1308,6 @@ impl<
             return Err(UnknownCryptoError);
         }
         self.verify_internal(&[&[0u8, ctx.len() as u8], ctx, m], sigma)
-    }
-
-    /// FIPS-204, HashML-DSA.
-    pub fn verify_prehash(
-        &self,
-        m: &[u8],
-        sigma: &InternalSignature<SIG_ENCODED_SIZE, COMMITHASH_LEN, K, L, P>,
-        ctx: &[u8],
-        ph: &PreHash,
-    ) -> Result<(), UnknownCryptoError> {
-        if ctx.len() > 255 {
-            return Err(UnknownCryptoError);
-        }
-
-        match ph {
-            // 2.16.840.1.101.3.4.2.1
-            PreHash::SHA256 => {
-                let hash = Sha256::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.2
-            PreHash::SHA384 => {
-                let hash = Sha384::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.3
-            PreHash::SHA512 => {
-                let hash = Sha512::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.7
-            PreHash::SHA3_224 => {
-                let hash = Sha3_224::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.8
-            PreHash::SHA3_256 => {
-                let hash = Sha3_256::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.9
-            PreHash::SHA3_384 => {
-                let hash = Sha3_384::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.10
-            PreHash::SHA3_512 => {
-                let hash = Sha3_512::digest(m)?;
-                self.verify_internal(
-                    &[&[1u8, ctx.len() as u8], ctx, ph.oid(), hash.as_ref()],
-                    sigma,
-                )
-            }
-            // 2.16.840.1.101.3.4.2.11
-            PreHash::SHAKE128 => {
-                let mut ph_m = [0u8; 256 / 8];
-                let mut shake128 = Shake128::new();
-                shake128.absorb(m)?;
-                shake128.squeeze(&mut ph_m)?;
-                self.verify_internal(&[&[1u8, ctx.len() as u8], ctx, ph.oid(), &ph_m], sigma)
-            }
-            // 2.16.840.1.101.3.4.2.12
-            PreHash::SHAKE256 => {
-                let mut ph_m = [0u8; 512 / 8];
-                let mut shake256 = Shake256::new();
-                shake256.absorb(m)?;
-                shake256.squeeze(&mut ph_m)?;
-                self.verify_internal(&[&[1u8, ctx.len() as u8], ctx, ph.oid(), &ph_m], sigma)
-            }
-        }
     }
 }
 
