@@ -57,8 +57,6 @@ impl GenerateSecret for KeyType {
 /// # Errors:
 /// An error will be returned if:
 /// - `slice` is empty.
-/// - `length` is 0.
-/// - `length` is not less than [`isize::MAX`].
 /// - Failure to generate random bytes securely.
 pub type SecretKey = Secret<KeyType>;
 
@@ -89,8 +87,6 @@ impl GeneratePublic for SaltType {
 /// # Errors:
 /// An error will be returned if:
 /// - `slice` is empty.
-/// - `length` is 0.
-/// - `length` is not less than [`isize::MAX`].
 /// - Failure to generate random bytes securely.
 pub type Salt = Public<SaltType>;
 
@@ -109,6 +105,4 @@ impl TypeSpec for PasswordType {
 /// # Errors:
 /// An error will be returned if:
 /// - `slice` is empty.
-/// - `length` is 0.
-/// - `length` is not less than [`isize::MAX`].
 pub type Password = Secret<PasswordType>;
