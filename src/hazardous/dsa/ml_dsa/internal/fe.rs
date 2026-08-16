@@ -59,6 +59,7 @@ pub(crate) const fn conditional_sub_u32(a: u32) -> u32 {
     (t & !mask) | (a & mask)
 }
 
+/// Montgomery reduce.
 pub const fn montgomery_reduce(value: u64) -> u32 {
     // cast to u32 and wrapping_mul to use lower 32 bits
     let t: u32 = (value as u32).wrapping_mul(QNEGINV);
@@ -74,6 +75,7 @@ mod sealed {
     pub trait Sealed {}
 }
 
+/// Domain markers to/from Montgomery.
 pub trait Domain: sealed::Sealed + Copy + Debug + PartialEq + Eq {}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -145,11 +147,13 @@ impl<D: Domain> Zeroize for FieldElement<D> {
 
 /// Specific routines for non-Montgomery domain field elements.
 impl FieldElement<Standard> {
+    #[allow(missing_docs)]
     pub const fn new(n: u32) -> Self {
         debug_assert!(n < DILITHIUM_Q);
         Self(n, PhantomData)
     }
 
+    #[allow(missing_docs)]
     pub const fn power2round<P: MlDsaParameters>(&self) -> (u32, u32) {
         debug_assert!(self.0 < DILITHIUM_Q);
         let r1 = (self.0.overflowing_add((1 << (P::D - 1)) - 1).0) >> P::D;
@@ -158,6 +162,7 @@ impl FieldElement<Standard> {
         (r1, conditional_sub_u32(r0))
     }
 
+    #[allow(missing_docs)]
     pub fn is_outside_bound(&self, bound: u32) -> Choice {
         debug_assert!(self.0 < DILITHIUM_Q);
         debug_assert!(bound < u32::MAX / 2); // required for panic-free 2*bound-1 range window.
@@ -232,6 +237,7 @@ impl FieldElement<Standard> {
         (adjust & hint) | (r1 & !hint)
     }
 
+    #[allow(missing_docs)]
     pub fn bitpack_gamma1_offset<P: MlDsaParameters>(&self) -> u32 {
         debug_assert!(self.0 < DILITHIUM_Q);
         let t = conditional_sub_u32(P::GAMMA_1 + DILITHIUM_Q - self.0);
@@ -242,6 +248,7 @@ impl FieldElement<Standard> {
 }
 
 impl<D: Domain> FieldElement<D> {
+    #[allow(missing_docs)]
     pub const fn zero() -> Self {
         Self(0, PhantomData)
     }

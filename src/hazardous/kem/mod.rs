@@ -32,3 +32,7 @@ pub use ml_kem::mlkem1024;
 
 /// X-Wing hybrid KEM as specified in [draft-connolly-cfrg-xwing-kem-10](https://www.ietf.org/archive/id/draft-connolly-cfrg-xwing-kem-10.html).
 pub mod xwing;
+
+#[doc(hidden)]
+#[cfg(feature = "ct-test")]
+pub use ml_kem::internal::fe::{FieldElement, barrett_reduce, conditional_sub_u32};
