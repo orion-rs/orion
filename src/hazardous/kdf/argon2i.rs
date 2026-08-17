@@ -106,7 +106,10 @@ use zeroize::Zeroize;
 pub const ARGON2_VERSION: u32 = 0x13;
 
 /// The Argon2 variant (i).
-pub const ARGON2_VARIANT: u32 = 1;
+pub const ARGON2_I_VARIANT: u32 = 1;
+
+/// The Argon2 variant (id).
+pub const ARGON2_ID_VARIANT: u32 = 2;
 
 /// The amount of segments per lane, as defined in the spec.
 const SEGMENTS_PER_LANE: usize = 4;
@@ -171,6 +174,7 @@ fn permutation_p(
 
 /// H0 as defined in the specification.
 fn initial_hash(
+    variant: u32,
     hash_length: u32,
     memory_kib: u32,
     passes: u32,
@@ -190,7 +194,7 @@ fn initial_hash(
     h0[8..12].copy_from_slice(&memory_kib.to_le_bytes());
     h0[12..16].copy_from_slice(&passes.to_le_bytes());
     h0[16..20].copy_from_slice(&ARGON2_VERSION.to_le_bytes());
-    h0[20..24].copy_from_slice(&ARGON2_VARIANT.to_le_bytes());
+    h0[20..24].copy_from_slice(&variant.to_le_bytes());
     h0[24..28].copy_from_slice(&(p.len() as u32).to_le_bytes());
 
     hasher.update(&h0[..28])?;
@@ -314,12 +318,12 @@ struct Gidx {
 }
 
 impl Gidx {
-    fn new(blocks: u32, passes: u32, segment_length: u32) -> Self {
+    fn new(variant: u32, blocks: u32, passes: u32, segment_length: u32) -> Self {
         let mut block = [0u64; 128];
         block[1] = 0u64; // Lane number, we only support one (0u64).
         block[3] = u64::from(blocks);
         block[4] = u64::from(passes);
-        block[5] = u64::from(ARGON2_VARIANT); // The Argon2i variant
+        block[5] = u64::from(variant);
 
         Self {
             block,
@@ -354,41 +358,68 @@ impl Gidx {
         xor_slices!(tmp_block, self.addresses);
     }
 
-    fn get_next(&mut self, segment_idx: u32, tmp_block: &mut [u64; 128]) -> u32 {
-        // We get J1 and discard J2, as J2 is only relevant if we had more than
-        // a single lane.
+    /// Get J1 as data-independent index.
+    /// Discard J2, as J2 is only relevant if we had more than a single lane.
+    fn get_next_j1(&mut self, tmp_block: &mut [u64; 128]) -> u64 {
         let j1: u64 = self.addresses[self.offset as usize] & 0xFFFF_FFFFu64;
         self.offset = (self.offset + 1) % 128; // Wrap-around on block length.
         if self.offset == 0 {
             self.next_addresses(tmp_block);
         }
 
-        // The Argon2 specification for this version (1.3) does not conform
-        // to the official reference implementation. This implementation follows
-        // the reference implementation and ignores the specification where they
-        // disagree. See https://github.com/P-H-C/phc-winner-argon2/issues/183.
+        j1
+    }
 
-        let n_blocks = self.block[3] as u32;
-        let pass_n = self.block[0] as u32;
-        let segment_n = self.block[2] as u32;
+    #[cfg(test)]
+    /// Test-only after adding support for Argon2id.
+    fn get_next(&mut self, segment_idx: u32, tmp_block: &mut [u64; 128]) -> u32 {
+        reference_idx(
+            self.get_next_j1(tmp_block),
+            self.block[3] as u32,
+            self.block[0] as u32,
+            self.block[2] as u32,
+            segment_idx,
+            self.segment_length,
+        )
+    }
+}
 
-        let ref_start_pos: u32 = if pass_n == 0 && segment_n == 0 {
-            segment_idx - 1
-        } else if pass_n == 0 {
-            segment_n * self.segment_length + segment_idx - 1
-        } else {
-            n_blocks - self.segment_length + segment_idx - 1
-        };
+// The Argon2 specification for this version (1.3) does not conform
+// to the official reference implementation. This implementation follows
+// the reference implementation and ignores the specification where they
+// disagree. See https://github.com/P-H-C/phc-winner-argon2/issues/183.
+fn reference_idx(
+    j1: u64,
+    n_blocks: u32,
+    pass_n: u32,
+    segment_n: u32,
+    segment_idx: u32,
+    segment_length: u32,
+) -> u32 {
+    let ref_start_pos: u32 = if pass_n == 0 && segment_n == 0 {
+        segment_idx - 1
+    } else if pass_n == 0 {
+        segment_n * segment_length + segment_idx - 1
+    } else {
+        n_blocks - segment_length + segment_idx - 1
+    };
 
-        let mut ref_pos: u64 = (j1 * j1) >> 32;
-        ref_pos = (ref_start_pos as u64 * ref_pos) >> 32;
-        ref_pos = (ref_start_pos as u64 - 1) - ref_pos;
+    let mut ref_pos: u64 = (j1 * j1) >> 32;
+    ref_pos = (ref_start_pos as u64 * ref_pos) >> 32;
+    ref_pos = (ref_start_pos as u64 - 1) - ref_pos;
 
-        if pass_n == 0 || segment_n == 3 {
-            ref_pos as u32 % n_blocks
-        } else {
-            (self.segment_length * (segment_n + 1) + ref_pos as u32) % n_blocks
-        }
+    if pass_n == 0 || segment_n == 3 {
+        ref_pos as u32 % n_blocks
+    } else {
+        (segment_length * (segment_n + 1) + ref_pos as u32) % n_blocks
+    }
+}
+
+const fn is_data_independent(variant: u32, pass_n: u32, segment_n: usize) -> bool {
+    match variant {
+        ARGON2_I_VARIANT => true,
+        ARGON2_ID_VARIANT => pass_n == 0 && segment_n < 2,
+        _ => false,
     }
 }
 
@@ -452,6 +483,7 @@ pub fn derive_key(
 
     // Fill first two blocks
     let mut h0 = initial_hash(
+        ARGON2_I_VARIANT,
         dst_out.len() as u32,
         memory,
         iterations,
@@ -476,7 +508,7 @@ pub fn derive_key(
     extended_hash(&h0, &mut tmp)?;
     load_u64_into_le(&tmp, &mut blocks[1]);
 
-    let mut gidx = Gidx::new(n_blocks, iterations, segment_length);
+    let mut gidx = Gidx::new(ARGON2_I_VARIANT, n_blocks, iterations, segment_length);
     let mut working_block = [0u64; 128];
 
     for pass_n in 0..iterations as usize {
@@ -486,10 +518,12 @@ pub fn derive_key(
                 _ => 0,
             };
 
-            gidx.init(pass_n as u32, segment_n as u32, offset, &mut working_block);
+            let use_gidx = is_data_independent(ARGON2_I_VARIANT, pass_n as u32, segment_n);
+            if use_gidx {
+                gidx.init(pass_n as u32, segment_n as u32, offset, &mut working_block);
+            }
 
             for segment_idx in offset..segment_length {
-                let reference_idx = gidx.get_next(segment_idx, &mut working_block);
                 let current_idx = segment_n as u32 * segment_length + segment_idx;
                 let previous_idx = if current_idx > 0 {
                     current_idx - 1
@@ -497,6 +531,21 @@ pub fn derive_key(
                     n_blocks - 1
                 };
 
+                let j1_idx = if use_gidx {
+                    gidx.get_next_j1(&mut working_block)
+                } else {
+                    // Data-dependent is lower 32 bits of previous block first word
+                    blocks[previous_idx as usize][0] & (u32::MAX as u64)
+                };
+
+                let reference_idx = reference_idx(
+                    j1_idx,
+                    n_blocks,
+                    pass_n as u32,
+                    segment_n as u32,
+                    segment_idx,
+                    segment_length,
+                );
                 let prev_b = blocks.get(previous_idx as usize).unwrap();
                 let ref_b = blocks.get(reference_idx as usize).unwrap();
 
@@ -1017,7 +1066,7 @@ mod public {
 mod private {
     use super::*;
 
-    mod test_initial_hash {
+    mod test_initial_hash_argon2i {
         use super::*;
 
         #[test]
@@ -1048,7 +1097,7 @@ mod private {
                 17, 49, 11, 228, 22, 128, 161, 57, 188, 136, 75, 96, 197, 3, 206, 224, 204, 65,
                 149, 190, 101, 231, 161, 232, 35, 87, 64, 0, 0, 0, 0, 0, 0, 0, 0,
             ];
-            let actual = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let actual = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
             assert_eq!(expected.as_ref(), actual.as_ref());
         }
 
@@ -1086,7 +1135,7 @@ mod private {
                 15, 239, 64, 239, 203, 191, 226, 71, 213, 149, 238, 65, 124, 102, 1, 150, 230, 41,
                 132, 23, 176, 221, 217, 237, 150, 154, 249, 0, 0, 0, 0, 0, 0, 0, 0,
             ];
-            let actual = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let actual = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
             assert_eq!(expected.as_ref(), actual.as_ref());
         }
 
@@ -1136,7 +1185,7 @@ mod private {
                 236, 58, 237, 193, 139, 30, 191, 244, 2, 176, 123, 134, 44, 251, 101, 255, 220,
                 218, 109, 249, 231, 200, 45, 232, 240, 155, 10, 93, 111, 0, 0, 0, 0, 0, 0, 0, 0,
             ];
-            let actual = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let actual = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
             assert_eq!(expected.as_ref(), actual.as_ref());
         }
 
@@ -1151,8 +1200,8 @@ mod private {
             k: Vec<u8>,
             x: Vec<u8>,
         ) -> bool {
-            let first = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
-            let second = initial_hash(hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let first = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let second = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
 
             first.as_ref() == second.as_ref()
         }
@@ -1412,7 +1461,7 @@ mod private {
             let segment_length = 1024;
             let passes = 3;
 
-            let mut gidx = Gidx::new(n_blocks, passes, segment_length);
+            let mut gidx = Gidx::new(ARGON2_I_VARIANT, n_blocks, passes, segment_length);
             let mut tmp_block = [0u64; 128];
 
             let offset = 2;
