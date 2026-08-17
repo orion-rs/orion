@@ -99,6 +99,7 @@ pub fn derive_key(
         salt.as_ref(),
         iterations,
         memory,
+        1,
         None,
         None,
         dk.data.as_mut(),

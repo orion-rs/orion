@@ -91,10 +91,7 @@
 
 pub use super::hltypes::Password;
 use super::hltypes::Salt;
-use crate::{
-    errors::UnknownCryptoError,
-    hazardous::kdf::argon2i::{self, LANES, MIN_MEMORY},
-};
+use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2i};
 use ct_codecs::{Base64NoPadding, Decoder, Encoder};
 #[cfg(feature = "serde")]
 use serde::{
@@ -228,7 +225,7 @@ impl PasswordHash {
         if iterations < MIN_ITERATIONS {
             return Err(UnknownCryptoError);
         }
-        if memory < MIN_MEMORY {
+        if memory < 8 {
             return Err(UnknownCryptoError);
         }
 
@@ -287,7 +284,7 @@ impl PasswordHash {
         }
 
         let memory = Self::parse_decimal_value(param_parts.next().unwrap())?;
-        if memory < MIN_MEMORY {
+        if memory < 8 {
             return Err(UnknownCryptoError);
         }
 
@@ -303,7 +300,7 @@ impl PasswordHash {
             return Err(UnknownCryptoError);
         }
         let lanes = Self::parse_decimal_value(param_parts.next().unwrap())?;
-        if lanes != LANES {
+        if lanes != 1 {
             return Err(UnknownCryptoError);
         }
 
@@ -436,6 +433,7 @@ pub fn hash_password(
         salt.as_ref(),
         iterations,
         memory,
+        1,
         None,
         None,
         buffer.as_mut(),
@@ -483,6 +481,7 @@ pub fn hash_password_verify(
         expected.salt.as_ref(),
         expected.iterations,
         expected.memory,
+        1,
         None,
         None,
         buffer.as_mut(),
@@ -1006,7 +1005,7 @@ mod public {
         #[test]
         fn test_argon2i_invalid_memory() {
             let password = Password::try_from(&[0u8; 64][..]).unwrap();
-            assert!(hash_password(&password, MIN_ITERATIONS, MIN_MEMORY - 1).is_err());
+            assert!(hash_password(&password, MIN_ITERATIONS, 8 - 1).is_err());
         }
     }
 }

@@ -23,6 +23,7 @@ fn test_case_1() {
             &salt,
             iterations,
             memory,
+            1,
             Some(&secret),
             Some(&ad),
             &mut actual
@@ -52,6 +53,7 @@ fn test_case_2() {
             &salt,
             iterations,
             memory,
+            1,
             Some(&secret),
             Some(&ad),
             &mut actual
@@ -81,6 +83,7 @@ fn test_case_3() {
             &salt,
             iterations,
             memory,
+            1,
             Some(&secret),
             Some(&ad),
             &mut actual

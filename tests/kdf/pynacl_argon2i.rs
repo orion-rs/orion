@@ -34,6 +34,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
                 test.salt.as_bytes(),
                 test.iters,
                 test.maxmem,
+                1,
                 None,
                 None,
                 &mut dst_out

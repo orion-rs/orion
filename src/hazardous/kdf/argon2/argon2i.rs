@@ -24,7 +24,8 @@
 //! Argon2i version 1.3. This implementation is available with features `safe_api` and `alloc`.
 //!
 //! # Note:
-//! This implementation only supports a single thread/lane.
+//! This implementation only supports a single thread/lane, so modifying the parallelism degree beyond `1`
+//! will simply make them run sequentially.
 //!
 //! # Parameters:
 //! - `expected`: The expected derived key.
@@ -32,6 +33,7 @@
 //! - `salt`: Salt value.
 //! - `iterations`: Iteration count.
 //! - `memory`: Memory size in kibibytes (KiB).
+//! - `parallelism:` Degree of parallelism.
 //! - `secret`: Optional secret value used for hashing.
 //! - `ad`: Optional associated data used for hashing.
 //! - `dst_out`: Destination buffer for the derived key. The length of the
@@ -39,13 +41,14 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - The length of the `password` is greater than [`u32::MAX`].
-//! - The length of the `salt` is greater than [`u32::MAX`] or less than `8`.
-//! - The length of the `secret` is greater than [`u32::MAX`].
-//! - The length of the `ad` is greater than [`u32::MAX`].
+//! - The length of the `password` is greater than [`MAX_PASSWORD_LEN`].
+//! - The length of the `salt` is greater than [`MAX_SALT_LEN`].
+//! - The length of the `secret` is greater than [`MAX_SECRET_LEN`].
+//! - The length of the `ad` is greater than [`MAX_AD_LEN`].
 //! - The length of `dst_out` is greater than [`u32::MAX`] or less than `4`.
-//! - `iterations` is less than `1`.
-//! - `memory` is less than `8`.
+//! - `iterations` is less than [`MIN_ITERATIONS_T`].
+//! - `memory` is less than `8*parallelism`.
+//! - `parallelism` is less then [`MIN_PARALLELISM_P`] or greater than [`MAX_PARALLELISM_P`].
 //! - The hashed password does not match the expected when verifying.
 //!
 //! # Security:
@@ -95,333 +98,21 @@
 //! [`zeroize` crate]: https://crates.io/crates/zeroize
 //! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
 
+use super::*;
 use crate::errors::UnknownCryptoError;
-use crate::hazardous::hash::blake2::blake2b::{BLAKE2B_MAX_OUTSIZE, Blake2b};
 use crate::util;
-use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
-#[cfg(feature = "zeroize")]
-use zeroize::Zeroize;
 
-/// The Argon2 version (0x13).
-pub const ARGON2_VERSION: u32 = 0x13;
-
-/// The Argon2 variant (i).
-pub const ARGON2_I_VARIANT: u32 = 1;
-
-/// The Argon2 variant (id).
-pub const ARGON2_ID_VARIANT: u32 = 2;
-
-/// The amount of segments per lane, as defined in the spec.
-const SEGMENTS_PER_LANE: usize = 4;
-
-/// The amount of lanes supported.
-pub(crate) const LANES: u32 = 1;
-
-/// The minimum amount of memory.
-pub(crate) const MIN_MEMORY: u32 = 8 * LANES;
-
-/// The minimum amount of iterations.
-pub(crate) const MIN_ITERATIONS: u32 = 1;
-
-const fn lower_mult_add(x: u64, y: u64) -> u64 {
-    let mask = 0xFFFF_FFFFu64;
-    let x_l = x & mask;
-    let y_l = y & mask;
-    let xy = x_l.wrapping_mul(y_l);
-    x.wrapping_add(y.wrapping_add(xy.wrapping_add(xy)))
-}
-
-/// BLAKE2 G with 64-bit multiplications.
-fn g(a: &mut u64, b: &mut u64, c: &mut u64, d: &mut u64) {
-    *a = lower_mult_add(*a, *b);
-    *d = (*d ^ *a).rotate_right(32);
-    *c = lower_mult_add(*c, *d);
-    *b = (*b ^ *c).rotate_right(24);
-    *a = lower_mult_add(*a, *b);
-    *d = (*d ^ *a).rotate_right(16);
-    *c = lower_mult_add(*c, *d);
-    *b = (*b ^ *c).rotate_right(63);
-}
-
-#[allow(clippy::too_many_arguments)]
-fn permutation_p(
-    v0: &mut u64,
-    v1: &mut u64,
-    v2: &mut u64,
-    v3: &mut u64,
-    v4: &mut u64,
-    v5: &mut u64,
-    v6: &mut u64,
-    v7: &mut u64,
-    v8: &mut u64,
-    v9: &mut u64,
-    v10: &mut u64,
-    v11: &mut u64,
-    v12: &mut u64,
-    v13: &mut u64,
-    v14: &mut u64,
-    v15: &mut u64,
-) {
-    g(v0, v4, v8, v12);
-    g(v1, v5, v9, v13);
-    g(v2, v6, v10, v14);
-    g(v3, v7, v11, v15);
-    g(v0, v5, v10, v15);
-    g(v1, v6, v11, v12);
-    g(v2, v7, v8, v13);
-    g(v3, v4, v9, v14);
-}
-
-/// H0 as defined in the specification.
-fn initial_hash(
-    variant: u32,
-    hash_length: u32,
-    memory_kib: u32,
-    passes: u32,
-    p: &[u8],
-    s: &[u8],
-    k: &[u8],
-    x: &[u8],
-) -> Result<[u8; 72], UnknownCryptoError> {
-    // We save additional 8 bytes in H0 for when the first two blocks are processed,
-    // so that this may contain two little-endian integers.
-    let mut h0 = [0u8; 72];
-    let mut hasher = Blake2b::new(BLAKE2B_MAX_OUTSIZE)?;
-
-    // Collect the first part to reduce times we update the hasher state.
-    h0[0..4].copy_from_slice(&LANES.to_le_bytes());
-    h0[4..8].copy_from_slice(&hash_length.to_le_bytes());
-    h0[8..12].copy_from_slice(&memory_kib.to_le_bytes());
-    h0[12..16].copy_from_slice(&passes.to_le_bytes());
-    h0[16..20].copy_from_slice(&ARGON2_VERSION.to_le_bytes());
-    h0[20..24].copy_from_slice(&variant.to_le_bytes());
-    h0[24..28].copy_from_slice(&(p.len() as u32).to_le_bytes());
-
-    hasher.update(&h0[..28])?;
-    hasher.update(p)?;
-    hasher.update(&(s.len() as u32).to_le_bytes())?;
-    hasher.update(s)?;
-    hasher.update(&(k.len() as u32).to_le_bytes())?;
-    hasher.update(k)?;
-    hasher.update(&(x.len() as u32).to_le_bytes())?;
-    hasher.update(x)?;
-    h0[0..BLAKE2B_MAX_OUTSIZE].copy_from_slice(hasher.finalize()?.as_ref());
-
-    Ok(h0)
-}
-
-/// H' as defined in the specification.
-fn extended_hash(input: &[u8], dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
-    if dst.is_empty() {
-        return Err(UnknownCryptoError);
-    }
-
-    let outlen = dst.len() as u32;
-
-    if dst.len() <= BLAKE2B_MAX_OUTSIZE {
-        let mut ctx = Blake2b::new(dst.len())?;
-        ctx.update(&outlen.to_le_bytes())?;
-        ctx.update(input)?;
-        dst.copy_from_slice(ctx.finalize()?.as_ref());
-    } else {
-        let mut ctx = Blake2b::new(BLAKE2B_MAX_OUTSIZE)?;
-        ctx.update(&outlen.to_le_bytes())?;
-        ctx.update(input)?;
-
-        let mut tmp = ctx.finalize()?;
-        dst[..BLAKE2B_MAX_OUTSIZE].copy_from_slice(tmp.as_ref());
-
-        let mut pos = BLAKE2B_MAX_OUTSIZE / 2;
-        let mut toproduce = dst.len() - BLAKE2B_MAX_OUTSIZE / 2;
-
-        while toproduce > BLAKE2B_MAX_OUTSIZE {
-            ctx.reset()?;
-            ctx.update(tmp.as_ref())?;
-            tmp = ctx.finalize()?;
-
-            dst[pos..(pos + BLAKE2B_MAX_OUTSIZE)].copy_from_slice(tmp.as_ref());
-            pos += BLAKE2B_MAX_OUTSIZE / 2;
-            toproduce -= BLAKE2B_MAX_OUTSIZE / 2;
-        }
-
-        ctx = Blake2b::new(toproduce)?;
-        ctx.update(tmp.as_ref())?;
-        tmp = ctx.finalize()?;
-        dst[pos..outlen as usize].copy_from_slice(&tmp.as_ref()[..toproduce]);
-    }
-
-    Ok(())
-}
-
-#[rustfmt::skip]
-fn fill_block(w: &mut [u64; 128]) {
-
-	let mut v0:  u64; let mut v1:  u64; let mut v2:  u64; let mut v3:  u64;
-	let mut v4:  u64; let mut v5:  u64; let mut v6:  u64; let mut v7:  u64;
-	let mut v8:  u64; let mut v9:  u64; let mut v10: u64; let mut v11: u64;
-	let mut v12: u64; let mut v13: u64; let mut v14: u64; let mut v15: u64;
-
-	let mut idx = 0;
-
-	// Operate on columns.
-	while idx < 128 {
-		v0  = w[idx      ]; v1  = w[idx +  1]; v2  = w[idx +  2]; v3  = w[idx +  3];
-		v4  = w[idx +   4]; v5  = w[idx +  5]; v6  = w[idx +  6]; v7  = w[idx +  7];
-		v8  = w[idx +   8]; v9  = w[idx +  9]; v10 = w[idx + 10]; v11 = w[idx + 11];
-		v12 = w[idx +  12]; v13 = w[idx + 13]; v14 = w[idx + 14]; v15 = w[idx + 15];
-
-		permutation_p(
-			&mut v0,  &mut v1,  &mut v2,  &mut v3,
-			&mut v4,  &mut v5,  &mut v6,  &mut v7,
-			&mut v8,  &mut v9,  &mut v10, &mut v11,
-			&mut v12, &mut v13, &mut v14, &mut v15
-		);
-
-		w[idx     ] =  v0; w[idx +  1] =  v1; w[idx +  2] =  v2; w[idx +  3] =  v3;
-		w[idx +  4] =  v4; w[idx +  5] =  v5; w[idx +  6] =  v6; w[idx +  7] =  v7;
-		w[idx +  8] =  v8; w[idx +  9] =  v9; w[idx + 10] = v10; w[idx + 11] = v11;
-		w[idx + 12] = v12; w[idx + 13] = v13; w[idx + 14] = v14; w[idx + 15] = v15;
-
-		idx += 16;
-	}
-
-	idx = 0;
-	// Operate on rows.
-	while idx < 16 {
-		v0  = w[idx     ]; v1  = w[idx +  1]; v2  = w[idx +  16]; v3  = w[idx +  17];
-		v4  = w[idx + 32]; v5  = w[idx + 33]; v6  = w[idx +  48]; v7  = w[idx +  49];
-		v8  = w[idx + 64]; v9  = w[idx + 65]; v10 = w[idx +  80]; v11 = w[idx +  81];
-		v12 = w[idx + 96]; v13 = w[idx + 97]; v14 = w[idx + 112]; v15 = w[idx + 113];
-
-		permutation_p(
-			&mut v0,  &mut v1,  &mut v2,  &mut v3,
-			&mut v4,  &mut v5,  &mut v6,  &mut v7,
-			&mut v8,  &mut v9,  &mut v10, &mut v11,
-			&mut v12, &mut v13, &mut v14, &mut v15
-		);
-
-		w[idx     ] =  v0; w[idx +  1] =  v1; w[idx +  16] =  v2; w[idx +  17] =  v3;
-		w[idx + 32] =  v4; w[idx + 33] =  v5; w[idx +  48] =  v6; w[idx +  49] =  v7;
-		w[idx + 64] =  v8; w[idx + 65] =  v9; w[idx +  80] = v10; w[idx +  81] = v11;
-		w[idx + 96] = v12; w[idx + 97] = v13; w[idx + 112] = v14; w[idx + 113] = v15;
-
-		idx += 2;
-	}
-}
-
-/// Data-independent indexing.
-struct Gidx {
-    block: [u64; 128],
-    addresses: [u64; 128],
-    segment_length: u32,
-    offset: u32,
-}
-
-impl Gidx {
-    fn new(variant: u32, blocks: u32, passes: u32, segment_length: u32) -> Self {
-        let mut block = [0u64; 128];
-        block[1] = 0u64; // Lane number, we only support one (0u64).
-        block[3] = u64::from(blocks);
-        block[4] = u64::from(passes);
-        block[5] = u64::from(variant);
-
-        Self {
-            block,
-            addresses: [0u64; 128],
-            segment_length,
-            offset: 0,
-        }
-    }
-
-    fn init(&mut self, pass_n: u32, segment_n: u32, offset: u32, tmp_block: &mut [u64; 128]) {
-        self.block[0] = u64::from(pass_n);
-        self.block[2] = u64::from(segment_n);
-        self.block[6] = 0u64; // Counter
-        self.offset = offset;
-
-        self.next_addresses(tmp_block);
-
-        // The existing values in self.addresses are not read
-        // when generating a new address block. Therefore we
-        // do not have to zero it out.
-    }
-
-    fn next_addresses(&mut self, tmp_block: &mut [u64; 128]) {
-        self.block[6] += 1;
-        // G-two operation
-        tmp_block.copy_from_slice(&self.block);
-        fill_block(tmp_block);
-        xor_slices!(self.block, tmp_block);
-
-        self.addresses.copy_from_slice(tmp_block);
-        fill_block(&mut self.addresses);
-        xor_slices!(tmp_block, self.addresses);
-    }
-
-    /// Get J1 as data-independent index.
-    /// Discard J2, as J2 is only relevant if we had more than a single lane.
-    fn get_next_j1(&mut self, tmp_block: &mut [u64; 128]) -> u64 {
-        let j1: u64 = self.addresses[self.offset as usize] & 0xFFFF_FFFFu64;
-        self.offset = (self.offset + 1) % 128; // Wrap-around on block length.
-        if self.offset == 0 {
-            self.next_addresses(tmp_block);
-        }
-
-        j1
-    }
-
-    #[cfg(test)]
-    /// Test-only after adding support for Argon2id.
-    fn get_next(&mut self, segment_idx: u32, tmp_block: &mut [u64; 128]) -> u32 {
-        reference_idx(
-            self.get_next_j1(tmp_block),
-            self.block[3] as u32,
-            self.block[0] as u32,
-            self.block[2] as u32,
-            segment_idx,
-            self.segment_length,
-        )
-    }
-}
-
-// The Argon2 specification for this version (1.3) does not conform
-// to the official reference implementation. This implementation follows
-// the reference implementation and ignores the specification where they
-// disagree. See https://github.com/P-H-C/phc-winner-argon2/issues/183.
-fn reference_idx(
-    j1: u64,
-    n_blocks: u32,
-    pass_n: u32,
-    segment_n: u32,
-    segment_idx: u32,
-    segment_length: u32,
-) -> u32 {
-    let ref_start_pos: u32 = if pass_n == 0 && segment_n == 0 {
-        segment_idx - 1
-    } else if pass_n == 0 {
-        segment_n * segment_length + segment_idx - 1
-    } else {
-        n_blocks - segment_length + segment_idx - 1
-    };
-
-    let mut ref_pos: u64 = (j1 * j1) >> 32;
-    ref_pos = (ref_start_pos as u64 * ref_pos) >> 32;
-    ref_pos = (ref_start_pos as u64 - 1) - ref_pos;
-
-    if pass_n == 0 || segment_n == 3 {
-        ref_pos as u32 % n_blocks
-    } else {
-        (segment_length * (segment_n + 1) + ref_pos as u32) % n_blocks
-    }
-}
-
-const fn is_data_independent(variant: u32, pass_n: u32, segment_n: usize) -> bool {
-    match variant {
-        ARGON2_I_VARIANT => true,
-        ARGON2_ID_VARIANT => pass_n == 0 && segment_n < 2,
-        _ => false,
-    }
-}
+pub use super::ARGON2_I_VARIANT;
+pub use super::ARGON2_VERSION_19;
+pub use super::MAX_AD_LEN;
+pub use super::MAX_ITERATIONS_T;
+pub use super::MAX_MEMORY_M;
+pub use super::MAX_PARALLELISM_P;
+pub use super::MAX_PASSWORD_LEN;
+pub use super::MAX_SALT_LEN;
+pub use super::MAX_SECRET_LEN;
+pub use super::MIN_ITERATIONS_T;
+pub use super::MIN_PARALLELISM_P;
 
 #[allow(clippy::too_many_arguments)]
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -431,153 +122,23 @@ pub fn derive_key(
     salt: &[u8],
     iterations: u32,
     memory: u32,
+    parallelism: u32,
     secret: Option<&[u8]>,
     ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    if password.len() > 0xFFFF_FFFF {
-        return Err(UnknownCryptoError);
-    }
-    if salt.len() > 0xFFFF_FFFF || salt.len() < 8 {
-        return Err(UnknownCryptoError);
-    }
-    if iterations < MIN_ITERATIONS {
-        return Err(UnknownCryptoError);
-    }
-    if memory < MIN_MEMORY {
-        return Err(UnknownCryptoError);
-    }
-
-    let k = match secret {
-        Some(n_val) => {
-            if n_val.len() > 0xFFFF_FFFF {
-                return Err(UnknownCryptoError);
-            }
-
-            n_val
-        }
-        None => &[0u8; 0],
-    };
-
-    let x = match ad {
-        Some(n_val) => {
-            if n_val.len() > 0xFFFF_FFFF {
-                return Err(UnknownCryptoError);
-            }
-
-            n_val
-        }
-        None => &[0u8; 0],
-    };
-
-    if dst_out.len() > 0xFFFF_FFFF || dst_out.len() < 4 {
-        return Err(UnknownCryptoError);
-    }
-
-    // Round down to 4 * p threads
-    let n_blocks = memory - (memory & 3);
-    // Divide by 4 (SEGMENTS_PER_LANE)
-    let segment_length = n_blocks >> 2;
-
-    let mut blocks = alloc::vec![[0u64; 128]; n_blocks as usize];
-
-    // Fill first two blocks
-    let mut h0 = initial_hash(
+    argon2_derive_key(
+        ARGON2_VERSION_19,
         ARGON2_I_VARIANT,
-        dst_out.len() as u32,
-        memory,
-        iterations,
         password,
         salt,
-        k,
-        x,
-    )?;
-    let mut tmp = [0u8; 1024];
-    debug_assert_eq!(h0.len(), ((size_of::<u32>() * 2) + BLAKE2B_MAX_OUTSIZE));
-    debug_assert!(
-        h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
-            == [0u8; size_of::<u32>()]
-    ); // Block 0
-    debug_assert!(h0[BLAKE2B_MAX_OUTSIZE + size_of::<u32>()..] == [0u8; size_of::<u32>()]); // Lane
-
-    // H' into the first two blocks
-    extended_hash(&h0, &mut tmp)?;
-    load_u64_into_le(&tmp, &mut blocks[0]);
-    h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
-        .copy_from_slice(&1u32.to_le_bytes()); // Block 1
-    extended_hash(&h0, &mut tmp)?;
-    load_u64_into_le(&tmp, &mut blocks[1]);
-
-    let mut gidx = Gidx::new(ARGON2_I_VARIANT, n_blocks, iterations, segment_length);
-    let mut working_block = [0u64; 128];
-
-    for pass_n in 0..iterations as usize {
-        for segment_n in 0..SEGMENTS_PER_LANE {
-            let offset = match (pass_n, segment_n) {
-                (0, 0) => 2, // The first two blocks have already been processed
-                _ => 0,
-            };
-
-            let use_gidx = is_data_independent(ARGON2_I_VARIANT, pass_n as u32, segment_n);
-            if use_gidx {
-                gidx.init(pass_n as u32, segment_n as u32, offset, &mut working_block);
-            }
-
-            for segment_idx in offset..segment_length {
-                let current_idx = segment_n as u32 * segment_length + segment_idx;
-                let previous_idx = if current_idx > 0 {
-                    current_idx - 1
-                } else {
-                    n_blocks - 1
-                };
-
-                let j1_idx = if use_gidx {
-                    gidx.get_next_j1(&mut working_block)
-                } else {
-                    // Data-dependent is lower 32 bits of previous block first word
-                    blocks[previous_idx as usize][0] & (u32::MAX as u64)
-                };
-
-                let reference_idx = reference_idx(
-                    j1_idx,
-                    n_blocks,
-                    pass_n as u32,
-                    segment_n as u32,
-                    segment_idx,
-                    segment_length,
-                );
-                let prev_b = blocks.get(previous_idx as usize).unwrap();
-                let ref_b = blocks.get(reference_idx as usize).unwrap();
-
-                // G-xor operation
-                for (el_tmp, (el_prev, el_ref)) in working_block
-                    .iter_mut()
-                    .zip(prev_b.iter().zip(ref_b.iter()))
-                {
-                    *el_tmp = el_prev ^ el_ref;
-                }
-                let cur_b = blocks.get_mut(current_idx as usize).unwrap();
-                xor_slices!(working_block, cur_b);
-                fill_block(&mut working_block);
-                xor_slices!(working_block, cur_b);
-            }
-        }
-    }
-
-    store_u64_into_le(blocks.get(n_blocks as usize - 1).unwrap(), &mut tmp);
-    extended_hash(&tmp, dst_out)?;
-
-    #[cfg(feature = "zeroize")]
-    {
-        working_block.zeroize();
-        tmp.zeroize();
-        h0.zeroize();
-        for block in blocks.iter_mut() {
-            block.zeroize();
-        }
-    }
-
-    Ok(())
+        iterations,
+        memory,
+        parallelism,
+        secret,
+        ad,
+        dst_out,
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -589,11 +150,21 @@ pub fn verify(
     salt: &[u8],
     iterations: u32,
     memory: u32,
+    parallelism: u32,
     secret: Option<&[u8]>,
     ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    derive_key(password, salt, iterations, memory, secret, ad, dst_out)?;
+    derive_key(
+        password,
+        salt,
+        iterations,
+        memory,
+        parallelism,
+        secret,
+        ad,
+        dst_out,
+    )?;
     util::secure_cmp(dst_out, expected)
 }
 
@@ -616,6 +187,7 @@ mod public {
             k: Vec<u8>,
             x: Vec<u8>,
         ) -> bool {
+            let parallelism = 1u32;
             let passes = 1;
             let mem = if !(8..=4096).contains(&kib) {
                 1024
@@ -631,7 +203,17 @@ mod public {
             };
 
             let mut dst_out_verify = dst_out.clone();
-            derive_key(&p, &salt, passes, mem, Some(&k), Some(&x), &mut dst_out).unwrap();
+            derive_key(
+                &p,
+                &salt,
+                passes,
+                mem,
+                parallelism,
+                Some(&k),
+                Some(&x),
+                &mut dst_out,
+            )
+            .unwrap();
 
             verify(
                 &dst_out,
@@ -639,6 +221,7 @@ mod public {
                 &salt,
                 passes,
                 mem,
+                parallelism,
                 Some(&k),
                 Some(&x),
                 &mut dst_out_verify,
@@ -654,16 +237,16 @@ mod public {
         fn test_invalid_mem() {
             // mem must be at least 8p, where p == threads (1)
             let mut dst_out = [0u8; 32];
-            assert!(derive_key(&[], &[0u8; 8], 1, 9, None, None, &mut dst_out).is_ok());
-            assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out).is_ok());
-            assert!(derive_key(&[], &[0u8; 8], 1, 7, None, None, &mut dst_out).is_err());
+            assert!(derive_key(&[], &[0u8; 8], 1, 9, 1, None, None, &mut dst_out).is_ok());
+            assert!(derive_key(&[], &[0u8; 8], 1, 8, 1, None, None, &mut dst_out).is_ok());
+            assert!(derive_key(&[], &[0u8; 8], 1, 7, 1, None, None, &mut dst_out).is_err());
         }
 
         #[test]
         fn test_invalid_passes() {
             let mut dst_out = [0u8; 32];
-            assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out).is_ok());
-            assert!(derive_key(&[], &[0u8; 8], 0, 8, None, None, &mut dst_out).is_err());
+            assert!(derive_key(&[], &[0u8; 8], 1, 8, 1, None, None, &mut dst_out).is_ok());
+            assert!(derive_key(&[], &[0u8; 8], 0, 8, 1, None, None, &mut dst_out).is_err());
         }
 
         #[test]
@@ -671,17 +254,17 @@ mod public {
             let mut dst_out_less = [0u8; 3];
             let mut dst_out_exact = [0u8; 4];
             let mut dst_out_above = [0u8; 5];
-            assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out_less).is_err());
-            assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out_exact).is_ok());
-            assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out_above).is_ok());
+            assert!(derive_key(&[], &[0u8; 8], 1, 8, 1, None, None, &mut dst_out_less).is_err());
+            assert!(derive_key(&[], &[0u8; 8], 1, 8, 1, None, None, &mut dst_out_exact).is_ok());
+            assert!(derive_key(&[], &[0u8; 8], 1, 8, 1, None, None, &mut dst_out_above).is_ok());
         }
 
         #[test]
         fn test_invalid_salt() {
             let mut dst_out = [0u8; 32];
-            assert!(derive_key(&[], &[0u8; 8], 1, 8, None, None, &mut dst_out).is_ok());
-            assert!(derive_key(&[], &[0u8; 9], 1, 8, None, None, &mut dst_out).is_ok());
-            assert!(derive_key(&[], &[0u8; 7], 1, 8, None, None, &mut dst_out).is_err());
+            assert!(derive_key(&[], &[0u8; 8], 1, 8, 1, None, None, &mut dst_out).is_ok());
+            assert!(derive_key(&[], &[0u8; 9], 1, 8, 1, None, None, &mut dst_out).is_ok());
+            assert!(derive_key(&[], &[0u8; 7], 1, 8, 1, None, None, &mut dst_out).is_err());
         }
 
         #[test]
@@ -689,12 +272,13 @@ mod public {
             let mut dst_one = [0u8; 32];
             let mut dst_two = [0u8; 32];
 
-            derive_key(&[255u8; 16], &[1u8; 16], 1, 8, None, None, &mut dst_one).unwrap();
+            derive_key(&[255u8; 16], &[1u8; 16], 1, 8, 1, None, None, &mut dst_one).unwrap();
             derive_key(
                 &[255u8; 16],
                 &[1u8; 16],
                 1,
                 8,
+                1,
                 Some(&[]),
                 Some(&[]),
                 &mut dst_two,
@@ -731,7 +315,7 @@ mod public {
             ];
 
             let mut actual = [0u8; 32];
-            derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
+            derive_key(&p, &s, passes, mem, 1, Some(&k), Some(&x), &mut actual).unwrap();
 
             assert_eq!(expected.len(), actual.len());
             assert_eq!(expected.as_ref(), &actual[..]);
@@ -771,7 +355,7 @@ mod public {
                 167, 198, 170, 1, 124, 235, 235, 3, 184, 75,
             ];
             let mut actual = [0u8; 64];
-            derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
+            derive_key(&p, &s, passes, mem, 1, Some(&k), Some(&x), &mut actual).unwrap();
 
             assert_eq!(expected.len(), actual.len());
             assert_eq!(expected.as_ref(), &actual[..]);
@@ -828,7 +412,7 @@ mod public {
             ];
 
             let mut actual = [0u8; 128];
-            derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
+            derive_key(&p, &s, passes, mem, 1, Some(&k), Some(&x), &mut actual).unwrap();
 
             assert_eq!(expected.len(), actual.len());
             assert_eq!(expected.as_ref(), &actual[..]);
@@ -913,7 +497,7 @@ mod public {
             ];
 
             let mut actual = [0u8; 256];
-            derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
+            derive_key(&p, &s, passes, mem, 1, Some(&k), Some(&x), &mut actual).unwrap();
 
             assert_eq!(expected.len(), actual.len());
             assert_eq!(expected.as_ref(), &actual[..]);
@@ -1053,7 +637,7 @@ mod public {
                 224, 142, 214, 25, 81, 9, 42, 248, 39, 148,
             ];
             let mut actual = [0u8; 512];
-            derive_key(&p, &s, passes, mem, Some(&k), Some(&x), &mut actual).unwrap();
+            derive_key(&p, &s, passes, mem, 1, Some(&k), Some(&x), &mut actual).unwrap();
 
             assert_eq!(expected.len(), actual.len());
             assert_eq!(expected.as_ref(), &actual[..]);
@@ -1097,7 +681,19 @@ mod private {
                 17, 49, 11, 228, 22, 128, 161, 57, 188, 136, 75, 96, 197, 3, 206, 224, 204, 65,
                 149, 190, 101, 231, 161, 232, 35, 87, 64, 0, 0, 0, 0, 0, 0, 0, 0,
             ];
-            let actual = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let actual = initial_hash(
+                ARGON2_VERSION_19,
+                1,
+                ARGON2_I_VARIANT,
+                hlen,
+                kib,
+                passes,
+                &p,
+                &s,
+                &k,
+                &x,
+            )
+            .unwrap();
             assert_eq!(expected.as_ref(), actual.as_ref());
         }
 
@@ -1135,7 +731,19 @@ mod private {
                 15, 239, 64, 239, 203, 191, 226, 71, 213, 149, 238, 65, 124, 102, 1, 150, 230, 41,
                 132, 23, 176, 221, 217, 237, 150, 154, 249, 0, 0, 0, 0, 0, 0, 0, 0,
             ];
-            let actual = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let actual = initial_hash(
+                ARGON2_VERSION_19,
+                1,
+                ARGON2_I_VARIANT,
+                hlen,
+                kib,
+                passes,
+                &p,
+                &s,
+                &k,
+                &x,
+            )
+            .unwrap();
             assert_eq!(expected.as_ref(), actual.as_ref());
         }
 
@@ -1185,7 +793,19 @@ mod private {
                 236, 58, 237, 193, 139, 30, 191, 244, 2, 176, 123, 134, 44, 251, 101, 255, 220,
                 218, 109, 249, 231, 200, 45, 232, 240, 155, 10, 93, 111, 0, 0, 0, 0, 0, 0, 0, 0,
             ];
-            let actual = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let actual = initial_hash(
+                ARGON2_VERSION_19,
+                1,
+                ARGON2_I_VARIANT,
+                hlen,
+                kib,
+                passes,
+                &p,
+                &s,
+                &k,
+                &x,
+            )
+            .unwrap();
             assert_eq!(expected.as_ref(), actual.as_ref());
         }
 
@@ -1200,8 +820,32 @@ mod private {
             k: Vec<u8>,
             x: Vec<u8>,
         ) -> bool {
-            let first = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
-            let second = initial_hash(ARGON2_I_VARIANT, hlen, kib, passes, &p, &s, &k, &x).unwrap();
+            let first = initial_hash(
+                ARGON2_VERSION_19,
+                1,
+                ARGON2_I_VARIANT,
+                hlen,
+                kib,
+                passes,
+                &p,
+                &s,
+                &k,
+                &x,
+            )
+            .unwrap();
+            let second = initial_hash(
+                ARGON2_VERSION_19,
+                1,
+                ARGON2_I_VARIANT,
+                hlen,
+                kib,
+                passes,
+                &p,
+                &s,
+                &k,
+                &x,
+            )
+            .unwrap();
 
             first.as_ref() == second.as_ref()
         }
