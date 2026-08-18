@@ -356,9 +356,9 @@ fn reference_idx(
             u64::from(segment_n) * u64::from(segment_length) - u64::from(segment_idx == 0)
         }
     } else if is_same_lane {
-        u64::from(is_same_lane) - u64::from(segment_length) + u64::from(segment_idx) - 1
+        u64::from(lane_len) - u64::from(segment_length) + u64::from(segment_idx) - 1
     } else {
-        u64::from(is_same_lane) - u64::from(segment_length) - u64::from(segment_idx == 0)
+        u64::from(lane_len) - u64::from(segment_length) - u64::from(segment_idx == 0)
     };
 
     let mut ref_pos: u64 = (j1 * j1) >> 32;
