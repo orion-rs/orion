@@ -542,10 +542,8 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
 
         for lane in 0..parallelism {
             debug_assert_eq!(h0.len(), ((size_of::<u32>() * 2) + BLAKE2B_MAX_OUTSIZE));
-            debug_assert!(
-                h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
-                    == [0u8; size_of::<u32>()]
-            ); // Block 0
+            h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
+                .copy_from_slice(&0u32.to_le_bytes()); // Block 0.
             h0[BLAKE2B_MAX_OUTSIZE + size_of::<u32>()..].copy_from_slice(&lane.to_le_bytes()); // Lane
 
             extended_hash(&h0, &mut tmp)?;

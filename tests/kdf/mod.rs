@@ -7,6 +7,9 @@ pub mod other_hkdf;
 pub mod pynacl_argon2i;
 #[cfg(feature = "safe_api")]
 pub mod ref_argon2i;
+#[cfg(feature = "safe_api")]
+pub mod rfc9106_argon2;
+
 pub mod rfc_pbkdf2;
 pub mod wycheproof_hkdf;
 pub mod wycheproof_pbkdf2;
