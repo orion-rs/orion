@@ -167,3 +167,39 @@ pub fn verify(
     )?;
     util::secure_cmp(dst_out, expected)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_1() {
+        let memory: u32 = 32;
+        let iterations: u32 = 3;
+        let password =
+            hex::decode("0101010101010101010101010101010101010101010101010101010101010101")
+                .unwrap();
+        let salt = hex::decode("02020202020202020202020202020202").unwrap();
+        let secret = hex::decode("0303030303030303").unwrap();
+        let ad = hex::decode("040404040404040404040404").unwrap();
+        let expected_hash =
+            hex::decode("3c944a05c2fc9c7e9432e506c83e0a5e950a872e8d1e378ac99a8e4de6bbaba5")
+                .unwrap();
+
+        let mut actual = vec![0u8; expected_hash.len()];
+        assert!(
+            verify(
+                &expected_hash,
+                &password,
+                &salt,
+                iterations,
+                memory,
+                1,
+                Some(&secret),
+                Some(&ad),
+                &mut actual
+            )
+            .is_ok()
+        );
+    }
+}

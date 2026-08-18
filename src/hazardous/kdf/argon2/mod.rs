@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use core::marker::PhantomData;
+
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b::{BLAKE2B_MAX_OUTSIZE, Blake2b};
 use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
@@ -270,9 +272,9 @@ struct Gidx {
 }
 
 impl Gidx {
-    fn new(variant: u32, blocks: u32, passes: u32, segment_length: u32) -> Self {
+    fn new(variant: u32, blocks: u32, passes: u32, segment_length: u32, lane: u32) -> Self {
         let mut block = [0u64; 128];
-        block[1] = 0u64; // Lane number, we only support one (0u64).
+        block[1] = u64::from(lane);
         block[3] = u64::from(blocks);
         block[4] = u64::from(passes);
         block[5] = u64::from(variant);
@@ -310,29 +312,16 @@ impl Gidx {
         xor_slices!(tmp_block, self.addresses);
     }
 
-    /// Get J1 as data-independent index.
-    /// Discard J2, as J2 is only relevant if we had more than a single lane.
-    fn get_next_j1(&mut self, tmp_block: &mut [u64; 128]) -> u64 {
+    /// Get J1/J2 indice-pair.
+    fn get_next_j1j2(&mut self, tmp_block: &mut [u64; 128]) -> (u64, u64) {
         let j1: u64 = self.addresses[self.offset as usize] & 0xFFFF_FFFFu64;
+        let j2: u64 = self.addresses[self.offset as usize] >> 32;
         self.offset = (self.offset + 1) % 128; // Wrap-around on block length.
         if self.offset == 0 {
             self.next_addresses(tmp_block);
         }
 
-        j1
-    }
-
-    #[cfg(test)]
-    /// Test-only after adding support for Argon2id.
-    fn get_next(&mut self, segment_idx: u32, tmp_block: &mut [u64; 128]) -> u32 {
-        reference_idx(
-            self.get_next_j1(tmp_block),
-            self.block[3] as u32,
-            self.block[0] as u32,
-            self.block[2] as u32,
-            segment_idx,
-            self.segment_length,
-        )
+        (j1, j2)
     }
 }
 
@@ -342,29 +331,50 @@ impl Gidx {
 // disagree. See https://github.com/P-H-C/phc-winner-argon2/issues/183.
 fn reference_idx(
     j1: u64,
-    n_blocks: u32,
+    j2: u64,
+    lanes: u32,
+    lane: u32,
+    lane_len: u32,
     pass_n: u32,
     segment_n: u32,
     segment_idx: u32,
     segment_length: u32,
-) -> u32 {
-    let ref_start_pos: u32 = if pass_n == 0 && segment_n == 0 {
-        segment_idx - 1
-    } else if pass_n == 0 {
-        segment_n * segment_length + segment_idx - 1
+) -> (u32, u32) {
+    let ref_start_lane = if pass_n == 0 && segment_n == 0 {
+        lane
     } else {
-        n_blocks - segment_length + segment_idx - 1
+        (j2 % lanes as u64) as u32
+    };
+
+    let is_same_lane = ref_start_lane == lane;
+    let ref_start_pos: u64 = if pass_n == 0 {
+        if segment_n == 0 {
+            u64::from(segment_idx) - 1
+        } else if is_same_lane {
+            u64::from(segment_n) * u64::from(segment_length) + u64::from(segment_idx) - 1
+        } else {
+            u64::from(segment_n) * u64::from(segment_length) - u64::from(segment_idx == 0)
+        }
+    } else if is_same_lane {
+        u64::from(is_same_lane) - u64::from(segment_length) + u64::from(segment_idx) - 1
+    } else {
+        u64::from(is_same_lane) - u64::from(segment_length) - u64::from(segment_idx == 0)
     };
 
     let mut ref_pos: u64 = (j1 * j1) >> 32;
     ref_pos = (ref_start_pos as u64 * ref_pos) >> 32;
     ref_pos = (ref_start_pos as u64 - 1) - ref_pos;
 
-    if pass_n == 0 || segment_n == 3 {
-        ref_pos as u32 % n_blocks
+    let start_pos: u32 = if pass_n == 0 || segment_n == SEGMENTS_PER_LANE as u32 - 1 {
+        0
     } else {
-        (segment_length * (segment_n + 1) + ref_pos as u32) % n_blocks
-    }
+        (segment_n + 1) * segment_length
+    };
+
+    (
+        ref_start_lane,
+        ((start_pos as u64 + ref_pos) % lane_len as u64) as u32,
+    )
 }
 
 /// Determine mased on variant and pass+segment if data-independent addressing should
@@ -390,167 +400,247 @@ fn check_minimum_memory(memory: u32, parallelism: u32) -> Result<(), UnknownCryp
     }
 }
 
-/// Argon2 core key derivation.
-fn argon2_derive_key(
-    version: u32,
-    variant: u32,
-    password: &[u8],
-    salt: &[u8],
-    iterations: u32,
-    memory: u32,
-    parallelism: u32,
-    secret: Option<&[u8]>,
-    ad: Option<&[u8]>,
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    debug_assert!(variant == ARGON2_ID_VARIANT || variant == ARGON2_I_VARIANT);
+// #[cfg(feature = "safe_api")]
+// pub struct Threaded;
 
-    check_minimum_memory(memory, parallelism)?;
-    if password.len() > MAX_PASSWORD_LEN as usize {
-        return Err(UnknownCryptoError);
-    }
-    if !(8..MAX_SALT_LEN as usize).contains(&salt.len()) {
-        return Err(UnknownCryptoError);
-    }
-    if !(MIN_ITERATIONS_T..MAX_ITERATIONS_T).contains(&iterations) {
-        return Err(UnknownCryptoError);
-    }
-    if !(MIN_PARALLELISM_P..MAX_PARALLELISM_P).contains(&parallelism) {
-        return Err(UnknownCryptoError);
-    }
+pub struct Sequential;
 
-    let k = match secret {
-        Some(n_val) => {
-            if n_val.len() > 0xFFFF_FFFF {
-                return Err(UnknownCryptoError);
-            }
+pub struct Argon2<Mode, Threading> {
+    _mode: PhantomData<Mode>,
+    _threading: PhantomData<Threading>,
+}
 
-            n_val
+impl<Mode, Threading> Argon2<Mode, Threading> {
+    fn validate_parameters(
+        version: u32,
+        variant: u32,
+        password: &[u8],
+        salt: &[u8],
+        iterations: u32,
+        memory: u32,
+        parallelism: u32,
+        secret: Option<&[u8]>,
+        ad: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        debug_assert_eq!(version, ARGON2_VERSION_19);
+        debug_assert!(variant == ARGON2_ID_VARIANT || variant == ARGON2_I_VARIANT);
+
+        check_minimum_memory(memory, parallelism)?;
+        if password.len() > MAX_PASSWORD_LEN as usize {
+            return Err(UnknownCryptoError);
         }
-        None => &[0u8; 0],
-    };
-
-    let x = match ad {
-        Some(n_val) => {
-            if n_val.len() > 0xFFFF_FFFF {
-                return Err(UnknownCryptoError);
-            }
-
-            n_val
+        if !(8..MAX_SALT_LEN as usize).contains(&salt.len()) {
+            return Err(UnknownCryptoError);
         }
-        None => &[0u8; 0],
-    };
+        if !(MIN_ITERATIONS_T..MAX_ITERATIONS_T).contains(&iterations) {
+            return Err(UnknownCryptoError);
+        }
+        if !(MIN_PARALLELISM_P..MAX_PARALLELISM_P).contains(&parallelism) {
+            return Err(UnknownCryptoError);
+        }
 
-    if dst_out.len() > 0xFFFF_FFFF || dst_out.len() < 4 {
-        return Err(UnknownCryptoError);
-    }
-
-    // Round down to 4 * p threads
-    let n_blocks = memory - (memory & 3);
-    // Divide by 4 (SEGMENTS_PER_LANE)
-    let segment_length = n_blocks >> 2;
-
-    let mut blocks = alloc::vec![[0u64; 128]; n_blocks as usize];
-
-    // Fill first two blocks
-    let mut h0 = initial_hash(
-        version,
-        parallelism,
-        variant,
-        dst_out.len() as u32,
-        memory,
-        iterations,
-        password,
-        salt,
-        k,
-        x,
-    )?;
-    let mut tmp = [0u8; 1024];
-    debug_assert_eq!(h0.len(), ((size_of::<u32>() * 2) + BLAKE2B_MAX_OUTSIZE));
-    debug_assert!(
-        h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
-            == [0u8; size_of::<u32>()]
-    ); // Block 0
-    debug_assert!(h0[BLAKE2B_MAX_OUTSIZE + size_of::<u32>()..] == [0u8; size_of::<u32>()]); // Lane
-
-    // H' into the first two blocks
-    extended_hash(&h0, &mut tmp)?;
-    load_u64_into_le(&tmp, &mut blocks[0]);
-    h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
-        .copy_from_slice(&1u32.to_le_bytes()); // Block 1
-    extended_hash(&h0, &mut tmp)?;
-    load_u64_into_le(&tmp, &mut blocks[1]);
-
-    let mut gidx = Gidx::new(variant, n_blocks, iterations, segment_length);
-    let mut working_block = [0u64; 128];
-
-    for pass_n in 0..iterations as usize {
-        for segment_n in 0..SEGMENTS_PER_LANE {
-            let offset = match (pass_n, segment_n) {
-                (0, 0) => 2, // The first two blocks have already been processed
-                _ => 0,
-            };
-
-            let use_gidx = is_data_independent(variant, pass_n as u32, segment_n);
-            if use_gidx {
-                gidx.init(pass_n as u32, segment_n as u32, offset, &mut working_block);
-            }
-
-            for segment_idx in offset..segment_length {
-                let current_idx = segment_n as u32 * segment_length + segment_idx;
-                let previous_idx = if current_idx > 0 {
-                    current_idx - 1
-                } else {
-                    n_blocks - 1
-                };
-
-                let j1_idx = if use_gidx {
-                    gidx.get_next_j1(&mut working_block)
-                } else {
-                    // Data-dependent is lower 32 bits of previous block first word
-                    blocks[previous_idx as usize][0] & (u32::MAX as u64)
-                };
-
-                let reference_idx = reference_idx(
-                    j1_idx,
-                    n_blocks,
-                    pass_n as u32,
-                    segment_n as u32,
-                    segment_idx,
-                    segment_length,
-                );
-                let prev_b = blocks.get(previous_idx as usize).unwrap();
-                let ref_b = blocks.get(reference_idx as usize).unwrap();
-
-                // G-xor operation
-                for (el_tmp, (el_prev, el_ref)) in working_block
-                    .iter_mut()
-                    .zip(prev_b.iter().zip(ref_b.iter()))
-                {
-                    *el_tmp = el_prev ^ el_ref;
+        let _k = match secret {
+            Some(n_val) => {
+                if n_val.len() > 0xFFFF_FFFF {
+                    return Err(UnknownCryptoError);
                 }
-                let cur_b = blocks.get_mut(current_idx as usize).unwrap();
-                xor_slices!(working_block, cur_b);
-                fill_block(&mut working_block);
-                xor_slices!(working_block, cur_b);
+
+                n_val
+            }
+            None => &[0u8; 0],
+        };
+
+        let _x = match ad {
+            Some(n_val) => {
+                if n_val.len() > 0xFFFF_FFFF {
+                    return Err(UnknownCryptoError);
+                }
+
+                n_val
+            }
+            None => &[0u8; 0],
+        };
+
+        if dst_out.len() > 0xFFFF_FFFF || dst_out.len() < 4 {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok(())
+    }
+}
+
+impl<Mode> Argon2<Mode, Sequential> {
+    pub fn derive_key(
+        version: u32,
+        variant: u32,
+        password: &[u8],
+        salt: &[u8],
+        iterations: u32,
+        memory: u32,
+        parallelism: u32,
+        secret: Option<&[u8]>,
+        ad: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        Self::validate_parameters(
+            version,
+            variant,
+            password,
+            salt,
+            iterations,
+            memory,
+            parallelism,
+            secret,
+            ad,
+            dst_out,
+        )?;
+
+        debug_assert!(4 * MAX_PARALLELISM_P <= u32::MAX);
+        let four_lanes = 4 * parallelism;
+        let n_blocks = (memory / four_lanes) * four_lanes;
+        let lane_len = n_blocks / parallelism;
+        // segment_lengt := lane_length / 4
+        let segment_length = lane_len >> 2;
+
+        let mut blocks: Vec<[u64; 128]> = vec![[0u64; 128]; n_blocks as usize];
+
+        let mut h0 = initial_hash(
+            version,
+            parallelism,
+            variant,
+            dst_out.len() as u32,
+            memory,
+            iterations,
+            password,
+            salt,
+            secret.unwrap_or(&[]),
+            ad.unwrap_or(&[]),
+        )?;
+        let mut tmp = [0u8; 1024];
+
+        for lane in 0..parallelism {
+            debug_assert_eq!(h0.len(), ((size_of::<u32>() * 2) + BLAKE2B_MAX_OUTSIZE));
+            debug_assert!(
+                h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
+                    == [0u8; size_of::<u32>()]
+            ); // Block 0
+            h0[BLAKE2B_MAX_OUTSIZE + size_of::<u32>()..].copy_from_slice(&lane.to_le_bytes()); // Lane
+
+            extended_hash(&h0, &mut tmp)?;
+            load_u64_into_le(&tmp, &mut blocks[(lane * lane_len) as usize]);
+
+            h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
+                .copy_from_slice(&1u32.to_le_bytes()); // Block 1.
+            extended_hash(&h0, &mut tmp)?;
+            load_u64_into_le(&tmp, &mut blocks[(lane * lane_len + 1) as usize]);
+        }
+
+        let mut working_block = [0u64; 128];
+
+        for pass_n in 0..iterations as usize {
+            for segment_n in 0..SEGMENTS_PER_LANE {
+                let offset = match (pass_n, segment_n) {
+                    (0, 0) => 2, // The first two blocks have already been processed
+                    _ => 0,
+                };
+
+                let use_gidx = is_data_independent(variant, pass_n as u32, segment_n);
+
+                for lane in 0..parallelism {
+                    // Argon2id only requires this in first round
+                    let mut gidx: Option<Gidx> = if use_gidx {
+                        let mut gidx =
+                            Gidx::new(variant, n_blocks, iterations, segment_length, lane);
+                        gidx.init(pass_n as u32, segment_n as u32, offset, &mut working_block);
+
+                        Some(gidx)
+                    } else {
+                        None
+                    };
+
+                    for segment_idx in offset..segment_length {
+                        let current_within_lane = segment_n as u32 * segment_length + segment_idx;
+                        let previous_within_lane = if current_within_lane > 0 {
+                            current_within_lane - 1
+                        } else {
+                            lane_len - 1
+                        };
+
+                        let current_idx = (lane * lane_len + current_within_lane) as usize;
+                        let previous_idx = (lane * lane_len + previous_within_lane) as usize;
+
+                        let (j1_idx, j2_idx) = if let Some(gidx) = gidx.as_mut() {
+                            gidx.get_next_j1j2(&mut working_block)
+                        } else {
+                            // Data-dependent is lower 32 bits of previous block first word
+                            let previous = blocks[previous_idx as usize][0];
+                            (previous & (u32::MAX as u64), previous >> 32)
+                        };
+
+                        let (reference_lane, reference_idx) = reference_idx(
+                            j1_idx,
+                            j2_idx,
+                            parallelism,
+                            lane,
+                            lane_len,
+                            pass_n as u32,
+                            segment_n as u32,
+                            segment_idx,
+                            segment_length,
+                        );
+                        let reference_idx = (reference_lane * lane_len + reference_idx) as usize;
+
+                        if let (Some(prev_b), Some(ref_b)) = (
+                            blocks.get(previous_idx as usize),
+                            blocks.get(reference_idx as usize),
+                        ) {
+                            // G-xor operation
+                            for (el_tmp, (el_prev, el_ref)) in working_block
+                                .iter_mut()
+                                .zip(prev_b.iter().zip(ref_b.iter()))
+                            {
+                                *el_tmp = el_prev ^ el_ref;
+                            }
+                            let cur_b = blocks.get_mut(current_idx as usize).unwrap();
+                            xor_slices!(working_block, cur_b);
+                            fill_block(&mut working_block);
+                            xor_slices!(working_block, cur_b);
+                        } else {
+                            return Err(UnknownCryptoError);
+                        }
+                    }
+                }
             }
         }
-    }
 
-    store_u64_into_le(blocks.get(n_blocks as usize - 1).unwrap(), &mut tmp);
-    extended_hash(&tmp, dst_out)?;
-
-    #[cfg(feature = "zeroize")]
-    {
-        working_block.zeroize();
-        tmp.zeroize();
-        h0.zeroize();
-        for block in blocks.iter_mut() {
-            block.zeroize();
+        // XOR last block of each lane
+        let mut ret_block = [0u64; 128];
+        for lane in 0..parallelism {
+            for (ret_block, last) in ret_block
+                .iter_mut()
+                .zip(blocks[(lane * lane_len + lane_len - 1) as usize].iter())
+            {
+                *ret_block ^= *last;
+            }
         }
-    }
 
-    Ok(())
+        store_u64_into_le(&ret_block, &mut tmp);
+        extended_hash(&tmp, dst_out)?;
+
+        #[cfg(feature = "zeroize")]
+        {
+            ret_block.zeroize();
+            working_block.zeroize();
+            tmp.zeroize();
+            h0.zeroize();
+            for block in blocks.iter_mut() {
+                block.zeroize();
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
