@@ -91,7 +91,7 @@
 
 pub use super::hltypes::Password;
 use super::hltypes::Salt;
-use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2i};
+use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2};
 use ct_codecs::{Base64NoPadding, Decoder, Encoder};
 #[cfg(feature = "serde")]
 use serde::{
@@ -428,7 +428,7 @@ pub fn hash_password(
     let salt = Salt::generate()?;
     let mut buffer = zeroize_wrap!([0u8; PWHASH_LENGTH]);
 
-    argon2i::derive_key(
+    argon2::Argon2::<argon2::I, argon2::Sequential>::derive_key(
         password.unprotected_as_ref(),
         salt.as_ref(),
         iterations,
@@ -475,7 +475,7 @@ pub fn hash_password_verify(
 ) -> Result<(), UnknownCryptoError> {
     let mut buffer = zeroize_wrap!([0u8; PWHASH_LENGTH]);
 
-    argon2i::verify(
+    argon2::Argon2::<argon2::I, argon2::Sequential>::verify(
         expected.unprotected_as_ref(),
         password.unprotected_as_ref(),
         expected.salt.as_ref(),

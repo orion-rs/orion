@@ -77,7 +77,7 @@
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
 pub use super::hltypes::{Password, Salt, SecretKey};
-use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2i, pwhash::MIN_ITERATIONS};
+use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2, pwhash::MIN_ITERATIONS};
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Derive a key using Argon2i.
@@ -94,7 +94,7 @@ pub fn derive_key(
 
     let mut dk = SecretKey::try_from(&vec![0u8; length as usize])?;
 
-    argon2i::derive_key(
+    argon2::Argon2::<argon2::I, argon2::Sequential>::derive_key(
         password.unprotected_as_ref(),
         salt.as_ref(),
         iterations,

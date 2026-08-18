@@ -3,7 +3,7 @@
 // The generated test vectors have been generated the 24th January 2020.
 
 use hex::decode;
-use orion::hazardous::kdf::argon2i;
+use orion::hazardous::kdf::argon2::*;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
 
@@ -28,7 +28,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
         let mut dst_out = vec![0u8; test.dgst_len];
 
         assert!(
-            argon2i::verify(
+            Argon2::<I, Sequential>::verify(
                 &decode(&test.pwhash).unwrap(),
                 test.passwd.as_bytes(),
                 test.salt.as_bytes(),

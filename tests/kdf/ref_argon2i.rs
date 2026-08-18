@@ -1,7 +1,7 @@
 // The following test vectors were generated with the reference implementation at: https://github.com/P-H-C/phc-winner-argon2/commit/62358ba2123abd17fccf2a108a301d4b52c01a7c
 // These are the only test vectors that include associated data and secret value.
 
-use orion::hazardous::kdf::argon2i;
+use orion::hazardous::kdf::argon2::*;
 
 #[test]
 fn test_case_1() {
@@ -17,7 +17,7 @@ fn test_case_1() {
 
     let mut actual = vec![0u8; expected_hash.len()];
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -47,7 +47,7 @@ fn test_case_2() {
 
     let mut actual = vec![0u8; expected_hash.len()];
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -77,7 +77,7 @@ fn test_case_3() {
 
     let mut actual = vec![0u8; expected_hash.len()];
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,

@@ -1,7 +1,7 @@
 // Testing against test vectors generated with Monocypher.
 
 use hex::decode;
-use orion::hazardous::kdf::argon2i;
+use orion::hazardous::kdf::argon2::*;
 
 #[test]
 fn test_case_0() {
@@ -16,7 +16,7 @@ fn test_case_0() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -29,7 +29,7 @@ fn test_case_0() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -57,7 +57,7 @@ fn test_case_1() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -70,7 +70,7 @@ fn test_case_1() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -98,7 +98,7 @@ fn test_case_2() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -111,7 +111,7 @@ fn test_case_2() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -139,7 +139,7 @@ fn test_case_3() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -152,7 +152,7 @@ fn test_case_3() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -180,7 +180,7 @@ fn test_case_4() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -193,7 +193,7 @@ fn test_case_4() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -221,7 +221,7 @@ fn test_case_5() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -234,7 +234,7 @@ fn test_case_5() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -262,7 +262,7 @@ fn test_case_6() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -275,7 +275,7 @@ fn test_case_6() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -303,7 +303,7 @@ fn test_case_7() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -316,7 +316,7 @@ fn test_case_7() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -343,7 +343,7 @@ fn test_case_8() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -356,7 +356,7 @@ fn test_case_8() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -383,7 +383,7 @@ fn test_case_9() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -396,7 +396,7 @@ fn test_case_9() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -424,7 +424,7 @@ fn test_case_10() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -437,7 +437,7 @@ fn test_case_10() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -465,7 +465,7 @@ fn test_case_11() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -478,7 +478,7 @@ fn test_case_11() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -506,7 +506,7 @@ fn test_case_12() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -519,7 +519,7 @@ fn test_case_12() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -547,7 +547,7 @@ fn test_case_13() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -560,7 +560,7 @@ fn test_case_13() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -588,7 +588,7 @@ fn test_case_14() {
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
 
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -601,7 +601,7 @@ fn test_case_14() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,

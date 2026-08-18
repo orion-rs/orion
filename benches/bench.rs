@@ -29,7 +29,7 @@ use orion::KP;
 use orion::hazardous::{
     aead::{chacha20poly1305, xchacha20poly1305},
     hash::*,
-    kdf::{argon2i, hkdf, pbkdf2},
+    kdf::{argon2, hkdf, pbkdf2},
     mac::{hmac, poly1305},
     stream::*,
 };
@@ -445,8 +445,17 @@ mod kdf {
             &salt,
             |b, _| {
                 b.iter(|| {
-                    argon2i::derive_key(&password, &salt, iter, mem, None, None, &mut dk_out)
-                        .unwrap()
+                    argon2::Argon2::<argon2::I, argon2::Sequential>::derive_key(
+                        &password,
+                        &salt,
+                        iter,
+                        mem,
+                        1,
+                        None,
+                        None,
+                        &mut dk_out,
+                    )
+                    .unwrap()
                 })
             },
         );

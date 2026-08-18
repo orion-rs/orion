@@ -1,7 +1,7 @@
 // src: https://www.rfc-editor.org/rfc/rfc9106.html#name-test-vectors
 
 use hex::decode;
-use orion::hazardous::kdf::{argon2i, argon2id};
+use orion::hazardous::kdf::argon2::*;
 
 #[test]
 fn test_case_argon2i() {
@@ -17,7 +17,7 @@ fn test_case_argon2i() {
         decode("c814d9d1dc7f37aa13f0d77f2494bda1c8de6b016dd388d29952a4c4672b6ce8").unwrap();
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
-    argon2i::derive_key(
+    Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -30,7 +30,7 @@ fn test_case_argon2i() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2i::verify(
+        Argon2::<I, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,
@@ -59,7 +59,7 @@ fn test_case_argon2id() {
         decode("0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659").unwrap();
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
-    argon2id::derive_key(
+    Argon2::<ID, Sequential>::derive_key(
         &password,
         &salt,
         passes,
@@ -72,7 +72,7 @@ fn test_case_argon2id() {
     .unwrap();
     assert_eq!(expected_hash, actual_hash);
     assert!(
-        argon2id::verify(
+        Argon2::<ID, Sequential>::verify(
             &expected_hash,
             &password,
             &salt,

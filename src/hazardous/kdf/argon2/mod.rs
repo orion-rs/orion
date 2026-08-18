@@ -1,6 +1,6 @@
 // MIT License
 
-// Copyright (c) 2026 The orion Developers
+// Copyright (c) 2020-2026 The orion Developers
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,81 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! # About:
+//! Argon2 version 1.3. This implementation is available with features `safe_api` and `alloc`.
+//!
+//! # Note:
+//! This implementation only supports a single thread, so modifying the parallelism degree beyond `1`
+//! will simply make them run sequentially.
+//!
+//! # Parameters:
+//! - `expected`: The expected derived key.
+//! - `password`: Password.
+//! - `salt`: Salt value.
+//! - `iterations`: Iteration count.
+//! - `memory`: Memory size in kibibytes (KiB).
+//! - `parallelism:` Degree of parallelism.
+//! - `secret`: Optional secret value used for hashing.
+//! - `ad`: Optional associated data used for hashing.
+//! - `dst_out`: Destination buffer for the derived key. The length of the
+//!   derived key is implied by the length of `dst_out`.
+//!
+//! # Errors:
+//! An error will be returned if:
+//! - The length of the `password` is greater than [`MAX_PASSWORD_LEN`].
+//! - The length of the `salt` is greater than [`MAX_SALT_LEN`].
+//! - The length of the `secret` is greater than [`MAX_SECRET_LEN`].
+//! - The length of the `ad` is greater than [`MAX_AD_LEN`].
+//! - The length of `dst_out` is greater than [`u32::MAX`] or less than `4`.
+//! - `iterations` is less than [`MIN_ITERATIONS_T`].
+//! - `memory` is less than `8 * parallelism`.
+//! - `parallelism` is less then [`MIN_PARALLELISM_P`] or greater than [`MAX_PARALLELISM_P`].
+//! - The hashed password does not match the expected when verifying.
+//!
+//! # Security:
+//! - Salts should always be generated using a CSPRNG.
+//!   [`secure_rand_bytes()`] can be used for this.
+//! - The minimum recommended length for a salt is `16` bytes.
+//! - Password hashes should always be compared in constant-time.
+//! - Please note that when verifying, a copy of the computed password hash is placed into
+//! `dst_out`. If the derived hash is considered sensitive and you want to provide defense
+//! in depth against an attacker reading your application's private memory, then you as
+//! the user are responsible for zeroing out this buffer (see the [`zeroize` crate]).
+//!
+//! Please be sure to check [OWASP] for the latest recommended cost parameters.
+//!
+//! # Example:
+//! ```rust
+//! # #[cfg(feature = "safe_api")] {
+//! use orion::{hazardous::kdf::argon2::*, util};
+//!
+//! let mut salt = [0u8; 16];
+//! util::secure_rand_bytes(&mut salt)?;
+//! let password = b"Secret password";
+//! let mut dst_out = [0u8; 64];
+//!
+//! Argon2::<ID, Sequential>::derive_key(password, &salt, 3, 1<<16, None, None, &mut dst_out)?;
+//!
+//! let expected_dk = dst_out;
+//!
+//! assert!(Argon2::<ID, Sequential>::::verify(
+//!     &expected_dk,
+//!     password,
+//!     &salt,
+//!     3,
+//!     1<<16,
+//!     None,
+//!     None,
+//!     &mut dst_out
+//! )
+//! .is_ok());
+//! # }
+//! # Ok::<(), orion::errors::UnknownCryptoError>(())
+//! ```
+//! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
+//! [`zeroize` crate]: https://crates.io/crates/zeroize
+//! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+
 use core::marker::PhantomData;
 
 use crate::errors::UnknownCryptoError;
@@ -28,22 +103,14 @@ use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
-#[cfg(any(feature = "safe_api", feature = "alloc"))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "safe_api", feature = "alloc"))))]
-pub mod argon2i;
-
-#[cfg(any(feature = "safe_api", feature = "alloc"))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "safe_api", feature = "alloc"))))]
-pub mod argon2id;
-
 /// The Argon2 version (0x13).
 pub const ARGON2_VERSION_19: u32 = 0x13;
 
 /// The Argon2 variant (i).
-pub const ARGON2_I_VARIANT: u32 = 1;
+const ARGON2_I_VARIANT: u32 = 1;
 
 /// The Argon2 variant (id).
-pub const ARGON2_ID_VARIANT: u32 = 2;
+const ARGON2_ID_VARIANT: u32 = 2;
 
 /// The minimum amount of iterations/passes.
 pub const MIN_ITERATIONS_T: u32 = 1;
@@ -66,14 +133,14 @@ pub const MIN_PARALLELISM_P: u32 = 1;
 /// The maximum parellism degree.
 pub const MAX_PARALLELISM_P: u32 = (1 << 24) - 1;
 
-/// The amount of segments per lane, as defined in the spec.
-pub const SEGMENTS_PER_LANE: usize = 4;
-
 /// The maximum length of the optional secret.
 pub const MAX_SECRET_LEN: u32 = u32::MAX;
 
 /// The maximum length of the optional additional data.
 pub const MAX_AD_LEN: u32 = u32::MAX;
+
+/// The amount of segments per lane, as defined in the spec.
+const SEGMENTS_PER_LANE: usize = 4;
 
 const fn lower_mult_add(x: u64, y: u64) -> u64 {
     let mask = 0xFFFF_FFFFu64;
@@ -388,9 +455,10 @@ const fn is_data_independent(variant: u32, pass_n: u32, segment_n: usize) -> boo
 }
 
 fn check_minimum_memory(memory: u32, parallelism: u32) -> Result<(), UnknownCryptoError> {
-    match 8u32.checked_add(parallelism) {
+    match 8u32.checked_mul(parallelism) {
         Some(min) => {
-            if !(min..u32::MAX).contains(&memory) {
+            if !(min..=u32::MAX).contains(&memory) {
+                dbg!("C1");
                 return Err(UnknownCryptoError);
             }
 
@@ -409,13 +477,19 @@ mod sealed {
     }
 }
 
+// TODO(brycx): RwLock + thread::scoped
+// #[derive(Debug, PartialEq)]
 // #[cfg(feature = "safe_api")]
 // pub struct Threaded;
 
+#[derive(Debug, PartialEq)]
+/// Sequential processing. This means, regardless of what parellelism `p` is set to,
+/// Argon2 will run with no extra threads, sequentially.
 pub struct Sequential;
 impl sealed::Sealed for Sequential {}
 
 #[derive(Debug, PartialEq)]
+/// Argon2i password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
 pub struct I;
 impl sealed::Sealed for I {}
 impl sealed::Variant for I {
@@ -423,12 +497,15 @@ impl sealed::Variant for I {
 }
 
 #[derive(Debug, PartialEq)]
+/// Argon2id password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
 pub struct ID;
 impl sealed::Sealed for ID {}
 impl sealed::Variant for ID {
     const VALUE: u32 = ARGON2_ID_VARIANT;
 }
 
+#[derive(Debug)]
+/// Argon2 password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
 pub struct Argon2<V: sealed::Variant, Threading: sealed::Sealed> {
     _variant: PhantomData<V>,
     _threading: PhantomData<Threading>,
@@ -449,17 +526,23 @@ impl<V: sealed::Variant, Threading: sealed::Sealed> Argon2<V, Threading> {
         debug_assert_eq!(version, ARGON2_VERSION_19);
         debug_assert!(V::VALUE == ARGON2_ID_VARIANT || V::VALUE == ARGON2_I_VARIANT);
 
+        if !(MIN_PARALLELISM_P..=MAX_PARALLELISM_P).contains(&parallelism) {
+            return Err(UnknownCryptoError);
+        }
+
         check_minimum_memory(memory, parallelism)?;
         if password.len() > MAX_PASSWORD_LEN as usize {
             return Err(UnknownCryptoError);
         }
-        if !(8..MAX_SALT_LEN as usize).contains(&salt.len()) {
+        if salt.len() > MAX_SALT_LEN as usize {
             return Err(UnknownCryptoError);
         }
-        if !(MIN_ITERATIONS_T..MAX_ITERATIONS_T).contains(&iterations) {
-            return Err(UnknownCryptoError);
-        }
-        if !(MIN_PARALLELISM_P..MAX_PARALLELISM_P).contains(&parallelism) {
+        if !(MIN_ITERATIONS_T..=MAX_ITERATIONS_T).contains(&iterations) {
+            dbg!(
+                "C2",
+                iterations,
+                (MIN_ITERATIONS_T..=MAX_ITERATIONS_T).contains(&iterations)
+            );
             return Err(UnknownCryptoError);
         }
 
@@ -494,8 +577,10 @@ impl<V: sealed::Variant, Threading: sealed::Sealed> Argon2<V, Threading> {
 }
 
 impl<V: sealed::Variant> Argon2<V, Sequential> {
+    #[allow(clippy::too_many_arguments)]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Run KDF.
     pub fn derive_key(
-        version: u32,
         password: &[u8],
         salt: &[u8],
         iterations: u32,
@@ -505,6 +590,7 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
         ad: Option<&[u8]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
+        let version = ARGON2_VERSION_19;
         Self::validate_parameters(
             version,
             password,
@@ -660,6 +746,33 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
 
         Ok(())
     }
+
+    #[allow(clippy::too_many_arguments)]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Verify derived key in constant time.
+    pub fn verify(
+        expected: &[u8],
+        password: &[u8],
+        salt: &[u8],
+        iterations: u32,
+        memory: u32,
+        parallelism: u32,
+        secret: Option<&[u8]>,
+        ad: Option<&[u8]>,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        Self::derive_key(
+            password,
+            salt,
+            iterations,
+            memory,
+            parallelism,
+            secret,
+            ad,
+            dst_out,
+        )?;
+        crate::util::secure_cmp(dst_out, expected)
+    }
 }
 
 #[cfg(test)]
@@ -669,12 +782,103 @@ mod test {
     #[test]
     fn test_memory_requirements() {
         assert!(check_minimum_memory(7, 1).is_err()); // below min by 1
-        assert!(check_minimum_memory(8, 1).is_err()); // min
+        assert!(check_minimum_memory(8, 1).is_ok()); // min
 
         assert!(check_minimum_memory(15, 2).is_err()); // below min by 1
-        assert!(check_minimum_memory(16, 2).is_err()); // min
+        assert!(check_minimum_memory(16, 2).is_ok()); // min
 
         assert!(check_minimum_memory(8, u32::MAX).is_err()); // overflows (and invalid parallelism)
         assert!(check_minimum_memory(MAX_MEMORY_M, MAX_PARALLELISM_P).is_ok());
+    }
+
+    #[test]
+    fn test_validate_parameters_passes_parallelism() {
+        let mut tmp = [0u8; 4];
+
+        assert!(
+            Argon2::<I, Sequential>::validate_parameters(
+                ARGON2_VERSION_19,
+                &[],
+                &[],
+                MIN_ITERATIONS_T - 1,
+                8,
+                1,
+                None,
+                None,
+                &mut tmp
+            )
+            .is_err()
+        );
+        assert!(
+            Argon2::<I, Sequential>::validate_parameters(
+                ARGON2_VERSION_19,
+                &[],
+                &[],
+                MIN_ITERATIONS_T,
+                8,
+                1,
+                None,
+                None,
+                &mut tmp
+            )
+            .is_ok()
+        );
+        assert!(
+            Argon2::<I, Sequential>::validate_parameters(
+                ARGON2_VERSION_19,
+                &[],
+                &[],
+                MAX_ITERATIONS_T,
+                8,
+                1,
+                None,
+                None,
+                &mut tmp
+            )
+            .is_ok()
+        );
+
+        assert!(
+            Argon2::<I, Sequential>::validate_parameters(
+                ARGON2_VERSION_19,
+                &[],
+                &[],
+                MIN_ITERATIONS_T,
+                8,
+                MIN_PARALLELISM_P - 1,
+                None,
+                None,
+                &mut tmp
+            )
+            .is_err()
+        );
+        assert!(
+            Argon2::<I, Sequential>::validate_parameters(
+                ARGON2_VERSION_19,
+                &[],
+                &[],
+                MIN_ITERATIONS_T,
+                8,
+                MIN_PARALLELISM_P,
+                None,
+                None,
+                &mut tmp
+            )
+            .is_ok()
+        );
+        assert!(
+            Argon2::<I, Sequential>::validate_parameters(
+                ARGON2_VERSION_19,
+                &[],
+                &[],
+                MIN_ITERATIONS_T,
+                MAX_PARALLELISM_P * 8,
+                MAX_PARALLELISM_P,
+                None,
+                None,
+                &mut tmp
+            )
+            .is_ok()
+        );
     }
 }

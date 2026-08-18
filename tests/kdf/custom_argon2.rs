@@ -1,7 +1,7 @@
 // Test vector generated with the Python cryptography.io package.
 
 use hex::decode;
-use orion::hazardous::kdf::{argon2i, argon2id};
+use orion::hazardous::kdf::argon2::*;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader};
 
@@ -53,7 +53,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
         match test.variant.as_str() {
             "argon2i" => {
                 assert!(
-                    argon2i::verify(
+                    Argon2::<I, Sequential>::verify(
                         &expacted_result,
                         &passwd,
                         &salt,
@@ -69,7 +69,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
             }
             "argon2id" => {
                 assert!(
-                    argon2id::verify(
+                    Argon2::<ID, Sequential>::verify(
                         &expacted_result,
                         &passwd,
                         &salt,
@@ -89,6 +89,6 @@ fn run_tests_from_json(path_to_vectors: &str) {
 }
 
 #[test]
-fn test_pynacl() {
+fn test_pycryptography() {
     run_tests_from_json("./tests/test_data/third_party/custom/python_cryptography_argon2.json");
 }
