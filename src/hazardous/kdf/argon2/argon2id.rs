@@ -127,9 +127,8 @@ pub fn derive_key(
     ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
-    argon2_derive_key(
+    Argon2::<ID, Sequential>::derive_key(
         ARGON2_VERSION_19,
-        ARGON2_ID_VARIANT,
         password,
         salt,
         iterations,

@@ -400,20 +400,43 @@ fn check_minimum_memory(memory: u32, parallelism: u32) -> Result<(), UnknownCryp
     }
 }
 
+mod sealed {
+
+    pub trait Sealed {}
+
+    pub trait Variant: Sealed {
+        const VALUE: u32;
+    }
+}
+
 // #[cfg(feature = "safe_api")]
 // pub struct Threaded;
 
 pub struct Sequential;
+impl sealed::Sealed for Sequential {}
 
-pub struct Argon2<Mode, Threading> {
-    _mode: PhantomData<Mode>,
+#[derive(Debug, PartialEq)]
+pub struct I;
+impl sealed::Sealed for I {}
+impl sealed::Variant for I {
+    const VALUE: u32 = ARGON2_I_VARIANT;
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ID;
+impl sealed::Sealed for ID {}
+impl sealed::Variant for ID {
+    const VALUE: u32 = ARGON2_ID_VARIANT;
+}
+
+pub struct Argon2<V: sealed::Variant, Threading: sealed::Sealed> {
+    _variant: PhantomData<V>,
     _threading: PhantomData<Threading>,
 }
 
-impl<Mode, Threading> Argon2<Mode, Threading> {
+impl<V: sealed::Variant, Threading: sealed::Sealed> Argon2<V, Threading> {
     fn validate_parameters(
         version: u32,
-        variant: u32,
         password: &[u8],
         salt: &[u8],
         iterations: u32,
@@ -424,7 +447,7 @@ impl<Mode, Threading> Argon2<Mode, Threading> {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         debug_assert_eq!(version, ARGON2_VERSION_19);
-        debug_assert!(variant == ARGON2_ID_VARIANT || variant == ARGON2_I_VARIANT);
+        debug_assert!(V::VALUE == ARGON2_ID_VARIANT || V::VALUE == ARGON2_I_VARIANT);
 
         check_minimum_memory(memory, parallelism)?;
         if password.len() > MAX_PASSWORD_LEN as usize {
@@ -470,10 +493,9 @@ impl<Mode, Threading> Argon2<Mode, Threading> {
     }
 }
 
-impl<Mode> Argon2<Mode, Sequential> {
+impl<V: sealed::Variant> Argon2<V, Sequential> {
     pub fn derive_key(
         version: u32,
-        variant: u32,
         password: &[u8],
         salt: &[u8],
         iterations: u32,
@@ -485,7 +507,6 @@ impl<Mode> Argon2<Mode, Sequential> {
     ) -> Result<(), UnknownCryptoError> {
         Self::validate_parameters(
             version,
-            variant,
             password,
             salt,
             iterations,
@@ -508,7 +529,7 @@ impl<Mode> Argon2<Mode, Sequential> {
         let mut h0 = initial_hash(
             version,
             parallelism,
-            variant,
+            V::VALUE,
             dst_out.len() as u32,
             memory,
             iterations,
@@ -545,13 +566,13 @@ impl<Mode> Argon2<Mode, Sequential> {
                     _ => 0,
                 };
 
-                let use_gidx = is_data_independent(variant, pass_n as u32, segment_n);
+                let use_gidx = is_data_independent(V::VALUE, pass_n as u32, segment_n);
 
                 for lane in 0..parallelism {
                     // Argon2id only requires this in first round
                     let mut gidx: Option<Gidx> = if use_gidx {
                         let mut gidx =
-                            Gidx::new(variant, n_blocks, iterations, segment_length, lane);
+                            Gidx::new(V::VALUE, n_blocks, iterations, segment_length, lane);
                         gidx.init(pass_n as u32, segment_n as u32, offset, &mut working_block);
 
                         Some(gidx)
