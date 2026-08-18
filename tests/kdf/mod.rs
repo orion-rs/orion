@@ -1,3 +1,5 @@
+#[cfg(feature = "safe_api")]
+pub mod custom_argon2;
 pub mod custom_hkdf;
 pub mod custom_pbkdf2;
 #[cfg(feature = "safe_api")]
