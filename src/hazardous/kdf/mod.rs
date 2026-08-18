@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::errors::UnknownCryptoError;
+
 /// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
 pub mod hkdf;
 
@@ -35,3 +37,32 @@ pub mod scrypt;
 #[cfg_attr(docsrs, doc(cfg(any(feature = "safe_api", feature = "alloc"))))]
 /// Argon2 password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
 pub mod argon2;
+
+pub(crate) mod sealed {
+
+    pub trait Sealed {}
+
+    pub trait Variant: Sealed {
+        const VALUE: u32;
+    }
+}
+
+#[cfg(feature = "safe_api")]
+/// A trait that is implemented to provide P-H-C string formats for password hashes.
+pub trait PhcString: sealed::Sealed {
+    /// The P-H-C string ID for the password hashing algorithm.
+    const PHC_ID: &'static str;
+
+    /// Parse a decimal parameter value to a u32. Returns an error on overflow
+    /// and if the value has leading zeroes.
+    fn parse_decimal_value(value: &str) -> Result<u32, UnknownCryptoError> {
+        // See: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
+        if value.len() > 1 && value.starts_with('0') {
+            return Err(UnknownCryptoError);
+        }
+        // .parse::<T>() detects overflows (in debug and release builds)
+        // and rejects empty strings. If the value contains spaces, parsing
+        // also fails.
+        Ok(value.parse::<u32>()?)
+    }
+}

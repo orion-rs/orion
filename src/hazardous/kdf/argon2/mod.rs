@@ -100,6 +100,9 @@ use core::marker::PhantomData;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b::{BLAKE2B_MAX_OUTSIZE, Blake2b};
+#[cfg(feature = "safe_api")]
+use crate::hazardous::kdf::PhcString;
+use crate::hazardous::kdf::sealed;
 use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
@@ -469,15 +472,6 @@ fn check_minimum_memory(memory: u32, parallelism: u32) -> Result<(), UnknownCryp
     }
 }
 
-mod sealed {
-
-    pub trait Sealed {}
-
-    pub trait Variant: Sealed {
-        const VALUE: u32;
-    }
-}
-
 // TODO(brycx): RwLock + thread::scoped
 // #[derive(Debug, PartialEq)]
 // #[cfg(feature = "safe_api")]
@@ -497,12 +491,22 @@ impl sealed::Variant for I {
     const VALUE: u32 = ARGON2_I_VARIANT;
 }
 
+#[cfg(feature = "safe_api")]
+impl PhcString for I {
+    const PHC_ID: &'static str = "argon2i";
+}
+
 #[derive(Debug, PartialEq)]
 /// Argon2id password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
 pub struct ID;
 impl sealed::Sealed for ID {}
 impl sealed::Variant for ID {
     const VALUE: u32 = ARGON2_ID_VARIANT;
+}
+
+#[cfg(feature = "safe_api")]
+impl PhcString for ID {
+    const PHC_ID: &'static str = "argon2id";
 }
 
 // **TODO**:
@@ -519,6 +523,23 @@ pub struct Argon2<V: sealed::Variant, Threading: sealed::Sealed> {
 }
 
 impl<V: sealed::Variant, Threading: sealed::Sealed> Argon2<V, Threading> {
+    fn validate_cost_parameters(
+        iterations: u32,
+        memory: u32,
+        parallelism: u32,
+    ) -> Result<(), UnknownCryptoError> {
+        if !(MIN_PARALLELISM_P..=MAX_PARALLELISM_P).contains(&parallelism) {
+            return Err(UnknownCryptoError);
+        }
+
+        check_minimum_memory(memory, parallelism)?;
+        if !(MIN_ITERATIONS_T..=MAX_ITERATIONS_T).contains(&iterations) {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok(())
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn validate_parameters(
         version: u32,
@@ -534,23 +555,11 @@ impl<V: sealed::Variant, Threading: sealed::Sealed> Argon2<V, Threading> {
         debug_assert_eq!(version, ARGON2_VERSION_19);
         debug_assert!(V::VALUE == ARGON2_ID_VARIANT || V::VALUE == ARGON2_I_VARIANT);
 
-        if !(MIN_PARALLELISM_P..=MAX_PARALLELISM_P).contains(&parallelism) {
-            return Err(UnknownCryptoError);
-        }
-
-        check_minimum_memory(memory, parallelism)?;
+        Self::validate_cost_parameters(iterations, memory, parallelism)?;
         if password.len() > MAX_PASSWORD_LEN as usize {
             return Err(UnknownCryptoError);
         }
         if salt.len() > MAX_SALT_LEN as usize {
-            return Err(UnknownCryptoError);
-        }
-        if !(MIN_ITERATIONS_T..=MAX_ITERATIONS_T).contains(&iterations) {
-            dbg!(
-                "C2",
-                iterations,
-                (MIN_ITERATIONS_T..=MAX_ITERATIONS_T).contains(&iterations)
-            );
             return Err(UnknownCryptoError);
         }
 
@@ -777,6 +786,95 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
             dst_out,
         )?;
         crate::util::secure_cmp(dst_out, expected)
+    }
+}
+
+#[cfg(feature = "safe_api")]
+impl<V: sealed::Variant + PhcString, Threading: sealed::Sealed> Argon2<V, Threading> {
+    /// Encode the password hash and parameters to a P-H-C string.
+    pub fn to_phc_string(
+        pwhash: &[u8],
+        salt: &[u8],
+        iterations: u32,
+        memory: u32,
+        parallelism: u32,
+    ) -> Result<String, UnknownCryptoError> {
+        use ct_codecs::{Base64NoPadding, Encoder};
+
+        Ok(format!(
+            "${}$v={}$m={},t={},p={}${}${}",
+            V::PHC_ID,
+            ARGON2_VERSION_19,
+            memory,
+            iterations,
+            parallelism,
+            Base64NoPadding::encode_to_string(salt)?,
+            Base64NoPadding::encode_to_string(pwhash)?,
+        ))
+    }
+
+    /// Parse and validate a P-H-C string.
+    pub fn from_phc_string(
+        password_hash: &str,
+    ) -> Result<(u32, u32, u32, Vec<u8>, Vec<u8>), UnknownCryptoError> {
+        use ct_codecs::{Base64NoPadding, Decoder};
+
+        if password_hash.contains(' ') {
+            return Err(UnknownCryptoError);
+        }
+
+        let parts_split = password_hash.split('$').collect::<Vec<&str>>();
+        if parts_split.len() != 6 {
+            return Err(UnknownCryptoError);
+        }
+        let mut parts = parts_split.into_iter();
+        if parts.next() != Some("") {
+            return Err(UnknownCryptoError);
+        }
+        if parts.next() != Some(V::PHC_ID) {
+            return Err(UnknownCryptoError);
+        }
+        if parts.next() != Some("19") {
+            return Err(UnknownCryptoError);
+        }
+
+        // Splits as ["m", "X", "t", "Y", "p", "Z"] where m=X, t=Y and p=Z.
+        let param_parts_split = parts
+            .next()
+            .unwrap()
+            .split(['=', ','])
+            .collect::<Vec<&str>>();
+        if param_parts_split.len() != 6 {
+            return Err(UnknownCryptoError);
+        }
+        let mut param_parts = param_parts_split.into_iter();
+
+        if param_parts.next() != Some("m") {
+            return Err(UnknownCryptoError);
+        }
+        let memory = V::parse_decimal_value(param_parts.next().unwrap())?;
+
+        if param_parts.next() != Some("t") {
+            return Err(UnknownCryptoError);
+        }
+        let iterations = V::parse_decimal_value(param_parts.next().unwrap())?;
+
+        if param_parts.next() != Some("p") {
+            return Err(UnknownCryptoError);
+        }
+        let lanes = V::parse_decimal_value(param_parts.next().unwrap())?;
+
+        Self::validate_cost_parameters(iterations, memory, lanes)?;
+        let salt = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
+        if salt.len() > MAX_SALT_LEN as usize {
+            return Err(UnknownCryptoError);
+        }
+        let password_hash_raw = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
+        if password_hash_raw.len() < 4 {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok((iterations, memory, lanes, salt, password_hash_raw))
     }
 }
 
