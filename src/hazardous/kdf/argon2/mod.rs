@@ -1035,6 +1035,101 @@ mod public {
     mod test_verify {
         use super::*;
 
+        // Migration logic from orion::pwhash (0.17 -> 0.18)
+        // to ensure this hazardous P-H-C implementation can
+        // be used during migrationn.
+        // These tests were part of orion::pwhash in 0.17.
+        mod migration {
+            use super::*;
+            use hex;
+
+            #[test]
+            fn test_encoding_and_verify_1() {
+                let password = b"password";
+                let raw_hash =
+                    hex::decode("7d1b1163d3c0b791fea802ae5d1ccbd3fe896c54a1b0277ad96e5a1f311293f7")
+                        .unwrap();
+                let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
+
+                let expected = PasswordHash::try_from(encoded_hash).unwrap();
+                assert_eq!(expected.data.hash, &raw_hash[..]);
+                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert!(
+                    Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
+                        .is_ok()
+                );
+            }
+
+            #[test]
+            fn test_encoding_and_verify_2() {
+                let password = b"passwordPASSWORDPassword";
+                let raw_hash =
+                    hex::decode("ed4b0fd657e165f9ffe90f66ff315fbec878e629f03b2d6468d4b17a50c796aa")
+                        .unwrap();
+                let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$7UsP1lfhZfn/6Q9m/zFfvsh45inwOy1kaNSxelDHlqo";
+
+                let expected = PasswordHash::try_from(encoded_hash).unwrap();
+                assert_eq!(expected.data.hash, &raw_hash[..]);
+                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert!(
+                    Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
+                        .is_ok()
+                );
+            }
+
+            #[test]
+            fn test_encoding_and_verify_3() {
+                // Different salt from test 2
+                let password = b"passwordPASSWORDPassword";
+                let raw_hash =
+                    hex::decode("fa9ea96fecd0998251d698c1303edda4df3889a39bfa87cd5e7b8656ef61b510")
+                        .unwrap();
+                let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$U29tZVNhbHRTb21lU2FsdA$+p6pb+zQmYJR1pjBMD7dpN84iaOb+ofNXnuGVu9htRA";
+
+                let expected = PasswordHash::try_from(encoded_hash).unwrap();
+                assert_eq!(expected.data.hash, &raw_hash[..]);
+                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert!(
+                    Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
+                        .is_ok()
+                );
+            }
+
+            #[test]
+            fn test_encoding_and_verify_4() {
+                let password = b"passwordPASSWORDPassword";
+                let raw_hash =
+                    hex::decode("fb3e0cdf7b10970bf6711c151861851566006f8986c9109ba2cdd5d98f9ca9d7")
+                        .unwrap();
+                let encoded_hash = "$argon2i$v=19$m=256,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$+z4M33sQlwv2cRwVGGGFFWYAb4mGyRCbos3V2Y+cqdc";
+
+                let expected = PasswordHash::try_from(encoded_hash).unwrap();
+                assert_eq!(expected.data.hash, &raw_hash[..]);
+                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert!(
+                    Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
+                        .is_ok()
+                );
+            }
+
+            #[test]
+            fn test_encoding_and_verify_5() {
+                let password = b"passwordPASSWORDPassword";
+                let raw_hash =
+                    hex::decode("9b134c4c1c34e66170d1088c18be3a8e0f4a1837d4c069703ce62f85248b1e8f")
+                        .unwrap();
+                let encoded_hash = "$argon2i$v=19$m=256,t=4,p=1$c29tZXNhbHRzb21lc2FsdA$mxNMTBw05mFw0QiMGL46jg9KGDfUwGlwPOYvhSSLHo8";
+
+                let expected = PasswordHash::try_from(encoded_hash).unwrap();
+                assert_eq!(expected.data.hash, &raw_hash[..]);
+                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert!(
+                    Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
+                        .is_ok()
+                );
+            }
+        }
+
         #[test]
         #[cfg(feature = "safe_api")]
         fn test_variant_mismatch_fails_verify() {

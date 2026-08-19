@@ -134,8 +134,7 @@ impl TryFrom<&str> for Argon2Phc {
         } else {
             return Err(UnknownCryptoError);
         };
-
-        if parts.next() != Some("19") {
+        if parts.next() != Some("v=19") {
             return Err(UnknownCryptoError);
         }
 
