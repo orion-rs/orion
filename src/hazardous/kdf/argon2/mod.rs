@@ -1044,12 +1044,13 @@ mod public {
         fn prop_test_same_input_verify_true(
             hlen: u32,
             kib: u32,
-            p: Vec<u8>,
+            p: u8,
+            pass: Vec<u8>,
             s: Vec<u8>,
             k: Vec<u8>,
             x: Vec<u8>,
         ) -> bool {
-            let parallelism = 1u32;
+            let parallelism = if p > 4 || p == 0 { 1 } else { p };
             let passes = 1;
             let mem = if !(8..=4096).contains(&kib) {
                 1024
@@ -1066,11 +1067,11 @@ mod public {
 
             let mut dst_out_verify = dst_out.clone();
             Argon2::<I, Sequential>::derive_key(
-                &p,
+                &pass,
                 &salt,
                 passes,
                 mem,
-                parallelism,
+                parallelism as u32,
                 Some(&k),
                 Some(&x),
                 &mut dst_out,
@@ -1079,11 +1080,11 @@ mod public {
 
             let argin2i_result = Argon2::<I, Sequential>::verify(
                 &dst_out,
-                &p,
+                &pass,
                 &salt,
                 passes,
                 mem,
-                parallelism,
+                parallelism as u32,
                 Some(&k),
                 Some(&x),
                 &mut dst_out_verify,
@@ -1091,11 +1092,11 @@ mod public {
             .is_ok();
 
             Argon2::<ID, Sequential>::derive_key(
-                &p,
+                &pass,
                 &salt,
                 passes,
                 mem,
-                parallelism,
+                parallelism as u32,
                 Some(&k),
                 Some(&x),
                 &mut dst_out,
@@ -1104,14 +1105,87 @@ mod public {
 
             let argin2id_result = Argon2::<ID, Sequential>::verify(
                 &dst_out,
-                &p,
+                &pass,
                 &salt,
                 passes,
                 mem,
-                parallelism,
+                parallelism as u32,
                 Some(&k),
                 Some(&x),
                 &mut dst_out_verify,
+            )
+            .is_ok();
+
+            argin2i_result && argin2id_result
+        }
+
+        #[quickcheck]
+        #[cfg(feature = "safe_api")]
+        fn prop_test_same_input_verify_encoded_true(
+            hlen: u32,
+            kib: u32,
+            p: u8,
+            pass: Vec<u8>,
+            s: Vec<u8>,
+            k: Vec<u8>,
+            x: Vec<u8>,
+        ) -> bool {
+            let parallelism = if p > 4 || p == 0 { 1 } else { p };
+            let passes = 1;
+            let mem = if !(8..=4096).contains(&kib) {
+                1024
+            } else {
+                kib
+            };
+            let salt = s;
+
+            let hlen = if !(4..=512).contains(&hlen) { 32 } else { hlen };
+
+            let h = Argon2::<I, Sequential>::derive_key_encoded(
+                &pass,
+                &salt,
+                passes,
+                mem,
+                parallelism as u32,
+                Some(&k),
+                Some(&x),
+                hlen as usize,
+            )
+            .unwrap();
+
+            let argin2i_result = Argon2::<I, Sequential>::verify_encoded(
+                &h,
+                &pass,
+                &salt,
+                passes,
+                mem,
+                parallelism as u32,
+                Some(&k),
+                Some(&x),
+            )
+            .is_ok();
+
+            let h = Argon2::<ID, Sequential>::derive_key_encoded(
+                &pass,
+                &salt,
+                passes,
+                mem,
+                parallelism as u32,
+                Some(&k),
+                Some(&x),
+                hlen as usize,
+            )
+            .unwrap();
+
+            let argin2id_result = Argon2::<ID, Sequential>::verify_encoded(
+                &h,
+                &pass,
+                &salt,
+                passes,
+                mem,
+                parallelism as u32,
+                Some(&k),
+                Some(&x),
             )
             .is_ok();
 
