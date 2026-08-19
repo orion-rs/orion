@@ -71,6 +71,18 @@ fn run_tests_from_json(path_to_vectors: &str) {
                     )
                     .is_ok()
                 );
+                let rt = Argon2::<I, Sequential>::derive_key_encoded(
+                    &passwd,
+                    &salt,
+                    test.passes,
+                    test.memory,
+                    test.parallelism,
+                    Some(&secret),
+                    Some(&ad),
+                    test.tag_length as usize,
+                )
+                .unwrap();
+                assert_eq!(rt.unprotected_as_ref(), test.phc.as_bytes());
                 assert!(
                     Argon2::<I, Sequential>::verify_encoded(
                         &phc,
@@ -96,6 +108,19 @@ fn run_tests_from_json(path_to_vectors: &str) {
                     )
                     .is_ok()
                 );
+
+                let rt = Argon2::<ID, Sequential>::derive_key_encoded(
+                    &passwd,
+                    &salt,
+                    test.passes,
+                    test.memory,
+                    test.parallelism,
+                    Some(&secret),
+                    Some(&ad),
+                    test.tag_length as usize,
+                )
+                .unwrap();
+                assert_eq!(rt.unprotected_as_ref(), test.phc.as_bytes());
                 assert!(
                     Argon2::<ID, Sequential>::verify_encoded(
                         &phc,

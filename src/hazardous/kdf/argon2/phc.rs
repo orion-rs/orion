@@ -23,7 +23,10 @@
 use crate::{
     errors::UnknownCryptoError,
     generics::sealed::{Data, TryFromBytes},
-    hazardous::kdf::argon2::{ARGON2_VERSION_19, MAX_SALT_LEN, validate_cost_parameters},
+    hazardous::kdf::{
+        argon2::{ARGON2_VERSION_19, I, ID, MAX_SALT_LEN, validate_cost_parameters},
+        sealed::Variant,
+    },
 };
 use core::fmt::Debug;
 use ct_codecs::{Base64NoPadding, Encoder};
@@ -76,7 +79,7 @@ impl Debug for Argon2Phc {
 }
 
 impl Argon2Phc {
-    const VALID_VARIANTS: [&'static str; 2] = ["argon2i", "argon2id"];
+    const VALID_VARIANTS: [&'static str; 2] = [I::PHC_ID, ID::PHC_ID];
 
     /// Parse a decimal parameter value to a u32. Returns an error on overflow
     /// and if the value has leading zeroes.

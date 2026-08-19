@@ -169,6 +169,8 @@ const SEGMENTS_PER_LANE: usize = 4;
 /// Marker type for a password hash, in P-H-C string format, produced by [`Argon2`]. See [`PasswordHash`] type for convenience.
 pub struct Argon2PasswordHash;
 
+// TODO: Missing generic Secret<Argon2PasswordHash> or adopted custom ones if those can't apply.
+
 #[cfg(feature = "safe_api")]
 impl crate::generics::sealed::Sealed for Argon2PasswordHash {}
 
@@ -646,7 +648,6 @@ fn validate_parameters(
 }
 
 // **TODO**:
-// - Implement P-H-C string format for this generic struct gated under safe_api
 // - Move scrypt and pbkdf2 to a struct as well for API consistency (HKDF already is in v0.18.0)
 // - Implement P-H-C string format for those two as well
 // - Move orion::pwhash to Argon2id with perhaps Legacy-wrapper struct there as well for easy migration from 0.17
@@ -709,6 +710,11 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
         secret: Option<&[u8]>,
         ad: Option<&[u8]>,
     ) -> Result<(), UnknownCryptoError> {
+        if expected.data.variant.as_str() != V::PHC_ID {
+            // Skip entirely computing if the variants differ.
+            return Err(UnknownCryptoError);
+        }
+
         let actual = Self::derive_key_encoded(
             password,
             &expected.data.salt,
