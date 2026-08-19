@@ -19,6 +19,7 @@ pub(crate) struct TestCase {
     secret: String,
     associated_data: String,
     tag: String,
+    phc: String,
 }
 
 fn run_tests_from_json(path_to_vectors: &str) {
@@ -50,6 +51,10 @@ fn run_tests_from_json(path_to_vectors: &str) {
         };
         let expacted_result = decode(&test.tag).unwrap();
 
+        // PasswordHash figures out the variant itself
+        let phc = PasswordHash::try_from(test.phc.as_bytes())
+            .expect("failed to parse test vector PHC string");
+
         match test.variant.as_str() {
             "argon2i" => {
                 assert!(
@@ -66,6 +71,15 @@ fn run_tests_from_json(path_to_vectors: &str) {
                     )
                     .is_ok()
                 );
+                assert!(
+                    Argon2::<I, Sequential>::verify_encoded(
+                        &phc,
+                        &passwd,
+                        Some(&secret),
+                        Some(&ad),
+                    )
+                    .is_ok()
+                );
             }
             "argon2id" => {
                 assert!(
@@ -79,6 +93,15 @@ fn run_tests_from_json(path_to_vectors: &str) {
                         Some(&secret),
                         Some(&ad),
                         &mut dst_out
+                    )
+                    .is_ok()
+                );
+                assert!(
+                    Argon2::<ID, Sequential>::verify_encoded(
+                        &phc,
+                        &passwd,
+                        Some(&secret),
+                        Some(&ad),
                     )
                     .is_ok()
                 );

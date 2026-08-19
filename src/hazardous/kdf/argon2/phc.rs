@@ -107,8 +107,6 @@ impl Argon2Phc {
     }
 }
 
-// TODO: Does this parsing handle empty salt correctl or shoulkd it error?
-
 impl TryFrom<&str> for Argon2Phc {
     type Error = UnknownCryptoError;
 

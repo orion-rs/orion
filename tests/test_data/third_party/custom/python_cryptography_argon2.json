@@ -7,10 +7,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "ed5f085c00ff163c1a4bd4f333318c1752a893db0c752ade01405585e3902ee8"
+    "tag": "f0f8c55ac3084b05480bbc661f3a88e7462b9023040f66d3a4a3abbdf71bf90e",
+    "phc": "$argon2i$v=19$m=32,t=1,p=1$AgICAgICAgI$8PjFWsMISwVIC7xmHzqI50YrkCMED2bTpKOrvfcb+Q4"
   },
   {
     "variant": "argon2i",
@@ -20,10 +21,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "1586fcf382b171483e4605af56a375c520d19b42054664e6986d483c3f5b542b"
+    "tag": "a21c925e1f8b9fb3af1d585a346e193da0bd58d1329ea173aa60d488486c1299",
+    "phc": "$argon2i$v=19$m=32,t=1,p=1$AgICAgICAgI$ohySXh+Ln7OvHVhaNG4ZPaC9WNEynqFzqmDUiEhsEpk"
   },
   {
     "variant": "argon2i",
@@ -33,10 +35,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "3d4c8be54cc1c6dd17b65daa47c505c460a2f62c90fa955d63cb222abff7318f"
+    "tag": "a1e839b5053171a4df326d965d7cd81c1f3c1e86b6ca8c642d3eeaca9817b41d",
+    "phc": "$argon2i$v=19$m=32,t=1,p=1$AgICAgICAgI$oeg5tQUxcaTfMm2WXXzYHB88Hoa2yoxkLT7qypgXtB0"
   },
   {
     "variant": "argon2i",
@@ -46,23 +49,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "1a7b4077540c1033c4946a3108a656dcfee53ae38a190d07306ecc24fec7ff02"
-  },
-  {
-    "variant": "argon2i",
-    "version": 19,
-    "memory": 32,
-    "passes": 1,
-    "parallelism": 1,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "858581baa5e21faabcea080d6592f8950a71e3da0765d8892f2bb3c1bc0ffdb0"
+    "tag": "50f05559c5e91acb139eb988d5e8ab8509d60d298f3217f230646c1e82404b88",
+    "phc": "$argon2i$v=19$m=32,t=1,p=1$AgICAgICAgI$UPBVWcXpGssTnrmI1eirhQnWDSmPMhfyMGRsHoJAS4g"
   },
   {
     "variant": "argon2i",
@@ -74,8 +65,23 @@
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
+    "associated_data": "",
+    "tag": "858581baa5e21faabcea080d6592f8950a71e3da0765d8892f2bb3c1bc0ffdb0",
+    "phc": "$argon2i$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$hYWBuqXiH6q86ggNZZL4lQpx49oHZdiJLyuzwbwP/bA"
+  },
+  {
+    "variant": "argon2i",
+    "version": 19,
+    "memory": 32,
+    "passes": 1,
+    "parallelism": 1,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "db423622f52d7c57963eb366e0f43428fb5cf9b441eb509fec0101b770af0ea1"
+    "tag": "db423622f52d7c57963eb366e0f43428fb5cf9b441eb509fec0101b770af0ea1",
+    "phc": "$argon2i$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$20I2IvUtfFeWPrNm4PQ0KPtc+bRB61Cf7AEBt3CvDqE"
   },
   {
     "variant": "argon2i",
@@ -88,7 +94,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "f8f568bbb9e4768cbaae99d3df3a81b6656a689aa4a2d4b0f9ed0b0cff8bbc83"
+    "tag": "f8f568bbb9e4768cbaae99d3df3a81b6656a689aa4a2d4b0f9ed0b0cff8bbc83",
+    "phc": "$argon2i$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$+PVou7nkdoy6rpnT3zqBtmVqaJqkotSw+e0LDP+LvIM"
   },
   {
     "variant": "argon2i",
@@ -101,7 +108,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "874d23fb9f55e2ff66bc190346e701197c9f25d11da45aad0d5d24198aacd2bb"
+    "tag": "874d23fb9f55e2ff66bc190346e701197c9f25d11da45aad0d5d24198aacd2bb",
+    "phc": "$argon2i$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$h00j+59V4v9mvBkDRucBGXyfJdEdpFqtDV0kGYqs0rs"
   },
   {
     "variant": "argon2i",
@@ -111,10 +119,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "6cce34cd9d9a670638e234f1e97099abfa5176bd1ca50c6e4932b728353195f6"
+    "tag": "c797154e445908fc02939b41c537584996066392417d19935fefd0a98d2889f3",
+    "phc": "$argon2i$v=19$m=32,t=2,p=1$AgICAgICAgI$x5cVTkRZCPwCk5tBxTdYSZYGY5JBfRmTX+/QqY0oifM"
   },
   {
     "variant": "argon2i",
@@ -124,10 +133,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "b7f3d11d7fc80131a5dcf87079d776f04c1e745ebf6d85c994e99c6d8cc2fbf6"
+    "tag": "67b527b1658000a080b6c8f78bc1f698d7f503f36b04a4b31083dd2e509f8f28",
+    "phc": "$argon2i$v=19$m=32,t=2,p=1$AgICAgICAgI$Z7UnsWWAAKCAtsj3i8H2mNf1A/NrBKSzEIPdLlCfjyg"
   },
   {
     "variant": "argon2i",
@@ -137,10 +147,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "d1620512c5fa59f213d02cc2b618cd7c1be0f1c85c7d671aa53eb229013106ae"
+    "tag": "c10c1d3be7f943d2c5788be932205d4208b29490a8927e8d9690acda59806bf3",
+    "phc": "$argon2i$v=19$m=32,t=2,p=1$AgICAgICAgI$wQwdO+f5Q9LFeIvpMiBdQgiylJCokn6NlpCs2lmAa/M"
   },
   {
     "variant": "argon2i",
@@ -150,23 +161,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "59fc4ef8c8523f86e03ae1fd4544a1fdece011a8c2ab1f33d1c756cddd71e704"
-  },
-  {
-    "variant": "argon2i",
-    "version": 19,
-    "memory": 32,
-    "passes": 2,
-    "parallelism": 1,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "6b653ea94658dfb2e31aad45040050c02f69283075325e4b603c2c019f2a90e6"
+    "tag": "398909e1845b7a898490ac1b39c635308ea3c05b7078fbd97f18b29eb5d2e940",
+    "phc": "$argon2i$v=19$m=32,t=2,p=1$AgICAgICAgI$OYkJ4YRbeomEkKwbOcY1MI6jwFtwePvZfxiynrXS6UA"
   },
   {
     "variant": "argon2i",
@@ -178,8 +177,23 @@
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
+    "associated_data": "",
+    "tag": "6b653ea94658dfb2e31aad45040050c02f69283075325e4b603c2c019f2a90e6",
+    "phc": "$argon2i$v=19$m=32,t=2,p=1$AgICAgICAgICAgICAgICAg$a2U+qUZY37LjGq1FBABQwC9pKDB1Ml5LYDwsAZ8qkOY"
+  },
+  {
+    "variant": "argon2i",
+    "version": 19,
+    "memory": 32,
+    "passes": 2,
+    "parallelism": 1,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "d803e909013f2ba2517bc37be2b2585ee29e191081e50447b19d42d250e477a5"
+    "tag": "d803e909013f2ba2517bc37be2b2585ee29e191081e50447b19d42d250e477a5",
+    "phc": "$argon2i$v=19$m=32,t=2,p=1$AgICAgICAgICAgICAgICAg$2APpCQE/K6JRe8N74rJYXuKeGRCB5QRHsZ1C0lDkd6U"
   },
   {
     "variant": "argon2i",
@@ -192,7 +206,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "6a3c135e47ae97acf612164214c99e21c6e4c8fdf60fd3d74af950801578899c"
+    "tag": "6a3c135e47ae97acf612164214c99e21c6e4c8fdf60fd3d74af950801578899c",
+    "phc": "$argon2i$v=19$m=32,t=2,p=1$AgICAgICAgICAgICAgICAg$ajwTXkeul6z2EhZCFMmeIcbkyP32D9PXSvlQgBV4iZw"
   },
   {
     "variant": "argon2i",
@@ -205,7 +220,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "c10f005ef878c8070e2cc52f577525c971c730eb00644a4e26d06ead7546e044"
+    "tag": "c10f005ef878c8070e2cc52f577525c971c730eb00644a4e26d06ead7546e044",
+    "phc": "$argon2i$v=19$m=32,t=2,p=1$AgICAgICAgICAgICAgICAg$wQ8AXvh4yAcOLMUvV3UlyXHHMOsAZEpOJtBurXVG4EQ"
   },
   {
     "variant": "argon2i",
@@ -215,10 +231,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "bfb9d0bce4d587e5d8fef3d35d40c879aac07d5f597e6eba97f2eee88badb4b3"
+    "tag": "49812b561b7cb62cd10b0fe3bc3303dcc0a13bbdb168795a1aa9a20d105ff1e4",
+    "phc": "$argon2i$v=19$m=32,t=3,p=1$AgICAgICAgI$SYErVht8tizRCw/jvDMD3MChO72xaHlaGqmiDRBf8eQ"
   },
   {
     "variant": "argon2i",
@@ -228,10 +245,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "32033418c2817b262dfcae40521b4fb0cd2c656311cdd3650e2834e713525dab"
+    "tag": "ac6e07f8eaf50ea952c5bb9145c720075da42d4e79e8b9351c7f980c8464cb06",
+    "phc": "$argon2i$v=19$m=32,t=3,p=1$AgICAgICAgI$rG4H+Or1DqlSxbuRRccgB12kLU556Lk1HH+YDIRkywY"
   },
   {
     "variant": "argon2i",
@@ -241,10 +259,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "81b41af606350e8bea68c1095f982750675b47ea33fc96929061656c0dfaa368"
+    "tag": "d8b162ed11cafaa3eced562db17745cf3fa0a943725d6cc743e1c6330ca7cc91",
+    "phc": "$argon2i$v=19$m=32,t=3,p=1$AgICAgICAgI$2LFi7RHK+qPs7VYtsXdFzz+gqUNyXWzHQ+HGMwynzJE"
   },
   {
     "variant": "argon2i",
@@ -254,23 +273,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "2b8ec4b01e07d491dd3e1c1c8e35fbef780575b72738900516bd04f1e157102c"
-  },
-  {
-    "variant": "argon2i",
-    "version": 19,
-    "memory": 32,
-    "passes": 3,
-    "parallelism": 1,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "4030aab435ecb85625e8cbe8309dad7b49dd174f499ce2f51eab454b54b252b7"
+    "tag": "265c3fe53aa2096ab406b294f9ab3c788a37cee4def06495d5295bab3bb9ea5f",
+    "phc": "$argon2i$v=19$m=32,t=3,p=1$AgICAgICAgI$Jlw/5TqiCWq0BrKU+as8eIo3zuTe8GSV1Slbqzu56l8"
   },
   {
     "variant": "argon2i",
@@ -282,8 +289,23 @@
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
+    "associated_data": "",
+    "tag": "4030aab435ecb85625e8cbe8309dad7b49dd174f499ce2f51eab454b54b252b7",
+    "phc": "$argon2i$v=19$m=32,t=3,p=1$AgICAgICAgICAgICAgICAg$QDCqtDXsuFYl6MvoMJ2te0ndF09JnOL1HqtFS1SyUrc"
+  },
+  {
+    "variant": "argon2i",
+    "version": 19,
+    "memory": 32,
+    "passes": 3,
+    "parallelism": 1,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "f2335f560e7d21b29f20990ae40f4fb52a07a69e61ddf9fd201dd59e3c77e820"
+    "tag": "f2335f560e7d21b29f20990ae40f4fb52a07a69e61ddf9fd201dd59e3c77e820",
+    "phc": "$argon2i$v=19$m=32,t=3,p=1$AgICAgICAgICAgICAgICAg$8jNfVg59IbKfIJkK5A9PtSoHpp5h3fn9IB3Vnjx36CA"
   },
   {
     "variant": "argon2i",
@@ -296,7 +318,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "f402b7353754ba5352983c6edf2f467f04975ceb82b9101935b38c613acbb50f"
+    "tag": "f402b7353754ba5352983c6edf2f467f04975ceb82b9101935b38c613acbb50f",
+    "phc": "$argon2i$v=19$m=32,t=3,p=1$AgICAgICAgICAgICAgICAg$9AK3NTdUulNSmDxu3y9GfwSXXOuCuRAZNbOMYTrLtQ8"
   },
   {
     "variant": "argon2i",
@@ -309,7 +332,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "1e14f98dce844e462a545ba81034494ce32ebba9a3f6a899ba83e98888e432b6"
+    "tag": "1e14f98dce844e462a545ba81034494ce32ebba9a3f6a899ba83e98888e432b6",
+    "phc": "$argon2i$v=19$m=32,t=3,p=1$AgICAgICAgICAgICAgICAg$HhT5jc6ETkYqVFuoEDRJTOMuu6mj9qiZuoPpiIjkMrY"
   },
   {
     "variant": "argon2i",
@@ -319,10 +343,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "518eb6035faf7e17596897da4c9c81d44fd7bc77e4cdbff88bc3f1cbb69ad1a2"
+    "tag": "ac47e1c5fa91a5fdbdcdf2ef7a805b0444ac97d1a2bad47471eadaf79fae6cc9",
+    "phc": "$argon2i$v=19$m=32,t=1,p=2$AgICAgICAgI$rEfhxfqRpf29zfLveoBbBESsl9GiutR0cera95+ubMk"
   },
   {
     "variant": "argon2i",
@@ -332,10 +357,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "5720076c0c6e936311dfa7b0c21d8b39a0b3e726951981d0be296d8016854d4e"
+    "tag": "91953d8912aee7eaf7a14ae5a8d8ce42eed706d4507d02adcf7549fd335c3830",
+    "phc": "$argon2i$v=19$m=32,t=1,p=2$AgICAgICAgI$kZU9iRKu5+r3oUrlqNjOQu7XBtRQfQKtz3VJ/TNcODA"
   },
   {
     "variant": "argon2i",
@@ -345,10 +371,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "ba8ff5d99da66fcabd590f1c466df4a92b44448c87861be01eb0d0eead4cb53b"
+    "tag": "e34e753e0224e9a68d15502022d35df83842187e7519bfcaaa040595d69abbb6",
+    "phc": "$argon2i$v=19$m=32,t=1,p=2$AgICAgICAgI$4051PgIk6aaNFVAgItNd+DhCGH51Gb/KqgQFldaau7Y"
   },
   {
     "variant": "argon2i",
@@ -358,10 +385,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "e78daec8315a21a3624696e000e37dd454ece06e36d11cec6201be101fd397ea"
+    "tag": "e196804acce1c9a2839e8961c7273c852a5ca46ad292a1ee6293d20aafdf35b2",
+    "phc": "$argon2i$v=19$m=32,t=1,p=2$AgICAgICAgI$4ZaASszhyaKDnolhxyc8hSpcpGrSkqHuYpPSCq/fNbI"
   },
   {
     "variant": "argon2i",
@@ -374,7 +402,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "edc42761d5711ab5e9a5553ff66e0b5cda8efda54921b94d7d311659680361f3"
+    "tag": "edc42761d5711ab5e9a5553ff66e0b5cda8efda54921b94d7d311659680361f3",
+    "phc": "$argon2i$v=19$m=32,t=1,p=2$AgICAgICAgICAgICAgICAg$7cQnYdVxGrXppVU/9m4LXNqO/aVJIblNfTEWWWgDYfM"
   },
   {
     "variant": "argon2i",
@@ -387,7 +416,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "7d389ff2dafdab609ae3397fe0d34195466065b53cc80adea6a5efd4d3d45fd0"
+    "tag": "7d389ff2dafdab609ae3397fe0d34195466065b53cc80adea6a5efd4d3d45fd0",
+    "phc": "$argon2i$v=19$m=32,t=1,p=2$AgICAgICAgICAgICAgICAg$fTif8tr9q2Ca4zl/4NNBlUZgZbU8yArepqXv1NPUX9A"
   },
   {
     "variant": "argon2i",
@@ -400,7 +430,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "5386f49b6baff941fd9281a28b3bbee1646845a7ecbd97b303b77a152279bdd1"
+    "tag": "5386f49b6baff941fd9281a28b3bbee1646845a7ecbd97b303b77a152279bdd1",
+    "phc": "$argon2i$v=19$m=32,t=1,p=2$AgICAgICAgICAgICAgICAg$U4b0m2uv+UH9koGiizu+4WRoRafsvZezA7d6FSJ5vdE"
   },
   {
     "variant": "argon2i",
@@ -413,7 +444,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "ee536d0b9610117890b92cbf4dd9b402b55260bf93658680357fd86156a3d1b9"
+    "tag": "ee536d0b9610117890b92cbf4dd9b402b55260bf93658680357fd86156a3d1b9",
+    "phc": "$argon2i$v=19$m=32,t=1,p=2$AgICAgICAgICAgICAgICAg$7lNtC5YQEXiQuSy/Tdm0ArVSYL+TZYaANX/YYVaj0bk"
   },
   {
     "variant": "argon2i",
@@ -423,10 +455,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "cb7daa3e292093110035beb7b6b23233587d738425234021da004922549ecae5"
+    "tag": "2a6cb3b20f6c2b8edcb07b707b3206fc402177bde4dbedc87e716c08e596981f",
+    "phc": "$argon2i$v=19$m=32,t=2,p=2$AgICAgICAgI$Kmyzsg9sK47csHtwezIG/EAhd73k2+3IfnFsCOWWmB8"
   },
   {
     "variant": "argon2i",
@@ -436,10 +469,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "2adabf42e63e9c7eaf8c42413b9ab1a284e239ddd1e500aba222214f79db0e4c"
+    "tag": "42bbf471ea16ba5ee4bedc91f143208b68e36c31b24fffb8e7087e8ed6736052",
+    "phc": "$argon2i$v=19$m=32,t=2,p=2$AgICAgICAgI$Qrv0ceoWul7kvtyR8UMgi2jjbDGyT/+45wh+jtZzYFI"
   },
   {
     "variant": "argon2i",
@@ -449,10 +483,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "754a1c4c81cb77ec70eaebc33f24b74c675811ad6a00e613d3554f6d8c3c3c46"
+    "tag": "38fec6050b2b6d28f466234dd33c4f3b775d2fb145d3ee0155f4155289c05cce",
+    "phc": "$argon2i$v=19$m=32,t=2,p=2$AgICAgICAgI$OP7GBQsrbSj0ZiNN0zxPO3ddL7FF0+4BVfQVUonAXM4"
   },
   {
     "variant": "argon2i",
@@ -462,36 +497,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "b3a1ab313446ecea6303e019fac236e7b62fed278d6373c82d8a379ef5b41488"
-  },
-  {
-    "variant": "argon2i",
-    "version": 19,
-    "memory": 32,
-    "passes": 2,
-    "parallelism": 2,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "b518d296200d9d8f9ad20c06c75bfd3f092c8083535d9a5548040be056bf399d"
-  },
-  {
-    "variant": "argon2i",
-    "version": 19,
-    "memory": 32,
-    "passes": 2,
-    "parallelism": 2,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "040404040404040404040404",
-    "tag": "c6712a45b4b41aa8247724a4b4e792d20daac09d52de96ab01990ff209d44056"
+    "tag": "b6d90d5877ada79946c2c1acc413edaa5197b568352c927517fb0c796a221514",
+    "phc": "$argon2i$v=19$m=32,t=2,p=2$AgICAgICAgI$ttkNWHetp5lGwsGsxBPtqlGXtWg1LJJ1F/sMeWoiFRQ"
   },
   {
     "variant": "argon2i",
@@ -502,9 +512,38 @@
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
+    "secret": "",
+    "associated_data": "",
+    "tag": "b518d296200d9d8f9ad20c06c75bfd3f092c8083535d9a5548040be056bf399d",
+    "phc": "$argon2i$v=19$m=32,t=2,p=2$AgICAgICAgICAgICAgICAg$tRjSliANnY+a0gwGx1v9PwksgINTXZpVSAQL4Fa/OZ0"
+  },
+  {
+    "variant": "argon2i",
+    "version": 19,
+    "memory": 32,
+    "passes": 2,
+    "parallelism": 2,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
+    "associated_data": "040404040404040404040404",
+    "tag": "c6712a45b4b41aa8247724a4b4e792d20daac09d52de96ab01990ff209d44056",
+    "phc": "$argon2i$v=19$m=32,t=2,p=2$AgICAgICAgICAgICAgICAg$xnEqRbS0GqgkdySktOeS0g2qwJ1S3parAZkP8gnUQFY"
+  },
+  {
+    "variant": "argon2i",
+    "version": 19,
+    "memory": 32,
+    "passes": 2,
+    "parallelism": 2,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "b239d490d9a570322d5b174ebec62d43bb4f1e94866b2b73d495611b046783fd"
+    "tag": "b239d490d9a570322d5b174ebec62d43bb4f1e94866b2b73d495611b046783fd",
+    "phc": "$argon2i$v=19$m=32,t=2,p=2$AgICAgICAgICAgICAgICAg$sjnUkNmlcDItWxdOvsYtQ7tPHpSGaytz1JVhGwRng/0"
   },
   {
     "variant": "argon2i",
@@ -517,7 +556,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "d7f7af0d5ea15f995d8b4c2e9fb92a8cd4287882459a2a00e0679fd4eb51a74a"
+    "tag": "d7f7af0d5ea15f995d8b4c2e9fb92a8cd4287882459a2a00e0679fd4eb51a74a",
+    "phc": "$argon2i$v=19$m=32,t=2,p=2$AgICAgICAgICAgICAgICAg$1/evDV6hX5ldi0wun7kqjNQoeIJFmioA4Gef1OtRp0o"
   },
   {
     "variant": "argon2i",
@@ -527,10 +567,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "85f81b3724cf77fdff53c4328b58994cc7a9454e180176c532601faa37bab384"
+    "tag": "934000d2b5fdbaf85c0ba0cc3fcf987543a5e653e82a4a0bc73885d2d33c92e5",
+    "phc": "$argon2i$v=19$m=32,t=3,p=2$AgICAgICAgI$k0AA0rX9uvhcC6DMP8+YdUOl5lPoKkoLxziF0tM8kuU"
   },
   {
     "variant": "argon2i",
@@ -540,10 +581,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "f92e5c2845025916be458da35decd3d45a39d4614283e34f92dae89fd64b62f5"
+    "tag": "2176ae2244186a312d51af893d05ea8787782021bbc923e264f40d791ae68cfd",
+    "phc": "$argon2i$v=19$m=32,t=3,p=2$AgICAgICAgI$IXauIkQYajEtUa+JPQXqh4d4ICG7ySPiZPQNeRrmjP0"
   },
   {
     "variant": "argon2i",
@@ -553,10 +595,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "2f437b623a0f0487b3773071412cf6226df281d9e2902cab4f9b97c3a54d309a"
+    "tag": "0123492e8c4d8de06f88e0d2aae1c43cacd96cc6b7955d5493b679f66fe0dee1",
+    "phc": "$argon2i$v=19$m=32,t=3,p=2$AgICAgICAgI$ASNJLoxNjeBviODSquHEPKzZbMa3lV1Uk7Z59m/g3uE"
   },
   {
     "variant": "argon2i",
@@ -566,23 +609,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "7f78f8d3565957b77cd47b4d41dbc9abbd3e5e0d3e594a9ec817330d60bf841e"
-  },
-  {
-    "variant": "argon2i",
-    "version": 19,
-    "memory": 32,
-    "passes": 3,
-    "parallelism": 2,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "5a60ad4e736b105bac1df93a6b81a845f7c7b562243046afed9e6f874cecc200"
+    "tag": "9a1dbd57838a98efd17fcf20d6e377f715feeda3be1825d6a742f1f8675aa4bb",
+    "phc": "$argon2i$v=19$m=32,t=3,p=2$AgICAgICAgI$mh29V4OKmO/Rf88g1uN39xX+7aO+GCXWp0Lx+GdapLs"
   },
   {
     "variant": "argon2i",
@@ -594,8 +625,23 @@
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
+    "associated_data": "",
+    "tag": "5a60ad4e736b105bac1df93a6b81a845f7c7b562243046afed9e6f874cecc200",
+    "phc": "$argon2i$v=19$m=32,t=3,p=2$AgICAgICAgICAgICAgICAg$WmCtTnNrEFusHfk6a4GoRffHtWIkMEav7Z5vh0zswgA"
+  },
+  {
+    "variant": "argon2i",
+    "version": 19,
+    "memory": 32,
+    "passes": 3,
+    "parallelism": 2,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "e7ab3c098ba041bf95b3740f5af8c505a07953253b4b255fedd8855f019820e8"
+    "tag": "e7ab3c098ba041bf95b3740f5af8c505a07953253b4b255fedd8855f019820e8",
+    "phc": "$argon2i$v=19$m=32,t=3,p=2$AgICAgICAgICAgICAgICAg$56s8CYugQb+Vs3QPWvjFBaB5UyU7SyVf7diFXwGYIOg"
   },
   {
     "variant": "argon2i",
@@ -608,7 +654,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "58162030137eff1c6034747d78583755a395fc1171ac70484d85ce30544b75e6"
+    "tag": "58162030137eff1c6034747d78583755a395fc1171ac70484d85ce30544b75e6",
+    "phc": "$argon2i$v=19$m=32,t=3,p=2$AgICAgICAgICAgICAgICAg$WBYgMBN+/xxgNHR9eFg3VaOV/BFxrHBITYXOMFRLdeY"
   },
   {
     "variant": "argon2i",
@@ -621,7 +668,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "a1a7a805931d8b641096dc2b441fb917ccc299ab68bc70ec89e2fb55b1807c94"
+    "tag": "a1a7a805931d8b641096dc2b441fb917ccc299ab68bc70ec89e2fb55b1807c94",
+    "phc": "$argon2i$v=19$m=32,t=3,p=2$AgICAgICAgICAgICAgICAg$oaeoBZMdi2QQltwrRB+5F8zCmatovHDsieL7VbGAfJQ"
   },
   {
     "variant": "argon2i",
@@ -631,10 +679,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "eb548be0ce05ff4d78c1347f5d62fb67a8b3ddbd1e8708d209e0eeab97bd4de3"
+    "tag": "33105b5fbd96f4aead203fecd5cae7185f42369f77914bdc1b3a15ef5f782668",
+    "phc": "$argon2i$v=19$m=32,t=1,p=4$AgICAgICAgI$MxBbX72W9K6tID/s1crnGF9CNp93kUvcGzoV7194Jmg"
   },
   {
     "variant": "argon2i",
@@ -644,10 +693,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "e682437db2a61c0ab1807032d149553ab7406d0adbe347efd9ec23655e2094f5"
+    "tag": "fde6e7a489c8d75e657fd99aa59bb296b9baeb97d2128c1ef3b99c756aeca3e8",
+    "phc": "$argon2i$v=19$m=32,t=1,p=4$AgICAgICAgI$/ebnpInI115lf9mapZuylrm665fSEowe87mcdWrso+g"
   },
   {
     "variant": "argon2i",
@@ -657,10 +707,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "10e4a394eb8c8abfbaa5bb21347081d860a3447aa2d903571a5ba406060db3f9"
+    "tag": "33e72175c4e3e4f67a3d09b2611bb9c08c5a176ed518121131a2538cde569f5f",
+    "phc": "$argon2i$v=19$m=32,t=1,p=4$AgICAgICAgI$M+chdcTj5PZ6PQmyYRu5wIxaF27VGBIRMaJTjN5Wn18"
   },
   {
     "variant": "argon2i",
@@ -670,10 +721,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "20f30f4cdf98fbee02badb79386c68c6151c756d8d6f82e5f72a79c5d98e1beb"
+    "tag": "1a3df7eb238d29d44edb223ba876205a191e07f4ddc71212f828341d39f795dd",
+    "phc": "$argon2i$v=19$m=32,t=1,p=4$AgICAgICAgI$Gj336yONKdRO2yI7qHYgWhkeB/TdxxIS+Cg0HTn3ld0"
   },
   {
     "variant": "argon2i",
@@ -686,7 +738,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "d93972b7d98bef827fc55506322f94e833219da4d32ac2f7a979fbe47ea0626f"
+    "tag": "d93972b7d98bef827fc55506322f94e833219da4d32ac2f7a979fbe47ea0626f",
+    "phc": "$argon2i$v=19$m=32,t=1,p=4$AgICAgICAgICAgICAgICAg$2Tlyt9mL74J/xVUGMi+U6DMhnaTTKsL3qXn75H6gYm8"
   },
   {
     "variant": "argon2i",
@@ -699,7 +752,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "e4143270f3924496ab7ad7f3511fa1b70d41ac924dabb30be65939494e5c76e1"
+    "tag": "e4143270f3924496ab7ad7f3511fa1b70d41ac924dabb30be65939494e5c76e1",
+    "phc": "$argon2i$v=19$m=32,t=1,p=4$AgICAgICAgICAgICAgICAg$5BQycPOSRJaretfzUR+htw1BrJJNq7ML5lk5SU5cduE"
   },
   {
     "variant": "argon2i",
@@ -712,7 +766,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "6a1185138826ee9231bf59c20094de199b06bea500ae455c2a8529239b3d1662"
+    "tag": "6a1185138826ee9231bf59c20094de199b06bea500ae455c2a8529239b3d1662",
+    "phc": "$argon2i$v=19$m=32,t=1,p=4$AgICAgICAgICAgICAgICAg$ahGFE4gm7pIxv1nCAJTeGZsGvqUArkVcKoUpI5s9FmI"
   },
   {
     "variant": "argon2i",
@@ -725,7 +780,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "2398541035fc2c311e1b33c53f841bb7c7d6ef9db42c6e8a56c364910e21d2fe"
+    "tag": "2398541035fc2c311e1b33c53f841bb7c7d6ef9db42c6e8a56c364910e21d2fe",
+    "phc": "$argon2i$v=19$m=32,t=1,p=4$AgICAgICAgICAgICAgICAg$I5hUEDX8LDEeGzPFP4Qbt8fW7520LG6KVsNkkQ4h0v4"
   },
   {
     "variant": "argon2i",
@@ -735,10 +791,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "5ab952dbf0b7c1d4d847f195ff18347f063a633391c567633a23c189dad0b7da"
+    "tag": "22d6bf0e837747cc2805f81485200d560485a2db801d6f483faab711070e3e46",
+    "phc": "$argon2i$v=19$m=32,t=2,p=4$AgICAgICAgI$Ita/DoN3R8woBfgUhSANVgSFotuAHW9IP6q3EQcOPkY"
   },
   {
     "variant": "argon2i",
@@ -748,10 +805,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "2df96eeb8428084ebf982ecfcee68d15a83d7f5040aec77795b23e7726ee9e18"
+    "tag": "14f31add2f688446ab928c6710b93707040ea1687b9aceb9d241349a1a737709",
+    "phc": "$argon2i$v=19$m=32,t=2,p=4$AgICAgICAgI$FPMa3S9ohEarkoxnELk3BwQOoWh7ms650kE0mhpzdwk"
   },
   {
     "variant": "argon2i",
@@ -761,10 +819,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "ede93bfb9df6a43b8ca7d5bfa20d846c75bd15fbf9bddd3fe2ebdf1a0c019b7e"
+    "tag": "087b81a8f29cd67a2a8fc1c63df7e0f03bf078d3cef28db2049bc64b4a13acd0",
+    "phc": "$argon2i$v=19$m=32,t=2,p=4$AgICAgICAgI$CHuBqPKc1noqj8HGPffg8DvweNPO8o2yBJvGS0oTrNA"
   },
   {
     "variant": "argon2i",
@@ -774,36 +833,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "7bd1efa67167ca5dbf69ccd6bdcc4db35e3c48b51e57c09b43170c3edba8650a"
-  },
-  {
-    "variant": "argon2i",
-    "version": 19,
-    "memory": 32,
-    "passes": 2,
-    "parallelism": 4,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "d23b72755ec12d99916f8a7f9c2624e899217c98d1db4d29dc326429751bb631"
-  },
-  {
-    "variant": "argon2i",
-    "version": 19,
-    "memory": 32,
-    "passes": 2,
-    "parallelism": 4,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "040404040404040404040404",
-    "tag": "d37acfae8a19ed8a5395ff4b2046207cd355178a82d8fbecb7e9dcda4d3fe13a"
+    "tag": "1d145cfaded00b18e3e4d4b33a27a8139d9c0f74f9a26640da8164c74df9cf24",
+    "phc": "$argon2i$v=19$m=32,t=2,p=4$AgICAgICAgI$HRRc+t7QCxjj5NSzOieoE52cD3T5omZA2oFkx035zyQ"
   },
   {
     "variant": "argon2i",
@@ -814,9 +848,38 @@
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
+    "secret": "",
+    "associated_data": "",
+    "tag": "d23b72755ec12d99916f8a7f9c2624e899217c98d1db4d29dc326429751bb631",
+    "phc": "$argon2i$v=19$m=32,t=2,p=4$AgICAgICAgICAgICAgICAg$0jtydV7BLZmRb4p/nCYk6JkhfJjR200p3DJkKXUbtjE"
+  },
+  {
+    "variant": "argon2i",
+    "version": 19,
+    "memory": 32,
+    "passes": 2,
+    "parallelism": 4,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
+    "associated_data": "040404040404040404040404",
+    "tag": "d37acfae8a19ed8a5395ff4b2046207cd355178a82d8fbecb7e9dcda4d3fe13a",
+    "phc": "$argon2i$v=19$m=32,t=2,p=4$AgICAgICAgICAgICAgICAg$03rProoZ7YpTlf9LIEYgfNNVF4qC2Pvst+nc2k0/4To"
+  },
+  {
+    "variant": "argon2i",
+    "version": 19,
+    "memory": 32,
+    "passes": 2,
+    "parallelism": 4,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "8e5567ed7f177c73d1050773fbe747e59958890712e431dbb64a577870fef05e"
+    "tag": "8e5567ed7f177c73d1050773fbe747e59958890712e431dbb64a577870fef05e",
+    "phc": "$argon2i$v=19$m=32,t=2,p=4$AgICAgICAgICAgICAgICAg$jlVn7X8XfHPRBQdz++dH5ZlYiQcS5DHbtkpXeHD+8F4"
   },
   {
     "variant": "argon2i",
@@ -829,7 +892,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "13bf9e36a78fb194ba7f14d927e049270deba164b57808f76cfedf7f38123473"
+    "tag": "13bf9e36a78fb194ba7f14d927e049270deba164b57808f76cfedf7f38123473",
+    "phc": "$argon2i$v=19$m=32,t=2,p=4$AgICAgICAgICAgICAgICAg$E7+eNqePsZS6fxTZJ+BJJw3roWS1eAj3bP7ffzgSNHM"
   },
   {
     "variant": "argon2i",
@@ -839,10 +903,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "5d0f8cae116ec1f51ee5b36d437aa0b5dfd8b445d02b60b994add7d621da8dc2"
+    "tag": "273fb9919aae4ad5eea2535bc801529274903bf7021eb9959a72f17605df087d",
+    "phc": "$argon2i$v=19$m=32,t=3,p=4$AgICAgICAgI$Jz+5kZquStXuolNbyAFSknSQO/cCHrmVmnLxdgXfCH0"
   },
   {
     "variant": "argon2i",
@@ -852,10 +917,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "5f45753f91550fcf6d113b23fc7cc6c056c12ccdd0eefb39662d22e24a2124fb"
+    "tag": "394b2c1719334de3a85a3c0653b26b90a081d118267575b591db92bb15d8fc03",
+    "phc": "$argon2i$v=19$m=32,t=3,p=4$AgICAgICAgI$OUssFxkzTeOoWjwGU7JrkKCB0RgmdXW1kduSuxXY/AM"
   },
   {
     "variant": "argon2i",
@@ -865,10 +931,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "e157e90f2dbdaf8d4145e9336f630245163f4a2af4cca9233642408ab6f9eff2"
+    "tag": "8a7585630528542277065701cf7a358c5dcb47398e467b4ad5df4ebd2de836dd",
+    "phc": "$argon2i$v=19$m=32,t=3,p=4$AgICAgICAgI$inWFYwUoVCJ3BlcBz3o1jF3LRzmORntK1d9OvS3oNt0"
   },
   {
     "variant": "argon2i",
@@ -878,10 +945,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "fb5fcda40856c60ceb25e8868337f79ea36fd379ce7a17e0ab0cba83225d3cb4"
+    "tag": "f1cfbc524b2a75f22188fa25e2762710615310aac6f248b70fee36e5e74ddcac",
+    "phc": "$argon2i$v=19$m=32,t=3,p=4$AgICAgICAgI$8c+8UksqdfIhiPol4nYnEGFTEKrG8ki3D+425edN3Kw"
   },
   {
     "variant": "argon2i",
@@ -894,7 +962,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "a9a7510e6db4d588ba3414cd0e094d480d683f97b9ccb612a544fe8ef65ba8e0"
+    "tag": "a9a7510e6db4d588ba3414cd0e094d480d683f97b9ccb612a544fe8ef65ba8e0",
+    "phc": "$argon2i$v=19$m=32,t=3,p=4$AgICAgICAgICAgICAgICAg$qadRDm201Yi6NBTNDglNSA1oP5e5zLYSpUT+jvZbqOA"
   },
   {
     "variant": "argon2i",
@@ -907,7 +976,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "67eed6b3048953c22ef68fbd5585dc90c36c49ecb230fd58ab9e693ecd825b58"
+    "tag": "67eed6b3048953c22ef68fbd5585dc90c36c49ecb230fd58ab9e693ecd825b58",
+    "phc": "$argon2i$v=19$m=32,t=3,p=4$AgICAgICAgICAgICAgICAg$Z+7WswSJU8Iu9o+9VYXckMNsSeyyMP1Yq55pPs2CW1g"
   },
   {
     "variant": "argon2i",
@@ -920,7 +990,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "b4635748266a51f0329a998cfd45d8a8a4ec5a9401b2a6ce31f0d43ace11461f"
+    "tag": "b4635748266a51f0329a998cfd45d8a8a4ec5a9401b2a6ce31f0d43ace11461f",
+    "phc": "$argon2i$v=19$m=32,t=3,p=4$AgICAgICAgICAgICAgICAg$tGNXSCZqUfAympmM/UXYqKTsWpQBsqbOMfDUOs4RRh8"
   },
   {
     "variant": "argon2i",
@@ -933,59 +1004,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "c814d9d1dc7f37aa13f0d77f2494bda1c8de6b016dd388d29952a4c4672b6ce8"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 1,
-    "parallelism": 1,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
-    "secret": "",
-    "associated_data": "",
-    "tag": "c4a5d590a65d520238e9b7746477f2952e7756849ad0bb17d72fc647d29abb9c"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 1,
-    "parallelism": 1,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
-    "secret": "",
-    "associated_data": "040404040404040404040404",
-    "tag": "2db2323ee59faa84f7fb2ae57db94dec89fc946bb4ba1acfd7f1ed95389eb383"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 1,
-    "parallelism": 1,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
-    "secret": "0303030303030303",
-    "associated_data": "",
-    "tag": "a1b0fb85013ea7fa1503a570cfb690ed85a134966cf269cabc1993f18d09fecf"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 1,
-    "parallelism": 1,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
-    "secret": "0303030303030303",
-    "associated_data": "040404040404040404040404",
-    "tag": "ae90082d59dbe2e77c84fd44a7b75a9726c9c45f50e1319d783ee00331b668aa"
+    "tag": "c814d9d1dc7f37aa13f0d77f2494bda1c8de6b016dd388d29952a4c4672b6ce8",
+    "phc": "$argon2i$v=19$m=32,t=3,p=4$AgICAgICAgICAgICAgICAg$yBTZ0dx/N6oT8Nd/JJS9ocjeawFt04jSmVKkxGcrbOg"
   },
   {
     "variant": "argon2id",
@@ -995,10 +1015,67 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "0202020202020202",
+    "secret": "",
+    "associated_data": "",
+    "tag": "194561ca503903d9d75cb1b1b9026ab42a6f62a70a41574e0d7c5b5496bc2d52",
+    "phc": "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgI$GUVhylA5A9nXXLGxuQJqtCpvYqcKQVdODXxbVJa8LVI"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 1,
+    "parallelism": 1,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "0202020202020202",
+    "secret": "",
+    "associated_data": "040404040404040404040404",
+    "tag": "0e2552685d205dd4599ac7d95981ae87bdcd6a5f6e1c67457522c834129bd307",
+    "phc": "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgI$DiVSaF0gXdRZmsfZWYGuh73Nal9uHGdFdSLINBKb0wc"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 1,
+    "parallelism": 1,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "0202020202020202",
+    "secret": "0303030303030303",
+    "associated_data": "",
+    "tag": "4223fb3668fecdfd65a49c27c201968a63655c7bb2ae3fc18fae7693e81b3261",
+    "phc": "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgI$QiP7Nmj+zf1lpJwnwgGWimNlXHuyrj/Bj652k+gbMmE"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 1,
+    "parallelism": 1,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "0202020202020202",
+    "secret": "0303030303030303",
+    "associated_data": "040404040404040404040404",
+    "tag": "a465673c33f2918c59bd7734b9c60bbe794f27b5a5b0b3f86a6d9be5ff7bc2cf",
+    "phc": "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgI$pGVnPDPykYxZvXc0ucYLvnlPJ7WlsLP4am2b5f97ws8"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 1,
+    "parallelism": 1,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "0778bc9723d7a0f59ac46552317707f7583958b97ae63a76ad8ef11e198227e2"
+    "tag": "0778bc9723d7a0f59ac46552317707f7583958b97ae63a76ad8ef11e198227e2",
+    "phc": "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$B3i8lyPXoPWaxGVSMXcH91g5WLl65jp2rY7xHhmCJ+I"
   },
   {
     "variant": "argon2id",
@@ -1011,7 +1088,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "9a2a43f881d67d541a16ebd2798681196ae6c2544e3fc09394df22e2c852ab74"
+    "tag": "9a2a43f881d67d541a16ebd2798681196ae6c2544e3fc09394df22e2c852ab74",
+    "phc": "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$mipD+IHWfVQaFuvSeYaBGWrmwlROP8CTlN8i4shSq3Q"
   },
   {
     "variant": "argon2id",
@@ -1024,7 +1102,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "e437610ab8fe6760977d6b9d820c74a25b6a620228bb63a82e5fc8f5af040fd2"
+    "tag": "e437610ab8fe6760977d6b9d820c74a25b6a620228bb63a82e5fc8f5af040fd2",
+    "phc": "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$5DdhCrj+Z2CXfWudggx0oltqYgIou2OoLl/I9a8ED9I"
   },
   {
     "variant": "argon2id",
@@ -1037,7 +1116,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "99dfcfc28976939da297094434d86fd00c949a0f318c22f0cbb469aaa87218ba"
+    "tag": "99dfcfc28976939da297094434d86fd00c949a0f318c22f0cbb469aaa87218ba",
+    "phc": "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$md/Pwol2k52ilwlENNhv0AyUmg8xjCLwy7RpqqhyGLo"
   },
   {
     "variant": "argon2id",
@@ -1047,10 +1127,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "c46811b926d98b9ddf3f37b3418bf8192f7ef25859e5ddae686f17d74b5bc698"
+    "tag": "1155afa370d513e38b277488330cac2fe9803c588ef8c7da2a44a420f0d3af8d",
+    "phc": "$argon2id$v=19$m=32,t=2,p=1$AgICAgICAgI$EVWvo3DVE+OLJ3SIMwysL+mAPFiO+MfaKkSkIPDTr40"
   },
   {
     "variant": "argon2id",
@@ -1060,10 +1141,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "7d591472a637c129886110c744fe99c2434b8a54c4a86ac0eb38fab26a4a8f17"
+    "tag": "3d53f0248005fc57051b85a6786e569000ee9074b12ee013b49cc2d8176e3e96",
+    "phc": "$argon2id$v=19$m=32,t=2,p=1$AgICAgICAgI$PVPwJIAF/FcFG4WmeG5WkADukHSxLuATtJzC2BduPpY"
   },
   {
     "variant": "argon2id",
@@ -1073,10 +1155,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "9789c026a3d56036ddf20a1c1b4e59085d84de26c261ddc94291e129d04be30d"
+    "tag": "b4616c9ec31a66021a5b42891c6987bb63b41c364a39657c7e9d1d7eb8792db8",
+    "phc": "$argon2id$v=19$m=32,t=2,p=1$AgICAgICAgI$tGFsnsMaZgIaW0KJHGmHu2O0HDZKOWV8fp0dfrh5Lbg"
   },
   {
     "variant": "argon2id",
@@ -1086,23 +1169,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "9876df2f1c2a32fc46cce9c0bf89a3225263df3def0353a537184427b7de65a9"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 2,
-    "parallelism": 1,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "269faa8db582cc87160ac7551e8e130a1f41e1a23de90ce21fab9a26216cd8bc"
+    "tag": "f9fc29be5d157dccf0e3b72af46ba5b199e195c7af2c21800c539dd6e5b1849b",
+    "phc": "$argon2id$v=19$m=32,t=2,p=1$AgICAgICAgI$+fwpvl0Vfczw47cq9GulsZnhlcevLCGADFOd1uWxhJs"
   },
   {
     "variant": "argon2id",
@@ -1114,8 +1185,23 @@
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
+    "associated_data": "",
+    "tag": "269faa8db582cc87160ac7551e8e130a1f41e1a23de90ce21fab9a26216cd8bc",
+    "phc": "$argon2id$v=19$m=32,t=2,p=1$AgICAgICAgICAgICAgICAg$Jp+qjbWCzIcWCsdVHo4TCh9B4aI96QziH6uaJiFs2Lw"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 2,
+    "parallelism": 1,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "2822c65045809ce72c1259f1c84d11479def7af87d40ba18813281353144084e"
+    "tag": "2822c65045809ce72c1259f1c84d11479def7af87d40ba18813281353144084e",
+    "phc": "$argon2id$v=19$m=32,t=2,p=1$AgICAgICAgICAgICAgICAg$KCLGUEWAnOcsElnxyE0RR53vevh9QLoYgTKBNTFECE4"
   },
   {
     "variant": "argon2id",
@@ -1128,7 +1214,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "4ad0f77efae13919b2bc650c3cb3760e5312a98b7a361d48ed37d3bdd98de5a3"
+    "tag": "4ad0f77efae13919b2bc650c3cb3760e5312a98b7a361d48ed37d3bdd98de5a3",
+    "phc": "$argon2id$v=19$m=32,t=2,p=1$AgICAgICAgICAgICAgICAg$StD3fvrhORmyvGUMPLN2DlMSqYt6Nh1I7TfTvdmN5aM"
   },
   {
     "variant": "argon2id",
@@ -1141,7 +1228,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "6c00b7a900e5004c24469ec1e7c01a99b2b8f77375d4eca7d8084211d3236b7a"
+    "tag": "6c00b7a900e5004c24469ec1e7c01a99b2b8f77375d4eca7d8084211d3236b7a",
+    "phc": "$argon2id$v=19$m=32,t=2,p=1$AgICAgICAgICAgICAgICAg$bAC3qQDlAEwkRp7B58AambK493N11Oyn2AhCEdMja3o"
   },
   {
     "variant": "argon2id",
@@ -1151,10 +1239,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "8ecd35bacd04ba5d3fa2ec613d05d547e41452c35b8473d8591194c28b27cf4e"
+    "tag": "173e53d6210d6913a9a5be7546f8b7f567b4f038ad64e2fec824deaa90600e02",
+    "phc": "$argon2id$v=19$m=32,t=3,p=1$AgICAgICAgI$Fz5T1iENaROppb51Rvi39We08DitZOL+yCTeqpBgDgI"
   },
   {
     "variant": "argon2id",
@@ -1164,10 +1253,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "63ad0d2340e46ff1d693dd29871bb31d2029476234183ee288355efc7394c86e"
+    "tag": "684d4b4da0e0835c51ac8c13e0775b4de52e2be0aea26496cbcd07497ab85d97",
+    "phc": "$argon2id$v=19$m=32,t=3,p=1$AgICAgICAgI$aE1LTaDgg1xRrIwT4HdbTeUuK+CuomSWy80HSXq4XZc"
   },
   {
     "variant": "argon2id",
@@ -1177,10 +1267,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "a794b091012149fb4aa2707aca6757d3ba529089dc1845d0da714ef7f6431e8b"
+    "tag": "81d31e4e16e93c041ab03fc6d4029b5d1f1a54057795338261e1402916a4ab65",
+    "phc": "$argon2id$v=19$m=32,t=3,p=1$AgICAgICAgI$gdMeThbpPAQasD/G1AKbXR8aVAV3lTOCYeFAKRakq2U"
   },
   {
     "variant": "argon2id",
@@ -1190,23 +1281,11 @@
     "parallelism": 1,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "a242ffb4e053b681ca7d2fec9a03b28d7057dde9f5b3aadc99bb2ba241c62982"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 3,
-    "parallelism": 1,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "30e0b44b7e23423b7282859ea36f02825b5828dde3c25f124d59d42d7235e132"
+    "tag": "1ae4617210c02381edbcbfd979381236cebce6e6d47cd9b241c33683e9c41fd5",
+    "phc": "$argon2id$v=19$m=32,t=3,p=1$AgICAgICAgI$GuRhchDAI4HtvL/ZeTgSNs685ubUfNmyQcM2g+nEH9U"
   },
   {
     "variant": "argon2id",
@@ -1218,8 +1297,23 @@
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
+    "associated_data": "",
+    "tag": "30e0b44b7e23423b7282859ea36f02825b5828dde3c25f124d59d42d7235e132",
+    "phc": "$argon2id$v=19$m=32,t=3,p=1$AgICAgICAgICAgICAgICAg$MOC0S34jQjtygoWeo28CgltYKN3jwl8STVnULXI14TI"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 3,
+    "parallelism": 1,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "d8675e9c6971fb92c8ca2a3ff573e58803494df0b02772e6de75f15093e2a10a"
+    "tag": "d8675e9c6971fb92c8ca2a3ff573e58803494df0b02772e6de75f15093e2a10a",
+    "phc": "$argon2id$v=19$m=32,t=3,p=1$AgICAgICAgICAgICAgICAg$2GdenGlx+5LIyio/9XPliANJTfCwJ3Lm3nXxUJPioQo"
   },
   {
     "variant": "argon2id",
@@ -1232,7 +1326,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "eed5f7e93bd25c51a3bb9f33eaa4fdbd9edc48103589423113b43ce9f14a608d"
+    "tag": "eed5f7e93bd25c51a3bb9f33eaa4fdbd9edc48103589423113b43ce9f14a608d",
+    "phc": "$argon2id$v=19$m=32,t=3,p=1$AgICAgICAgICAgICAgICAg$7tX36TvSXFGju58z6qT9vZ7cSBA1iUIxE7Q86fFKYI0"
   },
   {
     "variant": "argon2id",
@@ -1245,7 +1340,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "3c944a05c2fc9c7e9432e506c83e0a5e950a872e8d1e378ac99a8e4de6bbaba5"
+    "tag": "3c944a05c2fc9c7e9432e506c83e0a5e950a872e8d1e378ac99a8e4de6bbaba5",
+    "phc": "$argon2id$v=19$m=32,t=3,p=1$AgICAgICAgICAgICAgICAg$PJRKBcL8nH6UMuUGyD4KXpUKhy6NHjeKyZqOTea7q6U"
   },
   {
     "variant": "argon2id",
@@ -1255,10 +1351,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "aaaa97d557568ec3e3e268a9e9bd91a998a2b00d2bb7bac9829a9df3dedcb939"
+    "tag": "700455938ee6fcf284d4ddcdcbdb9dfbc446cc63d35bb1c77b93516c297b74d7",
+    "phc": "$argon2id$v=19$m=32,t=1,p=2$AgICAgICAgI$cARVk47m/PKE1N3Ny9ud+8RGzGPTW7HHe5NRbCl7dNc"
   },
   {
     "variant": "argon2id",
@@ -1268,10 +1365,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "fdd9833f4a92e270edbe3219cc56d385a97edd522cd471a3d659d0aff3b2f052"
+    "tag": "eabdf2c5b092fc4ac12b5197eb30bdad2bb4abbdc7fd2a71213c343a2f8fb866",
+    "phc": "$argon2id$v=19$m=32,t=1,p=2$AgICAgICAgI$6r3yxbCS/ErBK1GX6zC9rSu0q73H/SpxITw0Oi+PuGY"
   },
   {
     "variant": "argon2id",
@@ -1281,10 +1379,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "943540c21090784016c566da8bf9e6be040ae03e7dd183e433260f6c3c8768ae"
+    "tag": "ced95bc0280b9597d5dbbcafe167a9685e4b62690a2160dbe01467c7c4c132db",
+    "phc": "$argon2id$v=19$m=32,t=1,p=2$AgICAgICAgI$ztlbwCgLlZfV27yv4WepaF5LYmkKIWDb4BRnx8TBMts"
   },
   {
     "variant": "argon2id",
@@ -1294,23 +1393,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "b45f71a82bff38e793f805a6a41c5de458ef6a2da26e6c997719178797f70638"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 1,
-    "parallelism": 2,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "e8f7d9b1741fddcba84eb63bbf07ac418324540a2c958277f92b8bfcaad1d35c"
+    "tag": "722474d2db44667deedb89876ad2a49e070aec298a5ddea4bf78d26a0d8dbf51",
+    "phc": "$argon2id$v=19$m=32,t=1,p=2$AgICAgICAgI$ciR00ttEZn3u24mHatKkngcK7CmKXd6kv3jSag2Nv1E"
   },
   {
     "variant": "argon2id",
@@ -1322,8 +1409,23 @@
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
+    "associated_data": "",
+    "tag": "e8f7d9b1741fddcba84eb63bbf07ac418324540a2c958277f92b8bfcaad1d35c",
+    "phc": "$argon2id$v=19$m=32,t=1,p=2$AgICAgICAgICAgICAgICAg$6PfZsXQf3cuoTrY7vwesQYMkVAoslYJ3+SuL/KrR01w"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 1,
+    "parallelism": 2,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "4700ba9c76d984e07dc6937ba5b02a25f2e27dfc01ac7f24a56fabdaa5a95373"
+    "tag": "4700ba9c76d984e07dc6937ba5b02a25f2e27dfc01ac7f24a56fabdaa5a95373",
+    "phc": "$argon2id$v=19$m=32,t=1,p=2$AgICAgICAgICAgICAgICAg$RwC6nHbZhOB9xpN7pbAqJfLiffwBrH8kpW+r2qWpU3M"
   },
   {
     "variant": "argon2id",
@@ -1336,7 +1438,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "191319a678840ad5fd6c15198ba11d922db202bc5dc179a4ff6ec24e951d2064"
+    "tag": "191319a678840ad5fd6c15198ba11d922db202bc5dc179a4ff6ec24e951d2064",
+    "phc": "$argon2id$v=19$m=32,t=1,p=2$AgICAgICAgICAgICAgICAg$GRMZpniECtX9bBUZi6Edki2yArxdwXmk/27CTpUdIGQ"
   },
   {
     "variant": "argon2id",
@@ -1349,7 +1452,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "c28b359667629e8b95029cc5425c2f6f0ab3a8db6a0a0db321d1f9129bcec2b8"
+    "tag": "c28b359667629e8b95029cc5425c2f6f0ab3a8db6a0a0db321d1f9129bcec2b8",
+    "phc": "$argon2id$v=19$m=32,t=1,p=2$AgICAgICAgICAgICAgICAg$wos1lmdinouVApzFQlwvbwqzqNtqCg2zIdH5EpvOwrg"
   },
   {
     "variant": "argon2id",
@@ -1359,10 +1463,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "425046dafbc8b90bc62a967dea7e762dffdf0fc968005725aa64d74c128071f7"
+    "tag": "fc17853c740265b7b373eaf05aaa5c722707faefb7f4104ed17e54084ee06225",
+    "phc": "$argon2id$v=19$m=32,t=2,p=2$AgICAgICAgI$/BeFPHQCZbezc+rwWqpccicH+u+39BBO0X5UCE7gYiU"
   },
   {
     "variant": "argon2id",
@@ -1372,10 +1477,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "3d1d39d76b2871bde63dd4cf5a019f3ed80a09b4bdf2466e7db95476eebfea30"
+    "tag": "f51ebce5bc13cc040d2aca2ec15f23b5ffd170d0326d6c0c0fa316d0441f37be",
+    "phc": "$argon2id$v=19$m=32,t=2,p=2$AgICAgICAgI$9R685bwTzAQNKsouwV8jtf/RcNAybWwMD6MW0EQfN74"
   },
   {
     "variant": "argon2id",
@@ -1385,10 +1491,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "132ef5d64110eea48c6dfcee0a9c44df6db78eddb2b5e426ed842115a59df2e7"
+    "tag": "8edc8edca251298a2d27cf104ef84d313695faebac8d272a4eefdbd6a981ad00",
+    "phc": "$argon2id$v=19$m=32,t=2,p=2$AgICAgICAgI$jtyO3KJRKYotJ88QTvhNMTaV+uusjScqTu/b1qmBrQA"
   },
   {
     "variant": "argon2id",
@@ -1398,23 +1505,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "0efffc91100613e21045318fce6ec1a04e57c578feedd329548ddbeeb84a649b"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 2,
-    "parallelism": 2,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "7fd7d497b1848ec83a6be6899c6dd1ae045ea9f1db68a7666b2d3c6d606baedc"
+    "tag": "24207c0c0ae3b0054e612102f3c54115fcaf21a7f1a5b79962f18da5636f26ef",
+    "phc": "$argon2id$v=19$m=32,t=2,p=2$AgICAgICAgI$JCB8DArjsAVOYSEC88VBFfyvIafxpbeZYvGNpWNvJu8"
   },
   {
     "variant": "argon2id",
@@ -1426,8 +1521,23 @@
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
+    "associated_data": "",
+    "tag": "7fd7d497b1848ec83a6be6899c6dd1ae045ea9f1db68a7666b2d3c6d606baedc",
+    "phc": "$argon2id$v=19$m=32,t=2,p=2$AgICAgICAgICAgICAgICAg$f9fUl7GEjsg6a+aJnG3RrgReqfHbaKdmay08bWBrrtw"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 2,
+    "parallelism": 2,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "439caa05e3220f9e03e4f42b80d004ec99744321b69fe6dfcbfc94927ddcc9f6"
+    "tag": "439caa05e3220f9e03e4f42b80d004ec99744321b69fe6dfcbfc94927ddcc9f6",
+    "phc": "$argon2id$v=19$m=32,t=2,p=2$AgICAgICAgICAgICAgICAg$Q5yqBeMiD54D5PQrgNAE7Jl0QyG2n+bfy/yUkn3cyfY"
   },
   {
     "variant": "argon2id",
@@ -1440,7 +1550,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "e3be461f022065c0b88e6bc6abc96ce4e48315b62dc69bc8b75ae9a7ba77ea9e"
+    "tag": "e3be461f022065c0b88e6bc6abc96ce4e48315b62dc69bc8b75ae9a7ba77ea9e",
+    "phc": "$argon2id$v=19$m=32,t=2,p=2$AgICAgICAgICAgICAgICAg$475GHwIgZcC4jmvGq8ls5OSDFbYtxpvIt1rpp7p36p4"
   },
   {
     "variant": "argon2id",
@@ -1453,7 +1564,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "f39e6c06b69c37f6effe256616dfa040e8b9feeca7b6ac3ee8c021278f5c13d2"
+    "tag": "f39e6c06b69c37f6effe256616dfa040e8b9feeca7b6ac3ee8c021278f5c13d2",
+    "phc": "$argon2id$v=19$m=32,t=2,p=2$AgICAgICAgICAgICAgICAg$855sBracN/bv/iVmFt+gQOi5/uyntqw+6MAhJ49cE9I"
   },
   {
     "variant": "argon2id",
@@ -1463,10 +1575,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "e6bd5c75d8cd9cbf17f2ceeb4491284f053a3faba6a74a83bab9095512babba9"
+    "tag": "b24902a5fe705b660f9d26dc52a2e27c3c6ab533a1e520a396c9cd6a59f36279",
+    "phc": "$argon2id$v=19$m=32,t=3,p=2$AgICAgICAgI$skkCpf5wW2YPnSbcUqLifDxqtTOh5SCjlsnNalnzYnk"
   },
   {
     "variant": "argon2id",
@@ -1476,10 +1589,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "b010889c1e39efe527bcd5477766d1d7e738d985b69b68e661f76f8f9c3d23f0"
+    "tag": "f325b2129176c5093ce3b69eecc246536b85b5939a558548e7f7bf8d8d792ef4",
+    "phc": "$argon2id$v=19$m=32,t=3,p=2$AgICAgICAgI$8yWyEpF2xQk847ae7MJGU2uFtZOaVYVI5/e/jY15LvQ"
   },
   {
     "variant": "argon2id",
@@ -1489,10 +1603,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "99615e68bebeff9679af5b9341faa2f87792e4756c0f7ba79dbb259ad143b946"
+    "tag": "db0a1d601b391a07f6af550a482704b20d0e29926be63d43d2589941b2e1f649",
+    "phc": "$argon2id$v=19$m=32,t=3,p=2$AgICAgICAgI$2wodYBs5Ggf2r1UKSCcEsg0OKZJr5j1D0liZQbLh9kk"
   },
   {
     "variant": "argon2id",
@@ -1502,10 +1617,11 @@
     "parallelism": 2,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "57522a6b9dc7daa198333e70e54c4bff879b0ae11ddc6fc6864335cc5ae5865d"
+    "tag": "481afc0b4ed76952296bed9c6e0b0265899afeb697e0decf26986003a313a3fd",
+    "phc": "$argon2id$v=19$m=32,t=3,p=2$AgICAgICAgI$SBr8C07XaVIpa+2cbgsCZYma/raX4N7PJphgA6MTo/0"
   },
   {
     "variant": "argon2id",
@@ -1518,7 +1634,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "acb24abe5d47e7c4d405f8454e263bdbac7261e87a686675c53f44ec3037590f"
+    "tag": "acb24abe5d47e7c4d405f8454e263bdbac7261e87a686675c53f44ec3037590f",
+    "phc": "$argon2id$v=19$m=32,t=3,p=2$AgICAgICAgICAgICAgICAg$rLJKvl1H58TUBfhFTiY726xyYeh6aGZ1xT9E7DA3WQ8"
   },
   {
     "variant": "argon2id",
@@ -1531,7 +1648,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "fd5b76f77848602b77c0a18167cc86d134ac80ab421d28ec1a5f0fad8137dc1c"
+    "tag": "fd5b76f77848602b77c0a18167cc86d134ac80ab421d28ec1a5f0fad8137dc1c",
+    "phc": "$argon2id$v=19$m=32,t=3,p=2$AgICAgICAgICAgICAgICAg$/Vt293hIYCt3wKGBZ8yG0TSsgKtCHSjsGl8PrYE33Bw"
   },
   {
     "variant": "argon2id",
@@ -1544,7 +1662,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "cca3d3545b962a7567d658143eb9b5006f7371e5c105161375438957c3b8033d"
+    "tag": "cca3d3545b962a7567d658143eb9b5006f7371e5c105161375438957c3b8033d",
+    "phc": "$argon2id$v=19$m=32,t=3,p=2$AgICAgICAgICAgICAgICAg$zKPTVFuWKnVn1lgUPrm1AG9zceXBBRYTdUOJV8O4Az0"
   },
   {
     "variant": "argon2id",
@@ -1557,7 +1676,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "47c71919daf18f9d1756391f1f9f4a7df3aa9608128965f1e84c0d6fcc34db87"
+    "tag": "47c71919daf18f9d1756391f1f9f4a7df3aa9608128965f1e84c0d6fcc34db87",
+    "phc": "$argon2id$v=19$m=32,t=3,p=2$AgICAgICAgICAgICAgICAg$R8cZGdrxj50XVjkfH59KffOqlggSiWXx6EwNb8w024c"
   },
   {
     "variant": "argon2id",
@@ -1567,10 +1687,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "1645fcc5a9927f7c3b32fc7b15eb91e12e2559ee5c0e110a6b8bc056b77c098b"
+    "tag": "51f56c0e6497d3f7d091f1f8869410bcad68ac0e19401d27c555687d6cd11d54",
+    "phc": "$argon2id$v=19$m=32,t=1,p=4$AgICAgICAgI$UfVsDmSX0/fQkfH4hpQQvK1orA4ZQB0nxVVofWzRHVQ"
   },
   {
     "variant": "argon2id",
@@ -1580,10 +1701,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "718763c9801cf31d8eb9bef33410f972c7762efcd2e450c8c0d641df74d556fc"
+    "tag": "1fcd666e4c8c2ea2d0f6c5f7ad4f4662d402c26e034b383e4719339c7f8b0795",
+    "phc": "$argon2id$v=19$m=32,t=1,p=4$AgICAgICAgI$H81mbkyMLqLQ9sX3rU9GYtQCwm4DSzg+RxkznH+LB5U"
   },
   {
     "variant": "argon2id",
@@ -1593,10 +1715,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "9460f395bee507954786b463d12f2fff6e42a2533fed07eb9835fe083592fdaf"
+    "tag": "b0cf44b9a66b2ac47c6b70e338dbf32607e4f3a18f6637fca3996dfda550268f",
+    "phc": "$argon2id$v=19$m=32,t=1,p=4$AgICAgICAgI$sM9EuaZrKsR8a3DjONvzJgfk86GPZjf8o5lt/aVQJo8"
   },
   {
     "variant": "argon2id",
@@ -1606,36 +1729,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "aec88ef458c434b644ca6ca0e05b04e7c53e0f62943b7e3091f89826d26d3b42"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 1,
-    "parallelism": 4,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "d6ddcdc1259b0f66b1965350be37e21844554216b2e97268e75ce0b3b6ed36e3"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 1,
-    "parallelism": 4,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "040404040404040404040404",
-    "tag": "bf8e50d7816a54d8fbc07297664141ed48c2c1071937c691c438c7a6b2a40919"
+    "tag": "51229f5ef5a4620195a57a287ee861052c1613ec721b5c6bf5e2c3aab3d6c73d",
+    "phc": "$argon2id$v=19$m=32,t=1,p=4$AgICAgICAgI$USKfXvWkYgGVpXoofuhhBSwWE+xyG1xr9eLDqrPWxz0"
   },
   {
     "variant": "argon2id",
@@ -1646,9 +1744,38 @@
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
+    "secret": "",
+    "associated_data": "",
+    "tag": "d6ddcdc1259b0f66b1965350be37e21844554216b2e97268e75ce0b3b6ed36e3",
+    "phc": "$argon2id$v=19$m=32,t=1,p=4$AgICAgICAgICAgICAgICAg$1t3NwSWbD2axllNQvjfiGERVQhay6XJo51zgs7btNuM"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 1,
+    "parallelism": 4,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
+    "associated_data": "040404040404040404040404",
+    "tag": "bf8e50d7816a54d8fbc07297664141ed48c2c1071937c691c438c7a6b2a40919",
+    "phc": "$argon2id$v=19$m=32,t=1,p=4$AgICAgICAgICAgICAgICAg$v45Q14FqVNj7wHKXZkFB7UjCwQcZN8aRxDjHprKkCRk"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 1,
+    "parallelism": 4,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "ca8d8b01ad878bf04b675ec394cdc23c6f2d85d921cbfcfc835ba6c14ad0af8c"
+    "tag": "ca8d8b01ad878bf04b675ec394cdc23c6f2d85d921cbfcfc835ba6c14ad0af8c",
+    "phc": "$argon2id$v=19$m=32,t=1,p=4$AgICAgICAgICAgICAgICAg$yo2LAa2Hi/BLZ17DlM3CPG8thdkhy/z8g1umwUrQr4w"
   },
   {
     "variant": "argon2id",
@@ -1661,7 +1788,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "717fd03e48737c93e05cebb669c886322d6a23a9fd23ee2615100dff74e69213"
+    "tag": "717fd03e48737c93e05cebb669c886322d6a23a9fd23ee2615100dff74e69213",
+    "phc": "$argon2id$v=19$m=32,t=1,p=4$AgICAgICAgICAgICAgICAg$cX/QPkhzfJPgXOu2aciGMi1qI6n9I+4mFRAN/3TmkhM"
   },
   {
     "variant": "argon2id",
@@ -1671,10 +1799,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "7b9fb0b3eea2f51355586b80748393f32be3164c4872c8230da483b51931d9c7"
+    "tag": "51935390eeee81895be95093a3f7ccdd690dc8cbb17f20f8dabdd6f834d1ae9e",
+    "phc": "$argon2id$v=19$m=32,t=2,p=4$AgICAgICAgI$UZNTkO7ugYlb6VCTo/fM3WkNyMuxfyD42r3W+DTRrp4"
   },
   {
     "variant": "argon2id",
@@ -1684,10 +1813,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "6a1433acba25bb89a57033d6cf07404bc85afd0cbf7535a03fecabfabc2d1711"
+    "tag": "daa1bb1e08c365a5474e2e66e5d5ed1ef9d11c2f385e763f423e6014fdb2f1c7",
+    "phc": "$argon2id$v=19$m=32,t=2,p=4$AgICAgICAgI$2qG7HgjDZaVHTi5m5dXtHvnRHC84XnY/Qj5gFP2y8cc"
   },
   {
     "variant": "argon2id",
@@ -1697,10 +1827,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "2145a788f72c01f34c860e603860e2a251177a9b0c66cb79a84beeb9470d2132"
+    "tag": "dad98a1cd7cf0e8f64510890a2fd8cdccce806ccf02867d7367379f4bdf81256",
+    "phc": "$argon2id$v=19$m=32,t=2,p=4$AgICAgICAgI$2tmKHNfPDo9kUQiQov2M3MzoBszwKGfXNnN59L34ElY"
   },
   {
     "variant": "argon2id",
@@ -1710,23 +1841,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "004f64d35f6c0b51530a983817dc3aa94d0f121acc58f11828ac2db96b7d96e0"
-  },
-  {
-    "variant": "argon2id",
-    "version": 19,
-    "memory": 32,
-    "passes": 2,
-    "parallelism": 4,
-    "tag_length": 32,
-    "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "02020202020202020202020202020202",
-    "secret": "",
-    "associated_data": "",
-    "tag": "6015b26eb064c1372919ea41dd130573a668be5d19449309a5310fdc54b4bc7d"
+    "tag": "b10ee2d8c6b63ddb48bdf82334cd4be69453c211ed2580eb01fe83a9c757caff",
+    "phc": "$argon2id$v=19$m=32,t=2,p=4$AgICAgICAgI$sQ7i2Ma2PdtIvfgjNM1L5pRTwhHtJYDrAf6DqcdXyv8"
   },
   {
     "variant": "argon2id",
@@ -1738,8 +1857,23 @@
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
     "salt": "02020202020202020202020202020202",
     "secret": "",
+    "associated_data": "",
+    "tag": "6015b26eb064c1372919ea41dd130573a668be5d19449309a5310fdc54b4bc7d",
+    "phc": "$argon2id$v=19$m=32,t=2,p=4$AgICAgICAgICAgICAgICAg$YBWybrBkwTcpGepB3RMFc6Zovl0ZRJMJpTEP3FS0vH0"
+  },
+  {
+    "variant": "argon2id",
+    "version": 19,
+    "memory": 32,
+    "passes": 2,
+    "parallelism": 4,
+    "tag_length": 32,
+    "password": "0101010101010101010101010101010101010101010101010101010101010101",
+    "salt": "02020202020202020202020202020202",
+    "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "1547ede179129bfd5df45b4530c7381bc63a6df4ee9df1103e02c2ed927bd24f"
+    "tag": "1547ede179129bfd5df45b4530c7381bc63a6df4ee9df1103e02c2ed927bd24f",
+    "phc": "$argon2id$v=19$m=32,t=2,p=4$AgICAgICAgICAgICAgICAg$FUft4XkSm/1d9FtFMMc4G8Y6bfTunfEQPgLC7ZJ70k8"
   },
   {
     "variant": "argon2id",
@@ -1752,7 +1886,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "03b67c42fb9dd33ed8c63dc59e33632e6bd53667bf4c2fd83f35ef20b511e72b"
+    "tag": "03b67c42fb9dd33ed8c63dc59e33632e6bd53667bf4c2fd83f35ef20b511e72b",
+    "phc": "$argon2id$v=19$m=32,t=2,p=4$AgICAgICAgICAgICAgICAg$A7Z8Qvud0z7Yxj3FnjNjLmvVNme/TC/YPzXvILUR5ys"
   },
   {
     "variant": "argon2id",
@@ -1765,7 +1900,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "0547a2efd055ac3910295ffa7f50caa3b1bd0008f87657774845a5f7da730b59"
+    "tag": "0547a2efd055ac3910295ffa7f50caa3b1bd0008f87657774845a5f7da730b59",
+    "phc": "$argon2id$v=19$m=32,t=2,p=4$AgICAgICAgICAgICAgICAg$BUei79BVrDkQKV/6f1DKo7G9AAj4dld3SEWl99pzC1k"
   },
   {
     "variant": "argon2id",
@@ -1775,10 +1911,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "01abff1ebdc7228987b713c186b9d8e6fa8c84cffd838e5b7fd319e3c6cc9c85"
+    "tag": "656c02037053bdb5eb60b4c52955beb50363971b94922c5deb75b7f5514d135b",
+    "phc": "$argon2id$v=19$m=32,t=3,p=4$AgICAgICAgI$ZWwCA3BTvbXrYLTFKVW+tQNjlxuUkixd63W39VFNE1s"
   },
   {
     "variant": "argon2id",
@@ -1788,10 +1925,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "46f98ea426c66ba826c6c3557652ec39c47fe2c9e6566f625e72f020a65fc2b6"
+    "tag": "57883ef5317d9dd37cbb8893968c3e32380ff14ac68531ffbfafff6385a259ea",
+    "phc": "$argon2id$v=19$m=32,t=3,p=4$AgICAgICAgI$V4g+9TF9ndN8u4iTlow+MjgP8UrGhTH/v6//Y4WiWeo"
   },
   {
     "variant": "argon2id",
@@ -1801,10 +1939,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "f46c7d84e9cb65533f96f17274a62ba8bcfb9888bf6912bfcbea9eb3dfef9a10"
+    "tag": "6c55162df03ff7e322c9663e17bb97386dc5b6a764c6db179d9fb348231afef2",
+    "phc": "$argon2id$v=19$m=32,t=3,p=4$AgICAgICAgI$bFUWLfA/9+MiyWY+F7uXOG3FtqdkxtsXnZ+zSCMa/vI"
   },
   {
     "variant": "argon2id",
@@ -1814,10 +1953,11 @@
     "parallelism": 4,
     "tag_length": 32,
     "password": "0101010101010101010101010101010101010101010101010101010101010101",
-    "salt": "",
+    "salt": "0202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "5501e4a808feb5372f082bda16a56aec2d553858b5a320c51f401c438025478b"
+    "tag": "207fa82fa674fcb6374c36df7748f73254e6dd296cd094bd0bb0de4ee769ac08",
+    "phc": "$argon2id$v=19$m=32,t=3,p=4$AgICAgICAgI$IH+oL6Z0/LY3TDbfd0j3MlTm3Sls0JS9C7DeTudprAg"
   },
   {
     "variant": "argon2id",
@@ -1830,7 +1970,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "",
-    "tag": "03aab965c12001c9d7d0d2de33192c0494b684bb148196d73c1df1acaf6d0c2e"
+    "tag": "03aab965c12001c9d7d0d2de33192c0494b684bb148196d73c1df1acaf6d0c2e",
+    "phc": "$argon2id$v=19$m=32,t=3,p=4$AgICAgICAgICAgICAgICAg$A6q5ZcEgAcnX0NLeMxksBJS2hLsUgZbXPB3xrK9tDC4"
   },
   {
     "variant": "argon2id",
@@ -1843,7 +1984,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "",
     "associated_data": "040404040404040404040404",
-    "tag": "58a04dad07148fec37788cae426e39e4c710c1b06e551346293ea3372ec4bc0d"
+    "tag": "58a04dad07148fec37788cae426e39e4c710c1b06e551346293ea3372ec4bc0d",
+    "phc": "$argon2id$v=19$m=32,t=3,p=4$AgICAgICAgICAgICAgICAg$WKBNrQcUj+w3eIyuQm455McQwbBuVRNGKT6jNy7EvA0"
   },
   {
     "variant": "argon2id",
@@ -1856,7 +1998,8 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "",
-    "tag": "0034de3c8a75efc1148100eaf5ba9b1ce6d50ba5cdf6ae4018c54a4fc03ac10d"
+    "tag": "0034de3c8a75efc1148100eaf5ba9b1ce6d50ba5cdf6ae4018c54a4fc03ac10d",
+    "phc": "$argon2id$v=19$m=32,t=3,p=4$AgICAgICAgICAgICAgICAg$ADTePIp178EUgQDq9bqbHObVC6XN9q5AGMVKT8A6wQ0"
   },
   {
     "variant": "argon2id",
@@ -1869,6 +2012,7 @@
     "salt": "02020202020202020202020202020202",
     "secret": "0303030303030303",
     "associated_data": "040404040404040404040404",
-    "tag": "0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659"
+    "tag": "0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659",
+    "phc": "$argon2id$v=19$m=32,t=3,p=4$AgICAgICAgICAgICAgICAg$DWQN9Y14dmwIwDejSotTydAe8EUtdbZetSUg6WsB5lk"
   }
 ]

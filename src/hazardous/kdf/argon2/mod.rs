@@ -42,7 +42,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - The length of the `password` is greater than [`MAX_PASSWORD_LEN`].
-//! - The length of the `salt` is greater than [`MAX_SALT_LEN`].
+//! - The length of the `salt` is less than [`MIN_SALT_LEN`] or greater than [`MAX_SALT_LEN`].
 //! - The length of the `secret` is greater than [`MAX_SECRET_LEN`].
 //! - The length of the `ad` is greater than [`MAX_AD_LEN`].
 //! - The length of `dst_out` is greater than [`u32::MAX`] or less than `4`.
@@ -98,6 +98,7 @@
 //! [`PasswordHash::try_from()`]: crate::hazardous::kdf::argon2::PasswordHash::try_from
 //! [`MAX_PASSWORD_LEN`]: crate::hazardous::kdf::argon2::MAX_PASSWORD_LEN
 //! [`MAX_SALT_LEN`]: crate::hazardous::kdf::argon2::MAX_SALT_LEN
+//! [`MIN_SALT_LEN`]: crate::hazardous::kdf::argon2::MIN_SALT_LEN
 //! [`MAX_SECRET_LEN`]: crate::hazardous::kdf::argon2::MAX_SECRET_LEN
 //! [`MAX_AD_LEN`]: crate::hazardous::kdf::argon2::MAX_AD_LEN
 //! [`MIN_ITERATIONS_T`]: crate::hazardous::kdf::argon2::MIN_ITERATIONS_T
@@ -138,6 +139,9 @@ pub const MAX_ITERATIONS_T: u32 = u32::MAX;
 
 /// The maximum length of the password.
 pub const MAX_PASSWORD_LEN: u32 = u32::MAX;
+
+/// The minimum length of the salt.
+pub const MIN_SALT_LEN: u32 = 8;
 
 /// The maximum length of the salt.
 pub const MAX_SALT_LEN: u32 = u32::MAX;
@@ -608,7 +612,7 @@ fn validate_parameters(
     if password.len() > MAX_PASSWORD_LEN as usize {
         return Err(UnknownCryptoError);
     }
-    if salt.len() > MAX_SALT_LEN as usize {
+    if salt.len() < MIN_SALT_LEN as usize || salt.len() > MAX_SALT_LEN as usize {
         return Err(UnknownCryptoError);
     }
 
@@ -942,7 +946,7 @@ mod test {
             validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
-                &[],
+                &[0u8; 8],
                 MIN_ITERATIONS_T - 1,
                 8,
                 1,
@@ -956,7 +960,7 @@ mod test {
             validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
-                &[],
+                &[0u8; 8],
                 MIN_ITERATIONS_T,
                 8,
                 1,
@@ -970,7 +974,7 @@ mod test {
             validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
-                &[],
+                &[0u8; 8],
                 MAX_ITERATIONS_T,
                 8,
                 1,
@@ -985,7 +989,7 @@ mod test {
             validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
-                &[],
+                &[0u8; 8],
                 MIN_ITERATIONS_T,
                 8,
                 MIN_PARALLELISM_P - 1,
@@ -999,7 +1003,7 @@ mod test {
             validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
-                &[],
+                &[0u8; 8],
                 MIN_ITERATIONS_T,
                 8,
                 MIN_PARALLELISM_P,
@@ -1013,7 +1017,35 @@ mod test {
             validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
+                &[0u8; 8],
+                MIN_ITERATIONS_T,
+                MAX_PARALLELISM_P * 8,
+                MAX_PARALLELISM_P,
+                None,
+                None,
+                &mut tmp
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_parameters(
+                ARGON2_VERSION_19,
                 &[],
+                &[0u8; 7],
+                MIN_ITERATIONS_T,
+                MAX_PARALLELISM_P * 8,
+                MAX_PARALLELISM_P,
+                None,
+                None,
+                &mut tmp
+            )
+            .is_err()
+        );
+        assert!(
+            validate_parameters(
+                ARGON2_VERSION_19,
+                &[],
+                &[0u8; 9],
                 MIN_ITERATIONS_T,
                 MAX_PARALLELISM_P * 8,
                 MAX_PARALLELISM_P,
@@ -1274,7 +1306,7 @@ mod public {
             } else {
                 kib
             };
-            let salt = s;
+            let salt = if s.len() < 8 { alloc::vec![37u8; 8] } else { s };
 
             let hlen = if !(4..=512).contains(&hlen) { 32 } else { hlen };
 
