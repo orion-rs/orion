@@ -95,17 +95,31 @@
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
 //! [`zeroize` crate]: https://crates.io/crates/zeroize
 //! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+//! [`PasswordHash::try_from()`]: crate::hazardous::kdf::argon2::PasswordHash::try_from
+//! [`MAX_PASSWORD_LEN`]: crate::hazardous::kdf::argon2::MAX_PASSWORD_LEN
+//! [`MAX_SALT_LEN`]: crate::hazardous::kdf::argon2::MAX_SALT_LEN
+//! [`MAX_SECRET_LEN`]: crate::hazardous::kdf::argon2::MAX_SECRET_LEN
+//! [`MAX_AD_LEN`]: crate::hazardous::kdf::argon2::MAX_AD_LEN
+//! [`MIN_ITERATIONS_T`]: crate::hazardous::kdf::argon2::MIN_ITERATIONS_T
+//! [`MIN_PARALLELISM_P`]: crate::hazardous::kdf::argon2::MIN_PARALLELISM_P
+//! [`MAX_PARALLELISM_P`]: crate::hazardous::kdf::argon2::MAX_PARALLELISM_P
 
 use core::marker::PhantomData;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b::{BLAKE2B_MAX_OUTSIZE, Blake2b};
 #[cfg(feature = "safe_api")]
-use crate::hazardous::kdf::PhcString;
+use crate::hazardous::kdf::argon2::phc::Argon2Phc;
 use crate::hazardous::kdf::sealed;
 use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
+
+#[cfg(feature = "safe_api")]
+mod phc;
+
+#[cfg(feature = "safe_api")]
+use crate::generics::{Secret, TypeSpec};
 
 /// The Argon2 version (0x13).
 pub const ARGON2_VERSION_19: u32 = 0x13;
@@ -145,6 +159,65 @@ pub const MAX_AD_LEN: u32 = u32::MAX;
 
 /// The amount of segments per lane, as defined in the spec.
 const SEGMENTS_PER_LANE: usize = 4;
+
+#[derive(Debug)]
+#[cfg(feature = "safe_api")]
+/// Marker type for a password hash, in P-H-C string format, produced by [`Argon2`]. See [`PasswordHash`] type for convenience.
+pub struct Argon2PasswordHash;
+
+#[cfg(feature = "safe_api")]
+impl crate::generics::sealed::Sealed for Argon2PasswordHash {}
+
+#[cfg(feature = "safe_api")]
+impl TypeSpec for Argon2PasswordHash {
+    const NAME: &'static str = stringify!(PasswordHash);
+    // Parsing logic in Data-impl under [`Argon2Phc`] (applies to `parse_bytes()`).
+    type TypeData = Argon2Phc;
+}
+
+#[cfg(feature = "safe_api")]
+/// A type to represent the P-H-C encoded [`PasswordHash`] that [`Argon2``] returns when used for password hashing.
+///
+///
+/// # Errors:
+/// An error will be returned if:
+/// - Any of the parameter validations that apply to [`Argon2`] fails.
+/// - The encoded password hash contains whitespace.
+/// - The encoded password contains any other fields than: The algorithm name,
+///   version, m, t, p and the salt and password hash.
+/// - The encoded password hash contains invalid Base64 encoding.
+/// - Any decimal parameter value, such as m, contains leading zeroes and is longer
+///   than a single character.
+/// - The encoded password hash contains numerical values that cannot
+///   be represented as a `u32`.
+/// - The parameters in the encoded password hash are not correctly ordered. The ordering must be:
+///   - `$argon2i$v=19$m=<value>,t=<value>,p=<value>$<salt>$<hash>`
+///   - `$argon2id$v=19$m=<value>,t=<value>,p=<value>$<salt>$<hash>`
+///
+/// # Panics:
+/// A panic will occur if:
+/// - Overflowing calculations happen on `usize` when decoding the password and salt from Base64.
+///
+/// # Security:
+/// - __**Avoid using**__ `unprotected_as_ref()` to validate passwords. Use instead the provided [`Argon2::verify`] functions.
+/// - This is a secret type and does not include the password hashes in `Debug` impl. However, the entire purpose of this format
+///   is for storage, so `AsRef<&str>` is provided. Only use for storage operations and __**NOT**__ for debugging, risking password
+///   hash leaks.
+pub type PasswordHash = Secret<Argon2PasswordHash>;
+
+impl AsRef<str> for PasswordHash {
+    fn as_ref(&self) -> &str {
+        self.data.phc_string.as_str()
+    }
+}
+
+impl TryFrom<&str> for PasswordHash {
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(Self::from_data(Argon2Phc::try_from(value)?))
+    }
+}
 
 const fn lower_mult_add(x: u64, y: u64) -> u64 {
     let mask = 0xFFFF_FFFFu64;
@@ -489,10 +562,6 @@ pub struct I;
 impl sealed::Sealed for I {}
 impl sealed::Variant for I {
     const VALUE: u32 = ARGON2_I_VARIANT;
-}
-
-#[cfg(feature = "safe_api")]
-impl PhcString for I {
     const PHC_ID: &'static str = "argon2i";
 }
 
@@ -502,11 +571,74 @@ pub struct ID;
 impl sealed::Sealed for ID {}
 impl sealed::Variant for ID {
     const VALUE: u32 = ARGON2_ID_VARIANT;
+    const PHC_ID: &'static str = "argon2id";
 }
 
-#[cfg(feature = "safe_api")]
-impl PhcString for ID {
-    const PHC_ID: &'static str = "argon2id";
+fn validate_cost_parameters(
+    iterations: u32,
+    memory: u32,
+    parallelism: u32,
+) -> Result<(), UnknownCryptoError> {
+    if !(MIN_PARALLELISM_P..=MAX_PARALLELISM_P).contains(&parallelism) {
+        return Err(UnknownCryptoError);
+    }
+
+    check_minimum_memory(memory, parallelism)?;
+    if !(MIN_ITERATIONS_T..=MAX_ITERATIONS_T).contains(&iterations) {
+        return Err(UnknownCryptoError);
+    }
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_parameters(
+    version: u32,
+    password: &[u8],
+    salt: &[u8],
+    iterations: u32,
+    memory: u32,
+    parallelism: u32,
+    secret: Option<&[u8]>,
+    ad: Option<&[u8]>,
+    dst_out: &mut [u8],
+) -> Result<(), UnknownCryptoError> {
+    debug_assert_eq!(version, ARGON2_VERSION_19);
+    validate_cost_parameters(iterations, memory, parallelism)?;
+    if password.len() > MAX_PASSWORD_LEN as usize {
+        return Err(UnknownCryptoError);
+    }
+    if salt.len() > MAX_SALT_LEN as usize {
+        return Err(UnknownCryptoError);
+    }
+
+    let _k = match secret {
+        Some(n_val) => {
+            if n_val.len() > 0xFFFF_FFFF {
+                return Err(UnknownCryptoError);
+            }
+
+            n_val
+        }
+        None => &[0u8; 0],
+    };
+
+    let _x = match ad {
+        Some(n_val) => {
+            if n_val.len() > 0xFFFF_FFFF {
+                return Err(UnknownCryptoError);
+            }
+
+            n_val
+        }
+        None => &[0u8; 0],
+    };
+
+    if dst_out.len() > 0xFFFF_FFFF || dst_out.len() < 4 {
+        return Err(UnknownCryptoError);
+    }
+
+    Ok(())
 }
 
 // **TODO**:
@@ -522,27 +654,12 @@ pub struct Argon2<V: sealed::Variant, Threading: sealed::Sealed> {
     _threading: PhantomData<Threading>,
 }
 
-impl<V: sealed::Variant, Threading: sealed::Sealed> Argon2<V, Threading> {
-    fn validate_cost_parameters(
-        iterations: u32,
-        memory: u32,
-        parallelism: u32,
-    ) -> Result<(), UnknownCryptoError> {
-        if !(MIN_PARALLELISM_P..=MAX_PARALLELISM_P).contains(&parallelism) {
-            return Err(UnknownCryptoError);
-        }
-
-        check_minimum_memory(memory, parallelism)?;
-        if !(MIN_ITERATIONS_T..=MAX_ITERATIONS_T).contains(&iterations) {
-            return Err(UnknownCryptoError);
-        }
-
-        Ok(())
-    }
-
+impl<V: sealed::Variant> Argon2<V, Sequential> {
+    #[cfg(feature = "safe_api")]
     #[allow(clippy::too_many_arguments)]
-    fn validate_parameters(
-        version: u32,
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Equivalent to [`Self::derive_key`] but returns a P-H-C encoded [`PasswordHash`] object.
+    pub fn derive_key_encoded(
         password: &[u8],
         salt: &[u8],
         iterations: u32,
@@ -550,50 +667,66 @@ impl<V: sealed::Variant, Threading: sealed::Sealed> Argon2<V, Threading> {
         parallelism: u32,
         secret: Option<&[u8]>,
         ad: Option<&[u8]>,
-        dst_out: &mut [u8],
-    ) -> Result<(), UnknownCryptoError> {
-        debug_assert_eq!(version, ARGON2_VERSION_19);
-        debug_assert!(V::VALUE == ARGON2_ID_VARIANT || V::VALUE == ARGON2_I_VARIANT);
-
-        Self::validate_cost_parameters(iterations, memory, parallelism)?;
-        if password.len() > MAX_PASSWORD_LEN as usize {
-            return Err(UnknownCryptoError);
-        }
-        if salt.len() > MAX_SALT_LEN as usize {
-            return Err(UnknownCryptoError);
-        }
-
-        let _k = match secret {
-            Some(n_val) => {
-                if n_val.len() > 0xFFFF_FFFF {
-                    return Err(UnknownCryptoError);
-                }
-
-                n_val
-            }
-            None => &[0u8; 0],
+        hash_len: usize,
+    ) -> Result<PasswordHash, UnknownCryptoError> {
+        let mut pwhash = Argon2Phc {
+            variant: V::PHC_ID.into(),
+            version: ARGON2_VERSION_19,
+            memory,
+            iterations,
+            parallelism,
+            salt: salt.to_vec(),
+            hash: vec![0u8; hash_len],
+            phc_string: String::new(),
         };
 
-        let _x = match ad {
-            Some(n_val) => {
-                if n_val.len() > 0xFFFF_FFFF {
-                    return Err(UnknownCryptoError);
-                }
+        Self::derive_key(
+            password,
+            salt,
+            iterations,
+            memory,
+            parallelism,
+            secret,
+            ad,
+            &mut pwhash.hash,
+        )?;
+        pwhash.encode_to_phc()?;
 
-                n_val
-            }
-            None => &[0u8; 0],
-        };
-
-        if dst_out.len() > 0xFFFF_FFFF || dst_out.len() < 4 {
-            return Err(UnknownCryptoError);
-        }
-
-        Ok(())
+        Ok(PasswordHash::from_data(pwhash))
     }
-}
 
-impl<V: sealed::Variant> Argon2<V, Sequential> {
+    #[cfg(feature = "safe_api")]
+    #[allow(clippy::too_many_arguments)]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Equivalent to [`Self::derive_key`] but verifies a P-H-C encoded [`PasswordHash`] object.
+    pub fn verify_encoded(
+        expected: &PasswordHash,
+        password: &[u8],
+        salt: &[u8],
+        iterations: u32,
+        memory: u32,
+        parallelism: u32,
+        secret: Option<&[u8]>,
+        ad: Option<&[u8]>,
+    ) -> Result<(), UnknownCryptoError> {
+        let actual = Self::derive_key_encoded(
+            password,
+            salt,
+            iterations,
+            memory,
+            parallelism,
+            secret,
+            ad,
+            expected.data.hash.len(),
+        )?;
+
+        if expected != &actual {
+            Err(UnknownCryptoError)
+        } else {
+            Ok(())
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Run KDF.
@@ -608,7 +741,7 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         let version = ARGON2_VERSION_19;
-        Self::validate_parameters(
+        validate_parameters(
             version,
             password,
             salt,
@@ -789,95 +922,6 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
     }
 }
 
-#[cfg(feature = "safe_api")]
-impl<V: sealed::Variant + PhcString, Threading: sealed::Sealed> Argon2<V, Threading> {
-    /// Encode the password hash and parameters to a P-H-C string.
-    pub fn to_phc_string(
-        pwhash: &[u8],
-        salt: &[u8],
-        iterations: u32,
-        memory: u32,
-        parallelism: u32,
-    ) -> Result<String, UnknownCryptoError> {
-        use ct_codecs::{Base64NoPadding, Encoder};
-
-        Ok(format!(
-            "${}$v={}$m={},t={},p={}${}${}",
-            V::PHC_ID,
-            ARGON2_VERSION_19,
-            memory,
-            iterations,
-            parallelism,
-            Base64NoPadding::encode_to_string(salt)?,
-            Base64NoPadding::encode_to_string(pwhash)?,
-        ))
-    }
-
-    /// Parse and validate a P-H-C string.
-    pub fn from_phc_string(
-        password_hash: &str,
-    ) -> Result<(u32, u32, u32, Vec<u8>, Vec<u8>), UnknownCryptoError> {
-        use ct_codecs::{Base64NoPadding, Decoder};
-
-        if password_hash.contains(' ') {
-            return Err(UnknownCryptoError);
-        }
-
-        let parts_split = password_hash.split('$').collect::<Vec<&str>>();
-        if parts_split.len() != 6 {
-            return Err(UnknownCryptoError);
-        }
-        let mut parts = parts_split.into_iter();
-        if parts.next() != Some("") {
-            return Err(UnknownCryptoError);
-        }
-        if parts.next() != Some(V::PHC_ID) {
-            return Err(UnknownCryptoError);
-        }
-        if parts.next() != Some("19") {
-            return Err(UnknownCryptoError);
-        }
-
-        // Splits as ["m", "X", "t", "Y", "p", "Z"] where m=X, t=Y and p=Z.
-        let param_parts_split = parts
-            .next()
-            .unwrap()
-            .split(['=', ','])
-            .collect::<Vec<&str>>();
-        if param_parts_split.len() != 6 {
-            return Err(UnknownCryptoError);
-        }
-        let mut param_parts = param_parts_split.into_iter();
-
-        if param_parts.next() != Some("m") {
-            return Err(UnknownCryptoError);
-        }
-        let memory = V::parse_decimal_value(param_parts.next().unwrap())?;
-
-        if param_parts.next() != Some("t") {
-            return Err(UnknownCryptoError);
-        }
-        let iterations = V::parse_decimal_value(param_parts.next().unwrap())?;
-
-        if param_parts.next() != Some("p") {
-            return Err(UnknownCryptoError);
-        }
-        let lanes = V::parse_decimal_value(param_parts.next().unwrap())?;
-
-        Self::validate_cost_parameters(iterations, memory, lanes)?;
-        let salt = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
-        if salt.len() > MAX_SALT_LEN as usize {
-            return Err(UnknownCryptoError);
-        }
-        let password_hash_raw = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
-        if password_hash_raw.len() < 4 {
-            return Err(UnknownCryptoError);
-        }
-
-        Ok((iterations, memory, lanes, salt, password_hash_raw))
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -899,7 +943,7 @@ mod test {
         let mut tmp = [0u8; 4];
 
         assert!(
-            Argon2::<I, Sequential>::validate_parameters(
+            validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
                 &[],
@@ -913,7 +957,7 @@ mod test {
             .is_err()
         );
         assert!(
-            Argon2::<I, Sequential>::validate_parameters(
+            validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
                 &[],
@@ -927,7 +971,7 @@ mod test {
             .is_ok()
         );
         assert!(
-            Argon2::<I, Sequential>::validate_parameters(
+            validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
                 &[],
@@ -942,7 +986,7 @@ mod test {
         );
 
         assert!(
-            Argon2::<I, Sequential>::validate_parameters(
+            validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
                 &[],
@@ -956,7 +1000,7 @@ mod test {
             .is_err()
         );
         assert!(
-            Argon2::<I, Sequential>::validate_parameters(
+            validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
                 &[],
@@ -970,7 +1014,7 @@ mod test {
             .is_ok()
         );
         assert!(
-            Argon2::<I, Sequential>::validate_parameters(
+            validate_parameters(
                 ARGON2_VERSION_19,
                 &[],
                 &[],
