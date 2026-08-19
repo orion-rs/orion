@@ -702,19 +702,15 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
     pub fn verify_encoded(
         expected: &PasswordHash,
         password: &[u8],
-        salt: &[u8],
-        iterations: u32,
-        memory: u32,
-        parallelism: u32,
         secret: Option<&[u8]>,
         ad: Option<&[u8]>,
     ) -> Result<(), UnknownCryptoError> {
         let actual = Self::derive_key_encoded(
             password,
-            salt,
-            iterations,
-            memory,
-            parallelism,
+            &expected.data.salt,
+            expected.data.iterations,
+            expected.data.memory,
+            expected.data.parallelism,
             secret,
             ad,
             expected.data.hash.len(),
@@ -1039,6 +1035,52 @@ mod public {
     mod test_verify {
         use super::*;
 
+        #[test]
+        #[cfg(feature = "safe_api")]
+        fn test_variant_mismatch_fails_verify() {
+            use crate::util;
+
+            let mut salt = [0u8; 16];
+            util::secure_rand_bytes(&mut salt).unwrap();
+
+            let h_i = Argon2::<I, Sequential>::derive_key_encoded(
+                b"password",
+                &salt,
+                1,
+                1 << 8,
+                2,
+                None,
+                None,
+                32,
+            )
+            .unwrap();
+
+            let h_id = Argon2::<ID, Sequential>::derive_key_encoded(
+                b"password",
+                &salt,
+                1,
+                1 << 8,
+                2,
+                None,
+                None,
+                32,
+            )
+            .unwrap();
+
+            assert!(
+                Argon2::<I, Sequential>::verify_encoded(&h_i, b"password", None, None,).is_ok()
+            );
+            assert!(
+                Argon2::<I, Sequential>::verify_encoded(&h_id, b"password", None, None,).is_err()
+            );
+            assert!(
+                Argon2::<ID, Sequential>::verify_encoded(&h_i, b"password", None, None,).is_err()
+            );
+            assert!(
+                Argon2::<ID, Sequential>::verify_encoded(&h_id, b"password", None, None,).is_ok()
+            );
+        }
+
         #[quickcheck]
         #[cfg(feature = "safe_api")]
         fn prop_test_same_input_verify_true(
@@ -1153,17 +1195,8 @@ mod public {
             )
             .unwrap();
 
-            let argin2i_result = Argon2::<I, Sequential>::verify_encoded(
-                &h,
-                &pass,
-                &salt,
-                passes,
-                mem,
-                parallelism as u32,
-                Some(&k),
-                Some(&x),
-            )
-            .is_ok();
+            let argin2i_result =
+                Argon2::<I, Sequential>::verify_encoded(&h, &pass, Some(&k), Some(&x)).is_ok();
 
             let h = Argon2::<ID, Sequential>::derive_key_encoded(
                 &pass,
@@ -1177,17 +1210,8 @@ mod public {
             )
             .unwrap();
 
-            let argin2id_result = Argon2::<ID, Sequential>::verify_encoded(
-                &h,
-                &pass,
-                &salt,
-                passes,
-                mem,
-                parallelism as u32,
-                Some(&k),
-                Some(&x),
-            )
-            .is_ok();
+            let argin2id_result =
+                Argon2::<ID, Sequential>::verify_encoded(&h, &pass, Some(&k), Some(&x)).is_ok();
 
             argin2i_result && argin2id_result
         }
