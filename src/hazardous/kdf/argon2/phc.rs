@@ -235,3 +235,210 @@ impl Data for Argon2Phc {
         self.phc_string.zeroize();
     }
 }
+
+#[cfg(test)]
+#[cfg(feature = "safe_api")]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_valid_encoded_password() {
+        let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        assert!(Argon2Phc::try_from(valid).is_ok());
+    }
+
+    #[test]
+    fn test_bad_encoding_missing_dollar() {
+        let first_missing = "argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let second_missing = "$argon2iv=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let third_missing = "$argon2i$v=19m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let fourth_missing = "$argon2i$v=19$m=65536,t=3,p=1cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let fifth_missing = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(first_missing).is_err());
+        assert!(Argon2Phc::try_from(second_missing).is_err());
+        assert!(Argon2Phc::try_from(third_missing).is_err());
+        assert!(Argon2Phc::try_from(fourth_missing).is_err());
+        assert!(Argon2Phc::try_from(fifth_missing).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_missing_comma() {
+        let first_missing = "$argon2i$v=19$m=65536t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let second_missing = "$argon2i$v=19$m=65536,t=3p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(first_missing).is_err());
+        assert!(Argon2Phc::try_from(second_missing).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_missing_equals() {
+        let first_missing = "$argon2i$v19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let second_missing = "$argon2$iv=19$m65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let third_missing = "$argon2i$v=19$m=65536,t3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let fourth_missing = "$argon2i$v=19$m=65536,t=3,p1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(first_missing).is_err());
+        assert!(Argon2Phc::try_from(second_missing).is_err());
+        assert!(Argon2Phc::try_from(third_missing).is_err());
+        assert!(Argon2Phc::try_from(fourth_missing).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_whitespace() {
+        let first = "$argon2i$v=19$m=65536,t=3, p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let second = " $argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let third = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA ";
+
+        assert!(Argon2Phc::try_from(first).is_err());
+        assert!(Argon2Phc::try_from(second).is_err());
+        assert!(Argon2Phc::try_from(third).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_invalid_threads() {
+        let one = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let zero = "$argon2i$v=19$m=65536,t=3,p=0$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let two = "$argon2i$v=19$m=65536,t=3,p=2$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(one).is_ok());
+        assert!(Argon2Phc::try_from(zero).is_err());
+        assert!(Argon2Phc::try_from(two).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_invalid_memory() {
+        let exact_min = "$argon2i$v=19$m=8,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let less = "$argon2i$v=19$m=7,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        // Throws error during parsing as u32
+        let u32_overflow = format!(
+            "$argon2i$v=19$m={},t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA",
+            u64::MAX
+        );
+
+        assert!(Argon2Phc::try_from(exact_min).is_ok());
+        assert!(Argon2Phc::try_from(less).is_err());
+        assert!(Argon2Phc::try_from(u32_overflow.as_str()).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_invalid_iterations() {
+        let exact_min = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let less = "$argon2i$v=19$m=65536,t=2,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        // Throws error during parsing as u32
+        let u32_overflow = format!(
+            "$argon2i$v=19$m=65536,t={},p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA",
+            u64::MAX
+        );
+
+        assert!(Argon2Phc::try_from(exact_min).is_ok());
+        assert!(Argon2Phc::try_from(less).is_err());
+        assert!(Argon2Phc::try_from(u32_overflow.as_str()).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_invalid_algo() {
+        let argon2id = "$argon2id$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let argon2d = "$argon2d$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let nothing = "$$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(argon2d).is_err());
+        assert!(Argon2Phc::try_from(argon2id).is_err());
+        assert!(Argon2Phc::try_from(nothing).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_invalid_version() {
+        let v13 = "$argon2i$v=13$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let v0 = "$argon2i$v=0$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let nothing = "$argon2i$v=$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(v13).is_err());
+        assert!(Argon2Phc::try_from(v0).is_err());
+        assert!(Argon2Phc::try_from(nothing).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_invalid_order() {
+        let version_first = "$v=19$argon2i$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let t_before_m = "$argon2i$v=19$t=3,m=65536,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let p_before_t = "$argon2i$v=19$m=65536,p=1,t=3$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let p_before_m = "$argon2i$v=19$p=1,m=65536,t=3$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let pass_before_salt = "$argon2i$v=19$m=65536,t=3,p=1$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA$cHBwcHBwcHBwcHBwcHBwcA";
+        let salt_first = "$cHBwcHBwcHBwcHBwcHBwcA$argon2i$v=19$m=65536,t=3,p=1$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let pass_first = "$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA";
+
+        assert!(Argon2Phc::try_from(version_first).is_err());
+        assert!(Argon2Phc::try_from(t_before_m).is_err());
+        assert!(Argon2Phc::try_from(p_before_t).is_err());
+        assert!(Argon2Phc::try_from(p_before_m).is_err());
+        assert!(Argon2Phc::try_from(pass_before_salt).is_err());
+        assert!(Argon2Phc::try_from(salt_first).is_err());
+        assert!(Argon2Phc::try_from(pass_first).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_invalid_salt() {
+        let exact = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let nothing = "$argon2i$v=19$m=65536,t=3,p=1$$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let above = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcAA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(exact).is_ok());
+        assert!(Argon2Phc::try_from(nothing).is_err());
+        assert!(Argon2Phc::try_from(above).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_invalid_password() {
+        let exact = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let nothing = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$";
+        let above = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAA";
+
+        assert!(Argon2Phc::try_from(exact).is_ok());
+        assert!(Argon2Phc::try_from(nothing).is_err());
+        assert!(Argon2Phc::try_from(above).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_bad_parsing_integers() {
+        let j_instead_of_mem = "$argon2i$v=19$m=j,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(j_instead_of_mem).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_first_not_empty() {
+        // Nothing should precede "$argon2i"
+        let non_empty_first = "apples$argon2i$v=19$m=4096,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(non_empty_first).is_err());
+    }
+
+    #[test]
+    fn test_bad_encoding_bad_p() {
+        let p_is_j = "$argon2i$v=19$m=4096,t=3,j=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let p_gone = "$argon2i$v=19$m=4096,t=3,=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(p_is_j).is_err());
+        assert!(Argon2Phc::try_from(p_gone).is_err());
+    }
+
+    #[test]
+    fn test_decimal_value_reject_leading_zeroes() {
+        // https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
+        // According to the specification, the decimal parameters may not start with 0, if there is more than
+        // one character in the string. .parse::<u32>() will ignore leading 0's, so it will parse "0032" -> 32u32.
+        // Test here that these cases are detected and rejected by returning an error.
+        let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let invalid0 = "$argon2i$v=019$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let invalid1 = "$argon2i$v=19$m=065536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let invalid2 = "$argon2i$v=19$m=65536,t=03,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let invalid3 = "$argon2i$v=19$m=65536,t=3,p=01$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+        assert!(Argon2Phc::try_from(valid).is_ok());
+        assert!(Argon2Phc::try_from(invalid0).is_err());
+        assert!(Argon2Phc::try_from(invalid1).is_err());
+        assert!(Argon2Phc::try_from(invalid2).is_err());
+        assert!(Argon2Phc::try_from(invalid3).is_err());
+    }
+}

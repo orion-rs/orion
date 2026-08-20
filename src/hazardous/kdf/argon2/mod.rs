@@ -116,6 +116,12 @@ use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Deserialize, Deserializer},
+    ser::{Serialize, Serializer},
+};
+
 #[cfg(feature = "safe_api")]
 mod phc;
 
@@ -207,13 +213,44 @@ impl TypeSpec for Argon2PasswordHash {
 /// # Security:
 /// - __**Avoid using**__ `unprotected_as_ref()` to validate passwords. Use instead the provided [`Argon2::verify`] functions.
 /// - This is a secret type and does not include the password hashes in `Debug` impl. However, the entire purpose of this format
-///   is for storage, so `AsRef<&str>` is provided. Only use for storage operations and __**NOT**__ for debugging, risking password
+///   is for storage, so `unprotected_as_str()` is provided. Only use for storage operations and __**NOT**__ for debugging, risking password
 ///   hash leaks.
 pub type PasswordHash = Secret<Argon2PasswordHash>;
 
-impl AsRef<str> for PasswordHash {
-    fn as_ref(&self) -> &str {
+impl PasswordHash {
+    #[inline]
+    /// Return the [`PasswordHash`] in P-H-C encoding.
+    pub fn unprotected_as_str(&self) -> &str {
         self.data.phc_string.as_str()
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+/// `PasswordHash` serializes as would a [`String`](std::string::String). Note that
+/// the serialized type likely does not have the same protections that Orion
+/// provides, such as constant-time operations. A good rule of thumb is to only
+/// serialize these types for storage. Don't operate on the serialized types.
+impl Serialize for PasswordHash {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let encoded_string = self.unprotected_as_str();
+        serializer.serialize_str(encoded_string)
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+/// `PasswordHash` deserializes from a [`String`](std::string::String).
+impl<'de> Deserialize<'de> for PasswordHash {
+    fn deserialize<D>(deserializer: D) -> Result<PasswordHash, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let encoded_str = String::deserialize(deserializer)?;
+        PasswordHash::try_from(&encoded_str).map_err(de::Error::custom)
     }
 }
 
@@ -1068,6 +1105,107 @@ mod test {
 #[cfg(test)]
 mod public {
     use super::*;
+
+    #[cfg(feature = "safe_api")]
+    mod test_passwordhash {
+        use super::*;
+
+        #[test]
+        #[cfg(feature = "safe_api")]
+        fn test_debug_impl() {
+            let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let password_hash = PasswordHash::try_from(valid).unwrap();
+            let debug = format!("{password_hash:?}");
+            let expected = "PasswordHash {***OMITTED***}";
+            assert_eq!(debug, expected);
+
+            let valid = "$argon2id$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let password_hash = PasswordHash::try_from(valid).unwrap();
+            let debug = format!("{password_hash:?}");
+            let expected = "PasswordHash {***OMITTED***}";
+            assert_eq!(debug, expected);
+        }
+
+        #[test]
+        fn test_password_hash_eq() {
+            let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            let password_hash = PasswordHash::try_from(valid.as_bytes()).unwrap();
+            assert_eq!(password_hash.len(), valid.len());
+            assert_eq!(password_hash.unprotected_as_ref(), valid.as_bytes());
+            assert_eq!(
+                password_hash,
+                PasswordHash::try_from(valid.as_bytes()).unwrap()
+            );
+
+            let password_hash_again =
+                PasswordHash::try_from(password_hash.unprotected_as_str()).unwrap();
+            assert_eq!(password_hash, password_hash_again);
+
+            let valid = "$argon2id$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            let password_hash = PasswordHash::try_from(valid.as_bytes()).unwrap();
+            assert_eq!(password_hash.len(), valid.len());
+            assert_eq!(password_hash.unprotected_as_ref(), valid.as_bytes());
+            assert_eq!(
+                password_hash,
+                PasswordHash::try_from(valid.as_bytes()).unwrap()
+            );
+
+            let password_hash_again =
+                PasswordHash::try_from(password_hash.unprotected_as_str()).unwrap();
+            assert_eq!(password_hash, password_hash_again);
+        }
+
+        #[test]
+        fn test_password_hash_ne() {
+            let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let invalid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+
+            let password_hash = PasswordHash::try_from(valid.as_bytes()).unwrap();
+            assert_ne!(password_hash.unprotected_as_ref(), invalid.as_bytes());
+            assert_ne!(
+                password_hash,
+                PasswordHash::try_from(invalid.as_bytes()).unwrap()
+            );
+
+            let password_hash_again = PasswordHash::try_from(invalid.as_bytes()).unwrap();
+            assert_ne!(password_hash, password_hash_again);
+        }
+
+        #[cfg(feature = "serde")]
+        mod test_serde_impls {
+            use super::*;
+
+            #[test]
+            fn test_valid_deserialization() {
+                let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
+                let expected = PasswordHash::try_from(encoded_hash).unwrap();
+                let deserialized: PasswordHash =
+                    serde_json::from_str(format!("\"{encoded_hash}\"").as_str()).unwrap();
+                assert_eq!(deserialized, expected);
+
+                let encoded_hash = "$argon2id$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
+                let expected = PasswordHash::try_from(encoded_hash).unwrap();
+                let deserialized: PasswordHash =
+                    serde_json::from_str(format!("\"{encoded_hash}\"").as_str()).unwrap();
+                assert_eq!(deserialized, expected);
+            }
+
+            #[test]
+            fn test_valid_serialization() {
+                let encoded_hash = "$argon2i$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
+                let hash = PasswordHash::try_from(encoded_hash).unwrap();
+                let serialized: String = serde_json::to_string(&hash).unwrap();
+                assert_eq!(serialized, format!("\"{encoded_hash}\""));
+
+                let encoded_hash = "$argon2id$v=19$m=65536,t=3,p=1$c29tZXNhbHRzb21lc2FsdA$fRsRY9PAt5H+qAKuXRzL0/6JbFShsCd62W5aHzESk/c";
+                let hash = PasswordHash::try_from(encoded_hash).unwrap();
+                let serialized: String = serde_json::to_string(&hash).unwrap();
+                assert_eq!(serialized, format!("\"{encoded_hash}\""));
+            }
+        }
+    }
 
     #[cfg(feature = "safe_api")]
     mod test_verify {

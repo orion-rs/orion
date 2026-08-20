@@ -36,7 +36,15 @@
 - [Breaking change] `orion::hazardous::kdf`:
 	- `orion::hazardous::kdf::argon2i::{derive_key, verify}` have been removed.
 	- Functions are now part of `Argon2<Variant, Threading>` struct in `orion::hazardous::kdf::argon2`.
-	- Argon2(i/id) can now use empty salt. This is only true for the `hazardous` layer. 
+	- Hazardous now contains `safe_api` feature-gated `PasswordHash`.
+- [Breaking change] `orion::pwhash` now uses Argon2id:
+	- TODO: See [doc/MIGRATION](doc/MIGRATION.md) on how to migrate existing `0.17` `orion::pwhash::PasswordHash`es.
+	- `PasswordHash::unprotected_as_encoded()` -> `PasswordHash::unprotected_as_str()`.
+	- `PasswordHash` is nonw a wrapper around the PHC-encoded string only:
+		- `PasswordHash::from_slice()` is removed. `TryFrom<&[u8]>` exists, but expects this to be byte-repr of a PHC-encoded string. There is no longer
+		and option to make a `PasswordHash` manually from byte-repr hash annd the parameters.
+		- `PasswordHash::len()` returns the length of the encoded string.
+
 - Add support for Argon2id (sequential-mode only).
 - MSRV bumped to `1.87`
 - Add constants for BLAKE2b: `BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE` making the conditions more discernable.
