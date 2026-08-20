@@ -96,7 +96,6 @@
 //! [RP_MAX]: crate::hazardous::kdf::scrypt::RP_MAX
 //! [RP_BLK_MAX]: crate::hazardous::kdf::scrypt::RP_BLK_MAX
 //! [R_BLK_MAX]: crate::hazardous::kdf::scrypt::R_BLK_MAX
-//! [N_MAX]: crate::hazardous::kdf::scrypt::N_MAX
 //! [LOGN_MAX]: crate::hazardous::kdf::scrypt::LOGN_MAX
 
 use alloc::vec;
@@ -107,10 +106,15 @@ use crate::errors::UnknownCryptoError;
 #[cfg(feature = "safe_api")]
 use crate::generics::TypeSpec;
 use crate::hazardous::kdf::pbkdf2::sha256 as pbkdf2;
-use crate::util;
-
 #[cfg(feature = "safe_api")]
 use crate::hazardous::kdf::scrypt::phc::ScryptPhc;
+use crate::util;
+
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Deserialize, Deserializer},
+    ser::{Serialize, Serializer},
+};
 
 #[cfg(feature = "safe_api")]
 mod phc;
