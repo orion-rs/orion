@@ -41,7 +41,8 @@ fn run_tests_from_json(path_to_vectors: &str) {
         // PasswordHash figures out the variant itself
         let phc = PasswordHash::try_from(test.phc.as_bytes())
             .expect("failed to parse test vector PHC string");
-        let cost = CostParams::new(test.n, test.r, test.p).unwrap();
+        let logn = CostParams::logn_from_n(test.n as u64).unwrap();
+        let cost = CostParams::new(logn, test.r, test.p).unwrap();
 
         if test.variant.as_str() == "scrypt" {
             assert!(Scrypt::verify(&expacted_result, &passwd, &salt, &cost, &mut dst_out).is_ok());

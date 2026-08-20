@@ -77,7 +77,7 @@
 //! # #[cfg(feature = "safe_api")] {
 //! use orion::{hazardous::kdf::scrypt, util};
 //!
-//! let cost = scrypt::CostParams(17, 8, 1).unwrap();
+//! let cost = scrypt::CostParams::new(17, 8, 1).unwrap();
 //!
 //! let mut salt = [0u8; 64];
 //! util::secure_rand_bytes(&mut salt)?;
