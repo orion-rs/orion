@@ -261,7 +261,7 @@ impl TryFrom<&str> for PasswordHash {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-/// Argon2 cost parameters.
+/// [`Argon2`] cost parameters.
 pub struct CostParams {
     pub(crate) iterations: u32,
     pub(crate) memory: u32,

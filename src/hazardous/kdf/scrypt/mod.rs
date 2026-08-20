@@ -55,6 +55,8 @@
 //! - `n * 128 * r >=` [N_MAX].
 //! - The length of `dst_out` is less than 1.
 //! - The hashed password does not match the expected when verifying.
+//! - `salt` is empty.
+//! - `expected` is empty.
 //!
 //! # Security
 //! - Salts should always be generated using a CSPRNG.
@@ -100,9 +102,19 @@
 
 use alloc::vec;
 
+#[cfg(feature = "safe_api")]
+use crate::Secret;
 use crate::errors::UnknownCryptoError;
+#[cfg(feature = "safe_api")]
+use crate::generics::TypeSpec;
 use crate::hazardous::kdf::pbkdf2::sha256 as pbkdf2;
 use crate::util;
+
+#[cfg(feature = "safe_api")]
+use crate::hazardous::kdf::scrypt::phc::ScryptPhc;
+
+#[cfg(feature = "safe_api")]
+mod phc;
 
 /// scrypt `r * p` must be less than `2^30`.
 pub const RP_MAX: u64 = 1 << 30;
@@ -112,6 +124,141 @@ pub const RP_BLK_MAX: u32 = (i32::MAX as u32) / 128;
 pub const R_BLK_MAX: u32 = (i32::MAX as u32) / 256;
 /// scrypt `n * 128 * r` must be less than [i32::MAX].
 pub const N_MAX: u32 = (i32::MAX as u32) / 128;
+
+#[derive(Debug)]
+#[cfg(feature = "safe_api")]
+/// Marker type for a password hash, in P-H-C string format, produced by [`Scrypt`]. See [`PasswordHash`] type for convenience.
+pub struct ScryptPasswordHash;
+
+#[cfg(feature = "safe_api")]
+impl crate::generics::sealed::Sealed for ScryptPasswordHash {}
+
+#[cfg(feature = "safe_api")]
+impl TypeSpec for ScryptPasswordHash {
+    const NAME: &'static str = stringify!(PasswordHash);
+    // Parsing logic in Data-impl under [`Scrypt`] (applies to `parse_bytes()`).
+    type TypeData = ScryptPhc;
+}
+
+#[cfg(feature = "safe_api")]
+/// A type to represent the P-H-C encoded [`PasswordHash`] that [`Scrypt`] returns when used for password hashing.
+///
+///
+/// # Errors:
+/// An error will be returned if:
+/// - Any of the parameter validations that apply to [`Scrypt`] fails.
+/// - The encoded password hash contains whitespace.
+/// - The encoded password contains any other fields than: The algorithm name,
+///   version, ln, r, p and the salt and password hash.
+/// - The encoded password hash contains invalid Base64 encoding.
+/// - Any decimal parameter value, such as ln, contains leading zeroes and is longer
+///   than a single character.
+/// - The encoded password hash contains numerical values that cannot
+///   be represented as a `u32`.
+/// - The parameters in the encoded password hash are not correctly ordered. The ordering must be:
+///   - `$scrypt$ln=<value>,r=<value>,p=<value>$<salt>$<hash>`
+///
+/// # Panics:
+/// A panic will occur if:
+/// - Overflowing calculations happen on `usize` when decoding the password and salt from Base64.
+///
+/// # Security:
+/// - __**Avoid using**__ `unprotected_as_ref()` to validate passwords. Use instead the provided [`Scrypt::verify`] functions.
+/// - This is a secret type and does not include the password hashes in `Debug` impl. However, the entire purpose of this format
+///   is for storage, so `unprotected_as_str()` is provided. Only use for storage operations and __**NOT**__ for debugging, risking password
+///   hash leaks.
+pub type PasswordHash = Secret<ScryptPasswordHash>;
+
+impl PasswordHash {
+    #[inline]
+    /// Return the [`PasswordHash`] in P-H-C encoding.
+    pub fn unprotected_as_str(&self) -> &str {
+        self.data.phc_string.as_str()
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+/// `PasswordHash` serializes as would a [`String`](std::string::String). Note that
+/// the serialized type likely does not have the same protections that Orion
+/// provides, such as constant-time operations. A good rule of thumb is to only
+/// serialize these types for storage. Don't operate on the serialized types.
+impl Serialize for PasswordHash {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let encoded_string = self.unprotected_as_str();
+        serializer.serialize_str(encoded_string)
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+/// `PasswordHash` deserializes from a [`String`](std::string::String).
+impl<'de> Deserialize<'de> for PasswordHash {
+    fn deserialize<D>(deserializer: D) -> Result<PasswordHash, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let encoded_str = String::deserialize(deserializer)?;
+        PasswordHash::try_from(encoded_str.as_str()).map_err(de::Error::custom)
+    }
+}
+
+impl TryFrom<&str> for PasswordHash {
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(Self::from_data(ScryptPhc::try_from(value)?))
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+/// [`Scrypt`] cost parameters.
+pub struct CostParams {
+    pub(crate) logn: u32,
+    pub(crate) blocksize: u32,
+    pub(crate) parallelism: u32,
+}
+
+impl CostParams {
+    fn validate_cost_parameters(
+        n: u32,
+        r: u32,
+        parallelism: u32,
+    ) -> Result<(), UnknownCryptoError> {
+        if 
+        
+        
+        
+        if n <= 1
+            || n & (n - 1) != 0
+            || r == 0
+            || p == 0
+            || ((r as u64) * (p as u64)) >= RP_MAX
+            || r > RP_BLK_MAX / p
+            || r > R_BLK_MAX
+            || n > N_MAX / r
+            || usize::BITS < 32
+        {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok(())
+    }
+
+    /// Validate and create new [`CostParams`].
+    pub fn new(logn: u32, blocksize: u32, parallelism: u32) -> Result<Self, UnknownCryptoError> {
+        Self::validate_cost_parameters(logn, blocksize, parallelism)?;
+
+        Ok(Self {
+            logn,
+            blocksize,
+            parallelism,
+        })
+    }
+}
 
 // Copies n numbers from src into dst
 fn block_copy(dst: &mut [u32], src: &[u32], n: usize) {
@@ -291,70 +438,113 @@ fn smix(b: &mut [u8], r: usize, N: usize, v: &mut [u32], x: &mut [u32], y: &mut 
     }
 }
 
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// scrypt key derivation function as specified in [RFC 7914](https://datatracker.ietf.org/doc/html/rfc7914.html).
-pub fn derive_key(
-    password: &[u8],
-    salt: &[u8],
-    n: u32,
-    r: u32,
-    p: u32,
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    if n <= 1
-        || n & (n - 1) != 0
-        || r == 0
-        || p == 0
-        || ((r as u64) * (p as u64)) >= RP_MAX
-        || r > RP_BLK_MAX / p
-        || r > R_BLK_MAX
-        || n > N_MAX / r
-        || usize::BITS < 32
-    {
-        return Err(UnknownCryptoError);
+#[derive(Debug)]
+/// Scrypt Password-Based Key Derivation Function as specified in the [RFC 7914](https://datatracker.ietf.org/doc/html/rfc7914.html).
+pub struct Scrypt {}
+
+impl Scrypt {
+    #[cfg(feature = "safe_api")]
+    #[allow(clippy::too_many_arguments)]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Equivalent to [`Self::derive_key`] but returns a P-H-C encoded [`PasswordHash`] object.
+    pub fn derive_key_encoded(
+        password: &[u8],
+        salt: &[u8],
+        cost: &CostParams,
+        hash_len: usize,
+    ) -> Result<PasswordHash, UnknownCryptoError> {
+        let mut pwhash = ScryptPhc {
+            variant: ScryptPhc::VALID_VARIANT.into(),
+            logn: cost.logn,
+            blocksize: cost.blocksize,
+            parallelism: cost.parallelism,
+            salt: salt.to_vec(),
+            hash: vec![0u8; hash_len],
+            phc_string: String::new(),
+        };
+
+        Self::derive_key(password, salt, cost,&mut pwhash.hash)?;
+        pwhash.encode_to_phc()?;
+
+        Ok(PasswordHash::from_data(pwhash))
     }
 
-    let n: usize = n as usize;
-    let r: usize = r as usize;
-    let p: usize = p as usize;
+    #[cfg(feature = "safe_api")]
+    #[allow(clippy::too_many_arguments)]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Equivalent to [`Self::verify`] but verifies a P-H-C encoded [`PasswordHash`] object.
+    pub fn verify_encoded(
+        expected: &PasswordHash,
+        password: &[u8],
+    ) -> Result<(), UnknownCryptoError> {
+        let cost = CostParams::new(
+            expected.data.logn,
+            expected.data.blocksize,
+            expected.data.parallelism,
+        )?;
 
-    let vlen: usize = 32 * n * r;
-    let mut x = vec![0u32; 32 * r];
-    let mut y = vec![0u32; 32 * r];
-    let mut v = vec![0u32; vlen];
-    let pass = pbkdf2::Password::try_from(password)?;
-    let blen: usize = p * 128 * r;
-    let mut b = zeroize_wrap!(vec![0u8; blen]);
-    pbkdf2::derive_key(&pass, salt, 1, b.as_mut())?;
+        let actual = Self::derive_key_encoded(
+            password,
+            &expected.data.salt,
+            &cost,
+            expected.data.hash.len(),
+        )?;
 
-    for i in 0..p {
-        smix(&mut b[i * 128 * r..], r, n, &mut v, &mut x, &mut y);
+        if expected != &actual {
+            Err(UnknownCryptoError)
+        } else {
+            Ok(())
+        }
     }
 
-    pbkdf2::derive_key(&pass, b.as_ref(), 1, dst_out)?;
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// scrypt key derivation function as specified in [RFC 7914](https://datatracker.ietf.org/doc/html/rfc7914.html).
+    pub fn derive_key(
+        password: &[u8],
+        salt: &[u8],
+        cost: &CostParams,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        let n: usize = n as usize;
+        let r: usize = r as usize;
+        let p: usize = p as usize;
 
-    Ok(())
-}
+        let vlen: usize = 32 * n * r;
+        let mut x = vec![0u32; 32 * r];
+        let mut y = vec![0u32; 32 * r];
+        let mut v = vec![0u32; vlen];
+        let pass = pbkdf2::Password::try_from(password)?;
+        let blen: usize = p * 128 * r;
+        let mut b = zeroize_wrap!(vec![0u8; blen]);
+        pbkdf2::derive_key(&pass, salt, 1, b.as_mut())?;
 
-#[allow(clippy::too_many_arguments)]
-#[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Verify a scrypt derived key in constant time.
-pub fn verify(
-    expected: &[u8],
-    password: &[u8],
-    salt: &[u8],
-    n: u32,
-    r: u32,
-    p: u32,
-    dst_out: &mut [u8],
-) -> Result<(), UnknownCryptoError> {
-    derive_key(password, salt, n, r, p, dst_out)?;
-    util::secure_cmp(dst_out, expected)
+        for i in 0..p {
+            smix(&mut b[i * 128 * r..], r, n, &mut v, &mut x, &mut y);
+        }
+
+        pbkdf2::derive_key(&pass, b.as_ref(), 1, dst_out)?;
+
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Verify a scrypt derived key in constant time.
+    pub fn verify(
+        expected: &[u8],
+        password: &[u8],
+        salt: &[u8],
+        cost: &CostParams,
+        dst_out: &mut [u8],
+    ) -> Result<(), UnknownCryptoError> {
+        Self::derive_key(password, salt, cost, dst_out)?;
+        util::secure_cmp(dst_out, expected)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{derive_key, verify};
+    use super::Scrypt;
 
     #[cfg(any(feature = "safe_api", feature = "alloc"))]
     mod test_verify {
@@ -378,22 +568,24 @@ mod tests {
                 135, 37, 26, 83, 79, 117, 172, 217, 90, 197, 229, 10, 161, 95,
             ];
             let mut dst_out = vec![0u8; DK_LEN];
-            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dst_out).is_ok());
-            assert!(verify(&modified_dk, password, salt, n, r, p, &mut dst_out).is_err());
-            assert!(verify(&expected_dk, password, b"tlas", n, r, p, &mut dst_out).is_err());
+            assert!(Scrypt::verify(&expected_dk, password, salt, n, r, p, &mut dst_out).is_ok());
+            assert!(Scrypt::verify(&modified_dk, password, salt, n, r, p, &mut dst_out).is_err());
+            assert!(
+                Scrypt::verify(&expected_dk, password, b"tlas", n, r, p, &mut dst_out).is_err()
+            );
 
             let mut dkshort = [0u8; DK_LEN - 1];
             let mut dklong = [0u8; DK_LEN + 1];
             let mut dkzero = [0u8; 0];
-            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dkshort).is_err());
-            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dklong).is_err());
-            assert!(verify(&expected_dk, password, salt, n, r, p, &mut dkzero).is_err());
+            assert!(Scrypt::verify(&expected_dk, password, salt, n, r, p, &mut dkshort).is_err());
+            assert!(Scrypt::verify(&expected_dk, password, salt, n, r, p, &mut dklong).is_err());
+            assert!(Scrypt::verify(&expected_dk, password, salt, n, r, p, &mut dkzero).is_err());
         }
     }
 
     #[cfg(any(feature = "safe_api", feature = "alloc"))]
     mod test_derive_key {
-        use super::derive_key;
+        use super::Scrypt;
         use alloc::vec;
 
         struct ScryptVector<'a> {
@@ -506,7 +698,7 @@ mod tests {
         fn test_scrypt_vectors() {
             for case in SCRYPT_VECTORS.iter().take(SCRYPT_VECTORS.len() - 1) {
                 let mut got = vec![0u8; case.dk_len];
-                derive_key(case.password, case.salt, case.n, case.r, case.p, &mut got)
+                Scrypt::derive_key(case.password, case.salt, case.n, case.r, case.p, &mut got)
                     .expect("invalid scrypt parameters");
                 let exp = case.expected_dk;
                 assert_eq!(exp, got.as_slice())
@@ -528,18 +720,33 @@ mod tests {
 
             let mut dk = vec![0u8; 32];
 
-            assert!(derive_key(password, salt, valid_n, valid_r, valid_p, &mut dk).is_ok());
-            assert!(derive_key(password, salt, invalid_n, invalid_r, invalid_p, &mut dk).is_err());
+            assert!(Scrypt::derive_key(password, salt, valid_n, valid_r, valid_p, &mut dk).is_ok());
+            assert!(
+                Scrypt::derive_key(password, salt, invalid_n, invalid_r, invalid_p, &mut dk)
+                    .is_err()
+            );
 
-            assert!(derive_key(password, salt, invalid_n, valid_r, valid_p, &mut dk).is_err());
-            assert!(derive_key(password, salt, invalid_n, valid_r, invalid_p, &mut dk).is_err());
-            assert!(derive_key(password, salt, invalid_n, invalid_r, valid_p, &mut dk).is_err());
-            assert!(derive_key(password, salt, valid_n, invalid_r, invalid_p, &mut dk).is_err());
-            assert!(derive_key(password, salt, valid_n, valid_r, invalid_p, &mut dk).is_err());
-            assert!(derive_key(password, salt, valid_n, invalid_r, valid_p, &mut dk).is_err());
+            assert!(
+                Scrypt::derive_key(password, salt, invalid_n, valid_r, valid_p, &mut dk).is_err()
+            );
+            assert!(
+                Scrypt::derive_key(password, salt, invalid_n, valid_r, invalid_p, &mut dk).is_err()
+            );
+            assert!(
+                Scrypt::derive_key(password, salt, invalid_n, invalid_r, valid_p, &mut dk).is_err()
+            );
+            assert!(
+                Scrypt::derive_key(password, salt, valid_n, invalid_r, invalid_p, &mut dk).is_err()
+            );
+            assert!(
+                Scrypt::derive_key(password, salt, valid_n, valid_r, invalid_p, &mut dk).is_err()
+            );
+            assert!(
+                Scrypt::derive_key(password, salt, valid_n, invalid_r, valid_p, &mut dk).is_err()
+            );
             // r=0 and p=0 must return Err, not panic via division by zero
-            assert!(derive_key(password, salt, valid_n, 0, valid_p, &mut dk).is_err());
-            assert!(derive_key(password, salt, valid_n, valid_r, 0, &mut dk).is_err());
+            assert!(Scrypt::derive_key(password, salt, valid_n, 0, valid_p, &mut dk).is_err());
+            assert!(Scrypt::derive_key(password, salt, valid_n, valid_r, 0, &mut dk).is_err());
         }
     }
 }

@@ -3,6 +3,8 @@ pub mod custom_argon2;
 pub mod custom_hkdf;
 pub mod custom_pbkdf2;
 #[cfg(feature = "safe_api")]
+pub mod custom_scrypt;
+#[cfg(feature = "safe_api")]
 pub mod other_argon2i;
 pub mod other_hkdf;
 #[cfg(feature = "safe_api")]

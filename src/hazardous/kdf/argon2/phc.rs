@@ -25,6 +25,7 @@ use crate::{
     generics::sealed::{Data, TryFromBytes},
     hazardous::kdf::{
         argon2::{ARGON2_VERSION_19, CostParams, I, ID, MAX_SALT_LEN, MIN_SALT_LEN},
+        parse_decimal_value,
         sealed::Variant,
     },
 };
@@ -80,19 +81,6 @@ impl Debug for Argon2Phc {
 
 impl Argon2Phc {
     const VALID_VARIANTS: [&'static str; 2] = [I::PHC_ID, ID::PHC_ID];
-
-    /// Parse a decimal parameter value to a u32. Returns an error on overflow
-    /// and if the value has leading zeroes.
-    fn parse_decimal_value(value: &str) -> Result<u32, UnknownCryptoError> {
-        // See: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
-        if value.len() > 1 && value.starts_with('0') {
-            return Err(UnknownCryptoError);
-        }
-        // .parse::<T>() detects overflows (in debug and release builds)
-        // and rejects empty strings. If the value contains spaces, parsing
-        // also fails.
-        Ok(value.parse::<u32>()?)
-    }
 
     pub(crate) fn encode_to_phc(&mut self) -> Result<(), UnknownCryptoError> {
         self.phc_string = format!(
@@ -155,17 +143,17 @@ impl TryFrom<&str> for Argon2Phc {
         if param_parts.next() != Some("m") {
             return Err(UnknownCryptoError);
         }
-        let memory = Self::parse_decimal_value(param_parts.next().unwrap())?;
+        let memory = parse_decimal_value(param_parts.next().unwrap())?;
 
         if param_parts.next() != Some("t") {
             return Err(UnknownCryptoError);
         }
-        let iterations = Self::parse_decimal_value(param_parts.next().unwrap())?;
+        let iterations = parse_decimal_value(param_parts.next().unwrap())?;
 
         if param_parts.next() != Some("p") {
             return Err(UnknownCryptoError);
         }
-        let lanes = Self::parse_decimal_value(param_parts.next().unwrap())?;
+        let lanes = parse_decimal_value(param_parts.next().unwrap())?;
 
         CostParams::validate_cost_parameters(iterations, memory, lanes)?;
         let salt = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
