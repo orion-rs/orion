@@ -33,17 +33,23 @@
 	- [Breaking change]: Remove `chacha20poly1305::seal()`, `chacha20poly1305::open()`, `xchacha20poly1305::seal()` `xchacha20poly1305::open()`.
 	- Add structs `ChaCha20Poly1305` and `XChaCha20Poly1305` that offer equivalent `open()` and `seal()` functions from versions prior to `0.18.0`.
 	- Add support for `seal_inplace()` and `open_inplace()` for `ChaCha20Poly1305` and `XChaCha20Poly1305`. These overwrite data directly instead of copying and allow handling the authentication tag separately.
-- [Breaking change] `orion::hazardous::kdf`:
+- [Breaking change] `orion::hazardous::kdf::argon2`:
 	- `orion::hazardous::kdf::argon2i::{derive_key, verify}` have been removed.
 	- Functions are now part of `Argon2<Variant, Threading>` struct in `orion::hazardous::kdf::argon2`.
 	- Hazardous now contains `safe_api` feature-gated `PasswordHash`.
+	- Add `CostParams` struct being passes to functions.
 - [Breaking change] `orion::pwhash` now uses Argon2id:
-	- TODO: See [doc/MIGRATION](doc/MIGRATION.md) on how to migrate existing `0.17` `orion::pwhash::PasswordHash`es.
+	- See [doc/MIGRATION](doc/MIGRATION.md) on how to migrate existing `0.17` `orion::pwhash::PasswordHash`es.
 	- `PasswordHash::unprotected_as_encoded()` -> `PasswordHash::unprotected_as_str()`.
 	- `PasswordHash` is nonw a wrapper around the PHC-encoded string only:
 		- `PasswordHash::from_slice()` is removed. `TryFrom<&[u8]>` exists, but expects this to be byte-repr of a PHC-encoded string. There is no longer
 		and option to make a `PasswordHash` manually from byte-repr hash annd the parameters.
 		- `PasswordHash::len()` returns the length of the encoded string.
+	- Passes cost parameters with new `CostParams` struct.
+	- Restriction of minimum iterations of `3` is removed as this does not apply to Argon2id.
+	- Parallelism/lane cost parameter added which scales minimum memory requirement.
+- [Breaking change] `orion::kdf` now uses Argon2id:
+	- TODO: See [doc/MIGRATION](doc/MIGRATION.md) on how to migrate existing `0.17` `orion::pwhash::PasswordHash`es.
 
 - Add support for Argon2id (sequential-mode only).
 - MSRV bumped to `1.87`

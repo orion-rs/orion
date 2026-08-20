@@ -24,7 +24,7 @@ use crate::{
     errors::UnknownCryptoError,
     generics::sealed::{Data, TryFromBytes},
     hazardous::kdf::{
-        argon2::{ARGON2_VERSION_19, I, ID, MAX_SALT_LEN, validate_cost_parameters},
+        argon2::{ARGON2_VERSION_19, CostParams, I, ID, MAX_SALT_LEN},
         sealed::Variant,
     },
 };
@@ -167,7 +167,7 @@ impl TryFrom<&str> for Argon2Phc {
         }
         let lanes = Self::parse_decimal_value(param_parts.next().unwrap())?;
 
-        validate_cost_parameters(iterations, memory, lanes)?;
+        CostParams::validate_cost_parameters(iterations, memory, lanes)?;
         let salt = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
         if salt.len() > MAX_SALT_LEN as usize {
             return Err(UnknownCryptoError);

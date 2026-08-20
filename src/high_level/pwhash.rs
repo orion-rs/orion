@@ -59,8 +59,7 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `memory` is less than 8.
-//! - `iterations` is less than 3.
+//! - `memory` is less than `8 * parallelism`.
 //! - `password` is not 32 bytes.
 //! - `salt` is not 16 bytes.
 //! - The length of the `password` is greater than [`isize::MAX`].
@@ -73,16 +72,16 @@
 //!   Either use [`hash_password_verify()`] or compare two [`PasswordHash`]es directly.
 //! - Choosing the correct cost parameters is important for security. Please refer to [libsodium's docs]
 //!   for a description of how to do this.
-//!
-//! If the concrete cost parameters needed are unclear, please refer to [OWASP] for recommended minimum values.
+//! - The cost parameter presets provided as convenience may be outdated. Be sure to check [OWASP] to ensure
+//!   they are still adequate.
 //!
 //! # Example:
 //! ```rust
 //! use orion::pwhash;
 //!
 //! let password = pwhash::Password::try_from(b"Secret password")?;
-//!
-//! let hash = pwhash::hash_password(&password, 3, 1<<16)?;
+//! let cost = pwhash::OWASP_ARGON2ID_1ST;
+//! let hash = pwhash::hash_password(&password, &cost)?;
 //! assert!(pwhash::hash_password_verify(&hash, &password).is_ok());
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
@@ -93,6 +92,7 @@
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
 pub use super::hltypes::Password;
+pub use crate::hazardous::kdf::argon2::CostParams;
 pub use crate::hazardous::kdf::argon2::PasswordHash;
 
 use super::hltypes::Salt;
@@ -104,35 +104,31 @@ pub const SALT_LENGTH: usize = 16;
 /// The length of the hashed password.
 pub const PWHASH_LENGTH: usize = 32;
 
-/// Minimum amount of iterations.
-pub(crate) const MIN_ITERATIONS: u32 = 3;
+/// m=47104 (46 MiB), t=1, p=1 (Do not use with Argon2i).
+pub const OWASP_ARGON2ID_1ST: CostParams = CostParams {
+    iterations: 1,
+    memory: 47104,
+    parallelism: 1,
+};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct CostParams {
-    pub iterations: u32,
-    pub memory: u32,
-    pub parallelism: u32,
-}
+/// m=19456 (19 MiB), t=2, p=1 (Do not use with Argon2i)
+pub const OWASP_ARGON2ID_2ND: CostParams = CostParams {
+    iterations: 2,
+    memory: 19456,
+    parallelism: 1,
+};
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
 /// Hash a password using Argon2id.
 pub fn hash_password(
     password: &Password,
-    iterations: u32,
-    memory: u32,
-    parallelism: u32,
+    cost: &CostParams,
 ) -> Result<PasswordHash, UnknownCryptoError> {
-    if iterations < MIN_ITERATIONS {
-        return Err(UnknownCryptoError);
-    }
-
     let salt = Salt::generate()?;
     argon2::Argon2::<argon2::ID, argon2::Sequential>::derive_key_encoded(
         password.unprotected_as_ref(),
         salt.as_ref(),
-        iterations,
-        memory,
-        parallelism,
+        cost,
         None,
         None,
         PWHASH_LENGTH,
@@ -151,10 +147,10 @@ pub fn hash_password(
 ///
 /// let password = pwhash::Password::try_from(b"Secret password")?;
 /// let wrong_password = pwhash::Password::try_from(b"hunter2")?;
-///
+/// let cost = pwhash::OWASP_ARGON2ID_1ST;
 /// // Pretend these are stored somewhere and out-of-mind, e.g. in a database.
-/// let hash1 = pwhash::hash_password(&password, 3, 1<<15)?;
-/// let hash2 = pwhash::hash_password(&password, 4, 2<<15)?;
+/// let hash1 = pwhash::hash_password(&password, &cost)?;
+/// let hash2 = pwhash::hash_password(&password, &cost)?;
 ///
 /// // We don't have to remember which password used what parameters when it's
 /// // time to verify them. Both will correctly return `Ok(())`.
@@ -204,20 +200,21 @@ mod public {
         #[test]
         fn test_argon2i_verify() {
             let password = Password::try_from(&[0u8; 64]).unwrap();
-            let dk = hash_password(&password, 3, 4096).unwrap();
+            let cost = CostParams::new(1, 4096, 1).unwrap();
+            let dk = hash_password(&password, &cost).unwrap();
 
             assert!(hash_password_verify(&dk, &password).is_ok());
             assert!(!dk.is_empty());
         }
 
         #[test]
-        fn test_argon2i_verify_err_modified_password() {
+        fn test_argon2i_verify_err_modified_passwordhash() {
             let password = Password::try_from(&[0u8; 64]).unwrap();
-
-            let dk = hash_password(&password, 3, 4096).unwrap();
+            let cost = CostParams::new(1, 4096, 1).unwrap();
+            let dk = hash_password(&password, &cost).unwrap();
             let mut pwd_mod = dk.unprotected_as_ref().to_vec();
             pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
-            let modified = PasswordHash::from_slice(&pwd_mod, dk.salt.as_ref(), 3, 4096).unwrap();
+            let modified = PasswordHash::try_from(&pwd_mod).unwrap();
 
             assert!(hash_password_verify(&modified, &password).is_err());
         }
@@ -225,15 +222,15 @@ mod public {
         #[test]
         fn test_argon2i_verify_err_modified_memory() {
             let password = Password::try_from(&[0u8; 64][..]).unwrap();
-
-            let dk = hash_password(&password, 3, 4096).unwrap();
-            let encoded = dk.unprotected_as_encoded();
+            let cost = CostParams::new(1, 4096, 1).unwrap();
+            let dk = hash_password(&password, &cost).unwrap();
+            let encoded = dk.unprotected_as_str();
 
             let mut modified = encoded.to_string();
             let memory_offset = modified.find("$m=4096").unwrap();
             modified.replace_range(memory_offset..memory_offset + 7, "$m=2048");
 
-            let modified = PasswordHash::from_encoded(&modified).unwrap();
+            let modified = PasswordHash::try_from(modified.as_str()).unwrap();
 
             assert!(hash_password_verify(&modified, &password).is_err());
         }
@@ -241,15 +238,15 @@ mod public {
         #[test]
         fn test_argon2i_verify_err_modified_iterations() {
             let password = Password::try_from(&[0u8; 64][..]).unwrap();
-
-            let dk = hash_password(&password, 3, 4096).unwrap();
-            let encoded = dk.unprotected_as_encoded();
+            let cost = CostParams::new(1, 4096, 1).unwrap();
+            let dk = hash_password(&password, &cost).unwrap();
+            let encoded = dk.unprotected_as_str();
 
             let mut modified = encoded.to_string();
             let iterations_offset = modified.find(",t=3").unwrap();
             modified.replace_range(iterations_offset..iterations_offset + 4, ",t=4");
 
-            let modified = PasswordHash::from_encoded(&modified).unwrap();
+            let modified = PasswordHash::try_from(modified.as_str()).unwrap();
 
             assert!(hash_password_verify(&modified, &password).is_err());
         }
@@ -257,9 +254,9 @@ mod public {
         #[test]
         fn test_argon2i_verify_err_modified_memory_and_iterations() {
             let password = Password::try_from(&[0u8; 64][..]).unwrap();
-
-            let dk = hash_password(&password, 3, 4096).unwrap();
-            let encoded = dk.unprotected_as_encoded();
+            let cost = CostParams::new(1, 4096, 1).unwrap();
+            let dk = hash_password(&password, &cost).unwrap();
+            let encoded = dk.unprotected_as_str();
 
             let mut modified = encoded.to_string();
             let memory_offset = modified.find("$m=4096").unwrap();
@@ -267,7 +264,7 @@ mod public {
             modified.replace_range(memory_offset..memory_offset + 7, "$m=2048");
             modified.replace_range(iterations_offset..iterations_offset + 4, ",t=4");
 
-            let modified = PasswordHash::from_encoded(&modified).unwrap();
+            let modified = PasswordHash::try_from(modified.as_str()).unwrap();
 
             assert!(hash_password_verify(&modified, &password).is_err());
         }
@@ -275,40 +272,25 @@ mod public {
         #[test]
         fn test_argon2i_verify_err_modified_salt() {
             let password = Password::try_from(&[0u8; 64][..]).unwrap();
+            let cost = CostParams::new(1, 4096, 1).unwrap();
+            let mut dk = hash_password(&password, &cost).unwrap();
+            dk.data.salt[0..16].copy_from_slice(&[0u8; 16]);
+            dk.data.encode_to_phc();
 
-            let dk = hash_password(&password, 3, 4096).unwrap();
-            let mut salt_mod = dk.salt.as_ref().to_vec();
-            salt_mod[0..16].copy_from_slice(&[0u8; 16]);
-            let modified =
-                PasswordHash::from_slice(dk.unprotected_as_ref(), &salt_mod, 3, 4096).unwrap();
-
-            assert!(hash_password_verify(&modified, &password).is_err());
+            assert!(hash_password_verify(&dk, &password).is_err());
         }
 
         #[test]
         fn test_argon2i_verify_err_modified_salt_and_password() {
             let password = Password::try_from(&[0u8; 64][..]).unwrap();
 
-            let dk = hash_password(&password, 3, 4096).unwrap();
-            let mut pwd_mod = dk.unprotected_as_ref().to_vec();
-            let mut salt_mod = dk.salt.as_ref().to_vec();
-            pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
-            salt_mod[0..16].copy_from_slice(&[0u8; 16]);
-            let modified = PasswordHash::from_slice(&pwd_mod, &salt_mod, 3, 4096).unwrap();
+            let cost = CostParams::new(1, 4096, 1).unwrap();
+            let mut dk = hash_password(&password, &cost).unwrap();
+            dk.data.salt[0..16].copy_from_slice(&[0u8; 16]);
+            dk.data.hash[0..16].copy_from_slice(&[0u8; 16]);
+            dk.data.encode_to_phc();
 
-            assert!(hash_password_verify(&modified, &password).is_err());
-        }
-
-        #[test]
-        fn test_argon2i_invalid_iterations() {
-            let password = Password::try_from(&[0u8; 64][..]).unwrap();
-            assert!(hash_password(&password, MIN_ITERATIONS - 1, 4096).is_err());
-        }
-
-        #[test]
-        fn test_argon2i_invalid_memory() {
-            let password = Password::try_from(&[0u8; 64][..]).unwrap();
-            assert!(hash_password(&password, MIN_ITERATIONS, 8 - 1).is_err());
+            assert!(hash_password_verify(&dk, &password).is_err());
         }
     }
 }

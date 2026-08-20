@@ -73,7 +73,9 @@
 //! let password = b"Secret password";
 //! let mut dst_out = [0u8; 64];
 //!
-//! Argon2::<ID, Sequential>::derive_key(password, &salt, 3, 1<<16, 1, None, None, &mut dst_out)?;
+//! let cost = CostParams::new(1, 47104, 1)?;
+//!
+//! Argon2::<ID, Sequential>::derive_key(password, &salt, &cost, None, None, &mut dst_out)?;
 //!
 //! let expected_dk = dst_out;
 //!
@@ -81,9 +83,7 @@
 //!     &expected_dk,
 //!     password,
 //!     &salt,
-//!     3,
-//!     1<<16,
-//!     1,
+//!     &cost,
 //!     None,
 //!     None,
 //!     &mut dst_out
@@ -259,6 +259,58 @@ impl TryFrom<&str> for PasswordHash {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         Ok(Self::from_data(Argon2Phc::try_from(value)?))
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+/// Argon2 cost parameters.
+pub struct CostParams {
+    pub(crate) iterations: u32,
+    pub(crate) memory: u32,
+    pub(crate) parallelism: u32,
+}
+
+impl CostParams {
+    fn check_minimum_memory(memory: u32, parallelism: u32) -> Result<(), UnknownCryptoError> {
+        match 8u32.checked_mul(parallelism) {
+            Some(min) => {
+                if !(min..=u32::MAX).contains(&memory) {
+                    dbg!("C1");
+                    return Err(UnknownCryptoError);
+                }
+
+                Ok(())
+            }
+            None => Err(UnknownCryptoError),
+        }
+    }
+
+    fn validate_cost_parameters(
+        iterations: u32,
+        memory: u32,
+        parallelism: u32,
+    ) -> Result<(), UnknownCryptoError> {
+        if !(MIN_PARALLELISM_P..=MAX_PARALLELISM_P).contains(&parallelism) {
+            return Err(UnknownCryptoError);
+        }
+
+        Self::check_minimum_memory(memory, parallelism)?;
+        if !(MIN_ITERATIONS_T..=MAX_ITERATIONS_T).contains(&iterations) {
+            return Err(UnknownCryptoError);
+        }
+
+        Ok(())
+    }
+
+    /// Validate and create new [`CostParams`].
+    pub fn new(iterations: u32, memory: u32, parallelism: u32) -> Result<Self, UnknownCryptoError> {
+        Self::validate_cost_parameters(iterations, memory, parallelism)?;
+
+        Ok(Self {
+            iterations,
+            memory,
+            parallelism,
+        })
     }
 }
 
@@ -574,20 +626,6 @@ const fn is_data_independent(variant: u32, pass_n: u32, segment_n: usize) -> boo
     }
 }
 
-fn check_minimum_memory(memory: u32, parallelism: u32) -> Result<(), UnknownCryptoError> {
-    match 8u32.checked_mul(parallelism) {
-        Some(min) => {
-            if !(min..=u32::MAX).contains(&memory) {
-                dbg!("C1");
-                return Err(UnknownCryptoError);
-            }
-
-            Ok(())
-        }
-        None => Err(UnknownCryptoError),
-    }
-}
-
 // TODO(brycx): RwLock + thread::scoped
 // #[derive(Debug, PartialEq)]
 // #[cfg(feature = "safe_api")]
@@ -617,37 +655,16 @@ impl sealed::Variant for ID {
     const PHC_ID: &'static str = "argon2id";
 }
 
-fn validate_cost_parameters(
-    iterations: u32,
-    memory: u32,
-    parallelism: u32,
-) -> Result<(), UnknownCryptoError> {
-    if !(MIN_PARALLELISM_P..=MAX_PARALLELISM_P).contains(&parallelism) {
-        return Err(UnknownCryptoError);
-    }
-
-    check_minimum_memory(memory, parallelism)?;
-    if !(MIN_ITERATIONS_T..=MAX_ITERATIONS_T).contains(&iterations) {
-        return Err(UnknownCryptoError);
-    }
-
-    Ok(())
-}
-
 #[allow(clippy::too_many_arguments)]
 fn validate_parameters(
     version: u32,
     password: &[u8],
     salt: &[u8],
-    iterations: u32,
-    memory: u32,
-    parallelism: u32,
     secret: Option<&[u8]>,
     ad: Option<&[u8]>,
     dst_out: &mut [u8],
 ) -> Result<(), UnknownCryptoError> {
     debug_assert_eq!(version, ARGON2_VERSION_19);
-    validate_cost_parameters(iterations, memory, parallelism)?;
     if password.len() > MAX_PASSWORD_LEN as usize {
         return Err(UnknownCryptoError);
     }
@@ -704,9 +721,7 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
     pub fn derive_key_encoded(
         password: &[u8],
         salt: &[u8],
-        iterations: u32,
-        memory: u32,
-        parallelism: u32,
+        cost: &CostParams,
         secret: Option<&[u8]>,
         ad: Option<&[u8]>,
         hash_len: usize,
@@ -714,24 +729,15 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
         let mut pwhash = Argon2Phc {
             variant: V::PHC_ID.into(),
             version: ARGON2_VERSION_19,
-            memory,
-            iterations,
-            parallelism,
+            memory: cost.memory,
+            iterations: cost.iterations,
+            parallelism: cost.parallelism,
             salt: salt.to_vec(),
             hash: vec![0u8; hash_len],
             phc_string: String::new(),
         };
 
-        Self::derive_key(
-            password,
-            salt,
-            iterations,
-            memory,
-            parallelism,
-            secret,
-            ad,
-            &mut pwhash.hash,
-        )?;
+        Self::derive_key(password, salt, cost, secret, ad, &mut pwhash.hash)?;
         pwhash.encode_to_phc()?;
 
         Ok(PasswordHash::from_data(pwhash))
@@ -752,12 +758,16 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
             return Err(UnknownCryptoError);
         }
 
-        let actual = Self::derive_key_encoded(
-            password,
-            &expected.data.salt,
+        let cost = CostParams::new(
             expected.data.iterations,
             expected.data.memory,
             expected.data.parallelism,
+        )?;
+
+        let actual = Self::derive_key_encoded(
+            password,
+            &expected.data.salt,
+            &cost,
             secret,
             ad,
             expected.data.hash.len(),
@@ -776,29 +786,17 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
     pub fn derive_key(
         password: &[u8],
         salt: &[u8],
-        iterations: u32,
-        memory: u32,
-        parallelism: u32,
+        cost: &CostParams,
         secret: Option<&[u8]>,
         ad: Option<&[u8]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         let version = ARGON2_VERSION_19;
-        validate_parameters(
-            version,
-            password,
-            salt,
-            iterations,
-            memory,
-            parallelism,
-            secret,
-            ad,
-            dst_out,
-        )?;
+        validate_parameters(version, password, salt, secret, ad, dst_out)?;
 
-        let four_lanes = 4 * parallelism;
-        let n_blocks = (memory / four_lanes) * four_lanes;
-        let lane_len = n_blocks / parallelism;
+        let four_lanes = 4 * cost.parallelism;
+        let n_blocks = (cost.memory / four_lanes) * four_lanes;
+        let lane_len = n_blocks / cost.parallelism;
         // segment_lengt := lane_length / 4
         let segment_length = lane_len >> 2;
 
@@ -806,11 +804,11 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
 
         let mut h0 = initial_hash(
             version,
-            parallelism,
+            cost.parallelism,
             V::VALUE,
             dst_out.len() as u32,
-            memory,
-            iterations,
+            cost.memory,
+            cost.iterations,
             password,
             salt,
             secret.unwrap_or(&[]),
@@ -818,7 +816,7 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
         )?;
         let mut tmp = [0u8; 1024];
 
-        for lane in 0..parallelism {
+        for lane in 0..cost.parallelism {
             debug_assert_eq!(h0.len(), ((size_of::<u32>() * 2) + BLAKE2B_MAX_OUTSIZE));
             h0[BLAKE2B_MAX_OUTSIZE..(BLAKE2B_MAX_OUTSIZE + size_of::<u32>())]
                 .copy_from_slice(&0u32.to_le_bytes()); // Block 0.
@@ -835,7 +833,7 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
 
         let mut working_block = [0u64; 128];
 
-        for pass_n in 0..iterations as usize {
+        for pass_n in 0..cost.iterations as usize {
             for segment_n in 0..SEGMENTS_PER_LANE {
                 let offset = match (pass_n, segment_n) {
                     (0, 0) => 2, // The first two blocks have already been processed
@@ -844,10 +842,10 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
 
                 let use_gidx = is_data_independent(V::VALUE, pass_n as u32, segment_n);
 
-                for lane in 0..parallelism {
+                for lane in 0..cost.parallelism {
                     // Argon2id only requires this in first round
                     let mut gidx: Option<Gidx> = if use_gidx {
-                        let mut gidx = Gidx::new(V::VALUE, n_blocks, iterations, lane);
+                        let mut gidx = Gidx::new(V::VALUE, n_blocks, cost.iterations, lane);
                         gidx.init(pass_n as u32, segment_n as u32, offset, &mut working_block);
 
                         Some(gidx)
@@ -877,7 +875,7 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
                         let (reference_lane, reference_idx) = reference_idx(
                             j1_idx,
                             j2_idx,
-                            parallelism,
+                            cost.parallelism,
                             lane,
                             lane_len,
                             pass_n as u32,
@@ -911,7 +909,7 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
 
         // XOR last block of each lane
         let mut ret_block = [0u64; 128];
-        for lane in 0..parallelism {
+        for lane in 0..cost.parallelism {
             for (ret_block, last) in ret_block
                 .iter_mut()
                 .zip(blocks[(lane * lane_len + lane_len - 1) as usize].iter())
@@ -944,23 +942,12 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
         expected: &[u8],
         password: &[u8],
         salt: &[u8],
-        iterations: u32,
-        memory: u32,
-        parallelism: u32,
+        cost: &CostParams,
         secret: Option<&[u8]>,
         ad: Option<&[u8]>,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        Self::derive_key(
-            password,
-            salt,
-            iterations,
-            memory,
-            parallelism,
-            secret,
-            ad,
-            dst_out,
-        )?;
+        Self::derive_key(password, salt, cost, secret, ad, dst_out)?;
         crate::util::secure_cmp(dst_out, expected)
     }
 }
@@ -971,132 +958,34 @@ mod test {
 
     #[test]
     fn test_memory_requirements() {
-        assert!(check_minimum_memory(7, 1).is_err()); // below min by 1
-        assert!(check_minimum_memory(8, 1).is_ok()); // min
+        assert!(CostParams::check_minimum_memory(7, 1).is_err()); // below min by 1
+        assert!(CostParams::check_minimum_memory(8, 1).is_ok()); // min
 
-        assert!(check_minimum_memory(15, 2).is_err()); // below min by 1
-        assert!(check_minimum_memory(16, 2).is_ok()); // min
+        assert!(CostParams::check_minimum_memory(15, 2).is_err()); // below min by 1
+        assert!(CostParams::check_minimum_memory(16, 2).is_ok()); // min
 
-        assert!(check_minimum_memory(8, u32::MAX).is_err()); // overflows (and invalid parallelism)
-        assert!(check_minimum_memory(MAX_MEMORY_M, MAX_PARALLELISM_P).is_ok());
+        assert!(CostParams::check_minimum_memory(8, u32::MAX).is_err()); // overflows (and invalid parallelism)
+        assert!(CostParams::check_minimum_memory(MAX_MEMORY_M, MAX_PARALLELISM_P).is_ok());
     }
 
     #[test]
     fn test_validate_parameters_passes_parallelism() {
-        let mut tmp = [0u8; 4];
+        assert!(CostParams::new(MIN_ITERATIONS_T - 1, 8, 1,).is_err());
+        assert!(CostParams::new(MIN_ITERATIONS_T, 8, 1,).is_ok());
+        assert!(CostParams::new(MAX_ITERATIONS_T, 8, 1,).is_ok());
 
+        assert!(CostParams::new(MIN_ITERATIONS_T, 8, MIN_PARALLELISM_P - 1,).is_err());
+        assert!(CostParams::new(MIN_ITERATIONS_T, 8, MIN_PARALLELISM_P,).is_ok());
         assert!(
-            validate_parameters(
-                ARGON2_VERSION_19,
-                &[],
-                &[0u8; 8],
-                MIN_ITERATIONS_T - 1,
-                8,
-                1,
-                None,
-                None,
-                &mut tmp
-            )
-            .is_err()
-        );
-        assert!(
-            validate_parameters(
-                ARGON2_VERSION_19,
-                &[],
-                &[0u8; 8],
-                MIN_ITERATIONS_T,
-                8,
-                1,
-                None,
-                None,
-                &mut tmp
-            )
-            .is_ok()
-        );
-        assert!(
-            validate_parameters(
-                ARGON2_VERSION_19,
-                &[],
-                &[0u8; 8],
-                MAX_ITERATIONS_T,
-                8,
-                1,
-                None,
-                None,
-                &mut tmp
-            )
-            .is_ok()
+            CostParams::new(MIN_ITERATIONS_T, MAX_PARALLELISM_P * 8, MAX_PARALLELISM_P,).is_ok()
         );
 
+        let mut tmp = [0u8; 16];
         assert!(
-            validate_parameters(
-                ARGON2_VERSION_19,
-                &[],
-                &[0u8; 8],
-                MIN_ITERATIONS_T,
-                8,
-                MIN_PARALLELISM_P - 1,
-                None,
-                None,
-                &mut tmp
-            )
-            .is_err()
+            validate_parameters(ARGON2_VERSION_19, &[], &[0u8; 7], None, None, &mut tmp).is_err()
         );
         assert!(
-            validate_parameters(
-                ARGON2_VERSION_19,
-                &[],
-                &[0u8; 8],
-                MIN_ITERATIONS_T,
-                8,
-                MIN_PARALLELISM_P,
-                None,
-                None,
-                &mut tmp
-            )
-            .is_ok()
-        );
-        assert!(
-            validate_parameters(
-                ARGON2_VERSION_19,
-                &[],
-                &[0u8; 8],
-                MIN_ITERATIONS_T,
-                MAX_PARALLELISM_P * 8,
-                MAX_PARALLELISM_P,
-                None,
-                None,
-                &mut tmp
-            )
-            .is_ok()
-        );
-        assert!(
-            validate_parameters(
-                ARGON2_VERSION_19,
-                &[],
-                &[0u8; 7],
-                MIN_ITERATIONS_T,
-                MAX_PARALLELISM_P * 8,
-                MAX_PARALLELISM_P,
-                None,
-                None,
-                &mut tmp
-            )
-            .is_err()
-        );
-        assert!(
-            validate_parameters(
-                ARGON2_VERSION_19,
-                &[],
-                &[0u8; 9],
-                MIN_ITERATIONS_T,
-                MAX_PARALLELISM_P * 8,
-                MAX_PARALLELISM_P,
-                None,
-                None,
-                &mut tmp
-            )
-            .is_ok()
+            validate_parameters(ARGON2_VERSION_19, &[], &[0u8; 9], None, None, &mut tmp).is_ok()
         );
     }
 }
@@ -1317,9 +1206,7 @@ mod public {
             let h_i = Argon2::<I, Sequential>::derive_key_encoded(
                 b"password",
                 &salt,
-                1,
-                1 << 8,
-                2,
+                &CostParams::new(1, 1 << 8, 2).unwrap(),
                 None,
                 None,
                 32,
@@ -1329,9 +1216,7 @@ mod public {
             let h_id = Argon2::<ID, Sequential>::derive_key_encoded(
                 b"password",
                 &salt,
-                1,
-                1 << 8,
-                2,
+                &CostParams::new(1, 1 << 8, 2).unwrap(),
                 None,
                 None,
                 32,
@@ -1378,13 +1263,13 @@ mod public {
                 alloc::vec![0u8; hlen as usize]
             };
 
+            let cost = CostParams::new(passes, mem, parallelism as u32).unwrap();
+
             let mut dst_out_verify = dst_out.clone();
             Argon2::<I, Sequential>::derive_key(
                 &pass,
                 &salt,
-                passes,
-                mem,
-                parallelism as u32,
+                &cost,
                 Some(&k),
                 Some(&x),
                 &mut dst_out,
@@ -1395,9 +1280,7 @@ mod public {
                 &dst_out,
                 &pass,
                 &salt,
-                passes,
-                mem,
-                parallelism as u32,
+                &cost,
                 Some(&k),
                 Some(&x),
                 &mut dst_out_verify,
@@ -1407,9 +1290,7 @@ mod public {
             Argon2::<ID, Sequential>::derive_key(
                 &pass,
                 &salt,
-                passes,
-                mem,
-                parallelism as u32,
+                &cost,
                 Some(&k),
                 Some(&x),
                 &mut dst_out,
@@ -1420,9 +1301,7 @@ mod public {
                 &dst_out,
                 &pass,
                 &salt,
-                passes,
-                mem,
-                parallelism as u32,
+                &cost,
                 Some(&k),
                 Some(&x),
                 &mut dst_out_verify,
@@ -1453,13 +1332,12 @@ mod public {
             let salt = if s.len() < 8 { alloc::vec![37u8; 8] } else { s };
 
             let hlen = if !(4..=512).contains(&hlen) { 32 } else { hlen };
+            let cost = CostParams::new(passes, mem, parallelism as u32).unwrap();
 
             let h = Argon2::<I, Sequential>::derive_key_encoded(
                 &pass,
                 &salt,
-                passes,
-                mem,
-                parallelism as u32,
+                &cost,
                 Some(&k),
                 Some(&x),
                 hlen as usize,
@@ -1472,9 +1350,7 @@ mod public {
             let h = Argon2::<ID, Sequential>::derive_key_encoded(
                 &pass,
                 &salt,
-                passes,
-                mem,
-                parallelism as u32,
+                &cost,
                 Some(&k),
                 Some(&x),
                 hlen as usize,
@@ -1496,13 +1372,12 @@ mod public {
             let mut dst_out_less = [0u8; 3];
             let mut dst_out_exact = [0u8; 4];
             let mut dst_out_above = [0u8; 5];
+            let cost = CostParams::new(1, 8, 1).unwrap();
             assert!(
                 Argon2::<I, Sequential>::derive_key(
                     &[],
                     &[0u8; 8],
-                    1,
-                    8,
-                    1,
+                    &cost,
                     None,
                     None,
                     &mut dst_out_less
@@ -1513,9 +1388,7 @@ mod public {
                 Argon2::<I, Sequential>::derive_key(
                     &[],
                     &[0u8; 8],
-                    1,
-                    8,
-                    1,
+                    &cost,
                     None,
                     None,
                     &mut dst_out_exact
@@ -1526,9 +1399,7 @@ mod public {
                 Argon2::<I, Sequential>::derive_key(
                     &[],
                     &[0u8; 8],
-                    1,
-                    8,
-                    1,
+                    &cost,
                     None,
                     None,
                     &mut dst_out_above
@@ -1541,13 +1412,11 @@ mod public {
         fn test_some_or_none_same_result() {
             let mut dst_one = [0u8; 32];
             let mut dst_two = [0u8; 32];
-
+            let cost = CostParams::new(1, 8, 1).unwrap();
             Argon2::<I, Sequential>::derive_key(
                 &[255u8; 16],
                 &[1u8; 16],
-                1,
-                8,
-                1,
+                &cost,
                 None,
                 None,
                 &mut dst_one,
@@ -1556,9 +1425,7 @@ mod public {
             Argon2::<I, Sequential>::derive_key(
                 &[255u8; 16],
                 &[1u8; 16],
-                1,
-                8,
-                1,
+                &cost,
                 Some(&[]),
                 Some(&[]),
                 &mut dst_two,
@@ -1598,9 +1465,7 @@ mod public {
             Argon2::<I, Sequential>::derive_key(
                 &p,
                 &s,
-                passes,
-                mem,
-                1,
+                &CostParams::new(passes, mem, 1).unwrap(),
                 Some(&k),
                 Some(&x),
                 &mut actual,
@@ -1648,9 +1513,7 @@ mod public {
             Argon2::<I, Sequential>::derive_key(
                 &p,
                 &s,
-                passes,
-                mem,
-                1,
+                &CostParams::new(passes, mem, 1).unwrap(),
                 Some(&k),
                 Some(&x),
                 &mut actual,
@@ -1715,9 +1578,7 @@ mod public {
             Argon2::<I, Sequential>::derive_key(
                 &p,
                 &s,
-                passes,
-                mem,
-                1,
+                &CostParams::new(passes, mem, 1).unwrap(),
                 Some(&k),
                 Some(&x),
                 &mut actual,
@@ -1810,9 +1671,7 @@ mod public {
             Argon2::<I, Sequential>::derive_key(
                 &p,
                 &s,
-                passes,
-                mem,
-                1,
+                &CostParams::new(passes, mem, 1).unwrap(),
                 Some(&k),
                 Some(&x),
                 &mut actual,
@@ -1960,9 +1819,7 @@ mod public {
             Argon2::<I, Sequential>::derive_key(
                 &p,
                 &s,
-                passes,
-                mem,
-                1,
+                &CostParams::new(passes, mem, 1).unwrap(),
                 Some(&k),
                 Some(&x),
                 &mut actual,

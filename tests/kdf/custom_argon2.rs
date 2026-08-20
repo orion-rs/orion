@@ -54,6 +54,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
         // PasswordHash figures out the variant itself
         let phc = PasswordHash::try_from(test.phc.as_bytes())
             .expect("failed to parse test vector PHC string");
+        let cost = CostParams::new(test.passes, test.memory, test.parallelism).unwrap();
 
         match test.variant.as_str() {
             "argon2i" => {
@@ -62,9 +63,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
                         &expacted_result,
                         &passwd,
                         &salt,
-                        test.passes,
-                        test.memory,
-                        test.parallelism,
+                        &cost,
                         Some(&secret),
                         Some(&ad),
                         &mut dst_out
@@ -74,9 +73,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
                 let rt = Argon2::<I, Sequential>::derive_key_encoded(
                     &passwd,
                     &salt,
-                    test.passes,
-                    test.memory,
-                    test.parallelism,
+                    &cost,
                     Some(&secret),
                     Some(&ad),
                     test.tag_length as usize,
@@ -100,9 +97,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
                         &expacted_result,
                         &passwd,
                         &salt,
-                        test.passes,
-                        test.memory,
-                        test.parallelism,
+                        &cost,
                         Some(&secret),
                         Some(&ad),
                         &mut dst_out
@@ -113,9 +108,7 @@ fn run_tests_from_json(path_to_vectors: &str) {
                 let rt = Argon2::<ID, Sequential>::derive_key_encoded(
                     &passwd,
                     &salt,
-                    test.passes,
-                    test.memory,
-                    test.parallelism,
+                    &cost,
                     Some(&secret),
                     Some(&ad),
                     test.tag_length as usize,
