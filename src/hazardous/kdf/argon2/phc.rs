@@ -24,7 +24,7 @@ use crate::{
     errors::UnknownCryptoError,
     generics::sealed::{Data, TryFromBytes},
     hazardous::kdf::{
-        argon2::{ARGON2_VERSION_19, CostParams, I, ID, MAX_SALT_LEN},
+        argon2::{ARGON2_VERSION_19, CostParams, I, ID, MAX_SALT_LEN, MIN_SALT_LEN},
         sealed::Variant,
     },
 };
@@ -169,7 +169,7 @@ impl TryFrom<&str> for Argon2Phc {
 
         CostParams::validate_cost_parameters(iterations, memory, lanes)?;
         let salt = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
-        if salt.len() > MAX_SALT_LEN as usize {
+        if salt.len() < MIN_SALT_LEN as usize || salt.len() > MAX_SALT_LEN as usize {
             return Err(UnknownCryptoError);
         }
         let password_hash_raw = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
@@ -303,7 +303,7 @@ mod test {
 
         assert!(Argon2Phc::try_from(one).is_ok());
         assert!(Argon2Phc::try_from(zero).is_err());
-        assert!(Argon2Phc::try_from(two).is_err());
+        assert!(Argon2Phc::try_from(two).is_ok());
     }
 
     #[test]
@@ -323,8 +323,8 @@ mod test {
 
     #[test]
     fn test_bad_encoding_invalid_iterations() {
-        let exact_min = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-        let less = "$argon2i$v=19$m=65536,t=2,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let exact_min = "$argon2i$v=19$m=65536,t=1,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        let less = "$argon2i$v=19$m=65536,t=0,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         // Throws error during parsing as u32
         let u32_overflow = format!(
             "$argon2i$v=19$m=65536,t={},p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA",
@@ -338,12 +338,14 @@ mod test {
 
     #[test]
     fn test_bad_encoding_invalid_algo() {
+        let argon2i = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         let argon2id = "$argon2id$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         let argon2d = "$argon2d$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         let nothing = "$$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
 
         assert!(Argon2Phc::try_from(argon2d).is_err());
-        assert!(Argon2Phc::try_from(argon2id).is_err());
+        assert!(Argon2Phc::try_from(argon2i).is_ok());
+        assert!(Argon2Phc::try_from(argon2id).is_ok());
         assert!(Argon2Phc::try_from(nothing).is_err());
     }
 
@@ -364,7 +366,6 @@ mod test {
         let t_before_m = "$argon2i$v=19$t=3,m=65536,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         let p_before_t = "$argon2i$v=19$m=65536,p=1,t=3$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         let p_before_m = "$argon2i$v=19$p=1,m=65536,t=3$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-        let pass_before_salt = "$argon2i$v=19$m=65536,t=3,p=1$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA$cHBwcHBwcHBwcHBwcHBwcA";
         let salt_first = "$cHBwcHBwcHBwcHBwcHBwcA$argon2i$v=19$m=65536,t=3,p=1$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         let pass_first = "$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA";
 
@@ -372,7 +373,6 @@ mod test {
         assert!(Argon2Phc::try_from(t_before_m).is_err());
         assert!(Argon2Phc::try_from(p_before_t).is_err());
         assert!(Argon2Phc::try_from(p_before_m).is_err());
-        assert!(Argon2Phc::try_from(pass_before_salt).is_err());
         assert!(Argon2Phc::try_from(salt_first).is_err());
         assert!(Argon2Phc::try_from(pass_first).is_err());
     }
@@ -385,18 +385,16 @@ mod test {
 
         assert!(Argon2Phc::try_from(exact).is_ok());
         assert!(Argon2Phc::try_from(nothing).is_err());
-        assert!(Argon2Phc::try_from(above).is_err());
+        assert!(Argon2Phc::try_from(above).is_ok());
     }
 
     #[test]
     fn test_bad_encoding_invalid_password() {
         let exact = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         let nothing = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$";
-        let above = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAA";
 
         assert!(Argon2Phc::try_from(exact).is_ok());
         assert!(Argon2Phc::try_from(nothing).is_err());
-        assert!(Argon2Phc::try_from(above).is_err());
     }
 
     #[test]

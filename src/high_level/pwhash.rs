@@ -48,7 +48,8 @@
 //! See a more detailed description of the [encoding format here].
 //!
 //! # Note:
-//! This implementation only supports a single thread/lane.
+//! This implementation only supports a single thread, so modifying the parallelism degree beyond `1`
+//! will simply make them run sequentially.
 //!
 //! # Parameters:
 //! - `password`: The password to be hashed.
@@ -214,9 +215,8 @@ mod public {
             let dk = hash_password(&password, &cost).unwrap();
             let mut pwd_mod = dk.unprotected_as_ref().to_vec();
             pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
-            let modified = PasswordHash::try_from(&pwd_mod).unwrap();
 
-            assert!(hash_password_verify(&modified, &password).is_err());
+            assert!(PasswordHash::try_from(&pwd_mod).is_err());
         }
 
         #[test]
@@ -243,8 +243,8 @@ mod public {
             let encoded = dk.unprotected_as_str();
 
             let mut modified = encoded.to_string();
-            let iterations_offset = modified.find(",t=3").unwrap();
-            modified.replace_range(iterations_offset..iterations_offset + 4, ",t=4");
+            let iterations_offset = modified.find(",t=1").unwrap();
+            modified.replace_range(iterations_offset..iterations_offset + 4, ",t=2");
 
             let modified = PasswordHash::try_from(modified.as_str()).unwrap();
 
@@ -260,9 +260,9 @@ mod public {
 
             let mut modified = encoded.to_string();
             let memory_offset = modified.find("$m=4096").unwrap();
-            let iterations_offset = modified.find(",t=3").unwrap();
+            let iterations_offset = modified.find(",t=1").unwrap();
             modified.replace_range(memory_offset..memory_offset + 7, "$m=2048");
-            modified.replace_range(iterations_offset..iterations_offset + 4, ",t=4");
+            modified.replace_range(iterations_offset..iterations_offset + 4, ",t=2");
 
             let modified = PasswordHash::try_from(modified.as_str()).unwrap();
 
@@ -275,7 +275,7 @@ mod public {
             let cost = CostParams::new(1, 4096, 1).unwrap();
             let mut dk = hash_password(&password, &cost).unwrap();
             dk.data.salt[0..16].copy_from_slice(&[0u8; 16]);
-            dk.data.encode_to_phc();
+            dk.data.encode_to_phc().unwrap();
 
             assert!(hash_password_verify(&dk, &password).is_err());
         }
@@ -288,7 +288,7 @@ mod public {
             let mut dk = hash_password(&password, &cost).unwrap();
             dk.data.salt[0..16].copy_from_slice(&[0u8; 16]);
             dk.data.hash[0..16].copy_from_slice(&[0u8; 16]);
-            dk.data.encode_to_phc();
+            dk.data.encode_to_phc().unwrap();
 
             assert!(hash_password_verify(&dk, &password).is_err());
         }

@@ -15,14 +15,13 @@ fn test_case_argon2i() {
     let associated_data = decode("040404040404040404040404").unwrap();
     let expected_hash =
         decode("c814d9d1dc7f37aa13f0d77f2494bda1c8de6b016dd388d29952a4c4672b6ce8").unwrap();
+    let cost = CostParams::new(passes, mem, parallelism).unwrap();
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
     Argon2::<I, Sequential>::derive_key(
         &password,
         &salt,
-        passes,
-        mem,
-        parallelism,
+        &cost,
         Some(&secret_value),
         Some(&associated_data),
         &mut actual_hash,
@@ -34,9 +33,7 @@ fn test_case_argon2i() {
             &expected_hash,
             &password,
             &salt,
-            passes,
-            mem,
-            parallelism,
+            &cost,
             Some(&secret_value),
             Some(&associated_data),
             &mut actual_hash
@@ -57,14 +54,13 @@ fn test_case_argon2id() {
     let associated_data = decode("040404040404040404040404").unwrap();
     let expected_hash =
         decode("0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659").unwrap();
+    let cost = CostParams::new(passes, mem, parallelism).unwrap();
 
     let mut actual_hash = vec![0u8; expected_hash.len()];
     Argon2::<ID, Sequential>::derive_key(
         &password,
         &salt,
-        passes,
-        mem,
-        parallelism,
+        &cost,
         Some(&secret_value),
         Some(&associated_data),
         &mut actual_hash,
@@ -76,9 +72,7 @@ fn test_case_argon2id() {
             &expected_hash,
             &password,
             &salt,
-            passes,
-            mem,
-            parallelism,
+            &cost,
             Some(&secret_value),
             Some(&associated_data),
             &mut actual_hash

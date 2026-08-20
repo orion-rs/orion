@@ -429,8 +429,9 @@ mod kdf {
     pub fn bench_argon2i(c: &mut Criterion) {
         let mut group = c.benchmark_group("Argon2i");
 
-        let iter = 3;
         let mem = 128;
+        let iter = 3;
+        let cost = argon2::CostParams::new(iter, mem, 1).unwrap();
         let password = [0u8; 16];
         let salt = [0u8; 16];
         let mut dk_out = [0u8; 32];
@@ -448,9 +449,7 @@ mod kdf {
                     argon2::Argon2::<argon2::I, argon2::Sequential>::derive_key(
                         &password,
                         &salt,
-                        iter,
-                        mem,
-                        1,
+                        &cost,
                         None,
                         None,
                         &mut dk_out,

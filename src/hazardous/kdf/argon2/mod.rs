@@ -250,7 +250,7 @@ impl<'de> Deserialize<'de> for PasswordHash {
         D: Deserializer<'de>,
     {
         let encoded_str = String::deserialize(deserializer)?;
-        PasswordHash::try_from(&encoded_str).map_err(de::Error::custom)
+        PasswordHash::try_from(encoded_str.as_str()).map_err(de::Error::custom)
     }
 }
 
@@ -1049,7 +1049,7 @@ mod public {
         #[test]
         fn test_password_hash_ne() {
             let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-            let invalid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let invalid = "$argon2i$v=19$m=65536,t=2,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
 
             let password_hash = PasswordHash::try_from(valid.as_bytes()).unwrap();
             assert_ne!(password_hash.unprotected_as_ref(), invalid.as_bytes());

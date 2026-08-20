@@ -49,8 +49,10 @@
 	- Restriction of minimum iterations of `3` is removed as this does not apply to Argon2id.
 	- Parallelism/lane cost parameter added which scales minimum memory requirement.
 - [Breaking change] `orion::kdf` now uses Argon2id:
-	- TODO: See [doc/MIGRATION](doc/MIGRATION.md) on how to migrate existing `0.17` `orion::pwhash::PasswordHash`es.
-
+	- See [doc/MIGRATION](doc/MIGRATION.md) on how to migrate existing `0.17` `orion::kdf`es.
+	- Passes cost parameters with new `CostParams` struct.
+	- Restriction of minimum iterations of `3` is removed as this does not apply to Argon2id.
+	- Parallelism/lane cost parameter added which scales minimum memory requirement.
 - Add support for Argon2id (sequential-mode only).
 - MSRV bumped to `1.87`
 - Add constants for BLAKE2b: `BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE` making the conditions more discernable.
