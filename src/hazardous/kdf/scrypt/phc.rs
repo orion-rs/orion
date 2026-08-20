@@ -105,7 +105,7 @@ impl TryFrom<&str> for ScryptPhc {
         }
 
         let parts_split = value.split('$').collect::<Vec<&str>>();
-        if parts_split.len() != 6 {
+        if parts_split.len() != 5 {
             return Err(UnknownCryptoError);
         }
         let mut parts = parts_split.into_iter();
@@ -267,53 +267,6 @@ mod test {
     }
 
     #[test]
-    fn test_bad_encoding_invalid_n() {
-        // "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
-        // TODO
-        let one = "$scrypt$ln=1,r=1,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
-        let zero = "$scrypt$v=19$m=65536,t=3,p=0$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-        let two = "$scrypt$v=19$m=65536,t=3,p=2$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-
-        assert!(ScryptPhc::try_from(one).is_ok());
-        assert!(ScryptPhc::try_from(zero).is_err());
-        assert!(ScryptPhc::try_from(two).is_ok());
-    }
-
-    #[test]
-    fn test_bad_encoding_invalid_r() {
-        // "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
-        // TODO
-        let exact_min = "$scrypt$ln=16,r=0,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
-        let less = "$scrypt$v=19$m=7,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-        // Throws error during parsing as u32
-        let u32_overflow = format!(
-            "$scrypt$v=19$m={},t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA",
-            u64::MAX
-        );
-
-        assert!(ScryptPhc::try_from(exact_min).is_ok());
-        assert!(ScryptPhc::try_from(less).is_err());
-        assert!(ScryptPhc::try_from(u32_overflow.as_str()).is_err());
-    }
-
-    #[test]
-    fn test_bad_encoding_invalid_iterations() {
-        // "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
-        // TODO
-        let exact_min = "$scrypt$v=19$m=65536,t=1,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-        let less = "$scrypt$v=19$m=65536,t=0,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
-        // Throws error during parsing as u32
-        let u32_overflow = format!(
-            "$scrypt$v=19$m=65536,t={},p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA",
-            u64::MAX
-        );
-
-        assert!(ScryptPhc::try_from(exact_min).is_ok());
-        assert!(ScryptPhc::try_from(less).is_err());
-        assert!(ScryptPhc::try_from(u32_overflow.as_str()).is_err());
-    }
-
-    #[test]
     fn test_bad_encoding_invalid_algo() {
         let scrypt = "$scrypti$ln=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         let scryptd = "$scryptd$ln=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
@@ -322,8 +275,8 @@ mod test {
             "$$ln=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
 
         assert!(ScryptPhc::try_from(argon2d).is_err());
-        assert!(ScryptPhc::try_from(scrypt).is_ok());
-        assert!(ScryptPhc::try_from(scryptd).is_ok());
+        assert!(ScryptPhc::try_from(scrypt).is_err());
+        assert!(ScryptPhc::try_from(scryptd).is_err());
         assert!(ScryptPhc::try_from(nothing).is_err());
     }
 
@@ -344,13 +297,11 @@ mod test {
 
     #[test]
     fn test_bad_encoding_invalid_salt() {
-        let exact = "$scrypt$ln=16,r=8,p=1$cH$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
+        let exact = "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
         let nothing = "$scrypt$ln=16,r=8,p=1$$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
-        let above = "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
 
         assert!(ScryptPhc::try_from(exact).is_ok());
         assert!(ScryptPhc::try_from(nothing).is_err());
-        assert!(ScryptPhc::try_from(above).is_ok());
     }
 
     #[test]

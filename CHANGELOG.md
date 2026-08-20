@@ -34,8 +34,8 @@
 	- Add structs `ChaCha20Poly1305` and `XChaCha20Poly1305` that offer equivalent `open()` and `seal()` functions from versions prior to `0.18.0`.
 	- Add support for `seal_inplace()` and `open_inplace()` for `ChaCha20Poly1305` and `XChaCha20Poly1305`. These overwrite data directly instead of copying and allow handling the authentication tag separately.
 - [Breaking change] `orion::hazardous::kdf::argon2`:
-	- `orion::hazardous::kdf::argon2i::{derive_key, verify}` have been removed.
-	- Functions are now part of `Argon2<Variant, Threading>` struct in `orion::hazardous::kdf::argon2`.
+	- Functions moved to `Argon2<Variant, Threading>` struct.
+	- Added `Argon2::derive_key_encoded()` and `Argon2::verify_encoded()` that work on P-H-C strings.
 	- Hazardous now contains `safe_api` feature-gated `PasswordHash`.
 	- Add `CostParams` struct being passes to functions.
 - [Breaking change] `orion::pwhash` now uses Argon2id:
@@ -53,6 +53,12 @@
 	- Passes cost parameters with new `CostParams` struct.
 	- Restriction of minimum iterations of `3` is removed as this does not apply to Argon2id.
 	- Parallelism/lane cost parameter added which scales minimum memory requirement.
+- [Breaking change] `orion::hazardous::kdf::scrypt`:
+	- Functions moved to `Scrypt` struct.
+	- Added `Scrypt::derive_key_encoded()` and `Scrypt::verify_encoded()` that work on P-H-C strings.
+	- Hazardous now contains `safe_api` feature-gated `PasswordHash`.
+	- Add `CostParams` struct being passes to functions.
+	- Cost parameter `n` is now `logn` to make choosing wrong combinations harder.
 - Add support for Argon2id (sequential-mode only).
 - MSRV bumped to `1.87`
 - Add constants for BLAKE2b: `BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE` making the conditions more discernable.

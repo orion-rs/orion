@@ -43,19 +43,13 @@ fn run_tests_from_json(path_to_vectors: &str) {
             .expect("failed to parse test vector PHC string");
         let cost = CostParams::new(test.n, test.r, test.p).unwrap();
 
-        match test.variant.as_str() {
-            "scrypt" => {
-                assert!(
-                    Scrypt::verify(&expacted_result, &passwd, &salt, &cost, &mut dst_out).is_ok()
-                );
-                let rt =
-                    Scrypt::derive_key_encoded(&passwd, &salt, &cost, test.tag_length as usize)
-                        .unwrap();
-                assert_eq!(rt.unprotected_as_ref(), test.phc.as_bytes());
-                assert_eq!(rt.unprotected_as_str(), test.phc.as_str());
-                assert!(Scrypt::verify_encoded(&phc, &passwd,).is_ok());
-            }
-            _ => (),
+        if test.variant.as_str() == "scrypt" {
+            assert!(Scrypt::verify(&expacted_result, &passwd, &salt, &cost, &mut dst_out).is_ok());
+            let rt = Scrypt::derive_key_encoded(&passwd, &salt, &cost, test.tag_length as usize)
+                .unwrap();
+            assert_eq!(rt.unprotected_as_ref(), test.phc.as_bytes());
+            assert_eq!(rt.unprotected_as_str(), test.phc.as_str());
+            assert!(Scrypt::verify_encoded(&phc, &passwd).is_ok());
         }
     }
 }
