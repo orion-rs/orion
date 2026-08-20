@@ -10,9 +10,7 @@ mod custom_test_vectors {
 
     #[test]
     fn test_case_1() {
-        let password_256 = sha256::Password::try_from("password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::try_from("password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::try_from("password".as_bytes()).unwrap();
+        let password = b"password";
         let salt = "salt".as_bytes();
         let iter = 1;
         let mut dk_out = [0u8; 20];
@@ -22,16 +20,20 @@ mod custom_test_vectors {
         let expected_dk_512 = decode("867f70cf1ade02cff3752599a3a53dc4af34c7a6").unwrap();
 
         // verify() also runs derive_key()
-        assert!(sha256::verify(&expected_dk_256, &password_256, salt, iter, &mut dk_out).is_ok());
-        assert!(sha384::verify(&expected_dk_384, &password_384, salt, iter, &mut dk_out).is_ok());
-        assert!(sha512::verify(&expected_dk_512, &password_512, salt, iter, &mut dk_out).is_ok());
+        assert!(
+            Pbkdf2::<SHA256>::verify(&expected_dk_256, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA384>::verify(&expected_dk_384, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA512>::verify(&expected_dk_512, password, salt, iter, &mut dk_out).is_ok()
+        );
     }
 
     #[test]
     fn test_case_2() {
-        let password_256 = sha256::Password::try_from("password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::try_from("password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::try_from("password".as_bytes()).unwrap();
+        let password = b"password";
         let salt = "salt".as_bytes();
         let iter = 2;
         let mut dk_out = [0u8; 20];
@@ -41,16 +43,20 @@ mod custom_test_vectors {
         let expected_dk_512 = decode("e1d9c16aa681708a45f5c7c4e215ceb66e011a2e").unwrap();
 
         // verify() also runs derive_key()
-        assert!(sha256::verify(&expected_dk_256, &password_256, salt, iter, &mut dk_out).is_ok());
-        assert!(sha384::verify(&expected_dk_384, &password_384, salt, iter, &mut dk_out).is_ok());
-        assert!(sha512::verify(&expected_dk_512, &password_512, salt, iter, &mut dk_out).is_ok());
+        assert!(
+            Pbkdf2::<SHA256>::verify(&expected_dk_256, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA384>::verify(&expected_dk_384, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA512>::verify(&expected_dk_512, password, salt, iter, &mut dk_out).is_ok()
+        );
     }
 
     #[test]
     fn test_case_3() {
-        let password_256 = sha256::Password::try_from("password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::try_from("password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::try_from("password".as_bytes()).unwrap();
+        let password = b"password";
         let salt = "salt".as_bytes();
         let iter = 4096;
         let mut dk_out = [0u8; 20];
@@ -60,17 +66,21 @@ mod custom_test_vectors {
         let expected_dk_512 = decode("d197b1b33db0143e018b12f3d1d1479e6cdebdcc").unwrap();
 
         // verify() also runs derive_key()
-        assert!(sha256::verify(&expected_dk_256, &password_256, salt, iter, &mut dk_out).is_ok());
-        assert!(sha384::verify(&expected_dk_384, &password_384, salt, iter, &mut dk_out).is_ok());
-        assert!(sha512::verify(&expected_dk_512, &password_512, salt, iter, &mut dk_out).is_ok());
+        assert!(
+            Pbkdf2::<SHA256>::verify(&expected_dk_256, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA384>::verify(&expected_dk_384, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA512>::verify(&expected_dk_512, password, salt, iter, &mut dk_out).is_ok()
+        );
     }
 
     /* This takes too long for normal tests
     #[test]
     fn test_case_4() {
-        let password_256 = sha256::Password::try_from("password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::try_from("password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::try_from("password".as_bytes()).unwrap();
+        let password = b"password";
         let salt = "salt".as_bytes();
         let iter = 16777216;
         let mut dk_out = [0u8; 20];
@@ -80,20 +90,15 @@ mod custom_test_vectors {
         let expected_dk_512 = decode("6180a3ceabab45cc3964112c811e0131bca93a35").unwrap();
 
         // verify() also runs derive_key()
-        assert!(sha256::verify(&expected_dk_256, &password_256, salt, iter, &mut dk_out).is_ok());
-        assert!(sha384::verify(&expected_dk_384, &password_384, salt, iter, &mut dk_out).is_ok());
-        assert!(sha512::verify(&expected_dk_512, &password_512, salt, iter, &mut dk_out).is_ok());
+        assert!(Pbkdf2::<SHA256>::verify(&expected_dk_256, password, salt, iter, &mut dk_out).is_ok());
+        assert!(Pbkdf2::<SHA384>::verify(&expected_dk_384, password, salt, iter, &mut dk_out).is_ok());
+        assert!(Pbkdf2::<SHA512>::verify(&expected_dk_512, password, salt, iter, &mut dk_out).is_ok());
     }
     */
 
     #[test]
     fn test_case_5() {
-        let password_256 =
-            sha256::Password::try_from("passwordPASSWORDpassword".as_bytes()).unwrap();
-        let password_384 =
-            sha384::Password::try_from("passwordPASSWORDpassword".as_bytes()).unwrap();
-        let password_512 =
-            sha512::Password::try_from("passwordPASSWORDpassword".as_bytes()).unwrap();
+        let password = b"passwordPASSWORDpassword";
         let salt = "saltSALTsaltSALTsaltSALTsaltSALTsalt".as_bytes();
         let iter = 4096;
         let mut dk_out = [0u8; 25];
@@ -103,16 +108,20 @@ mod custom_test_vectors {
         let expected_dk_512 = decode("8c0511f4c6e597c6ac6315d8f0362e225f3c501495ba23b868").unwrap();
 
         // verify() also runs derive_key()
-        assert!(sha256::verify(&expected_dk_256, &password_256, salt, iter, &mut dk_out).is_ok());
-        assert!(sha384::verify(&expected_dk_384, &password_384, salt, iter, &mut dk_out).is_ok());
-        assert!(sha512::verify(&expected_dk_512, &password_512, salt, iter, &mut dk_out).is_ok());
+        assert!(
+            Pbkdf2::<SHA256>::verify(&expected_dk_256, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA384>::verify(&expected_dk_384, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA512>::verify(&expected_dk_512, password, salt, iter, &mut dk_out).is_ok()
+        );
     }
 
     #[test]
     fn test_case_6() {
-        let password_256 = sha256::Password::try_from("pass\0word".as_bytes()).unwrap();
-        let password_384 = sha384::Password::try_from("pass\0word".as_bytes()).unwrap();
-        let password_512 = sha512::Password::try_from("pass\0word".as_bytes()).unwrap();
+        let password = b"pass\0word";
         let salt = "sa\0lt".as_bytes();
         let iter = 4096;
         let mut dk_out = [0u8; 16];
@@ -122,16 +131,20 @@ mod custom_test_vectors {
         let expected_dk_512 = decode("9d9e9c4cd21fe4be24d5b8244c759665").unwrap();
 
         // verify() also runs derive_key()
-        assert!(sha256::verify(&expected_dk_256, &password_256, salt, iter, &mut dk_out).is_ok());
-        assert!(sha384::verify(&expected_dk_384, &password_384, salt, iter, &mut dk_out).is_ok());
-        assert!(sha512::verify(&expected_dk_512, &password_512, salt, iter, &mut dk_out).is_ok());
+        assert!(
+            Pbkdf2::<SHA256>::verify(&expected_dk_256, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA384>::verify(&expected_dk_384, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA512>::verify(&expected_dk_512, password, salt, iter, &mut dk_out).is_ok()
+        );
     }
 
     #[test]
     fn test_case_7() {
-        let password_256 = sha256::Password::try_from("passwd".as_bytes()).unwrap();
-        let password_384 = sha384::Password::try_from("passwd".as_bytes()).unwrap();
-        let password_512 = sha512::Password::try_from("passwd".as_bytes()).unwrap();
+        let password = b"passwd";
         let salt = "salt".as_bytes();
         let iter = 1;
         let mut dk_out = [0u8; 128];
@@ -141,16 +154,20 @@ mod custom_test_vectors {
         let expected_dk_512 = decode("c74319d99499fc3e9013acff597c23c5baf0a0bec5634c46b8352b793e324723d55caa76b2b25c43402dcfdc06cdcf66f95b7d0429420b39520006749c51a04ef3eb99e576617395a178ba33214793e48045132928a9e9bf2661769fdc668f31798597aaf6da70dd996a81019726084d70f152baed8aafe2227c07636c6ddece").unwrap();
 
         // verify() also runs derive_key()
-        assert!(sha256::verify(&expected_dk_256, &password_256, salt, iter, &mut dk_out).is_ok());
-        assert!(sha384::verify(&expected_dk_384, &password_384, salt, iter, &mut dk_out).is_ok());
-        assert!(sha512::verify(&expected_dk_512, &password_512, salt, iter, &mut dk_out).is_ok());
+        assert!(
+            Pbkdf2::<SHA256>::verify(&expected_dk_256, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA384>::verify(&expected_dk_384, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA512>::verify(&expected_dk_512, password, salt, iter, &mut dk_out).is_ok()
+        );
     }
 
     #[test]
     fn test_case_8() {
-        let password_256 = sha256::Password::try_from("Password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::try_from("Password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::try_from("Password".as_bytes()).unwrap();
+        let password = b"Password";
         let salt = "NaCl".as_bytes();
         let iter = 80000;
         let mut dk_out = [0u8; 128];
@@ -160,16 +177,20 @@ mod custom_test_vectors {
         let expected_dk_512 = decode("e6337d6fbeb645c794d4a9b5b75b7b30dac9ac50376a91df1f4460f6060d5addb2c1fd1f84409abacc67de7eb4056e6bb06c2d82c3ef4ccd1bded0f675ed97c65c33d39f81248454327aa6d03fd049fc5cbb2b5e6dac08e8ace996cdc960b1bd4530b7e754773d75f67a733fdb99baf6470e42ffcb753c15c352d4800fb6f9d6").unwrap();
 
         // verify() also runs derive_key()
-        assert!(sha256::verify(&expected_dk_256, &password_256, salt, iter, &mut dk_out).is_ok());
-        assert!(sha384::verify(&expected_dk_384, &password_384, salt, iter, &mut dk_out).is_ok());
-        assert!(sha512::verify(&expected_dk_512, &password_512, salt, iter, &mut dk_out).is_ok());
+        assert!(
+            Pbkdf2::<SHA256>::verify(&expected_dk_256, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA384>::verify(&expected_dk_384, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA512>::verify(&expected_dk_512, password, salt, iter, &mut dk_out).is_ok()
+        );
     }
 
     #[test]
     fn test_case_9() {
-        let password_256 = sha256::Password::try_from("Password".as_bytes()).unwrap();
-        let password_384 = sha384::Password::try_from("Password".as_bytes()).unwrap();
-        let password_512 = sha512::Password::try_from("Password".as_bytes()).unwrap();
+        let password = b"Password";
         let salt = "sa\0lt".as_bytes();
         let iter = 4096;
         let mut dk_out = [0u8; 256];
@@ -179,8 +200,14 @@ mod custom_test_vectors {
         let expected_dk_512 = decode("10176fb32cb98cd7bb31e2bb5c8f6e425c103333a2e496058e3fd2bd88f657485c89ef92daa0668316bc23ebd1ef88f6dd14157b2320b5d54b5f26377c5dc279b1dcdec044bd6f91b166917c80e1e99ef861b1d2c7bce1b961178125fb86867f6db489a2eae0022e7bc9cf421f044319fac765d70cb89b45c214590e2ffb2c2b565ab3b9d07571fde0027b1dc57f8fd25afa842c1056dd459af4074d7510a0c020b914a5e202445d4d3f151070589dd6a2554fc506018c4f001df6239643dc86771286ae4910769d8385531bba57544d63c3640b90c98f1445ebdd129475e02086b600f0beb5b05cc6ca9b3633b452b7dad634e9336f56ec4c3ac0b4fe54ced8").unwrap();
 
         // verify() also runs derive_key()
-        assert!(sha256::verify(&expected_dk_256, &password_256, salt, iter, &mut dk_out).is_ok());
-        assert!(sha384::verify(&expected_dk_384, &password_384, salt, iter, &mut dk_out).is_ok());
-        assert!(sha512::verify(&expected_dk_512, &password_512, salt, iter, &mut dk_out).is_ok());
+        assert!(
+            Pbkdf2::<SHA256>::verify(&expected_dk_256, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA384>::verify(&expected_dk_384, password, salt, iter, &mut dk_out).is_ok()
+        );
+        assert!(
+            Pbkdf2::<SHA512>::verify(&expected_dk_512, password, salt, iter, &mut dk_out).is_ok()
+        );
     }
 }

@@ -36,16 +36,6 @@ pub mod scrypt;
 /// Argon2 password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
 pub mod argon2;
 
-pub(crate) mod sealed {
-
-    pub trait Sealed {}
-
-    pub trait Variant: Sealed {
-        const VALUE: u32;
-        const PHC_ID: &'static str;
-    }
-}
-
 #[cfg(feature = "safe_api")]
 /// Parse a decimal parameter value to a u32. Returns an error on overflow
 /// and if the value has leading zeroes.

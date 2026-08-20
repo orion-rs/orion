@@ -111,7 +111,6 @@ use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::blake2::blake2b::{BLAKE2B_MAX_OUTSIZE, Blake2b};
 #[cfg(feature = "safe_api")]
 use crate::hazardous::kdf::argon2::phc::Argon2Phc;
-use crate::hazardous::kdf::sealed;
 use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
@@ -624,6 +623,16 @@ const fn is_data_independent(variant: u32, pass_n: u32, segment_n: usize) -> boo
     }
 }
 
+pub(crate) mod sealed {
+
+    pub trait Sealed {}
+
+    pub trait Variant: Sealed {
+        const VALUE: u32;
+        const PHC_ID: &'static str;
+    }
+}
+
 // TODO(brycx): RwLock + thread::scoped
 // #[derive(Debug, PartialEq)]
 // #[cfg(feature = "safe_api")]
@@ -698,10 +707,6 @@ fn validate_parameters(
 
     Ok(())
 }
-
-// **TODO**:
-// - Move scrypt and pbkdf2 to a struct as well for API consistency (HKDF already is in v0.18.0)
-// - Implement P-H-C string format for those two as well
 
 #[derive(Debug)]
 /// Argon2 password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).

@@ -59,6 +59,9 @@
 	- Hazardous now contains `safe_api` feature-gated `PasswordHash`.
 	- Add `CostParams` struct being passes to functions.
 	- Cost parameter `n` is now `logn` to make choosing wrong combinations harder.
+- [Breaking change] `orion::hazardous::kdf::pbkdf2`:
+	- Functions moved to `Pbkdf2` struct.
+	- `password` being passed is now a byte-slice, instead of a HMAC key that internally pads the key (yielding the padded if called `unprotected_as_ref()` on).
 - Add support for Argon2id (sequential-mode only).
 - MSRV bumped to `1.87`
 - Add constants for BLAKE2b: `BLAKE2B_MIN_OUTSIZE, BLAKE2B_MAX_OUTSIZE, BLAKE2B_MIN_KEYSIZE, BLAKE2B_MAX_KEYSIZE` making the conditions more discernable.

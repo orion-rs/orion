@@ -24,9 +24,10 @@ use crate::{
     errors::UnknownCryptoError,
     generics::sealed::{Data, TryFromBytes},
     hazardous::kdf::{
-        argon2::{ARGON2_VERSION_19, CostParams, I, ID, MAX_SALT_LEN, MIN_SALT_LEN},
+        argon2::{
+            ARGON2_VERSION_19, CostParams, I, ID, MAX_SALT_LEN, MIN_SALT_LEN, sealed::Variant,
+        },
         parse_decimal_value,
-        sealed::Variant,
     },
 };
 use core::fmt::Debug;

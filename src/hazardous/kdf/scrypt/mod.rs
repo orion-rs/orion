@@ -105,7 +105,7 @@ use crate::Secret;
 use crate::errors::UnknownCryptoError;
 #[cfg(feature = "safe_api")]
 use crate::generics::TypeSpec;
-use crate::hazardous::kdf::pbkdf2::sha256 as pbkdf2;
+use crate::hazardous::kdf::pbkdf2;
 #[cfg(feature = "safe_api")]
 use crate::hazardous::kdf::scrypt::phc::ScryptPhc;
 use crate::util;
@@ -525,16 +525,15 @@ impl Scrypt {
         let mut x = vec![0u32; 32 * r];
         let mut y = vec![0u32; 32 * r];
         let mut v = vec![0u32; vlen];
-        let pass = pbkdf2::Password::try_from(password)?;
         let blen: usize = p * 128 * r;
         let mut b = zeroize_wrap!(vec![0u8; blen]);
-        pbkdf2::derive_key(&pass, salt, 1, b.as_mut())?;
+        pbkdf2::Pbkdf2::<pbkdf2::SHA256>::derive_key(password, salt, 1, b.as_mut())?;
 
         for i in 0..p {
             smix(&mut b[i * 128 * r..], r, n, &mut v, &mut x, &mut y);
         }
 
-        pbkdf2::derive_key(&pass, b.as_ref(), 1, dst_out)?;
+        pbkdf2::Pbkdf2::<pbkdf2::SHA256>::derive_key(password, b.as_ref(), 1, dst_out)?;
 
         Ok(())
     }
