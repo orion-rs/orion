@@ -55,3 +55,7 @@ opt-level = 1
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[[example]]
+name = "migration17to18"
+path = "doc/0.18/migration.rs"
