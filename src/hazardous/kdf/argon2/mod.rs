@@ -115,7 +115,7 @@ use crate::util::endianness::{load_u64_into_le, store_u64_into_le};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "serde", feature = "safe_api"))]
 use serde::{
     de::{self, Deserialize, Deserializer},
     ser::{Serialize, Serializer},
@@ -123,6 +123,9 @@ use serde::{
 
 #[cfg(feature = "safe_api")]
 mod phc;
+
+#[cfg(all(feature = "alloc", not(feature = "safe_api")))]
+use alloc::vec::Vec;
 
 #[cfg(feature = "safe_api")]
 use crate::generics::{Secret, TypeSpec};
@@ -185,6 +188,7 @@ impl TypeSpec for Argon2PasswordHash {
 }
 
 #[cfg(feature = "safe_api")]
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 /// A type to represent the P-H-C encoded [`PasswordHash`] that [`Argon2``] returns when used for password hashing.
 ///
 ///
@@ -214,6 +218,7 @@ impl TypeSpec for Argon2PasswordHash {
 ///   hash leaks.
 pub type PasswordHash = Secret<Argon2PasswordHash>;
 
+#[cfg(feature = "safe_api")]
 impl PasswordHash {
     #[inline]
     /// Return the [`PasswordHash`] in P-H-C encoding.
@@ -222,8 +227,8 @@ impl PasswordHash {
     }
 }
 
-#[cfg(feature = "serde")]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+#[cfg(all(feature = "serde", feature = "safe_api"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "serde", feature = "safe_api"))))]
 /// `PasswordHash` serializes as would a [`String`](std::string::String). Note that
 /// the serialized type likely does not have the same protections that Orion
 /// provides, such as constant-time operations. A good rule of thumb is to only
@@ -238,8 +243,8 @@ impl Serialize for PasswordHash {
     }
 }
 
-#[cfg(feature = "serde")]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+#[cfg(all(feature = "serde", feature = "safe_api"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "serde", feature = "safe_api"))))]
 /// `PasswordHash` deserializes from a [`String`](std::string::String).
 impl<'de> Deserialize<'de> for PasswordHash {
     fn deserialize<D>(deserializer: D) -> Result<PasswordHash, D::Error>
@@ -251,6 +256,7 @@ impl<'de> Deserialize<'de> for PasswordHash {
     }
 }
 
+#[cfg(feature = "safe_api")]
 impl TryFrom<&str> for PasswordHash {
     type Error = UnknownCryptoError;
 
@@ -801,7 +807,7 @@ impl<V: sealed::Variant> Argon2<V, Sequential> {
         // segment_lengt := lane_length / 4
         let segment_length = lane_len >> 2;
 
-        let mut blocks: Vec<[u64; 128]> = vec![[0u64; 128]; n_blocks as usize];
+        let mut blocks: Vec<[u64; 128]> = alloc::vec![[0u64; 128]; n_blocks as usize];
 
         let mut h0 = initial_hash(
             version,

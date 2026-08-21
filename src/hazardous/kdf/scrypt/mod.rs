@@ -110,7 +110,7 @@ use crate::hazardous::kdf::pbkdf2;
 use crate::hazardous::kdf::scrypt::phc::ScryptPhc;
 use crate::util;
 
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "serde", feature = "safe_api"))]
 use serde::{
     de::{self, Deserialize, Deserializer},
     ser::{Serialize, Serializer},
@@ -146,6 +146,7 @@ impl TypeSpec for ScryptPasswordHash {
 }
 
 #[cfg(feature = "safe_api")]
+#[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 /// A type to represent the P-H-C encoded [`PasswordHash`] that [`Scrypt`] returns when used for password hashing.
 ///
 ///
@@ -174,6 +175,7 @@ impl TypeSpec for ScryptPasswordHash {
 ///   hash leaks.
 pub type PasswordHash = Secret<ScryptPasswordHash>;
 
+#[cfg(feature = "safe_api")]
 impl PasswordHash {
     #[inline]
     /// Return the [`PasswordHash`] in P-H-C encoding.
@@ -182,8 +184,8 @@ impl PasswordHash {
     }
 }
 
-#[cfg(feature = "serde")]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+#[cfg(all(feature = "serde", feature = "safe_api"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "serde", feature = "safe_api"))))]
 /// `PasswordHash` serializes as would a [`String`](std::string::String). Note that
 /// the serialized type likely does not have the same protections that Orion
 /// provides, such as constant-time operations. A good rule of thumb is to only
@@ -198,8 +200,8 @@ impl Serialize for PasswordHash {
     }
 }
 
-#[cfg(feature = "serde")]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+#[cfg(all(feature = "serde", feature = "safe_api"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "serde", feature = "safe_api"))))]
 /// `PasswordHash` deserializes from a [`String`](std::string::String).
 impl<'de> Deserialize<'de> for PasswordHash {
     fn deserialize<D>(deserializer: D) -> Result<PasswordHash, D::Error>
@@ -211,6 +213,7 @@ impl<'de> Deserialize<'de> for PasswordHash {
     }
 }
 
+#[cfg(feature = "safe_api")]
 impl TryFrom<&str> for PasswordHash {
     type Error = UnknownCryptoError;
 
@@ -555,7 +558,7 @@ impl Scrypt {
 
 #[cfg(test)]
 mod tests {
-    use super::Scrypt;
+    use super::*;
 
     #[cfg(feature = "serde")]
     mod test_serde_impls {
