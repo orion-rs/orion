@@ -37,6 +37,10 @@
 //! - The recommended minimum output size is `32`. The security provided by the hash function cannot
 //!   exceed `256` bits, so choosing output sizes larger than `32` bytes provides no additional security over
 //!   the `32` exactly. Choosing a smaller output size however decreases the security provided.
+//! - While there exists a [`Blake3::new_keyed`] function, it's usage is recommended against unless
+//!   strictly needed. It's main purpose is for uses where a keyed hash needs to be longer than
+//!   `32` bytes. If this is not the case, use [`mac::blake3`] where more protections are offered for
+//!   handling authentication tags.
 //!
 //! # Example:
 //! ```rust
@@ -54,13 +58,17 @@
 //! [`absorb()`]: blake3::Blake3::absorb
 //! [`reset()`]: blake3::Blake3::reset
 //! [`squeeze()`]: blake3::Blake3::squeeze
+//! [`Blake3::new_keyed`]: blake3::Blake::new_keyed
+//! [`mac::blake3`]: crate::hazardous::mac::blake3
 
 pub(crate) mod cvstack;
 pub(crate) mod internal;
 pub(crate) mod state;
 
 use crate::errors::UnknownCryptoError;
+use crate::hazardous::hash::blake3::internal::KEYED_HASH;
 use crate::hazardous::hash::blake3::state::Blake3State;
+use crate::hazardous::mac::blake3::SecretKey;
 
 #[cfg(feature = "safe_api")]
 use std::io;
@@ -69,6 +77,7 @@ use std::io;
 #[derive(PartialEq, Debug, Clone)]
 pub struct Blake3 {
     internal: Blake3State,
+    flags: u32,
 }
 
 /// Represents the standard `hash` mode for [Blake3] for producing
@@ -78,6 +87,7 @@ impl Default for Blake3 {
     fn default() -> Self {
         Self {
             internal: Blake3State::new_with_iv(0),
+            flags: 0,
         }
     }
 }
@@ -88,19 +98,27 @@ impl Blake3 {
         Self::default()
     }
 
+    /// Create a new [`Blake3`] instance for keyed hashing (`keyed` mode).
+    pub fn new_keyed(secret_key: &SecretKey) -> Self {
+        Self {
+            internal: Blake3State::new(secret_key, KEYED_HASH),
+            flags: KEYED_HASH,
+        }
+    }
+
     /// Reset to [`Self::new()`] state.
     pub fn reset(&mut self) {
-        self.internal = Blake3State::new_with_iv(0)
+        self.internal.reset();
     }
 
     /// Update state with `data`. This can be called multiple times.
     pub fn absorb(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.absorb(data, 0)
+        self.internal.absorb(data, self.flags)
     }
 
     /// Squeeze output of the XOF into `dest`. This can be called multiple times.
     pub fn squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.squeeze(dest, 0)
+        self.internal.squeeze(dest, self.flags)
     }
 }
 

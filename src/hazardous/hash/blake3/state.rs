@@ -118,10 +118,10 @@ impl Blake3State {
 
     /// Update state with `data`. This can be called multiple times.
     pub(crate) fn absorb(&mut self, data: &[u8], flags: u32) -> Result<(), UnknownCryptoError> {
-        debug_assert!(self.squeezer.is_none());
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
+        debug_assert!(self.squeezer.is_none());
 
         let mut data_view = data;
         while !data_view.is_empty() {
@@ -170,16 +170,19 @@ impl Blake3State {
             self.is_finalized = true;
             let is_root = self.total_chunks == 0;
 
-            self.squeezer = if is_root {
-                Some(self.chunk.root_output(is_root))
+            let mut squeezer = if is_root {
+                self.chunk.root_output(is_root)
             } else {
                 let current_state = self.chunk.finalize_chunk(is_root);
-                Some(self.chain_values.root_output(FinalizeCommand {
+                self.chain_values.root_output(FinalizeCommand {
                     current_cv: current_state.truncate(),
                     key_words: self.key,
                     flags: flags | PARENT,
-                }))
-            }
+                })
+            };
+
+            squeezer.squeeze(out_slice)?;
+            self.squeezer = Some(squeezer);
         }
 
         Ok(())

@@ -46,16 +46,17 @@
 //!
 //! # Example:
 //! ```rust
+//! # #[cfg(feature = "safe_api")] {
 //! use orion::hazardous::mac::blake3::{Blake3, SecretKey};
 //!
 //! let key = SecretKey::generate()?;
 //!
-//! let mut state = Blake3::new(&key)?;
+//! let mut state = Blake3::new(&key);
 //! state.update(b"Some data")?;
 //! let tag = state.finalize()?;
 //!
 //! assert!(Blake3::verify(&tag, &key, b"Some data").is_ok());
-//!
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`update()`]: blake3::Blake3::update

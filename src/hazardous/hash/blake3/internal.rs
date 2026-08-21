@@ -208,7 +208,7 @@ pub(crate) struct OutputReader {
     /// Block positions to determine amount of bytes already produced.
     position: u64,
     buffer: [u8; 64],
-    block_n: u64,
+    block_n: Option<u64>,
 }
 
 impl OutputReader {
@@ -218,21 +218,18 @@ impl OutputReader {
             msgs,
             position: 0,
             buffer: [0u8; 64],
-            block_n: 0,
+            block_n: None,
         }
     }
 
     pub(crate) fn squeeze(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
         let mut squeezed = 0usize;
         while squeezed < out_slice.len() {
-            if let Some(block_idx) = self.position.checked_div(64) {
-                // we're requesting a different block than what we have cached
-                if block_idx != self.block_n {
-                    self.compute_block(block_idx);
-                    self.block_n = block_idx;
-                }
-            } else {
-                return Err(UnknownCryptoError);
+            let block_idx = self.position / 64;
+            // we're requesting a different block than what we have cached
+            if Some(block_idx) != self.block_n {
+                self.compute_block(block_idx);
+                self.block_n = Some(block_idx);
             }
 
             let buffer_idx = (self.position % 64) as usize;
