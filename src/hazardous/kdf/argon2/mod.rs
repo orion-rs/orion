@@ -272,7 +272,6 @@ impl CostParams {
         match 8u32.checked_mul(parallelism) {
             Some(min) => {
                 if !(min..=u32::MAX).contains(&memory) {
-                    dbg!("C1");
                     return Err(UnknownCryptoError);
                 }
 
