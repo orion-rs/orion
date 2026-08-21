@@ -234,6 +234,8 @@ mod test {
     fn test_valid_encoded_password() {
         let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
         assert!(Argon2Phc::try_from(valid).is_ok());
+        let valid = "$argon2id$v=19$m=65536,t=3,p=2$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        assert!(Argon2Phc::try_from(valid).is_ok());
     }
 
     #[test]

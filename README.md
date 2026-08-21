@@ -44,7 +44,7 @@ MSRV may be changed at any point and will not be considered a SemVer breaking ch
 
 - `default`/`safe_api`: All functionality, requires `std`.
 - `serde`: Automatically enables the `alloc` feature.
-- `alloc`: Argon2i in `hazardous` when `default`/`safe_api` is not available.
+- `alloc`: Argon2 in `hazardous` when `default`/`safe_api` is not available.
 - `no_std`: Implicit feature that represents no heap allocations. Enabled by disabling default features and not selecting any additional features.
 - `zeroize`: Toggles whether sensitive key material is zeroized internally. Enabled by default.
 - `experimental`: These APIs may contain breaking changes in any non SemVer-breaking crate releases.
