@@ -75,6 +75,9 @@ use crate::generics::{ByteArrayData, TypeSpec};
 use crate::hazardous::hash::blake3::internal::KEYED_HASH;
 use crate::hazardous::hash::blake3::state::Blake3State;
 
+#[cfg(feature = "serde")]
+use alloc::vec::Vec;
+
 /// Size for a BLAKE3 [`SecretKey`].
 pub const KEY_SIZE: usize = crate::hazardous::hash::blake3::internal::KEY_SIZE;
 
