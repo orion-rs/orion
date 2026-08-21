@@ -22,12 +22,11 @@
 
 //! # Parameters:
 //! - `data`: The data to be hashed.
-//! - `out_slice`: The variable-sized output buffer.
+//! - `dest`: The variable-sized output buffer.
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - [`finalize()`] is called twice without a [`reset()`] in between.
-//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
+//! - [`absorb()`] is called after [`squeeze()`] without a [`reset()`] in
 //!   between.
 //!
 //! # Panics:
@@ -46,14 +45,14 @@
 //! // Using the streaming interface.
 //! let mut hash_out = [0u8; 32];
 //! let mut state = Blake3::new();
-//! state.update(b"Some data")?;
-//! state.finalize(&mut hash_out)?;
+//! state.absorb(b"Some data")?;
+//! state.squeeze(&mut hash_out)?;
 //!
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: blake3::Blake3::update
+//! [`absorb()`]: blake3::Blake3::absorb
 //! [`reset()`]: blake3::Blake3::reset
-//! [`finalize()`]: blake3::Blake3::finalize
+//! [`squeeze()`]: blake3::Blake3::squeeze
 
 pub(crate) mod cvstack;
 pub(crate) mod internal;
@@ -94,15 +93,13 @@ impl Blake3 {
     }
 
     /// Update state with `data`. This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.update(data, 0)
+    pub fn absorb(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.internal.absorb(data, 0)
     }
 
-    /// Return a BLAKE3 digest in the `out_slice` parameter.
-    /// The length of the `out_slice` parameter dictates the
-    /// length of the output.
-    pub fn finalize(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.finalize(out_slice, 0)
+    /// Squeeze output of the XOF into `dest`. This can be called multiple times.
+    pub fn squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        self.internal.squeeze(dest, 0)
     }
 }
 
@@ -121,24 +118,24 @@ impl Blake3 {
 /// std::io::copy(&mut reader, &mut hasher)?;
 ///
 /// let mut digest = [0u8; 32];
-/// hasher.finalize(&mut digest)?;
+/// hasher.squeeze(&mut digest)?;
 ///
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[cfg(feature = "safe_api")]
 impl io::Write for Blake3 {
-    /// Update the hasher's internal state with *all* of the bytes given.
+    /// absorb the hasher's internal state with *all* of the bytes given.
     /// If this function returns the `Ok` variant, it's guaranteed that it
     /// will contain the length of the buffer passed to [`Write`](std::io::Write).
     /// Note that this function is just a small wrapper over
-    /// [`Blake3::update`](crate::hazardous::hash::blake3::Blake3::update).
+    /// [`Blake3::absorb`](crate::hazardous::hash::blake3::Blake3::absorb).
     ///
     /// ## Errors:
     /// This function will only ever return the [`std::io::ErrorKind::Other`]()
     /// variant when it returns an error. Additionally, this will always contain Orion's
     /// [`UnknownCryptoError`] type.
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        self.update(bytes).map_err(io::Error::other)?;
+        self.absorb(bytes).map_err(io::Error::other)?;
         Ok(bytes.len())
     }
 
@@ -149,71 +146,41 @@ impl io::Write for Blake3 {
 }
 
 #[cfg(test)]
-mod test_streaming_interface {
-    mod hash_streaming_interface {
-        use crate::hazardous::hash::blake3::internal::BLOCK_LEN;
-        use crate::hazardous::hash::blake3::*;
-        use crate::test_framework::incremental_interface::{
-            StreamingContextConsistencyTester, TestableStreamingContext,
-        };
+mod test_xof_interface {
+    use crate::hazardous::hash::blake3::internal::BLOCK_LEN;
+    use crate::hazardous::hash::blake3::*;
+    use crate::test_framework::xof_interface::{TestableXofContext, XofContextConsistencyTester};
 
-        impl TestableStreamingContext<[u8; 32]> for Blake3 {
-            fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                self.reset();
-                Ok(())
-            }
-
-            fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
-                self.update(input)
-            }
-
-            fn finalize(&mut self) -> Result<[u8; 32], UnknownCryptoError> {
-                let mut out = [0u8; 32];
-                self.finalize(&mut out)?;
-                Ok(out)
-            }
-
-            fn one_shot(input: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
-                let mut hasher = Blake3::new();
-                hasher.update(input)?;
-
-                let mut out = [0u8; 32];
-                hasher.finalize(&mut out)?;
-                Ok(out)
-            }
-
-            fn verify_result(expected: &[u8; 32], input: &[u8]) -> Result<(), UnknownCryptoError> {
-                let actual = Self::one_shot(input)?;
-                if &actual == expected {
-                    Ok(())
-                } else {
-                    Err(UnknownCryptoError)
-                }
-            }
-
-            fn compare_states(state_1: &Self, state_2: &Self) {
-                assert_eq!(state_1, state_2)
-            }
+    impl TestableXofContext for Blake3 {
+        fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+            self.reset();
+            Ok(())
         }
 
-        #[test]
-        fn default_consistency_states() {
-            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3>::new(
-                Blake3::new(),
-                BLOCK_LEN,
-            );
-            test_runner.run_all_tests();
+        fn absorb(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.absorb(input)
         }
 
-        #[quickcheck]
-        #[cfg(feature = "safe_api")]
-        fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3>::new(
-                Blake3::new(),
-                BLOCK_LEN,
-            );
-            test_runner.run_all_tests_property(&data);
-            true
+        fn squeeze(&mut self, dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self.squeeze(dst)
         }
+
+        fn compare_states(state_1: &Self, state_2: &Self) {
+            assert_eq!(state_1, state_2)
+        }
+    }
+
+    #[test]
+    fn default_consistency_states() {
+        let test_runner = XofContextConsistencyTester::<Blake3>::new(Blake3::new(), BLOCK_LEN);
+        test_runner.run_all_tests();
+    }
+
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+        let test_runner = XofContextConsistencyTester::<Blake3>::new(Blake3::new(), BLOCK_LEN);
+        test_runner.run_all_tests_property(&data);
+        true
     }
 }

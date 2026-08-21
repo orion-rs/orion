@@ -117,7 +117,7 @@ impl Blake3State {
     }
 
     /// Update state with `data`. This can be called multiple times.
-    pub(crate) fn update(&mut self, data: &[u8], flags: u32) -> Result<(), UnknownCryptoError> {
+    pub(crate) fn absorb(&mut self, data: &[u8], flags: u32) -> Result<(), UnknownCryptoError> {
         debug_assert!(self.squeezer.is_none());
         if self.is_finalized {
             return Err(UnknownCryptoError);
