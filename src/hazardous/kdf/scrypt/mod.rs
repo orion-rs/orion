@@ -560,7 +560,7 @@ impl Scrypt {
 mod tests {
     use super::*;
 
-    #[cfg(feature = "serde")]
+    #[cfg(all(feature = "serde", feature = "safe_api"))]
     mod test_serde_impls {
         use super::*;
 

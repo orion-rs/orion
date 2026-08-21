@@ -1069,7 +1069,7 @@ mod public {
             assert_ne!(password_hash, password_hash_again);
         }
 
-        #[cfg(feature = "serde")]
+        #[cfg(all(feature = "serde", feature = "safe_api"))]
         mod test_serde_impls {
             use super::*;
 
