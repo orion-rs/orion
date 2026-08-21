@@ -87,7 +87,7 @@ impl Blake3State {
         let key_words = Self::parse_key(key);
         Self {
             key: key_words,
-            flags: flags,
+            flags,
             chunk: ChunkState::new(&key_words, 0, CHUNK_START | flags),
             chain_values: TreeStack::new(compress),
             total_chunks: 0,
@@ -99,7 +99,7 @@ impl Blake3State {
     pub(crate) fn new_with_iv(flags: u32) -> Self {
         Self {
             key: IV,
-            flags: flags,
+            flags,
             chunk: ChunkState::new(&IV, 0, CHUNK_START | flags),
             chain_values: TreeStack::new(compress),
             total_chunks: 0,

@@ -27,7 +27,6 @@ use core::ops::{Index, IndexMut};
 use subtle::ConstantTimeEq;
 
 use crate::errors::UnknownCryptoError;
-use crate::util::u32x4::U32x4;
 
 pub(crate) const BLOCK_LEN: usize = 64;
 pub(crate) const CHUNK_LEN: usize = 1024;
@@ -254,7 +253,7 @@ impl OutputReader {
 
     fn compute_block(&mut self, block_idx: u64) {
         let state = CFState {
-            counter: CFState::to_le_array(block_idx as u64),
+            counter: CFState::to_le_array(block_idx),
             ..self.base_state.clone()
         };
 
@@ -262,7 +261,7 @@ impl OutputReader {
         let block_output = Self::block_output(&compressed, &state);
         for (word, chunk_bytes) in block_output
             .iter()
-            .zip(self.buffer.chunks_mut(size_of::<U32x4>()))
+            .zip(self.buffer.chunks_mut(size_of::<u32>()))
         {
             chunk_bytes.copy_from_slice(&word.to_le_bytes());
         }

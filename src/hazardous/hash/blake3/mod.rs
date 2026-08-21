@@ -42,11 +42,12 @@
 //! ```rust
 //! use orion::hazardous::hash::blake3::Blake3;
 //!
-//! // Using the streaming interface.
-//! let mut hash_out = [0u8; 32];
 //! let mut state = Blake3::new();
-//! state.absorb(b"Some data")?;
-//! state.squeeze(&mut hash_out)?;
+//! state.absorb(b"Hello world")?;
+//!
+//! let mut dest = [0u8; 32];
+//! state.squeeze(&mut dest[..16])?;
+//! state.squeeze(&mut dest[16..])?;
 //!
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
