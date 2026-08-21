@@ -58,7 +58,7 @@
 //! [`absorb()`]: blake3::Blake3::absorb
 //! [`reset()`]: blake3::Blake3::reset
 //! [`squeeze()`]: blake3::Blake3::squeeze
-//! [`Blake3::new_keyed`]: blake3::Blake::new_keyed
+//! [`Blake3::new_keyed`]: blake3::Blake3::new_keyed
 //! [`mac::blake3`]: crate::hazardous::mac::blake3
 
 pub(crate) mod cvstack;

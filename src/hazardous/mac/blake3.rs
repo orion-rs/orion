@@ -64,6 +64,7 @@
 //! [`finalize()`]: blake3::Blake3::finalize
 //! [`SecretKey::generate()`]: blake3::SecretKey::generate
 //! [`Blake3`]: blake3::Blake3
+//! [`Tag`]: blake3::Tag
 
 use crate::GenerateSecret;
 use crate::Secret;
