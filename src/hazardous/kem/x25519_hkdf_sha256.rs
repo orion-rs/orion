@@ -68,7 +68,7 @@
 use crate::GenerateSecret;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
-use crate::hazardous::kdf::hkdf;
+use crate::hazardous::kdf::hkdf::{Hkdf, SHA256};
 
 use crate::generics::ByteArrayData;
 use crate::generics::Secret;
@@ -203,7 +203,7 @@ impl DhKem {
         label: &[u8; 7],
         ikm: &[u8],
     ) -> Result<hmac::sha256::Tag, UnknownCryptoError> {
-        hkdf::HkdfSha256::extract_with_parts(
+        Hkdf::<SHA256>::extract_with_parts(
             salt,
             &[
                 Self::HPKE_VERSION_ID.as_bytes(),
@@ -222,7 +222,7 @@ impl DhKem {
         out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
         let l: u16 = out.len().try_into().map_err(|_| UnknownCryptoError)?;
-        hkdf::HkdfSha256::expand_with_parts(
+        Hkdf::<SHA256>::expand_with_parts(
             prk.unprotected_as_ref(),
             Some(&[
                 &l.to_be_bytes(),
