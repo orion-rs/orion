@@ -1,5 +1,9 @@
+#[cfg(feature = "safe_api")]
+pub mod custom_argon2;
 pub mod custom_hkdf;
 pub mod custom_pbkdf2;
+#[cfg(feature = "safe_api")]
+pub mod custom_scrypt;
 #[cfg(feature = "safe_api")]
 pub mod other_argon2i;
 pub mod other_hkdf;
@@ -7,6 +11,9 @@ pub mod other_hkdf;
 pub mod pynacl_argon2i;
 #[cfg(feature = "safe_api")]
 pub mod ref_argon2i;
+#[cfg(feature = "safe_api")]
+pub mod rfc9106_argon2;
+
 pub mod rfc_pbkdf2;
 pub mod wycheproof_hkdf;
 pub mod wycheproof_pbkdf2;
@@ -56,38 +63,62 @@ impl_hkdf_test_runner!(hkdf256_test_runner, HkdfSha256, Tag256);
 impl_hkdf_test_runner!(hkdf384_test_runner, HkdfSha384, Tag384);
 impl_hkdf_test_runner!(hkdf512_test_runner, HkdfSha512, Tag512);
 
-macro_rules! impl_pbkdf2_test_runner (($name:ident, $password:ident, $derive_key:ident) => (
-    fn $name(
-        expected_dk: &[u8],
-        password: &[u8],
-        salt: &[u8],
-        iterations: usize,
-        dk_len: usize,
-        valid_result: bool,
-    ) {
-        let mut dk_out = vec![0u8; dk_len];
-        let password = $password::try_from(password).unwrap();
-
-        if valid_result {
-            assert!($derive_key(&password, salt, iterations, &mut dk_out).is_ok());
-            assert_eq!(dk_out, expected_dk);
-        } else {
-            unimplemented!("there aren't supposed to be these vectors")
-        }
+fn pbkdf2_256_test_runner(
+    expected_dk: &[u8],
+    password: &[u8],
+    salt: &[u8],
+    iterations: usize,
+    dk_len: usize,
+    valid_result: bool,
+) {
+    let mut dk_out = vec![0u8; dk_len];
+    if valid_result {
+        assert!(
+            pbkdf2::Pbkdf2::<pbkdf2::SHA256>::derive_key(password, salt, iterations, &mut dk_out)
+                .is_ok()
+        );
+        assert_eq!(dk_out, expected_dk);
+    } else {
+        unimplemented!("there aren't supposed to be these vectors")
     }
-));
+}
 
-use pbkdf2::sha256::Password as Password256;
-use pbkdf2::sha256::derive_key as pbkdf2_derive_key256;
+fn pbkdf2_384_test_runner(
+    expected_dk: &[u8],
+    password: &[u8],
+    salt: &[u8],
+    iterations: usize,
+    dk_len: usize,
+    valid_result: bool,
+) {
+    let mut dk_out = vec![0u8; dk_len];
+    if valid_result {
+        assert!(
+            pbkdf2::Pbkdf2::<pbkdf2::SHA384>::derive_key(password, salt, iterations, &mut dk_out)
+                .is_ok()
+        );
+        assert_eq!(dk_out, expected_dk);
+    } else {
+        unimplemented!("there aren't supposed to be these vectors")
+    }
+}
 
-impl_pbkdf2_test_runner!(pbkdf2_256_test_runner, Password256, pbkdf2_derive_key256);
-
-use pbkdf2::sha384::Password as Password384;
-use pbkdf2::sha384::derive_key as pbkdf2_derive_key384;
-
-impl_pbkdf2_test_runner!(pbkdf2_384_test_runner, Password384, pbkdf2_derive_key384);
-
-use pbkdf2::sha512::Password as Password512;
-use pbkdf2::sha512::derive_key as pbkdf2_derive_key512;
-
-impl_pbkdf2_test_runner!(pbkdf2_512_test_runner, Password512, pbkdf2_derive_key512);
+fn pbkdf2_512_test_runner(
+    expected_dk: &[u8],
+    password: &[u8],
+    salt: &[u8],
+    iterations: usize,
+    dk_len: usize,
+    valid_result: bool,
+) {
+    let mut dk_out = vec![0u8; dk_len];
+    if valid_result {
+        assert!(
+            pbkdf2::Pbkdf2::<pbkdf2::SHA512>::derive_key(password, salt, iterations, &mut dk_out)
+                .is_ok()
+        );
+        assert_eq!(dk_out, expected_dk);
+    } else {
+        unimplemented!("there aren't supposed to be these vectors")
+    }
+}

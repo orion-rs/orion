@@ -33,5 +33,19 @@ pub mod scrypt;
 
 #[cfg(any(feature = "safe_api", feature = "alloc"))]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "safe_api", feature = "alloc"))))]
-/// Argon2i password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
-pub mod argon2i;
+/// Argon2 password hashing function as described in the [P-H-C specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
+pub mod argon2;
+
+#[cfg(feature = "safe_api")]
+/// Parse a decimal parameter value to a u32. Returns an error on overflow
+/// and if the value has leading zeroes.
+pub(crate) fn parse_decimal_value(value: &str) -> Result<u32, crate::errors::UnknownCryptoError> {
+    // See: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
+    if value.len() > 1 && value.starts_with('0') {
+        return Err(crate::errors::UnknownCryptoError);
+    }
+    // .parse::<T>() detects overflows (in debug and release builds)
+    // and rejects empty strings. If the value contains spaces, parsing
+    // also fails.
+    Ok(value.parse::<u32>()?)
+}

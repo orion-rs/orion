@@ -30,10 +30,11 @@
 //! and using this derived key in disk encryption.
 //!
 //! # About:
-//! - Uses Argon2i.
+//! - Uses Argon2id.
 //!
 //! # Note:
-//! This implementation only supports a single thread/lane.
+//! This implementation only supports a single thread, so modifying the parallelism degree beyond `1`
+//! will simply make them run sequentially.
 //!
 //! # Parameters:
 //! - `password`: The low-entropy input key to be used in key derivation.
@@ -41,12 +42,12 @@
 //! - `iterations`: Iterations cost parameter for Argon2i.
 //! - `memory`: Memory (in kibibytes (KiB)) cost parameter for Argon2i.
 //! - `length`: The desired length of the derived key.
+//! - `parallelism`: Degree of parallelism/lanes cost parameter for Argon2id.
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `iterations` is less than 3.
 //! - `length` is less than 4.
-//! - `memory` is less than 8.
+//! - `memory` is less than `8 * parallelism`.
 //! - The length of the `password` is greater than [`isize::MAX`].
 //! - The length of the `salt` is greater than [`isize::MAX`] or less than `8`.
 //!
@@ -57,8 +58,8 @@
 //!   can be used for this, it will generate a [`Salt`] of 16 bytes.
 //! - The recommended minimum size for a salt is 16 bytes.
 //! - The recommended minimum size for a derived key is 16 bytes.
-//!
-//! If the concrete cost parameters needed are unclear, please refer to [OWASP] for recommended minimum values.
+//! - The cost parameter presets provided as convenience may be outdated. Be sure to check [OWASP] to ensure
+//!   they are still adequate.
 //!
 //! # Example:
 //! ```rust
@@ -66,8 +67,8 @@
 //!
 //! let user_password = kdf::Password::try_from(b"User password")?;
 //! let salt = kdf::Salt::generate()?;
-//!
-//! let derived_key = kdf::derive_key(&user_password, &salt, 3, 1<<16, 32)?;
+//! let cost = kdf::OWASP_ARGON2ID_1ST;
+//! let derived_key = kdf::derive_key(&user_password, &salt, &cost, 32)?;
 //!
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
@@ -77,28 +78,24 @@
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
 pub use super::hltypes::{Password, Salt, SecretKey};
-use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2i, pwhash::MIN_ITERATIONS};
+pub use crate::hazardous::kdf::argon2::CostParams;
+pub use crate::pwhash::OWASP_ARGON2ID_1ST;
+pub use crate::pwhash::OWASP_ARGON2ID_2ND;
+use crate::{errors::UnknownCryptoError, hazardous::kdf::argon2};
 
 #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-/// Derive a key using Argon2i.
+/// Derive a key using Argon2id.
 pub fn derive_key(
     password: &Password,
     salt: &Salt,
-    iterations: u32,
-    memory: u32,
+    cost: &CostParams,
     length: u32,
 ) -> Result<SecretKey, UnknownCryptoError> {
-    if iterations < MIN_ITERATIONS {
-        return Err(UnknownCryptoError);
-    }
-
     let mut dk = SecretKey::try_from(&vec![0u8; length as usize])?;
-
-    argon2i::derive_key(
+    argon2::Argon2::<argon2::ID, argon2::Sequential>::derive_key(
         password.unprotected_as_ref(),
         salt.as_ref(),
-        iterations,
-        memory,
+        cost,
         None,
         None,
         dk.data.as_mut(),
@@ -119,8 +116,9 @@ mod public {
         fn test_derive_key() {
             let password = Password::try_from([0u8; 64].as_slice()).unwrap();
             let salt = Salt::try_from([0u8; 16].as_slice()).unwrap();
-            let dk_first = derive_key(&password, &salt, 3, 1024, 32).unwrap();
-            let dk_second = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let cost: CostParams = CostParams::new(3, 1024, 1).unwrap();
+            let dk_first = derive_key(&password, &salt, &cost, 32).unwrap();
+            let dk_second = derive_key(&password, &salt, &cost, 32).unwrap();
 
             assert_eq!(dk_first, dk_second);
         }
@@ -129,8 +127,11 @@ mod public {
         fn test_derive_key_err_diff_iter() {
             let password = Password::try_from([0u8; 64].as_slice()).unwrap();
             let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
-            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
-            let dk_diff_iter = derive_key(&password, &salt, 4, 1024, 32).unwrap();
+            let cost: CostParams = CostParams::new(3, 1024, 1).unwrap();
+
+            let dk = derive_key(&password, &salt, &cost, 32).unwrap();
+            let dk_diff_iter =
+                derive_key(&password, &salt, &CostParams::new(4, 1024, 1).unwrap(), 32).unwrap();
 
             assert_ne!(dk, dk_diff_iter);
         }
@@ -139,8 +140,11 @@ mod public {
         fn test_derive_key_err_diff_mem() {
             let password = Password::try_from([0u8; 64].as_slice()).unwrap();
             let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
-            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
-            let dk_diff_mem = derive_key(&password, &salt, 3, 512, 32).unwrap();
+            let cost: CostParams = CostParams::new(3, 1024, 1).unwrap();
+
+            let dk = derive_key(&password, &salt, &cost, 32).unwrap();
+            let dk_diff_mem =
+                derive_key(&password, &salt, &CostParams::new(4, 512, 1).unwrap(), 32).unwrap();
 
             assert_ne!(dk, dk_diff_mem);
         }
@@ -149,12 +153,13 @@ mod public {
         fn test_derive_key_err_diff_salt() {
             let password = Password::try_from([0u8; 64].as_slice()).unwrap();
             let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
-            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let cost: CostParams = CostParams::new(3, 1024, 1).unwrap();
+
+            let dk = derive_key(&password, &salt, &cost, 32).unwrap();
             let dk_diff_salt = derive_key(
                 &password,
                 &Salt::try_from([1u8; 64].as_slice()).unwrap(),
-                3,
-                1024,
+                &cost,
                 32,
             )
             .unwrap();
@@ -166,8 +171,10 @@ mod public {
         fn test_derive_key_err_diff_len() {
             let password = Password::try_from([0u8; 64].as_slice()).unwrap();
             let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
-            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
-            let dk_diff_len = derive_key(&password, &salt, 3, 1024, 64).unwrap();
+            let cost: CostParams = CostParams::new(3, 1024, 1).unwrap();
+
+            let dk = derive_key(&password, &salt, &cost, 32).unwrap();
+            let dk_diff_len = derive_key(&password, &salt, &cost, 64).unwrap();
 
             assert_ne!(dk, dk_diff_len);
         }
@@ -176,12 +183,13 @@ mod public {
         fn test_derive_key_err_diff_pass() {
             let password = Password::try_from([0u8; 64].as_slice()).unwrap();
             let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
-            let dk = derive_key(&password, &salt, 3, 1024, 32).unwrap();
+            let cost: CostParams = CostParams::new(3, 1024, 1).unwrap();
+
+            let dk = derive_key(&password, &salt, &cost, 32).unwrap();
             let dk_diff_pass = derive_key(
                 &Password::try_from([1u8; 64].as_slice()).unwrap(),
                 &salt,
-                3,
-                1024,
+                &cost,
                 32,
             )
             .unwrap();
@@ -193,30 +201,11 @@ mod public {
         fn test_derive_key_bad_length() {
             let password = Password::try_from([0u8; 64].as_slice()).unwrap();
             let salt = Salt::try_from([0u8; 64].as_slice()).unwrap();
+            let cost: CostParams = CostParams::new(3, 1024, 1).unwrap();
 
-            assert!(derive_key(&password, &salt, 3, 1024, 3).is_err());
-            assert!(derive_key(&password, &salt, 3, 1024, 4).is_ok());
-            assert!(derive_key(&password, &salt, 3, 1024, 5).is_ok());
-        }
-
-        #[test]
-        fn test_derive_key_bad_iter() {
-            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
-            let salt = Salt::try_from([0u8; 16].as_slice()).unwrap();
-
-            assert!(derive_key(&password, &salt, 2, 1024, 32).is_err());
-            assert!(derive_key(&password, &salt, 3, 1024, 32).is_ok());
-            assert!(derive_key(&password, &salt, 4, 1024, 32).is_ok());
-        }
-
-        #[test]
-        fn test_derive_key_bad_mem() {
-            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
-            let salt = Salt::try_from([0u8; 16].as_slice()).unwrap();
-
-            assert!(derive_key(&password, &salt, 3, 7, 32).is_err());
-            assert!(derive_key(&password, &salt, 3, 8, 32).is_ok());
-            assert!(derive_key(&password, &salt, 3, 9, 32).is_ok());
+            assert!(derive_key(&password, &salt, &cost, 3).is_err());
+            assert!(derive_key(&password, &salt, &cost, 4).is_ok());
+            assert!(derive_key(&password, &salt, &cost, 5).is_ok());
         }
     }
 }
