@@ -59,4 +59,4 @@ rustdoc-args = ["--cfg", "docsrs"]
 [[example]]
 name = "migration17to18"
 path = "doc/0.18/migration.rs"
-test = false # We compile & run it in CI - but it doesn't specify feature-set so excluded from normal testruns
+required-features = ["safe_api"]
