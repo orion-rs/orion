@@ -26,7 +26,7 @@ use crate::{
     errors::UnknownCryptoError,
     hazardous::hash::blake3::{
         cvstack::{FinalizeCommand, PushCommand, TreeStack},
-        internal::{CHUNK_LEN, CHUNK_START, ChunkState, IV, PARENT, compress},
+        internal::{CHUNK_LEN, CHUNK_START, ChunkState, IV, OutputReader, PARENT, compress},
     },
     hazardous::mac::blake3::SecretKey,
 };
@@ -41,6 +41,7 @@ pub struct Blake3State {
     chain_values: TreeStack,
     total_chunks: u64,
     is_finalized: bool,
+    squeezer: Option<OutputReader>,
 }
 
 impl PartialEq<Blake3State> for Blake3State {
@@ -50,6 +51,7 @@ impl PartialEq<Blake3State> for Blake3State {
             & (self.chain_values == other.chain_values)
             & (self.total_chunks == other.total_chunks)
             & (self.is_finalized == other.is_finalized)
+            & (self.squeezer == other.squeezer)
     }
 }
 
@@ -90,6 +92,7 @@ impl Blake3State {
             chain_values: TreeStack::new(compress),
             total_chunks: 0,
             is_finalized: false,
+            squeezer: None,
         }
     }
 
@@ -101,6 +104,7 @@ impl Blake3State {
             chain_values: TreeStack::new(compress),
             total_chunks: 0,
             is_finalized: false,
+            squeezer: None,
         }
     }
 
@@ -109,10 +113,12 @@ impl Blake3State {
         self.chain_values = TreeStack::new(compress);
         self.total_chunks = 0;
         self.is_finalized = false;
+        self.squeezer = None;
     }
 
     /// Update state with `data`. This can be called multiple times.
     pub(crate) fn update(&mut self, data: &[u8], flags: u32) -> Result<(), UnknownCryptoError> {
+        debug_assert!(self.squeezer.is_none());
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
@@ -151,28 +157,31 @@ impl Blake3State {
         self.chunk = ChunkState::new(&self.key, self.total_chunks, flags | CHUNK_START);
     }
 
-    /// Return a BLAKE3 digest in the `out_slice` parameter.
-    /// The length of the `out_slice` parameter dictates the
-    /// length of the output.
-    pub fn finalize(&mut self, out_slice: &mut [u8], flags: u32) -> Result<(), UnknownCryptoError> {
-        if self.is_finalized {
-            return Err(UnknownCryptoError);
-        }
-        self.is_finalized = true;
-        let is_root = self.total_chunks == 0;
-
-        let reader = if is_root {
-            self.chunk.root_output(is_root)
+    pub(crate) fn squeeze(
+        &mut self,
+        out_slice: &mut [u8],
+        flags: u32,
+    ) -> Result<(), UnknownCryptoError> {
+        if let Some(ctx) = self.squeezer.as_mut() {
+            ctx.squeeze(out_slice)?;
         } else {
-            let current_state = self.chunk.finalize_chunk(is_root);
-            self.chain_values.root_output(FinalizeCommand {
-                current_cv: current_state.truncate(),
-                key_words: self.key,
-                flags: flags | PARENT,
-            })
-        };
+            // should only be callable once.
+            debug_assert!(!self.is_finalized);
+            self.is_finalized = true;
+            let is_root = self.total_chunks == 0;
 
-        reader.fill(out_slice);
+            self.squeezer = if is_root {
+                Some(self.chunk.root_output(is_root))
+            } else {
+                let current_state = self.chunk.finalize_chunk(is_root);
+                Some(self.chain_values.root_output(FinalizeCommand {
+                    current_cv: current_state.truncate(),
+                    key_words: self.key,
+                    flags: flags | PARENT,
+                }))
+            }
+        }
+
         Ok(())
     }
 }
