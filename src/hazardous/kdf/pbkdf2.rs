@@ -66,7 +66,6 @@
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`Password::generate()`]: pbkdf2::sha512::Password::generate
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
 //! [`zeroize` crate]: https://crates.io/crates/zeroize
 //! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html

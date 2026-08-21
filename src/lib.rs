@@ -41,8 +41,11 @@
 //! ## Hashing
 //! [`orion::hash`] offers hashing using BLAKE2b.
 //!
-//! ## Key exchange
-//! [`orion::kex`] offers ephemeral key exchange using X25519 and BLAKE2b.
+//! ## Key Enncapsulation Mechanism
+//! [`orion::kem`] offers KEM using X-Wing.
+//!
+//! ## Hybrid Public Key Encryption
+//! [`orion::hpke`] offers HPKE with the PQ/T XWING_SHAKE256_CHACHA20POLY1305.
 //!
 //! ### A note on `no_std`:
 //! When Orion is used in a `no_std` context, the high-level API is not available, since it relies on access to the systems random number generator.
@@ -54,8 +57,9 @@
 //! [`orion::kdf`]: crate::kdf
 //! [`orion::auth`]: crate::auth
 //! [`orion::hash`]: crate::hash
-//! [`orion::kex`]: crate::kex
+//! [`orion::hpke`]: crate::hpke
 //! [`orion::signer`]: crate::signer
+//! [`orion::kem`]: crate::kem
 //! [wiki]: https://github.com/orion-rs/orion/wiki
 
 #![cfg_attr(not(feature = "safe_api"), no_std)]
@@ -116,10 +120,13 @@ pub use high_level::pwhash;
 pub use high_level::kdf;
 
 #[cfg(feature = "safe_api")]
-pub use high_level::kex;
+pub use high_level::hpke;
 
 #[cfg(feature = "safe_api")]
 pub use high_level::signer;
+
+#[cfg(feature = "safe_api")]
+pub use high_level::kem;
 
 #[doc(hidden)]
 /// Testing framework.

@@ -30,12 +30,11 @@
 //!
 //! # Security:
 //! - Multiple different `private_key`/`public_key` pairs can produce the same shared key. Therefore,
-//! using the resulting [`SharedKey`], directly from [`key_agreement()`], is not recommended. This is handled
-//! automatically in [`orion::kex`].
+//! using the resulting [`SharedKey`], directly from [`key_agreement()`], is not recommended.
 //! - To securely generate a strong key, use [`PrivateKey::generate()`].
 //!
 //! # Recommendation:
-//! - It is recommended to use [`orion::kex`] when possible.
+//! - It is recommended to use [`orion::kem`] when possible.
 //!
 //! # Example:
 //! ```rust
@@ -59,9 +58,9 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`PrivateKey::generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
-//! [`orion::kex`]: crate::kex
 //! [`key_agreement()`]: crate::hazardous::ecc::x25519::key_agreement
 //! [`SharedKey`]: crate::hazardous::ecc::x25519::SharedKey
+//! [`orion::kem`]: crate::kem
 
 use crate::errors::UnknownCryptoError;
 use crate::generics::GenerateSecret;
