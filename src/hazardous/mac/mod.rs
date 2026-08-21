@@ -28,3 +28,6 @@ pub mod poly1305;
 
 /// BLAKE2b as specified in the [RFC 7693](https://tools.ietf.org/html/rfc7693).
 pub mod blake2b;
+
+/// BLAKE3 as specified in the [BLAKE3 paper](https://raw.githubusercontent.com/BLAKE3-team/BLAKE3-specs/master/blake3.pdf).
+pub mod blake3;

@@ -26,6 +26,8 @@ use core::ops::{Index, IndexMut};
 
 use subtle::ConstantTimeEq;
 
+use crate::errors::UnknownCryptoError;
+
 pub(crate) const BLOCK_LEN: usize = 64;
 pub(crate) const CHUNK_LEN: usize = 1024;
 pub(crate) const KEY_SIZE: usize = 32;
@@ -48,11 +50,6 @@ fn chunk_end_flags(is_root: bool) -> u32 {
 // Initial state inside the compression function
 pub(crate) const IV: [u32; 8] = [
     0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19,
-];
-
-pub(crate) const IV_BYTES: [u8; 32] = [
-    103, 230, 9, 106, 133, 174, 103, 187, 114, 243, 110, 60, 58, 245, 79, 165, 127, 82, 14, 81,
-    140, 104, 5, 155, 171, 217, 131, 31, 25, 205, 224, 91,
 ];
 
 // Permutation done after each round (except for the last one)
@@ -204,33 +201,66 @@ impl ChunkState {
     }
 }
 
+#[derive(Clone, PartialEq)]
 pub(crate) struct OutputReader {
     base_state: CFState,
     msgs: [u32; 16],
+    /// Block positions to determine amount of bytes already produced.
+    position: u64,
+    buffer: [u8; 64],
+    block_n: Option<u64>,
 }
 
 impl OutputReader {
     pub(crate) fn new(base_state: CFState, msgs: [u32; 16]) -> Self {
-        Self { base_state, msgs }
+        Self {
+            base_state,
+            msgs,
+            position: 0,
+            buffer: [0u8; 64],
+            block_n: None,
+        }
     }
 
-    pub(crate) fn fill(self, out_slice: &mut [u8]) {
-        for (out_block_counter, out_chunk) in out_slice.chunks_mut(64).enumerate() {
-            let state = CFState {
-                counter: CFState::to_le_array(out_block_counter as u64),
-                ..self.base_state
-            };
-
-            let compressed = compress(state.clone(), &self.msgs);
-            let block_output = Self::block_output(&compressed, &state);
-
-            // Write directly into the final output slice
-            for (word, chunk_bytes) in block_output.iter().zip(out_chunk.chunks_mut(4)) {
-                let bytes = word.to_le_bytes();
-                // chunk_bytes is exactly 4 bytes long, EXCEPT potentially the very last one.
-                // Slicing `bytes` to match `chunk_bytes.len()` guarantees no panics.
-                chunk_bytes.copy_from_slice(&bytes[..chunk_bytes.len()]);
+    pub(crate) fn squeeze(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        let mut squeezed = 0usize;
+        while squeezed < out_slice.len() {
+            let block_idx = self.position / 64;
+            // we're requesting a different block than what we have cached
+            if Some(block_idx) != self.block_n {
+                self.compute_block(block_idx);
+                self.block_n = Some(block_idx);
             }
+
+            let buffer_idx = (self.position % 64) as usize;
+            let available = &self.buffer[buffer_idx..];
+            let want = min(available.len(), out_slice.len() - squeezed);
+            out_slice[squeezed..squeezed + want].copy_from_slice(&available[..want]);
+
+            squeezed += want; // should not overflow because the below err on 2^64 would errors first
+            if let Some(pos) = self.position.checked_add(want as u64) {
+                self.position = pos;
+            } else {
+                return Err(UnknownCryptoError);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn compute_block(&mut self, block_idx: u64) {
+        let state = CFState {
+            counter: CFState::to_le_array(block_idx),
+            ..self.base_state.clone()
+        };
+
+        let compressed = compress(state.clone(), &self.msgs);
+        let block_output = Self::block_output(&compressed, &state);
+        for (word, chunk_bytes) in block_output
+            .iter()
+            .zip(self.buffer.chunks_mut(size_of::<u32>()))
+        {
+            chunk_bytes.copy_from_slice(&word.to_le_bytes());
         }
     }
 
@@ -249,7 +279,7 @@ impl OutputReader {
 }
 
 // Internal compression function state
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub(crate) struct CFState {
     input_chaining_values: ChainingValue,
     iv: [u32; 4],

@@ -242,8 +242,8 @@ mod hash {
                 |b, input_message| {
                     b.iter(|| {
                         let mut ctx = blake3::Blake3::new();
-                        ctx.update(input_message).unwrap();
-                        ctx.finalize(&mut dest).unwrap();
+                        ctx.absorb(input_message).unwrap();
+                        ctx.squeeze(&mut dest).unwrap();
                     })
                 },
             );

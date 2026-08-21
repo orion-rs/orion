@@ -25,10 +25,10 @@ use subtle::ConstantTimeEq;
 use crate::{
     errors::UnknownCryptoError,
     hazardous::hash::blake3::{
-        SecretKey,
         cvstack::{FinalizeCommand, PushCommand, TreeStack},
-        internal::{CHUNK_LEN, CHUNK_START, ChunkState, PARENT, compress},
+        internal::{CHUNK_LEN, CHUNK_START, ChunkState, IV, OutputReader, PARENT, compress},
     },
+    hazardous::mac::blake3::SecretKey,
 };
 use core::cmp::min;
 
@@ -36,10 +36,12 @@ use core::cmp::min;
 #[derive(Clone)]
 pub struct Blake3State {
     key: [u32; 8],
+    flags: u32,
     chunk: ChunkState,
     chain_values: TreeStack,
     total_chunks: u64,
     is_finalized: bool,
+    squeezer: Option<OutputReader>,
 }
 
 impl PartialEq<Blake3State> for Blake3State {
@@ -49,6 +51,7 @@ impl PartialEq<Blake3State> for Blake3State {
             & (self.chain_values == other.chain_values)
             & (self.total_chunks == other.total_chunks)
             & (self.is_finalized == other.is_finalized)
+            & (self.squeezer == other.squeezer)
     }
 }
 
@@ -62,7 +65,7 @@ impl Drop for Blake3State {
 
 impl core::fmt::Debug for Blake3State {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Blake3State {{ [***OMITTED***] }}",)
+        write!(f, "Blake3State {{***OMITTED***}}",)
     }
 }
 
@@ -84,18 +87,41 @@ impl Blake3State {
         let key_words = Self::parse_key(key);
         Self {
             key: key_words,
+            flags,
             chunk: ChunkState::new(&key_words, 0, CHUNK_START | flags),
             chain_values: TreeStack::new(compress),
             total_chunks: 0,
             is_finalized: false,
+            squeezer: None,
         }
     }
 
+    pub(crate) fn new_with_iv(flags: u32) -> Self {
+        Self {
+            key: IV,
+            flags,
+            chunk: ChunkState::new(&IV, 0, CHUNK_START | flags),
+            chain_values: TreeStack::new(compress),
+            total_chunks: 0,
+            is_finalized: false,
+            squeezer: None,
+        }
+    }
+
+    pub(crate) fn reset(&mut self) {
+        self.chunk = ChunkState::new(&self.key, 0, CHUNK_START | self.flags);
+        self.chain_values = TreeStack::new(compress);
+        self.total_chunks = 0;
+        self.is_finalized = false;
+        self.squeezer = None;
+    }
+
     /// Update state with `data`. This can be called multiple times.
-    pub(crate) fn update(&mut self, data: &[u8], flags: u32) -> Result<(), UnknownCryptoError> {
+    pub(crate) fn absorb(&mut self, data: &[u8], flags: u32) -> Result<(), UnknownCryptoError> {
         if self.is_finalized {
             return Err(UnknownCryptoError);
         }
+        debug_assert!(self.squeezer.is_none());
 
         let mut data_view = data;
         while !data_view.is_empty() {
@@ -131,28 +157,34 @@ impl Blake3State {
         self.chunk = ChunkState::new(&self.key, self.total_chunks, flags | CHUNK_START);
     }
 
-    /// Return a BLAKE3 digest in the `out_slice` parameter.
-    /// The length of the `out_slice` parameter dictates the
-    /// length of the output.
-    pub fn finalize(&mut self, out_slice: &mut [u8], flags: u32) -> Result<(), UnknownCryptoError> {
-        if self.is_finalized {
-            return Err(UnknownCryptoError);
-        }
-        self.is_finalized = true;
-        let is_root = self.total_chunks == 0;
-
-        let reader = if is_root {
-            self.chunk.root_output(is_root)
+    pub(crate) fn squeeze(
+        &mut self,
+        out_slice: &mut [u8],
+        flags: u32,
+    ) -> Result<(), UnknownCryptoError> {
+        if let Some(ctx) = self.squeezer.as_mut() {
+            ctx.squeeze(out_slice)?;
         } else {
-            let current_state = self.chunk.finalize_chunk(is_root);
-            self.chain_values.root_output(FinalizeCommand {
-                current_cv: current_state.truncate(),
-                key_words: self.key,
-                flags: flags | PARENT,
-            })
-        };
+            // should only be callable once.
+            debug_assert!(!self.is_finalized);
+            self.is_finalized = true;
+            let is_root = self.total_chunks == 0;
 
-        reader.fill(out_slice);
+            let mut squeezer = if is_root {
+                self.chunk.root_output(is_root)
+            } else {
+                let current_state = self.chunk.finalize_chunk(is_root);
+                self.chain_values.root_output(FinalizeCommand {
+                    current_cv: current_state.truncate(),
+                    key_words: self.key,
+                    flags: flags | PARENT,
+                })
+            };
+
+            squeezer.squeeze(out_slice)?;
+            self.squeezer = Some(squeezer);
+        }
+
         Ok(())
     }
 }

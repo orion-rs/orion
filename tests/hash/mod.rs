@@ -35,27 +35,31 @@ fn blake2b_test_runner(input: &[u8], key: &[u8], output: &[u8]) {
 
 fn blake3_test_runner(input: &[u8], key: &[u8], expected_hash: &[u8], expected_keyed_hash: &[u8]) {
     let mut hasher = blake3::Blake3::default();
-    hasher
-        .update(input)
-        .expect("unexpected error on first update");
+    hasher.absorb(input).unwrap();
     let mut digest = vec![0u8; expected_hash.len()];
     hasher
-        .finalize(&mut digest)
+        .squeeze(&mut digest)
         .expect("unexpected error on finalization");
     assert_eq!(digest.as_slice(), expected_hash);
 
     // Keyed Hash
     if !key.is_empty() {
-        let secret_key = blake3::SecretKey::try_from(key).unwrap();
-        let mut keyed_hasher = blake3::Blake3Keyed::new(&secret_key);
-        keyed_hasher
-            .update(input)
-            .expect("unexpected error on first update");
-        let mut keyed_digest = vec![0u8; expected_keyed_hash.len()];
-        keyed_hasher
-            .finalize(&mut keyed_digest)
-            .expect("unexpected error on finalization");
-        assert_eq!(keyed_digest.as_slice(), expected_keyed_hash);
+        let secret_key = mac::blake3::SecretKey::try_from(key).unwrap();
+        let mut keyed_hasher = blake3::Blake3::new_keyed(&secret_key);
+        keyed_hasher.absorb(input).unwrap();
+        let mut keyed_hash = vec![0u8; expected_keyed_hash.len()];
+        keyed_hasher.squeeze(&mut keyed_hash).unwrap();
+
+        let mut mac = mac::blake3::Blake3::new(&secret_key);
+        mac.update(input).unwrap();
+        let tag = mac.finalize().unwrap();
+
+        assert_eq!(&keyed_hash, expected_keyed_hash);
+        let minlen = core::cmp::min(tag.len(), expected_keyed_hash.len());
+        assert_eq!(
+            &tag.unprotected_as_ref()[..minlen],
+            &expected_keyed_hash[..minlen]
+        );
     }
 }
 

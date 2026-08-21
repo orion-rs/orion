@@ -22,12 +22,11 @@
 
 //! # Parameters:
 //! - `data`: The data to be hashed.
-//! - `out_slice`: The variable-sized output buffer.
+//! - `dest`: The variable-sized output buffer.
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - [`finalize()`] is called twice without a [`reset()`] in between.
-//! - [`update()`] is called after [`finalize()`] without a [`reset()`] in
+//! - [`absorb()`] is called after [`squeeze()`] without a [`reset()`] in
 //!   between.
 //!
 //! # Panics:
@@ -35,83 +34,50 @@
 //! - More than 2^64 bytes of data are hashed.
 //!
 //! # Security:
-//! - The recommended minimum output size is 32. The security provided by the hash function cannot
-//! exceed 256 bits, so choosing output sizes larger than 32 bytes provides no additional security over
-//! the 32 exactly. Choosing a smaller output size however decreases the security provided.
-//! - The secret key should always be generated using a CSPRNG.
-//!   [`SecretKey::generate()`] can be used for this. It generates
-//!   a secret key of 32 bytes.
-//! - When using [`Blake3Keyed`] the output digest can be used as a MAC. If this is done, it is crucial
-//! to use constant-time comparisons for such digest and take care not to leak them through [`Debug`].
+//! - The recommended minimum output size is `32`. The security provided by the hash function cannot
+//!   exceed `256` bits, so choosing output sizes larger than `32` bytes provides no additional security over
+//!   the `32` exactly. Choosing a smaller output size however decreases the security provided.
+//! - While there exists a [`Blake3::new_keyed`] function, it's usage is recommended against unless
+//!   strictly needed. It's main purpose is for uses where a keyed hash needs to be longer than
+//!   `32` bytes. If this is not the case, use [`mac::blake3`] where more protections are offered for
+//!   handling authentication tags.
 //!
 //! # Example:
 //! ```rust
 //! use orion::hazardous::hash::blake3::Blake3;
 //!
-//! // Using the streaming interface.
-//! let mut hash_out = [0u8; 32];
 //! let mut state = Blake3::new();
-//! state.update(b"Some data")?;
-//! state.finalize(&mut hash_out)?;
+//! state.absorb(b"Hello world")?;
+//!
+//! let mut dest = [0u8; 32];
+//! state.squeeze(&mut dest[..16])?;
+//! state.squeeze(&mut dest[16..])?;
 //!
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`update()`]: blake3::Blake3::update
+//! [`absorb()`]: blake3::Blake3::absorb
 //! [`reset()`]: blake3::Blake3::reset
-//! [`finalize()`]: blake3::Blake3::finalize
-//! [`SecretKey::generate()`]: blake3::SecretKey::generate
-//! [`Blake3Keyed`]: blake3::Blake3Keyed
+//! [`squeeze()`]: blake3::Blake3::squeeze
+//! [`Blake3::new_keyed`]: blake3::Blake::new_keyed
+//! [`mac::blake3`]: crate::hazardous::mac::blake3
 
-mod cvstack;
-mod internal;
-mod state;
+pub(crate) mod cvstack;
+pub(crate) mod internal;
+pub(crate) mod state;
 
-use crate::GenerateSecret;
-use crate::Secret;
 use crate::errors::UnknownCryptoError;
-#[cfg(feature = "safe_api")]
-use crate::generics::sealed::Data;
-use crate::generics::sealed::Sealed;
-use crate::generics::{ByteArrayData, TypeSpec};
-use crate::hazardous::hash::blake3::internal::{IV_BYTES, KEY_SIZE, KEYED_HASH};
+use crate::hazardous::hash::blake3::internal::KEYED_HASH;
 use crate::hazardous::hash::blake3::state::Blake3State;
+use crate::hazardous::mac::blake3::SecretKey;
 
 #[cfg(feature = "safe_api")]
 use std::io;
-
-#[derive(Debug)]
-/// Marker type for BLAKE3 key. See [`SecretKey`] type for convenience.
-pub struct Blake3Key {}
-impl Sealed for Blake3Key {}
-
-impl TypeSpec for Blake3Key {
-    const NAME: &'static str = stringify!(SecretKey);
-    type TypeData = ByteArrayData<KEY_SIZE>;
-}
-
-impl GenerateSecret for Blake3Key {
-    #[cfg(feature = "safe_api")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    fn generate() -> Result<Secret<Blake3Key>, UnknownCryptoError> {
-        let mut data = Self::TypeData::new(KEY_SIZE)?;
-        crate::util::secure_rand_bytes(&mut data.bytes)?;
-        Ok(Secret::from_data(data))
-    }
-}
-
-/// A type to represent the secret key that BLAKE3 uses for keyed mode.
-pub type SecretKey = Secret<Blake3Key>;
-
-impl From<[u8; KEY_SIZE]> for SecretKey {
-    fn from(value: [u8; 32]) -> Self {
-        Self::from_data(<Blake3Key as TypeSpec>::TypeData::from(value))
-    }
-}
 
 /// BLAKE3 configuration for standard hashing.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Blake3 {
     internal: Blake3State,
+    flags: u32,
 }
 
 /// Represents the standard `hash` mode for [Blake3] for producing
@@ -120,7 +86,8 @@ impl Default for Blake3 {
     /// Create a new [`Blake3`] instance for standard hashing (`hash` mode).
     fn default() -> Self {
         Self {
-            internal: Blake3State::new(&SecretKey::from(IV_BYTES), 0),
+            internal: Blake3State::new_with_iv(0),
+            flags: 0,
         }
     }
 }
@@ -131,21 +98,27 @@ impl Blake3 {
         Self::default()
     }
 
+    /// Create a new [`Blake3`] instance for keyed hashing (`keyed` mode).
+    pub fn new_keyed(secret_key: &SecretKey) -> Self {
+        Self {
+            internal: Blake3State::new(secret_key, KEYED_HASH),
+            flags: KEYED_HASH,
+        }
+    }
+
     /// Reset to [`Self::new()`] state.
     pub fn reset(&mut self) {
-        self.internal = Blake3State::new(&SecretKey::from(IV_BYTES), 0)
+        self.internal.reset();
     }
 
     /// Update state with `data`. This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.update(data, 0)
+    pub fn absorb(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
+        self.internal.absorb(data, self.flags)
     }
 
-    /// Return a BLAKE3 digest in the `out_slice` parameter.
-    /// The length of the `out_slice` parameter dictates the
-    /// length of the output.
-    pub fn finalize(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.finalize(out_slice, 0)
+    /// Squeeze output of the XOF into `dest`. This can be called multiple times.
+    pub fn squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
+        self.internal.squeeze(dest, self.flags)
     }
 }
 
@@ -164,24 +137,24 @@ impl Blake3 {
 /// std::io::copy(&mut reader, &mut hasher)?;
 ///
 /// let mut digest = [0u8; 32];
-/// hasher.finalize(&mut digest)?;
+/// hasher.squeeze(&mut digest)?;
 ///
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[cfg(feature = "safe_api")]
 impl io::Write for Blake3 {
-    /// Update the hasher's internal state with *all* of the bytes given.
+    /// absorb the hasher's internal state with *all* of the bytes given.
     /// If this function returns the `Ok` variant, it's guaranteed that it
     /// will contain the length of the buffer passed to [`Write`](std::io::Write).
     /// Note that this function is just a small wrapper over
-    /// [`Blake3::update`](crate::hazardous::hash::blake3::Blake3::update).
+    /// [`Blake3::absorb`](crate::hazardous::hash::blake3::Blake3::absorb).
     ///
     /// ## Errors:
     /// This function will only ever return the [`std::io::ErrorKind::Other`]()
     /// variant when it returns an error. Additionally, this will always contain Orion's
     /// [`UnknownCryptoError`] type.
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        self.update(bytes).map_err(io::Error::other)?;
+        self.absorb(bytes).map_err(io::Error::other)?;
         Ok(bytes.len())
     }
 
@@ -191,181 +164,42 @@ impl io::Write for Blake3 {
     }
 }
 
-/// Represents the "keyed hash" mode for BLAKE3 for producing
-/// hashes using a secret key.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Blake3Keyed<'key> {
-    internal: Blake3State,
-    key: &'key SecretKey,
-}
-
-impl<'key> Blake3Keyed<'key> {
-    /// Create a new [`Blake3Keyed`] instance for keyed hashing (`keyed hash` mode).
-    pub fn new(key: &'key SecretKey) -> Self {
-        Self {
-            internal: Blake3State::new(key, KEYED_HASH),
-            key,
-        }
-    }
-
-    /// Reset to [`Self::new()`] state.
-    pub fn reset(&mut self) {
-        self.internal = Blake3State::new(self.key, KEYED_HASH);
-    }
-
-    /// Update state with `data`. This can be called multiple times.
-    pub fn update(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.update(data, KEYED_HASH)
-    }
-
-    /// Return a BLAKE3 digest in the `out_slice` parameter.
-    /// The length of the `out_slice` parameter dictates the
-    /// length of the output.
-    pub fn finalize(&mut self, out_slice: &mut [u8]) -> Result<(), UnknownCryptoError> {
-        self.internal.finalize(out_slice, KEYED_HASH)
-    }
-}
-
 #[cfg(test)]
-mod test_streaming_interface {
-    mod hash_streaming_interface {
-        use crate::hazardous::hash::blake3::internal::BLOCK_LEN;
-        use crate::hazardous::hash::blake3::*;
-        use crate::test_framework::incremental_interface::{
-            StreamingContextConsistencyTester, TestableStreamingContext,
-        };
+mod test_xof_interface {
+    use crate::hazardous::hash::blake3::internal::BLOCK_LEN;
+    use crate::hazardous::hash::blake3::*;
+    use crate::test_framework::xof_interface::{TestableXofContext, XofContextConsistencyTester};
 
-        impl TestableStreamingContext<[u8; 32]> for Blake3 {
-            fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                self.reset();
-                Ok(())
-            }
-
-            fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
-                self.update(input)
-            }
-
-            fn finalize(&mut self) -> Result<[u8; 32], UnknownCryptoError> {
-                let mut out = [0u8; 32];
-                self.finalize(&mut out)?;
-                Ok(out)
-            }
-
-            fn one_shot(input: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
-                let mut hasher = Blake3::new();
-                hasher.update(input)?;
-
-                let mut out = [0u8; 32];
-                hasher.finalize(&mut out)?;
-                Ok(out)
-            }
-
-            fn verify_result(expected: &[u8; 32], input: &[u8]) -> Result<(), UnknownCryptoError> {
-                let actual = Self::one_shot(input)?;
-                if &actual == expected {
-                    Ok(())
-                } else {
-                    Err(UnknownCryptoError)
-                }
-            }
-
-            fn compare_states(state_1: &Self, state_2: &Self) {
-                assert_eq!(state_1, state_2)
-            }
+    impl TestableXofContext for Blake3 {
+        fn reset(&mut self) -> Result<(), UnknownCryptoError> {
+            self.reset();
+            Ok(())
         }
 
-        #[test]
-        fn default_consistency_states() {
-            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3>::new(
-                Blake3::new(),
-                BLOCK_LEN,
-            );
-            test_runner.run_all_tests();
+        fn absorb(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
+            self.absorb(input)
         }
 
-        #[quickcheck]
-        #[cfg(feature = "safe_api")]
-        fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3>::new(
-                Blake3::new(),
-                BLOCK_LEN,
-            );
-            test_runner.run_all_tests_property(&data);
-            true
+        fn squeeze(&mut self, dst: &mut [u8]) -> Result<(), UnknownCryptoError> {
+            self.squeeze(dst)
+        }
+
+        fn compare_states(state_1: &Self, state_2: &Self) {
+            assert_eq!(state_1, state_2)
         }
     }
 
-    mod keyed_streaming_interface {
-        use crate::hazardous::hash::blake3::internal::BLOCK_LEN;
-        use crate::hazardous::hash::blake3::*;
-        use crate::test_framework::incremental_interface::{
-            StreamingContextConsistencyTester, TestableStreamingContext,
-        };
+    #[test]
+    fn default_consistency_states() {
+        let test_runner = XofContextConsistencyTester::<Blake3>::new(Blake3::new(), BLOCK_LEN);
+        test_runner.run_all_tests();
+    }
 
-        impl<'key> TestableStreamingContext<[u8; 32]> for Blake3Keyed<'key> {
-            fn reset(&mut self) -> Result<(), UnknownCryptoError> {
-                self.reset();
-                Ok(())
-            }
-
-            fn update(&mut self, input: &[u8]) -> Result<(), UnknownCryptoError> {
-                self.update(input)
-            }
-
-            fn finalize(&mut self) -> Result<[u8; 32], UnknownCryptoError> {
-                let mut out = [0u8; 32];
-                self.finalize(&mut out)?;
-                Ok(out)
-            }
-
-            fn one_shot(input: &[u8]) -> Result<[u8; 32], UnknownCryptoError> {
-                let secret_key = get_secret_key();
-                let mut hasher = Blake3Keyed::new(&secret_key);
-                hasher.update(input)?;
-
-                let mut out = [0u8; 32];
-                hasher.finalize(&mut out)?;
-                Ok(out)
-            }
-
-            fn verify_result(expected: &[u8; 32], input: &[u8]) -> Result<(), UnknownCryptoError> {
-                let actual = Self::one_shot(input)?;
-                if &actual == expected {
-                    Ok(())
-                } else {
-                    Err(UnknownCryptoError)
-                }
-            }
-
-            fn compare_states(state_1: &Self, state_2: &Self) {
-                assert_eq!(state_1, state_2)
-            }
-        }
-
-        #[test]
-        fn keyed_consistency_states() {
-            let secret_key = get_secret_key();
-            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3Keyed<'_>>::new(
-                Blake3Keyed::new(&secret_key),
-                BLOCK_LEN,
-            );
-            test_runner.run_all_tests();
-        }
-
-        #[quickcheck]
-        #[cfg(feature = "safe_api")]
-        fn prop_input_to_consistency(data: Vec<u8>) -> bool {
-            let secret_key = get_secret_key();
-            let test_runner = StreamingContextConsistencyTester::<[u8; 32], Blake3Keyed<'_>>::new(
-                Blake3Keyed::new(&secret_key),
-                BLOCK_LEN,
-            );
-            test_runner.run_all_tests_property(&data);
-            true
-        }
-
-        fn get_secret_key() -> SecretKey {
-            SecretKey::from([0x42; 32])
-        }
+    #[quickcheck]
+    #[cfg(feature = "safe_api")]
+    fn prop_input_to_consistency(data: Vec<u8>) -> bool {
+        let test_runner = XofContextConsistencyTester::<Blake3>::new(Blake3::new(), BLOCK_LEN);
+        test_runner.run_all_tests_property(&data);
+        true
     }
 }
