@@ -174,10 +174,6 @@ pub(crate) mod sealed {
     pub trait Variant: Sealed {}
 }
 
-//
-// TODO(brycx): This also seems like a better split apporach for HKDF re-using these marker structs?
-//
-
 #[derive(Debug, PartialEq)]
 /// PBKDF2-HMAC-SHA256 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
 pub struct SHA256;

@@ -43,18 +43,20 @@
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
-//! use orion::{hazardous::kdf::hkdf::HkdfSha512, util};
+//! use orion::{hazardous::kdf::hkdf::{Hkdf, SHA512}, util};
 //!
 //! let mut salt = [0u8; 64];
 //! util::secure_rand_bytes(&mut salt)?;
 //! let mut okm_out = [0u8; 32];
 //!
-//! HkdfSha512::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out)?;
+//! Hkdf::<SHA512>::derive_key(&salt, "IKM".as_bytes(), None, &mut okm_out)?;
 //!
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`secure_rand_bytes()`]: crate::util::secure_rand_bytes
+
+use core::marker::PhantomData;
 
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE;
@@ -217,12 +219,38 @@ where
     _expand::<Hmac, { OUTSIZE }>(&_extract::<Hmac, { OUTSIZE }>(salt, ikm)?, info, dest)
 }
 
-/// HKDF-HMAC-SHA256 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
-#[derive(Debug, Clone, Copy)]
-/// HKDF-SHA256.
-pub struct HkdfSha256 {}
+// NOTE(brycx): Has to be a different Sealed, otherwise you could
+// plug these into Argon2.
+pub(crate) mod sealed {
+    pub trait Sealed {}
+    pub trait Variant: Sealed + Clone {}
+}
 
-impl HkdfSha256 {
+#[derive(Clone, Debug, PartialEq)]
+/// HKDF-HMAC-SHA256 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
+pub struct SHA256;
+impl sealed::Sealed for SHA256 {}
+impl sealed::Variant for SHA256 {}
+
+#[derive(Clone, Debug, PartialEq)]
+/// HKDF-HMAC-SHA384 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
+pub struct SHA384;
+impl sealed::Sealed for SHA384 {}
+impl sealed::Variant for SHA384 {}
+
+#[derive(Clone, Debug, PartialEq)]
+/// HKDF-HMAC-SHA512 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
+pub struct SHA512;
+impl sealed::Sealed for SHA512 {}
+impl sealed::Variant for SHA512 {}
+
+#[derive(Debug, Clone, Copy)]
+/// HKDF (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
+pub struct Hkdf<V: sealed::Variant> {
+    _variant: PhantomData<V>,
+}
+
+impl Hkdf<SHA256> {
     /// HPKE: <https://www.rfc-editor.org/rfc/rfc9180.html#name-cryptographic-dependencies>
     pub(crate) fn hpke_labeled_extract(
         version_id: &[u8; 7],
@@ -311,12 +339,7 @@ impl HkdfSha256 {
     }
 }
 
-/// HKDF-HMAC-SHA384 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
-#[derive(Debug, Clone, Copy)]
-/// HKDF-SHA384.
-pub struct HkdfSha384 {}
-
-impl HkdfSha384 {
+impl Hkdf<SHA384> {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF extract step.
     pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::sha384::Tag, UnknownCryptoError> {
@@ -352,12 +375,7 @@ impl HkdfSha384 {
     }
 }
 
-/// HKDF-HMAC-SHA512 (HMAC-based Extract-and-Expand Key Derivation Function) as specified in the [RFC 5869](https://tools.ietf.org/html/rfc5869).
-#[derive(Debug, Clone, Copy)]
-/// HKDF-SHA512.
-pub struct HkdfSha512 {}
-
-impl HkdfSha512 {
+impl Hkdf<SHA512> {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// The HKDF extract step.
     pub fn extract(salt: &[u8], ikm: &[u8]) -> Result<hmac::sha512::Tag, UnknownCryptoError> {
@@ -415,12 +433,13 @@ mod test_derive_key {
             outsize
         };
 
-        let prk = HkdfSha256::extract(&salt[..], &ikm[..]).unwrap();
+        let prk = Hkdf::<SHA256>::extract(&salt[..], &ikm[..]).unwrap();
         let mut out = vec![0u8; outsize_checked];
-        HkdfSha256::expand(&prk, Some(&info[..]), &mut out).unwrap();
+        Hkdf::<SHA256>::expand(&prk, Some(&info[..]), &mut out).unwrap();
 
         let mut out_one_shot = vec![0u8; outsize_checked];
-        HkdfSha256::derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
+        Hkdf::<SHA256>::derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot)
+            .unwrap();
 
         out == out_one_shot
     }
@@ -441,12 +460,13 @@ mod test_derive_key {
             outsize
         };
 
-        let prk = HkdfSha384::extract(&salt[..], &ikm[..]).unwrap();
+        let prk = Hkdf::<SHA384>::extract(&salt[..], &ikm[..]).unwrap();
         let mut out = vec![0u8; outsize_checked];
-        HkdfSha384::expand(&prk, Some(&info[..]), &mut out).unwrap();
+        Hkdf::<SHA384>::expand(&prk, Some(&info[..]), &mut out).unwrap();
 
         let mut out_one_shot = vec![0u8; outsize_checked];
-        HkdfSha384::derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
+        Hkdf::<SHA384>::derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot)
+            .unwrap();
 
         out == out_one_shot
     }
@@ -467,12 +487,13 @@ mod test_derive_key {
             outsize
         };
 
-        let prk = HkdfSha512::extract(&salt[..], &ikm[..]).unwrap();
+        let prk = Hkdf::<SHA512>::extract(&salt[..], &ikm[..]).unwrap();
         let mut out = vec![0u8; outsize_checked];
-        HkdfSha512::expand(&prk, Some(&info[..]), &mut out).unwrap();
+        Hkdf::<SHA512>::expand(&prk, Some(&info[..]), &mut out).unwrap();
 
         let mut out_one_shot = vec![0u8; outsize_checked];
-        HkdfSha512::derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot).unwrap();
+        Hkdf::<SHA512>::derive_key(&salt[..], &ikm[..], Some(&info[..]), &mut out_one_shot)
+            .unwrap();
 
         out == out_one_shot
     }
@@ -489,8 +510,8 @@ mod public {
     #[test]
     fn hkdf_above_maximum_length_err() {
         let mut okm_out = [0u8; 255 * SHA256_OUTSIZE + 1];
-        let prk = HkdfSha256::extract(b"", b"").unwrap();
-        assert!(HkdfSha256::expand(&prk, Some(b""), &mut okm_out).is_err());
+        let prk = Hkdf::<SHA256>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA256>::expand(&prk, Some(b""), &mut okm_out).is_err());
         assert!(
             _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
                 prk.unprotected_as_ref(),
@@ -499,11 +520,11 @@ mod public {
             )
             .is_err()
         );
-        assert!(HkdfSha256::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
+        assert!(Hkdf::<SHA256>::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
         let mut okm_out = [0u8; 255 * SHA384_OUTSIZE + 1];
-        let prk = HkdfSha384::extract(b"", b"").unwrap();
-        assert!(HkdfSha384::expand(&prk, Some(b""), &mut okm_out).is_err());
+        let prk = Hkdf::<SHA384>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA384>::expand(&prk, Some(b""), &mut okm_out).is_err());
         assert!(
             _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(
                 prk.unprotected_as_ref(),
@@ -512,11 +533,11 @@ mod public {
             )
             .is_err()
         );
-        assert!(HkdfSha384::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
+        assert!(Hkdf::<SHA384>::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
         let mut okm_out = [0u8; 255 * SHA512_OUTSIZE + 1];
-        let prk = HkdfSha512::extract(b"", b"").unwrap();
-        assert!(HkdfSha512::expand(&prk, Some(b""), &mut okm_out).is_err());
+        let prk = Hkdf::<SHA512>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA512>::expand(&prk, Some(b""), &mut okm_out).is_err());
         assert!(
             _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(
                 prk.unprotected_as_ref(),
@@ -525,14 +546,14 @@ mod public {
             )
             .is_err()
         );
-        assert!(HkdfSha512::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
+        assert!(Hkdf::<SHA512>::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
     }
 
     #[test]
     fn hkdf_exact_maximum_length_ok() {
         let mut okm_out = [0u8; 255 * SHA256_OUTSIZE];
-        let prk = HkdfSha256::extract(b"", b"").unwrap();
-        assert!(HkdfSha256::expand(&prk, Some(b""), &mut okm_out).is_ok());
+        let prk = Hkdf::<SHA256>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA256>::expand(&prk, Some(b""), &mut okm_out).is_ok());
         assert!(
             _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
                 prk.unprotected_as_ref(),
@@ -541,11 +562,11 @@ mod public {
             )
             .is_ok()
         );
-        assert!(HkdfSha256::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
+        assert!(Hkdf::<SHA256>::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
 
         let mut okm_out = [0u8; 255 * SHA384_OUTSIZE];
-        let prk = HkdfSha384::extract(b"", b"").unwrap();
-        assert!(HkdfSha384::expand(&prk, Some(b""), &mut okm_out).is_ok());
+        let prk = Hkdf::<SHA384>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA384>::expand(&prk, Some(b""), &mut okm_out).is_ok());
         assert!(
             _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(
                 prk.unprotected_as_ref(),
@@ -555,11 +576,11 @@ mod public {
             .is_ok()
         );
 
-        assert!(HkdfSha384::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
+        assert!(Hkdf::<SHA384>::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
 
         let mut okm_out = [0u8; 255 * SHA512_OUTSIZE];
-        let prk = HkdfSha512::extract(b"", b"").unwrap();
-        assert!(HkdfSha512::expand(&prk, Some(b""), &mut okm_out).is_ok());
+        let prk = Hkdf::<SHA512>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA512>::expand(&prk, Some(b""), &mut okm_out).is_ok());
         assert!(
             _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(
                 prk.unprotected_as_ref(),
@@ -568,15 +589,15 @@ mod public {
             )
             .is_ok()
         );
-        assert!(HkdfSha512::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
+        assert!(Hkdf::<SHA512>::derive_key(b"", b"", Some(b""), &mut okm_out).is_ok());
     }
 
     #[test]
     fn hkdf_zero_length_err() {
         let mut okm_out = [0u8; 0];
 
-        let prk = HkdfSha256::extract(b"", b"").unwrap();
-        assert!(HkdfSha256::expand(&prk, Some(b""), &mut okm_out).is_err());
+        let prk = Hkdf::<SHA256>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA256>::expand(&prk, Some(b""), &mut okm_out).is_err());
         assert!(
             _expand::<hmac::sha256::HmacSha256, { SHA256_OUTSIZE }>(
                 prk.unprotected_as_ref(),
@@ -586,10 +607,10 @@ mod public {
             .is_err()
         );
 
-        assert!(HkdfSha256::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
+        assert!(Hkdf::<SHA256>::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
-        let prk = HkdfSha384::extract(b"", b"").unwrap();
-        assert!(HkdfSha384::expand(&prk, Some(b""), &mut okm_out).is_err());
+        let prk = Hkdf::<SHA384>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA384>::expand(&prk, Some(b""), &mut okm_out).is_err());
         assert!(
             _expand::<hmac::sha384::HmacSha384, { SHA384_OUTSIZE }>(
                 prk.unprotected_as_ref(),
@@ -599,10 +620,10 @@ mod public {
             .is_err()
         );
 
-        assert!(HkdfSha384::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
+        assert!(Hkdf::<SHA384>::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
 
-        let prk = HkdfSha512::extract(b"", b"").unwrap();
-        assert!(HkdfSha512::expand(&prk, Some(b""), &mut okm_out).is_err());
+        let prk = Hkdf::<SHA512>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA512>::expand(&prk, Some(b""), &mut okm_out).is_err());
         assert!(
             _expand::<hmac::sha512::HmacSha512, { SHA512_OUTSIZE }>(
                 prk.unprotected_as_ref(),
@@ -612,7 +633,7 @@ mod public {
             .is_err()
         );
 
-        assert!(HkdfSha512::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
+        assert!(Hkdf::<SHA512>::derive_key(b"", b"", Some(b""), &mut okm_out).is_err());
     }
 
     #[test]
@@ -621,19 +642,19 @@ mod public {
         let mut okm_out = [0u8; 32];
         let mut okm_out_verify = [0u8; 32];
 
-        let prk = HkdfSha256::extract(b"", b"").unwrap();
-        assert!(HkdfSha256::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
-        assert!(HkdfSha256::derive_key(b"", b"", None, &mut okm_out_verify).is_ok());
+        let prk = Hkdf::<SHA256>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA256>::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
+        assert!(Hkdf::<SHA256>::derive_key(b"", b"", None, &mut okm_out_verify).is_ok());
         assert_eq!(okm_out, okm_out_verify);
 
-        let prk = HkdfSha384::extract(b"", b"").unwrap();
-        assert!(HkdfSha384::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
-        assert!(HkdfSha384::derive_key(b"", b"", None, &mut okm_out_verify).is_ok());
+        let prk = Hkdf::<SHA384>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA384>::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
+        assert!(Hkdf::<SHA384>::derive_key(b"", b"", None, &mut okm_out_verify).is_ok());
         assert_eq!(okm_out, okm_out_verify);
 
-        let prk = HkdfSha512::extract(b"", b"").unwrap();
-        assert!(HkdfSha512::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
-        assert!(HkdfSha512::derive_key(b"", b"", None, &mut okm_out_verify).is_ok());
+        let prk = Hkdf::<SHA512>::extract(b"", b"").unwrap();
+        assert!(Hkdf::<SHA512>::expand(&prk, Some(b""), &mut okm_out).is_ok()); // Use info Some
+        assert!(Hkdf::<SHA512>::derive_key(b"", b"", None, &mut okm_out_verify).is_ok());
         assert_eq!(okm_out, okm_out_verify);
     }
 
@@ -645,16 +666,16 @@ mod public {
         let mut okm_out = [0u8; 42];
         let mut okm_out_verify = [0u8; 42];
 
-        HkdfSha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-        HkdfSha256::derive_key(b"", ikm, Some(info), &mut okm_out_verify).unwrap();
+        Hkdf::<SHA256>::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        Hkdf::<SHA256>::derive_key(b"", ikm, Some(info), &mut okm_out_verify).unwrap();
         assert_ne!(okm_out, okm_out_verify);
 
-        HkdfSha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-        HkdfSha384::derive_key(b"", ikm, Some(info), &mut okm_out_verify).unwrap();
+        Hkdf::<SHA384>::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        Hkdf::<SHA384>::derive_key(b"", ikm, Some(info), &mut okm_out_verify).unwrap();
         assert_ne!(okm_out, okm_out_verify);
 
-        HkdfSha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-        HkdfSha512::derive_key(b"", ikm, Some(info), &mut okm_out_verify).unwrap();
+        Hkdf::<SHA512>::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        Hkdf::<SHA512>::derive_key(b"", ikm, Some(info), &mut okm_out_verify).unwrap();
         assert_ne!(okm_out, okm_out_verify);
     }
 
@@ -666,16 +687,16 @@ mod public {
         let mut okm_out = [0u8; 42];
         let mut okm_out_verify = [0u8; 42];
 
-        HkdfSha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-        HkdfSha256::derive_key(salt, b"", Some(info), &mut okm_out_verify).unwrap();
+        Hkdf::<SHA256>::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        Hkdf::<SHA256>::derive_key(salt, b"", Some(info), &mut okm_out_verify).unwrap();
         assert_ne!(okm_out, okm_out_verify);
 
-        HkdfSha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-        HkdfSha384::derive_key(salt, b"", Some(info), &mut okm_out_verify).unwrap();
+        Hkdf::<SHA384>::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        Hkdf::<SHA384>::derive_key(salt, b"", Some(info), &mut okm_out_verify).unwrap();
         assert_ne!(okm_out, okm_out_verify);
 
-        HkdfSha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-        HkdfSha512::derive_key(salt, b"", Some(info), &mut okm_out_verify).unwrap();
+        Hkdf::<SHA512>::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        Hkdf::<SHA512>::derive_key(salt, b"", Some(info), &mut okm_out_verify).unwrap();
         assert_ne!(okm_out, okm_out_verify);
     }
 
@@ -687,16 +708,16 @@ mod public {
         let mut okm_out = [0u8; 42];
         let mut okm_out_verify = [0u8; 43];
 
-        HkdfSha256::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-        HkdfSha256::derive_key(salt, ikm, Some(info), &mut okm_out_verify).unwrap();
+        Hkdf::<SHA256>::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        Hkdf::<SHA256>::derive_key(salt, ikm, Some(info), &mut okm_out_verify).unwrap();
         assert_ne!(okm_out[..], okm_out_verify[..]);
 
-        HkdfSha384::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-        HkdfSha384::derive_key(salt, ikm, Some(info), &mut okm_out_verify).unwrap();
+        Hkdf::<SHA384>::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        Hkdf::<SHA384>::derive_key(salt, ikm, Some(info), &mut okm_out_verify).unwrap();
         assert_ne!(okm_out[..], okm_out_verify[..]);
 
-        HkdfSha512::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
-        HkdfSha512::derive_key(salt, ikm, Some(info), &mut okm_out_verify).unwrap();
+        Hkdf::<SHA512>::derive_key(salt, ikm, Some(info), &mut okm_out).unwrap();
+        Hkdf::<SHA512>::derive_key(salt, ikm, Some(info), &mut okm_out_verify).unwrap();
         assert_ne!(okm_out[..], okm_out_verify[..]);
     }
 }

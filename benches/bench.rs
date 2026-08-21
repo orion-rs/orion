@@ -333,7 +333,8 @@ mod kdf {
                 &ikm,
                 |b, input_ikm| {
                     b.iter(|| {
-                        hkdf::HkdfSha256::derive_key(&salt, input_ikm, None, &mut okm_out).unwrap()
+                        hkdf::Hkdf::<hkdf::SHA256>::derive_key(&salt, input_ikm, None, &mut okm_out)
+                            .unwrap()
                     })
                 },
             );
@@ -355,7 +356,8 @@ mod kdf {
                 &ikm,
                 |b, input_ikm| {
                     b.iter(|| {
-                        hkdf::HkdfSha512::derive_key(&salt, input_ikm, None, &mut okm_out).unwrap()
+                        hkdf::Hkdf::<hkdf::SHA512>::derive_key(&salt, input_ikm, None, &mut okm_out)
+                            .unwrap()
                     })
                 },
             );

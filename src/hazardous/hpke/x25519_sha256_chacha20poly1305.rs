@@ -23,7 +23,7 @@
 use crate::hazardous::aead::chacha20poly1305::ChaCha20Poly1305;
 use crate::hazardous::hpke::base::HpkeSuite;
 use crate::hazardous::hpke::kem::DhKemX25519HkdfSha256;
-use crate::hazardous::kdf::hkdf::HkdfSha256;
+use crate::hazardous::kdf::hkdf::{Hkdf, SHA256};
 
 #[allow(non_camel_case_types)]
 /// HPKE suite: DHKEM(X25519, HKDF-SHA256), HKDF-SHA256 and ChaCha20Poly1305.
@@ -42,7 +42,7 @@ use crate::hazardous::kdf::hkdf::HkdfSha256;
 ///
 /// [`unprotected_as_ref()`]: crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey::unprotected_as_ref
 pub type DHKEM_X25519_SHA256_CHACHA20 =
-    HpkeSuite<DhKemX25519HkdfSha256, HkdfSha256, ChaCha20Poly1305>;
+    HpkeSuite<DhKemX25519HkdfSha256, Hkdf<SHA256>, ChaCha20Poly1305>;
 
 #[cfg(feature = "safe_api")]
 #[cfg(test)]
