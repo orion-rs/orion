@@ -29,7 +29,7 @@ use orion::KP;
 use orion::hazardous::{
     aead::{chacha20poly1305, xchacha20poly1305},
     hash::*,
-    kdf::{argon2i, hkdf, pbkdf2},
+    kdf::{argon2, hkdf, pbkdf2},
     mac::{hmac, poly1305},
     stream::*,
 };
@@ -51,7 +51,7 @@ mod mac {
                 BenchmarkId::new("compute mac", *size),
                 &input,
                 |b, input_message| {
-                    b.iter(|| poly1305::Poly1305::poly1305(&key, &input_message).unwrap())
+                    b.iter(|| poly1305::Poly1305::poly1305(&key, input_message).unwrap())
                 },
             );
         }
@@ -71,7 +71,7 @@ mod mac {
                 BenchmarkId::new("compute mac", *size),
                 &input,
                 |b, input_message| {
-                    b.iter(|| hmac::sha256::HmacSha256::hmac(&key, &input_message).unwrap())
+                    b.iter(|| hmac::sha256::HmacSha256::hmac(&key, input_message).unwrap())
                 },
             );
         }
@@ -91,7 +91,7 @@ mod mac {
                 BenchmarkId::new("compute mac", *size),
                 &input,
                 |b, input_message| {
-                    b.iter(|| hmac::sha512::HmacSha512::hmac(&key, &input_message).unwrap())
+                    b.iter(|| hmac::sha512::HmacSha512::hmac(&key, input_message).unwrap())
                 },
             );
         }
@@ -172,7 +172,7 @@ mod hash {
             group.bench_with_input(
                 BenchmarkId::new("compute hash", *size),
                 &input,
-                |b, input_message| b.iter(|| sha2::sha256::Sha256::digest(&input_message).unwrap()),
+                |b, input_message| b.iter(|| sha2::sha256::Sha256::digest(input_message).unwrap()),
             );
         }
     }
@@ -187,7 +187,7 @@ mod hash {
             group.bench_with_input(
                 BenchmarkId::new("compute hash", *size),
                 &input,
-                |b, input_message| b.iter(|| sha2::sha384::Sha384::digest(&input_message).unwrap()),
+                |b, input_message| b.iter(|| sha2::sha384::Sha384::digest(input_message).unwrap()),
             );
         }
     }
@@ -202,7 +202,7 @@ mod hash {
             group.bench_with_input(
                 BenchmarkId::new("compute hash", *size),
                 &input,
-                |b, input_message| b.iter(|| sha2::sha512::Sha512::digest(&input_message).unwrap()),
+                |b, input_message| b.iter(|| sha2::sha512::Sha512::digest(input_message).unwrap()),
             );
         }
     }
@@ -220,7 +220,7 @@ mod hash {
                 |b, input_message| {
                     b.iter(|| {
                         blake2::blake2b::Hasher::Blake2b512
-                            .digest(&input_message)
+                            .digest(input_message)
                             .unwrap()
                     })
                 },
@@ -242,7 +242,7 @@ mod hash {
                 |b, input_message| {
                     b.iter(|| {
                         let mut ctx = blake3::Blake3::new();
-                        ctx.update(&input_message).unwrap();
+                        ctx.update(input_message).unwrap();
                         ctx.finalize(&mut dest).unwrap();
                     })
                 },
@@ -381,8 +381,8 @@ mod kdf {
                 &iterations,
                 |b, iter_count| {
                     b.iter(|| {
-                        pbkdf2::sha256::derive_key(
-                            &pbkdf2::sha256::Password::try_from(&salt).unwrap(),
+                        pbkdf2::Pbkdf2::<pbkdf2::SHA256>::derive_key(
+                            &salt,
                             &ikm,
                             **iter_count,
                             &mut dk_out,
@@ -413,8 +413,8 @@ mod kdf {
                 &iterations,
                 |b, iter_count| {
                     b.iter(|| {
-                        pbkdf2::sha512::derive_key(
-                            &pbkdf2::sha512::Password::try_from(&salt).unwrap(),
+                        pbkdf2::Pbkdf2::<pbkdf2::SHA512>::derive_key(
+                            &salt,
                             &ikm,
                             **iter_count,
                             &mut dk_out,
@@ -429,8 +429,9 @@ mod kdf {
     pub fn bench_argon2i(c: &mut Criterion) {
         let mut group = c.benchmark_group("Argon2i");
 
-        let iter = 3;
         let mem = 128;
+        let iter = 3;
+        let cost = argon2::CostParams::new(iter, mem, 1).unwrap();
         let password = [0u8; 16];
         let salt = [0u8; 16];
         let mut dk_out = [0u8; 32];
@@ -445,8 +446,15 @@ mod kdf {
             &salt,
             |b, _| {
                 b.iter(|| {
-                    argon2i::derive_key(&password, &salt, iter, mem, None, None, &mut dk_out)
-                        .unwrap()
+                    argon2::Argon2::<argon2::I, argon2::Sequential>::derive_key(
+                        &password,
+                        &salt,
+                        &cost,
+                        None,
+                        None,
+                        &mut dk_out,
+                    )
+                    .unwrap()
                 })
             },
         );
@@ -552,7 +560,7 @@ mod dsa {
     // Uses the deterministic signing benchmark approach from: https://github.com/C2SP/CCTV/tree/main/ML-DSA/benchmark
     // Taken at commit: https://github.com/C2SP/CCTV/commit/d091f096c98eaaf9a42a824eb923a457867e4eae
 
-    const ML_DSA_44_MSG: [&'static str; 188] = [
+    const ML_DSA_44_MSG: [&str; 188] = [
         "BUS7IAZWYOZ4JHJQYDWRTJL4V7",
         "MK5HFFNP4TB5S6FM4KUFZSIXPD",
         "DBFETUV4O56J57FXTXTIVCDIAR",
@@ -743,7 +751,7 @@ mod dsa {
         "I3FQOAW3PINUK26P62HCX657FO",
     ];
 
-    const ML_DSA_65_MSG: [&'static str; 147] = [
+    const ML_DSA_65_MSG: [&str; 147] = [
         "NDGEUBUDWGRJJ3A4UNZZQOEKNL",
         "ACGYQUXN4POOFUENCLNCIPHFAZ",
         "Z3XETEYKROVJH7SIHOIAYCTO42",
@@ -893,7 +901,7 @@ mod dsa {
         "3S6NATWA57SFTZEW7UZUOUYAEU",
     ];
 
-    const ML_DSA_87_MSG: [&'static str; 114] = [
+    const ML_DSA_87_MSG: [&str; 114] = [
         "LQQPGPNUME6QDNDTQTS4BA7I7M",
         "PTYEEJ7RMI6MXNN6PZH222Y6QI",
         "R6DTHAADKNMEADDK5ECPNOTOAT",
@@ -1052,8 +1060,7 @@ mod dsa {
         group.bench_function("verify", move |b| {
             b.iter(|| {
                 let sig_and_msg = sigs.next().unwrap();
-                let _ = kp
-                    .public()
+                kp.public()
                     .verify(sig_and_msg.0.as_slice(), &[], &sig_and_msg.1)
                     .unwrap();
             })
@@ -1102,8 +1109,7 @@ mod dsa {
         group.bench_function("verify", move |b| {
             b.iter(|| {
                 let sig_and_msg = sigs.next().unwrap();
-                let _ = kp
-                    .public()
+                kp.public()
                     .verify(sig_and_msg.0.as_slice(), &[], &sig_and_msg.1)
                     .unwrap();
             })
@@ -1152,8 +1158,7 @@ mod dsa {
         group.bench_function("verify", move |b| {
             b.iter(|| {
                 let sig_and_msg = sigs.next().unwrap();
-                let _ = kp
-                    .public()
+                kp.public()
                     .verify(sig_and_msg.0.as_slice(), &[], &sig_and_msg.1)
                     .unwrap();
             })

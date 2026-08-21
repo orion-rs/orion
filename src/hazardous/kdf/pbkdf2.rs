@@ -39,8 +39,6 @@
 //! - The length of `dst_out` is greater than (2^32 - 1) * SHA(256/384/512)_OUTSIZE.
 //!
 //! # Security:
-//! - Use [`Password::generate()`] to randomly generate a password of the same length as
-//! the underlying SHA2 hash functions blocksize.
 //! - Salts should always be generated using a CSPRNG.
 //!   [`secure_rand_bytes()`] can be used for this.
 //! - The recommended length for a salt is 64 bytes.
@@ -54,18 +52,17 @@
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
-//! use orion::{hazardous::kdf::pbkdf2, util};
+//! use orion::{hazardous::kdf::pbkdf2::*, util};
 //!
 //! let mut salt = [0u8; 64];
 //! util::secure_rand_bytes(&mut salt)?;
-//! let password = pbkdf2::sha512::Password::try_from("Secret password".as_bytes())?;
 //! let mut dst_out = [0u8; 64];
 //!
-//! pbkdf2::sha512::derive_key(&password, &salt, 10000, &mut dst_out)?;
+//! Pbkdf2::<SHA512>::derive_key(b"Secret password", &salt, 10000, &mut dst_out)?;
 //!
 //! let expected_dk = dst_out;
 //!
-//! assert!(pbkdf2::sha512::verify(&expected_dk, &password, &salt, 10000, &mut dst_out).is_ok());
+//! assert!(Pbkdf2::<SHA512>::verify(&expected_dk, b"Secret password", &salt, 10000, &mut dst_out).is_ok());
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
@@ -75,6 +72,7 @@
 //! [OWASP]: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
 
 use crate::{errors::UnknownCryptoError, hazardous::mac::hmac};
+use core::marker::PhantomData;
 
 /// The F function as described in the RFC.
 fn _function_f<Hmac>(
@@ -169,40 +167,70 @@ where
     crate::util::secure_cmp(expected, dest)
 }
 
-/// PBKDF2-HMAC-SHA256 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
-pub mod sha256 {
-    use super::*;
-    use crate::hazardous::hash::sha2::sha256;
-    pub use crate::hazardous::mac::hmac::sha256::SecretKey as Password;
+// NOTE(brycx): Has to be a different Sealed, otherwise you could
+// plug these into Argon2.
+pub(crate) mod sealed {
+    pub trait Sealed {}
+    pub trait Variant: Sealed {}
+}
 
+//
+// TODO(brycx): This also seems like a better split apporach for HKDF re-using these marker structs?
+//
+
+#[derive(Debug, PartialEq)]
+/// PBKDF2-HMAC-SHA256 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
+pub struct SHA256;
+impl sealed::Sealed for SHA256 {}
+impl sealed::Variant for SHA256 {}
+
+#[derive(Debug, PartialEq)]
+/// PBKDF2-HMAC-SHA384 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
+pub struct SHA384;
+impl sealed::Sealed for SHA384 {}
+impl sealed::Variant for SHA384 {}
+
+#[derive(Debug, PartialEq)]
+/// PBKDF2-HMAC-SHA512 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
+pub struct SHA512;
+impl sealed::Sealed for SHA512 {}
+impl sealed::Variant for SHA512 {}
+
+#[derive(Debug)]
+///Password-Based Key Derivation Function as specified in the [RFC 7914](https://datatracker.ietf.org/doc/html/rfc7914.html).
+pub struct Pbkdf2<V: sealed::Variant> {
+    _variant: PhantomData<V>,
+}
+
+impl Pbkdf2<SHA256> {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Derive a key using PBKDF2-HMAC-SHA256.
     pub fn derive_key(
-        password: &Password,
+        password: &[u8],
         salt: &[u8],
         iterations: usize,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _derive_key::<hmac::sha256::HmacSha256, { sha256::SHA256_OUTSIZE }>(
-            password.unprotected_as_ref(),
-            salt,
-            iterations,
-            dst_out,
-        )
+        let padded = hmac::sha256::SecretKey::try_from(password)?;
+        _derive_key::<
+            hmac::sha256::HmacSha256,
+            { crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE },
+        >(padded.unprotected_as_ref(), salt, iterations, dst_out)
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Verify PBKDF2-HMAC-SHA256 derived key in constant time.
     pub fn verify(
         expected: &[u8],
-        password: &Password,
+        password: &[u8],
         salt: &[u8],
         iterations: usize,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _verify::<hmac::sha256::HmacSha256, { sha256::SHA256_OUTSIZE }>(
+        let padded = hmac::sha256::SecretKey::try_from(password)?;
+        _verify::<hmac::sha256::HmacSha256, { crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE }>(
             expected,
-            password.unprotected_as_ref(),
+            padded.unprotected_as_ref(),
             salt,
             iterations,
             dst_out,
@@ -210,40 +238,35 @@ pub mod sha256 {
     }
 }
 
-/// PBKDF2-HMAC-SHA384 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
-pub mod sha384 {
-    use super::*;
-    use crate::hazardous::hash::sha2::sha384;
-    pub use crate::hazardous::mac::hmac::sha384::SecretKey as Password;
-
+impl Pbkdf2<SHA384> {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Derive a key using PBKDF2-HMAC-SHA384.
     pub fn derive_key(
-        password: &Password,
+        password: &[u8],
         salt: &[u8],
         iterations: usize,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _derive_key::<hmac::sha384::HmacSha384, { sha384::SHA384_OUTSIZE }>(
-            password.unprotected_as_ref(),
-            salt,
-            iterations,
-            dst_out,
-        )
+        let padded = hmac::sha384::SecretKey::try_from(password)?;
+        _derive_key::<
+            hmac::sha384::HmacSha384,
+            { crate::hazardous::hash::sha2::sha384::SHA384_OUTSIZE },
+        >(padded.unprotected_as_ref(), salt, iterations, dst_out)
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Verify PBKDF2-HMAC-SHA384 derived key in constant time.
     pub fn verify(
         expected: &[u8],
-        password: &Password,
+        password: &[u8],
         salt: &[u8],
         iterations: usize,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _verify::<hmac::sha384::HmacSha384, { sha384::SHA384_OUTSIZE }>(
+        let padded = hmac::sha384::SecretKey::try_from(password)?;
+        _verify::<hmac::sha384::HmacSha384, { crate::hazardous::hash::sha2::sha384::SHA384_OUTSIZE }>(
             expected,
-            password.unprotected_as_ref(),
+            padded.unprotected_as_ref(),
             salt,
             iterations,
             dst_out,
@@ -251,40 +274,35 @@ pub mod sha384 {
     }
 }
 
-/// PBKDF2-HMAC-SHA512 (Password-Based Key Derivation Function 2) as specified in the [RFC 8018](https://tools.ietf.org/html/rfc8018).
-pub mod sha512 {
-    use super::*;
-    use crate::hazardous::hash::sha2::sha512;
-    pub use crate::hazardous::mac::hmac::sha512::SecretKey as Password;
-
+impl Pbkdf2<SHA512> {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Derive a key using PBKDF2-HMAC-SHA512.
     pub fn derive_key(
-        password: &Password,
+        password: &[u8],
         salt: &[u8],
         iterations: usize,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _derive_key::<hmac::sha512::HmacSha512, { sha512::SHA512_OUTSIZE }>(
-            password.unprotected_as_ref(),
-            salt,
-            iterations,
-            dst_out,
-        )
+        let padded = hmac::sha512::SecretKey::try_from(password)?;
+        _derive_key::<
+            hmac::sha512::HmacSha512,
+            { crate::hazardous::hash::sha2::sha512::SHA512_OUTSIZE },
+        >(padded.unprotected_as_ref(), salt, iterations, dst_out)
     }
 
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Verify PBKDF2-HMAC-SHA512 derived key in constant time.
     pub fn verify(
         expected: &[u8],
-        password: &Password,
+        password: &[u8],
         salt: &[u8],
         iterations: usize,
         dst_out: &mut [u8],
     ) -> Result<(), UnknownCryptoError> {
-        _verify::<hmac::sha512::HmacSha512, { sha512::SHA512_OUTSIZE }>(
+        let padded = hmac::sha512::SecretKey::try_from(password)?;
+        _verify::<hmac::sha512::HmacSha512, { crate::hazardous::hash::sha2::sha512::SHA512_OUTSIZE }>(
             expected,
-            password.unprotected_as_ref(),
+            padded.unprotected_as_ref(),
             salt,
             iterations,
             dst_out,
@@ -302,219 +320,136 @@ mod public {
 
         #[test]
         fn verify_true() {
-            let password_256 = sha256::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_384 = sha384::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_512 = sha512::Password::try_from("pass\0word".as_bytes()).unwrap();
-
+            let password = b"pass\0word";
             let salt = "sa\0lt".as_bytes();
             let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA256>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha256::verify(
-                    &okm_out,
-                    &password_256,
-                    salt,
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_ok()
+                Pbkdf2::<SHA256>::verify(&okm_out, password, salt, iterations, &mut okm_out_verify)
+                    .is_ok()
             );
 
-            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA384>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha384::verify(
-                    &okm_out,
-                    &password_384,
-                    salt,
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_ok()
+                Pbkdf2::<SHA384>::verify(&okm_out, password, salt, iterations, &mut okm_out_verify)
+                    .is_ok()
             );
 
-            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA512>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha512::verify(
-                    &okm_out,
-                    &password_512,
-                    salt,
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_ok()
+                Pbkdf2::<SHA512>::verify(&okm_out, password, salt, iterations, &mut okm_out_verify)
+                    .is_ok()
             );
         }
 
         #[test]
         fn verify_false_wrong_salt() {
-            let password_256 = sha256::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_384 = sha384::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_512 = sha512::Password::try_from("pass\0word".as_bytes()).unwrap();
-
+            let password = b"pass\0word";
             let salt = "sa\0lt".as_bytes();
             let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA256>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha256::verify(
-                    &okm_out,
-                    &password_256,
-                    b"",
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_err()
+                Pbkdf2::<SHA256>::verify(&okm_out, password, b"", iterations, &mut okm_out_verify)
+                    .is_err()
             );
 
-            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA384>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha384::verify(
-                    &okm_out,
-                    &password_384,
-                    b"",
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_err()
+                Pbkdf2::<SHA384>::verify(&okm_out, password, b"", iterations, &mut okm_out_verify)
+                    .is_err()
             );
 
-            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA512>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha512::verify(
-                    &okm_out,
-                    &password_512,
-                    b"",
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_err()
+                Pbkdf2::<SHA512>::verify(&okm_out, password, b"", iterations, &mut okm_out_verify)
+                    .is_err()
             );
         }
         #[test]
         fn verify_false_wrong_password() {
-            let password_256 = sha256::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_384 = sha384::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_512 = sha512::Password::try_from("pass\0word".as_bytes()).unwrap();
-
+            let password = b"pass\0word";
             let salt = "sa\0lt".as_bytes();
             let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA256>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha256::verify(
-                    &okm_out,
-                    &sha256::Password::try_from(b"pass").unwrap(),
-                    salt,
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_err()
+                Pbkdf2::<SHA256>::verify(&okm_out, b"pass", salt, iterations, &mut okm_out_verify)
+                    .is_err()
             );
 
-            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA384>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha384::verify(
-                    &okm_out,
-                    &sha384::Password::try_from(b"pass").unwrap(),
-                    salt,
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_err()
+                Pbkdf2::<SHA384>::verify(&okm_out, b"pass", salt, iterations, &mut okm_out_verify)
+                    .is_err()
             );
 
-            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA512>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha512::verify(
-                    &okm_out,
-                    &sha512::Password::try_from(b"pass").unwrap(),
-                    salt,
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_err()
+                Pbkdf2::<SHA512>::verify(&okm_out, b"pass", salt, iterations, &mut okm_out_verify)
+                    .is_err()
             );
         }
 
         #[test]
         fn verify_diff_dklen_error() {
-            let password_256 = sha256::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_384 = sha384::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_512 = sha512::Password::try_from("pass\0word".as_bytes()).unwrap();
+            let password = b"pass\0word";
 
             let salt = "sa\0lt".as_bytes();
             let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 32];
 
-            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA256>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha256::verify(
-                    &okm_out,
-                    &password_256,
-                    salt,
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_err()
+                Pbkdf2::<SHA256>::verify(&okm_out, password, salt, iterations, &mut okm_out_verify)
+                    .is_err()
             );
 
-            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA384>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha384::verify(
-                    &okm_out,
-                    &password_384,
-                    salt,
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_err()
+                Pbkdf2::<SHA384>::verify(&okm_out, password, salt, iterations, &mut okm_out_verify)
+                    .is_err()
             );
 
-            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA512>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha512::verify(
-                    &okm_out,
-                    &password_512,
-                    salt,
-                    iterations,
-                    &mut okm_out_verify
-                )
-                .is_err()
+                Pbkdf2::<SHA512>::verify(&okm_out, password, salt, iterations, &mut okm_out_verify)
+                    .is_err()
             );
         }
 
         #[test]
         fn verify_diff_iter_error() {
-            let password_256 = sha256::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_384 = sha384::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_512 = sha512::Password::try_from("pass\0word".as_bytes()).unwrap();
-
+            let password = b"pass\0word";
             let salt = "sa\0lt".as_bytes();
             let iterations: usize = 128;
             let mut okm_out = [0u8; 16];
             let mut okm_out_verify = [0u8; 16];
 
-            sha256::derive_key(&password_256, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA256>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha256::verify(&okm_out, &password_256, salt, 127, &mut okm_out_verify).is_err()
+                Pbkdf2::<SHA256>::verify(&okm_out, password, salt, 127, &mut okm_out_verify)
+                    .is_err()
             );
 
-            sha384::derive_key(&password_384, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA384>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha384::verify(&okm_out, &password_384, salt, 127, &mut okm_out_verify).is_err()
+                Pbkdf2::<SHA384>::verify(&okm_out, password, salt, 127, &mut okm_out_verify)
+                    .is_err()
             );
 
-            sha512::derive_key(&password_512, salt, iterations, &mut okm_out).unwrap();
+            Pbkdf2::<SHA512>::derive_key(password, salt, iterations, &mut okm_out).unwrap();
             assert!(
-                sha512::verify(&okm_out, &password_512, salt, 127, &mut okm_out_verify).is_err()
+                Pbkdf2::<SHA512>::verify(&okm_out, password, salt, 127, &mut okm_out_verify)
+                    .is_err()
             );
         }
     }
@@ -524,32 +459,40 @@ mod public {
 
         #[test]
         fn zero_iterations_err() {
-            let password_256 = sha256::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_384 = sha384::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_512 = sha512::Password::try_from("pass\0word".as_bytes()).unwrap();
+            let password = b"pass\0word";
 
             let salt = "salt".as_bytes();
             let iterations: usize = 0;
             let mut okm_out = [0u8; 15];
 
-            assert!(sha256::derive_key(&password_256, salt, iterations, &mut okm_out).is_err());
-            assert!(sha384::derive_key(&password_384, salt, iterations, &mut okm_out).is_err());
-            assert!(sha512::derive_key(&password_512, salt, iterations, &mut okm_out).is_err());
+            assert!(
+                Pbkdf2::<SHA256>::derive_key(password, salt, iterations, &mut okm_out).is_err()
+            );
+            assert!(
+                Pbkdf2::<SHA384>::derive_key(password, salt, iterations, &mut okm_out).is_err()
+            );
+            assert!(
+                Pbkdf2::<SHA512>::derive_key(password, salt, iterations, &mut okm_out).is_err()
+            );
         }
 
         #[test]
         fn zero_dklen_err() {
-            let password_256 = sha256::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_384 = sha384::Password::try_from("pass\0word".as_bytes()).unwrap();
-            let password_512 = sha512::Password::try_from("pass\0word".as_bytes()).unwrap();
+            let password = b"pass\0word";
 
             let salt = "salt".as_bytes();
             let iterations: usize = 1;
             let mut okm_out = [0u8; 0];
 
-            assert!(sha256::derive_key(&password_256, salt, iterations, &mut okm_out).is_err());
-            assert!(sha384::derive_key(&password_384, salt, iterations, &mut okm_out).is_err());
-            assert!(sha512::derive_key(&password_512, salt, iterations, &mut okm_out).is_err());
+            assert!(
+                Pbkdf2::<SHA256>::derive_key(password, salt, iterations, &mut okm_out).is_err()
+            );
+            assert!(
+                Pbkdf2::<SHA384>::derive_key(password, salt, iterations, &mut okm_out).is_err()
+            );
+            assert!(
+                Pbkdf2::<SHA512>::derive_key(password, salt, iterations, &mut okm_out).is_err()
+            );
         }
     }
 }

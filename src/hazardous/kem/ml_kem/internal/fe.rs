@@ -30,8 +30,8 @@ pub(crate) const KYBER_Q: u32 = 3329;
 ///
 /// Given value < 2q return value mod q (in [0, n]).
 ///
-/// src: https://en.wikipedia.org/wiki/Barrett_reduction
-/// src: BoringSSL, https://boringssl.googlesource.com/boringssl/+/refs/heads/main/crypto/fipsmodule/mlkem/mlkem.cc.inc
+/// src: <https://en.wikipedia.org/wiki/Barrett_reduction>
+/// src: BoringSSL, <https://boringssl.googlesource.com/boringssl/+/refs/heads/main/crypto/fipsmodule/mlkem/mlkem.cc.inc>
 pub fn barrett_reduce(value: u32) -> u32 {
     debug_assert!(value < KYBER_Q.pow(2));
 
