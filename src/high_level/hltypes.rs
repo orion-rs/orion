@@ -80,7 +80,7 @@ impl GeneratePublic for SaltType {
     }
 }
 
-/// A type to represent the `Salt` that Argon2i uses during key derivation.
+/// A type to represent the `Salt` that Argon2id uses during key derivation.
 ///
 /// [`Salt::generate()`] will generate a random salt of 16 bytes.
 ///
@@ -100,7 +100,7 @@ impl TypeSpec for PasswordType {
     type TypeData = ByteVecData;
 }
 
-/// A type to represent the `Password` that Argon2i hashes and uses for key derivation.
+/// A type to represent the `Password` that Argon2id hashes and uses for key derivation.
 ///
 /// # Errors:
 /// An error will be returned if:
