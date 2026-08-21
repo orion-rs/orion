@@ -91,6 +91,10 @@ pub fn derive_key(
     cost: &CostParams,
     length: u32,
 ) -> Result<SecretKey, UnknownCryptoError> {
+    if salt.len() < 8 {
+        return Err(UnknownCryptoError);
+    }
+
     let mut dk = SecretKey::try_from(&vec![0u8; length as usize])?;
     argon2::Argon2::<argon2::ID, argon2::Sequential>::derive_key(
         password.unprotected_as_ref(),
@@ -206,6 +210,40 @@ mod public {
             assert!(derive_key(&password, &salt, &cost, 3).is_err());
             assert!(derive_key(&password, &salt, &cost, 4).is_ok());
             assert!(derive_key(&password, &salt, &cost, 5).is_ok());
+        }
+
+        #[test]
+        fn test_derive_salt_bad_length() {
+            let password = Password::try_from([0u8; 64].as_slice()).unwrap();
+            let cost: CostParams = CostParams::new(3, 1024, 1).unwrap();
+
+            assert!(
+                derive_key(
+                    &password,
+                    &Salt::try_from([0].as_slice()).unwrap(),
+                    &cost,
+                    3
+                )
+                .is_err()
+            );
+            assert!(
+                derive_key(
+                    &password,
+                    &Salt::try_from([0u8; 1].as_slice()).unwrap(),
+                    &cost,
+                    4
+                )
+                .is_err()
+            );
+            assert!(
+                derive_key(
+                    &password,
+                    &Salt::try_from([0u8; 8].as_slice()).unwrap(),
+                    &cost,
+                    5
+                )
+                .is_ok()
+            );
         }
     }
 }
