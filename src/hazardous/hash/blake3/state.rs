@@ -25,10 +25,10 @@ use subtle::ConstantTimeEq;
 use crate::{
     errors::UnknownCryptoError,
     hazardous::hash::blake3::{
-        SecretKey,
         cvstack::{FinalizeCommand, PushCommand, TreeStack},
-        internal::{CHUNK_LEN, CHUNK_START, ChunkState, PARENT, compress},
+        internal::{CHUNK_LEN, CHUNK_START, ChunkState, IV, PARENT, compress},
     },
+    hazardous::mac::blake3::SecretKey,
 };
 use core::cmp::min;
 
@@ -36,6 +36,7 @@ use core::cmp::min;
 #[derive(Clone)]
 pub struct Blake3State {
     key: [u32; 8],
+    flags: u32,
     chunk: ChunkState,
     chain_values: TreeStack,
     total_chunks: u64,
@@ -62,7 +63,7 @@ impl Drop for Blake3State {
 
 impl core::fmt::Debug for Blake3State {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Blake3State {{ [***OMITTED***] }}",)
+        write!(f, "Blake3State {{***OMITTED***}}",)
     }
 }
 
@@ -84,11 +85,30 @@ impl Blake3State {
         let key_words = Self::parse_key(key);
         Self {
             key: key_words,
+            flags: flags,
             chunk: ChunkState::new(&key_words, 0, CHUNK_START | flags),
             chain_values: TreeStack::new(compress),
             total_chunks: 0,
             is_finalized: false,
         }
+    }
+
+    pub(crate) fn new_with_iv(flags: u32) -> Self {
+        Self {
+            key: IV,
+            flags: flags,
+            chunk: ChunkState::new(&IV, 0, CHUNK_START | flags),
+            chain_values: TreeStack::new(compress),
+            total_chunks: 0,
+            is_finalized: false,
+        }
+    }
+
+    pub(crate) fn reset(&mut self) {
+        self.chunk = ChunkState::new(&self.key, 0, CHUNK_START | self.flags);
+        self.chain_values = TreeStack::new(compress);
+        self.total_chunks = 0;
+        self.is_finalized = false;
     }
 
     /// Update state with `data`. This can be called multiple times.
