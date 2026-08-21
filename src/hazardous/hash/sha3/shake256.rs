@@ -22,6 +22,7 @@
 
 //! # Parameters:
 //! - `data`: The data to be hashed.
+//! - `dest`: The variable-sized output buffer.
 //!
 //! # Errors:
 //! An error will be returned if:
