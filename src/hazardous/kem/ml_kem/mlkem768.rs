@@ -89,10 +89,10 @@ pub use crate::hazardous::kem::ml_kem::RAND_SIZE;
 pub use crate::hazardous::kem::ml_kem::SEED_SIZE;
 pub use crate::hazardous::kem::ml_kem::Seed;
 
-/// Size of private [`EncapsulationKey`].
+/// Size of public [`EncapsulationKey`].
 pub const EK_SIZE: usize = MlKem768Internal::EK_SIZE;
 
-/// Size of public [`DecapsulationKey`].
+/// Size of private [`DecapsulationKey`].
 pub const DK_SIZE: usize = MlKem768Internal::DK_SIZE;
 
 /// Size of public [`Ciphertext`].
