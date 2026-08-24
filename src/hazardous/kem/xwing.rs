@@ -83,10 +83,10 @@ use crate::hazardous::kem::ml_kem::{self, ExplicitRandom, mlkem768};
 /// KEM-label used by X-Wing.
 const LABEL: &[u8; 6] = b"\\.//^\\";
 
-/// Size of private [`EncapsulationKey`].
+/// Size of public [`EncapsulationKey`].
 pub const EK_SIZE: usize = 1216;
 
-/// Size of public [`DecapsulationKey`].
+/// Size of private [`DecapsulationKey`].
 pub const DK_SIZE: usize = 32;
 
 /// Size of public [`Ciphertext`].
