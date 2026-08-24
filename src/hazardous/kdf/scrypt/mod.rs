@@ -175,15 +175,6 @@ impl TypeSpec for ScryptPasswordHash {
 ///   hash leaks.
 pub type PasswordHash = Secret<ScryptPasswordHash>;
 
-#[cfg(feature = "safe_api")]
-impl PasswordHash {
-    #[inline]
-    /// Return the [`PasswordHash`] in P-H-C encoding.
-    pub fn unprotected_as_str(&self) -> &str {
-        self.data.phc_string.as_str()
-    }
-}
-
 #[cfg(all(feature = "serde", feature = "safe_api"))]
 #[cfg_attr(docsrs, doc(cfg(all(feature = "serde", feature = "safe_api"))))]
 /// `PasswordHash` serializes as would a [`String`](std::string::String). Note that
@@ -195,7 +186,7 @@ impl Serialize for PasswordHash {
     where
         S: Serializer,
     {
-        let encoded_string = self.unprotected_as_str();
+        let encoded_string = self.unprotected_as_ref::<str>();
         serializer.serialize_str(encoded_string)
     }
 }

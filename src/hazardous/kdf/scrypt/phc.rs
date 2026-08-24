@@ -22,9 +22,11 @@
 
 use crate::{
     errors::UnknownCryptoError,
-    generics::sealed::{Data, TryFromBytes},
-    hazardous::kdf::parse_decimal_value,
-    hazardous::kdf::scrypt::CostParams,
+    generics::{
+        UnprotectedAsRef,
+        sealed::{Data, TryFromBytes},
+    },
+    hazardous::kdf::{parse_decimal_value, scrypt::CostParams},
 };
 use core::fmt::Debug;
 use ct_codecs::{Base64NoPadding, Encoder};
@@ -163,6 +165,12 @@ impl TryFrom<&str> for ScryptPhc {
             hash: password_hash_raw,
             phc_string: value.into(),
         })
+    }
+}
+
+impl UnprotectedAsRef<str> for ScryptPhc {
+    fn unprotected_as_ref(&self) -> &str {
+        &self.phc_string
     }
 }
 

@@ -188,7 +188,7 @@ mod public {
         /// If valid params then it's always valid to encode/decode.
         fn prop_always_produce_valid_encoding(hash: String) -> bool {
             if let Ok(res) = PasswordHash::try_from(hash.as_str()) {
-                assert!(PasswordHash::try_from(res.unprotected_as_ref()).is_ok());
+                assert!(PasswordHash::try_from(res.unprotected_as_ref::<str>()).is_ok());
             }
 
             true
@@ -213,7 +213,7 @@ mod public {
             let password = Password::try_from(&[0u8; 64]).unwrap();
             let cost = CostParams::new(1, 4096, 1).unwrap();
             let dk = hash_password(&password, &cost).unwrap();
-            let mut pwd_mod = dk.unprotected_as_ref().to_vec();
+            let mut pwd_mod = dk.unprotected_as_ref::<[u8]>().to_vec();
             pwd_mod[0..32].copy_from_slice(&[0u8; 32]);
 
             assert!(PasswordHash::try_from(&pwd_mod).is_err());
@@ -224,7 +224,7 @@ mod public {
             let password = Password::try_from(&[0u8; 64][..]).unwrap();
             let cost = CostParams::new(1, 4096, 1).unwrap();
             let dk = hash_password(&password, &cost).unwrap();
-            let encoded = dk.unprotected_as_str();
+            let encoded = dk.unprotected_as_ref::<str>();
 
             let mut modified = encoded.to_string();
             let memory_offset = modified.find("$m=4096").unwrap();
@@ -240,7 +240,7 @@ mod public {
             let password = Password::try_from(&[0u8; 64][..]).unwrap();
             let cost = CostParams::new(1, 4096, 1).unwrap();
             let dk = hash_password(&password, &cost).unwrap();
-            let encoded = dk.unprotected_as_str();
+            let encoded = dk.unprotected_as_ref::<str>();
 
             let mut modified = encoded.to_string();
             let iterations_offset = modified.find(",t=1").unwrap();
@@ -256,7 +256,7 @@ mod public {
             let password = Password::try_from(&[0u8; 64][..]).unwrap();
             let cost = CostParams::new(1, 4096, 1).unwrap();
             let dk = hash_password(&password, &cost).unwrap();
-            let encoded = dk.unprotected_as_str();
+            let encoded = dk.unprotected_as_ref::<str>();
 
             let mut modified = encoded.to_string();
             let memory_offset = modified.find("$m=4096").unwrap();

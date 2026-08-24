@@ -218,15 +218,6 @@ impl TypeSpec for Argon2PasswordHash {
 ///   hash leaks.
 pub type PasswordHash = Secret<Argon2PasswordHash>;
 
-#[cfg(feature = "safe_api")]
-impl PasswordHash {
-    #[inline]
-    /// Return the [`PasswordHash`] in P-H-C encoding.
-    pub fn unprotected_as_str(&self) -> &str {
-        self.data.phc_string.as_str()
-    }
-}
-
 #[cfg(all(feature = "serde", feature = "safe_api"))]
 #[cfg_attr(docsrs, doc(cfg(all(feature = "serde", feature = "safe_api"))))]
 /// `PasswordHash` serializes as would a [`String`](std::string::String). Note that
@@ -238,7 +229,7 @@ impl Serialize for PasswordHash {
     where
         S: Serializer,
     {
-        let encoded_string = self.unprotected_as_str();
+        let encoded_string = self.unprotected_as_ref::<str>();
         serializer.serialize_str(encoded_string)
     }
 }
@@ -1028,28 +1019,28 @@ mod public {
 
             let password_hash = PasswordHash::try_from(valid.as_bytes()).unwrap();
             assert_eq!(password_hash.len(), valid.len());
-            assert_eq!(password_hash.unprotected_as_ref(), valid.as_bytes());
+            assert_eq!(password_hash.unprotected_as_ref::<[u8]>(), valid.as_bytes());
             assert_eq!(
                 password_hash,
                 PasswordHash::try_from(valid.as_bytes()).unwrap()
             );
 
             let password_hash_again =
-                PasswordHash::try_from(password_hash.unprotected_as_str()).unwrap();
+                PasswordHash::try_from(password_hash.unprotected_as_ref::<str>()).unwrap();
             assert_eq!(password_hash, password_hash_again);
 
             let valid = "$argon2id$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
 
             let password_hash = PasswordHash::try_from(valid.as_bytes()).unwrap();
             assert_eq!(password_hash.len(), valid.len());
-            assert_eq!(password_hash.unprotected_as_ref(), valid.as_bytes());
+            assert_eq!(password_hash.unprotected_as_ref::<[u8]>(), valid.as_bytes());
             assert_eq!(
                 password_hash,
                 PasswordHash::try_from(valid.as_bytes()).unwrap()
             );
 
             let password_hash_again =
-                PasswordHash::try_from(password_hash.unprotected_as_str()).unwrap();
+                PasswordHash::try_from(password_hash.unprotected_as_ref::<str>()).unwrap();
             assert_eq!(password_hash, password_hash_again);
         }
 
@@ -1059,7 +1050,10 @@ mod public {
             let invalid = "$argon2i$v=19$m=65536,t=2,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
 
             let password_hash = PasswordHash::try_from(valid.as_bytes()).unwrap();
-            assert_ne!(password_hash.unprotected_as_ref(), invalid.as_bytes());
+            assert_ne!(
+                password_hash.unprotected_as_ref::<[u8]>(),
+                invalid.as_bytes()
+            );
             assert_ne!(
                 password_hash,
                 PasswordHash::try_from(invalid.as_bytes()).unwrap()
@@ -1125,7 +1119,10 @@ mod public {
 
                 let expected = PasswordHash::try_from(encoded_hash).unwrap();
                 assert_eq!(expected.data.hash, &raw_hash[..]);
-                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert_eq!(
+                    expected.unprotected_as_ref::<[u8]>(),
+                    encoded_hash.as_bytes()
+                );
                 assert!(
                     Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
                         .is_ok()
@@ -1142,7 +1139,10 @@ mod public {
 
                 let expected = PasswordHash::try_from(encoded_hash).unwrap();
                 assert_eq!(expected.data.hash, &raw_hash[..]);
-                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert_eq!(
+                    expected.unprotected_as_ref::<[u8]>(),
+                    encoded_hash.as_bytes()
+                );
                 assert!(
                     Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
                         .is_ok()
@@ -1160,7 +1160,10 @@ mod public {
 
                 let expected = PasswordHash::try_from(encoded_hash).unwrap();
                 assert_eq!(expected.data.hash, &raw_hash[..]);
-                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert_eq!(
+                    expected.unprotected_as_ref::<[u8]>(),
+                    encoded_hash.as_bytes()
+                );
                 assert!(
                     Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
                         .is_ok()
@@ -1177,7 +1180,10 @@ mod public {
 
                 let expected = PasswordHash::try_from(encoded_hash).unwrap();
                 assert_eq!(expected.data.hash, &raw_hash[..]);
-                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert_eq!(
+                    expected.unprotected_as_ref::<[u8]>(),
+                    encoded_hash.as_bytes()
+                );
                 assert!(
                     Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
                         .is_ok()
@@ -1194,7 +1200,10 @@ mod public {
 
                 let expected = PasswordHash::try_from(encoded_hash).unwrap();
                 assert_eq!(expected.data.hash, &raw_hash[..]);
-                assert_eq!(expected.unprotected_as_ref(), encoded_hash.as_bytes());
+                assert_eq!(
+                    expected.unprotected_as_ref::<[u8]>(),
+                    encoded_hash.as_bytes()
+                );
                 assert!(
                     Argon2::<I, Sequential>::verify_encoded(&expected, password, None, None)
                         .is_ok()
