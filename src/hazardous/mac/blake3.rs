@@ -88,7 +88,7 @@ pub const TAG_SIZE: usize = 32;
 /// A type to represent the secret key that BLAKE3 uses for keyed mode.
 pub type SecretKey = Secret<Blake3Key>;
 
-/// A type to represent the secret key that BLAKE3 uses for keyed mode.
+/// A type to represent the authentication tag that BLAKE3 produces.
 pub type Tag = Secret<Blake3Tag>;
 
 #[derive(Debug)]

@@ -39,8 +39,8 @@
 //! # Parameters:
 //! - `password`: The low-entropy input key to be used in key derivation.
 //! - `salt`: The salt used for the key derivation.
-//! - `iterations`: Iterations cost parameter for Argon2i.
-//! - `memory`: Memory (in kibibytes (KiB)) cost parameter for Argon2i.
+//! - `iterations`: Iterations cost parameter for Argon2id.
+//! - `memory`: Memory (in kibibytes (KiB)) cost parameter for Argon2id.
 //! - `length`: The desired length of the derived key.
 //! - `parallelism`: Degree of parallelism/lanes cost parameter for Argon2id.
 //!

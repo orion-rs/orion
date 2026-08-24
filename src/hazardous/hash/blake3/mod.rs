@@ -106,7 +106,7 @@ impl Blake3 {
         }
     }
 
-    /// Reset to [`Self::new()`] state.
+    /// Reset to [`Self::new()`] or [`Self::new_keyed()`] state.
     pub fn reset(&mut self) {
         self.internal.reset();
     }
