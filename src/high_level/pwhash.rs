@@ -36,9 +36,9 @@
 //! - The password hash length is set to 32.
 //!
 //! [`PasswordHash`] provides two ways of retrieving the hashed password:
-//! - [`PasswordHash::unprotected_as_str()`] returns the hashed password in an encoded form.
+//! - [`PasswordHash::unprotected_as_ref::<str>()`] returns the hashed password in an encoded form.
 //!   The encoding specifies the settings used to hash the password.
-//! - [`PasswordHash::unprotected_as_ref()`] returns only the hashed password in raw bytes.
+//! - [`PasswordHash::unprotected_as_ref::<[u8]>()`] returns only the hashed password in raw bytes.
 //!
 //! The following is an example of how the encoded password hash might look:
 //! ```text
@@ -68,7 +68,7 @@
 //! - Failure to generate random bytes securely during [`Salt::generate()`].
 //!
 //! # Security:
-//! - [`PasswordHash::unprotected_as_str()`] and [`PasswordHash::unprotected_as_ref()`] should never
+//! - [`PasswordHash::unprotected_as_ref()`] should never
 //!   be used to compare password hashes, as these will not run in constant-time.
 //!   Either use [`hash_password_verify()`] or compare two [`PasswordHash`]es directly.
 //! - Choosing the correct cost parameters is important for security. Please refer to [libsodium's docs]

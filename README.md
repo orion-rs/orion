@@ -16,7 +16,7 @@ Orion is a cryptography library written in pure Rust. It aims to provide easy an
 #### Other
 * **AEAD**: (X)ChaCha20-Poly1305.
 * **Hashing**: BLAKE3, BLAKE2b, SHA2, SHA3.
-* **XOF**: SHAKE128, SHAKE256.
+* **XOF**: SHAKE128, SHAKE256, BLAKE3.
 * **KDF**: HKDF, PBKDF2, Argon2(id+i), scrypt.
 * **ECDH**: X25519.
 * **MAC**: HMAC, Poly1305.

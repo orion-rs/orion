@@ -1351,7 +1351,7 @@ impl<
         h.absorb(&w1encoded)?;
         h.squeeze(&mut c_tilde_prime)?;
 
-        // SECURITY: While this is VerifyingKey and therefor should
+        // SECURITY: While this is VerifyingKey and therefore should
         // be no leak of secret data if this were vartime, we keep it
         // because is_outside_bound() return Choice and it is the careful
         // approach.

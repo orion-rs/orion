@@ -93,18 +93,18 @@
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`getrandom::fill()`]: getrandom::fill
-//! [`KeyPair::generate()`]: mldsa87::KeyPair::generate
-//! [`KeyPair`]: mldsa87::KeyPair
-//! [`SigningKey`]: mldsa87::SigningKey
-//! [`SigningKey::try_from()`]: mldsa87::SigningKey::try_from
-//! [`Seed`]: mldsa87::Seed
-//! [`ExplicitRandom`]: mldsa87::ExplicitRandom
-//! [`SigningKey::update()`]: mldsa87::SigningKey::update
-//! [`SigningKey::finalize()`]: mldsa87::SigningKey::finalize
-//! [`SigningKey::init()`]: mldsa87::SigningKey::init
-//! [`VerifyingKey::update()`]: mldsa87::VerifyingKey::update
-//! [`VerifyingKey::finalize()`]: mldsa87::VerifyingKey::finalize
-//! [`VerifyingKey::init()`]: mldsa87::VerifyingKey::init
+//! [`KeyPair::generate()`]: crate::hazardous::dsa::ml_dsa::mldsa87::KeyPair::generate
+//! [`KeyPair`]: crate::hazardous::dsa::ml_dsa::mldsa87::KeyPair
+//! [`SigningKey`]: crate::hazardous::dsa::ml_dsa::mldsa87::SigningKey
+//! [`SigningKey::try_from()`]: crate::hazardous::dsa::ml_dsa::mldsa87::SigningKey::try_from
+//! [`Seed`]: crate::hazardous::dsa::ml_dsa::mldsa87::Seed
+//! [`ExplicitRandom`]: crate::hazardous::dsa::ml_dsa::mldsa87::ExplicitRandom
+//! [`SigningKey::update()`]: crate::hazardous::dsa::ml_dsa::mldsa87::SigningKey::update
+//! [`SigningKey::finalize()`]: crate::hazardous::dsa::ml_dsa::mldsa87::SigningKey::finalize
+//! [`SigningKey::init()`]: crate::hazardous::dsa::ml_dsa::mldsa87::SigningKey::init
+//! [`VerifyingKey::update()`]: crate::hazardous::dsa::ml_dsa::mldsa87::VerifyingKey::update
+//! [`VerifyingKey::finalize()`]: crate::hazardous::dsa::ml_dsa::mldsa87::VerifyingKey::finalize
+//! [`VerifyingKey::init()`]: crate::hazardous::dsa::ml_dsa::mldsa87::VerifyingKey::init
 
 use crate::KP;
 use crate::errors::UnknownCryptoError;
