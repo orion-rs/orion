@@ -53,7 +53,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - `info` is longer than `64` bytes
-//! - `out` buffer is longer than [`MLKEM768_X25519_SHAKE256_CHACHA20::EXPORT_SECRET_MAXLEN`] when exporting secrets with [`HpkeBase::export_secret()`]/[`HpkePsk::export_secret()`]
+//! - `out` buffer is longer than [`EXPORT_SECRET_MAXLEN`] when exporting secrets with [`HpkeBase::export_secret()`]/[`HpkePsk::export_secret()`]
 //! - `exporter_context` is longer than `64` bytes
 //! - The internal counter reaches [`u64::MAX`] and a call to `seal()`]/`open()` is made
 //! - Calling [`HpkeBase::seal()`]/[`HpkePsk::seal()`] when the role is recipient
@@ -120,8 +120,10 @@
 pub use crate::hazardous::hpke::MLKEM768_X25519_SHAKE256_CHACHA20;
 pub use crate::hazardous::hpke::ModeBase;
 pub use crate::hazardous::hpke::ModePsk;
-pub use crate::hazardous::hpke::Suite;
 pub use crate::hazardous::kem::xwing::KeyPair;
+
+/// Maximum secret export length.
+pub const EXPORT_SECRET_MAXLEN: usize = MLKEM768_X25519_SHAKE256_CHACHA20::EXPORT_SECRET_MAXLEN;
 
 /// PQ/T HPKE with X-Wing and SHAKE256 in base-mode.
 pub type HpkeBase = ModeBase<MLKEM768_X25519_SHAKE256_CHACHA20>;

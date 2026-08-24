@@ -37,14 +37,12 @@ mod kem;
 
 pub(crate) use kem::{VERSION_ID, length_prefix};
 
-pub use base::HpkeSuite;
 pub use mlkem768x25519_sha256_chacha20poly1305::MLKEM768_X25519_SHA256_CHACHA20;
 pub use mlkem768x25519_shake256_chacha20poly1305::MLKEM768_X25519_SHAKE256_CHACHA20;
 pub use mode::ModeAuth;
 pub use mode::ModeAuthPsk;
 pub use mode::ModeBase;
 pub use mode::ModePsk;
-pub use suite::private::{AuthSuite, HpkeAead, HpkeAuthKem, HpkeKdf, HpkeKem, Suite};
 pub use x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20;
 
 pub(crate) mod private {
