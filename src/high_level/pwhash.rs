@@ -61,8 +61,6 @@
 //! # Errors:
 //! An error will be returned if:
 //! - `memory` is less than `8 * parallelism`.
-//! - `password` is not 32 bytes.
-//! - `salt` is not 16 bytes.
 //! - The length of the `password` is greater than [`isize::MAX`].
 //! - The password hash does not match `expected`.
 //! - Failure to generate random bytes securely during [`Salt::generate()`].
