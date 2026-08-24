@@ -22,7 +22,10 @@
 
 use crate::{
     errors::UnknownCryptoError,
-    generics::sealed::{Data, TryFromBytes},
+    generics::{
+        UnprotectedAsRef,
+        sealed::{Data, TryFromBytes},
+    },
     hazardous::kdf::{
         argon2::{
             ARGON2_VERSION_19, CostParams, I, ID, MAX_SALT_LEN, MIN_SALT_LEN, sealed::Variant,
@@ -177,6 +180,12 @@ impl TryFrom<&str> for Argon2Phc {
             hash: password_hash_raw,
             phc_string: value.into(),
         })
+    }
+}
+
+impl UnprotectedAsRef<str> for Argon2Phc {
+    fn unprotected_as_ref(&self) -> &str {
+        &self.phc_string
     }
 }
 

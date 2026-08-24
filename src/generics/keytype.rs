@@ -86,6 +86,21 @@ pub trait TypeSpec: Sealed + Sized {
     }
 }
 
+/// Trait for a [`Secret`] type that may be "un-protected" explicitly
+pub trait UnprotectedAsRef<T: ?Sized>: Sealed {
+    /// Return reference to underlying data.
+    /// **Warning**: Should not be used unless strictly needed.
+    /// This **breaks protections** that the type implements.
+    fn unprotected_as_ref(&self) -> &T;
+}
+
+// All backing [`Data`] impls already require AsRef<[u8]>
+impl<D: Data> UnprotectedAsRef<[u8]> for D {
+    fn unprotected_as_ref(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
+
 /// Trait for a [`Secret`] type that may be instantiated using calls to a CSPRNG.
 pub trait GenerateSecret: TypeSpec {
     #[cfg(feature = "safe_api")]
@@ -206,6 +221,16 @@ impl<T: TypeSpec> Secret<T> {
     /// an empty instance of this object.
     pub fn is_empty(&self) -> bool {
         T::is_empty(&self.data)
+    }
+
+    /// Return reference to underlying data.
+    /// **Warning**: Should not be used unless strictly needed.
+    /// This **breaks protections** that the type implements.
+    pub fn unprotected_as_ref<O: ?Sized>(&self) -> &O
+    where
+        T::TypeData: UnprotectedAsRef<O>,
+    {
+        UnprotectedAsRef::unprotected_as_ref(&self.data)
     }
 }
 
@@ -373,14 +398,5 @@ impl<T: TypeSpec> TryFrom<&Vec<u8>> for Secret<T> {
 
     fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
         Self::try_from(bytes.as_slice())
-    }
-}
-
-impl<T: TypeSpec> Secret<T> {
-    #[inline]
-    /// Return the object as byte slice. **Warning**: Should not be used unless strictly
-    /// needed. This **breaks protections** that the type implements.
-    pub fn unprotected_as_ref(&self) -> &[u8] {
-        self.data.as_ref()
     }
 }
