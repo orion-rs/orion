@@ -621,7 +621,7 @@ fn reference_idx(
     )
 }
 
-/// Determine mased on variant and pass+segment if data-independent addressing should
+/// Determine based on variant and pass+segment if data-independent addressing should
 /// be used.
 const fn is_data_independent(variant: u32, pass_n: u32, segment_n: usize) -> bool {
     match variant {
@@ -647,7 +647,7 @@ pub(crate) mod sealed {
 // pub struct Threaded;
 
 #[derive(Debug, PartialEq)]
-/// Sequential processing. This means, regardless of what parellelism `p` is set to,
+/// Sequential processing. This means, regardless of what parallelism `p` is set to,
 /// Argon2 will run with no extra threads, sequentially.
 pub struct Sequential;
 impl sealed::Sealed for Sequential {}

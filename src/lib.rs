@@ -41,7 +41,7 @@
 //! ## Hashing
 //! [`orion::hash`] offers hashing using BLAKE2b.
 //!
-//! ## Key Enncapsulation Mechanism
+//! ## Key Encapsulation Mechanism
 //! [`orion::kem`] offers KEM using X-Wing.
 //!
 //! ## Hybrid Public Key Encryption
