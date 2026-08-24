@@ -175,6 +175,18 @@ impl TypeSpec for ScryptPasswordHash {
 ///   hash leaks.
 pub type PasswordHash = Secret<ScryptPasswordHash>;
 
+#[cfg(feature = "safe_api")]
+impl PasswordHash {
+    /// Return the [`CostParams`] this [`PasswordHash`] was created with.
+    pub fn cost_params(&self) -> CostParams {
+        CostParams {
+            logn: self.data.logn,
+            blocksize: self.data.blocksize,
+            parallelism: self.data.parallelism,
+        }
+    }
+}
+
 #[cfg(all(feature = "serde", feature = "safe_api"))]
 #[cfg_attr(docsrs, doc(cfg(all(feature = "serde", feature = "safe_api"))))]
 /// `PasswordHash` serializes as would a [`String`](std::string::String). Note that

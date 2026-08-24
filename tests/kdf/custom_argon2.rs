@@ -79,8 +79,8 @@ fn run_tests_from_json(path_to_vectors: &str) {
                     test.tag_length as usize,
                 )
                 .unwrap();
-                assert_eq!(rt.unprotected_as_ref(), test.phc.as_bytes());
-                assert_eq!(rt.unprotected_as_str(), test.phc.as_str());
+                assert_eq!(rt.unprotected_as_ref::<[u8]>(), test.phc.as_bytes());
+                assert_eq!(rt.unprotected_as_ref::<str>(), test.phc.as_str());
                 assert!(
                     Argon2::<I, Sequential>::verify_encoded(
                         &phc,
@@ -114,8 +114,8 @@ fn run_tests_from_json(path_to_vectors: &str) {
                     test.tag_length as usize,
                 )
                 .unwrap();
-                assert_eq!(rt.unprotected_as_ref(), test.phc.as_bytes());
-                assert_eq!(rt.unprotected_as_str(), test.phc.as_str());
+                assert_eq!(rt.unprotected_as_ref::<[u8]>(), test.phc.as_bytes());
+                assert_eq!(rt.unprotected_as_ref::<str>(), test.phc.as_str());
                 assert!(
                     Argon2::<ID, Sequential>::verify_encoded(
                         &phc,

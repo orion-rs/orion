@@ -218,6 +218,18 @@ impl TypeSpec for Argon2PasswordHash {
 ///   hash leaks.
 pub type PasswordHash = Secret<Argon2PasswordHash>;
 
+#[cfg(feature = "safe_api")]
+impl PasswordHash {
+    /// Return the [`CostParams`] this [`PasswordHash`] was created with.
+    pub fn cost_params(&self) -> CostParams {
+        CostParams {
+            iterations: self.data.iterations,
+            memory: self.data.memory,
+            parallelism: self.data.parallelism,
+        }
+    }
+}
+
 #[cfg(all(feature = "serde", feature = "safe_api"))]
 #[cfg_attr(docsrs, doc(cfg(all(feature = "serde", feature = "safe_api"))))]
 /// `PasswordHash` serializes as would a [`String`](std::string::String). Note that
