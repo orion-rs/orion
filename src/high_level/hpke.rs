@@ -77,7 +77,6 @@
 //! # Example:
 //! ```rust
 //! use orion::hpke::*;
-//! use orion::KP;
 //!
 //! let sender_kp = KeyPair::generate()?;
 //! let recipient_kp = KeyPair::generate()?;
@@ -117,6 +116,7 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
+pub use crate::KP;
 pub use crate::hazardous::hpke::MLKEM768_X25519_SHAKE256_CHACHA20;
 pub use crate::hazardous::hpke::ModeBase;
 pub use crate::hazardous::hpke::ModePsk;
