@@ -50,7 +50,6 @@
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
-//! use orion::KP;
 //! use orion::kem::*;
 //!
 //! let kp = KeyPair::generate()?;
@@ -76,6 +75,7 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
+pub use crate::KP;
 pub use crate::hazardous::kem::xwing::CIPHERTEXT_SIZE;
 pub use crate::hazardous::kem::xwing::Ciphertext;
 pub use crate::hazardous::kem::xwing::DK_SIZE;

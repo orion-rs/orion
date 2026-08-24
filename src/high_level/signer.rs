@@ -67,6 +67,7 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
+pub use crate::KP;
 pub use crate::hazardous::dsa::mldsa65::Seed;
 pub use crate::hazardous::dsa::mldsa65::Signature;
 pub use crate::hazardous::dsa::mldsa65::VerifyingKey;
@@ -78,6 +79,16 @@ pub struct SigningKeyPair {
     kp: mldsa65::KeyPair,
 }
 
+impl KP<mldsa65::MlDsaSeed, mldsa65::MlDsa65VerifyingKey> for SigningKeyPair {
+    fn private(&self) -> &Seed {
+        self.kp.seed()
+    }
+
+    fn public(&self) -> &VerifyingKey {
+        &self.kp.verifying_key
+    }
+}
+
 impl SigningKeyPair {
     /// Randomly generate a fresh ML-DSA-65 keypair.
     pub fn generate() -> Result<Self, UnknownCryptoError> {
@@ -86,16 +97,6 @@ impl SigningKeyPair {
         Ok(Self {
             kp: mldsa65::KeyPair::try_from(&seed)?,
         })
-    }
-
-    /// Get a reference to this [`SigningKeyPair`]'s private seed.
-    pub fn private(&self) -> &Seed {
-        self.kp.seed()
-    }
-
-    /// Get a reference to this [`SigningKeyPair`]'s public verifying key.
-    pub fn public(&self) -> &VerifyingKey {
-        &self.kp.verifying_key
     }
 
     /// Sign a message, with optional context (can be empty), using ML-DSA-65 hedged/randomized signing.
