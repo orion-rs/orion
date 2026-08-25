@@ -246,6 +246,8 @@ impl SigningKey {
     }
 
     /// Given the [`SigningKey`], sign a message `m` and context.
+    /// Uses the all-zero [`ExplicitRandom::deterministic()`], per FIPS-204.
+    /// Prefer the hedged [`Self::sign()`] if possible.
     pub fn sign_deterministic(
         &self,
         m: &[u8],

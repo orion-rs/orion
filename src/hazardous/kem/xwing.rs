@@ -211,7 +211,7 @@ pub struct XWingSharedSecret {}
 impl Sealed for XWingSharedSecret {}
 
 impl TypeSpec for XWingSharedSecret {
-    const NAME: &'static str = stringify!(XWingSharedSecret);
+    const NAME: &'static str = stringify!(SharedSecret);
     type TypeData = ByteArrayData<SHARED_SECRET_SIZE>;
 }
 

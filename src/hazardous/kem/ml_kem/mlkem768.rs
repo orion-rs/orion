@@ -269,7 +269,7 @@ impl DecapsulationKey {
 pub struct KeyPair {
     seed: Seed,
     private: DecapsulationKey,
-    pub(crate) public: EncapsulationKey,
+    public: EncapsulationKey,
 }
 
 impl KP<MlKem768DecapKey, MlKem768EncapKey> for KeyPair {
