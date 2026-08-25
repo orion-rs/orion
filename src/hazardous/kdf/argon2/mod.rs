@@ -57,9 +57,10 @@
 //! - The minimum recommended length for a salt is `16` bytes.
 //! - Password hashes should always be compared in constant-time.
 //! - Please note that when verifying, a copy of the computed password hash is placed into
-//! `dst_out`. If the derived hash is considered sensitive and you want to provide defense
-//! in depth against an attacker reading your application's private memory, then you as
-//! the user are responsible for zeroing out this buffer (see the [`zeroize` crate]).
+//!   `dst_out`. If the derived hash is considered sensitive and you want to provide defense
+//!   in depth against an attacker reading your application's private memory, then you as
+//!   the user are responsible for zeroing out this buffer (see the [`zeroize` crate]).
+//! - Argon2id has secret-dependent addressing after the first round, as specified in RFC 9106.
 //!
 //! Please be sure to check [OWASP] for the latest recommended cost parameters.
 //!

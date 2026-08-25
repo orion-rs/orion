@@ -661,6 +661,10 @@ impl<const K: usize, const ENCODED_SIZE_EK: usize, const ENCODED_SIZE_DK: usize,
         c_prime: &mut [u8],
         ek: &EncapKey<K, ENCODED_SIZE_EK, Pke>,
     ) -> Result<[u8; 32], UnknownCryptoError> {
+        // SECURITY(brycx): This function is ONLY intended for internal use
+        // with already pre-cached `ek`. Do NOT let a user directly
+        // or indirectly invoke this function without making sure
+        // that the `self` decapuslation key belong with passed `ek`.
         debug_assert_eq!(ek, &self.get_encapsulation_key_bytes());
         debug_assert_eq!(c.len(), Pke::CIPHERTEXT_SIZE);
 
