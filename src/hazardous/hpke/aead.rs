@@ -23,12 +23,15 @@
 use crate::{
     Public, Secret,
     errors::UnknownCryptoError,
+    generics::sealed::Sealed,
     hazardous::{
         aead::chacha20poly1305::ChaCha20Poly1305,
         hpke::suite::private::HpkeAead,
         stream::chacha20::{self, ChaCha20Key, ChaCha20Nonce},
     },
 };
+
+impl Sealed for ChaCha20Poly1305 {}
 
 impl HpkeAead for ChaCha20Poly1305 {
     const AEAD_ID: [u8; 2] = 0x0003u16.to_be_bytes();

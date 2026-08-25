@@ -24,6 +24,7 @@ use core::marker::PhantomData;
 use core::mem::size_of;
 
 use crate::errors::UnknownCryptoError;
+use crate::generics::sealed::Sealed;
 use crate::hazardous::hpke::VERSION_ID;
 use crate::hazardous::hpke::mode::private::*;
 use crate::hazardous::hpke::suite::private::*;
@@ -232,7 +233,10 @@ impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> HpkeSuite<Kem, Kdf, Aead> {
     }
 }
 
-impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> Suite for HpkeSuite<Kem, Kdf, Aead> {
+impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> Suite for HpkeSuite<Kem, Kdf, Aead>
+where
+    HpkeSuite<Kem, Kdf, Aead>: Sealed,
+{
     type PrivateKey = Kem::PrivateKey;
     type PublicKey = Kem::PublicKey;
     type EncapsulatedKey = Kem::EncapsulatedKey;
@@ -420,7 +424,10 @@ impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> Suite for HpkeSuite<Kem, Kdf, A
     }
 }
 
-impl<Kem: HpkeAuthKem, Kdf: HpkeKdf, Aead: HpkeAead> AuthSuite for HpkeSuite<Kem, Kdf, Aead> {
+impl<Kem: HpkeAuthKem, Kdf: HpkeKdf, Aead: HpkeAead> AuthSuite for HpkeSuite<Kem, Kdf, Aead>
+where
+    HpkeSuite<Kem, Kdf, Aead>: Sealed,
+{
     #[cfg(feature = "safe_api")]
     fn setup_auth_sender(
         pubkey_r: &Self::PublicKey,

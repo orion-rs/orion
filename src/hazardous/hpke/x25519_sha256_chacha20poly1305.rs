@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::generics::sealed::Sealed;
 use crate::hazardous::aead::chacha20poly1305::ChaCha20Poly1305;
 use crate::hazardous::hpke::base::HpkeSuite;
 use crate::hazardous::hpke::kem::DhKemX25519HkdfSha256;
@@ -43,6 +44,8 @@ use crate::hazardous::kdf::hkdf::{Hkdf, SHA256};
 /// [`unprotected_as_ref()`]: crate::hazardous::kem::x25519_hkdf_sha256::PrivateKey::unprotected_as_ref
 pub type DHKEM_X25519_SHA256_CHACHA20 =
     HpkeSuite<DhKemX25519HkdfSha256, Hkdf<SHA256>, ChaCha20Poly1305>;
+
+impl Sealed for DHKEM_X25519_SHA256_CHACHA20 {}
 
 #[cfg(feature = "safe_api")]
 #[cfg(test)]
