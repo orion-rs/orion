@@ -58,7 +58,7 @@
 //! let signature = Signature::try_from(sig.as_ref())?;
 //!
 //! // Verify the signature of the message and accompanying context
-//! assert!(verifying_key.verify(b"Message to be signed", b"Context", &sig).is_ok());
+//! assert!(verifying_key.verify(b"Message to be signed", b"Context", &signature).is_ok());
 //!
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
