@@ -21,12 +21,15 @@
 // SOFTWARE.
 
 use crate::errors::UnknownCryptoError;
+use crate::generics::sealed::Sealed;
 use crate::hazardous::hash::sha2::sha256::SHA256_OUTSIZE;
 use crate::hazardous::hash::sha3::shake256::Shake256;
 use crate::hazardous::hpke::kem::{VERSION_ID, length_prefix};
 use crate::hazardous::hpke::mode::private::HpkeMode;
 use crate::hazardous::hpke::suite::private::HpkeKdf;
 use crate::hazardous::kdf::hkdf::{Hkdf, SHA256};
+
+impl Sealed for Hkdf<SHA256> {}
 
 impl HpkeKdf for Hkdf<SHA256> {
     const KDF_ID: [u8; 2] = 0x0001u16.to_be_bytes();
@@ -125,6 +128,8 @@ impl HpkeKdf for Hkdf<SHA256> {
         )
     }
 }
+
+impl Sealed for Shake256 {}
 
 impl HpkeKdf for Shake256 {
     const KDF_ID: [u8; 2] = 0x0011u16.to_be_bytes();

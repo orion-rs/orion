@@ -23,12 +23,12 @@
 pub(crate) mod private {
     use crate::Public;
     use crate::errors::UnknownCryptoError;
-    use crate::generics::{Secret, TypeSpec};
+    use crate::generics::{Secret, TypeSpec, sealed};
     use crate::hazardous::hpke::mode::private::HpkeMode;
     use crate::hazardous::hpke::private::{HpkeEncapKey, HpkePrivateKey, HpkePublicKey};
 
     /// Trait for a KEM usable with HPKE.
-    pub trait HpkeKem {
+    pub trait HpkeKem: sealed::Sealed {
         /// KEM identifier <https://www.rfc-editor.org/rfc/rfc9180.html#section-7>.
         const KEM_ID: [u8; 2];
 
@@ -110,7 +110,7 @@ pub(crate) mod private {
     }
 
     /// Trait for a KDF usable with HPKE.
-    pub trait HpkeKdf {
+    pub trait HpkeKdf: sealed::Sealed {
         /// KDF identifier <https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2>.
         const KDF_ID: [u8; 2];
 
@@ -154,7 +154,7 @@ pub(crate) mod private {
     }
 
     /// Trait for an AEAD usable with HPKE.
-    pub trait HpkeAead {
+    pub trait HpkeAead: sealed::Sealed {
         /// AEAD identifier <https://www.rfc-editor.org/rfc/rfc9180.html#section-7.3>.
         const AEAD_ID: [u8; 2];
 
@@ -206,7 +206,7 @@ pub(crate) mod private {
     }
 
     /// Common trait for HPKE suite.
-    pub trait Suite {
+    pub trait Suite: sealed::Sealed {
         /// The private key used for this suite.
         type PrivateKey: HpkePrivateKey;
 

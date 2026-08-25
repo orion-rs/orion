@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 use crate::Secret;
+use crate::generics::sealed::Sealed;
 use crate::{
     errors::UnknownCryptoError,
     hazardous::{
@@ -45,6 +46,8 @@ pub(crate) fn length_prefix(input: &[u8]) -> Result<[u8; 2], UnknownCryptoError>
 #[derive(Debug, Clone, Copy)]
 /// `DHKEM(X25519, HKDF-SHA256)` <https://www.rfc-editor.org/rfc/rfc9180.html#name-dh-based-kem-dhkem>.
 pub struct DhKemX25519HkdfSha256 {}
+
+impl Sealed for DhKemX25519HkdfSha256 {}
 
 impl HpkeKem for DhKemX25519HkdfSha256 {
     const KEM_ID: [u8; 2] = 0x0020u16.to_be_bytes();
@@ -125,6 +128,8 @@ impl HpkeAuthKem for DhKemX25519HkdfSha256 {
 ///
 /// This does not provide `Auth`.
 pub struct MlKem768X25519 {}
+
+impl Sealed for MlKem768X25519 {}
 
 impl MlKem768X25519 {
     /// Label of `DeriveKeyPair()` (<https://datatracker.ietf.org/doc/html/draft-ietf-hpke-hpke-04#section-4>).

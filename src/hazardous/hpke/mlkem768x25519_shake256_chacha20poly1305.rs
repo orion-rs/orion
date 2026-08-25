@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::generics::sealed::Sealed;
 use crate::hazardous::aead::chacha20poly1305::ChaCha20Poly1305;
 use crate::hazardous::hash::sha3::shake256::Shake256;
 use crate::hazardous::hpke::base::HpkeSuite;
@@ -53,6 +54,8 @@ use crate::hazardous::hpke::kem::MlKem768X25519;
 /// [`xwing::DecapsulationKey`]: crate::hazardous::kem::xwing::DecapsulationKey
 /// [`xwing::KeyPair`]: crate::hazardous::kem::xwing::KeyPair
 pub type MLKEM768_X25519_SHAKE256_CHACHA20 = HpkeSuite<MlKem768X25519, Shake256, ChaCha20Poly1305>;
+
+impl Sealed for MLKEM768_X25519_SHAKE256_CHACHA20 {}
 
 #[cfg(feature = "safe_api")]
 #[cfg(test)]
