@@ -43,6 +43,7 @@
 //! An error will be returned if:
 //! - [`getrandom::fill()`] fails during encapsulation.
 //! - [`getrandom::fill()`] fails during [`KeyPair::generate()`].
+//! - [`EncapsulationKey`] or [`DecapsulationKey`] fail FIPS-203 key-checks during `TryFrom<[u8]>`.
 //!
 //! # Security:
 //! - It is critical that both the seed and explicit randomness `m`, used for key generation and encapsulation
@@ -59,8 +60,7 @@
 //!
 //! let kp = KeyPair::generate()?;
 //!
-//! let ek = EncapsulationKey::try_from(kp.public().as_ref())?;
-//! let (sender_shared_secret, sender_ciphertext) = ek.encap()?;
+//! let (sender_shared_secret, sender_ciphertext) = kp.public().encap()?;
 //! let recipient_shared_secret = kp.decap(&sender_ciphertext)?;
 //!
 //! assert_eq!(sender_shared_secret, recipient_shared_secret);

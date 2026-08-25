@@ -26,6 +26,7 @@
 //! `orion::kem` can be used to establish a pair of shared keys between two parties.
 //!
 //! # About:
+//! - Uses the post-quantum/hybrid X-Wing [draft-connolly-cfrg-xwing-kem-10](https://www.ietf.org/archive/id/draft-connolly-cfrg-xwing-kem-10.html).
 //! - In general, it is highly recommended to use the [`KeyPair`] type to deal with decapsulating operations, or decapsulation keys in general.
 //!   [`KeyPair`] internally caches the [`EncapsulationKey`]s used during decapsulation, making it more efficient when used to decapsulate multiple
 //!   KEM ciphertext with a given private [`DecapsulationKey`].
@@ -40,6 +41,7 @@
 //! An error will be returned if:
 //! - [`getrandom::fill()`] fails during [`EncapsulationKey::encap()`].
 //! - [`getrandom::fill()`] fails during [`DecapsulationKey::generate()`]/[`KeyPair::generate()`]/[`Eseed::generate()`].
+//! - [`EncapsulationKey`] fail FIPS-203 key-checks during `TryFrom<[u8]>`.
 //!
 //! # Security:
 //! - It is critical that both the seed and explicit randomness `eseed`, used for key generation and encapsulation
@@ -54,8 +56,7 @@
 //!
 //! let kp = KeyPair::generate()?;
 //!
-//! let ek = EncapsulationKey::try_from(kp.public().as_ref())?;
-//! let (sender_shared_secret, sender_ciphertext) = ek.encap()?;
+//! let (sender_shared_secret, sender_ciphertext) = kp.public().encap()?;
 //! let recipient_shared_secret = kp.decap(&sender_ciphertext)?;
 //!
 //! assert_eq!(sender_shared_secret, recipient_shared_secret);

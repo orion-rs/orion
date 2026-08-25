@@ -1,6 +1,6 @@
 ### 0.18.0
 
-**Data:** TBD.
+**Date:** TBD.
 
 **Changelog:**
 - [Breaking change] Rust Edition moved from `2021` to `2024`.
