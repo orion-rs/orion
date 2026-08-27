@@ -25,6 +25,7 @@
 - [Breaking change] `orion::hazardous::ecc::x25519::SharedSecret` now respects (applies masking) the u-coordinate condition for `PartialEq`.
 - [Breaking change] `orion::hazardous::kem::xwing::EncapsulationKey` now fails on `TryFrom<&[u8]>` if the ML-KEM-768 public-part does not pass the FIPS-203 keys checks.
 - [Breaking change] `orion::hazardous::kem::x25519_hkdf_sha256` uses as separate `PrivateKey` type to ensure RFC9180 `SerializePrivateKey()` and `DeserializePrivateKey()` clamping requirements are uphled.
+- [Breaking change] `orion::hazardous::kem::x25519_hkdf_sha256` `DhKem` has been renamed to `KeyPair` to match the same API the remaining KEM interfaces have.
 	- This was previously a part of `orion::hazardous::ecc::x25519::SecretKey` but has been moved to HPKE, since it is a HPKE-specific requirement.
 - [Breaking change] `orion::hazardous::stream`:
 	- [Breaking change]: Remove `chacha20::encrypt()`, `chacha20::decrypt()`, `xchacha20::encrypt()` and `xchacha20::decrypt()`.

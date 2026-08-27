@@ -84,9 +84,9 @@ fn hpke_runner(path: &str) {
                 PrivateKey::try_from(&decode(test.skSm.as_ref().unwrap()).unwrap()).unwrap();
             let public_sender =
                 PublicKey::try_from(&decode(test.pkSm.as_ref().unwrap()).unwrap()).unwrap();
-            let derived_kp_sender = DhKem::derive_keypair(&decode(ikm_s).unwrap()).unwrap();
-            assert_eq!(secret_sender, derived_kp_sender.0);
-            assert_eq!(public_sender, derived_kp_sender.1);
+            let derived_kp_sender = KeyPair::derive(&decode(ikm_s).unwrap()).unwrap();
+            assert_eq!(&secret_sender, derived_kp_sender.private());
+            assert_eq!(&public_sender, derived_kp_sender.public());
             assert_eq!(
                 public_sender,
                 decode(test.pkSm.as_ref().unwrap()).unwrap().as_slice()
@@ -95,16 +95,16 @@ fn hpke_runner(path: &str) {
 
         let secret_recip = PrivateKey::try_from(&decode(&test.skRm).unwrap()).unwrap();
         let public_recip = PublicKey::try_from(&decode(&test.pkRm).unwrap()).unwrap();
-        let derived_kp_recip = DhKem::derive_keypair(&decode(&test.ikmR).unwrap()).unwrap();
-        assert_eq!(secret_recip, derived_kp_recip.0);
-        assert_eq!(public_recip, derived_kp_recip.1);
+        let derived_kp_recip = KeyPair::derive(&decode(&test.ikmR).unwrap()).unwrap();
+        assert_eq!(&secret_recip, derived_kp_recip.private());
+        assert_eq!(&public_recip, derived_kp_recip.public());
         assert_eq!(public_recip, decode(&test.pkRm).unwrap().as_slice());
 
         let secret_eph = PrivateKey::try_from(&decode(&test.skEm).unwrap()).unwrap();
         let public_eph = PublicKey::try_from(&decode(&test.pkEm).unwrap()).unwrap();
-        let derived_kp_eph = DhKem::derive_keypair(&decode(&test.ikmE).unwrap()).unwrap();
-        assert_eq!(secret_eph, derived_kp_eph.0);
-        assert_eq!(public_eph, derived_kp_eph.1);
+        let derived_kp_eph = KeyPair::derive(&decode(&test.ikmE).unwrap()).unwrap();
+        assert_eq!(&secret_eph, derived_kp_eph.private());
+        assert_eq!(&public_eph, derived_kp_eph.public());
         assert_eq!(public_eph, decode(&test.pkEm).unwrap().as_slice());
 
         let info = hex::decode(test.info).unwrap();
@@ -117,7 +117,7 @@ fn hpke_runner(path: &str) {
 
         match test.mode as u8 {
             ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
-                let (ss, _) = DhKem::encap_deterministic(
+                let (ss, _) = KeyPair::encap_deterministic(
                     &public_recip,
                     PrivateKey::try_from(&decode(&test.skEm).unwrap()).unwrap(),
                 )
@@ -179,7 +179,7 @@ fn hpke_runner(path: &str) {
                 test_counter += 1;
             }
             ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::MODE_ID => {
-                let (ss, _) = DhKem::encap_deterministic(
+                let (ss, _) = KeyPair::encap_deterministic(
                     &public_recip,
                     PrivateKey::try_from(&decode(&test.skEm).unwrap()).unwrap(),
                 )
@@ -258,7 +258,7 @@ fn hpke_runner(path: &str) {
                 let public_sender =
                     PublicKey::try_from(&decode(test.pkSm.unwrap()).unwrap()).unwrap();
 
-                let (ss, _) = DhKem::auth_encap_deterministic(
+                let (ss, _) = KeyPair::auth_encap_deterministic(
                     &public_recip,
                     &secret_sender,
                     PrivateKey::try_from(&decode(&test.skEm).unwrap()).unwrap(),
@@ -336,7 +336,7 @@ fn hpke_runner(path: &str) {
                 let public_sender =
                     PublicKey::try_from(&decode(test.pkSm.unwrap()).unwrap()).unwrap();
 
-                let (ss, _) = DhKem::auth_encap_deterministic(
+                let (ss, _) = KeyPair::auth_encap_deterministic(
                     &public_recip,
                     &secret_sender,
                     PrivateKey::try_from(&decode(&test.skEm).unwrap()).unwrap(),

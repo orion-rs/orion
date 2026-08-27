@@ -539,22 +539,23 @@ impl<S: Suite + Psk> ModePsk<S> {
 /// ```rust
 /// # #[cfg(feature = "safe_api")] {
 /// use orion::hazardous::hpke::{ModeAuth, DHKEM_X25519_SHA256_CHACHA20};
-/// use orion::hazardous::kem::x25519_hkdf_sha256::DhKem;
+/// use orion::hazardous::kem::x25519_hkdf_sha256::KeyPair;
+/// use orion::KP;
 ///
-/// let (sender_secret, sender_public) = DhKem::generate_keypair()?;
-/// let (recipient_secret, recipient_public) = DhKem::generate_keypair()?;
+/// let sender_kp = KeyPair::generate()?;
+/// let recipient_kp = KeyPair::generate()?;
 ///
 /// // Streaming-based API
 /// let mut aead_ct_out0 = [0u8; 32];
 /// let mut aead_ct_out1 = [0u8; 32];
 /// let mut aead_ct_out2 = [0u8; 32];
 ///
-/// let (mut hpke_sender, enc) = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&recipient_public, b"info parameter", &sender_secret)?;
+/// let (mut hpke_sender, enc) = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(recipient_kp.public(), b"info parameter", sender_kp.private())?;
 /// hpke_sender.seal(&[0u8; 16], b"aad parameter 0", &mut aead_ct_out0)?;
 /// hpke_sender.seal(&[1u8; 16], b"aad parameter 1", &mut aead_ct_out1)?;
 /// hpke_sender.seal(&[2u8; 16], b"aad parameter 2", &mut aead_ct_out2)?;
 ///
-/// let mut hpke_recipient = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, &recipient_secret, b"info parameter", &sender_public)?;
+/// let mut hpke_recipient = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, recipient_kp.private(), b"info parameter", sender_kp.public())?;
 /// let mut aead_pt_out0 = [0u8; 16];
 /// let mut aead_pt_out1 = [0u8; 16];
 /// let mut aead_pt_out2 = [0u8; 16];
@@ -567,8 +568,8 @@ impl<S: Suite + Psk> ModePsk<S> {
 /// assert_eq!(&aead_pt_out2, &[2u8; 16]);
 ///
 /// // One-shot API
-/// let enc = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::auth_seal(&recipient_public, b"info parameter", &sender_secret, &[3u8; 16], b"aad", &mut aead_ct_out0)?;
-/// ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::auth_open(&enc, &recipient_secret, b"info parameter", &sender_public, &aead_ct_out0, b"aad", &mut aead_pt_out0)?;
+/// let enc = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::auth_seal(recipient_kp.public(), b"info parameter", sender_kp.private(), &[3u8; 16], b"aad", &mut aead_ct_out0)?;
+/// ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::auth_open(&enc, recipient_kp.private(), b"info parameter", sender_kp.public(), &aead_ct_out0, b"aad", &mut aead_pt_out0)?;
 /// assert_eq!(&aead_pt_out0, &[3u8; 16]);
 /// # }
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
@@ -747,10 +748,11 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
 /// ```rust
 /// # #[cfg(feature = "safe_api")] {
 /// use orion::hazardous::hpke::{ModeAuthPsk, DHKEM_X25519_SHA256_CHACHA20};
-/// use orion::hazardous::kem::x25519_hkdf_sha256::DhKem;
+/// use orion::hazardous::kem::x25519_hkdf_sha256::KeyPair;
+/// use orion::KP;
 ///
-/// let (sender_secret, sender_public) = DhKem::generate_keypair()?;
-/// let (recipient_secret, recipient_public) = DhKem::generate_keypair()?;
+/// let sender_kp = KeyPair::generate()?;
+/// let recipient_kp = KeyPair::generate()?;
 /// let psk = b"any preshared secret key that is 32 bytes minimum";
 /// let psk_id = b"identifier for psk";
 ///
@@ -759,12 +761,12 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
 /// let mut aead_ct_out1 = [0u8; 32];
 /// let mut aead_ct_out2 = [0u8; 32];
 ///
-/// let (mut hpke_sender, enc) = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&recipient_public, b"info parameter", psk, psk_id, &sender_secret)?;
+/// let (mut hpke_sender, enc) = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(recipient_kp.public(), b"info parameter", psk, psk_id, sender_kp.private())?;
 /// hpke_sender.seal(&[0u8; 16], b"aad parameter 0", &mut aead_ct_out0)?;
 /// hpke_sender.seal(&[1u8; 16], b"aad parameter 1", &mut aead_ct_out1)?;
 /// hpke_sender.seal(&[2u8; 16], b"aad parameter 2", &mut aead_ct_out2)?;
 ///
-/// let mut hpke_recipient = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, &recipient_secret, b"info parameter", psk, psk_id, &sender_public)?;
+/// let mut hpke_recipient = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, recipient_kp.private(), b"info parameter", psk, psk_id, sender_kp.public())?;
 /// let mut aead_pt_out0 = [0u8; 16];
 /// let mut aead_pt_out1 = [0u8; 16];
 /// let mut aead_pt_out2 = [0u8; 16];
@@ -777,8 +779,8 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
 /// assert_eq!(&aead_pt_out2, &[2u8; 16]);
 ///
 /// // One-shot API
-/// let enc = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::authpsk_seal(&recipient_public, b"info parameter", psk, psk_id, &sender_secret, &[3u8; 16], b"aad", &mut aead_ct_out0)?;
-/// ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::authpsk_open(&enc, &recipient_secret, b"info parameter", psk, psk_id, &sender_public, &aead_ct_out0, b"aad", &mut aead_pt_out0)?;
+/// let enc = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::authpsk_seal(recipient_kp.public(), b"info parameter", psk, psk_id, sender_kp.private(), &[3u8; 16], b"aad", &mut aead_ct_out0)?;
+/// ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::authpsk_open(&enc, recipient_kp.private(), b"info parameter", psk, psk_id, sender_kp.public(), &aead_ct_out0, b"aad", &mut aead_pt_out0)?;
 /// assert_eq!(&aead_pt_out0, &[3u8; 16]);
 /// # }
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
@@ -937,7 +939,10 @@ impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
 #[cfg(feature = "safe_api")]
 mod test {
     use super::*;
-    use crate::hazardous::{hpke::DHKEM_X25519_SHA256_CHACHA20, kem::x25519_hkdf_sha256::DhKem};
+    use crate::{
+        KP,
+        hazardous::{hpke::DHKEM_X25519_SHA256_CHACHA20, kem::x25519_hkdf_sha256::KeyPair},
+    };
 
     #[test]
     fn test_internal_hpke_mode_verifier() {
@@ -962,18 +967,22 @@ mod test {
 
     #[test]
     fn test_error_on_mismatched_role() {
-        let (sk_s, pk_s) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
-        let (sk_r, pk_r) = DhKem::derive_keypair(&[255u8; 64]).unwrap();
+        let sender_kp = KeyPair::derive(&[0u8; 64]).unwrap();
+        let recipient_kp = KeyPair::derive(&[255u8; 64]).unwrap();
 
         let mut pt = [1u8; 32];
         let mut out_ct = [0u8; 32 + 16];
 
         // ModeBase
         let (mut ctx_s, enc) =
-            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&pk_r, &[0u8; 64]).unwrap();
-        let mut ctx_r =
-            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, &sk_r, &[0u8; 64])
+            ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(recipient_kp.public(), &[0u8; 64])
                 .unwrap();
+        let mut ctx_r = ModeBase::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
+            &enc,
+            recipient_kp.private(),
+            &[0u8; 64],
+        )
+        .unwrap();
 
         assert!(ctx_r.seal(&pt, b"", &mut out_ct).is_err());
         ctx_s.seal(&pt, b"", &mut out_ct).unwrap();
@@ -989,11 +998,18 @@ mod test {
 
         // ModePsk
         let (mut ctx_s, enc) = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
-            &pk_r, &[0u8; 64], &[1u8; 32], b"psk_id",
+            recipient_kp.public(),
+            &[0u8; 64],
+            &[1u8; 32],
+            b"psk_id",
         )
         .unwrap();
         let mut ctx_r = ModePsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
-            &enc, &sk_r, &[0u8; 64], &[1u8; 32], b"psk_id",
+            &enc,
+            recipient_kp.private(),
+            &[0u8; 64],
+            &[1u8; 32],
+            b"psk_id",
         )
         .unwrap();
 
@@ -1010,11 +1026,19 @@ mod test {
         assert_eq!(export_s, export_r);
 
         // ModeAuth
-        let (mut ctx_s, enc) =
-            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(&pk_r, &[0u8; 64], &sk_s).unwrap();
-        let mut ctx_r =
-            ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(&enc, &sk_r, &[0u8; 64], &pk_s)
-                .unwrap();
+        let (mut ctx_s, enc) = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
+            recipient_kp.public(),
+            &[0u8; 64],
+            sender_kp.private(),
+        )
+        .unwrap();
+        let mut ctx_r = ModeAuth::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
+            &enc,
+            recipient_kp.private(),
+            &[0u8; 64],
+            sender_kp.public(),
+        )
+        .unwrap();
 
         assert!(ctx_r.seal(&pt, b"", &mut out_ct).is_err());
         ctx_s.seal(&pt, b"", &mut out_ct).unwrap();
@@ -1030,11 +1054,20 @@ mod test {
 
         // ModeAuthPsk
         let (mut ctx_s, enc) = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_sender(
-            &pk_r, &[0u8; 64], &[1u8; 32], b"psk_id", &sk_s,
+            recipient_kp.public(),
+            &[0u8; 64],
+            &[1u8; 32],
+            b"psk_id",
+            sender_kp.private(),
         )
         .unwrap();
         let mut ctx_r = ModeAuthPsk::<DHKEM_X25519_SHA256_CHACHA20>::new_recipient(
-            &enc, &sk_r, &[0u8; 64], &[1u8; 32], b"psk_id", &pk_s,
+            &enc,
+            recipient_kp.private(),
+            &[0u8; 64],
+            &[1u8; 32],
+            b"psk_id",
+            sender_kp.public(),
         )
         .unwrap();
 

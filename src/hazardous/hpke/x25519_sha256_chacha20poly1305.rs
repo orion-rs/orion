@@ -51,6 +51,7 @@ impl Sealed for DHKEM_X25519_SHA256_CHACHA20 {}
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::KP;
     use crate::errors::UnknownCryptoError;
     use crate::hazardous::hpke::suite::private::{AuthSuite, Suite};
     use crate::hazardous::kem::x25519_hkdf_sha256::*;
@@ -61,21 +62,16 @@ mod test {
 
     #[test]
     fn test_derive_keypair() {
-        let (sk, pk) = DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32]).unwrap();
-        let (sk_kem, pk_kem) = DhKem::derive_keypair(&[0u8; 32]).unwrap();
-        assert_eq!(sk, sk_kem);
-        assert_eq!(pk, pk_kem);
+        let kp = DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32]).unwrap();
+        let kp_kem = KeyPair::derive(&[0u8; 32]).unwrap();
+        assert_eq!(kp, kp_kem);
 
         assert!(DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 31]).is_err());
         assert!(DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32]).is_ok());
         assert!(DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 63]).is_ok());
         assert_ne!(
-            DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32])
-                .unwrap()
-                .1,
-            DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[1u8; 32])
-                .unwrap()
-                .1
+            DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[0u8; 32]).unwrap(),
+            DHKEM_X25519_SHA256_CHACHA20::derive_keypair(&[1u8; 32]).unwrap()
         );
     }
 
@@ -83,8 +79,9 @@ mod test {
     #[cfg(feature = "safe_api")]
     // format! is only available with std
     fn test_omitted_debug() {
-        let (_sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
-        let (ctx, _enc) = DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
+        let kp = KeyPair::derive(&[0u8; 64]).unwrap();
+        let (ctx, _enc) =
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; 64]).unwrap();
 
         let secret_key = format!("{:?}", ctx.key);
         let secret_export = format!("{:?}", ctx.exporter_secret);
@@ -96,28 +93,36 @@ mod test {
 
     #[test]
     fn test_partialeq_impl() {
-        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let kp = KeyPair::derive(&[0u8; 64]).unwrap();
         let (ctx_s, enc) =
-            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; 64]).unwrap();
         let ctx_r =
-            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, &sk, &[0u8; 64]).unwrap();
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, kp.private(), &[0u8; 64])
+                .unwrap();
         assert_eq!(ctx_s, ctx_r);
 
-        let (_sk, pk) = DhKem::derive_keypair(&[1u8; 64]).unwrap();
+        let kp = KeyPair::derive(&[1u8; 64]).unwrap();
         let (ctx_s, _enc) =
-            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; 64]).unwrap();
         assert_ne!(ctx_s, ctx_r);
     }
 
     #[test]
     fn test_error_on_lengths_base() {
-        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
-        let (ctx, enc) = DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).unwrap();
+        let kp = KeyPair::derive(&[0u8; 64]).unwrap();
+        let (ctx, enc) =
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; 64]).unwrap();
         // Info
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 64]).is_ok());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, &[0u8; 65]).is_err());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, &sk, &[0u8; 64]).is_ok());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, &sk, &[0u8; 65]).is_err());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; 64]).is_ok());
+        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; 65]).is_err());
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, kp.private(), &[0u8; 64])
+                .is_ok()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, kp.private(), &[0u8; 65])
+                .is_err()
+        );
 
         // Export
         let mut out = [0u8; 64];
@@ -129,58 +134,108 @@ mod test {
 
     #[test]
     fn test_error_on_lengths_psk() {
-        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let kp = KeyPair::derive(&[0u8; 64]).unwrap();
         // Info
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 65], &[0u8; 64], b"psk_id")
-                .is_err()
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+                kp.public(),
+                &[0u8; 65],
+                &[0u8; 64],
+                b"psk_id"
+            )
+            .is_err()
         );
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"psk_id")
-                .is_ok()
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 64],
+                b"psk_id"
+            )
+            .is_ok()
         );
 
         // PSK
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 65], b"psk_id")
-                .is_err()
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 65],
+                b"psk_id"
+            )
+            .is_err()
         );
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 31], b"psk_id")
-                .is_err()
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 31],
+                b"psk_id"
+            )
+            .is_err()
         );
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 32], b"psk_id")
-                .is_ok()
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 32],
+                b"psk_id"
+            )
+            .is_ok()
         );
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"psk_id")
-                .is_ok()
+            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 64],
+                b"psk_id"
+            )
+            .is_ok()
         );
-        let (ctx, enc) =
-            DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(&pk, &[0u8; 64], &[0u8; 64], b"psk_id")
-                .unwrap();
+        let (ctx, enc) = DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
+            kp.public(),
+            &[0u8; 64],
+            &[0u8; 64],
+            b"psk_id",
+        )
+        .unwrap();
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_psk_recipient(
-                &enc, &sk, &[0u8; 64], &[0u8; 31], b"psk_id"
+                &enc,
+                kp.private(),
+                &[0u8; 64],
+                &[0u8; 31],
+                b"psk_id"
             )
             .is_err()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_psk_recipient(
-                &enc, &sk, &[0u8; 64], &[0u8; 65], b"psk_id"
+                &enc,
+                kp.private(),
+                &[0u8; 64],
+                &[0u8; 65],
+                b"psk_id"
             )
             .is_err()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_psk_recipient(
-                &enc, &sk, &[0u8; 64], &[0u8; 32], b"psk_id"
+                &enc,
+                kp.private(),
+                &[0u8; 64],
+                &[0u8; 32],
+                b"psk_id"
             )
             .is_ok()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_psk_recipient(
-                &enc, &sk, &[0u8; 64], &[0u8; 64], b"psk_id"
+                &enc,
+                kp.private(),
+                &[0u8; 64],
+                &[0u8; 64],
+                b"psk_id"
             )
             .is_ok()
         );
@@ -195,17 +250,36 @@ mod test {
 
     #[test]
     fn test_error_on_lengths_auth() {
-        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let kp = KeyPair::derive(&[0u8; 64]).unwrap();
         let (ctx, enc) =
-            DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(&pk, &[0u8; 64], &sk).unwrap();
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(kp.public(), &[0u8; 64], kp.private())
+                .unwrap();
         // Info
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(&pk, &[0u8; 64], &sk).is_ok());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(&pk, &[0u8; 65], &sk).is_err());
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_auth_recipient(&enc, &sk, &[0u8; 64], &pk).is_ok()
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(kp.public(), &[0u8; 64], kp.private())
+                .is_ok()
         );
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_auth_recipient(&enc, &sk, &[0u8; 65], &pk).is_err()
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(kp.public(), &[0u8; 65], kp.private())
+                .is_err()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_recipient(
+                &enc,
+                kp.private(),
+                &[0u8; 64],
+                kp.public()
+            )
+            .is_ok()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_recipient(
+                &enc,
+                kp.private(),
+                &[0u8; 65],
+                kp.public()
+            )
+            .is_err()
         );
 
         // Export
@@ -218,17 +292,25 @@ mod test {
 
     #[test]
     fn test_error_on_lengths_authpsk() {
-        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
+        let kp = KeyPair::derive(&[0u8; 64]).unwrap();
         // Info
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-                &pk, &[0u8; 65], &[0u8; 64], b"psk_id", &sk
+                kp.public(),
+                &[0u8; 65],
+                &[0u8; 64],
+                b"psk_id",
+                kp.private()
             )
             .is_err()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-                &pk, &[0u8; 64], &[0u8; 64], b"psk_id", &sk
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 64],
+                b"psk_id",
+                kp.private()
             )
             .is_ok()
         );
@@ -236,53 +318,93 @@ mod test {
         // PSK
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-                &pk, &[0u8; 64], &[0u8; 65], b"psk_id", &sk
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 65],
+                b"psk_id",
+                kp.private()
             )
             .is_err()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-                &pk, &[0u8; 64], &[0u8; 31], b"psk_id", &sk
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 31],
+                b"psk_id",
+                kp.private()
             )
             .is_err()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-                &pk, &[0u8; 64], &[0u8; 32], b"psk_id", &sk
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 32],
+                b"psk_id",
+                kp.private()
             )
             .is_ok()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-                &pk, &[0u8; 64], &[0u8; 64], b"psk_id", &sk
+                kp.public(),
+                &[0u8; 64],
+                &[0u8; 64],
+                b"psk_id",
+                kp.private()
             )
             .is_ok()
         );
         let (ctx, enc) = DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
-            &pk, &[0u8; 64], &[0u8; 64], b"psk_id", &sk,
+            kp.public(),
+            &[0u8; 64],
+            &[0u8; 64],
+            b"psk_id",
+            kp.private(),
         )
         .unwrap();
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_recipient(
-                &enc, &sk, &[0u8; 64], &[0u8; 31], b"psk_id", &pk
+                &enc,
+                kp.private(),
+                &[0u8; 64],
+                &[0u8; 31],
+                b"psk_id",
+                kp.public()
             )
             .is_err()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_recipient(
-                &enc, &sk, &[0u8; 64], &[0u8; 65], b"psk_id", &pk
+                &enc,
+                kp.private(),
+                &[0u8; 64],
+                &[0u8; 65],
+                b"psk_id",
+                kp.public()
             )
             .is_err()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_recipient(
-                &enc, &sk, &[0u8; 64], &[0u8; 32], b"psk_id", &pk
+                &enc,
+                kp.private(),
+                &[0u8; 64],
+                &[0u8; 32],
+                b"psk_id",
+                kp.public()
             )
             .is_ok()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_recipient(
-                &enc, &sk, &[0u8; 64], &[0u8; 64], b"psk_id", &pk
+                &enc,
+                kp.private(),
+                &[0u8; 64],
+                &[0u8; 64],
+                b"psk_id",
+                kp.public()
             )
             .is_ok()
         );
@@ -298,8 +420,9 @@ mod test {
     #[test]
     fn test_error_if_internal_counter_overflows() {
         let info = b"info param";
-        let (sk, pk) = DhKem::derive_keypair(&[0u8; 64]).unwrap();
-        let (mut ctx, enc) = DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(&pk, info).unwrap();
+        let kp = KeyPair::derive(&[0u8; 64]).unwrap();
+        let (mut ctx, enc) =
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), info).unwrap();
 
         ctx.ctr = u64::MAX - 1;
 
@@ -310,7 +433,8 @@ mod test {
         assert!(ctx.increment_seq().is_err());
         assert!(ctx.seal(plaintext, b"", &mut dst_out).is_err());
 
-        let mut ctx = DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, &sk, info).unwrap();
+        let mut ctx =
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, kp.private(), info).unwrap();
         ctx.ctr = u64::MAX - 1;
 
         let ciphertext = dst_out;
@@ -331,8 +455,11 @@ mod test {
         }
 
         fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
-            let (sk, pk) = DhKem::derive_keypair(seed)?;
-            Ok((sk.unprotected_as_ref().to_vec(), pk.as_ref().to_vec()))
+            let kp = KeyPair::derive(seed)?;
+            Ok((
+                kp.private().unprotected_as_ref().to_vec(),
+                kp.public().as_ref().to_vec(),
+            ))
         }
 
         fn setup_fresh_sender(
@@ -449,8 +576,11 @@ mod test {
         }
 
         fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
-            let (sk, pk) = DhKem::derive_keypair(seed)?;
-            Ok((sk.unprotected_as_ref().to_vec(), pk.as_ref().to_vec()))
+            let kp = KeyPair::derive(seed)?;
+            Ok((
+                kp.private().unprotected_as_ref().to_vec(),
+                kp.public().as_ref().to_vec(),
+            ))
         }
 
         fn setup_fresh_sender(
@@ -578,8 +708,11 @@ mod test {
         }
 
         fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
-            let (sk, pk) = DhKem::derive_keypair(seed)?;
-            Ok((sk.unprotected_as_ref().to_vec(), pk.as_ref().to_vec()))
+            let kp = KeyPair::derive(seed)?;
+            Ok((
+                kp.private().unprotected_as_ref().to_vec(),
+                kp.public().as_ref().to_vec(),
+            ))
         }
 
         fn setup_fresh_sender(
@@ -711,8 +844,11 @@ mod test {
         }
 
         fn gen_kp(seed: &[u8]) -> Result<(Vec<u8>, Vec<u8>), UnknownCryptoError> {
-            let (sk, pk) = DhKem::derive_keypair(seed)?;
-            Ok((sk.unprotected_as_ref().to_vec(), pk.as_ref().to_vec()))
+            let kp = KeyPair::derive(seed)?;
+            Ok((
+                kp.private().unprotected_as_ref().to_vec(),
+                kp.public().as_ref().to_vec(),
+            ))
         }
 
         fn setup_fresh_sender(

@@ -61,34 +61,31 @@ impl HpkeKem for DhKemX25519HkdfSha256 {
     type EncapsulatedKey = x25519_hkdf_sha256::PublicKey;
     type EphemeralSecret = x25519_hkdf_sha256::PrivateKey;
     type SharedSecretSpec = x25519_hkdf_sha256::DhKemSharedSecret;
-
-    // DHKEM has no dedicated keypair type.
-    // TODO(brycx): Change this?
-    type KeyPair = (Self::PrivateKey, Self::PublicKey);
+    type KeyPair = x25519_hkdf_sha256::KeyPair;
 
     fn derive_keypair(ikm: &[u8]) -> Result<Self::KeyPair, UnknownCryptoError> {
-        x25519_hkdf_sha256::DhKem::derive_keypair(ikm)
+        x25519_hkdf_sha256::KeyPair::derive(ikm)
     }
 
     #[cfg(feature = "safe_api")]
     fn encap(
         pubkey_r: &Self::PublicKey,
     ) -> Result<(Secret<Self::SharedSecretSpec>, Self::EncapsulatedKey), UnknownCryptoError> {
-        x25519_hkdf_sha256::DhKem::encap(pubkey_r)
+        x25519_hkdf_sha256::KeyPair::encap(pubkey_r)
     }
 
     fn encap_deterministic(
         pubkey_r: &Self::PublicKey,
         secret_ephemeral: Self::EphemeralSecret,
     ) -> Result<(Secret<Self::SharedSecretSpec>, Self::EncapsulatedKey), UnknownCryptoError> {
-        x25519_hkdf_sha256::DhKem::encap_deterministic(pubkey_r, secret_ephemeral)
+        x25519_hkdf_sha256::KeyPair::encap_deterministic(pubkey_r, secret_ephemeral)
     }
 
     fn decap(
         enc: &Self::EncapsulatedKey,
         secret_key_r: &Self::PrivateKey,
     ) -> Result<Secret<Self::SharedSecretSpec>, UnknownCryptoError> {
-        x25519_hkdf_sha256::DhKem::decap(enc, secret_key_r)
+        x25519_hkdf_sha256::KeyPair::decap(enc, secret_key_r)
     }
 }
 
@@ -98,7 +95,7 @@ impl HpkeAuthKem for DhKemX25519HkdfSha256 {
         pubkey_r: &Self::PublicKey,
         secret_key_s: &Self::PrivateKey,
     ) -> Result<(Secret<Self::SharedSecretSpec>, Self::EncapsulatedKey), UnknownCryptoError> {
-        x25519_hkdf_sha256::DhKem::auth_encap(pubkey_r, secret_key_s)
+        x25519_hkdf_sha256::KeyPair::auth_encap(pubkey_r, secret_key_s)
     }
 
     fn auth_encap_deterministic(
@@ -106,7 +103,7 @@ impl HpkeAuthKem for DhKemX25519HkdfSha256 {
         secret_key_s: &Self::PrivateKey,
         secret_ephemeral: Self::EphemeralSecret,
     ) -> Result<(Secret<Self::SharedSecretSpec>, Self::EncapsulatedKey), UnknownCryptoError> {
-        x25519_hkdf_sha256::DhKem::auth_encap_deterministic(
+        x25519_hkdf_sha256::KeyPair::auth_encap_deterministic(
             pubkey_r,
             secret_key_s,
             secret_ephemeral,
@@ -118,7 +115,7 @@ impl HpkeAuthKem for DhKemX25519HkdfSha256 {
         secret_key_r: &Self::PrivateKey,
         pubkey_s: &Self::PublicKey,
     ) -> Result<Secret<Self::SharedSecretSpec>, UnknownCryptoError> {
-        x25519_hkdf_sha256::DhKem::auth_decap(enc, secret_key_r, pubkey_s)
+        x25519_hkdf_sha256::KeyPair::auth_decap(enc, secret_key_r, pubkey_s)
     }
 }
 
