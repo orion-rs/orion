@@ -63,7 +63,7 @@
 //!
 //! # Example:
 //! ```ignore-windows
-//! # #[cfg(feature = "safe_api")] {
+//! # #[cfg(all(feature = "safe_api", not(target_os = "windows")))] {
 //! use orion::KP;
 //! use orion::hazardous::dsa::mldsa87::*;
 //!
