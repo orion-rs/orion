@@ -30,11 +30,11 @@
 //! # Errors:
 //! An error will be returned if:
 //! - If a shared X25519 secret is all-zero.
-//! - If `ikm.len() < 32` when calling [`derive_keypair()`].
+//! - If `ikm.len() < 32` when calling [`derive()`].
 //! - [`generate()`] errors during [`encap()`], [`auth_encap()`], [`decap()`] or [`auth_decap()`].
 //!
 //! # Security:
-//! - The `ikm` used as input for [`derive_keypair()`] must never be reused.
+//! - The `ikm` used as input for [`derive()`] must never be reused.
 //! - The `secret_ephemeral` must never be reused.
 //! - This KEM is vulnerable to key-compromise impersonation attacks (KCI), meaning
 //! that if the recipients private key `secret_recipient` is leaked at any point, sender authentication
@@ -45,36 +45,38 @@
 //! # Example:
 //! ```rust
 //! # #[cfg(feature = "safe_api")] {
-//! use orion::hazardous::kem::x25519_hkdf_sha256::DhKem;
+//! use orion::hazardous::kem::x25519_hkdf_sha256::KeyPair;
+//! use orion::KP;
 //!
-//! let (sender_secret, sender_public) = DhKem::generate_keypair()?;
-//! let (recipient_secret, recipient_public) = DhKem::generate_keypair()?;
+//! let sender_kp = KeyPair::generate()?;
+//! let recipient_kp = KeyPair::generate()?;
 //!
 //! let (sender_shared_secret, public_eph) =
-//!     DhKem::auth_encap(&recipient_public, &sender_secret)?;
-//! let recipient_shared_secret = DhKem::auth_decap(&public_eph, &recipient_secret, &sender_public)?;
+//!     KeyPair::auth_encap(recipient_kp.public(), sender_kp.private())?;
+//! let recipient_shared_secret = KeyPair::auth_decap(&public_eph, recipient_kp.private(), sender_kp.public())?;
 //!
 //! assert_eq!(sender_shared_secret, recipient_shared_secret);
 //! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
-//! [`encap()`]: x25519_hkdf_sha256::DhKem::encap
-//! [`decap()`]: x25519_hkdf_sha256::DhKem::decap
-//! [`auth_encap()`]: x25519_hkdf_sha256::DhKem::auth_encap
-//! [`auth_decap()`]: x25519_hkdf_sha256::DhKem::auth_decap
-//! [`derive_keypair()`]: x25519_hkdf_sha256::DhKem::derive_keypair
+//! [`encap()`]: x25519_hkdf_sha256::KeyPair::encap
+//! [`decap()`]: x25519_hkdf_sha256::KeyPair::decap
+//! [`auth_encap()`]: x25519_hkdf_sha256::KeyPair::auth_encap
+//! [`auth_decap()`]: x25519_hkdf_sha256::KeyPair::auth_decap
+//! [`derive()`]: x25519_hkdf_sha256::KeyPair::derive
 //! [`generate()`]: crate::hazardous::ecc::x25519::PrivateKey::generate
 
-use crate::GenerateSecret;
 use crate::errors::UnknownCryptoError;
 use crate::hazardous::ecc::x25519;
 use crate::hazardous::kdf::hkdf::{Hkdf, SHA256};
+use crate::{GenerateSecret, KP};
 
 use crate::generics::ByteArrayData;
 use crate::generics::Secret;
 use crate::generics::TypeSpec;
 use crate::generics::sealed::Sealed;
 pub use crate::hazardous::ecc::x25519::PublicKey;
+pub use crate::hazardous::ecc::x25519::X25519PublicKey;
 
 #[cfg(feature = "safe_api")]
 use crate::generics::sealed::Data;
@@ -184,11 +186,39 @@ impl From<&PrivateKey> for x25519::PrivateKey {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
+/// DHKEM keypair.
+///
 /// DHKEM(X25519, HKDF-SHA256) as specified in HPKE [RFC 9180](https://www.rfc-editor.org/rfc/rfc9180.html).
-pub struct DhKem {}
+pub struct KeyPair {
+    private: PrivateKey,
+    public: PublicKey,
+}
 
-impl DhKem {
+impl KP<DhKemX25519PrivateKey, X25519PublicKey> for KeyPair {
+    fn private(&self) -> &Secret<DhKemX25519PrivateKey> {
+        &self.private
+    }
+
+    fn public(&self) -> &crate::Public<X25519PublicKey> {
+        &self.public
+    }
+}
+
+impl TryFrom<&PrivateKey> for KeyPair {
+    type Error = UnknownCryptoError;
+
+    fn try_from(value: &PrivateKey) -> Result<Self, Self::Error> {
+        let public = PublicKey::try_from(value)?;
+
+        Ok(Self {
+            private: PrivateKey::from_data(value.data.clone()),
+            public,
+        })
+    }
+}
+
+impl KeyPair {
     /// ID for this DH-KEM. See <https://www.rfc-editor.org/rfc/rfc9180.html#section-7.1>
     pub const KEM_ID: u16 = 0x0020;
 
@@ -253,16 +283,16 @@ impl DhKem {
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
-    /// Generate random X25519 keypair.
-    pub fn generate_keypair() -> Result<(PrivateKey, PublicKey), UnknownCryptoError> {
-        let sk = PrivateKey::generate()?;
-        let pk = PublicKey::try_from(&sk)?;
+    /// Generate a fresh [`KeyPair`].
+    pub fn generate() -> Result<Self, UnknownCryptoError> {
+        let private = PrivateKey::generate()?;
+        let public = PublicKey::try_from(&private)?;
 
-        Ok((sk, pk))
+        Ok(Self { private, public })
     }
 
     /// Deterministically derive a X25519 keypair from `ikm`.
-    pub fn derive_keypair(ikm: &[u8]) -> Result<(PrivateKey, PublicKey), UnknownCryptoError> {
+    pub fn derive(ikm: &[u8]) -> Result<Self, UnknownCryptoError> {
         if ikm.len() < 32 {
             return Err(UnknownCryptoError);
         }
@@ -271,10 +301,10 @@ impl DhKem {
         let mut sk_bytes = zeroize_wrap!([0u8; x25519::PRIVATE_KEY_SIZE]);
         Self::labeled_expand(&dkp_prk, b"sk", b"", sk_bytes.as_mut_slice())?;
 
-        let sk = PrivateKey::try_from(sk_bytes.as_slice())?;
-        let pk = PublicKey::try_from(&sk)?;
+        let private = PrivateKey::try_from(sk_bytes.as_slice())?;
+        let public = PublicKey::try_from(&private)?;
 
-        Ok((sk, pk))
+        Ok(Self { private, public })
     }
 
     #[cfg(feature = "safe_api")]
@@ -419,12 +449,13 @@ mod public {
     fn test_rfc9180_serialize_deserialize_clapming_requirement() {
         use crate::hazardous::ecc::x25519::X25519PrivateKey;
 
-        let kp = DhKem::derive_keypair(&[42u8; 32]).unwrap();
+        let kp = KeyPair::derive(&[42u8; 32]).unwrap();
         // Test it returns (SerializePrivateKey()) clamped
-        let k: [u8; x25519::PRIVATE_KEY_SIZE] = kp.0.unprotected_as_ref().try_into().unwrap();
+        let k: [u8; x25519::PRIVATE_KEY_SIZE] =
+            kp.private().unprotected_as_ref().try_into().unwrap();
         assert!(X25519PrivateKey::is_clamped(&k));
         // Test it holds internally (DeserializePrivateKey()) clamped
-        assert!(X25519PrivateKey::is_clamped(&kp.0.data.bytes));
+        assert!(X25519PrivateKey::is_clamped(&kp.private().data.bytes));
         // Test it is applied from foreign-origin byte slice
         let mut k = [0u8; x25519::PRIVATE_KEY_SIZE];
         crate::util::secure_rand_bytes(&mut k).unwrap();
@@ -451,21 +482,21 @@ mod public {
 
     #[test]
     fn error_on_short_ikm() {
-        assert!(DhKem::derive_keypair(&[0u8; 31]).is_err());
-        assert!(DhKem::derive_keypair(&[0u8; 32]).is_ok());
-        assert!(DhKem::derive_keypair(&[0u8; 65]).is_ok());
+        assert!(KeyPair::derive(&[0u8; 31]).is_err());
+        assert!(KeyPair::derive(&[0u8; 32]).is_ok());
+        assert!(KeyPair::derive(&[0u8; 65]).is_ok());
     }
 
     #[test]
     fn encap_deterministic() {
-        let (_secret, public) = DhKem::derive_keypair(&[123u8; 32]).unwrap();
-        let (secret_eph1, _public_eph) = DhKem::derive_keypair(&[123u8; 32]).unwrap();
-        let (secret_eph2, _public_eph) = DhKem::derive_keypair(&[123u8; 32]).unwrap();
+        let kp = KeyPair::derive(&[123u8; 32]).unwrap();
+        let kp_eph1 = KeyPair::derive(&[123u8; 32]).unwrap();
+        let kp_eph2 = KeyPair::derive(&[123u8; 32]).unwrap();
 
         let (shared_secret1, public_eph1) =
-            DhKem::encap_deterministic(&public, secret_eph1).unwrap();
+            KeyPair::encap_deterministic(kp.public(), kp_eph1.private).unwrap();
         let (shared_secret2, public_eph2) =
-            DhKem::encap_deterministic(&public, secret_eph2).unwrap();
+            KeyPair::encap_deterministic(kp.public(), kp_eph2.private).unwrap();
 
         assert_eq!(shared_secret1, shared_secret2);
         assert_eq!(public_eph1, public_eph2);
@@ -477,8 +508,8 @@ mod public {
         let recipient_secret = PrivateKey::generate().unwrap();
         let recipient_public = PublicKey::try_from(&recipient_secret).unwrap();
 
-        let (shared_secret_1, public_eph) = DhKem::encap(&recipient_public).unwrap();
-        let shared_secret_2 = DhKem::decap(&public_eph, &recipient_secret).unwrap();
+        let (shared_secret_1, public_eph) = KeyPair::encap(&recipient_public).unwrap();
+        let shared_secret_2 = KeyPair::decap(&public_eph, &recipient_secret).unwrap();
 
         assert_eq!(shared_secret_1, shared_secret_2);
     }
@@ -493,9 +524,9 @@ mod public {
         let recipient_public = PublicKey::try_from(&recipient_secret).unwrap();
 
         let (shared_secret_1, public_eph) =
-            DhKem::auth_encap(&recipient_public, &sender_secret).unwrap();
+            KeyPair::auth_encap(&recipient_public, &sender_secret).unwrap();
         let shared_secret_2 =
-            DhKem::auth_decap(&public_eph, &recipient_secret, &sender_public).unwrap();
+            KeyPair::auth_decap(&public_eph, &recipient_secret, &sender_public).unwrap();
 
         assert_eq!(shared_secret_1, shared_secret_2);
     }
