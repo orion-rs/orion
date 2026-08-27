@@ -42,6 +42,7 @@
 //!
 //! # Example:
 //! ```ignore-windows
+//! # #[cfg(not(target_os = "windows"))] {
 //! use orion::signer::*;
 //!
 //! // Randomly generate a fresh keypair
@@ -59,7 +60,7 @@
 //!
 //! // Verify the signature of the message and accompanying context
 //! assert!(verifying_key.verify(b"Message to be signed", b"Context", &signature).is_ok());
-//!
+//! # }
 //! # Ok::<(), orion::errors::UnknownCryptoError>(())
 //! ```
 //! [`orion::signer`]: crate::signer
