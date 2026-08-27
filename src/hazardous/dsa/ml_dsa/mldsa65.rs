@@ -58,7 +58,7 @@
 //! # Security:
 //! - Using the randomized, non-deterministic signing hardens the ML-DSA signing routine against fault-injection attacks.
 //! - It is critical that both the seed and explicit randomness `rnd`, used for key generation and signing
-//! are generated using a strong CSPRNG.
+//!   are generated using a strong CSPRNG (if not deterministic is intended).
 //! - Users should always prefer the hedged/randomized if in doubt.
 //!
 //! # Example:
