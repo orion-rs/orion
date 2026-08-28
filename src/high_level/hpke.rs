@@ -29,7 +29,7 @@
 //! - Uses the PQ/T HPKE suite `X-Wing/(ML-KEM768, X25519), SHAKE256, ChaCha20Poly1305`.
 //! - HPKE provides no forward secrecy for the recipient long-term key. If the recipients long-term
 //!   key is compromised, past ciphertext can be decrypted.
-//! - Messages muist be decrypted in the same order they were encrypted.
+//! - Messages must be decrypted in the same order they were encrypted.
 //!   HPKE provides no further protections against replay.
 //! - Length of the messages encrypted are not hidden.
 //! - Base-mode provides no sender authentication. PSK-mode should be used for this.
@@ -51,7 +51,7 @@
 //! # Errors:
 //! An error will be returned if:
 //! - `info` is longer than `64` bytes
-//! - The internal counter reaches [`u64::MAX`] and a call to `seal()`]/`open()` is made
+//! - The internal counter reaches [`u64::MAX`] and a call to `seal()`/`open()` is made
 //! - Calling [`HpkeBase::seal()`]/[`HpkePsk::seal()`] when the role is recipient
 //! - Calling [`HpkeBase::open()`]/[`HpkePsk::open()`] when the role is sender
 //! - Calling [`HpkeBase::open()`]/[`HpkePsk::open()`] on a set of messages that does not match the order of how they were `seal()`'ed (re-ordering)
@@ -59,19 +59,18 @@
 //! - `psk` is less than `32` bytes or more than `64` bytes
 //! - `psk_id` is more than `64` bytes
 //! - If a shared secret is all-zero.
-//! - `getrandom` errors during [`HpkeBase::new_sender()`]/[`HpkePsk::new_sender()`] or [`HpkePsk::seal()`].
+//! - `getrandom` errors during [`HpkeBase::new_sender()`] or [`HpkePsk::new_sender()`].
 //!
 //! # Security:
-//! - If forward secrecy for both the recipient and receiver are required, what is usaully considered the long-term
-//!   key in HPKE, should be made ephemeral (generated for each message). This turn it into an interactive protocol
-//!   and is nont specified in the standard. Frequent key-rotations of "long-term" keys will shrink the window of
+//! - If forward secrecy for both the sender and recipient are required, what is usually considered the long-term
+//!   key in HPKE, those keys should be made ephemeral (generated for each message). This turns it into an interactive protocol
+//!   and is not specified in the standard. Frequent key-rotations of "long-term" keys will shrink the window of
 //!   compromised ciphertexts, for a single key, if leaked.
 //!
 //! # Example:
 //! ```rust
 //! use orion::hpke::*;
 //!
-//! let sender_kp = KeyPair::generate()?;
 //! let recipient_kp = KeyPair::generate()?;
 //! let psk = b"any preshared secret key that is 32 bytes minimum";
 //! let psk_id = b"identifier for psk";
@@ -83,6 +82,20 @@
 //! let ct2 = hpke_sender.seal(&[2u8; 16], b"aad parameter 2")?;
 //!
 //! let mut hpke_recipient = HpkeBase::new_recipient(&enc, recipient_kp.private(), b"info parameter")?;
+//! let pt0 = hpke_recipient.open(&ct0, b"aad parameter 0")?;
+//! let pt1 = hpke_recipient.open(&ct1, b"aad parameter 1")?;
+//! let pt2 = hpke_recipient.open(&ct2, b"aad parameter 2")?;
+//!
+//! assert_eq!(&pt0, &[0u8; 16]);
+//! assert_eq!(&pt1, &[1u8; 16]);
+//! assert_eq!(&pt2, &[2u8; 16]);
+//!
+//! let (mut hpke_sender, enc) = HpkePsk::new_sender(recipient_kp.public(), b"info parameter", psk, psk_id)?;
+//! let ct0 = hpke_sender.seal(&[0u8; 16], b"aad parameter 0")?;
+//! let ct1 = hpke_sender.seal(&[1u8; 16], b"aad parameter 1")?;
+//! let ct2 = hpke_sender.seal(&[2u8; 16], b"aad parameter 2")?;
+//!
+//! let mut hpke_recipient = HpkePsk::new_recipient(&enc, recipient_kp.private(), b"info parameter", psk, psk_id)?;
 //! let pt0 = hpke_recipient.open(&ct0, b"aad parameter 0")?;
 //! let pt1 = hpke_recipient.open(&ct1, b"aad parameter 1")?;
 //! let pt2 = hpke_recipient.open(&ct2, b"aad parameter 2")?;
