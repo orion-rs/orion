@@ -238,6 +238,7 @@ impl TryFrom<&Seed> for SigningKey {
 impl SigningKey {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`SigningKey`], sign a message `m` and context.
     pub fn sign(&self, m: &[u8], ctx: &[u8]) -> Result<Signature, UnknownCryptoError> {
         let rnd = ExplicitRandom::generate()?;
@@ -245,6 +246,7 @@ impl SigningKey {
         self.sign_with_rnd(m, ctx, &rnd)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`SigningKey`], sign a message `m` and context.
     /// Uses the all-zero [`ExplicitRandom::deterministic()`], per FIPS-204.
     /// Prefer the hedged [`Self::sign()`] if possible.
@@ -256,6 +258,7 @@ impl SigningKey {
         self.sign_with_rnd(m, ctx, &ExplicitRandom::deterministic())
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`SigningKey`], sign a message `m` and context, given specifically supplied `rnd`.
     pub fn sign_with_rnd(
         &self,
@@ -270,6 +273,7 @@ impl SigningKey {
         )?))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`SigningKey`], sign `mu`.
     ///
     /// Where `mu`: `H(BytesToBits(tr)||M ′, 64)`, FIPS-204, Algorithm 7.
@@ -288,17 +292,20 @@ impl SigningKey {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`SigningKey`] and `ctx`, initialize internal state
     /// for streaming processing of message digest to be signed.
     pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
         self.data.init(ctx)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Update internal message digest state with message bytes.
     pub fn update(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
         self.data.update(m)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Finalize and compute the signature given [`ExplicitRandom`].
     pub fn finalize_with_rnd(
         &mut self,
@@ -311,6 +318,7 @@ impl SigningKey {
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Finalize and compute the signature.
     pub fn finalize(&mut self) -> Result<Signature, UnknownCryptoError> {
         let rnd = ExplicitRandom::generate()?;
@@ -319,11 +327,13 @@ impl SigningKey {
 }
 
 impl VerifyingKey {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`VerifyingKey`], verify a signature `sig` produced over message `m` and context.
     pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
         self.data.verify(m, &sig.data, ctx)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`VerifyingKey`], verify signature over `mu`.
     ///
     /// Where `mu`: `H(BytesToBits(tr)||M ′, 64)`, FIPS-204, Algorithm 7.
@@ -335,17 +345,20 @@ impl VerifyingKey {
         self.data.verify_internal_with_mu(mu, &sig.data)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`VerifyingKey`] and `ctx`, initialize internal state
     /// for streaming processing of message digest to be verified.
     pub fn init(&mut self, ctx: &[u8]) -> Result<(), UnknownCryptoError> {
         self.data.init(ctx)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Update internal message digest state with message bytes.
     pub fn update(&mut self, m: &[u8]) -> Result<(), UnknownCryptoError> {
         self.data.update(m)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Finalize and verify the signature.
     pub fn finalize(&mut self, sig: &Signature) -> Result<(), UnknownCryptoError> {
         self.data.finalize(&sig.data)
@@ -417,6 +430,7 @@ impl TryFrom<&Seed> for KeyPair {
 impl KeyPair {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Generate a fresh [`KeyPair`].
     pub fn generate() -> Result<Self, UnknownCryptoError> {
         let seed = Seed::generate()?;
@@ -428,6 +442,7 @@ impl KeyPair {
         &self.seed
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Create a new instance from a private [`Seed`].
     pub fn new(seed: Seed) -> Result<Self, UnknownCryptoError> {
         Self::try_from(&seed)

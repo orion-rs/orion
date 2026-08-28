@@ -105,6 +105,7 @@ impl<D: Data> UnprotectedAsRef<[u8]> for D {
 pub trait GenerateSecret: TypeSpec {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Use a CSPRNG to fill a new instance of this type with secure random bytes.
     ///
     /// # Errors:
@@ -115,6 +116,7 @@ pub trait GenerateSecret: TypeSpec {
 impl<T: TypeSpec + GenerateSecret> Secret<T> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// See [`GenerateSecret::generate`].
     pub fn generate() -> Result<Self, UnknownCryptoError> {
         T::generate()
@@ -125,6 +127,7 @@ impl<T: TypeSpec + GenerateSecret> Secret<T> {
 pub trait GeneratePublic: TypeSpec {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Use a CSPRNG to fill a new instance of this type with secure random bytes.
     ///
     /// # Errors:
@@ -135,6 +138,7 @@ pub trait GeneratePublic: TypeSpec {
 impl<T: TypeSpec + GeneratePublic> Public<T> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// See [`GeneratePublic::generate`].
     pub fn generate() -> Result<Self, UnknownCryptoError> {
         T::generate()

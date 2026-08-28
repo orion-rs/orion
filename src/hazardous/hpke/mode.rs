@@ -177,6 +177,7 @@ impl<S> ModeBase<S> {
 impl<S: Suite + Base> ModeBase<S> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Base mode sender.
     pub fn new_sender(
         pubkey_r: &S::PublicKey,
@@ -193,6 +194,7 @@ impl<S: Suite + Base> ModeBase<S> {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Base mode sender with a supplied ephemeral private key, which is taken ownership of.
     pub fn new_sender_deterministic(
         pubkey_r: &S::PublicKey,
@@ -210,6 +212,7 @@ impl<S: Suite + Base> ModeBase<S> {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Base mode recipient.
     pub fn new_recipient(
         enc: &S::EncapsulatedKey,
@@ -222,6 +225,7 @@ impl<S: Suite + Base> ModeBase<S> {
         })
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware sealing operations.
     pub fn seal(
         &mut self,
@@ -236,6 +240,7 @@ impl<S: Suite + Base> ModeBase<S> {
         self.suite.seal(plaintext, aad, out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware opening operations.
     pub fn open(
         &mut self,
@@ -252,6 +257,7 @@ impl<S: Suite + Base> ModeBase<S> {
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// One-shot API for HPKE Base mode [`Self::seal()`] operation.
     pub fn base_seal(
         pubkey_r: &S::PublicKey,
@@ -266,6 +272,7 @@ impl<S: Suite + Base> ModeBase<S> {
         Ok(ek)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// One-shot API for HPKE Base mode [`Self::open()`] operation.
     pub fn base_open(
         enc: &S::EncapsulatedKey,
@@ -279,6 +286,7 @@ impl<S: Suite + Base> ModeBase<S> {
         ctx.open(ciphertext, aad, out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Export secret.
     pub fn export_secret(
         &self,
@@ -382,6 +390,7 @@ impl<S> ModePsk<S> {
 impl<S: Suite + Psk> ModePsk<S> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Psk mode sender.
     pub fn new_sender(
         pubkey_r: &S::PublicKey,
@@ -400,6 +409,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Psk mode sender with a supplied ephemeral private key, which is taken ownership of.
     pub fn new_sender_deterministic(
         pubkey_r: &S::PublicKey,
@@ -420,6 +430,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Psk mode recipient.
     pub fn new_recipient(
         enc: &S::EncapsulatedKey,
@@ -434,6 +445,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         })
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware sealing operations.
     pub fn seal(
         &mut self,
@@ -448,6 +460,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         self.suite.seal(plaintext, aad, out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware opening operations.
     pub fn open(
         &mut self,
@@ -464,6 +477,7 @@ impl<S: Suite + Psk> ModePsk<S> {
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// One-shot API for HPKE Psk mode [`Self::seal()`] operation.
     pub fn psk_seal(
         pubkey_r: &S::PublicKey,
@@ -481,6 +495,7 @@ impl<S: Suite + Psk> ModePsk<S> {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// One-shot API for HPKE Psk mode [`Self::open()`] operation.
     pub fn psk_open(
         enc: &S::EncapsulatedKey,
@@ -496,6 +511,7 @@ impl<S: Suite + Psk> ModePsk<S> {
         ctx.open(ciphertext, aad, out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Export secret.
     pub fn export_secret(
         &self,
@@ -594,6 +610,7 @@ impl<S> ModeAuth<S> {
 impl<S: AuthSuite + Auth> ModeAuth<S> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Auth mode sender.
     pub fn new_sender(
         pubkey_r: &S::PublicKey,
@@ -611,6 +628,7 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Auth mode sender with a supplied ephemeral private key, which is taken ownership of.
     pub fn new_sender_deterministic(
         pubkey_r: &S::PublicKey,
@@ -630,6 +648,7 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Auth mode recipient.
     pub fn new_recipient(
         enc: &S::EncapsulatedKey,
@@ -643,6 +662,7 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
         })
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware sealing operations.
     pub fn seal(
         &mut self,
@@ -657,6 +677,7 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
         self.suite.seal(plaintext, aad, out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware opening operations.
     pub fn open(
         &mut self,
@@ -673,6 +694,7 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// One-shot API for HPKE Auth mode [`Self::seal()`] operation.
     pub fn auth_seal(
         pubkey_r: &S::PublicKey,
@@ -688,6 +710,7 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
         Ok(ek)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// One-shot API for HPKE Auth mode [`Self::open()`] operation.
     pub fn auth_open(
         enc: &S::EncapsulatedKey,
@@ -702,6 +725,7 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
         ctx.open(ciphertext, aad, out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Export secret.
     pub fn export_secret(
         &self,
@@ -807,6 +831,7 @@ impl<S> ModeAuthPsk<S> {
 impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE AuthPsk mode sender.
     pub fn new_sender(
         pubkey_r: &S::PublicKey,
@@ -826,6 +851,7 @@ impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE AuthPsk mode sender with a supplied ephemeral private key, which is taken ownership of.
     pub fn new_sender_deterministic(
         pubkey_r: &S::PublicKey,
@@ -853,6 +879,7 @@ impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE AuthPsk mode recipient.
     pub fn new_recipient(
         enc: &S::EncapsulatedKey,
@@ -868,6 +895,7 @@ impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
         })
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware sealing operations.
     pub fn seal(
         &mut self,
@@ -882,6 +910,7 @@ impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
         self.suite.seal(plaintext, aad, out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware opening operations.
     pub fn open(
         &mut self,
@@ -899,6 +928,7 @@ impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     #[allow(clippy::too_many_arguments)]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// One-shot API for HPKE AuthPsk mode [`Self::seal()`] operation.
     pub fn authpsk_seal(
         pubkey_r: &S::PublicKey,
@@ -917,6 +947,7 @@ impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// One-shot API for HPKE AuthPsk mode [`Self::open()`] operation.
     pub fn authpsk_open(
         enc: &S::EncapsulatedKey,
@@ -933,6 +964,7 @@ impl<S: AuthSuite + AuthPsk> ModeAuthPsk<S> {
         ctx.open(ciphertext, aad, out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Export secret.
     pub fn export_secret(
         &self,

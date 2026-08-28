@@ -89,6 +89,10 @@
 // 1) that would be a breaking change either way
 // 2) X-Wing is still a draft, so that could break it also
 //
+// orion::signer does also a wrap for the SigningKeyPair, but the hazardous type
+// that needs re-export here VerifyingKey does not have the same deterministic
+// operations, so while it seems similar it's not (note to future self).
+//
 // So for now I've opted to keep it as this.
 
 pub use crate::KP;

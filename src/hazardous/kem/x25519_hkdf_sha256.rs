@@ -283,6 +283,7 @@ impl KeyPair {
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Generate a fresh [`KeyPair`].
     pub fn generate() -> Result<Self, UnknownCryptoError> {
         let private = PrivateKey::generate()?;
@@ -291,6 +292,7 @@ impl KeyPair {
         Ok(Self { private, public })
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Deterministically derive a X25519 keypair from `ikm`.
     pub fn derive(ikm: &[u8]) -> Result<Self, UnknownCryptoError> {
         if ikm.len() < 32 {
@@ -309,6 +311,7 @@ impl KeyPair {
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Derive ephemeral shared secret and encapsulation thereof, which can be
     /// decapsulated by the holder of `public_recipient`.
     pub fn encap(
@@ -318,6 +321,7 @@ impl KeyPair {
         Self::encap_deterministic(public_recipient, secret_ephemeral)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Equivalent to [`Self::encap()`], but with a one-time use provided ephemeral private key.
     pub fn encap_deterministic(
         public_recipient: &PublicKey,
@@ -343,6 +347,7 @@ impl KeyPair {
         Ok((shared_secret, public_ephemeral))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Decapsulate `public_ephemeral` and return the shared ephemeral secret,
     /// using `secret_recipient` private key.
     pub fn decap(
@@ -370,6 +375,7 @@ impl KeyPair {
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Equivalent to [`Self::encap()`], additionally ensuring the holder of `secret_sender` was
     /// the one to generate the shared secret.
     pub fn auth_encap(
@@ -380,6 +386,7 @@ impl KeyPair {
         Self::auth_encap_deterministic(public_recipient, secret_sender, secret_ephemeral)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Equivalent to  [`Self::auth_encap()`], but with a one-time use provided ephemeral private key.
     pub fn auth_encap_deterministic(
         public_recipient: &PublicKey,
@@ -412,6 +419,7 @@ impl KeyPair {
         Ok((shared_secret, public_ephemeral))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Equivalent to [`Self::decap()`], additionally ensuring the holder of `secret_sender` was
     /// the one to generate the shared secret.
     pub fn auth_decap(

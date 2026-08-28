@@ -109,6 +109,7 @@ pub use crate::hazardous::kem::xwing::{Ciphertext, DecapsulationKey, Encapsulati
 pub struct HpkeBase(ModeBase<MLKEM768_X25519_SHAKE256_CHACHA20>);
 
 impl HpkeBase {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Base mode sender.
     pub fn new_sender(
         pk_r: &EncapsulationKey,
@@ -118,6 +119,7 @@ impl HpkeBase {
         Ok((Self(ctx), enc))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE Base mode recipient.
     pub fn new_recipient(
         enc: &Ciphertext,
@@ -129,6 +131,7 @@ impl HpkeBase {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware sealing operations.
     pub fn seal(&mut self, plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
         let mut out = vec![
@@ -143,6 +146,7 @@ impl HpkeBase {
         Ok(out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware opening operations.
     pub fn open(&mut self, ciphertext: &[u8], aad: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
         let mut out = vec![
@@ -163,6 +167,7 @@ impl HpkeBase {
 pub struct HpkePsk(ModePsk<MLKEM768_X25519_SHAKE256_CHACHA20>);
 
 impl HpkePsk {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE PSK mode sender.
     pub fn new_sender(
         pk_r: &EncapsulationKey,
@@ -175,6 +180,7 @@ impl HpkePsk {
         Ok((Self(ctx), enc))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// HPKE PSK mode recipient.
     pub fn new_recipient(
         enc: &Ciphertext,
@@ -194,6 +200,7 @@ impl HpkePsk {
         ))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware sealing operations.
     pub fn seal(&mut self, plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
         let mut out = vec![
@@ -208,6 +215,7 @@ impl HpkePsk {
         Ok(out)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Context-aware opening operations.
     pub fn open(&mut self, ciphertext: &[u8], aad: &[u8]) -> Result<Vec<u8>, UnknownCryptoError> {
         let mut out = vec![

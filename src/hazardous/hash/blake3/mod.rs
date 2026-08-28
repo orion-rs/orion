@@ -111,11 +111,13 @@ impl Blake3 {
         self.internal.reset();
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Update state with `data`. This can be called multiple times.
     pub fn absorb(&mut self, data: &[u8]) -> Result<(), UnknownCryptoError> {
         self.internal.absorb(data, self.flags)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Squeeze output of the XOF into `dest`. This can be called multiple times.
     pub fn squeeze(&mut self, dest: &mut [u8]) -> Result<(), UnknownCryptoError> {
         self.internal.squeeze(dest, self.flags)
