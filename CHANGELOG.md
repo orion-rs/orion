@@ -1,4 +1,4 @@
-### 0.18.0
+### 0.18.0-rc.1
 
 **Date:** TBD.
 
@@ -14,7 +14,7 @@
 - [Breaking change] HKDF functions have been moved to specific struct (for example `::hkdf::sha256` is now `::hkdf::Hkdf<SHA256>`).
 - [Breaking change] ML-KEM and X-Wing API have undergone large re-design:
 	- [Breaking change] `mlkem*:MlKem*` struct no longer exists, and all functionality has been moved to the respective `KeyPair`, `EncapsulationKey` and `DecapsulationKey` types.
-	- [Breaking change] ML-KEM `DecapsulatoinKeys` no longer themself perform key-caching. This has been moved to `KeyPair`. `KeyPair` therefor offers important performance benefits when decapsulating with the same secret more than once.
+	- [Breaking change] ML-KEM `DecapsulationKey`s no longer perform key-caching. This has been moved to `KeyPair`. `KeyPair` therefor offers important performance benefits when decapsulating with the same secret more than once.
 	- [Breaking change] Constants previously associated with the zero-sized structs are now in `mlkem*::` modules.
 	- [Breaking change] `ML-KEM` `DecapuslationKey`s can now return the raw, encoded bytes.
 	- [Breaking change] `X-Wing` now has separate type for explicit randomness `Eseed` used during encapsulation operations.
