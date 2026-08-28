@@ -91,6 +91,7 @@ impl KP<mldsa65::MlDsaSeed, mldsa65::MlDsa65VerifyingKey> for SigningKeyPair {
 }
 
 impl SigningKeyPair {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Randomly generate a fresh ML-DSA-65 keypair.
     pub fn generate() -> Result<Self, UnknownCryptoError> {
         let seed = Seed::generate()?;
@@ -100,11 +101,13 @@ impl SigningKeyPair {
         })
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Sign a message, with optional context (can be empty), using ML-DSA-65 hedged/randomized signing.
     pub fn sign(&self, m: &[u8], ctx: &[u8]) -> Result<Signature, UnknownCryptoError> {
         self.kp.signing_key.sign(m, ctx)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Verify a signature over a message, with optional context (can be empty), using ML-DSA-65.
     /// Returns nothing on success and [`UnknownCryptoError`] if verification failed.
     pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {

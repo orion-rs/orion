@@ -257,12 +257,14 @@ fn combiner(
 impl EncapsulationKey {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`EncapsulationKey`], generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap(&self) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
         let eseed = Eseed::generate()?;
         self.encap_deterministic(&eseed)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`EncapsulationKey`] and securely generated randomness [`Eseed`], generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap_deterministic(
         &self,
@@ -296,6 +298,7 @@ impl EncapsulationKey {
 }
 
 impl DecapsulationKey {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Equivalent to [Section 5.2 - Key generation](https://www.ietf.org/archive/id/draft-connolly-cfrg-xwing-kem-10.html#section-5.2).
     fn expand_into_keypair(&self) -> Result<KeyPair, UnknownCryptoError> {
         let mut expanded = zeroize_wrap!([0u8; 96]);
@@ -325,6 +328,7 @@ impl DecapsulationKey {
         })
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Perform decapsulation of a [`Ciphertext`].
     pub fn decap(&self, c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
         let kp = self.expand_into_keypair()?;
@@ -379,11 +383,13 @@ impl TryFrom<&DecapsulationKey> for KeyPair {
 impl KeyPair {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Generate a fresh [`KeyPair`].
     pub fn generate() -> Result<Self, UnknownCryptoError> {
         DecapsulationKey::generate()?.expand_into_keypair()
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Perform decapsulation of a [`Ciphertext`], using internally cached [`EncapsulationKey`].
     pub fn decap(&self, c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
         let ct_m = &c.as_ref()[..mlkem768::CIPHERTEXT_SIZE];

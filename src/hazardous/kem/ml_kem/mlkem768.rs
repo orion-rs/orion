@@ -197,12 +197,14 @@ impl TryFrom<&DecapsulationKey> for Public<MlKem768EncapKey> {
 impl EncapsulationKey {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`EncapsulationKey`], generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap(&self) -> Result<(SharedSecret, Ciphertext), UnknownCryptoError> {
         let m = ExplicitRandom::generate()?;
         self.encap_deterministic(&m)
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`EncapsulationKey`] and randomness `m`, generate a [`SharedSecret`] and associated [`Ciphertext`].
     pub fn encap_deterministic(
         &self,
@@ -227,6 +229,7 @@ impl EncapsulationKey {
 }
 
 impl DecapsulationKey {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Instantiate a [`DecapsulationKey`] with only key-checks from FIPS-203, section 7.3. Not MAL-BIND-K-CT secure.
     pub fn unchecked_from_slice(slice: &[u8]) -> Result<Self, UnknownCryptoError> {
         let dk_unchecked = DecapKey::<
@@ -239,6 +242,7 @@ impl DecapsulationKey {
         Ok(Self::from_data(dk_unchecked))
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Perform decapsulation of a [`Ciphertext`].
     pub fn decap(&self, c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
         let ek = Public::<MlKem768EncapKey>::try_from(self.data.get_encapsulation_key_bytes())?;
@@ -303,6 +307,7 @@ impl TryFrom<&Seed> for KeyPair {
 impl KeyPair {
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Generate a fresh [`KeyPair`].
     pub fn generate() -> Result<Self, UnknownCryptoError> {
         let seed = Seed::generate()?;
@@ -314,6 +319,7 @@ impl KeyPair {
         &self.seed
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Create a new instance from a private [`Seed`].
     pub fn new(seed: Seed) -> Result<Self, UnknownCryptoError> {
         let (ek, dk) = KeyPairInternal::<MlKem768Internal>::from_seed::<
@@ -331,6 +337,7 @@ impl KeyPair {
 
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Instantiate a [`KeyPair`] with all key validation checks, described
     /// in FIPS-203, Section 7.1, 7.2 and 7.3.
     ///
@@ -353,6 +360,7 @@ impl KeyPair {
         })
     }
 
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Perform decapsulation of a [`Ciphertext`], using internally cached [`EncapsulationKey`].
     pub fn decap(&self, c: &Ciphertext) -> Result<SharedSecret, UnknownCryptoError> {
         let mut c_prime_buf = [0u8; MlKem768Internal::CIPHERTEXT_SIZE];
