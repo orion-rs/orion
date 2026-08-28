@@ -37,6 +37,7 @@
 //! - [`getrandom::fill()`] fails during [`EncapsulationKey::encap()`].
 //! - [`getrandom::fill()`] fails during [`DecapsulationKey::generate()`]/[`KeyPair::generate()`]/[`Eseed::generate()`].
 //! - [`EncapsulationKey`] fail FIPS-203 key-checks during `TryFrom<[u8]>`.
+//! - If X25519 produces low-order points during `encap()`/`decap()` calls.
 //!
 //! # Security:
 //! - It is critical that both the seed and explicit randomness `eseed`, used for key generation and encapsulation

@@ -50,14 +50,14 @@
 //!
 //! # Errors:
 //! An error will be returned if:
-//! - `info` is longer than `64` bytes
+//! - `info` is longer than [`u16::MAX`] bytes
 //! - The internal counter reaches [`u64::MAX`] and a call to `seal()`/`open()` is made
 //! - Calling [`HpkeBase::seal()`]/[`HpkePsk::seal()`] when the role is recipient
 //! - Calling [`HpkeBase::open()`]/[`HpkePsk::open()`] when the role is sender
 //! - Calling [`HpkeBase::open()`]/[`HpkePsk::open()`] on a set of messages that does not match the order of how they were `seal()`'ed (re-ordering)
 //! - `psk` or `psk_id` are empty
-//! - `psk` is less than `32` bytes or more than `64` bytes
-//! - `psk_id` is more than `64` bytes
+//! - `psk` is less than `32` bytes or more than [`u16::MAX`]` bytes
+//! - `psk_id` is more than [`u16::MAX`]` bytes
 //! - If a shared secret is all-zero.
 //! - `getrandom` errors during [`HpkeBase::new_sender()`] or [`HpkePsk::new_sender()`].
 //!

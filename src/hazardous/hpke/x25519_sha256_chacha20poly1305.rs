@@ -113,22 +113,39 @@ mod test {
         let (ctx, enc) =
             DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; 64]).unwrap();
         // Info
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; 64]).is_ok());
-        assert!(DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; 65]).is_err());
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, kp.private(), &[0u8; 64])
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(kp.public(), &[0u8; u16::MAX as usize])
                 .is_ok()
         );
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, kp.private(), &[0u8; 65])
-                .is_err()
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_sender(
+                kp.public(),
+                &[0u8; u16::MAX as usize + 1]
+            )
+            .is_err()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(
+                &enc,
+                kp.private(),
+                &[0u8; u16::MAX as usize]
+            )
+            .is_ok()
+        );
+        assert!(
+            DHKEM_X25519_SHA256_CHACHA20::setup_base_recipient(
+                &enc,
+                kp.private(),
+                &[0u8; u16::MAX as usize + 1]
+            )
+            .is_err()
         );
 
         // Export
         let mut out = [0u8; 64];
         let mut out_max = [0u8; (255 * DHKEM_X25519_SHA256_CHACHA20::NH) + 1];
-        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
-        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; u16::MAX as usize], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; u16::MAX as usize + 1], &mut out).is_err());
         assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
     }
 
@@ -139,7 +156,7 @@ mod test {
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
                 kp.public(),
-                &[0u8; 65],
+                &[0u8; u16::MAX as usize + 1],
                 &[0u8; 64],
                 b"psk_id"
             )
@@ -148,7 +165,7 @@ mod test {
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
                 kp.public(),
-                &[0u8; 64],
+                &[0u8; u16::MAX as usize],
                 &[0u8; 64],
                 b"psk_id"
             )
@@ -160,7 +177,7 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
                 kp.public(),
                 &[0u8; 64],
-                &[0u8; 65],
+                &[0u8; u16::MAX as usize + 1],
                 b"psk_id"
             )
             .is_err()
@@ -187,7 +204,7 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::setup_psk_sender(
                 kp.public(),
                 &[0u8; 64],
-                &[0u8; 64],
+                &[0u8; u16::MAX as usize],
                 b"psk_id"
             )
             .is_ok()
@@ -214,7 +231,7 @@ mod test {
                 &enc,
                 kp.private(),
                 &[0u8; 64],
-                &[0u8; 65],
+                &[0u8; u16::MAX as usize + 1],
                 b"psk_id"
             )
             .is_err()
@@ -234,7 +251,7 @@ mod test {
                 &enc,
                 kp.private(),
                 &[0u8; 64],
-                &[0u8; 64],
+                &[0u8; u16::MAX as usize],
                 b"psk_id"
             )
             .is_ok()
@@ -243,8 +260,8 @@ mod test {
         // Export
         let mut out = [0u8; 64];
         let mut out_max = [0u8; (255 * DHKEM_X25519_SHA256_CHACHA20::NH) + 1];
-        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
-        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; u16::MAX as usize], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; u16::MAX as usize + 1], &mut out).is_err());
         assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
     }
 
@@ -256,12 +273,20 @@ mod test {
                 .unwrap();
         // Info
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(kp.public(), &[0u8; 64], kp.private())
-                .is_ok()
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(
+                kp.public(),
+                &[0u8; u16::MAX as usize],
+                kp.private()
+            )
+            .is_ok()
         );
         assert!(
-            DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(kp.public(), &[0u8; 65], kp.private())
-                .is_err()
+            DHKEM_X25519_SHA256_CHACHA20::setup_auth_sender(
+                kp.public(),
+                &[0u8; u16::MAX as usize + 1],
+                kp.private()
+            )
+            .is_err()
         );
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_auth_recipient(
@@ -276,7 +301,7 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::setup_auth_recipient(
                 &enc,
                 kp.private(),
-                &[0u8; 65],
+                &[0u8; u16::MAX as usize + 1],
                 kp.public()
             )
             .is_err()
@@ -285,8 +310,8 @@ mod test {
         // Export
         let mut out = [0u8; 64];
         let mut out_max = [0u8; (255 * DHKEM_X25519_SHA256_CHACHA20::NH) + 1];
-        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
-        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; u16::MAX as usize], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; u16::MAX as usize + 1], &mut out).is_err());
         assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
     }
 
@@ -297,7 +322,7 @@ mod test {
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
                 kp.public(),
-                &[0u8; 65],
+                &[0u8; u16::MAX as usize + 1],
                 &[0u8; 64],
                 b"psk_id",
                 kp.private()
@@ -307,7 +332,7 @@ mod test {
         assert!(
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
                 kp.public(),
-                &[0u8; 64],
+                &[0u8; u16::MAX as usize],
                 &[0u8; 64],
                 b"psk_id",
                 kp.private()
@@ -320,7 +345,7 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
                 kp.public(),
                 &[0u8; 64],
-                &[0u8; 65],
+                &[0u8; u16::MAX as usize + 1],
                 b"psk_id",
                 kp.private()
             )
@@ -340,7 +365,7 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
                 kp.public(),
                 &[0u8; 64],
-                &[0u8; 32],
+                &[0u8; u16::MAX as usize],
                 b"psk_id",
                 kp.private()
             )
@@ -350,7 +375,7 @@ mod test {
             DHKEM_X25519_SHA256_CHACHA20::setup_authpsk_sender(
                 kp.public(),
                 &[0u8; 64],
-                &[0u8; 64],
+                &[0u8; 32],
                 b"psk_id",
                 kp.private()
             )
@@ -380,7 +405,7 @@ mod test {
                 &enc,
                 kp.private(),
                 &[0u8; 64],
-                &[0u8; 65],
+                &[0u8; u16::MAX as usize + 1],
                 b"psk_id",
                 kp.public()
             )
@@ -402,7 +427,7 @@ mod test {
                 &enc,
                 kp.private(),
                 &[0u8; 64],
-                &[0u8; 64],
+                &[0u8; u16::MAX as usize],
                 b"psk_id",
                 kp.public()
             )
@@ -412,8 +437,8 @@ mod test {
         // Export
         let mut out = [0u8; 64];
         let mut out_max = [0u8; (255 * DHKEM_X25519_SHA256_CHACHA20::NH) + 1];
-        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
-        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; u16::MAX as usize], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; u16::MAX as usize + 1], &mut out).is_err());
         assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
     }
 

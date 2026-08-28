@@ -479,7 +479,7 @@ impl<T: TestableHpke> HpkeTester<T> {
         assert!(
             T::setup_fresh_sender(
                 &recipient_pub,
-                &[0u8; 65],
+                &[0u8; u16::MAX as usize + 1],
                 valid_psk,
                 valid_psk_id,
                 &sender_priv,
@@ -491,7 +491,7 @@ impl<T: TestableHpke> HpkeTester<T> {
             T::setup_fresh_recipient(
                 &ct,
                 &recipient_priv,
-                &[0u8; 65],
+                &[0u8; u16::MAX as usize + 1],
                 valid_psk,
                 valid_psk_id,
                 &sender_pub
@@ -505,7 +505,7 @@ impl<T: TestableHpke> HpkeTester<T> {
                 T::setup_fresh_sender(
                     &recipient_pub,
                     valid_info,
-                    &[0u8; 65],
+                    &[0u8; u16::MAX as usize + 1],
                     valid_psk_id,
                     &sender_priv,
                     &mut ct
@@ -517,7 +517,7 @@ impl<T: TestableHpke> HpkeTester<T> {
                     &ct,
                     &recipient_priv,
                     valid_info,
-                    &[0u8; 65],
+                    &[0u8; u16::MAX as usize + 1],
                     valid_psk_id,
                     &sender_pub
                 )
@@ -529,7 +529,7 @@ impl<T: TestableHpke> HpkeTester<T> {
                     &recipient_pub,
                     valid_info,
                     valid_psk,
-                    &[0u8; 65],
+                    &[0u8; u16::MAX as usize + 1],
                     &sender_priv,
                     &mut ct
                 )
@@ -541,15 +541,16 @@ impl<T: TestableHpke> HpkeTester<T> {
                     &recipient_priv,
                     valid_info,
                     valid_psk,
-                    &[0u8; 65],
+                    &[0u8; u16::MAX as usize + 1],
                     &sender_pub
                 )
                 .is_err()
             );
         }
 
-        // ikm (NOTE/TODO: we do NOT restrict this to 64 MAX, this would be breaking change)
-        // assert!(T::gen_kp(&[0u8; 64]).is_err());
+        // IKM
+        assert!(T::gen_kp(&[0u8; 32]).is_ok());
+        assert!(T::gen_kp(&[0u8; 31]).is_err());
 
         let (sender_priv, sender_pub) = T::gen_kp(valid_kem_ikm_sender).unwrap();
         let (recipient_priv, recipient_pub) = T::gen_kp(valid_kem_ikm_recipient).unwrap();
@@ -578,8 +579,16 @@ impl<T: TestableHpke> HpkeTester<T> {
         let mut dst = [0u8; 128];
         assert!(sender.export(&[0u8; 64], &mut dst).is_ok());
         assert!(recipient.export(&[0u8; 64], &mut dst).is_ok());
-        assert!(sender.export(&[0u8; 65], &mut dst).is_err());
-        assert!(recipient.export(&[0u8; 65], &mut dst).is_err());
+        assert!(
+            sender
+                .export(&[0u8; u16::MAX as usize + 1], &mut dst)
+                .is_err()
+        );
+        assert!(
+            recipient
+                .export(&[0u8; u16::MAX as usize + 1], &mut dst)
+                .is_err()
+        );
     }
 
     fn test_info_inclusion(&mut self) {
