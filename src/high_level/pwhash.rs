@@ -73,6 +73,7 @@
 //!   for a description of how to do this.
 //! - The cost parameter presets provided as convenience may be outdated. Be sure to check [OWASP] to ensure
 //!   they are still adequate.
+//! - The cost parameters are **__not__** suitable for _i_-variant.
 //!
 //! # Example:
 //! ```rust
