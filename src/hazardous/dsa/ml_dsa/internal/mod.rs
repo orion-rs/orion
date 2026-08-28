@@ -763,10 +763,24 @@ impl<
         let rho: [u8; 32] = expanded_seed[..32].try_into().unwrap();
 
         let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&rho)?;
+
+        #[cfg(feature = "zeroize")]
+        let (mut s1, mut s2) = expand_s::<K, L, P>(&expanded_seed[32..32 + 64])?;
+        #[cfg(not(feature = "zeroize"))]
         let (s1, s2) = expand_s::<K, L, P>(&expanded_seed[32..32 + 64])?;
+
         let s1_hat = s1.ntt();
+
+        #[cfg(feature = "zeroize")]
+        let mut t = (&mat_a_hat * &s1_hat).inverse_ntt_mont() + &s2;
+        #[cfg(not(feature = "zeroize"))]
         let t = (&mat_a_hat * &s1_hat).inverse_ntt_mont() + &s2;
+
+        #[cfg(feature = "zeroize")]
+        let (mut t1, mut t0) = t.power2round::<P>();
+        #[cfg(not(feature = "zeroize"))]
         let (t1, t0) = t.power2round::<P>();
+
         let pk = P::pk_encode::<PK_ENCODED_SIZE>(&rho, &t1.elems);
 
         let mut tr = [0u8; 64];
@@ -783,7 +797,7 @@ impl<
             &t0.elems,
         );
 
-        Ok(Self {
+        let ret = Self {
             sk: InternalSigningKey {
                 rho,
                 sk,
@@ -807,7 +821,18 @@ impl<
                 _phantom: PhantomData,
             },
             _phantom: PhantomData,
-        })
+        };
+
+        #[cfg(feature = "zeroize")]
+        {
+            s1.zeroize();
+            s2.zeroize();
+            t.zeroize();
+            t0.zeroize();
+            t1.zeroize();
+        }
+
+        Ok(ret)
     }
 }
 
@@ -914,6 +939,9 @@ impl<
     type Error = UnknownCryptoError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        #[cfg(feature = "zeroize")]
+        let (rho, k, tr, mut s1, mut s2, mut t0) = P::sk_decode(value)?;
+        #[cfg(not(feature = "zeroize"))]
         let (rho, k, tr, s1, s2, t0) = P::sk_decode(value)?;
 
         let ret = Self {
@@ -931,6 +959,13 @@ impl<
             is_initialized: false,
             _phantom: PhantomData,
         };
+
+        #[cfg(feature = "zeroize")]
+        {
+            s1.zeroize();
+            s2.zeroize();
+            t0.zeroize();
+        }
 
         Ok(ret)
     }
@@ -1018,7 +1053,7 @@ impl<
                 w_sub_cs2 = zeroize_wrap!(w - &c_mul_s2);
             }
 
-            let r0 = w_sub_cs2.low_bits::<P>();
+            let r0 = zeroize_wrap!(w_sub_cs2.low_bits::<P>());
             if bool::from(
                 z.is_outside_bound(P::GAMMA_1 - P::BETA)
                     | r0.is_outside_bound(P::GAMMA_2 - P::BETA),
@@ -1028,10 +1063,10 @@ impl<
                 continue;
             }
 
-            let c_mul_t0 = (&c_hat * &self.t0_hat).inverse_ntt_mont();
+            let c_mul_t0 = zeroize_wrap!((&c_hat * &self.t0_hat).inverse_ntt_mont());
             #[cfg(feature = "zeroize")]
             {
-                hint = Hint::<K>::make::<P>(&-c_mul_t0, &(*w_sub_cs2 + &c_mul_t0));
+                hint = Hint::<K>::make::<P>(&-*c_mul_t0, &(*w_sub_cs2 + &c_mul_t0));
             }
             #[cfg(not(feature = "zeroize"))]
             {
