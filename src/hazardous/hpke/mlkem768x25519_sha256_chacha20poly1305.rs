@@ -561,16 +561,35 @@ mod test {
         }
     }
 
+    #[cfg(feature = "safe_api")]
+    fn generate_test_seed() -> [u8; 8] {
+        use rand::RngExt;
+
+        let mut rng = rand::rng();
+        let mut seed = [0u8; 8];
+        rng.fill(&mut seed);
+
+        seed
+    }
+
     #[test]
     fn default_consistency_tests_mode_base() {
+        #[cfg(feature = "safe_api")]
+        let seed = generate_test_seed();
+        #[cfg(not(feature = "safe_api"))]
         let seed = 123456u64.to_le_bytes();
+
         let mut tester_ctx = HpkeTester::<ModeBase<MLKEM768_X25519_SHA256_CHACHA20>>::new(&seed);
         tester_ctx.run_all_tests();
     }
 
     #[test]
     fn default_consistency_tests_mode_psk() {
+        #[cfg(feature = "safe_api")]
+        let seed = generate_test_seed();
+        #[cfg(not(feature = "safe_api"))]
         let seed = 123456u64.to_le_bytes();
+
         let mut tester_ctx = HpkeTester::<ModePsk<MLKEM768_X25519_SHA256_CHACHA20>>::new(&seed);
         tester_ctx.run_all_tests();
     }
