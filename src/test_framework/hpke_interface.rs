@@ -121,12 +121,12 @@ impl<T: TestableHpke> HpkeTester<T> {
         seedu64[..minlen].copy_from_slice(&seed[..minlen]);
 
         let mut rng = SmallRng::seed_from_u64(u64::from_le_bytes(seedu64));
-        let info = Self::random_vector(&mut rng, 0..65);
-        let psk = Self::random_vector(&mut rng, 32..65);
-        let psk_id = Self::random_vector(&mut rng, 0..65);
+        let info = Self::random_vector(&mut rng, 0..128);
+        let psk = Self::random_vector(&mut rng, 32..128);
+        let psk_id = Self::random_vector(&mut rng, 0..128);
 
-        let kem_ikm_sender = Self::random_vector(&mut rng, 32..64);
-        let kem_ikm_recipient = Self::random_vector(&mut rng, 32..64);
+        let kem_ikm_sender = Self::random_vector(&mut rng, 32..128);
+        let kem_ikm_recipient = Self::random_vector(&mut rng, 32..128);
 
         let (sender_priv, sender_pub) = T::gen_kp(&kem_ikm_sender).unwrap();
         let (recipient_priv, recipient_pub) = T::gen_kp(&kem_ikm_recipient).unwrap();
