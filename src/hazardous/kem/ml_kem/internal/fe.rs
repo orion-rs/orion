@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use core::ops::{Add, Mul, Sub};
+use core::ops::{Add, AddAssign, Mul, Sub};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
 
@@ -141,6 +141,12 @@ impl Add for FieldElement {
     fn add(self, other: Self) -> Self {
         let x: u32 = self.0 + other.0;
         Self(conditional_sub_u32(x))
+    }
+}
+
+impl AddAssign<&Self> for FieldElement {
+    fn add_assign(&mut self, rhs: &Self) {
+        self.0 = conditional_sub_u32(self.0 + rhs.0)
     }
 }
 
