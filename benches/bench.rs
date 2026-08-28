@@ -506,6 +506,8 @@ mod kem {
     use super::*;
     use orion::hazardous::kem::{mlkem512, mlkem768, mlkem1024};
 
+    // NOTE(brycx): ML-KEM KeyGen is not benchmarked due to rejection-sampling.
+
     pub fn bench_mlkem512(c: &mut Criterion) {
         let mut group = c.benchmark_group("ML-KEM-512");
 
@@ -1020,6 +1022,19 @@ mod dsa {
         "PM6XIDECSS5S77UXMB55VZHZSE",
     ];
 
+    pub fn bench_mldsa44_keygen(c: &mut Criterion) {
+        let mut group = c.benchmark_group("ML-DSA-44");
+
+        let seed = mldsa44::Seed::from([0u8; 32]);
+
+        group.sample_size(100);
+        group.bench_function("keygen", move |b| {
+            b.iter(|| {
+                let _kp = mldsa44::KeyPair::try_from(&seed).unwrap();
+            })
+        });
+    }
+
     pub fn bench_mldsa44_sign(c: &mut Criterion) {
         let mut group = c.benchmark_group("ML-DSA-44");
 
@@ -1069,6 +1084,19 @@ mod dsa {
         });
     }
 
+    pub fn bench_mldsa65_keygen(c: &mut Criterion) {
+        let mut group = c.benchmark_group("ML-DSA-65");
+
+        let seed = mldsa65::Seed::from([0u8; 32]);
+
+        group.sample_size(100);
+        group.bench_function("keygen", move |b| {
+            b.iter(|| {
+                let _kp = mldsa65::KeyPair::try_from(&seed).unwrap();
+            })
+        });
+    }
+
     pub fn bench_mldsa65_sign(c: &mut Criterion) {
         let mut group = c.benchmark_group("ML-DSA-65");
 
@@ -1114,6 +1142,19 @@ mod dsa {
                 kp.public()
                     .verify(sig_and_msg.0.as_slice(), &[], &sig_and_msg.1)
                     .unwrap();
+            })
+        });
+    }
+
+    pub fn bench_mldsa87_keygen(c: &mut Criterion) {
+        let mut group = c.benchmark_group("ML-DSA-87");
+
+        let seed = mldsa87::Seed::from([0u8; 32]);
+
+        group.sample_size(100);
+        group.bench_function("keygen", move |b| {
+            b.iter(|| {
+                let _kp = mldsa87::KeyPair::try_from(&seed).unwrap();
             })
         });
     }
@@ -1171,10 +1212,13 @@ mod dsa {
         name = dsa_benches;
         config = Criterion::default();
         targets =
+            bench_mldsa44_keygen,
             bench_mldsa44_sign,
             bench_mldsa44_verify,
+            bench_mldsa65_keygen,
             bench_mldsa65_sign,
             bench_mldsa65_verify,
+            bench_mldsa87_keygen,
             bench_mldsa87_sign,
             bench_mldsa87_verify
     }
