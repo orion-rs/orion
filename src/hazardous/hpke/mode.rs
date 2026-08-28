@@ -104,9 +104,9 @@ pub(crate) mod private {
 ///
 /// # Errors:
 /// An error will be returned if:
-/// - `info` is longer than 64 bytes
+/// - `info` is longer than [`u16::MAX`] bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
-/// - `exporter_context` is longer than 64 bytes
+/// - `exporter_context` is longer than [`u16::MAX`] bytes
 /// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
 /// - Calling [`Self::seal()`] when the role is [`Role::Recipient`]
 /// - Calling [`Self::open()`] when the role is [`Role::Sender`]
@@ -313,16 +313,16 @@ impl<S: Suite + Base> ModeBase<S> {
 ///
 /// # Errors:
 /// An error will be returned if:
-/// - `info` is longer than 64 bytes
+/// - `info` is longer than [`u16::MAX`] bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
-/// - `exporter_context` is longer than 64 bytes
+/// - `exporter_context` is longer than [`u16::MAX`] bytes
 /// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
 /// - Calling [`Self::seal()`] when the role is [`Role::Recipient`]
 /// - Calling [`Self::open()`] when the role is [`Role::Sender`]
 /// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - `psk` or `psk_id` are empty
-/// - `psk` is less than 32 bytes or more than 64 bytes
-/// - `psk_id` is more than 64 bytes
+/// - `psk` is less than 32 bytes or more than [`u16::MAX`] bytes
+/// - `psk_id` is more than [`u16::MAX`] bytes
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
 /// - `getrandom` errors during [`Self::new_sender()`] or [`Self::psk_seal()`].
@@ -538,9 +538,9 @@ impl<S: Suite + Psk> ModePsk<S> {
 ///
 /// # Errors:
 /// An error will be returned if:
-/// - `info` is longer than 64 bytes
+/// - `info` is longer than [`u16::MAX`] bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
-/// - `exporter_context` is longer than 64 bytes
+/// - `exporter_context` is longer than [`u16::MAX`] bytes
 /// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
 /// - Calling [`Self::seal()`] when the role is [`Role::Recipient`]
 /// - Calling [`Self::open()`] when the role is [`Role::Sender`]
@@ -754,16 +754,16 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
 ///
 /// # Errors:
 /// An error will be returned if:
-/// - `info` is longer than 64 bytes
+/// - `info` is longer than [`u16::MAX`] bytes
 /// - `out` buffer is longer than `S::EXPORT_SECRET_MAXLEN` when exporting secrets with [`Self::export_secret()`]
-/// - `exporter_context` is longer than 64 bytes
+/// - `exporter_context` is longer than [`u16::MAX`] bytes
 /// - The internal counter reaches [`u64::MAX`] and a call to [`Self::seal()`]/[`Self::open()`] is made
 /// - Calling [`Self::seal()`] when the role is [`Role::Recipient`]
 /// - Calling [`Self::open()`] when the role is [`Role::Sender`]
 /// - Calling [`Self::open()`] on a set of messages that does not match the order of how they were [`Self::seal()`]'ed (re-ordering)
 /// - `psk` or `psk_id` are empty
-/// - `psk` is less than 32 bytes or more than 64 bytes
-/// - `psk_id` is more than 64 bytes
+/// - `psk` is less than 32 bytes or more than [`u16::MAX`] bytes
+/// - `psk_id` is more than [`u16::MAX`] bytes
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
 /// - `getrandom` errors during [`Self::new_sender()`] or [`Self::authpsk_seal()`].

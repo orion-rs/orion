@@ -155,20 +155,36 @@ mod test {
         let (ctx, enc) =
             MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).unwrap();
         // Info
-        assert!(MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; 64]).is_ok());
-        assert!(MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; 65]).is_err());
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, dk, &[0u8; 64]).is_ok()
+            MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; u16::MAX as usize])
+                .is_ok()
         );
         assert!(
-            MLKEM768_X25519_SHA256_CHACHA20::setup_base_recipient(&enc, dk, &[0u8; 65]).is_err()
+            MLKEM768_X25519_SHA256_CHACHA20::setup_base_sender(ek, &[0u8; u16::MAX as usize + 1])
+                .is_err()
+        );
+        assert!(
+            MLKEM768_X25519_SHA256_CHACHA20::setup_base_recipient(
+                &enc,
+                dk,
+                &[0u8; u16::MAX as usize]
+            )
+            .is_ok()
+        );
+        assert!(
+            MLKEM768_X25519_SHA256_CHACHA20::setup_base_recipient(
+                &enc,
+                dk,
+                &[0u8; u16::MAX as usize + 1]
+            )
+            .is_err()
         );
 
         // Export
         let mut out = [0u8; 64];
         let mut out_max = [0u8; (255 * MLKEM768_X25519_SHA256_CHACHA20::NH) + 1];
-        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
-        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; u16::MAX as usize], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; u16::MAX as usize + 1], &mut out).is_err());
         assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
     }
 
@@ -179,13 +195,19 @@ mod test {
         // Info
         assert!(
             MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
-                ek, &[0u8; 65], &[0u8; 64], b"psk_id"
+                ek,
+                &[0u8; u16::MAX as usize + 1],
+                &[0u8; 64],
+                b"psk_id"
             )
             .is_err()
         );
         assert!(
             MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
-                ek, &[0u8; 64], &[0u8; 64], b"psk_id"
+                ek,
+                &[0u8; u16::MAX as usize],
+                &[0u8; 64],
+                b"psk_id"
             )
             .is_ok()
         );
@@ -193,7 +215,10 @@ mod test {
         // PSK
         assert!(
             MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
-                ek, &[0u8; 64], &[0u8; 65], b"psk_id"
+                ek,
+                &[0u8; 64],
+                &[0u8; u16::MAX as usize + 1],
+                b"psk_id"
             )
             .is_err()
         );
@@ -211,7 +236,10 @@ mod test {
         );
         assert!(
             MLKEM768_X25519_SHA256_CHACHA20::setup_psk_sender(
-                ek, &[0u8; 64], &[0u8; 64], b"psk_id"
+                ek,
+                &[0u8; 64],
+                &[0u8; u16::MAX as usize],
+                b"psk_id"
             )
             .is_ok()
         );
@@ -227,7 +255,11 @@ mod test {
         );
         assert!(
             MLKEM768_X25519_SHA256_CHACHA20::setup_psk_recipient(
-                &enc, dk, &[0u8; 64], &[0u8; 65], b"psk_id"
+                &enc,
+                dk,
+                &[0u8; 64],
+                &[0u8; u16::MAX as usize + 1],
+                b"psk_id"
             )
             .is_err()
         );
@@ -239,7 +271,11 @@ mod test {
         );
         assert!(
             MLKEM768_X25519_SHA256_CHACHA20::setup_psk_recipient(
-                &enc, dk, &[0u8; 64], &[0u8; 64], b"psk_id"
+                &enc,
+                dk,
+                &[0u8; 64],
+                &[0u8; u16::MAX as usize],
+                b"psk_id"
             )
             .is_ok()
         );
@@ -247,8 +283,8 @@ mod test {
         // Export
         let mut out = [0u8; 64];
         let mut out_max = [0u8; (255 * MLKEM768_X25519_SHA256_CHACHA20::NH) + 1];
-        assert!(ctx.export(&[0u8; 64], &mut out).is_ok());
-        assert!(ctx.export(&[0u8; 65], &mut out).is_err());
+        assert!(ctx.export(&[0u8; u16::MAX as usize], &mut out).is_ok());
+        assert!(ctx.export(&[0u8; u16::MAX as usize + 1], &mut out).is_err());
         assert!(ctx.export(&[0u8; 64], &mut out_max).is_err());
     }
 

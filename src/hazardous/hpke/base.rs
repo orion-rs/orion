@@ -226,9 +226,16 @@ impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> HpkeSuite<Kem, Kdf, Aead> {
         Self::check_input_max_lengths(psk_id)
     }
 
-    /// Maximum length: <https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2.1>
+    /// Maximum length: <https://hpkewg.github.io/hpke/draft-ietf-hpke-hpke.html#section-7.2.1>
+    ///
+    /// This above linked draft is supposed to at some point obsolete RFC 9180.
+    /// It says implementations should support higher than (RFC 9180 recommends max 64 bytes)
+    /// 64 bytes, to accomodate things like ECH, which this [`u16::MAX`] limit does.
+    ///
+    /// We bound it to [`u16::MAX`] since that's what the lenght-prefix checks for
+    /// HPKE with SHAKE256 as KDF have as well. HKDF-SHA256 is much higher.
     fn check_input_max_lengths(input: &[u8]) -> Result<(), UnknownCryptoError> {
-        if input.len() > 64 {
+        if u16::try_from(input.len()).is_err() {
             return Err(UnknownCryptoError);
         }
 

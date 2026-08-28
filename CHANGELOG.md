@@ -65,6 +65,7 @@
 	- `password` being passed is now a byte-slice, instead of a HMAC key that internally pads the key (yielding the padded if called `unprotected_as_ref()` on).
 - [Breaking change] `orion::kex` has been removed.
 	- See [doc/MIGRATION](doc/MIGRATION.md) on possible migration strategies.
+- HPKE implementations now allow `info`, `psk`, `psk_id` and `exporter_context` sizes of [`u16::MAX`], enabling more uses such as ECH.
 - Add `orion::hpke` a high-level hazardous-export of HPKE in base/psk mode using XWING_SHAKE256_CHACHA20POLY1305 suite.
 - Add `orion::kem` a high-level hazardous-export of X-Wing.
 - Add support for BLAKE3 ([#641](https://github.com/orion-rs/orion/pull/641), credits: [@jakub-mata](https://github.com/jakub-mata)).
