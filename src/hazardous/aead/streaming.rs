@@ -364,7 +364,7 @@ impl StreamXChaCha20Poly1305 {
         let mut ctx = ChaCha20::new(&self.key, &nonce);
         ctx.set_position(1);
         ctx.xor_keystream_into(&mut block)?;
-        let tag = StreamTag::try_from(block[0])?;
+        let tag = block[0];
 
         block[0] = ciphertext[0];
         let mac = self.generate_auth_tag(ciphertext, ad, msglen, &block, TAG_SIZE)?;
@@ -372,6 +372,7 @@ impl StreamXChaCha20Poly1305 {
             return Err(UnknownCryptoError);
         }
 
+        let tag = StreamTag::try_from(tag)?;
         if msglen != 0 {
             debug_assert_eq!(ctx.position(), 2);
             dst_out[..msglen].copy_from_slice(&ciphertext[TAG_SIZE..(TAG_SIZE + msglen)]);
