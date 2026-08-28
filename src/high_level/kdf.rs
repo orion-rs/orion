@@ -52,6 +52,10 @@
 //! - The length of the `salt` is greater than [`isize::MAX`] or less than `8`.
 //!
 //! # Security:
+//! - `length` should be bounded if sources from untrusted input.
+//!   `length` parameter is used to allocate the return buffer _before_ Argon2 is ran. The maximimum
+//!   value of `length` as defined in the spec is [`u32::MAX`]. Thus, if `length` is parsed and used
+//!   directly from untrusted input, it can be used to exhaust memory.
 //! - Choosing the correct cost parameters is important for security. Please refer to
 //!   [libsodium's docs] for a description of how to do this.
 //! - The salt should always be generated using a CSPRNG. [`Salt::generate()`]
