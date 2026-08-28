@@ -114,6 +114,7 @@ pub(crate) mod private {
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
 /// - `getrandom` errors during [`Self::new_sender()`] or [`Self::base_seal()`].
+/// - Any error condition from AEAD is hit when calling [`Self::seal()`]/[`Self::open()`] (only [`ChaCha20Poly1305`] currently).
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
@@ -162,6 +163,7 @@ pub(crate) mod private {
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 /// [`MLKEM768_X25519_SHAKE256_CHACHA20`]: crate::hazardous::hpke::MLKEM768_X25519_SHAKE256_CHACHA20
+/// [`ChaCha20Poly1305`]: crate::hazardous::aead::chacha20poly1305
 pub struct ModeBase<S> {
     suite: S,
     role: Role,
@@ -316,6 +318,7 @@ impl<S: Suite + Base> ModeBase<S> {
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
 /// - `getrandom` errors during [`Self::new_sender()`] or [`Self::psk_seal()`].
+/// - Any error condition from AEAD is hit when calling [`Self::seal()`]/[`Self::open()`] (only [`ChaCha20Poly1305`] currently).
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
@@ -365,6 +368,7 @@ impl<S: Suite + Base> ModeBase<S> {
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 /// [`MLKEM768_X25519_SHAKE256_CHACHA20`]: crate::hazardous::hpke::MLKEM768_X25519_SHAKE256_CHACHA20
+/// [`ChaCha20Poly1305`]: crate::hazardous::aead::chacha20poly1305
 pub struct ModePsk<S> {
     suite: S,
     role: Role,
@@ -528,6 +532,7 @@ impl<S: Suite + Psk> ModePsk<S> {
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
 /// - `getrandom` errors during [`Self::new_sender()`] or [`Self::auth_seal()`].
+/// - Any error condition from AEAD is hit when calling [`Self::seal()`]/[`Self::open()`] (only [`ChaCha20Poly1305`] currently).
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
@@ -575,6 +580,7 @@ impl<S: Suite + Psk> ModePsk<S> {
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 /// [`DHKEM_X25519_SHA256_CHACHA20`]: crate::hazardous::hpke::x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20
+/// [`ChaCha20Poly1305`]: crate::hazardous::aead::chacha20poly1305
 pub struct ModeAuth<S> {
     suite: S,
     role: Role,
@@ -737,6 +743,7 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
 /// - If a shared secret is all-zero.
 /// - If `ikm.len() < 32` when calling `derive_keypair()` on a suite's KEM.
 /// - `getrandom` errors during [`Self::new_sender()`] or [`Self::authpsk_seal()`].
+/// - Any error condition from AEAD is hit when calling [`Self::seal()`]/[`Self::open()`] (only [`ChaCha20Poly1305`] currently).
 ///
 /// # Security:
 /// - When deriving a keypair deterministically instead of generating it randomly, the input `ikm` must have at least as much entropy
@@ -786,6 +793,7 @@ impl<S: AuthSuite + Auth> ModeAuth<S> {
 /// # Ok::<(), orion::errors::UnknownCryptoError>(())
 /// ```
 /// [`DHKEM_X25519_SHA256_CHACHA20`]: crate::hazardous::hpke::x25519_sha256_chacha20poly1305::DHKEM_X25519_SHA256_CHACHA20
+/// [`ChaCha20Poly1305`]: crate::hazardous::aead::chacha20poly1305
 pub struct ModeAuthPsk<S> {
     suite: S,
     role: Role,
