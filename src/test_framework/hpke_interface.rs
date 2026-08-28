@@ -441,7 +441,6 @@ impl<T: TestableHpke> HpkeTester<T> {
     }
 
     fn test_kdf_input_limits() {
-        // we  use the recommended input length restriction of 64: https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2.1
         let valid_info = &[0u8; 64];
         let valid_psk = &[0u8; 64];
         let valid_psk_id = &[0u8; 64];
