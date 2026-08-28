@@ -277,7 +277,7 @@ pub(crate) fn expand_mask<const CLEN: usize, const K: usize, const L: usize, P: 
     debug_assert_eq!(seed.len(), 64);
 
     let mut y = Vector::<L>::zero();
-    let mut v = [0u8; CLEN];
+    let mut v = zeroize_wrap!([0u8; CLEN]);
 
     let mut ctx = Shake256::new();
     ctx.absorb(seed)?;
@@ -288,8 +288,8 @@ pub(crate) fn expand_mask<const CLEN: usize, const K: usize, const L: usize, P: 
         // to actually overflow
         if let Some(kappa_r) = (kappa as u16).checked_add(r) {
             h.absorb(&kappa_r.to_le_bytes())?;
-            h.squeeze(&mut v)?;
-            P::bitunpack_ring_element_gamma(&v, &mut y[r as usize]);
+            h.squeeze(v.as_mut())?;
+            P::bitunpack_ring_element_gamma(v.as_ref(), &mut y[r as usize]);
         } else {
             return Err(UnknownCryptoError);
         }
