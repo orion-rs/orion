@@ -76,6 +76,21 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
 
+// NOTE(brycx):
+// In orion::hpke we wrap HPKE-logic to restrict access to deterministic operations
+// and simplify the interface. This is fine because `HpkeBase`/`HpkePsk` does not also
+// have newtypes from `Public`/`Private` separately. If we were to take the same approach here
+// we'd end up with full re-implementations of `EncapuslationKey` and `KeyPair`, using new
+// `Public`/`Private` wrappers. This would then alos have be used used in orion::hpke in public API
+// or there would be a type-level difference between orion::hpke::EncapsulationKey (which is re-exported)
+// annd orion::kem::EncapsulationKey. I've played around with a wrapper but the additional code
+// seems not to be worth the extra test and review cost right now. It would enable making a "generic"
+// orion::kem interface, that potentially could swap out X-Wing if ever needed, with something else, but
+// 1) that would be a breaking change either way
+// 2) X-Wing is still a draft, so that could break it also
+//
+// So for now I've opted to keep it as this.
+
 pub use crate::KP;
 pub use crate::hazardous::kem::xwing::CIPHERTEXT_SIZE;
 pub use crate::hazardous::kem::xwing::Ciphertext;
