@@ -155,6 +155,9 @@ impl<Kem: HpkeKem, Kdf: HpkeKdf, Aead: HpkeAead> HpkeSuite<Kem, Kdf, Aead> {
     /// Nonce size for this suite's AEAD (<https://www.rfc-editor.org/rfc/rfc9180.html#section-7.3>).
     pub const NN: usize = Aead::NN;
 
+    /// Tag size for this suite's AEAD (<https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2>).
+    pub const NT: usize = Aead::NT;
+
     /// Output size for this suite's KDF (<https://www.rfc-editor.org/rfc/rfc9180.html#section-7.2>).
     pub const NH: usize = Kdf::NH;
 

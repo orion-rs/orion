@@ -27,6 +27,7 @@ use crate::{
     hazardous::{
         aead::chacha20poly1305::ChaCha20Poly1305,
         hpke::suite::private::HpkeAead,
+        mac::poly1305,
         stream::chacha20::{self, ChaCha20Key, ChaCha20Nonce},
     },
 };
@@ -37,6 +38,7 @@ impl HpkeAead for ChaCha20Poly1305 {
     const AEAD_ID: [u8; 2] = 0x0003u16.to_be_bytes();
     const NK: usize = chacha20::CHACHA_KEYSIZE;
     const NN: usize = chacha20::IETF_CHACHA_NONCESIZE;
+    const NT: usize = poly1305::POLY1305_OUTSIZE;
 
     type Key = ChaCha20Key;
     type Nonce = ChaCha20Nonce;

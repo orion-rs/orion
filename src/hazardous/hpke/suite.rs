@@ -164,6 +164,9 @@ pub(crate) mod private {
         /// RFC9180 "`Nn`": The length of a nonce for this AEAD, in bytes.
         const NN: usize;
 
+        /// RFC9180 "`Nt`": The length of a authentication tag for this AEAD, in bytes.
+        const NT: usize;
+
         #[cfg(test)]
         /// The key of this AEAD, which is `Nk` bytes.
         type Key: TypeSpec + Clone;
