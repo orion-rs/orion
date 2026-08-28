@@ -194,11 +194,9 @@ impl IndexMut<usize> for RingElementNTT {
 
 impl AddAssign for RingElementNTT {
     fn add_assign(&mut self, other: Self) {
-        add_poly(
-            &self.coefficients.clone(),
-            &other.coefficients,
-            &mut self.coefficients,
-        );
+        for (coeff_ret, coeff_rhs) in self.coefficients.iter_mut().zip(other.coefficients.iter()) {
+            *coeff_ret += coeff_rhs;
+        }
     }
 }
 
