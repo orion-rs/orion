@@ -3,7 +3,7 @@
 **Date:** TBD.
 
 **Note:**
-This is release contains many breaking changes and updates to almost every part of the crate. Feel free to open an issue if something seems off.
+This release contains many breaking changes and updates to almost every part of the crate. Feel free to open an issue if something seems off.
 
 A [doc/MIGRATION](doc/MIGRATION.md) guide has been written to give a better overview than this exhaustive list.
 

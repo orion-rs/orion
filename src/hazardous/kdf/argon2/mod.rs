@@ -1012,6 +1012,15 @@ mod public {
 
         #[test]
         #[cfg(feature = "safe_api")]
+        fn test_get_cost_params() {
+            let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+            let hash = PasswordHash::try_from(valid).unwrap();
+            let costp = hash.cost_params();
+            assert_eq!(CostParams::new(3, 65536, 1).unwrap(), costp);
+        }
+
+        #[test]
+        #[cfg(feature = "safe_api")]
         fn test_debug_impl() {
             let valid = "$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
             let password_hash = PasswordHash::try_from(valid).unwrap();
