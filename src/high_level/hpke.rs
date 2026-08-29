@@ -243,3 +243,45 @@ impl HpkePsk {
         Ok(out)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_basic_roundtrip() {
+        let recipient_kp = KeyPair::generate().unwrap();
+        let psk = b"any preshared secret key that is 32 bytes minimum";
+        let psk_id = b"identifier for psk";
+
+        let (mut hpke_sender, enc) =
+            HpkeBase::new_sender(recipient_kp.public(), b"info parameter").unwrap();
+        let ct0 = hpke_sender.seal(&[0u8; 16], b"aad parameter 0").unwrap();
+        let ct1 = hpke_sender.seal(&[1u8; 16], b"aad parameter 1").unwrap();
+        let ct2 = hpke_sender.seal(&[2u8; 16], b"aad parameter 2").unwrap();
+
+        let mut hpke_recipient =
+            HpkeBase::new_recipient(&enc, recipient_kp.private(), b"info parameter").unwrap();
+        let pt0 = hpke_recipient.open(&ct0, b"aad parameter 0").unwrap();
+        let pt1 = hpke_recipient.open(&ct1, b"aad parameter 1").unwrap();
+        let pt2 = hpke_recipient.open(&ct2, b"aad parameter 2").unwrap();
+        assert_eq!(&pt0, &[0u8; 16]);
+        assert_eq!(&pt1, &[1u8; 16]);
+        assert_eq!(&pt2, &[2u8; 16]);
+
+        let (mut hpke_sender, enc) =
+            HpkePsk::new_sender(recipient_kp.public(), b"info parameter", psk, psk_id).unwrap();
+        let ct0 = hpke_sender.seal(&[0u8; 16], b"aad parameter 0").unwrap();
+        let ct1 = hpke_sender.seal(&[1u8; 16], b"aad parameter 1").unwrap();
+        let ct2 = hpke_sender.seal(&[2u8; 16], b"aad parameter 2").unwrap();
+        let mut hpke_recipient =
+            HpkePsk::new_recipient(&enc, recipient_kp.private(), b"info parameter", psk, psk_id)
+                .unwrap();
+        let pt0 = hpke_recipient.open(&ct0, b"aad parameter 0").unwrap();
+        let pt1 = hpke_recipient.open(&ct1, b"aad parameter 1").unwrap();
+        let pt2 = hpke_recipient.open(&ct2, b"aad parameter 2").unwrap();
+        assert_eq!(&pt0, &[0u8; 16]);
+        assert_eq!(&pt1, &[1u8; 16]);
+        assert_eq!(&pt2, &[2u8; 16]);
+    }
+}

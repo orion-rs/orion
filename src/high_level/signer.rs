@@ -124,3 +124,30 @@ impl TryFrom<&Seed> for SigningKeyPair {
         })
     }
 }
+
+// Testing public functions in the module.
+#[cfg(feature = "safe_api")]
+#[cfg(test)]
+mod public {
+    use super::*;
+
+    #[test]
+    fn test_keypair() {
+        let seed = Seed::from([0u8; 32]);
+        let kp = SigningKeyPair::try_from(&seed).unwrap();
+
+        assert_eq!(kp.private(), &seed);
+        assert_eq!(
+            kp.public(),
+            &VerifyingKey::try_from(kp.kp.verifying_key.as_ref()).unwrap()
+        );
+    }
+
+    #[quickcheck]
+    fn prop_sign_verify(input: Vec<u8>) -> bool {
+        let kp = SigningKeyPair::generate().unwrap();
+        let sig = kp.sign(&input, &[]).unwrap();
+
+        kp.verify(&input, &[], &sig).is_ok()
+    }
+}
