@@ -191,12 +191,12 @@ impl Blake3State {
 
 #[cfg(test)]
 mod test {
-    use super::*;
 
     #[test]
     #[cfg(feature = "safe_api")]
     // format! is only available with std
     fn test_state_omitted_debug() {
+        use super::*;
         let state = Blake3State::new_with_iv(0u32);
 
         let test_debug_contents = format!("{:?}", state);

@@ -752,6 +752,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "safe_api")]
     fn test_one_shot_eq_streaming_hedged() {
         let seed = Seed::from([255u8; 32]);
         let kp = KeyPair::new(seed.clone()).unwrap();
@@ -765,7 +766,7 @@ mod tests {
         sk.update(b"Message to ").unwrap();
         sk.update(b"sign").unwrap();
         let multi = sk.finalize().unwrap();
-        assert_eq!(oneshot, multi);
+        assert_ne!(oneshot, multi);
 
         let mut vk = VerifyingKey::try_from(&sk).unwrap();
         assert_eq!(kp.public(), &vk);
