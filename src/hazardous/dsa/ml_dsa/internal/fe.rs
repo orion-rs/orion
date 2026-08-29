@@ -1282,3 +1282,23 @@ mod test_arithmetic {
         ));
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_hint_omitted_debug() {
+        use crate::hazardous::dsa::ml_dsa::internal::MlDsa44;
+
+        let h = Hint::<{ MlDsa44::DIM_K }>::random_hint::<MlDsa44>();
+        let h_values = h.bits;
+
+        let test_debug_contents = format!("{:?}", h);
+        let h_values_debug = format!("{:?}", h_values);
+
+        assert!(!test_debug_contents.contains(&h_values_debug));
+    }
+}

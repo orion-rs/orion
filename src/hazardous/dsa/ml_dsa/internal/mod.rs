@@ -1974,3 +1974,179 @@ impl<
         Self::try_from(bytes)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_signing_key_omitted_debug() {
+        use crate::hazardous::dsa::ml_dsa::internal::MlDsa44;
+
+        let kp = KeyPairInternal::<
+            { MlDsa44::PRIVATE_KEY_SIZE },
+            { MlDsa44::PUBLIC_KEY_SIZE },
+            { MlDsa44::SIGNATURE_SIZE },
+            { MlDsa44::CLEN },
+            { MlDsa44::COMMITMENT_HASH_LEN },
+            { MlDsa44::W1_BITPACK_SIZE * MlDsa44::DIM_K },
+            { MlDsa44::DIM_K },
+            { MlDsa44::DIM_L },
+            MlDsa44,
+        >::keygen_internal(&[128u8; 32])
+        .unwrap();
+
+        let test_debug_contents = format!("{:?}", kp.sk);
+
+        assert!(!test_debug_contents.contains(&format!("{:?}", kp.sk.rho)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", kp.sk.sk)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", kp.sk.k)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", kp.sk.tr_hash)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", kp.sk.s1_hat)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", kp.sk.s2_hat)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", kp.sk.t0_hat)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", kp.sk.shake256)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", kp.sk.is_initialized)));
+    }
+
+    #[test]
+    fn test_err_bad_ctx_init() {
+        let mut kp = KeyPairInternal::<
+            { MlDsa44::PRIVATE_KEY_SIZE },
+            { MlDsa44::PUBLIC_KEY_SIZE },
+            { MlDsa44::SIGNATURE_SIZE },
+            { MlDsa44::CLEN },
+            { MlDsa44::COMMITMENT_HASH_LEN },
+            { MlDsa44::W1_BITPACK_SIZE * MlDsa44::DIM_K },
+            { MlDsa44::DIM_K },
+            { MlDsa44::DIM_L },
+            MlDsa44,
+        >::keygen_internal(&[128u8; 32])
+        .unwrap();
+
+        assert!(kp.sk.init(&[0u8; 256]).is_err());
+        assert!(kp.sk.init(&[0u8; 255]).is_ok());
+
+        assert!(kp.pk.init(&[0u8; 256]).is_err());
+        assert!(kp.pk.init(&[0u8; 255]).is_ok());
+    }
+
+    #[test]
+    fn test_partial_eq_verifying_key() {
+        let kp1 = KeyPairInternal::<
+            { MlDsa44::PRIVATE_KEY_SIZE },
+            { MlDsa44::PUBLIC_KEY_SIZE },
+            { MlDsa44::SIGNATURE_SIZE },
+            { MlDsa44::CLEN },
+            { MlDsa44::COMMITMENT_HASH_LEN },
+            { MlDsa44::W1_BITPACK_SIZE * MlDsa44::DIM_K },
+            { MlDsa44::DIM_K },
+            { MlDsa44::DIM_L },
+            MlDsa44,
+        >::keygen_internal(&[128u8; 32])
+        .unwrap();
+
+        let kp2 = KeyPairInternal::<
+            { MlDsa44::PRIVATE_KEY_SIZE },
+            { MlDsa44::PUBLIC_KEY_SIZE },
+            { MlDsa44::SIGNATURE_SIZE },
+            { MlDsa44::CLEN },
+            { MlDsa44::COMMITMENT_HASH_LEN },
+            { MlDsa44::W1_BITPACK_SIZE * MlDsa44::DIM_K },
+            { MlDsa44::DIM_K },
+            { MlDsa44::DIM_L },
+            MlDsa44,
+        >::keygen_internal(&[128u8; 32])
+        .unwrap();
+
+        let kp3 = KeyPairInternal::<
+            { MlDsa44::PRIVATE_KEY_SIZE },
+            { MlDsa44::PUBLIC_KEY_SIZE },
+            { MlDsa44::SIGNATURE_SIZE },
+            { MlDsa44::CLEN },
+            { MlDsa44::COMMITMENT_HASH_LEN },
+            { MlDsa44::W1_BITPACK_SIZE * MlDsa44::DIM_K },
+            { MlDsa44::DIM_K },
+            { MlDsa44::DIM_L },
+            MlDsa44,
+        >::keygen_internal(&[129u8; 32])
+        .unwrap();
+
+        assert_eq!(kp1.pk, kp2.pk);
+        assert_ne!(kp2.pk, kp3.pk);
+    }
+
+    #[test]
+    fn test_pk_decode_bad_size() {
+        assert!(
+            MlDsa44::pk_decode::<{ MlDsa44::DIM_K }>(&[127u8; MlDsa44::PUBLIC_KEY_SIZE - 1])
+                .is_err()
+        );
+        assert!(
+            MlDsa44::pk_decode::<{ MlDsa44::DIM_K }>(&[127u8; MlDsa44::PUBLIC_KEY_SIZE + 1])
+                .is_err()
+        );
+
+        assert!(
+            MlDsa65::pk_decode::<{ MlDsa65::DIM_K }>(&[127u8; MlDsa65::PUBLIC_KEY_SIZE - 1])
+                .is_err()
+        );
+        assert!(
+            MlDsa65::pk_decode::<{ MlDsa65::DIM_K }>(&[127u8; MlDsa65::PUBLIC_KEY_SIZE + 1])
+                .is_err()
+        );
+
+        assert!(
+            MlDsa87::pk_decode::<{ MlDsa87::DIM_K }>(&[127u8; MlDsa87::PUBLIC_KEY_SIZE - 1])
+                .is_err()
+        );
+        assert!(
+            MlDsa87::pk_decode::<{ MlDsa87::DIM_K }>(&[127u8; MlDsa87::PUBLIC_KEY_SIZE + 1])
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_sk_decode_bad_size() {
+        assert!(
+            MlDsa44::sk_decode::<{ MlDsa44::DIM_K }, { MlDsa44::DIM_L }>(
+                &[127u8; MlDsa44::PRIVATE_KEY_SIZE - 1]
+            )
+            .is_err()
+        );
+        assert!(
+            MlDsa44::sk_decode::<{ MlDsa44::DIM_K }, { MlDsa44::DIM_L }>(
+                &[127u8; MlDsa44::PRIVATE_KEY_SIZE + 1]
+            )
+            .is_err()
+        );
+
+        assert!(
+            MlDsa65::sk_decode::<{ MlDsa65::DIM_K }, { MlDsa65::DIM_L }>(
+                &[127u8; MlDsa65::PRIVATE_KEY_SIZE - 1]
+            )
+            .is_err()
+        );
+        assert!(
+            MlDsa65::sk_decode::<{ MlDsa65::DIM_K }, { MlDsa65::DIM_L }>(
+                &[127u8; MlDsa65::PRIVATE_KEY_SIZE + 1]
+            )
+            .is_err()
+        );
+
+        assert!(
+            MlDsa87::sk_decode::<{ MlDsa87::DIM_K }, { MlDsa87::DIM_L }>(
+                &[127u8; MlDsa87::PRIVATE_KEY_SIZE - 1]
+            )
+            .is_err()
+        );
+        assert!(
+            MlDsa87::sk_decode::<{ MlDsa87::DIM_K }, { MlDsa87::DIM_L }>(
+                &[127u8; MlDsa87::PRIVATE_KEY_SIZE + 1]
+            )
+            .is_err()
+        );
+    }
+}
