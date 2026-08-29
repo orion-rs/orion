@@ -204,4 +204,35 @@ mod test_xof_interface {
         test_runner.run_all_tests_property(&data);
         true
     }
+
+    #[cfg(feature = "safe_api")]
+    mod test_io_impls {
+        use std::io::Write;
+
+        use crate::hazardous::hash::blake3::Blake3;
+
+        #[quickcheck]
+        fn prop_hasher_write_same_as_update(data: Vec<u8>, outlen: u16) -> bool {
+            let mut hasher_a = Blake3::new();
+            let mut hasher_b = hasher_a.clone();
+
+            hasher_a.absorb(&data).unwrap();
+            hasher_b.write_all(&data).unwrap();
+
+            // Additionally make sure flush() is a no-op, which we expect.
+            hasher_b.flush().unwrap();
+            assert_eq!(hasher_a, hasher_b);
+
+            let mut hash_a = vec![0u8; outlen as usize];
+            let mut hash_b = vec![0u8; outlen as usize];
+            hasher_a.squeeze(&mut hash_a).unwrap();
+            hasher_b.squeeze(&mut hash_b).unwrap();
+
+            // Additionally make sure flush() is a no-op, which we expect.
+            hasher_b.flush().unwrap();
+            assert_eq!(hasher_a, hasher_b);
+
+            hash_a == hash_b
+        }
+    }
 }

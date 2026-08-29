@@ -41,7 +41,7 @@ pub struct Blake3State {
     chain_values: TreeStack,
     total_chunks: u64,
     is_finalized: bool,
-    squeezer: Option<OutputReader>,
+    pub(crate) squeezer: Option<OutputReader>,
 }
 
 impl PartialEq<Blake3State> for Blake3State {
@@ -186,5 +186,26 @@ impl Blake3State {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_state_omitted_debug() {
+        let state = Blake3State::new_with_iv(0u32);
+
+        let test_debug_contents = format!("{:?}", state);
+        assert!(!test_debug_contents.contains(&format!("{:?}", state.key)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", state.flags)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", state.chunk)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", state.chain_values)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", state.total_chunks)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", state.is_finalized)));
+        // Option<OutputReader> no Debug impl
     }
 }
