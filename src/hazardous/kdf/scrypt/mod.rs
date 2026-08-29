@@ -585,6 +585,15 @@ mod tests {
         }
     }
 
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_get_cost_params() {
+        let valid = "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
+        let hash = PasswordHash::try_from(valid).unwrap();
+        let costp = hash.cost_params();
+        assert_eq!(CostParams::new(16, 8, 1).unwrap(), costp);
+    }
+
     #[cfg(any(feature = "safe_api", feature = "alloc"))]
     mod test_verify {
         use crate::hazardous::kdf::scrypt::CostParams;
