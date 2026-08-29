@@ -38,7 +38,7 @@
 //! [`PasswordHash`] provides two ways of retrieving the hashed password:
 //! - [`PasswordHash::unprotected_as_ref::<str>()`] returns the hashed password in an encoded form.
 //!   The encoding specifies the settings used to hash the password.
-//! - [`PasswordHash::unprotected_as_ref::<[u8]>()`] returns only the hashed password in raw bytes.
+//! - [`PasswordHash::unprotected_as_ref::<\[u8\]>()`] returns only the hashed password in raw bytes.
 //!
 //! The following is an example of how the encoded password hash might look:
 //! ```text

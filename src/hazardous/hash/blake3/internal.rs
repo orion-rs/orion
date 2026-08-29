@@ -551,4 +551,19 @@ mod tests {
             "Compression output mismatch"
         );
     }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_chunkstate_omitted_debug() {
+        let chunk = ChunkState::new(&[12345u32; 8], 1, 0u32);
+
+        let test_debug_contents = format!("{:?}", chunk);
+        assert!(!test_debug_contents.contains(&format!("{:?}", chunk.cv)));
+        assert!(test_debug_contents.contains(&format!("{:?}", chunk.chunk_counter)));
+        assert!(test_debug_contents.contains(&format!("{:?}", chunk.block)));
+        assert!(test_debug_contents.contains(&format!("{:?}", chunk.block_len)));
+        assert!(test_debug_contents.contains(&format!("{:?}", chunk.blocks_compressed)));
+        assert!(test_debug_contents.contains(&format!("{:?}", chunk.flags)));
+    }
 }

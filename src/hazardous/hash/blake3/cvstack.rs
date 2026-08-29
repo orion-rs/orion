@@ -210,4 +210,30 @@ mod tests {
             "Stack should merge down to a single parent node"
         );
     }
+
+    #[test]
+    fn test_tree_stack_partial_eq() {
+        let tree0 = TreeStack::new(mock_compress);
+        let mut tree1 = TreeStack::new(mock_compress);
+
+        // stack_len mistmach was the only non-covered by the other tests
+        // according to coverage
+        assert_eq!(tree0, tree1);
+        tree1.stack_len += 1;
+        assert_ne!(tree0, tree1);
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_treestack_omitted_debug() {
+        let tree = TreeStack::new(mock_compress);
+
+        let stack_len = format!("{:?}", tree.stack_len);
+        let stack = format!("{:?}", tree.stack);
+
+        let test_debug_contents = format!("{:?}", tree);
+        assert!(!test_debug_contents.contains(&stack_len));
+        assert!(!test_debug_contents.contains(&stack));
+    }
 }
