@@ -2,6 +2,11 @@
 
 **Date:** TBD.
 
+**Note:**
+This is release contains many breaking changes and updates to almost every part of the crate. Feel free to open an issue if something seems off.
+
+A [doc/MIGRATION](doc/MIGRATION.md) guide has been written to give a better overview than this exhaustive list.
+
 **Changelog:**
 - [Breaking change] Rust Edition moved from `2021` to `2024`.
 - [Breaking change] `auth::SecretKey` has been changed to reference directly the hazardous type instead: `crate::hazardous::mac::blake2b::SecretKey`.
