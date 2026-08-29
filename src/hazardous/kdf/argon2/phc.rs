@@ -422,6 +422,12 @@ mod test {
     }
 
     #[test]
+    fn test_invalid_variant() {
+        let argon3i = "$argon3i$v=19$m=4096,t=3,=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA";
+        assert!(Argon2Phc::try_from(argon3i).is_err());
+    }
+
+    #[test]
     fn test_decimal_value_reject_leading_zeroes() {
         // https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
         // According to the specification, the decimal parameters may not start with 0, if there is more than
@@ -438,5 +444,48 @@ mod test {
         assert!(Argon2Phc::try_from(invalid1).is_err());
         assert!(Argon2Phc::try_from(invalid2).is_err());
         assert!(Argon2Phc::try_from(invalid3).is_err());
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_err_invalid_utf8() {
+        use rand::RngExt;
+
+        let mut rng = rand::rng();
+        let mut bytes = [0u8; 256];
+
+        // Make invalid utf8 string
+        while let Ok(_utf8) = String::from_utf8(bytes.to_vec()) {
+            rng.fill(&mut bytes)
+        }
+
+        assert!(Argon2Phc::try_from_bytes(bytes.as_ref()).is_err());
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_state_omitted_debug() {
+        let phc = Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").unwrap();
+
+        let test_debug_contents = format!("{:?}", phc);
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.variant)));
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.version)));
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.memory)));
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.iterations)));
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.parallelism)));
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.salt)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", phc.hash)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", phc.phc_string)));
+    }
+
+    #[test]
+    fn test_partial_eq() {
+        let phc0 = Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").unwrap();
+        let phc1 = Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").unwrap();
+        let phc2 = Argon2Phc::try_from("$argon2i$v=19$m=65536,t=1,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").unwrap();
+
+        assert_eq!(phc0, phc1);
+        assert_ne!(phc1, phc2);
     }
 }
