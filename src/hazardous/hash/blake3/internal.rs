@@ -399,6 +399,7 @@ pub(crate) fn compress(mut init_state: CFState, msgs: &[u32; 16]) -> CFState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hazardous::hash::blake3::Blake3;
 
     #[test]
     fn test_cfstate_counter_endianness() {
@@ -565,5 +566,19 @@ mod tests {
         assert!(test_debug_contents.contains(&format!("{:?}", chunk.block_len)));
         assert!(test_debug_contents.contains(&format!("{:?}", chunk.blocks_compressed)));
         assert!(test_debug_contents.contains(&format!("{:?}", chunk.flags)));
+    }
+
+    #[test]
+    fn test_squeeze_max() {
+        let mut state = Blake3::new();
+        state.absorb(b"Hello world").unwrap();
+        let mut dest = [0u8; 32];
+        state.squeeze(&mut dest[..16]).unwrap();
+        if let Some(sqz) = state.internal.squeezer.as_mut() {
+            sqz.position = u64::MAX;
+            assert!(state.squeeze(&mut dest[..1]).is_err());
+        } else {
+            panic!("squeezer did not initialize");
+        }
     }
 }
