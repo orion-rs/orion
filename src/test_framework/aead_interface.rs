@@ -591,7 +591,10 @@ impl<Aead: TestableAead, const KS: usize, const NS: usize, const TS: usize>
 
         if !ad.is_empty() {
             input = ref_input.clone();
-            rng.fill_bytes(&mut ad);
+            let original = ad.clone();
+            while ad == original {
+                rng.fill_bytes(&mut ad);
+            }
             let diff_tag = Aead::_seal_inplace(&sk, &n, Some(&ad), &mut input).unwrap();
             assert_ne!(diff_tag, ref_tag);
             // AD-difference only changes the Tag, not the ciphertext. If empty, always Eq.
