@@ -383,31 +383,11 @@ impl RingElement {
     }
 }
 
-impl Add<&Self> for RingElement {
-    type Output = Self;
-
-    fn add(mut self, rhs: &Self) -> Self::Output {
-        self += rhs;
-
-        self
-    }
-}
-
 impl AddAssign<&Self> for RingElement {
     fn add_assign(&mut self, rhs: &Self) {
         for (coeff_ret, coeff_rhs) in self.coefficients.iter_mut().zip(rhs.coefficients.iter()) {
             *coeff_ret += coeff_rhs;
         }
-    }
-}
-
-impl Sub<&Self> for RingElement {
-    type Output = Self;
-
-    fn sub(mut self, rhs: &Self) -> Self::Output {
-        self -= rhs;
-
-        self
     }
 }
 
@@ -485,32 +465,11 @@ impl RingElementNTT<Standard> {
 }
 
 // FIPS-204, Algorithm 44.
-impl<D: Domain> Add<&Self> for RingElementNTT<D> {
-    type Output = Self;
-
-    fn add(mut self, rhs: &Self) -> Self::Output {
-        self += rhs;
-
-        self
-    }
-}
-
-// FIPS-204, Algorithm 44.
 impl<D: Domain> AddAssign<&Self> for RingElementNTT<D> {
     fn add_assign(&mut self, rhs: &Self) {
         for (coeff_ret, coeff_rhs) in self.coefficients.iter_mut().zip(rhs.coefficients.iter()) {
             *coeff_ret += coeff_rhs;
         }
-    }
-}
-
-impl<D: Domain> Sub<&Self> for RingElementNTT<D> {
-    type Output = Self;
-
-    fn sub(mut self, rhs: &Self) -> Self::Output {
-        self -= rhs;
-
-        self
     }
 }
 
@@ -757,24 +716,6 @@ impl<const N: usize, D: Domain> VectorNTT<N, D> {
     pub fn zero() -> Self {
         Self {
             elems: [RingElementNTT::zero(); N],
-        }
-    }
-}
-
-impl<const N: usize, D: Domain> Add<&Self> for VectorNTT<N, D> {
-    type Output = Self;
-
-    fn add(mut self, rhs: &Self) -> Self::Output {
-        self += rhs;
-
-        self
-    }
-}
-
-impl<const N: usize, D: Domain> AddAssign<&Self> for VectorNTT<N, D> {
-    fn add_assign(&mut self, rhs: &Self) {
-        for (elem_ret, elem_rhs) in self.elems.iter_mut().zip(rhs.elems.iter()) {
-            *elem_ret += elem_rhs;
         }
     }
 }
@@ -1285,12 +1226,12 @@ mod test_arithmetic {
 
 #[cfg(test)]
 mod test {
-    use super::*;
 
     #[test]
     #[cfg(feature = "safe_api")]
     // format! is only available with std
     fn test_hint_omitted_debug() {
+        use super::*;
         use crate::hazardous::dsa::ml_dsa::internal::MlDsa44;
 
         let h = Hint::<{ MlDsa44::DIM_K }>::random_hint::<MlDsa44>();
