@@ -679,6 +679,14 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_keypair_generate() {
+        let kp0 = KeyPair::generate().unwrap();
+        let kp1 = KeyPair::generate().unwrap();
+        assert_ne!(kp0, kp1);
+    }
+
+    #[test]
     fn test_err_on_invalid_mu() {
         let seed = Seed::from([255u8; 32]);
         let rnd = ExplicitRandom::from([0u8; 32]);
@@ -712,7 +720,7 @@ mod tests {
     }
 
     #[test]
-    fn test_one_shot_eq_streaming() {
+    fn test_one_shot_eq_streaming_deterministic() {
         let seed = Seed::from([255u8; 32]);
         let kp = KeyPair::new(seed.clone()).unwrap();
         let oneshot = kp
@@ -730,6 +738,33 @@ mod tests {
         let multi = sk
             .finalize_with_rnd(&ExplicitRandom::deterministic())
             .unwrap();
+        assert_eq!(oneshot, multi);
+
+        let mut vk = VerifyingKey::try_from(&sk).unwrap();
+        assert_eq!(kp.public(), &vk);
+        vk.init(b"Context").unwrap();
+        vk.update(b"Message").unwrap();
+        vk.update(b" to ").unwrap();
+        vk.update(b"sign").unwrap();
+
+        assert!(vk.clone().finalize(&oneshot).is_ok());
+        assert!(vk.clone().finalize(&multi).is_ok());
+    }
+
+    #[test]
+    fn test_one_shot_eq_streaming_hedged() {
+        let seed = Seed::from([255u8; 32]);
+        let kp = KeyPair::new(seed.clone()).unwrap();
+        let oneshot = kp.private().sign(b"Message to sign", b"Context").unwrap();
+
+        let mut sk = SigningKey::try_from(&seed).unwrap();
+        assert_eq!(kp.seed, seed);
+        assert_eq!(kp.private(), &sk);
+
+        sk.init(b"Context").unwrap();
+        sk.update(b"Message to ").unwrap();
+        sk.update(b"sign").unwrap();
+        let multi = sk.finalize().unwrap();
         assert_eq!(oneshot, multi);
 
         let mut vk = VerifyingKey::try_from(&sk).unwrap();
