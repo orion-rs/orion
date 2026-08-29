@@ -360,4 +360,46 @@ mod test {
         assert!(ScryptPhc::try_from(invalid1).is_err());
         assert!(ScryptPhc::try_from(invalid2).is_err());
     }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    fn test_err_invalid_utf8() {
+        use rand::RngExt;
+
+        let mut rng = rand::rng();
+        let mut bytes = [0u8; 256];
+
+        // Make invalid utf8 string
+        while let Ok(_utf8) = String::from_utf8(bytes.to_vec()) {
+            rng.fill(&mut bytes)
+        }
+
+        assert!(ScryptPhc::try_from_bytes(bytes.as_ref()).is_err());
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    // format! is only available with std
+    fn test_state_omitted_debug() {
+        let phc = ScryptPhc::try_from("$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").unwrap();
+
+        let test_debug_contents = format!("{:?}", phc);
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.variant)));
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.blocksize)));
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.logn)));
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.parallelism)));
+        assert!(test_debug_contents.contains(&format!("{:?}", phc.salt)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", phc.hash)));
+        assert!(!test_debug_contents.contains(&format!("{:?}", phc.phc_string)));
+    }
+
+    #[test]
+    fn test_partial_eq() {
+        let phc0 = ScryptPhc::try_from("$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").unwrap();
+        let phc1 = ScryptPhc::try_from("$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").unwrap();
+        let phc2 = ScryptPhc::try_from("$scrypt$ln=16,r=4,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").unwrap();
+
+        assert_eq!(phc0, phc1);
+        assert_ne!(phc1, phc2);
+    }
 }
