@@ -64,4 +64,7 @@ fn test_parse_decimal_value() {
     assert!(parse_decimal_value("-").is_err());
     assert!(parse_decimal_value("-0").is_err());
     assert!(parse_decimal_value("-1").is_err()); // should be true if we ever need to support it
+    assert!(parse_decimal_value("+").is_err());
+    assert!(parse_decimal_value("+0").is_err());
+    assert!(parse_decimal_value("+1").is_err());
 }
