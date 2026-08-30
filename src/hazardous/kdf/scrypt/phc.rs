@@ -408,5 +408,17 @@ mod test {
         assert!(ScryptPhc::try_from("$scrypt$ln=+16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
         assert!(ScryptPhc::try_from("$scrypt$ln=16,r=+8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
         assert!(ScryptPhc::try_from("$scrypt$ln=16,r=8,p=+1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+
+        assert!(ScryptPhc::try_from("$scrypt$ln=016,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=0016,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=00016,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+
+        assert!(ScryptPhc::try_from("$scrypt$ln=16,r=08,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=16,r=008,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=16,r=0008,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+
+        assert!(ScryptPhc::try_from("$scrypt$ln=16,r=8,p=01$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=16,r=8,p=001$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=16,r=8,p=0001$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
     }
 }

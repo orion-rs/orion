@@ -47,8 +47,21 @@ pub(crate) fn parse_decimal_value(value: &str) -> Result<u32, crate::errors::Unk
     if value.len() > 1 && value.contains('+') {
         return Err(crate::errors::UnknownCryptoError);
     }
+
+    // The specification allows `-` sign where the following digit must be non-zero.
+    // However, since this is only used for Argon2/Scrypt where negative values are
+    // invalid cost parameters, this is not implemented.
+
     // .parse::<T>() detects overflows (in debug and release builds)
     // and rejects empty strings. If the value contains spaces, parsing
     // also fails.
     Ok(value.parse::<u32>()?)
+}
+
+#[test]
+#[cfg(feature = "safe_api")]
+fn test_parse_decimal_value() {
+    assert!(parse_decimal_value("-").is_err());
+    assert!(parse_decimal_value("-0").is_err());
+    assert!(parse_decimal_value("-1").is_err()); // should be true if we ever need to support it
 }
