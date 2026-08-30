@@ -276,6 +276,21 @@ impl CostParams {
 
         Ok(n.trailing_zeros())
     }
+
+    /// Get the `logn` parameter for this [`CostParams`].
+    pub fn logn(&self) -> u32 {
+        self.logn
+    }
+
+    /// Get the `blocksize` parameter for this [`CostParams`].
+    pub fn blocksize(&self) -> u32 {
+        self.blocksize
+    }
+
+    /// Get the `parallelism` parameter for this [`CostParams`].
+    pub fn parallelism(&self) -> u32 {
+        self.parallelism
+    }
 }
 
 // Copies n numbers from src into dst
@@ -760,7 +775,10 @@ mod tests {
             let valid_n = CostParams::logn_from_n(1024).unwrap();
             let valid_r = 8;
             let valid_p = 1;
-            assert!(CostParams::new(valid_n, valid_r, valid_p).is_ok());
+            let cost = CostParams::new(valid_n, valid_r, valid_p).unwrap();
+            assert_eq!(cost.logn(), valid_n);
+            assert_eq!(cost.blocksize(), valid_r);
+            assert_eq!(cost.parallelism(), valid_p);
 
             // not a power of two
             assert!(CostParams::logn_from_n(1025).is_err());

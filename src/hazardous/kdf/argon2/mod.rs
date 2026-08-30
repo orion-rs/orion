@@ -318,6 +318,21 @@ impl CostParams {
             parallelism,
         })
     }
+
+    /// Get the `iterations` parameter for this [`CostParams`].
+    pub fn iterations(&self) -> u32 {
+        self.iterations
+    }
+
+    /// Get the `memory` parameter for this [`CostParams`].
+    pub fn memory(&self) -> u32 {
+        self.memory
+    }
+
+    /// Get the `parallelism` parameter for this [`CostParams`].
+    pub fn parallelism(&self) -> u32 {
+        self.parallelism
+    }
 }
 
 const fn lower_mult_add(x: u64, y: u64) -> u64 {
@@ -998,6 +1013,14 @@ mod test {
         assert!(
             validate_parameters(ARGON2_VERSION_19, &[], &[0u8; 9], None, None, &mut tmp).is_ok()
         );
+    }
+
+    #[test]
+    fn test_get_cost_params() {
+        let cost = CostParams::new(MAX_ITERATIONS_T, 8, 1).unwrap();
+        assert_eq!(cost.iterations(), MAX_ITERATIONS_T);
+        assert_eq!(cost.memory(), 8);
+        assert_eq!(cost.parallelism(), 1);
     }
 }
 
