@@ -52,6 +52,11 @@
 //! - The hashed password does not match the expected when verifying.
 //!
 //! # Security:
+//! - `PasswordHash::TryFrom<&str>` and later verification sets no additional bounds on cost parameters.
+//!   If `PasswordHash` is attacker-controlled and the cost-parameters are not validated to be within
+//!   reasonable bounds, then verifying that password hash may exhaust a machines resources (DoS)
+//!   if costs are set too high. Therefor, you should always validate cost-parameters can not coming
+//!   from a trusted source.
 //! - Salts should always be generated using a CSPRNG.
 //!   [`secure_rand_bytes()`] can be used for this.
 //! - The minimum recommended length for a salt is `16` bytes.
