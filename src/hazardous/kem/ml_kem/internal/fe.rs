@@ -101,6 +101,7 @@ impl FieldElement {
         let div: u32 = self.0 << d;
         let mut quo: u32 = ((u64::from(div) * MUL) >> SHIFT) as u32;
         let rem: u32 = div - (quo * KYBER_Q);
+        debug_assert!(rem < KYBER_Q + KYBER_Q / 2);
 
         quo += ((KYBER_Q / 2).overflowing_sub(rem).0 >> 31) & 1;
         quo += ((KYBER_Q + KYBER_Q / 2 - rem) >> 31) & 1;
