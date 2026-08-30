@@ -157,7 +157,7 @@ impl TypeSpec for ScryptPasswordHash {
 /// - The encoded password contains any other fields than: The algorithm name,
 ///   version, ln, r, p and the salt and password hash.
 /// - The encoded password hash contains invalid Base64 encoding.
-/// - Any decimal parameter value, such as ln, contains leading zeroes and is longer
+/// - Any decimal parameter value, such as ln, contains leading zeroes, `+`, or is longer
 ///   than a single character.
 /// - The encoded password hash contains numerical values that cannot
 ///   be represented as a `u32`.

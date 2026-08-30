@@ -488,4 +488,11 @@ mod test {
         assert_eq!(phc0, phc1);
         assert_ne!(phc1, phc2);
     }
+
+    #[test]
+    fn test_sign_parsing() {
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=+65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=+3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p=+1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+    }
 }

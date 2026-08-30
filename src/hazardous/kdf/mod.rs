@@ -40,8 +40,11 @@ pub mod argon2;
 /// Parse a decimal parameter value to a u32. Returns an error on overflow
 /// and if the value has leading zeroes.
 pub(crate) fn parse_decimal_value(value: &str) -> Result<u32, crate::errors::UnknownCryptoError> {
-    // See: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#decimal-encoding
+    // See: https://github.com/C2SP/C2SP/blob/main/phc-strings.md#decimal-encoding
     if value.len() > 1 && value.starts_with('0') {
+        return Err(crate::errors::UnknownCryptoError);
+    }
+    if value.len() > 1 && value.contains('+') {
         return Err(crate::errors::UnknownCryptoError);
     }
     // .parse::<T>() detects overflows (in debug and release builds)
