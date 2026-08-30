@@ -59,6 +59,11 @@
 //! - `expected` is empty.
 //!
 //! # Security
+//! - `PasswordHash::TryFrom<&str>` and later verification sets no additional bounds on cost parameters.
+//!   If `PasswordHash` is attacker-controlled and the cost-parameters are not validated to be within
+//!   reasonable bounds, then verifying that password hash may exhaust a machines resources (DoS)
+//!   if costs are set too high. Therefor, you should always validate cost-parameters can not coming
+//!   from a trusted source.
 //! - Salts should always be generated using a CSPRNG.
 //!   [`secure_rand_bytes()`] can be used for this.
 //! - Please note that when verifying, a copy of the computed password hash is placed into
@@ -157,7 +162,7 @@ impl TypeSpec for ScryptPasswordHash {
 /// - The encoded password contains any other fields than: The algorithm name,
 ///   version, ln, r, p and the salt and password hash.
 /// - The encoded password hash contains invalid Base64 encoding.
-/// - Any decimal parameter value, such as ln, contains leading zeroes and is longer
+/// - Any decimal parameter value, such as ln, contains leading zeroes, `+`, or is longer
 ///   than a single character.
 /// - The encoded password hash contains numerical values that cannot
 ///   be represented as a `u32`.
@@ -275,6 +280,21 @@ impl CostParams {
         }
 
         Ok(n.trailing_zeros())
+    }
+
+    /// Get the `logn` parameter for this [`CostParams`].
+    pub fn logn(&self) -> u32 {
+        self.logn
+    }
+
+    /// Get the `blocksize` parameter for this [`CostParams`].
+    pub fn blocksize(&self) -> u32 {
+        self.blocksize
+    }
+
+    /// Get the `parallelism` parameter for this [`CostParams`].
+    pub fn parallelism(&self) -> u32 {
+        self.parallelism
     }
 }
 
@@ -760,7 +780,10 @@ mod tests {
             let valid_n = CostParams::logn_from_n(1024).unwrap();
             let valid_r = 8;
             let valid_p = 1;
-            assert!(CostParams::new(valid_n, valid_r, valid_p).is_ok());
+            let cost = CostParams::new(valid_n, valid_r, valid_p).unwrap();
+            assert_eq!(cost.logn(), valid_n);
+            assert_eq!(cost.blocksize(), valid_r);
+            assert_eq!(cost.parallelism(), valid_p);
 
             // not a power of two
             assert!(CostParams::logn_from_n(1025).is_err());

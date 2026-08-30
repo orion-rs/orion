@@ -38,7 +38,7 @@
 //! [`PasswordHash`] provides two ways of retrieving the hashed password:
 //! - [`PasswordHash::unprotected_as_ref::<str>()`] returns the hashed password in an encoded form.
 //!   The encoding specifies the settings used to hash the password.
-//! - [`PasswordHash::unprotected_as_ref::<\[u8\]>()`] returns only the hashed password in raw bytes.
+//! - [`PasswordHash::unprotected_as_ref::<\[u8\]>()`] returns the encoded hash as raw bytes.
 //!
 //! The following is an example of how the encoded password hash might look:
 //! ```text
@@ -66,6 +66,11 @@
 //! - Failure to generate random bytes securely during [`Salt::generate()`].
 //!
 //! # Security:
+//! - `PasswordHash::TryFrom<&str>` and later verification sets no additional bounds on cost parameters.
+//!   If `PasswordHash` is attacker-controlled and the cost-parameters are not validated to be within
+//!   reasonable bounds, then verifying that password hash may exhaust a machines resources (DoS)
+//!   if costs are set too high. Therefor, you should always validate cost-parameters can not coming
+//!   from a trusted source.
 //! - [`PasswordHash::unprotected_as_ref()`] should never
 //!   be used to compare password hashes, as these will not run in constant-time.
 //!   Either use [`hash_password_verify()`] or compare two [`PasswordHash`]es directly.

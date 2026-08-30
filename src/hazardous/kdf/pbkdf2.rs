@@ -33,10 +33,8 @@
 //! - The length of `dst_out` is less than 1.
 //! - The specified iteration count is less than 1.
 //! - The hashed password does not match the expected when verifying.
-//!
-//! # Panics:
-//! A panic will occur if:
 //! - The length of `dst_out` is greater than (2^32 - 1) * SHA(256/384/512)_OUTSIZE.
+//!
 //!
 //! # Security:
 //! - Salts should always be generated using a CSPRNG.
@@ -127,8 +125,12 @@ where
     let mut u_step = [0u8; OUTSIZE];
     let mut hmac = Hmac::_new(padded_password)?;
     for (idx, dk_block) in dest.chunks_mut(Hmac::HASH_FUNC_OUTSIZE).enumerate() {
-        // If this panics, then the size limit for PBKDF2 is reached.
-        let block_idx: u32 = 1u32.checked_add(idx as u32).unwrap();
+        let idx = u32::try_from(idx).map_err(|_| UnknownCryptoError)?;
+        let block_idx = if let Some(bidx) = 1u32.checked_add(idx) {
+            bidx
+        } else {
+            return Err(UnknownCryptoError);
+        };
 
         _function_f(
             salt,

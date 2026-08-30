@@ -41,10 +41,10 @@ pub fn sample_ntt(seed: &[u8; 32], ij: &[u8; 2]) -> Result<RingElementNTT, Unkno
         xof.squeeze(&mut c)?;
 
         let d1: i16 = (c[0] as i16) + 256 * ((c[1] as i16) & 15);
-        debug_assert!(d1 >= 0 || d1 < 2i16.pow(12));
+        debug_assert!(d1 >= 0 && d1 < 2i16.pow(12));
 
         let d2: i16 = ((c[1] as i16) >> 4u16) + 16i16 * (c[2] as i16);
-        debug_assert!(d2 >= 0 || d2 < 2i16.pow(12));
+        debug_assert!(d2 >= 0 && d2 < 2i16.pow(12));
 
         if d1 < KYBER_Q as i16 {
             a_hat[j] = FieldElement(d1 as u32);

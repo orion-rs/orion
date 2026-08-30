@@ -477,7 +477,7 @@ impl ChaCha20 {
     }
 
     /// Get the current position/counter of the [`ChaCha20`] state, as a byte-index.
-    pub fn byte_position(&mut self) -> u64 {
+    pub fn byte_position(&self) -> u64 {
         if self.exhausted && self.blockoffset == 0 {
             return MAX_KEYSTREAM_BYTES;
         }

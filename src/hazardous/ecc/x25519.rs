@@ -485,24 +485,11 @@ impl Sealed for X25519SharedKey {}
 impl TypeSpec for X25519SharedKey {
     const NAME: &'static str = stringify!(SharedKey);
     type TypeData = ByteArrayData<SHARED_KEY_SIZE>;
-
-    /// SECURITY: This overrides the default constant-time [`PartialEq`] with
-    /// a constant time one, in order to include high-bit masking.
-    fn ct_partial_eq(lhs: &Self::TypeData, rhs: &[u8]) -> bool {
-        use subtle::ConstantTimeEq;
-        debug_assert_eq!(lhs.bytes.len(), SHARED_KEY_SIZE);
-        if lhs.bytes.len() != rhs.len() {
-            return false;
-        }
-
-        (lhs.bytes[..31].ct_eq(&rhs[..31]) & (lhs.bytes[31] & 127u8).ct_eq(&(rhs[31] & 127u8)))
-            .into()
-    }
 }
 
 impl From<[u8; SHARED_KEY_SIZE]> for Secret<X25519SharedKey> {
     fn from(value: [u8; SHARED_KEY_SIZE]) -> Self {
-        Self::from_data(<X25519PublicKey as TypeSpec>::TypeData::from(value))
+        Self::from_data(<X25519SharedKey as TypeSpec>::TypeData::from(value))
     }
 }
 
@@ -666,35 +653,6 @@ mod public {
         // we only handle it internally and on [`PartialEq`]. Preserve still original
         // value.
         assert_ne!(pk_msb_one.as_ref(), pk_msb_zero.as_ref());
-    }
-
-    #[test]
-    fn test_shared_key_ignores_highbit() {
-        let u = [0u8; 32];
-
-        let mut msb_zero = u;
-        msb_zero[31] &= 127u8;
-        let mut msb_one = u;
-        msb_one[31] |= 128u8;
-
-        // These should equal each other. The high bits differ, but should be ignored.
-        let pk_msb_zero = SharedKey::from(msb_zero);
-        assert_eq!(pk_msb_zero, &msb_zero);
-        assert_eq!(pk_msb_zero, &msb_one);
-
-        let pk_msb_one = SharedKey::from(msb_one);
-        assert_eq!(pk_msb_one, &msb_zero);
-        assert_eq!(pk_msb_one, &msb_one);
-
-        assert_eq!(pk_msb_zero, pk_msb_one.unprotected_as_ref());
-        // We do not modify the stored value itself, because any impl MUST accept
-        // non-canonical and treat them as if they are. So in stead of modifying,
-        // we only handle it internally and on [`PartialEq`]. Preserve still original
-        // value.
-        assert_ne!(
-            pk_msb_one.unprotected_as_ref(),
-            pk_msb_zero.unprotected_as_ref()
-        );
     }
 
     #[test]

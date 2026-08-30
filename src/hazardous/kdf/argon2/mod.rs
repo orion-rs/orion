@@ -52,6 +52,11 @@
 //! - The hashed password does not match the expected when verifying.
 //!
 //! # Security:
+//! - `PasswordHash::TryFrom<&str>` and later verification sets no additional bounds on cost parameters.
+//!   If `PasswordHash` is attacker-controlled and the cost-parameters are not validated to be within
+//!   reasonable bounds, then verifying that password hash may exhaust a machines resources (DoS)
+//!   if costs are set too high. Therefor, you should always validate cost-parameters can not coming
+//!   from a trusted source.
 //! - Salts should always be generated using a CSPRNG.
 //!   [`secure_rand_bytes()`] can be used for this.
 //! - The minimum recommended length for a salt is `16` bytes.
@@ -200,7 +205,7 @@ impl TypeSpec for Argon2PasswordHash {
 /// - The encoded password contains any other fields than: The algorithm name,
 ///   version, m, t, p and the salt and password hash.
 /// - The encoded password hash contains invalid Base64 encoding.
-/// - Any decimal parameter value, such as m, contains leading zeroes and is longer
+/// - Any decimal parameter value, such as m, contains leading zeroes, `+`, or is longer
 ///   than a single character.
 /// - The encoded password hash contains numerical values that cannot
 ///   be represented as a `u32`.
@@ -317,6 +322,21 @@ impl CostParams {
             memory,
             parallelism,
         })
+    }
+
+    /// Get the `iterations` parameter for this [`CostParams`].
+    pub fn iterations(&self) -> u32 {
+        self.iterations
+    }
+
+    /// Get the `memory` parameter for this [`CostParams`].
+    pub fn memory(&self) -> u32 {
+        self.memory
+    }
+
+    /// Get the `parallelism` parameter for this [`CostParams`].
+    pub fn parallelism(&self) -> u32 {
+        self.parallelism
     }
 }
 
@@ -998,6 +1018,14 @@ mod test {
         assert!(
             validate_parameters(ARGON2_VERSION_19, &[], &[0u8; 9], None, None, &mut tmp).is_ok()
         );
+    }
+
+    #[test]
+    fn test_get_cost_params() {
+        let cost = CostParams::new(MAX_ITERATIONS_T, 8, 1).unwrap();
+        assert_eq!(cost.iterations(), MAX_ITERATIONS_T);
+        assert_eq!(cost.memory(), 8);
+        assert_eq!(cost.parallelism(), 1);
     }
 }
 
