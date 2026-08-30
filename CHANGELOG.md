@@ -1,6 +1,6 @@
-### 0.18.0-rc.1
+### 0.18.0
 
-**Date:** TBD.
+**Date:** August 30, 2026.
 
 **Note:**
 This release contains many breaking changes and updates to almost every part of the crate. Feel free to open an issue if something seems off.
