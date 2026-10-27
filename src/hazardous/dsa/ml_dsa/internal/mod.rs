@@ -1038,11 +1038,13 @@ impl<
             let w = zeroize_wrap!((mat_a_hat.as_ref() * &y.ntt()).inverse_ntt_mont());
 
             #[cfg(not(any(feature = "alloc", feature = "safe_api")))]
-            {
-                let mut w_hat = zeroize_wrap!(VectorNTT::<K, RInv>::zero());
-                MatrixNTT::<K, L>::mul_vec_ntt(&self.rho, &y.ntt(), &mut w_hat)?;
-                let w = zeroize_wrap!(w_hat.inverse_ntt_mont());
-            }
+            let mut w_hat = zeroize_wrap!(VectorNTT::<K, RInv>::zero());
+            
+            #[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+            MatrixNTT::<K, L>::mul_vec_ntt(&self.rho, &y.ntt(), &mut w_hat)?;
+            
+            #[cfg(not(any(feature = "alloc", feature = "safe_api")))]    
+            let w = zeroize_wrap!(w_hat.inverse_ntt_mont());
 
             let w1 = zeroize_wrap!(w.high_bits::<P>());
             P::w1_encode(&w1, w1_bytes.as_mut());
