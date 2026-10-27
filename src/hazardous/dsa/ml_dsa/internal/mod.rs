@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::hazardous::dsa::ml_dsa::internal::fe::RInv;
 use crate::{
     errors::UnknownCryptoError,
     generics::sealed::{Data, Sealed, TryFromBytes},
@@ -813,9 +814,10 @@ impl<
                 _phantom: PhantomData,
             },
             pk: InternalVerifyingKey {
+                rho,
                 pk,
                 t1,
-                mat_a_hat,
+                mat_a_hat: None,
                 shake256: Shake256::new(),
                 is_initialized: false,
                 _phantom: PhantomData,
@@ -1019,14 +1021,29 @@ impl<
         let mut hint = Hint::<K>::zero();
         let mut z = Vector::<L>::zero();
 
-        let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&self.rho)?;
+        // NOTE: We do fully expand the matrix here, if we're provided a heap.
+        // If it weren't, we have to re-compute the entire matrix on each rejection sampling iteration
+        // as is the case on stack-only operations.
+        #[cfg(any(feature = "alloc", feature = "safe_api"))]
+        let mat_a_hat = Box::new(MatrixNTT::<K, L>::expand_a::<P>(&self.rho)?);
 
         while !valid_sample {
             let y = zeroize_wrap!(expand_mask::<CLEN, K, L, P>(
                 rhoprimeprime.as_slice(),
                 counter
             )?);
-            let w = zeroize_wrap!((&mat_a_hat * &y.ntt()).inverse_ntt_mont());
+
+            // If we have heap, use the fully expanded matrix, otherwise compute it on-the-fly.
+            #[cfg(any(feature = "alloc", feature = "safe_api"))]
+            let w = zeroize_wrap!((mat_a_hat.as_ref() * &y.ntt()).inverse_ntt_mont());
+
+            #[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+            {
+                let mut w_hat = zeroize_wrap!(VectorNTT::<K, RInv>::zero());
+                MatrixNTT::<K, L>::mul_vec_ntt(&self.rho, &y.ntt(), &mut w_hat)?;
+                let w = zeroize_wrap!(w_hat.inverse_ntt_mont());
+            }
+
             let w1 = zeroize_wrap!(w.high_bits::<P>());
             P::w1_encode(&w1, w1_bytes.as_mut());
 
@@ -1194,9 +1211,10 @@ pub struct InternalVerifyingKey<
     const L: usize,
     P: MlDsaParameters,
 > {
+    rho: [u8; 32],
     pub(crate) pk: [u8; PK_ENCODED_SIZE],
     t1: Vector<K>,
-    mat_a_hat: MatrixNTT<K, L>,
+    pub(crate) mat_a_hat: Option<MatrixNTT<K, L>>,
     shake256: Shake256,
     is_initialized: bool,
     _phantom: PhantomData<P>,
@@ -1257,11 +1275,12 @@ impl<
         let (rho, t1) = P::pk_decode::<K>(value)?;
 
         Ok(Self {
+            rho,
             pk: value
                 .try_into()
                 .expect("length check is part of P::pk_decode()"),
             t1,
-            mat_a_hat: MatrixNTT::<K, L>::expand_a::<P>(&rho)?,
+            mat_a_hat: None,
             shake256: Shake256::new(),
             is_initialized: false,
             _phantom: PhantomData,
@@ -1331,9 +1350,10 @@ impl<
         let pk = P::pk_encode::<PK_ENCODED_SIZE>(&rho, &t1.elems);
 
         Ok(Self {
+            rho,
             pk,
             t1,
-            mat_a_hat,
+            mat_a_hat: None,
             shake256: Shake256::new(),
             is_initialized: false,
             _phantom: PhantomData,
@@ -1362,6 +1382,12 @@ impl<
         P,
     >
 {
+    /// Compute the fully expanded matrix and store it for later use.
+    pub fn cache_fully_expanded_matrix(&mut self) -> Result<(), UnknownCryptoError> {
+        self.mat_a_hat = Some(MatrixNTT::<K, L>::expand_a::<P>(&self.rho)?);
+        Ok(())
+    }
+
     /// FIPS-204, Algorithm 8.
     pub fn verify_internal_with_mu(
         &self,
@@ -1372,9 +1398,15 @@ impl<
 
         let c = sample_in_ball::<P>(&sigma.c)?;
         // Az − ct1 ⋅ 2d
-        let w_approx = ((&self.mat_a_hat * &sigma.z.ntt())
-            - &(&c.into_ntt() * &self.t1.shift_left_d::<P>().ntt()))
-            .inverse_ntt_mont();
+
+        // w_approx based on wether we have the matrix cached or not
+        let mut w_approx_hat = VectorNTT::<K, RInv>::zero();
+        match self.mat_a_hat.as_ref() {
+            Some(mat_a_hat) => w_approx_hat = mat_a_hat * &sigma.z.ntt(),
+            None => MatrixNTT::<K, L>::mul_vec_ntt(&self.rho, &sigma.z.ntt(), &mut w_approx_hat)?,
+        };
+        w_approx_hat -= &(&c.into_ntt() * &self.t1.shift_left_d::<P>().ntt());
+        let w_approx = w_approx_hat.inverse_ntt_mont();
 
         let w1 = w_approx.use_hint::<P>(&sigma.h);
         let mut c_tilde_prime = [0u8; COMMITHASH_LEN];

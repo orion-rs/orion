@@ -1,3 +1,14 @@
+### 0.18.1
+
+**Date:** TBD, 2026.
+
+**Changelog:**
+- Removing caching of fully expanded matrix A in ML-DSA's `VerifyingKey` by default. It is now computed on-the-fly to save stackspace instead.
+  - Add `VerifyingKey::cache_key()` to explicitly enabling the use cached keys.
+- Gate internal allocation of fully expanded matrix A in ML-DSA's `SigningKey` behind `Box`, making it `alloc`/`safe_api` only.
+  - If `#![no_std]` it is computed on-the-fly as with the `VerifyingKey`, in order to save stackspace.
+
+
 ### 0.18.0
 
 **Date:** August 30, 2026.

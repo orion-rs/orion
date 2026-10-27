@@ -99,6 +99,52 @@ pub fn sample_in_ball<P: MlDsaParameters>(seed: &[u8]) -> Result<RingElement, Un
     Ok(c)
 }
 
+/// FIPS-204, Alrogithm 32.
+///
+/// Shake128 ctx is passed pre-initialized with absorbed rho.
+fn rej_ntt_poly(
+    shake: &Shake128,
+    j: u8,
+    i: u8,
+    out: &mut RingElementNTT<Standard>,
+) -> Result<(), UnknownCryptoError> {
+    // rho remains fixed for each of these invocations
+    let mut g = shake.clone();
+    g.absorb(&[j, i])?; // rho prime
+
+    let mut j = 0;
+
+    // Squeeze entire block (also done in ref impl) to save squeezes for better performance.
+    // Because SHAKE_128_RATE envenly divides the per-iter 3 pair sample, we can easily do it
+    // here without buffering extra leftover.
+    let mut shake_block = [0u8; SHAKE_128_RATE];
+    debug_assert_eq!(SHAKE_128_RATE % 3, 0);
+    g.squeeze(&mut shake_block)?;
+    let mut blockpos = 0usize;
+
+    while j < 256 {
+        if blockpos == SHAKE_128_RATE {
+            g.squeeze(&mut shake_block)?;
+            blockpos = 0;
+        }
+
+        // Here again, the indices are safe due to SHAKE_128_RATE % 3 = 0.
+        debug_assert!(blockpos + 2 < SHAKE_128_RATE);
+        if let Some(coeff) = coeff_from_three_bytes(
+            shake_block[blockpos],
+            shake_block[blockpos + 1],
+            shake_block[blockpos + 2],
+        ) {
+            out[j] = coeff;
+            j += 1;
+        }
+
+        blockpos += 3;
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
     mat: [VectorNTT<L, Standard>; K],
@@ -122,6 +168,32 @@ impl<const K: usize, const L: usize> Mul<&VectorNTT<L, Standard>> for &MatrixNTT
 
 impl<const K: usize, const L: usize> MatrixNTT<K, L> {
     /// FIPS-204, Algorithm 32 and Algorithm 31.
+    /// Here we generate the matrix on-the-fly, for each entry needed. This avoid holding
+    /// the entirety of the matrix in memory at once.
+    ///
+    /// Matrix A is fully derived from rho, so computing its entries on-the-fly
+    /// is the exact same as pre-computation.
+    pub(crate) fn mul_vec_ntt(
+        rho: &[u8],
+        v_hat: &VectorNTT<L, Standard>,
+        out: &mut VectorNTT<K, RInv>,
+    ) -> Result<(), UnknownCryptoError> {
+        let mut ctx = Shake128::new();
+        ctx.absorb(rho)?;
+
+        let mut mat_a_ij = RingElementNTT::zero();
+        for (i, out_i) in out.elems.iter_mut().enumerate().take(K) {
+            *out_i = RingElementNTT::<RInv>::zero();
+            for (j, v_hat_j) in v_hat.elems.iter().enumerate().take(L) {
+                rej_ntt_poly(&ctx, j as u8, i as u8, &mut mat_a_ij)?;
+                *out_i += &(mat_a_ij * *v_hat_j);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// FIPS-204, Algorithm 32 and Algorithm 31.
     /// Merged to avoid useless re-instantiations of SHAKE128.
     pub(crate) fn expand_a<P: MlDsaParameters>(seed: &[u8]) -> Result<Self, UnknownCryptoError> {
         debug_assert_eq!(K, P::DIM_K);
@@ -135,43 +207,7 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
         for (r, row) in mat_hat.iter_mut().enumerate().take(K) {
             for (s, entry) in row.elems.iter_mut().enumerate().take(L) {
                 // FIPS-204, Algorithm 31:
-
-                // rho remains fixed for each of these invocations
-                let mut g = ctx.clone();
-                g.absorb(&[s as u8, r as u8])?; // rho prime
-
-                let mut a_hat = RingElementNTT::zero();
-                let mut j = 0;
-
-                // Squeeze entire block (also done in ref impl) to save squeezes for better performance.
-                // Because SHAKE_128_RATE envenly divides the per-iter 3 pair sample, we can easily do it
-                // here without buffering extra leftover.
-                let mut shake_block = [0u8; SHAKE_128_RATE];
-                debug_assert_eq!(SHAKE_128_RATE % 3, 0);
-                g.squeeze(&mut shake_block)?;
-                let mut blockpos = 0usize;
-
-                while j < 256 {
-                    if blockpos == SHAKE_128_RATE {
-                        g.squeeze(&mut shake_block)?;
-                        blockpos = 0;
-                    }
-
-                    // Here again, the indices are safe due to SHAKE_128_RATE % 3 = 0.
-                    debug_assert!(blockpos + 2 < SHAKE_128_RATE);
-                    if let Some(coeff) = coeff_from_three_bytes(
-                        shake_block[blockpos],
-                        shake_block[blockpos + 1],
-                        shake_block[blockpos + 2],
-                    ) {
-                        a_hat[j] = coeff;
-                        j += 1;
-                    }
-
-                    blockpos += 3;
-                }
-
-                *entry = a_hat;
+                rej_ntt_poly(&ctx, s as u8, r as u8, entry)?;
             }
         }
 

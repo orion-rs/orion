@@ -32,6 +32,13 @@
 //! [`KeyPair`] does not expose the streaming-based API, so in this case a [`SigningKey`] should preferrably be constructed
 //! from a [`Seed`].
 //!
+//! #### Performance
+//! By default, neither [`VerifyingKey`] nor [`KeyPair`] store the fully expanded matrix internally. This can be enabled manually with
+//! [`VerifyingKey::cache_keys()`] and [`KeyPair::cache_keys()`], respectively.
+//!
+//! [`SigningKey`] computes the fully expanded matrix once per signing operation (in [`Box`]), if features `alloc` or `safe_api` is turned on.
+//! On fully `#![no_std]`, the entire matrix is never stored fully on the stack, to preserve space.
+//!
 //! #### Serialized signing keys
 //! It is possible to instantiate a [`SigningKey`] directly, if strictly required, using [`SigningKey::try_from()`]. This use hereof is intended solely for
 //! interoperability purposes. The lack of generate function for [`SigningKey`] is intentional.
@@ -328,6 +335,16 @@ impl SigningKey {
 
 impl VerifyingKey {
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Computes and stores internally the fully expanded matrix for this [`VerifyingKey`].
+    /// It's useful for applications that have enough stack space and verify many signatures,
+    /// for the same [`VerifyingKey`].
+    ///
+    /// Note that this requires sufficient stack space to be available.
+    pub fn cache_keys(&mut self) -> Result<(), UnknownCryptoError> {
+        self.data.cache_fully_expanded_matrix()
+    }
+
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`VerifyingKey`], verify a signature `sig` produced over message `m` and context.
     pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
         self.data.verify(m, &sig.data, ctx)
@@ -428,6 +445,12 @@ impl TryFrom<&Seed> for KeyPair {
 }
 
 impl KeyPair {
+    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
+    /// Equivalent to [`VerifyingKey::cache_keys`].
+    pub fn cache_keys(&mut self) -> Result<(), UnknownCryptoError> {
+        self.verifying_key.cache_keys()
+    }
+
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -777,5 +800,50 @@ mod tests {
 
         assert!(vk.clone().finalize(&oneshot).is_ok());
         assert!(vk.clone().finalize(&multi).is_ok());
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    /// NOTE: This has primarily been an issue on Windows platforms running tests
+    /// where the stack was exhausted. This is true for debug builds primarily,
+    /// but we don't ant to break downstream debug testing either, so it's worth handling.
+    fn double_keypair_fits_stack() {
+        // 1 MiB is the max due to Windows default stacksize for x86-64
+        // Linux has 8 MiB so this is leaves plenty room
+        const STACKSIZE: usize = 1024 << 10;
+        std::thread::Builder::new()
+            .stack_size(STACKSIZE)
+            .spawn(|| {
+                let kp1 = KeyPair::new(Seed::from([127u8; 32])).unwrap();
+                assert!(kp1.verifying_key.data.mat_a_hat.is_none());
+                let kp2 = KeyPair::new(Seed::from([255u8; 32])).unwrap();
+                assert!(kp2.verifying_key.data.mat_a_hat.is_none());
+                let sig1 = kp1.signing_key.sign(b"Test", b"").unwrap();
+                let sig2 = kp2.signing_key.sign(b"Test", b"").unwrap();
+                assert!(kp1.verifying_key.verify(b"Test", b"", &sig1).is_ok());
+                assert!(kp2.verifying_key.verify(b"Test", b"", &sig2).is_ok());
+            })
+            .unwrap()
+            .join()
+            .expect("ML-DSA-65 exceeded the stack size");
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    #[cfg(feature = "safe_api")]
+    fn test_uncached_and_cached_agree() {
+        let mut kp = KeyPair::generate().unwrap();
+        let mut vk = kp.verifying_key.clone();
+        vk.cache_keys().unwrap();
+
+        let sig = kp.signing_key.sign(b"Test", b"").unwrap();
+        assert!(kp.verifying_key.data.mat_a_hat.is_none());
+        assert!(kp.verifying_key.verify(b"Test", b"", &sig).is_ok());
+        assert!(vk.data.mat_a_hat.is_some());
+        assert!(vk.verify(b"Test", b"", &sig).is_ok());
+
+        kp.cache_keys().unwrap();
+        assert!(kp.verifying_key.data.mat_a_hat.is_some());
+        assert!(kp.verifying_key.verify(b"Test", b"", &sig).is_ok());
     }
 }
