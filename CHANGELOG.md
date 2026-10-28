@@ -1,3 +1,12 @@
+### 0.18.1
+
+**Date:** TBD, 2026.
+
+**Changelog:**
+- Expand the matrix for ML-DSA in full only if heap is available (`alloc`/`safe_api`).
+  - If `#![no_std]` compute the matrix on-the-fly when needed for ML-DSA operations.
+
+
 ### 0.18.0
 
 **Date:** August 30, 2026.

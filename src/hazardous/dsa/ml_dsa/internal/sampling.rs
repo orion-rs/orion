@@ -28,7 +28,11 @@ use crate::hazardous::dsa::ml_dsa::internal::fe::{
 };
 use crate::hazardous::hash::sha3::shake128::{SHAKE_128_RATE, Shake128};
 use crate::hazardous::hash::sha3::shake256::{SHAKE_256_RATE, Shake256};
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
 use core::ops::Mul;
+
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
+use alloc::{vec, vec::Vec};
 
 /// FIPS-204, Algorithm 14.
 pub(crate) fn coeff_from_three_bytes(b0: u8, b1: u8, b2: u8) -> Option<FieldElement<Standard>> {
@@ -99,11 +103,92 @@ pub fn sample_in_ball<P: MlDsaParameters>(seed: &[u8]) -> Result<RingElement, Un
     Ok(c)
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
-    mat: [VectorNTT<L, Standard>; K],
+/// FIPS-204, Algorithm 32.
+///
+/// Shake128 ctx is passed pre-initialized with absorbed rho.
+fn rej_ntt_poly(
+    shake: &Shake128,
+    j: u8,
+    i: u8,
+    out: &mut RingElementNTT<Standard>,
+) -> Result<(), UnknownCryptoError> {
+    // rho remains fixed for each of these invocations
+    let mut g = shake.clone();
+    g.absorb(&[j, i])?; // rho prime
+
+    let mut j = 0;
+
+    // Squeeze entire block (also done in ref impl) to save squeezes for better performance.
+    // Because SHAKE_128_RATE evenly divides the per-iter 3 pair sample, we can easily do it
+    // here without buffering extra leftover.
+    let mut shake_block = [0u8; SHAKE_128_RATE];
+    debug_assert_eq!(SHAKE_128_RATE % 3, 0);
+    g.squeeze(&mut shake_block)?;
+    let mut blockpos = 0usize;
+
+    while j < 256 {
+        if blockpos == SHAKE_128_RATE {
+            g.squeeze(&mut shake_block)?;
+            blockpos = 0;
+        }
+
+        // Here again, the indices are safe due to SHAKE_128_RATE % 3 = 0.
+        debug_assert!(blockpos + 2 < SHAKE_128_RATE);
+        if let Some(coeff) = coeff_from_three_bytes(
+            shake_block[blockpos],
+            shake_block[blockpos + 1],
+            shake_block[blockpos + 2],
+        ) {
+            out[j] = coeff;
+            j += 1;
+        }
+
+        blockpos += 3;
+    }
+
+    Ok(())
 }
 
+#[cfg(any(test, not(any(feature = "alloc", feature = "safe_api"))))]
+/// FIPS-204, Algorithm 32 and Algorithm 31.
+/// Here we generate the matrix on-the-fly, for each entry needed. This avoids holding
+/// the entirety of the matrix in memory at once.
+///
+/// Matrix A is fully derived from rho, so computing its entries on-the-fly
+/// is the exact same as pre-computation.
+pub(crate) fn mul_vec_ntt<const K: usize, const L: usize>(
+    rho: &[u8],
+    v_hat: &VectorNTT<L, Standard>,
+    out: &mut VectorNTT<K, RInv>,
+) -> Result<(), UnknownCryptoError> {
+    debug_assert_eq!(rho.len(), 32);
+
+    let mut ctx = Shake128::new();
+    ctx.absorb(rho)?;
+
+    let mut mat_a_ij = RingElementNTT::zero();
+    for (i, out_i) in out.elems.iter_mut().enumerate().take(K) {
+        *out_i = RingElementNTT::<RInv>::zero();
+        for (j, v_hat_j) in v_hat.elems.iter().enumerate().take(L) {
+            rej_ntt_poly(&ctx, j as u8, i as u8, &mut mat_a_ij)?;
+            *out_i += &(mat_a_ij * *v_hat_j);
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
+#[derive(Debug, Clone, PartialEq)]
+/// Fully expanded matrix A, which we store on the heap as it has previously put too much pressure
+/// on the stack.
+pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
+    // We want to avoid copies on the stack before being moved to heap
+    // as happens with Vector(NTT) newtypes, so here we simply define as standard `Vec`.
+    mat: Vec<Vec<RingElementNTT<Standard>>>,
+}
+
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
 impl<const K: usize, const L: usize> Mul<&VectorNTT<L, Standard>> for &MatrixNTT<K, L> {
     type Output = VectorNTT<K, RInv>;
 
@@ -120,6 +205,7 @@ impl<const K: usize, const L: usize> Mul<&VectorNTT<L, Standard>> for &MatrixNTT
     }
 }
 
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
 impl<const K: usize, const L: usize> MatrixNTT<K, L> {
     /// FIPS-204, Algorithm 32 and Algorithm 31.
     /// Merged to avoid useless re-instantiations of SHAKE128.
@@ -128,50 +214,14 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
         debug_assert_eq!(L, P::DIM_L);
         debug_assert_eq!(seed.len(), 32);
 
-        let mut mat_hat = [VectorNTT::<L, Standard>::zero(); K];
+        let mut mat_hat = vec![vec![RingElementNTT::<Standard>::zero(); L]; K];
         let mut ctx = Shake128::new();
         ctx.absorb(seed)?;
 
-        for (r, row) in mat_hat.iter_mut().enumerate().take(K) {
-            for (s, entry) in row.elems.iter_mut().enumerate().take(L) {
+        for (r, row) in mat_hat.iter_mut().enumerate() {
+            for (s, entry) in row.iter_mut().enumerate() {
                 // FIPS-204, Algorithm 31:
-
-                // rho remains fixed for each of these invocations
-                let mut g = ctx.clone();
-                g.absorb(&[s as u8, r as u8])?; // rho prime
-
-                let mut a_hat = RingElementNTT::zero();
-                let mut j = 0;
-
-                // Squeeze entire block (also done in ref impl) to save squeezes for better performance.
-                // Because SHAKE_128_RATE envenly divides the per-iter 3 pair sample, we can easily do it
-                // here without buffering extra leftover.
-                let mut shake_block = [0u8; SHAKE_128_RATE];
-                debug_assert_eq!(SHAKE_128_RATE % 3, 0);
-                g.squeeze(&mut shake_block)?;
-                let mut blockpos = 0usize;
-
-                while j < 256 {
-                    if blockpos == SHAKE_128_RATE {
-                        g.squeeze(&mut shake_block)?;
-                        blockpos = 0;
-                    }
-
-                    // Here again, the indices are safe due to SHAKE_128_RATE % 3 = 0.
-                    debug_assert!(blockpos + 2 < SHAKE_128_RATE);
-                    if let Some(coeff) = coeff_from_three_bytes(
-                        shake_block[blockpos],
-                        shake_block[blockpos + 1],
-                        shake_block[blockpos + 2],
-                    ) {
-                        a_hat[j] = coeff;
-                        j += 1;
-                    }
-
-                    blockpos += 3;
-                }
-
-                *entry = a_hat;
+                rej_ntt_poly(&ctx, s as u8, r as u8, entry)?;
             }
         }
 
@@ -399,5 +449,42 @@ mod test {
 
         assert_eq!(nonzero, MlDsa87::TAU);
         assert_eq!(ones, MlDsa87::TAU);
+    }
+
+    #[test]
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    // NOTE: The difference between pure no_std ML-DSA and heap-available
+    // is the caching of matrix A. This tests that both approaches to generating
+    // the matrix are equivalent.
+    fn test_mul_vec_ntt_matrix_expand_a_equivalence() {
+        fn check_equivalence<
+            const CLEN: usize,
+            const K: usize,
+            const L: usize,
+            P: MlDsaParameters,
+        >() {
+            // Deterministically dervie rho and seed for tests
+            let mut xof = Shake128::new();
+            xof.absorb(b"test_mul_vec_ntt_matrix_expand_a_equivalence")
+                .unwrap();
+
+            for _ in 0..64 {
+                let (mut rho, mut seed) = ([0u8; 32], [0u8; 64]);
+                xof.squeeze(&mut rho).unwrap();
+                xof.squeeze(&mut seed).unwrap();
+
+                let v_hat = expand_mask::<CLEN, K, L, P>(&seed, 0).unwrap().ntt();
+
+                let expected = &MatrixNTT::<K, L>::expand_a::<P>(&rho).unwrap() * &v_hat;
+                let mut actual = VectorNTT::<K, RInv>::zero();
+                mul_vec_ntt::<K, L>(&rho, &v_hat, &mut actual).unwrap();
+
+                assert_eq!(expected, actual);
+            }
+        }
+
+        check_equivalence::<{ MlDsa44::CLEN }, { MlDsa44::DIM_K }, { MlDsa44::DIM_L }, MlDsa44>();
+        check_equivalence::<{ MlDsa65::CLEN }, { MlDsa65::DIM_K }, { MlDsa65::DIM_L }, MlDsa65>();
+        check_equivalence::<{ MlDsa87::CLEN }, { MlDsa87::DIM_K }, { MlDsa87::DIM_L }, MlDsa87>();
     }
 }

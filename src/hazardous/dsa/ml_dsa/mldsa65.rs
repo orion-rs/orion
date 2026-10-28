@@ -32,6 +32,13 @@
 //! [`KeyPair`] does not expose the streaming-based API, so in this case a [`SigningKey`] should preferrably be constructed
 //! from a [`Seed`].
 //!
+//! #### Performance
+//! By default, both [`VerifyingKey`] and [`KeyPair`] store the fully expanded matrix internally (requires `alloc` or `safe_api`).
+//!
+//! [`SigningKey`] computes the fully expanded matrix once per signing operation (in a [`Vec`]), if features `alloc` or `safe_api` is turned on.
+//!
+//! When `#![no_std]`, the fully expanded matrix is never stored fully on the stack.
+//!
 //! #### Serialized signing keys
 //! It is possible to instantiate a [`SigningKey`] directly, if strictly required, using [`SigningKey::try_from()`]. This use hereof is intended solely for
 //! interoperability purposes. The lack of generate function for [`SigningKey`] is intentional.
@@ -102,6 +109,7 @@
 //! [`SigningKey::update()`]: crate::hazardous::dsa::ml_dsa::mldsa65::SigningKey::update
 //! [`SigningKey::finalize()`]: crate::hazardous::dsa::ml_dsa::mldsa65::SigningKey::finalize
 //! [`SigningKey::init()`]: crate::hazardous::dsa::ml_dsa::mldsa65::SigningKey::init
+//! [`VerifyingKey`]: crate::hazardous::dsa::ml_dsa::mldsa65::VerifyingKey
 //! [`VerifyingKey::update()`]: crate::hazardous::dsa::ml_dsa::mldsa65::VerifyingKey::update
 //! [`VerifyingKey::finalize()`]: crate::hazardous::dsa::ml_dsa::mldsa65::VerifyingKey::finalize
 //! [`VerifyingKey::init()`]: crate::hazardous::dsa::ml_dsa::mldsa65::VerifyingKey::init
@@ -662,9 +670,9 @@ mod tests {
         #[cfg(not(feature = "safe_api"))]
         let seed = Seed::from([123u8; 32]);
 
-        let streaming_tester = DsaTester::<KeyPair>::new(KeyPair::new(seed.clone()).unwrap());
+        let dsa_tester = DsaTester::<KeyPair>::new(KeyPair::new(seed.clone()).unwrap());
         DsaTester::<KeyPair>::run_all_tests(
-            &streaming_tester,
+            &dsa_tester,
             seed.unprotected_as_ref(),
             b"This message to sign with ML-DSA.",
         );
@@ -777,5 +785,29 @@ mod tests {
 
         assert!(vk.clone().finalize(&oneshot).is_ok());
         assert!(vk.clone().finalize(&multi).is_ok());
+    }
+
+    #[test]
+    #[cfg(feature = "safe_api")]
+    /// NOTE: This has primarily been an issue on Windows platforms running tests
+    /// where the stack was exhausted. This is true for debug builds primarily,
+    /// but we don't ant to break downstream debug testing either, so it's worth handling.
+    fn double_keypair_fits_stack() {
+        // 1 MiB is the max due to Windows default stacksize for x86-64
+        // Linux has 8 MiB so this leaves plenty room
+        const STACKSIZE: usize = 1024 << 10;
+        std::thread::Builder::new()
+            .stack_size(STACKSIZE)
+            .spawn(|| {
+                let kp1 = KeyPair::new(Seed::from([127u8; 32])).unwrap();
+                let kp2 = KeyPair::new(Seed::from([255u8; 32])).unwrap();
+                let sig1 = kp1.signing_key.sign(b"Test", b"").unwrap();
+                let sig2 = kp2.signing_key.sign(b"Test", b"").unwrap();
+                assert!(kp1.verifying_key.verify(b"Test", b"", &sig1).is_ok());
+                assert!(kp2.verifying_key.verify(b"Test", b"", &sig2).is_ok());
+            })
+            .unwrap()
+            .join()
+            .expect("ML-DSA-65 exceeded the stack size");
     }
 }

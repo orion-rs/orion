@@ -20,19 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::hazardous::dsa::ml_dsa::internal::fe::RInv;
 use crate::{
     errors::UnknownCryptoError,
     generics::sealed::{Data, Sealed, TryFromBytes},
     hazardous::{
         dsa::ml_dsa::internal::{
             fe::{FieldElement, Hint, RingElement, Standard, Vector, VectorNTT},
-            sampling::{MatrixNTT, expand_mask, expand_s, sample_in_ball},
+            sampling::{expand_mask, expand_s, sample_in_ball},
         },
         hash::sha3::shake256::Shake256,
     },
 };
 use core::{fmt::Debug, marker::PhantomData};
 use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater};
+
+#[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+use crate::hazardous::dsa::ml_dsa::internal::sampling::mul_vec_ntt;
+
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
+use crate::hazardous::dsa::ml_dsa::internal::sampling::MatrixNTT;
 
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
@@ -762,8 +769,6 @@ impl<
         // SAFETY: Const-sized on 128.
         let rho: [u8; 32] = expanded_seed[..32].try_into().unwrap();
 
-        let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&rho)?;
-
         #[cfg(feature = "zeroize")]
         let (mut s1, mut s2) = expand_s::<K, L, P>(&expanded_seed[32..32 + 64])?;
         #[cfg(not(feature = "zeroize"))]
@@ -771,10 +776,27 @@ impl<
 
         let s1_hat = s1.ntt();
 
+        #[allow(unused_mut)]
+        // mut not needed normally but allowed here for no_std or there'll be too many cfg's
+        let mut t_hat: VectorNTT<K, RInv>;
+
+        #[cfg(any(feature = "alloc", feature = "safe_api"))]
+        let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&rho)?;
+        #[cfg(any(feature = "alloc", feature = "safe_api"))]
+        {
+            t_hat = &mat_a_hat * &s1_hat;
+        }
+
+        #[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+        {
+            t_hat = VectorNTT::zero();
+            mul_vec_ntt::<K, L>(&rho, &s1_hat, &mut t_hat)?;
+        }
+
         #[cfg(feature = "zeroize")]
-        let mut t = (&mat_a_hat * &s1_hat).inverse_ntt_mont() + &s2;
+        let mut t = t_hat.inverse_ntt_mont() + &s2;
         #[cfg(not(feature = "zeroize"))]
-        let t = (&mat_a_hat * &s1_hat).inverse_ntt_mont() + &s2;
+        let t = t_hat.inverse_ntt_mont() + &s2;
 
         #[cfg(feature = "zeroize")]
         let (mut t1, mut t0) = t.power2round::<P>();
@@ -813,8 +835,10 @@ impl<
                 _phantom: PhantomData,
             },
             pk: InternalVerifyingKey {
+                rho,
                 pk,
                 t1,
+                #[cfg(any(feature = "alloc", feature = "safe_api"))]
                 mat_a_hat,
                 shake256: Shake256::new(),
                 is_initialized: false,
@@ -827,6 +851,7 @@ impl<
         {
             s1.zeroize();
             s2.zeroize();
+            t_hat.zeroize();
             t.zeroize();
             t0.zeroize();
             t1.zeroize();
@@ -1019,6 +1044,10 @@ impl<
         let mut hint = Hint::<K>::zero();
         let mut z = Vector::<L>::zero();
 
+        // NOTE: We do fully expand the matrix here, if we're provided a heap.
+        // If it weren't, we have to re-compute the entire matrix on each rejection sampling iteration
+        // as is the case on stack-only operations.
+        #[cfg(any(feature = "alloc", feature = "safe_api"))]
         let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&self.rho)?;
 
         while !valid_sample {
@@ -1026,7 +1055,20 @@ impl<
                 rhoprimeprime.as_slice(),
                 counter
             )?);
+
+            // If we have heap, use the fully expanded matrix, otherwise compute it on-the-fly.
+            #[cfg(any(feature = "alloc", feature = "safe_api"))]
             let w = zeroize_wrap!((&mat_a_hat * &y.ntt()).inverse_ntt_mont());
+
+            #[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+            let mut w_hat = zeroize_wrap!(VectorNTT::<K, RInv>::zero());
+
+            #[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+            mul_vec_ntt::<K, L>(&self.rho, &y.ntt(), &mut w_hat)?;
+
+            #[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+            let w = zeroize_wrap!(w_hat.inverse_ntt_mont());
+
             let w1 = zeroize_wrap!(w.high_bits::<P>());
             P::w1_encode(&w1, w1_bytes.as_mut());
 
@@ -1194,9 +1236,15 @@ pub struct InternalVerifyingKey<
     const L: usize,
     P: MlDsaParameters,
 > {
+    // rho is only needed to expand matrix A when no heap is available.
+    #[cfg_attr(any(feature = "alloc", feature = "safe_api"), allow(dead_code))]
+    rho: [u8; 32],
     pub(crate) pk: [u8; PK_ENCODED_SIZE],
     t1: Vector<K>,
-    mat_a_hat: MatrixNTT<K, L>,
+    // Only ever store the fully expanded matrix if we have a heap allocator
+    // available.
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    pub(crate) mat_a_hat: MatrixNTT<K, L>,
     shake256: Shake256,
     is_initialized: bool,
     _phantom: PhantomData<P>,
@@ -1257,10 +1305,12 @@ impl<
         let (rho, t1) = P::pk_decode::<K>(value)?;
 
         Ok(Self {
+            rho,
             pk: value
                 .try_into()
                 .expect("length check is part of P::pk_decode()"),
             t1,
+            #[cfg(any(feature = "alloc", feature = "safe_api"))]
             mat_a_hat: MatrixNTT::<K, L>::expand_a::<P>(&rho)?,
             shake256: Shake256::new(),
             is_initialized: false,
@@ -1318,21 +1368,59 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         #[cfg(feature = "zeroize")]
-        let (rho, mut k, _tr, _s1, s2, _t0) = P::sk_decode::<K, L>(&value.sk)?;
+        let (rho, mut k, _tr, mut s1, mut s2, mut t0) = P::sk_decode::<K, L>(&value.sk)?;
         #[cfg(feature = "zeroize")]
-        k.zeroize();
+        {
+            k.zeroize();
+            t0.zeroize();
+            s1.zeroize();
+        }
 
         #[cfg(not(feature = "zeroize"))]
         let (rho, _k, _tr, _s1, s2, _t0) = P::sk_decode::<K, L>(&value.sk)?;
 
+        #[allow(unused_mut)]
+        // mut not needed normally but allowed here for no_std or there'll be too many cfg's
+        let mut t_hat: VectorNTT<K, RInv>;
+
+        #[cfg(any(feature = "alloc", feature = "safe_api"))]
         let mat_a_hat = MatrixNTT::<K, L>::expand_a::<P>(&rho)?;
-        let t = (&mat_a_hat * &value.s1_hat).inverse_ntt_mont() + &s2;
+        #[cfg(any(feature = "alloc", feature = "safe_api"))]
+        {
+            t_hat = &mat_a_hat * &value.s1_hat;
+        }
+
+        #[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+        {
+            t_hat = VectorNTT::zero();
+            mul_vec_ntt::<K, L>(&rho, &value.s1_hat, &mut t_hat)?;
+        }
+
+        #[cfg(feature = "zeroize")]
+        let mut t = t_hat.inverse_ntt_mont() + &s2;
+        #[cfg(not(feature = "zeroize"))]
+        let t = t_hat.inverse_ntt_mont() + &s2;
+
+        #[cfg(feature = "zeroize")]
+        let (t1, mut t0) = t.power2round::<P>();
+        #[cfg(not(feature = "zeroize"))]
         let (t1, _t0) = t.power2round::<P>();
+
         let pk = P::pk_encode::<PK_ENCODED_SIZE>(&rho, &t1.elems);
 
+        #[cfg(feature = "zeroize")]
+        {
+            t_hat.zeroize();
+            t.zeroize();
+            s2.zeroize();
+            t0.zeroize();
+        }
+
         Ok(Self {
+            rho,
             pk,
             t1,
+            #[cfg(any(feature = "alloc", feature = "safe_api"))]
             mat_a_hat,
             shake256: Shake256::new(),
             is_initialized: false,
@@ -1372,9 +1460,20 @@ impl<
 
         let c = sample_in_ball::<P>(&sigma.c)?;
         // Az − ct1 ⋅ 2d
-        let w_approx = ((&self.mat_a_hat * &sigma.z.ntt())
-            - &(&c.into_ntt() * &self.t1.shift_left_d::<P>().ntt()))
-            .inverse_ntt_mont();
+        let mut w_approx_hat: VectorNTT<K, RInv>;
+
+        #[cfg(any(feature = "alloc", feature = "safe_api"))]
+        {
+            w_approx_hat = &self.mat_a_hat * &sigma.z.ntt()
+        }
+        #[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+        {
+            w_approx_hat = VectorNTT::zero();
+            mul_vec_ntt::<K, L>(&self.rho, &sigma.z.ntt(), &mut w_approx_hat)?
+        }
+
+        w_approx_hat -= &(&c.into_ntt() * &self.t1.shift_left_d::<P>().ntt());
+        let w_approx = w_approx_hat.inverse_ntt_mont();
 
         let w1 = w_approx.use_hint::<P>(&sigma.h);
         let mut c_tilde_prime = [0u8; COMMITHASH_LEN];
