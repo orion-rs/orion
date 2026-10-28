@@ -160,6 +160,8 @@ pub(crate) fn mul_vec_ntt<const K: usize, const L: usize>(
     v_hat: &VectorNTT<L, Standard>,
     out: &mut VectorNTT<K, RInv>,
 ) -> Result<(), UnknownCryptoError> {
+    debug_assert_eq!(rho.len(), 32);
+
     let mut ctx = Shake128::new();
     ctx.absorb(rho)?;
 

@@ -1349,9 +1349,13 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         #[cfg(feature = "zeroize")]
-        let (rho, mut k, _tr, _s1, s2, _t0) = P::sk_decode::<K, L>(&value.sk)?;
+        let (rho, mut k, _tr, mut s1, mut s2, mut t0) = P::sk_decode::<K, L>(&value.sk)?;
         #[cfg(feature = "zeroize")]
-        k.zeroize();
+        {
+            k.zeroize();
+            t0.zeroize();
+            s1.zeroize();
+        }
 
         #[cfg(not(feature = "zeroize"))]
         let (rho, _k, _tr, _s1, s2, _t0) = P::sk_decode::<K, L>(&value.sk)?;
@@ -1370,6 +1374,7 @@ impl<
         {
             t_hat.zeroize();
             t.zeroize();
+            s2.zeroize();
         }
 
         Ok(Self {

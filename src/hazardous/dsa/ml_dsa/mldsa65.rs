@@ -34,10 +34,11 @@
 //!
 //! #### Performance
 //! By default, neither [`VerifyingKey`] nor [`KeyPair`] store the fully expanded matrix internally. This can be enabled manually with
-//! [`VerifyingKey::cache_keys()`] and [`KeyPair::cache_keys()`], respectively.
+//! [`VerifyingKey::cache_keys()`] and [`KeyPair::cache_keys()`], respectively (requires `alloc` or `safe_api`).
 //!
-//! [`SigningKey`] computes the fully expanded matrix once per signing operation (in [`Box`]), if features `alloc` or `safe_api` is turned on.
-//! On fully `#![no_std]`, the entire matrix is never stored fully on the stack, to preserve space.
+//! [`SigningKey`] computes the fully expanded matrix once per signing operation (in a [`Vec`]), if features `alloc` or `safe_api` is turned on.
+//!
+//! When `#![no_std]`, the fully expanded matrix is never stored fully on the stack.
 //!
 //! #### Serialized signing keys
 //! It is possible to instantiate a [`SigningKey`] directly, if strictly required, using [`SigningKey::try_from()`]. This use hereof is intended solely for
@@ -343,8 +344,6 @@ impl VerifyingKey {
     /// Computes and stores internally (heap) the fully expanded matrix for this [`VerifyingKey`].
     /// It's useful for applications that have enough stack space and verify many signatures,
     /// for the same [`VerifyingKey`].
-    ///
-    /// Note that this requires sufficient stack space to be available.
     pub fn cache_keys(&mut self) -> Result<(), UnknownCryptoError> {
         self.data.cache_fully_expanded_matrix()
     }
