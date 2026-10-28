@@ -3,8 +3,7 @@
 **Date:** TBD, 2026.
 
 **Changelog:**
-- Expand the matrix for ML-DSA in full during signing if heap is available (`alloc`/`safe_api`).
-- Expand the matrix for ML-DSA in full and cache for `VerifyingKey` and `KeyPair` if heap is available (`alloc`/`safe_api`).
+- Expand the matrix for ML-DSA in full only if heap is available (`alloc`/`safe_api`).
   - If `#![no_std]` compute the matrix on-the-fly when needed for ML-DSA operations.
 
 

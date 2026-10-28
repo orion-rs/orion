@@ -794,7 +794,7 @@ mod tests {
     /// but we don't ant to break downstream debug testing either, so it's worth handling.
     fn double_keypair_fits_stack() {
         // 1 MiB is the max due to Windows default stacksize for x86-64
-        // Linux has 8 MiB so this is leaves plenty room
+        // Linux has 8 MiB so this leaves plenty room
         const STACKSIZE: usize = 1024 << 10;
         std::thread::Builder::new()
             .stack_size(STACKSIZE)

@@ -1236,8 +1236,8 @@ pub struct InternalVerifyingKey<
     const L: usize,
     P: MlDsaParameters,
 > {
-    #[allow(dead_code)]
     // rho is only needed to expand matrix A when no heap is available.
+    #[cfg_attr(any(feature = "alloc", feature = "safe_api"), allow(dead_code))]
     rho: [u8; 32],
     pub(crate) pk: [u8; PK_ENCODED_SIZE],
     t1: Vector<K>,
@@ -1401,7 +1401,11 @@ impl<
         #[cfg(not(feature = "zeroize"))]
         let t = t_hat.inverse_ntt_mont() + &s2;
 
+        #[cfg(feature = "zeroize")]
+        let (t1, mut t0) = t.power2round::<P>();
+        #[cfg(not(feature = "zeroize"))]
         let (t1, _t0) = t.power2round::<P>();
+
         let pk = P::pk_encode::<PK_ENCODED_SIZE>(&rho, &t1.elems);
 
         #[cfg(feature = "zeroize")]
@@ -1409,6 +1413,7 @@ impl<
             t_hat.zeroize();
             t.zeroize();
             s2.zeroize();
+            t0.zeroize();
         }
 
         Ok(Self {
@@ -1455,8 +1460,6 @@ impl<
 
         let c = sample_in_ball::<P>(&sigma.c)?;
         // Az − ct1 ⋅ 2d
-
-        // w_approx based on wether we have the matrix cached or not
         let mut w_approx_hat: VectorNTT<K, RInv>;
 
         #[cfg(any(feature = "alloc", feature = "safe_api"))]

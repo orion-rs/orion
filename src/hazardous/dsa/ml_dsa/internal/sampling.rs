@@ -103,7 +103,7 @@ pub fn sample_in_ball<P: MlDsaParameters>(seed: &[u8]) -> Result<RingElement, Un
     Ok(c)
 }
 
-/// FIPS-204, Alrogithm 32.
+/// FIPS-204, Algorithm 32.
 ///
 /// Shake128 ctx is passed pre-initialized with absorbed rho.
 fn rej_ntt_poly(
@@ -119,7 +119,7 @@ fn rej_ntt_poly(
     let mut j = 0;
 
     // Squeeze entire block (also done in ref impl) to save squeezes for better performance.
-    // Because SHAKE_128_RATE envenly divides the per-iter 3 pair sample, we can easily do it
+    // Because SHAKE_128_RATE evenly divides the per-iter 3 pair sample, we can easily do it
     // here without buffering extra leftover.
     let mut shake_block = [0u8; SHAKE_128_RATE];
     debug_assert_eq!(SHAKE_128_RATE % 3, 0);
@@ -149,9 +149,9 @@ fn rej_ntt_poly(
     Ok(())
 }
 
-#[cfg(not(any(feature = "alloc", feature = "safe_api")))]
+#[cfg(any(test, not(any(feature = "alloc", feature = "safe_api"))))]
 /// FIPS-204, Algorithm 32 and Algorithm 31.
-/// Here we generate the matrix on-the-fly, for each entry needed. This avoid holding
+/// Here we generate the matrix on-the-fly, for each entry needed. This avoids holding
 /// the entirety of the matrix in memory at once.
 ///
 /// Matrix A is fully derived from rho, so computing its entries on-the-fly
@@ -183,8 +183,8 @@ pub(crate) fn mul_vec_ntt<const K: usize, const L: usize>(
 /// Fully expanded matrix A, which we store on the heap as it has previously put too much pressure
 /// on the stack.
 pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
-    // We want to avoid copied lying around on the stack before being moved to heap
-    // as happens with Vector(NTT) newtypes, so here we simply defines as standard `Vec`.
+    // We want to avoid copies on the stack before being moved to heap
+    // as happens with Vector(NTT) newtypes, so here we simply define as standard `Vec`.
     mat: Vec<Vec<RingElementNTT<Standard>>>,
 }
 
@@ -449,5 +449,42 @@ mod test {
 
         assert_eq!(nonzero, MlDsa87::TAU);
         assert_eq!(ones, MlDsa87::TAU);
+    }
+
+    #[test]
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    // NOTE: The difference between pure no_std ML-DSA and heap-available
+    // is the caching of matrix A. This tests that both approaches to generating
+    // the matrix are equivalent.
+    fn test_mul_vec_ntt_matrix_expand_a_equivalence() {
+        fn check_equivalence<
+            const CLEN: usize,
+            const K: usize,
+            const L: usize,
+            P: MlDsaParameters,
+        >() {
+            // Deterministically dervie rho and seed for tests
+            let mut xof = Shake128::new();
+            xof.absorb(b"test_mul_vec_ntt_matrix_expand_a_equivalence")
+                .unwrap();
+
+            for _ in 0..64 {
+                let (mut rho, mut seed) = ([0u8; 32], [0u8; 64]);
+                xof.squeeze(&mut rho).unwrap();
+                xof.squeeze(&mut seed).unwrap();
+
+                let v_hat = expand_mask::<CLEN, K, L, P>(&seed, 0).unwrap().ntt();
+
+                let expected = &MatrixNTT::<K, L>::expand_a::<P>(&rho).unwrap() * &v_hat;
+                let mut actual = VectorNTT::<K, RInv>::zero();
+                mul_vec_ntt::<K, L>(&rho, &v_hat, &mut actual).unwrap();
+
+                assert_eq!(expected, actual);
+            }
+        }
+
+        check_equivalence::<{ MlDsa44::CLEN }, { MlDsa44::DIM_K }, { MlDsa44::DIM_L }, MlDsa44>();
+        check_equivalence::<{ MlDsa65::CLEN }, { MlDsa65::DIM_K }, { MlDsa65::DIM_L }, MlDsa65>();
+        check_equivalence::<{ MlDsa87::CLEN }, { MlDsa87::DIM_K }, { MlDsa87::DIM_L }, MlDsa87>();
     }
 }
