@@ -109,6 +109,7 @@
 //! [`SigningKey::update()`]: crate::hazardous::dsa::ml_dsa::mldsa44::SigningKey::update
 //! [`SigningKey::finalize()`]: crate::hazardous::dsa::ml_dsa::mldsa44::SigningKey::finalize
 //! [`SigningKey::init()`]: crate::hazardous::dsa::ml_dsa::mldsa44::SigningKey::init
+//! [`VerifyingKey`]: crate::hazardous::dsa::ml_dsa::mldsa44::VerifyingKey
 //! [`VerifyingKey::update()`]: crate::hazardous::dsa::ml_dsa::mldsa44::VerifyingKey::update
 //! [`VerifyingKey::finalize()`]: crate::hazardous::dsa::ml_dsa::mldsa44::VerifyingKey::finalize
 //! [`VerifyingKey::init()`]: crate::hazardous::dsa::ml_dsa::mldsa44::VerifyingKey::init
@@ -336,8 +337,10 @@ impl SigningKey {
 }
 
 impl VerifyingKey {
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "alloc", feature = "safe_api"))))]
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Computes and stores internally the fully expanded matrix for this [`VerifyingKey`].
+    /// Computes and stores internally (heap) the fully expanded matrix for this [`VerifyingKey`].
     /// It's useful for applications that have enough stack space and verify many signatures,
     /// for the same [`VerifyingKey`].
     ///
@@ -447,6 +450,8 @@ impl TryFrom<&Seed> for KeyPair {
 }
 
 impl KeyPair {
+    #[cfg(any(feature = "alloc", feature = "safe_api"))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "alloc", feature = "safe_api"))))]
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Equivalent to [`VerifyingKey::cache_keys`].
     pub fn cache_keys(&mut self) -> Result<(), UnknownCryptoError> {

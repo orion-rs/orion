@@ -28,7 +28,11 @@ use crate::hazardous::dsa::ml_dsa::internal::fe::{
 };
 use crate::hazardous::hash::sha3::shake128::{SHAKE_128_RATE, Shake128};
 use crate::hazardous::hash::sha3::shake256::{SHAKE_256_RATE, Shake256};
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
 use core::ops::Mul;
+
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
+use alloc::{vec, vec::Vec};
 
 /// FIPS-204, Algorithm 14.
 pub(crate) fn coeff_from_three_bytes(b0: u8, b1: u8, b2: u8) -> Option<FieldElement<Standard>> {
@@ -145,11 +149,43 @@ fn rej_ntt_poly(
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
-    mat: [VectorNTT<L, Standard>; K],
+/// FIPS-204, Algorithm 32 and Algorithm 31.
+/// Here we generate the matrix on-the-fly, for each entry needed. This avoid holding
+/// the entirety of the matrix in memory at once.
+///
+/// Matrix A is fully derived from rho, so computing its entries on-the-fly
+/// is the exact same as pre-computation.
+pub(crate) fn mul_vec_ntt<const K: usize, const L: usize>(
+    rho: &[u8],
+    v_hat: &VectorNTT<L, Standard>,
+    out: &mut VectorNTT<K, RInv>,
+) -> Result<(), UnknownCryptoError> {
+    let mut ctx = Shake128::new();
+    ctx.absorb(rho)?;
+
+    let mut mat_a_ij = RingElementNTT::zero();
+    for (i, out_i) in out.elems.iter_mut().enumerate().take(K) {
+        *out_i = RingElementNTT::<RInv>::zero();
+        for (j, v_hat_j) in v_hat.elems.iter().enumerate().take(L) {
+            rej_ntt_poly(&ctx, j as u8, i as u8, &mut mat_a_ij)?;
+            *out_i += &(mat_a_ij * *v_hat_j);
+        }
+    }
+
+    Ok(())
 }
 
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
+#[derive(Debug, Clone, PartialEq)]
+/// Fully expanded matrix A, which we store on the heap as it has previously put too much pressure
+/// on the stack.
+pub(crate) struct MatrixNTT<const K: usize, const L: usize> {
+    // We want to avoid copied lying around on the stack before being moved to heap
+    // as happens with Vector(NTT) newtypes, so here we simply defines as standard `Vec`.
+    mat: Vec<Vec<RingElementNTT<Standard>>>,
+}
+
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
 impl<const K: usize, const L: usize> Mul<&VectorNTT<L, Standard>> for &MatrixNTT<K, L> {
     type Output = VectorNTT<K, RInv>;
 
@@ -166,33 +202,8 @@ impl<const K: usize, const L: usize> Mul<&VectorNTT<L, Standard>> for &MatrixNTT
     }
 }
 
+#[cfg(any(feature = "alloc", feature = "safe_api"))]
 impl<const K: usize, const L: usize> MatrixNTT<K, L> {
-    /// FIPS-204, Algorithm 32 and Algorithm 31.
-    /// Here we generate the matrix on-the-fly, for each entry needed. This avoid holding
-    /// the entirety of the matrix in memory at once.
-    ///
-    /// Matrix A is fully derived from rho, so computing its entries on-the-fly
-    /// is the exact same as pre-computation.
-    pub(crate) fn mul_vec_ntt(
-        rho: &[u8],
-        v_hat: &VectorNTT<L, Standard>,
-        out: &mut VectorNTT<K, RInv>,
-    ) -> Result<(), UnknownCryptoError> {
-        let mut ctx = Shake128::new();
-        ctx.absorb(rho)?;
-
-        let mut mat_a_ij = RingElementNTT::zero();
-        for (i, out_i) in out.elems.iter_mut().enumerate().take(K) {
-            *out_i = RingElementNTT::<RInv>::zero();
-            for (j, v_hat_j) in v_hat.elems.iter().enumerate().take(L) {
-                rej_ntt_poly(&ctx, j as u8, i as u8, &mut mat_a_ij)?;
-                *out_i += &(mat_a_ij * *v_hat_j);
-            }
-        }
-
-        Ok(())
-    }
-
     /// FIPS-204, Algorithm 32 and Algorithm 31.
     /// Merged to avoid useless re-instantiations of SHAKE128.
     pub(crate) fn expand_a<P: MlDsaParameters>(seed: &[u8]) -> Result<Self, UnknownCryptoError> {
@@ -200,12 +211,12 @@ impl<const K: usize, const L: usize> MatrixNTT<K, L> {
         debug_assert_eq!(L, P::DIM_L);
         debug_assert_eq!(seed.len(), 32);
 
-        let mut mat_hat = [VectorNTT::<L, Standard>::zero(); K];
+        let mut mat_hat = vec![vec![RingElementNTT::<Standard>::zero(); L]; K];
         let mut ctx = Shake128::new();
         ctx.absorb(seed)?;
 
-        for (r, row) in mat_hat.iter_mut().enumerate().take(K) {
-            for (s, entry) in row.elems.iter_mut().enumerate().take(L) {
+        for (r, row) in mat_hat.iter_mut().enumerate() {
+            for (s, entry) in row.iter_mut().enumerate() {
                 // FIPS-204, Algorithm 31:
                 rej_ntt_poly(&ctx, s as u8, r as u8, entry)?;
             }
