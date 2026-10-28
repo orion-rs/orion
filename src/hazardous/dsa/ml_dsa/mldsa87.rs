@@ -112,6 +112,8 @@
 //! [`VerifyingKey::update()`]: crate::hazardous::dsa::ml_dsa::mldsa87::VerifyingKey::update
 //! [`VerifyingKey::finalize()`]: crate::hazardous::dsa::ml_dsa::mldsa87::VerifyingKey::finalize
 //! [`VerifyingKey::init()`]: crate::hazardous::dsa::ml_dsa::mldsa87::VerifyingKey::init
+//! [`VerifyingKey::cache_keys()`]: crate::hazardous::dsa::ml_dsa::mldsa87::VerifyingKey::cache_keys
+//! [`KeyPair::cache_keys()`]: crate::hazardous::dsa::ml_dsa::mldsa87::KeyPair::cache_keys
 
 use crate::KP;
 use crate::errors::UnknownCryptoError;
