@@ -33,8 +33,7 @@
 //! from a [`Seed`].
 //!
 //! #### Performance
-//! By default, neither [`VerifyingKey`] nor [`KeyPair`] store the fully expanded matrix internally. This can be enabled manually with
-//! [`VerifyingKey::cache_keys()`] and [`KeyPair::cache_keys()`], respectively (requires `alloc` or `safe_api`).
+//! By default, both [`VerifyingKey`] and [`KeyPair`] store the fully expanded matrix internally (requires `alloc` or `safe_api`).
 //!
 //! [`SigningKey`] computes the fully expanded matrix once per signing operation (in a [`Vec`]), if features `alloc` or `safe_api` is turned on.
 //!
@@ -114,8 +113,6 @@
 //! [`VerifyingKey::update()`]: crate::hazardous::dsa::ml_dsa::mldsa44::VerifyingKey::update
 //! [`VerifyingKey::finalize()`]: crate::hazardous::dsa::ml_dsa::mldsa44::VerifyingKey::finalize
 //! [`VerifyingKey::init()`]: crate::hazardous::dsa::ml_dsa::mldsa44::VerifyingKey::init
-//! [`VerifyingKey::cache_keys()`]: crate::hazardous::dsa::ml_dsa::mldsa44::VerifyingKey::cache_keys
-//! [`KeyPair::cache_keys()`]: crate::hazardous::dsa::ml_dsa::mldsa44::KeyPair::cache_keys
 
 use crate::KP;
 use crate::errors::UnknownCryptoError;
@@ -338,16 +335,6 @@ impl SigningKey {
 }
 
 impl VerifyingKey {
-    #[cfg(any(feature = "alloc", feature = "safe_api"))]
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "alloc", feature = "safe_api"))))]
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Computes and stores internally (heap) the fully expanded matrix for this [`VerifyingKey`].
-    /// It's useful for applications that have enough stack space and verify many signatures,
-    /// for the same [`VerifyingKey`].
-    pub fn cache_keys(&mut self) -> Result<(), UnknownCryptoError> {
-        self.data.cache_fully_expanded_matrix()
-    }
-
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
     /// Given the [`VerifyingKey`], verify a signature `sig` produced over message `m` and context.
     pub fn verify(&self, m: &[u8], ctx: &[u8], sig: &Signature) -> Result<(), UnknownCryptoError> {
@@ -449,14 +436,6 @@ impl TryFrom<&Seed> for KeyPair {
 }
 
 impl KeyPair {
-    #[cfg(any(feature = "alloc", feature = "safe_api"))]
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "alloc", feature = "safe_api"))))]
-    #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
-    /// Equivalent to [`VerifyingKey::cache_keys`].
-    pub fn cache_keys(&mut self) -> Result<(), UnknownCryptoError> {
-        self.verifying_key.cache_keys()
-    }
-
     #[cfg(feature = "safe_api")]
     #[cfg_attr(docsrs, doc(cfg(feature = "safe_api")))]
     #[must_use = "SECURITY WARNING: Ignoring a Result can have real security implications."]
@@ -691,9 +670,9 @@ mod tests {
         #[cfg(not(feature = "safe_api"))]
         let seed = Seed::from([123u8; 32]);
 
-        let streaming_tester = DsaTester::<KeyPair>::new(KeyPair::new(seed.clone()).unwrap());
+        let dsa_tester = DsaTester::<KeyPair>::new(KeyPair::new(seed.clone()).unwrap());
         DsaTester::<KeyPair>::run_all_tests(
-            &streaming_tester,
+            &dsa_tester,
             seed.unprotected_as_ref(),
             b"This message to sign with ML-DSA.",
         );
@@ -821,9 +800,7 @@ mod tests {
             .stack_size(STACKSIZE)
             .spawn(|| {
                 let kp1 = KeyPair::new(Seed::from([127u8; 32])).unwrap();
-                assert!(kp1.verifying_key.data.mat_a_hat.is_none());
                 let kp2 = KeyPair::new(Seed::from([255u8; 32])).unwrap();
-                assert!(kp2.verifying_key.data.mat_a_hat.is_none());
                 let sig1 = kp1.signing_key.sign(b"Test", b"").unwrap();
                 let sig2 = kp2.signing_key.sign(b"Test", b"").unwrap();
                 assert!(kp1.verifying_key.verify(b"Test", b"", &sig1).is_ok());
@@ -832,24 +809,5 @@ mod tests {
             .unwrap()
             .join()
             .expect("ML-DSA-44 exceeded the stack size");
-    }
-
-    #[test]
-    #[cfg(not(target_os = "windows"))]
-    #[cfg(feature = "safe_api")]
-    fn test_uncached_and_cached_agree() {
-        let mut kp = KeyPair::generate().unwrap();
-        let mut vk = kp.verifying_key.clone();
-        vk.cache_keys().unwrap();
-
-        let sig = kp.signing_key.sign(b"Test", b"").unwrap();
-        assert!(kp.verifying_key.data.mat_a_hat.is_none());
-        assert!(kp.verifying_key.verify(b"Test", b"", &sig).is_ok());
-        assert!(vk.data.mat_a_hat.is_some());
-        assert!(vk.verify(b"Test", b"", &sig).is_ok());
-
-        kp.cache_keys().unwrap();
-        assert!(kp.verifying_key.data.mat_a_hat.is_some());
-        assert!(kp.verifying_key.verify(b"Test", b"", &sig).is_ok());
     }
 }

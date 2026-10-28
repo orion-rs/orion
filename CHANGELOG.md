@@ -4,9 +4,7 @@
 
 **Changelog:**
 - Expand the matrix for ML-DSA in full during signing if heap is available (`alloc`/`safe_api`).
-  - If `#![no_std]` compute the matrix on-the-fly when needed for ML-DSA operations.
-- Remove caching of fully expanded matrix A in ML-DSA's `VerifyingKey` and `KeyPair` by default.
-  - Add `VerifyingKey::cache_keys()` and `KeyPair::cache_keys()` to explicitly enable caching the full matrix on heap. Only available on `alloc`/`safe_api`.
+- Expand the matrix for ML-DSA in full and cache for `VerifyingKey` and `KeyPair` if heap is available (`alloc`/`safe_api`).
   - If `#![no_std]` compute the matrix on-the-fly when needed for ML-DSA operations.
 
 

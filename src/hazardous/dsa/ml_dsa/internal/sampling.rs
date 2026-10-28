@@ -149,6 +149,7 @@ fn rej_ntt_poly(
     Ok(())
 }
 
+#[cfg(not(any(feature = "alloc", feature = "safe_api")))]
 /// FIPS-204, Algorithm 32 and Algorithm 31.
 /// Here we generate the matrix on-the-fly, for each entry needed. This avoid holding
 /// the entirety of the matrix in memory at once.
