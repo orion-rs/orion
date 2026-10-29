@@ -510,14 +510,22 @@ mod public {
             let t2 = mac.finalize().unwrap();
             // Length is cached, so same length reset worked.
             assert!(Blake2b::verify(&t2, &k2_32, taglen, message).is_ok());
-            assert_eq!(t2.unprotected_as_ref(), &hex::decode("c053d9657b3d5e0b8ecc62235f25936008981da8f8ae9456e5fe2517a1b65153").unwrap());
+            assert_eq!(
+                t2.unprotected_as_ref(),
+                &hex::decode("c053d9657b3d5e0b8ecc62235f25936008981da8f8ae9456e5fe2517a1b65153")
+                    .unwrap()
+            );
 
             // Reset to a different-length key.
             mac.reset(&k3_33).unwrap();
             mac.update(message).unwrap();
             let t3 = mac.finalize().unwrap();
             assert!(Blake2b::verify(&t3, &k3_33, taglen, message).is_ok());
-            assert_eq!(t3.unprotected_as_ref(), &hex::decode("fa0e4d6c7974a2021f96f30e98e8564430441e460f32e98de2cea59c320271d5").unwrap());
+            assert_eq!(
+                t3.unprotected_as_ref(),
+                &hex::decode("fa0e4d6c7974a2021f96f30e98e8564430441e460f32e98de2cea59c320271d5")
+                    .unwrap()
+            );
 
             // reset() doesn't take a new output MAC size as input,
             // so this stays fixed per `new()`-produced instance
