@@ -836,5 +836,14 @@ mod tests {
                 .is_err()
             );
         }
+
+	#[test]
+        fn test_hashlen_min() {
+            let cost = CostParams::new(4, 8, 1).unwrap();
+
+            assert!(Scrypt::derive_key_encoded(b"password", b"salt", &cost, 0).is_err());
+            assert!(Scrypt::derive_key_encoded(b"password", b"salt", &cost, 9).is_err());
+            assert!(Scrypt::derive_key_encoded(b"password", b"salt", &cost, 10).is_ok());
+        }
     }
 }
