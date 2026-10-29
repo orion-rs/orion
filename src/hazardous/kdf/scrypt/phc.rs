@@ -26,7 +26,10 @@ use crate::{
         UnprotectedAsRef,
         sealed::{Data, TryFromBytes},
     },
-    hazardous::kdf::{parse_decimal_value, scrypt::CostParams},
+    hazardous::kdf::{
+        parse_decimal_value,
+        scrypt::{CostParams, PHC_MIN_HASHLEN},
+    },
 };
 use core::fmt::Debug;
 use ct_codecs::{Base64NoPadding, Encoder};
@@ -149,7 +152,9 @@ impl TryFrom<&str> for ScryptPhc {
         }
         let password_hash_raw = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
         // NOTE(brycx): This is not an RFC limitation but rather one for more stable and predictable parsing.
-        if password_hash_raw.is_empty() {
+        // Unlike Argon2, scrypt does not bind to the output length, so this
+        // needs to be a minimum as is defined in P-H-C.
+        if password_hash_raw.len() < PHC_MIN_HASHLEN {
             return Err(UnknownCryptoError);
         }
 
@@ -313,9 +318,15 @@ mod test {
     fn test_bad_encoding_invalid_password() {
         let exact = "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E";
         let nothing = "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$";
+        let one = "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nA";
+        let below_min = "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNl";
+        let exact_min = "$scrypt$ln=16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldA";
 
         assert!(ScryptPhc::try_from(exact).is_ok());
         assert!(ScryptPhc::try_from(nothing).is_err());
+        assert!(ScryptPhc::try_from(one).is_err());
+        assert!(ScryptPhc::try_from(below_min).is_err());
+        assert!(ScryptPhc::try_from(exact_min).is_ok());
     }
 
     #[test]

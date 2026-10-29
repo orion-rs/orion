@@ -3,11 +3,14 @@
 **Date:** TBD, 2026.
 
 **Changelog:**
-- Expand the matrix for ML-DSA in full only if heap is available (`alloc`/`safe_api`).
+- Expand the matrix for ML-DSA in full only if heap is available (`alloc`/`safe_api`) ([#680](https://github.com/orion-rs/orion/pull/680)).
   - If `#![no_std]` compute the matrix on-the-fly when needed for ML-DSA operations.
-- Fix parsing Argon2 and Scrypt strings where the `=` and `,` delimiters are swapped.
-- Correctly restrict the use of empty salts in `Scrypt::derive_key_encoded()`.
+- Fix parsing Argon2 and Scrypt strings where the `=` and `,` delimiters are swapped ([#684](https://github.com/orion-rs/orion/pull/684)).
+- Correctly restrict the use of empty salts in `Scrypt::derive_key_encoded()` ([#685](https://github.com/orion-rs/orion/pull/685)).
   - Parsing a `scrypt::PasswordHash` already fails with empty salt, but before this fix one could be created with `Scrypt::derive_key_encoded()`.
+- Add minimum password hash length for scrypt `PHC_MIN_HASHLEN` as defined by P-H-C string format spec ([#686](https://github.com/orion-rs/orion/pull/686)).
+
+**Note** about strictly being a breaking changes to scrypt P-H-C logic: #685 and #686 are strictly speaking two breaking changes. It is being included in this minor patch however, since it onlyt applies to `0.18.0` which was recently released. No public dependencies were identified to use this API of this version and most crates.io downloads remain on `0.17` for now it seems. I apologize if anyone against expectations should experience an actual break here and if that turns out to be the case, I will of course revert, save for next brekaing, and push a new minor.
 
 ### 0.18.0
 

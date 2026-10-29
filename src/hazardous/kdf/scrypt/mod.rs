@@ -57,6 +57,7 @@
 //! - The hashed password does not match the expected when verifying.
 //! - `salt` is empty when using [`Scrypt::derive_key_encoded`] or parsing a [`PasswordHash`].
 //! - `expected` is empty.
+//! - `hash_len` is less than `10` when using [`Scrypt::derive_key_encoded`].
 //!
 //! # Security
 //! - `PasswordHash::TryFrom<&str>` and later verification sets no additional bounds on cost parameters.
@@ -136,6 +137,8 @@ pub const R_BLK_MAX: u32 = (i32::MAX as u32) / 256;
 const N_MAX: u32 = (i32::MAX as u32) / 128;
 /// scrypt `n * 128 * r` must be less than [i32::MAX].
 pub const LOGN_MAX: u32 = 31;
+/// Minimum [`ScryptPasswordHash`] length.
+pub const PHC_MIN_HASHLEN: usize = 10; // https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md#function-duties
 
 #[derive(Debug)]
 #[cfg(feature = "safe_api")]
@@ -170,6 +173,7 @@ impl TypeSpec for ScryptPasswordHash {
 ///   be represented as a `u32`.
 /// - The parameters in the encoded password hash are not correctly ordered. The ordering must be:
 ///   - `$scrypt$ln=<value>,r=<value>,p=<value>$<salt>$<hash>`
+/// - The decoded password hash is less than [`PHC_MIN_HASHLEN`] bytes.
 ///
 /// # Panics:
 /// A panic will occur if:
@@ -497,6 +501,9 @@ impl Scrypt {
         // when working with raw KDF API (e.g. deriving encryption keys, not storing passwords)
         // but we restrict the password to non-empty when working with P-H-C encoded ones.
         if salt.is_empty() {
+            return Err(UnknownCryptoError);
+        }
+        if hash_len < PHC_MIN_HASHLEN {
             return Err(UnknownCryptoError);
         }
 
@@ -828,6 +835,15 @@ mod tests {
                 )
                 .is_err()
             );
+        }
+
+        #[test]
+        fn test_hashlen_min() {
+            let cost = CostParams::new(4, 8, 1).unwrap();
+
+            assert!(Scrypt::derive_key_encoded(b"password", b"salt", &cost, 0).is_err());
+            assert!(Scrypt::derive_key_encoded(b"password", b"salt", &cost, 9).is_err());
+            assert!(Scrypt::derive_key_encoded(b"password", b"salt", &cost, 10).is_ok());
         }
     }
 }
