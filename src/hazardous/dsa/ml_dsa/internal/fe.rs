@@ -20,11 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use cmov::Cmov;
 use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 use core::ops::{Index, IndexMut};
-
 use subtle::{Choice, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess};
 
 #[cfg(feature = "zeroize")]
@@ -46,21 +46,28 @@ pub(crate) const INV_R2: MontSquareFactor = MontSquareFactor(41978);
 /// `256^{1} \cdot R mod q`
 pub(crate) const INV: MontFactor = MontFactor(16382);
 
-// Constant-time conditional subtraction
-pub(crate) const fn conditional_sub_u32(a: u32) -> u32 {
-    // Calculate a - mod
-    let t: u32 = a.overflowing_sub(DILITHIUM_Q).0;
+/// Constant-time conditional subtraction.
+///
+/// SECURITY:
+/// - Cannot be `const` due to use of inline `asm!` in `cmov`.
+/// - Previous version got optimized into variable-time jumps on targets without
+///   conditional move/select instructions.
+pub fn conditional_sub_u32(a: u32) -> u32 {
+    debug_assert!(a < (1u32 << 31) + DILITHIUM_Q);
+    let t = a.wrapping_sub(DILITHIUM_Q);
+    let didwrap = (t >> 31) as u8;
+    debug_assert_eq!((a < DILITHIUM_Q) as u8, didwrap);
 
-    // Check if a >= mod (if t is non-negative)
-    // If a >= mod, mask will be 0xFFFFFFFF, otherwise 0
-    let mask: u32 = 0u32.overflowing_sub(t >> 31).0;
+    let mut ret = t;
+    // SECURITY: Uses `asm!` when available on CPU, `read_volatile`/`black_box()`
+    // fallback when those are not available.
+    ret.cmovnz(&a, didwrap);
 
-    // If mask is 0, return a (no subtraction), otherwise return t (a - mod)
-    (t & !mask) | (a & mask)
+    ret
 }
 
 /// Montgomery reduce.
-pub const fn montgomery_reduce(value: u64) -> u32 {
+pub fn montgomery_reduce(value: u64) -> u32 {
     // cast to u32 and wrapping_mul to use lower 32 bits
     let t: u32 = (value as u32).wrapping_mul(QNEGINV);
     let r: u32 = (value
@@ -114,7 +121,7 @@ impl<D: Domain> Mul<FieldElement<D>> for MontFactor {
 pub struct MontSquareFactor(pub(crate) u32);
 
 impl MontSquareFactor {
-    pub(crate) const fn apply(self, rhs: FieldElement<RInv>) -> FieldElement<Standard> {
+    pub(crate) fn apply(self, rhs: FieldElement<RInv>) -> FieldElement<Standard> {
         FieldElement::<Standard>::new(montgomery_reduce(self.0 as u64 * rhs.0 as u64))
     }
 }
@@ -154,7 +161,7 @@ impl FieldElement<Standard> {
     }
 
     #[allow(missing_docs)]
-    pub const fn power2round<P: MlDsaParameters>(&self) -> (u32, u32) {
+    pub fn power2round<P: MlDsaParameters>(&self) -> (u32, u32) {
         debug_assert!(self.0 < DILITHIUM_Q);
         let r1 = (self.0.overflowing_add((1 << (P::D - 1)) - 1).0) >> P::D;
         let r0 = self.0.overflowing_add(DILITHIUM_Q - (r1 << P::D)).0;
