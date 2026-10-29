@@ -1,8 +1,10 @@
 ### 0.18.1
 
-**Date:** TBD, 2026.
+**Date:** October 30, 2026.
 
 **Changelog:**
+- **SECURITY**: ([GHSA-r7wm-4vf2-h44w](https://github.com/orion-rs/orion/security/advisories/GHSA-r7wm-4vf2-h44w)) ([#689](https://github.com/orion-rs/orion/pull/689)).
+- **SECURITY**: ([GHSA-xcc6-f2jq-43x6](https://github.com/orion-rs/orion/security/advisories/GHSA-xcc6-f2jq-43x6)) ([#690](https://github.com/orion-rs/orion/pull/690)).
 - Expand the matrix for ML-DSA in full only if heap is available (`alloc`/`safe_api`) ([#680](https://github.com/orion-rs/orion/pull/680)).
   - If `#![no_std]` compute the matrix on-the-fly when needed for ML-DSA operations.
 - Fix parsing Argon2 and Scrypt strings where the `=` and `,` delimiters are swapped ([#684](https://github.com/orion-rs/orion/pull/684)).
@@ -100,6 +102,15 @@ A [doc/MIGRATION](doc/MIGRATION.md) guide has been written to give a better over
 - Add new high-level module `orion::signer` which provides post-quantum hedged ML-DSA-65 signature creation and verification.
 - `orion::utils::secure_rand_bytes()` no longer panics and propagates all errors.
 - Introduce a new feature `ct-test` which only is for testing internal constant-time logic.
+
+### 0.17.16
+
+**Date:** October 30, 2026.
+
+**Changelog:**
+- **SECURITY**: ([GHSA-r7wm-4vf2-h44w](https://github.com/orion-rs/orion/security/advisories/GHSA-r7wm-4vf2-h44w)) ([#689](https://github.com/orion-rs/orion/pull/689)).
+- **SECURITY**: ([GHSA-xcc6-f2jq-43x6](https://github.com/orion-rs/orion/security/advisories/GHSA-xcc6-f2jq-43x6)) ([#690](https://github.com/orion-rs/orion/pull/690)).
+
 
 ### 0.17.15
 
