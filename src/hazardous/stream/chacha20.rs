@@ -42,6 +42,8 @@
 //!   has generated all possible keystream bytes and is thus not safe to use further.
 //!   This can be checked with [`ChaCha20::is_exhausted()`].
 //! - If [`ChaCha20::set_byte_position()`] is called with a `pos` that is equal to or greater than [`MAX_KEYSTREAM_BYTES`].
+//! - If `ChaCha20::zeroize()` has been manually called outside [`Drop`] and more keystream bytes are requested.
+//!   `ChaCha20::zeroize()` exhausts the state.
 //!
 //! # Security:
 //! - It is critical for security that a given nonce is not re-used with a given
@@ -94,8 +96,8 @@
 //! [`ChaCha20::next_producible()`]: chacha20::ChaCha20::next_producible()
 //! [`ChaCha20::set_byte_position()`]: chacha20::ChaCha20::set_byte_position()
 //! [`MAX_KEYSTREAM_BYTES`]: chacha20::MAX_KEYSTREAM_BYTES
-
 //! [RFC]: https://tools.ietf.org/html/rfc8439
+
 use crate::GenerateSecret;
 use crate::errors::UnknownCryptoError;
 #[cfg(feature = "safe_api")]
@@ -263,6 +265,11 @@ impl Zeroize for ChaCha20 {
     fn zeroize(&mut self) {
         self.state.iter_mut().zeroize();
         self.keystreamblock.iter_mut().zeroize();
+        self.blockoffset = 0;
+        self.streampos = 0;
+        // SECURITY: We've zeroed out the key, so producing any
+        // further keystream would not be safe.
+        self.exhausted = true;
     }
 }
 
@@ -566,6 +573,39 @@ mod public {
     fn test_zerokey() {
         assert_eq!(ChaCha20Key::zero(), &ZERO_KEY);
         assert_eq!(ChaCha20Nonce::zero(), &ZERO_IETF_NONCE);
+    }
+
+    #[test]
+    #[cfg(feature = "zeroize")]
+    // Test to make sure that users cannot import `Zeroize` from the third-party
+    // crate and manually call `.zeroize()` on [`ChaCha20`] and keep using the state
+    // afterward.
+    fn test_zeroize_is_exhausted() {
+        let sk = SecretKey::from([0u8; CHACHA_KEYSIZE]);
+        let nonce = Nonce::from(ZERO_IETF_NONCE);
+        let mut buf = [0u8; CHACHA_BLOCKSIZE * 2];
+
+        for used in [
+            0,
+            1,
+            CHACHA_BLOCKSIZE / 2,
+            CHACHA_BLOCKSIZE,
+            CHACHA_BLOCKSIZE * 2,
+        ] {
+            let mut ctx = ChaCha20::new(&sk, &nonce);
+            ctx.xor_keystream_into(&mut buf[..used]).unwrap();
+            ctx.zeroize();
+
+            // Zeroize should always exhaust the stream making it unusable.
+            assert!(ctx.is_exhausted());
+            assert!(ctx.next_producible().is_err());
+            assert_eq!(ctx.keystream_remaining(), 0);
+            assert!(ctx.xor_keystream_into(&mut buf).is_err());
+
+            // Reset position still invalid.
+            ctx.set_position(0);
+            assert!(ctx.xor_keystream_into(&mut buf).is_err());
+        }
     }
 
     #[test]
