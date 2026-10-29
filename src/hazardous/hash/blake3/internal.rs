@@ -201,7 +201,7 @@ impl ChunkState {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub(crate) struct OutputReader {
     base_state: CFState,
     msgs: [u32; 16],
@@ -209,6 +209,16 @@ pub(crate) struct OutputReader {
     position: u64,
     buffer: [u8; 64],
     block_n: Option<u64>,
+}
+
+impl PartialEq<OutputReader> for OutputReader {
+    fn eq(&self, other: &OutputReader) -> bool {
+        (self.base_state == other.base_state)
+            & Into::<bool>::into(self.msgs.ct_eq(&other.msgs))
+            & (self.position == other.position)
+            & Into::<bool>::into(self.buffer.ct_eq(&other.buffer))
+            & (self.block_n == other.block_n)
+    }
 }
 
 impl OutputReader {
@@ -279,13 +289,25 @@ impl OutputReader {
 }
 
 // Internal compression function state
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub(crate) struct CFState {
     input_chaining_values: ChainingValue,
     iv: [u32; 4],
     counter: [u32; 2],
     block_amount: u32,
     flags: u32,
+}
+
+impl PartialEq<CFState> for CFState {
+    fn eq(&self, other: &CFState) -> bool {
+        Into::<bool>::into(
+            self.input_chaining_values
+                .ct_eq(&other.input_chaining_values),
+        ) & (self.iv == other.iv)
+            & (self.counter == other.counter)
+            & (self.block_amount == other.block_amount)
+            & (self.flags == other.flags)
+    }
 }
 
 impl CFState {

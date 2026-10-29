@@ -10,6 +10,7 @@
   - Parsing a `scrypt::PasswordHash` already fails with empty salt, but before this fix one could be created with `Scrypt::derive_key_encoded()`.
 - Add minimum password hash length for scrypt `PHC_MIN_HASHLEN` as defined by P-H-C string format spec ([#686](https://github.com/orion-rs/orion/pull/686)).
 - Set the `ChaCha20` keystream as exhausted if `zeroize()` is called for it, making subsequent usage fail ([#687](https://github.com/orion-rs/orion/pull/687)).
+- Improve constant-time `PartialEq` impls in internal BLAKE3 structures ([#688](https://github.com/orion-rs/orion/pull/688)).
 
 **Note** about strictly being a breaking changes to scrypt P-H-C logic: #685 and #686 are strictly speaking two breaking changes. It is being included in this minor patch however, since it onlyt applies to `0.18.0` which was recently released. No public dependencies were identified to use this API of this version and most crates.io downloads remain on `0.17` for now it seems. I apologize if anyone against expectations should experience an actual break here and if that turns out to be the case, I will of course revert, save for next brekaing, and push a new minor.
 

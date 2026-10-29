@@ -23,6 +23,7 @@
 use crate::hazardous::hash::blake3::internal::{
     BLOCK_LEN, CFState, ChainingValue, CompressionFn, OutputReader, ROOT,
 };
+use subtle::ConstantTimeEq;
 
 // The maximum possible height of a BLAKE3 tree: the input is capped at 2^64B
 // with 2^10B nodes => 2^54B nodes
@@ -43,8 +44,13 @@ impl PartialEq for TreeStack {
             return false;
         }
 
+        // self.stack is derived from the secret key
+        // when BLAKE3 runs in keyed mode.
         let len = self.stack_len as usize;
-        self.stack[..len] == other.stack[..len]
+        self.stack[..len]
+            .as_flattened()
+            .ct_eq(other.stack[..len].as_flattened())
+            .into()
     }
 }
 
