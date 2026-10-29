@@ -490,6 +490,49 @@ mod public {
             produces_same_hash(&sk, 28, b"");
         }
 
+        #[test]
+        /// Regression: https://github.com/orion-rs/orion/security/advisories/GHSA-xcc6-f2jq-43x6
+        fn test_reset_uses_correct_key() {
+            let message = b"message";
+            let taglen = 32usize;
+
+            let k1_32 = SecretKey::try_from(&[0x11; 32]).unwrap();
+            let k2_32 = SecretKey::try_from(&[0x33; 32]).unwrap();
+            let k3_33 = SecretKey::try_from(&[0x22; 64]).unwrap();
+
+            let mut mac = Blake2b::new(&k1_32, taglen).unwrap();
+            mac.update(message).unwrap();
+            let t1 = mac.finalize().unwrap();
+            assert!(Blake2b::verify(&t1, &k1_32, taglen, message).is_ok());
+
+            mac.reset(&k2_32).unwrap();
+            mac.update(message).unwrap();
+            let t2 = mac.finalize().unwrap();
+            // Length is cached, so same length reset worked.
+            assert!(Blake2b::verify(&t2, &k2_32, taglen, message).is_ok());
+            assert_eq!(
+                t2.unprotected_as_ref(),
+                &hex::decode("c053d9657b3d5e0b8ecc62235f25936008981da8f8ae9456e5fe2517a1b65153")
+                    .unwrap()
+            );
+
+            // Reset to a different-length key.
+            mac.reset(&k3_33).unwrap();
+            mac.update(message).unwrap();
+            let t3 = mac.finalize().unwrap();
+            assert!(Blake2b::verify(&t3, &k3_33, taglen, message).is_ok());
+            assert_eq!(
+                t3.unprotected_as_ref(),
+                &hex::decode("fa0e4d6c7974a2021f96f30e98e8564430441e460f32e98de2cea59c320271d5")
+                    .unwrap()
+            );
+
+            // reset() doesn't take a new output MAC size as input,
+            // so this stays fixed per `new()`-produced instance
+            // and a user can't expect this to be otherwise because it
+            // of this.
+        }
+
         #[quickcheck]
         #[cfg(feature = "safe_api")]
         /// Related bug: https://github.com/orion-rs/orion/issues/46
