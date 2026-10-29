@@ -1,3 +1,11 @@
+### 0.17.16
+
+**Date:** October 30, 2026.
+
+**Changelog:**
+- **SECURITY**: ([GHSA-r7wm-4vf2-h44w](https://github.com/orion-rs/orion/security/advisories/GHSA-r7wm-4vf2-h44w)) ([#689](https://github.com/orion-rs/orion/pull/689)).
+- **SECURITY**: ([GHSA-xcc6-f2jq-43x6](https://github.com/orion-rs/orion/security/advisories/GHSA-xcc6-f2jq-43x6)) ([#690](https://github.com/orion-rs/orion/pull/690)).
+
 ### 0.17.15
 
 **Date:** June 1, 2026.
