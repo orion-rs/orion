@@ -837,7 +837,7 @@ mod tests {
             );
         }
 
-	#[test]
+        #[test]
         fn test_hashlen_min() {
             let cost = CostParams::new(4, 8, 1).unwrap();
 
