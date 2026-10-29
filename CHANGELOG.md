@@ -6,7 +6,8 @@
 - Expand the matrix for ML-DSA in full only if heap is available (`alloc`/`safe_api`).
   - If `#![no_std]` compute the matrix on-the-fly when needed for ML-DSA operations.
 - Fix parsing Argon2 and Scrypt strings where the `=` and `,` delimiters are swapped.
-
+- Correctly restrict the use of empty salts in `Scrypt::derive_key_encoded()`.
+  - Parsing a `scrypt::PasswordHash` already fails with empty salt, but before this fix one could be created with `Scrypt::derive_key_encoded()`.
 
 ### 0.18.0
 

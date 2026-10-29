@@ -55,7 +55,7 @@
 //! - `r * 256 >=` [R_BLK_MAX].
 //! - The length of `dst_out` is less than 1.
 //! - The hashed password does not match the expected when verifying.
-//! - `salt` is empty.
+//! - `salt` is empty when using [`Scrypt::derive_key_encoded`] or parsing a [`PasswordHash`].
 //! - `expected` is empty.
 //!
 //! # Security
@@ -102,6 +102,8 @@
 //! [RP_BLK_MAX]: crate::hazardous::kdf::scrypt::RP_BLK_MAX
 //! [R_BLK_MAX]: crate::hazardous::kdf::scrypt::R_BLK_MAX
 //! [LOGN_MAX]: crate::hazardous::kdf::scrypt::LOGN_MAX
+//! [`Scrypt::derive_key_encoded`]: crate::hazardous::kdf::scrypt::Scrypt::derive_key_encoded
+//! [`PasswordHash`]: crate::hazardous::kdf::scrypt::PasswordHash
 
 use alloc::vec;
 
@@ -491,6 +493,13 @@ impl Scrypt {
         cost: &CostParams,
         hash_len: usize,
     ) -> Result<PasswordHash, UnknownCryptoError> {
+        // RFC 7914 puts no length restrictions on salt, which is allowed empty
+        // when working with raw KDF API (e.g. deriving encryption keys, not storing passwords)
+        // but we restrict the password to non-empty when working with P-H-C encoded ones.
+        if salt.is_empty() {
+            return Err(UnknownCryptoError);
+        }
+
         let mut pwhash = ScryptPhc {
             variant: ScryptPhc::VALID_VARIANT.into(),
             logn: cost.logn,
@@ -771,7 +780,7 @@ mod tests {
                 Scrypt::derive_key(case.password, case.salt, &cost, &mut got)
                     .expect("invalid scrypt parameters");
                 let exp = case.expected_dk;
-                assert_eq!(exp, got.as_slice())
+                assert_eq!(exp, got.as_slice());
             }
         }
 
@@ -794,6 +803,31 @@ mod tests {
             // r=0 and p=0 must return Err, not panic via division by zero
             assert!(CostParams::new(valid_n, 0, valid_p).is_err());
             assert!(CostParams::new(valid_n, valid_r, 0).is_err());
+        }
+    }
+
+    #[cfg(feature = "safe_api")]
+    mod test_derive_key_encoded {
+        use super::*;
+
+        #[test]
+        fn test_salt_out_cannot_be_empty_when_encoding() {
+            let cost = CostParams::new(4, 8, 1).unwrap();
+
+            // Rountrip
+            let hash = Scrypt::derive_key_encoded(b"password", b"salt", &cost, 32).unwrap();
+            let parsed = PasswordHash::try_from(hash.unprotected_as_ref::<str>()).unwrap();
+            assert_eq!(hash, parsed);
+            assert!(Scrypt::verify_encoded(&parsed, b"password").is_ok());
+
+            assert!(Scrypt::derive_key_encoded(b"password", b"", &cost, 32).is_err());
+            assert!(Scrypt::derive_key_encoded(b"password", b"", &cost, 0).is_err());
+            assert!(
+                PasswordHash::try_from(
+                    "$scrypt$ln=17,r=8,p=1$$6EIh7dD/3Ap8lWSA1MpshgKf04pqs0TS4YncEhzCyKQ"
+                )
+                .is_err()
+            );
         }
     }
 }
