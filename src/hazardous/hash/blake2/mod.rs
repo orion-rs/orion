@@ -255,20 +255,8 @@ pub(crate) mod blake2b_core {
                 (_, _) => return Err(UnknownCryptoError),
             }
 
-            self.internal_state.copy_from_slice(&self.init_state);
-            self.buffer = [0u8; BLAKE2B_BLOCKSIZE];
-            self.leftover = 0;
-            self.t = [0u64; 2];
-            self.f = [0u64; 2];
-            self.is_finalized = false;
-
-            if self.is_keyed {
-                self._update(sk)?;
-                // The state needs updating with the secret key padded to blocksize length
-                let pad = [0u8; BLAKE2B_BLOCKSIZE];
-                let rem = BLAKE2B_BLOCKSIZE - sk.len();
-                self._update(pad[..rem].as_ref())?;
-            }
+            // Size is not part of parameters and is this not covered in the reset logic.
+            *self = Self::_new(sk, self.size)?;
 
             Ok(())
         }
