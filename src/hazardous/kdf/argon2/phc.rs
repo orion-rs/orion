@@ -507,4 +507,16 @@ mod test {
         assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p=001$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
         assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p=0001$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
     }
+
+    #[test]
+    fn test_swapped_comma_equals_parsing() {
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m,65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536=t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t,3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3=p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p,1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m,65536=t,3=p,1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m,65536,t,3,p,1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536=t=3=p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+    }
 }
