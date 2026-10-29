@@ -5,6 +5,7 @@
 **Changelog:**
 - Expand the matrix for ML-DSA in full only if heap is available (`alloc`/`safe_api`).
   - If `#![no_std]` compute the matrix on-the-fly when needed for ML-DSA operations.
+- Fix parsing Argon2 and Scrypt strings where the `=` and `,` delimiters are swapped.
 
 
 ### 0.18.0

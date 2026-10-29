@@ -133,31 +133,28 @@ impl TryFrom<&str> for Argon2Phc {
             return Err(UnknownCryptoError);
         }
 
-        // Splits as ["m", "X", "t", "Y", "p", "Z"] where m=X, t=Y and p=Z.
+        // Splits as ["m=X", "t=Y", "p=Z"].
         let param_parts_split = parts
             .next()
-            .unwrap()
-            .split(['=', ','])
+            .ok_or(UnknownCryptoError)?
+            .split(',')
             .collect::<Vec<&str>>();
-        if param_parts_split.len() != 6 {
-            return Err(UnknownCryptoError);
-        }
-        let mut param_parts = param_parts_split.into_iter();
 
-        if param_parts.next() != Some("m") {
+        let memory = if let Some(mem) = param_parts_split.first() {
+            parse_decimal_value(mem.strip_prefix("m=").ok_or(UnknownCryptoError)?)?
+        } else {
             return Err(UnknownCryptoError);
-        }
-        let memory = parse_decimal_value(param_parts.next().unwrap())?;
-
-        if param_parts.next() != Some("t") {
+        };
+        let iterations = if let Some(iter) = param_parts_split.get(1) {
+            parse_decimal_value(iter.strip_prefix("t=").ok_or(UnknownCryptoError)?)?
+        } else {
             return Err(UnknownCryptoError);
-        }
-        let iterations = parse_decimal_value(param_parts.next().unwrap())?;
-
-        if param_parts.next() != Some("p") {
+        };
+        let lanes = if let Some(lns) = param_parts_split.get(2) {
+            parse_decimal_value(lns.strip_prefix("p=").ok_or(UnknownCryptoError)?)?
+        } else {
             return Err(UnknownCryptoError);
-        }
-        let lanes = parse_decimal_value(param_parts.next().unwrap())?;
+        };
 
         CostParams::validate_cost_parameters(iterations, memory, lanes)?;
         let salt = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
@@ -506,5 +503,17 @@ mod test {
         assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p=01$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
         assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p=001$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
         assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p=0001$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+    }
+
+    #[test]
+    fn test_swapped_comma_equals_parsing() {
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m,65536,t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536=t=3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t,3,p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3=p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536,t=3,p,1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m,65536=t,3=p,1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m,65536,t,3,p,1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
+        assert!(Argon2Phc::try_from("$argon2i$v=19$m=65536=t=3=p=1$cHBwcHBwcHBwcHBwcHBwcA$MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA").is_err());
     }
 }

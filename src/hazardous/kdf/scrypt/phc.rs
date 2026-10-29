@@ -118,31 +118,28 @@ impl TryFrom<&str> for ScryptPhc {
             return Err(UnknownCryptoError);
         }
 
-        // Splits as ["ln", "X", "r", "Y", "p", "Z"] where ln=X, r=Y and p=Z.
+        // Splits as ["ln=X", "r=Y" and "p=Z"].
         let param_parts_split = parts
             .next()
-            .unwrap()
-            .split(['=', ','])
+            .ok_or(UnknownCryptoError)?
+            .split(',')
             .collect::<Vec<&str>>();
-        if param_parts_split.len() != 6 {
-            return Err(UnknownCryptoError);
-        }
-        let mut param_parts = param_parts_split.into_iter();
 
-        if param_parts.next() != Some("ln") {
+        let logn = if let Some(logn) = param_parts_split.first() {
+            parse_decimal_value(logn.strip_prefix("ln=").ok_or(UnknownCryptoError)?)?
+        } else {
             return Err(UnknownCryptoError);
-        }
-        let logn = parse_decimal_value(param_parts.next().unwrap())?;
-
-        if param_parts.next() != Some("r") {
+        };
+        let blocksize = if let Some(bs) = param_parts_split.get(1) {
+            parse_decimal_value(bs.strip_prefix("r=").ok_or(UnknownCryptoError)?)?
+        } else {
             return Err(UnknownCryptoError);
-        }
-        let blocksize = parse_decimal_value(param_parts.next().unwrap())?;
-
-        if param_parts.next() != Some("p") {
+        };
+        let parallelism = if let Some(pl) = param_parts_split.get(2) {
+            parse_decimal_value(pl.strip_prefix("p=").ok_or(UnknownCryptoError)?)?
+        } else {
             return Err(UnknownCryptoError);
-        }
-        let parallelism = parse_decimal_value(param_parts.next().unwrap())?;
+        };
 
         CostParams::validate_cost_parameters(logn, blocksize, parallelism)?;
         let salt = Base64NoPadding::decode_to_vec(parts.next().unwrap(), None)?;
@@ -420,5 +417,17 @@ mod test {
         assert!(ScryptPhc::try_from("$scrypt$ln=16,r=8,p=01$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
         assert!(ScryptPhc::try_from("$scrypt$ln=16,r=8,p=001$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
         assert!(ScryptPhc::try_from("$scrypt$ln=16,r=8,p=0001$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+    }
+
+    #[test]
+    fn test_swapped_comma_equals_parsing() {
+        assert!(ScryptPhc::try_from("$scrypt$ln,16,r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=16=r=8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=16,r,8,p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=16,r=8=p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=16,r=8,p,1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln,16=r,8=p,1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln,16,r,8,p,1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
+        assert!(ScryptPhc::try_from("$scrypt$ln=16=r=8=p=1$aM15713r3Xsvxbi31lqr1Q$nFNh2CVHVjNldFVKDHDlm4CbdRSCdEBsjjJxD+iCs5E").is_err());
     }
 }
