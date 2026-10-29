@@ -1,6 +1,6 @@
 [package]
 name = "orion"
-version = "0.17.15"
+version = "0.17.16"
 authors = ["brycx <brycx@protonmail.com>"]
 description = "Usable, easy and safe pure-Rust crypto"
 keywords = ["cryptography", "crypto", "aead", "pqc", "kem"]
@@ -19,6 +19,7 @@ zeroize = { version = "1.1.0", optional = true, default-features = false }
 fiat-crypto = { version = "0.3.0", default-features = false }
 getrandom = { version = "0.4.1", optional = true }
 ct-codecs = { version = "1.1.1", optional = true }
+cmov = { version = "0.5.4" }
 
 [dependencies.serde]
 version = "1.0.124"

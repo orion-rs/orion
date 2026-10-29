@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use cmov::Cmov;
 use core::ops::{Add, Mul, Sub};
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
@@ -50,17 +51,23 @@ pub fn barrett_reduce(value: u32) -> u32 {
     ret
 }
 
-// Constant-time conditional subtraction
+/// Constant-time conditional subtraction.
+///
+/// SECURITY:
+/// - Cannot be `const` due to use of inline `asm!` in `cmov`.
+/// - Previous version got optimized into variable-time jumps on targets without
 fn conditional_sub_u32(a: u32) -> u32 {
-    // Calculate a - mod
-    let t: u32 = a.overflowing_sub(KYBER_Q).0;
+    debug_assert!(a < (1u32 << 31) + KYBER_Q);
+    let t = a.wrapping_sub(KYBER_Q);
+    let didwrap = (t >> 31) as u8;
+    debug_assert_eq!((a < KYBER_Q) as u8, didwrap);
 
-    // Check if a >= mod (if t is non-negative)
-    // If a >= mod, mask will be 0xFFFFFFFF, otherwise 0
-    let mask: u32 = 0u32.overflowing_sub(t >> 31).0;
+    let mut ret = t;
+    // SECURITY: Uses `asm!` when available on CPU, `read_volatile`/`black_box()`
+    // fallback when those are not available.
+    ret.cmovnz(&a, didwrap);
 
-    // If mask is 0, return a (no subtraction), otherwise return t (a - mod)
-    (t & !mask) | (a & mask)
+    ret
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
