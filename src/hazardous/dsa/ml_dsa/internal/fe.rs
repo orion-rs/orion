@@ -829,8 +829,8 @@ impl<const K: usize> Hint<K> {
         let mut index = 0usize;
 
         for i in 0..K {
-            for j in 0..256 {
-                if self.bits[i][j] != 0 {
+            for (j, bit) in self.bits[i].iter().enumerate() {
+                if bit != &0 {
                     out[index] = j as u8;
                     index += 1;
                 }
