@@ -739,9 +739,9 @@ impl<Pke: PkeParameters> KeyPairInternal<Pke> {
         let mut n = 0;
 
         // Steps 3..7
-        for i in 0..Pke::K {
-            for j in 0..Pke::K {
-                ek.mat_a[i][j] = sample_ntt(&rho, &[j as u8, i as u8])?;
+        for (i, v) in ek.mat_a.iter_mut().enumerate().take(Pke::K) {
+            for (j, re) in v.iter_mut().enumerate().take(Pke::K) {
+                *re = sample_ntt(&rho, &[j as u8, i as u8])?;
             }
         }
 
